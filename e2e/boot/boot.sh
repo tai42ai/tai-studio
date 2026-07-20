@@ -18,7 +18,7 @@
 #
 # Env knobs (all have safe defaults for local runs):
 #   STUDIO_API_KEY   the seeded key the Studio pastes at /login (default below)
-#   SKELETON_DIR     path to the tai42-skeleton checkout (default: sibling repo)
+#   SKELETON_DIR     path to the tai-skeleton checkout (default: sibling repo)
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist
 #   MANIFEST_PATH    the skeleton manifest to serve (default: boot/manifest.yml,

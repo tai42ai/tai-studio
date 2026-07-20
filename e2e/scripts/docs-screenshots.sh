@@ -159,8 +159,8 @@ for _ in 1 2 3 4 5; do
     -d '{"tool_name":"studio_demo_echo_prometheus_metrics","arguments":{"message":"docs metrics warm-up"}}' \
     >/dev/null || die "warm-up tool run failed"
 done
-if ! curl -s -m 5 "${BASE_URL}/metrics" | grep -q "tai42_tool_call_count"; then
-  die "/metrics has no tai42_tool_call_count after warm-up — the System screen would be empty"
+if ! curl -s -m 5 "${BASE_URL}/metrics" | grep -q "tai_tool_call_count"; then
+  die "/metrics has no tai_tool_call_count after warm-up — the System screen would be empty"
 fi
 
 # --- 7b. Seed realistic demo accounts (login + users-admin screens) ---------

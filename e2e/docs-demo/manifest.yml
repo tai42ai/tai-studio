@@ -86,7 +86,7 @@ extensions_modules:
 # The reference plugin's demo tools, plus the ask_user builtin. The
 # `prometheus_metrics` extension is attached to studio_demo_echo, branching it
 # into studio_demo_echo_prometheus_metrics — the variant the runner warms up so
-# /metrics serves real tai42_tool_* counter families.
+# /metrics serves real tai_tool_* counter families.
 #
 # The management capabilities (config/manifest/templates/hooks/notify) are served
 # by the routers loaded above and project onto the MCP tool surface from the

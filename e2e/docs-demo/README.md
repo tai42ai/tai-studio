@@ -19,8 +19,8 @@ Outputs:
 - `tai-studio/docs/screenshots/*.png` — the 5 shell screens the README embeds,
   from the same capture.
 
-Assumes sibling checkouts of `tai42-skeleton`, `tai-docs`, `tai42-agents`,
-`tai42-storage-local`, and `tai42-toolbox`; override with `SKELETON_DIR`,
+Assumes sibling checkouts of `tai-skeleton`, `tai-docs`, `tai-agents`,
+`tai-storage-local`, and `tai-toolbox`; override with `SKELETON_DIR`,
 `TAI_DOCS_DIR`, `TAI_AGENTS_DIR`, `TAI_STORAGE_LOCAL_DIR`, `TAI_TOOLBOX_DIR`. See
 the runner's header (`e2e/scripts/docs-screenshots.sh`) for every env knob
 (`SKIP_SPA_BUILD`, `KEEP_UP`, `OUT_DIR`, …) and prerequisites.

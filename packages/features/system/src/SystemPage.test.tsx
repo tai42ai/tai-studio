@@ -162,7 +162,7 @@ function converged(...origins: string[]): {
 function stubClient(overrides: Partial<StubbedMethods> = {}): ApiClient {
   return {
     getHealth: vi.fn().mockResolvedValue('OK'),
-    getMetrics: vi.fn().mockResolvedValue('tai42_up 1'),
+    getMetrics: vi.fn().mockResolvedValue('tai_up 1'),
     getSystemKinds: vi.fn().mockResolvedValue(DEFAULT_KINDS),
     getBackendInfo: vi.fn().mockResolvedValue({ present: false, backend: null, module: null }),
     listFleetWorkers: vi.fn().mockResolvedValue(fleet()),
@@ -196,21 +196,21 @@ describe('SystemPage', () => {
 
   it('renders the metrics text inside a CodeBlock (escaped preformatted text)', async () => {
     const client = stubClient({
-      getMetrics: vi.fn().mockResolvedValue('tai42_requests_total 42\ntai_up 1'),
+      getMetrics: vi.fn().mockResolvedValue('tai_requests_total 42\ntai_up 1'),
     });
     renderWithProviders(<SystemPage search={{}} />, { client });
 
-    const code = await screen.findByText(/tai42_requests_total 42/);
+    const code = await screen.findByText(/tai_requests_total 42/);
     expect(code.tagName).toBe('CODE');
     expect(code.closest('pre')).not.toBeNull();
   });
 
   it('refetches metrics when Refresh is clicked', async () => {
-    const getMetrics = vi.fn().mockResolvedValue('tai42_up 1');
+    const getMetrics = vi.fn().mockResolvedValue('tai_up 1');
     const client = stubClient({ getMetrics });
     renderWithProviders(<SystemPage search={{}} />, { client });
 
-    await screen.findByText('tai42_up 1');
+    await screen.findByText('tai_up 1');
     expect(getMetrics).toHaveBeenCalledTimes(1);
 
     await userEvent.click(screen.getByRole('button', { name: 'Refresh metrics' }));

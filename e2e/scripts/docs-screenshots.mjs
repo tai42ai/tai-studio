@@ -153,9 +153,9 @@ const AUTHED_PAGES = [
   {
     name: 'system',
     // Real Prometheus counters in the Metrics card (warmed up by the runner). The
-    // counter family name is a substring match, so it matches `tai42_tool_call_count_total`.
+    // counter family name is a substring match, so it matches `tai_tool_call_count_total`.
     path: '/system',
-    wait: 'text=tai42_tool_call_count',
+    wait: 'text=tai_tool_call_count',
     // Also require the Healthy badge and the Prometheus caption so the shot shows
     // the health + metrics ops cards rendered (not the SPA index.html document).
     action: async (page) => {

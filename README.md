@@ -20,8 +20,8 @@ and the deploy notes all live there.
 > `bash e2e/scripts/docs-screenshots.sh`, which boots a fully-populated docs-demo
 > backend and captures every screen in light and dark. It is a **maintainer
 > command**: it needs Docker, `uv`, the Playwright chromium browser, and six
-> checkouts beside this repo — `tai42-skeleton`, `tai-docs`, `tai42-agents`,
-> `tai42-storage-local`, `tai42-toolbox`, and `tai42-accounts-postgres` (each
+> checkouts beside this repo — `tai-skeleton`, `tai-docs`, `tai-agents`,
+> `tai-storage-local`, `tai-toolbox`, and `tai-accounts-postgres` (each
 > overridable with its matching `*_DIR` environment variable). Rerun it after any
 > UI or branding change. See `e2e/docs-demo/README.md`.
 

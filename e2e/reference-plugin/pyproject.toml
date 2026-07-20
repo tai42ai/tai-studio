@@ -3,7 +3,7 @@ name = "reference-plugin"
 version = "0.1.0"
 description = "Reference Studio plugin for tai-studio end-to-end tests: a Python tool package plus a Studio front-end bundle (built into src/reference_plugin/studio/)."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 license = "Apache-2.0"
 authors = [{ name = "tai42", email = "oss@tai42.ai" }]
 dependencies = ["tai42-contract"]

@@ -139,11 +139,11 @@ describe('apiText', () => {
 
   it('the client exposes getHealth / getMetrics over apiText', async () => {
     const fetchImpl = vi.fn((url: string) =>
-      Promise.resolve(textResponse(url.endsWith('/metrics') ? 'tai42_up 1' : 'OK')),
+      Promise.resolve(textResponse(url.endsWith('/metrics') ? 'tai_up 1' : 'OK')),
     );
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
     expect(await client.getHealth()).toBe('OK');
-    expect(await client.getMetrics()).toBe('tai42_up 1');
+    expect(await client.getMetrics()).toBe('tai_up 1');
   });
 });
 

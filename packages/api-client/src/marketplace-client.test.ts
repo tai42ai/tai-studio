@@ -196,7 +196,7 @@ describe('marketplace client transport', () => {
           advisories: [ADVISORY],
           notes: ['config provider selected via TAI_CONFIG_MODE'],
           reload: { ok: true },
-          pip_output: 'Successfully installed tai-toolbox-0.1.0',
+          pip_output: 'Successfully installed tai42-toolbox-0.1.0',
         },
       }),
     );
