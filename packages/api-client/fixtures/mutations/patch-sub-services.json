@@ -1,0 +1,13 @@
+{
+  "connection_id": "conn_9f8e7d6c",
+  "enabled_sub_services": ["issues", "pulls"],
+  "consent_required": true,
+  "flow_id": "e2f3a4b5-6677-4888-9999-aaaabbbbcccc",
+  "authorize_url": "https://provider.example.com/oauth/authorize?flow=e2f3a4b5-6677-4888-9999-aaaabbbbcccc",
+  "added_manifest_entries": ["mcp:github:pulls"],
+  "removed_manifest_entries": [],
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

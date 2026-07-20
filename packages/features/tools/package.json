@@ -1,0 +1,64 @@
+{
+  "name": "@tai42/feature-tools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tools surface: browse and exercise the skeleton's registered tools.",
+  "license": "Apache-2.0",
+  "author": "tai42 <oss@tai42.ai>",
+  "homepage": "https://tai42.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tai42ai/tai-studio",
+    "directory": "packages/features/tools"
+  },
+  "bugs": {
+    "url": "https://github.com/tai42ai/tai-studio/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "!src/**/__snapshots__"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json",
+    "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@tanstack/react-query": "^5.62.0"
+  },
+  "dependencies": {
+    "@tai42/api-client": "workspace:*",
+    "@tai42/studio-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "jsdom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vitest": "catalog:"
+  }
+}

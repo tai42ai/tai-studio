@@ -1,0 +1,15 @@
+[
+  {
+    "run_id": "run_9f8e7d6c5b4a3210",
+    "tool_name": "studio_demo_form",
+    "status": "succeeded",
+    "started_at": "2026-01-01T00:00:00+00:00",
+    "finished_at": "2026-01-01T00:00:03+00:00"
+  },
+  {
+    "run_id": "run_1a2b3c4d5e6f7080",
+    "tool_name": "studio_demo_form",
+    "status": "running",
+    "started_at": "2026-01-01T00:05:00+00:00"
+  }
+]

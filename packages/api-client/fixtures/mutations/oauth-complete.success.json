@@ -1,0 +1,9 @@
+{
+  "kind": "success",
+  "connection_id": "conn_9f8e7d6c",
+  "return_url": "https://studio.example.com/settings/connections",
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

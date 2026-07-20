@@ -1,0 +1,5 @@
+{
+  "present": true,
+  "backend": "CeleryBackend",
+  "module": "tai_backend_celery.provider"
+}

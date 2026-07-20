@@ -1,0 +1,4 @@
+{
+  "flow_id": "c0ffee00-1111-4222-8333-444455556666",
+  "authorize_url": "https://provider.example.com/oauth/authorize?flow=c0ffee00-1111-4222-8333-444455556666"
+}

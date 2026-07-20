@@ -1,0 +1,6 @@
+[
+  { "name": "echo", "tags": [] },
+  { "name": "paris_weather", "tags": ["geo"] },
+  { "name": "quick", "tags": ["scratch"] },
+  { "name": "weather", "tags": [] }
+]

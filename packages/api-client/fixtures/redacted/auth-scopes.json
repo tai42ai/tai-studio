@@ -1,0 +1,4 @@
+{
+  "https://api.example.test/v1/reports": "scope_readonly",
+  "https://api.example.test/v1/admin": "scope_admin"
+}

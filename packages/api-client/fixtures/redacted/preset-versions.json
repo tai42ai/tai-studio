@@ -1,0 +1,49 @@
+[
+  {
+    "version": 1,
+    "body": {
+      "base_tool": "weather",
+      "description": "Paris weather",
+      "fixed_kwargs": { "units": "metric", "api_key": "***" },
+      "extensions": [
+        [
+          "chain",
+          {
+            "name": "output_schema",
+            "config": {
+              "schema": {
+                "type": "object",
+                "title": "Weather",
+                "properties": { "temperature_c": { "type": "number" } }
+              }
+            }
+          }
+        ]
+      ],
+      "tags": ["geo"],
+      "output_schema": null
+    },
+    "tags": [],
+    "created_at": "2024-01-01T00:00:02+00:00",
+    "is_current": false
+  },
+  {
+    "version": 2,
+    "body": {
+      "base_tool": "weather",
+      "description": "Paris weather",
+      "fixed_kwargs": { "units": "imperial", "api_key": "***" },
+      "extensions": [],
+      "tags": ["geo", "eu"],
+      "output_schema": {
+        "type": "object",
+        "title": "Weather",
+        "properties": { "temperature_c": { "type": "number", "title": "Temperature (°C)" } },
+        "required": ["temperature_c"]
+      }
+    },
+    "tags": [],
+    "created_at": "2024-01-01T00:00:03+00:00",
+    "is_current": true
+  }
+]

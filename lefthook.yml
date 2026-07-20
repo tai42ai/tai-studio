@@ -1,0 +1,18 @@
+# Git hooks, run by lefthook (a root devDependency).
+# Install once after `pnpm install` with: pnpm exec lefthook install
+pre-commit:
+  parallel: true
+  commands:
+    prettier:
+      glob: '*.{ts,tsx,js,jsx,json,css,md,yml,yaml}'
+      run: pnpm exec prettier --check {staged_files}
+    eslint:
+      glob: '*.{ts,tsx,js,jsx}'
+      run: pnpm exec eslint --fix {staged_files}
+      stage_fixed: true
+    lockfile:
+      # Assert the committed pnpm-lock.yaml still satisfies every package.json.
+      # `--frozen-lockfile` fails if the lockfile is out of date; `--offline`
+      # keeps the check from hitting the network.
+      glob: '{package.json,pnpm-lock.yaml,pnpm-workspace.yaml}'
+      run: pnpm install --frozen-lockfile --offline

@@ -1,0 +1,31 @@
+{
+  // The shell app type-checks its own sources plus the standalone OAuth bridge
+  // (bridge/), and references every library's EMITTING build config for their
+  // declarations. `src` and `bridge` both fall under the strict/no-any surface.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "bridge"],
+  "references": [
+    { "path": "../../packages/studio-sdk/tsconfig.build.json" },
+    { "path": "../../packages/api-client/tsconfig.build.json" },
+    { "path": "../../packages/features/tools/tsconfig.build.json" },
+    { "path": "../../packages/features/agents/tsconfig.build.json" },
+    { "path": "../../packages/features/presets/tsconfig.build.json" },
+    { "path": "../../packages/features/extensions/tsconfig.build.json" },
+    { "path": "../../packages/features/interactions/tsconfig.build.json" },
+    { "path": "../../packages/features/notifications/tsconfig.build.json" },
+    { "path": "../../packages/features/connectors/tsconfig.build.json" },
+    { "path": "../../packages/features/hooks/tsconfig.build.json" },
+    { "path": "../../packages/features/templates/tsconfig.build.json" },
+    { "path": "../../packages/features/storage/tsconfig.build.json" },
+    { "path": "../../packages/features/manifest/tsconfig.build.json" },
+    { "path": "../../packages/features/settings/tsconfig.build.json" },
+    { "path": "../../packages/features/observability/tsconfig.build.json" },
+    { "path": "../../packages/features/scheduling/tsconfig.build.json" },
+    { "path": "../../packages/features/system/tsconfig.build.json" },
+    { "path": "../../packages/features/marketplace/tsconfig.build.json" }
+  ]
+}

@@ -1,0 +1,5 @@
+[
+  { "path": "/api/tools", "methods": ["GET"], "mapped": "scope_readonly" },
+  { "path": "/api/health", "methods": ["GET"], "mapped": "public" },
+  { "path": "/api/backup/export", "methods": ["POST"], "mapped": null }
+]

@@ -1,0 +1,109 @@
+# tai-skeleton manifest for the end-to-end boot recipe.
+#
+# NOT A PRODUCTION TEMPLATE — it pairs with boot.sh, which seeds an obviously
+# test-only API key and loopback Redis. It wires exactly the surface the Studio
+# e2e suites drive: the UI-facing routers, the ask_external extension, the demo
+# tools, and the reference Studio plugin.
+
+# --- Lifecycle modules ------------------------------------------------------
+# The redis-backed api-key identity provider. Importing the package registers it
+# as the "redis" identity provider (import-only registration), and "redis" is the
+# sole entry in the skeleton's default `auth_providers` list (`["redis"]`).
+# boot.sh enables access control, so the skeleton MUST load a concrete identity
+# provider here — without this line the `probe_identity_provider` startup handler
+# raises `Unknown identity provider: 'redis'` and the skeleton never comes up.
+#
+# We name the PACKAGE (`tai_identity_redis`), not the submodule form
+# `tai_identity_redis.redis_api_key_provider`: on a cold boot the submodule form
+# double-registers through `import_or_reload_package` (its `find_spec` discovery
+# imports the parent package, whose __init__ imports+registers the submodule, then
+# the pop+re-import runs the module-level `register_identity_provider("redis", …)` a
+# SECOND time, tripping the duplicate guard). The package form registers exactly once.
+lifecycle_modules:
+  - tai_identity_redis
+
+# --- HTTP routers -----------------------------------------------------------
+# ORDER IS LOAD-BEARING: `plugins` is LAST. Its SPA catch-all (`/{path}`) matches
+# any path, and FastMCP matches custom routes in registration (import) order, so a
+# router listed after `plugins` would be shadowed by the catch-all. Every other
+# router is registered first; `plugins` closes the list.
+routers_modules:
+  - tai_skeleton.routers.interactions
+  - tai_skeleton.routers.tools
+  - tai_skeleton.routers.extensions
+  # Per-tool extension combos (`/api/tools/{name}/extensions`). Every tool detail
+  # page renders a `ToolExtensionsCard` that GETs this on mount, so without this
+  # router that fetch 404s and the card shows a loud "Something went wrong" — a
+  # spurious error next to a working run panel. Reads the live manifest's
+  # selection maps in-process; needs no extra config beyond the routers already
+  # loaded here.
+  - tai_skeleton.routers.tool_extensions
+  # Presets (`/api/presets*`). The same `ToolExtensionsCard` also lists presets to
+  # tell a preset-backed tool from a manifest-backed one, so without this router
+  # that GET 404s and the card errors. With no `VERSIONING_STORE_*` configured the
+  # list endpoint serves an empty list (no store read), so this loads config-free.
+  - tai_skeleton.routers.presets
+  - tai_skeleton.routers.sub_mcp
+  - tai_skeleton.routers.config
+  - tai_skeleton.routers.templates
+  - tai_skeleton.routers.manifest
+  - tai_skeleton.routers.connectors
+  - tai_skeleton.routers.hooks
+  # Background tool-runs (`/api/tool-runs*`). Every tool page's RunPanel drives this
+  # surface: it renders a "Recent background runs" list that GETs
+  # `/api/tool-runs?tool_name=...` on mount, so without this router that fetch 404s
+  # and the panel shows a spurious error. Needs a reachable Redis — boot.sh points
+  # `TAI_TOOL_RUNS_REDIS_URL` at the compose Redis (db 3).
+  - tai_skeleton.routers.tool_runs
+  # The public sign-in aggregator (`GET /api/login/methods`). The login page GETs
+  # this on mount; without the router that fetch 404s and the dev/Playwright login
+  # screen renders a spurious "Could not load sign-in methods" notice next to a
+  # working key-paste form. No accounts plugin is loaded in this boot (it would
+  # need Postgres the recipe does not provision), so the aggregator answers an
+  # empty `{methods: [], bootstrap: false}` — today's expanded key-paste screen.
+  - tai_skeleton.routers.login
+  # The pluggable-kind status table (`GET /api/system/kinds`). The System page's
+  # "Plugin kinds" card GETs this on mount; without the router that fetch 404s and
+  # the card renders a permanent error next to the working health/metrics/fleet
+  # cards. The collector only READS the already-loaded registries, so this needs
+  # no extra config beyond the routers already listed here.
+  - tai_skeleton.routers.system_kinds
+  # The access-control key/scope surface (`/api/auth/*`), including
+  # `GET /api/auth/me` — the caller's derived capability projection. The
+  # authenticated shell's CapabilityProvider GETs `/api/auth/me` once per auth
+  # flip and gates the entire nav, route boundaries, and plugin loading on the
+  # result; without this router that fetch 404s, the provider fails closed, and
+  # every authenticated surface — including the reference-plugin pages the suites
+  # drive — never mounts. Reads the access-control policy/route stores boot.sh
+  # already configures, so `/me` needs no extra config here.
+  - tai_skeleton.routers.api_keys
+  - tai_skeleton.routers.plugins
+
+# --- Tool extensions --------------------------------------------------------
+# `ask_external` wraps a callback_url-taking tool into an external human-in-the-
+# loop question; the interactions inbox surfaces the external-link card for it.
+extensions_modules:
+  - tai_skeleton.extensions.builtin.ask_external
+
+# --- Tools ------------------------------------------------------------------
+# The reference plugin's demo tools (studio_demo_echo has a custom panel;
+# studio_demo_form / studio_demo_fail have none, so they exercise the auto-form
+# fallback + the loud-error result surface) and the ask_user built-in (the
+# blocking human-in-the-loop question the run-tool suite drives).
+#
+# Only runtime-native builtins are named here. The management capabilities
+# (config/manifest/templates/hooks/notify) are served by the routers loaded above
+# and project onto the MCP tool surface from the operations registry — gated by
+# the `api_tools` block, which defaults to enabled — so they need no hand-written
+# tool module.
+tools:
+  - title: reference-plugin-tools
+    module: reference_plugin.tools
+  - title: ask-user
+    module: tai_skeleton.tools.builtin.interactions
+
+# --- Studio plugins ---------------------------------------------------------
+# Names the installed Python package whose `studio/` dist the skeleton serves and
+# whose bundle the shell loads through the server-injected import map.
+studio_plugins:
+  - reference_plugin

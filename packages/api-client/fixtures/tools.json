@@ -1,0 +1,10 @@
+[
+  "ask_user",
+  "reload_config",
+  "reload_tool",
+  "remove_tool",
+  "run_tool",
+  "studio_demo_echo",
+  "studio_demo_fail",
+  "studio_demo_form"
+]

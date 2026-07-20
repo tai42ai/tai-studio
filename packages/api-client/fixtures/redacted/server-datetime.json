@@ -1,0 +1,12 @@
+{
+  "utc": {
+    "iso": "2026-07-05T12:00:00+00:00",
+    "date": "2026-07-05",
+    "time": "12:00:00"
+  },
+  "local": {
+    "iso": "2026-07-05T14:00:00+02:00",
+    "tz": "Europe/Berlin"
+  },
+  "system": { "timezone": "Europe/Berlin" }
+}
