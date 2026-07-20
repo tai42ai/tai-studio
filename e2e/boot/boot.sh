@@ -3,9 +3,9 @@
 # End-to-end boot recipe. Brings up everything the Playwright suites drive:
 #
 #   1. a throwaway loopback Redis (docker compose)
-#   2. the reference Studio plugin, installed into the tai-skeleton env
+#   2. the reference Studio plugin, installed into the tai42-skeleton env
 #   3. the built Studio SPA
-#   4. a tai-skeleton with ACCESS CONTROL ON, a seeded test-only API key, the
+#   4. a tai42-skeleton with ACCESS CONTROL ON, a seeded test-only API key, the
 #      two-tier route mappings, and studio_dist_path pointing at the SPA dist
 #
 # It runs the skeleton in the FOREGROUND so Playwright's `webServer` can own its
@@ -18,7 +18,7 @@
 #
 # Env knobs (all have safe defaults for local runs):
 #   STUDIO_API_KEY   the seeded key the Studio pastes at /login (default below)
-#   SKELETON_DIR     path to the tai-skeleton checkout (default: sibling repo)
+#   SKELETON_DIR     path to the tai42-skeleton checkout (default: sibling repo)
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist
 #   MANIFEST_PATH    the skeleton manifest to serve (default: boot/manifest.yml,
@@ -88,7 +88,7 @@ redis_cli() { docker compose -f "${COMPOSE_FILE}" exec -T redis redis-cli "$@"; 
 pg_exec() { docker compose -f "${COMPOSE_FILE}" exec -T postgres psql -q -U postgres -d tai "$@"; }
 
 # Apply the connector-framework DDL (idempotent CREATE TABLE IF NOT EXISTS).
-CONNECTOR_DDL="${SKELETON_DIR}/src/tai_skeleton/sql/resources/tai_skeleton.init.sql"
+CONNECTOR_DDL="${SKELETON_DIR}/src/tai42_skeleton/sql/resources/tai42_skeleton.init.sql"
 if [[ ! -f "${CONNECTOR_DDL}" ]]; then
   log "ERROR: connector DDL not found at ${CONNECTOR_DDL}"
   exit 1
@@ -121,15 +121,15 @@ if [[ -n "${EXTRA_PLUGINS:-}" ]]; then
   set +f
 fi
 
-# Apply the tai-accounts-postgres schema (accounts_users / accounts_sessions /
+# Apply the tai42-accounts-postgres schema (accounts_users / accounts_sessions /
 # accounts_invites) when the docs-screenshot runner requests it. The plugin owns
-# its tables out-of-band via `python -m tai_accounts_postgres.db apply` (idempotent),
+# its tables out-of-band via `python -m tai42_accounts_postgres.db apply` (idempotent),
 # which connects through the TAI_ACCOUNTS_PG_* env the runner exports. Gated so the
 # lean e2e boot (no accounts plugin installed) is untouched. The compose Postgres is
 # already up (step 1) and the plugin is installed above, so this runs cleanly here.
 if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
-  log "applying tai-accounts-postgres schema (python -m tai_accounts_postgres.db apply)"
-  "${SKELETON_PY}" -m tai_accounts_postgres.db apply >&2
+  log "applying tai42-accounts-postgres schema (python -m tai42_accounts_postgres.db apply)"
+  "${SKELETON_PY}" -m tai42_accounts_postgres.db apply >&2
 fi
 
 # --- 3. Build the SPA -------------------------------------------------------
@@ -145,7 +145,7 @@ log "seeding the test API key (Redis), policy + route mappings (Postgres)"
 KEY_HASH="$(printf '%s' "${STUDIO_API_KEY}" | shasum -a 256 | cut -d' ' -f1)"
 
 # Identity record — PLAIN Redis HASH `ac:key:{sha256(raw)}` -> {user_id, description}.
-# The tai-identity-redis provider reads it with HGETALL and resolves `user_id`; no
+# The tai42-identity-redis provider reads it with HGETALL and resolves `user_id`; no
 # RedisJSON module is involved (the whole point of the plain-redis stack).
 redis_cli HSET "ac:key:${KEY_HASH}" user_id "${STUDIO_USER_ID}" description "e2e studio key" >/dev/null
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from tai_contract.monitoring import MonitoringObservation, MonitoringTrace
+from tai42_contract.monitoring import MonitoringObservation, MonitoringTrace
 
 # One row per trace: (days_ago, hour_utc, model, input_tokens, output_tokens,
 # cost_usd, latency_seconds). Spread over 13 days and three models so the day

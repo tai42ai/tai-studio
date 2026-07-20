@@ -1,6 +1,6 @@
 """In-memory trace store shared by the docs-demo monitoring writer and reader.
 
-Holds complete :class:`~tai_contract.monitoring.MonitoringTrace` objects keyed by
+Holds complete :class:`~tai42_contract.monitoring.MonitoringTrace` objects keyed by
 trace id. The writer mutates it (real recording of live spans); the reader
 aggregates over it. There is no external service — the whole point of the
 docs-demo backend is a self-contained, deterministic observability dataset.
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from tai_contract.monitoring import MonitoringObservation, MonitoringTrace
+from tai42_contract.monitoring import MonitoringObservation, MonitoringTrace
 
 
 class TraceStore:

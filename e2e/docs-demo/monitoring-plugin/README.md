@@ -8,7 +8,7 @@ render **populated, real data** without any external service.
 ## What it is
 
 A genuine implementation of the vendor-neutral monitoring contract
-(`tai_contract.monitoring`):
+(`tai42_contract.monitoring`):
 
 - `DemoWriter` — the full `MonitoringWriter`, recording live spans/events into an
   in-memory `TraceStore` (fail-safe: an emit never raises into a flow).
@@ -31,7 +31,7 @@ monitoring_module: docs_demo_monitoring
 ```
 
 Importing the package fires
-`@tai_app.monitoring.register_monitoring` (an import side-effect), replacing the
+`@tai42_app.monitoring.register_monitoring` (an import side-effect), replacing the
 skeleton's no-op default. Install it into the skeleton venv with
 `uv pip install <this dir>`; the docs-screenshot runner does this automatically.
 

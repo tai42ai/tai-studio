@@ -1,7 +1,7 @@
 """The registered docs-demo monitoring backend: one writer + one reader over a
 shared, seeded trace store.
 
-Importing this module fires ``@tai_app.monitoring.register_monitoring`` on the
+Importing this module fires ``@tai42_app.monitoring.register_monitoring`` on the
 zero-arg builder, so naming ``docs_demo_monitoring`` in a manifest's
 ``monitoring_module`` installs it (replacing the no-op default). The builder
 seeds the store with the demo dataset — that is the package's whole purpose.
@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from tai_contract.app import tai_app
-from tai_contract.monitoring import ProjectConfig
+from tai42_contract.app import tai42_app
+from tai42_contract.monitoring import ProjectConfig
 
 from docs_demo_monitoring.reader import DemoReader
 from docs_demo_monitoring.seed import build_seed_traces
@@ -41,7 +41,7 @@ class DemoMonitoring:
         pass
 
 
-@tai_app.monitoring.register_monitoring
+@tai42_app.monitoring.register_monitoring
 def build_monitoring() -> DemoMonitoring:
     """Build the docs-demo backend, pre-seeded with the demo dataset."""
     store = TraceStore()

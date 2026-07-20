@@ -11,7 +11,7 @@
 #
 # What it does, end to end:
 #   1. builds the Studio SPA + reference-plugin bundle and boots a DOCS-DEMO
-#      tai-skeleton (e2e/docs-demo/manifest.yml) via e2e/boot/boot.sh, installing
+#      tai42-skeleton (e2e/docs-demo/manifest.yml) via e2e/boot/boot.sh, installing
 #      the agents / storage-local / toolbox / seeded-monitoring plugins into the
 #      skeleton venv;
 #   2. waits for /health, warms up the Prometheus counters with real tool runs,
@@ -159,8 +159,8 @@ for _ in 1 2 3 4 5; do
     -d '{"tool_name":"studio_demo_echo_prometheus_metrics","arguments":{"message":"docs metrics warm-up"}}' \
     >/dev/null || die "warm-up tool run failed"
 done
-if ! curl -s -m 5 "${BASE_URL}/metrics" | grep -q "tai_tool_call_count"; then
-  die "/metrics has no tai_tool_call_count after warm-up — the System screen would be empty"
+if ! curl -s -m 5 "${BASE_URL}/metrics" | grep -q "tai42_tool_call_count"; then
+  die "/metrics has no tai42_tool_call_count after warm-up — the System screen would be empty"
 fi
 
 # --- 7b. Seed realistic demo accounts (login + users-admin screens) ---------

@@ -13,7 +13,7 @@ import re
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from tai_contract.monitoring import (
+from tai42_contract.monitoring import (
     MetricsFilter,
     MetricsView,
     MonitoringReadNotSupportedError,

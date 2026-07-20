@@ -4,7 +4,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 The Studio: a React 19 + TypeScript web UI — the platform's visual workbench for
-a [`tai-skeleton`](https://github.com/tai42ai/tai-skeleton) MCP server. Browse and exercise tools,
+a [`tai42-skeleton`](https://github.com/tai42ai/tai-skeleton) MCP server. Browse and exercise tools,
 extensions, connectors, templates, and human-in-the-loop interactions against a
 running skeleton, straight from the browser. It is the platform's web UI, and the
 [documentation site](https://tai42.ai/studio) is its full doc home — the screens
@@ -20,8 +20,8 @@ and the deploy notes all live there.
 > `bash e2e/scripts/docs-screenshots.sh`, which boots a fully-populated docs-demo
 > backend and captures every screen in light and dark. It is a **maintainer
 > command**: it needs Docker, `uv`, the Playwright chromium browser, and six
-> checkouts beside this repo — `tai-skeleton`, `tai-docs`, `tai-agents`,
-> `tai-storage-local`, `tai-toolbox`, and `tai-accounts-postgres` (each
+> checkouts beside this repo — `tai42-skeleton`, `tai-docs`, `tai42-agents`,
+> `tai42-storage-local`, `tai42-toolbox`, and `tai42-accounts-postgres` (each
 > overridable with its matching `*_DIR` environment variable). Rerun it after any
 > UI or branding change. See `e2e/docs-demo/README.md`.
 
@@ -48,7 +48,7 @@ The dev server proxies `/api` to a running skeleton — point it with
 sit in the app package, not the repo root: `apps/studio/vite.config.ts` reads it
 with `loadEnv(mode, process.cwd(), 'VITE_')`, and `pnpm dev` runs Vite with
 `apps/studio` as the working directory. New to TAI? Start with
-[`tai-skeleton`](https://github.com/tai42ai/tai-skeleton) — its quickstart boots a working server, then
+[`tai42-skeleton`](https://github.com/tai42ai/tai-skeleton) — its quickstart boots a working server, then
 point this Studio at it.
 
 ## Architecture

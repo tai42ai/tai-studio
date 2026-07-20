@@ -19,19 +19,19 @@ describe('CopyField', () => {
   });
 
   it('shows the value and an optional caption', () => {
-    render(<CopyField value="tai_key_123" caption="Copy this key now." />);
-    expect(screen.getByText('tai_key_123')).toBeInTheDocument();
+    render(<CopyField value="tai42_key_123" caption="Copy this key now." />);
+    expect(screen.getByText('tai42_key_123')).toBeInTheDocument();
     expect(screen.getByText('Copy this key now.')).toBeInTheDocument();
   });
 
   it('copies the value to the clipboard and flips to the copied state', async () => {
     const user = userEvent.setup();
     const writeText = mockClipboard();
-    render(<CopyField value="tai_key_123" />);
+    render(<CopyField value="tai42_key_123" />);
 
     await user.click(screen.getByRole('button', { name: 'Copy' }));
 
-    expect(writeText).toHaveBeenCalledWith('tai_key_123');
+    expect(writeText).toHaveBeenCalledWith('tai42_key_123');
     expect(await screen.findByText('Copied')).toBeInTheDocument();
   });
 

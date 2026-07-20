@@ -25,7 +25,7 @@ function detailFixture(overrides: Partial<MarketplacePluginDetail> = {}): Market
     name: 'toolbox',
     display_name: 'Toolbox',
     icon_url: null,
-    package: 'tai-toolbox',
+    package: 'tai42-toolbox',
     description: 'A box of tools.',
     readme_md: null,
     license: 'Apache-2.0',

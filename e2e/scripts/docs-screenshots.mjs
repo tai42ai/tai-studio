@@ -153,9 +153,9 @@ const AUTHED_PAGES = [
   {
     name: 'system',
     // Real Prometheus counters in the Metrics card (warmed up by the runner). The
-    // counter family name is a substring match, so it matches `tai_tool_call_count_total`.
+    // counter family name is a substring match, so it matches `tai42_tool_call_count_total`.
     path: '/system',
-    wait: 'text=tai_tool_call_count',
+    wait: 'text=tai42_tool_call_count',
     // Also require the Healthy badge and the Prometheus caption so the shot shows
     // the health + metrics ops cards rendered (not the SPA index.html document).
     action: async (page) => {
@@ -185,13 +185,13 @@ const AUTHED_PAGES = [
   },
   {
     // The accounts plugin's users-admin page mounted in the Studio shell (route
-    // `/plugins/tai_accounts_postgres/users`). The runner seeds a realistic set of
+    // `/plugins/tai42_accounts_postgres/users`). The runner seeds a realistic set of
     // human accounts (an admin owner + editor/viewer + a pending invite) before
     // capture, so the users table is non-empty. The wait selector is the seeded
     // owner's email cell — proof of a real populated row, never the "No users yet"
     // empty state.
     name: 'users-admin',
-    path: '/plugins/tai_accounts_postgres/users',
+    path: '/plugins/tai42_accounts_postgres/users',
     wait: 'text=ada.lovelace@demo.tai',
   },
   // --- Capability-scoped screens (authenticated as the seeded OWNED key) -------

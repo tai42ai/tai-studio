@@ -31,7 +31,7 @@ services:
   # Postgres for the connectors router's catalog + token store. The `connectors`
   # router is loaded by the e2e manifest, and its startup catalog refresh opens
   # Postgres, so the recipe provides one. The connector framework DDL
-  # (tai_skeleton.init.sql) is applied by boot.sh after the DB is healthy.
+  # (tai42_skeleton.init.sql) is applied by boot.sh after the DB is healthy.
   # Loopback-bound on 55432 so it never collides with a local Postgres on 5432.
   postgres:
     image: postgres:16-alpine

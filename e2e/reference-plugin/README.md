@@ -5,7 +5,7 @@ It has two halves:
 
 - **Tools** (`src/reference_plugin/tools.py`) — `studio_demo_echo`,
   `studio_demo_form`, and `studio_demo_fail`, registered with the skeleton via
-  `@tai_app.tools.tool`.
+  `@tai42_app.tools.tool`.
 - **Front-end** (`studio-src/`) — a Studio bundle built against `@tai42/studio-sdk`
   that exports a `register(context)` entry; the host calls it with a
   `PluginContext` through which the plugin contributes one page, one tool panel

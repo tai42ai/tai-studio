@@ -12,8 +12,8 @@ function schemaFixture(): SettingsSchema {
     groups: [
       {
         name: 'AppSettings',
-        module: 'tai_app.settings',
-        qualname: 'tai_app.settings.AppSettings',
+        module: 'tai42_app.settings',
+        qualname: 'tai42_app.settings.AppSettings',
         fields: [
           {
             name: 'port',

@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in tai-studio (the React web UI for a tai-skeleton server)
+description: Report a defect in tai-studio (the React web UI for a tai42-skeleton server)
 labels: ['bug']
 body:
   - type: textarea
@@ -28,7 +28,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Browser + version, OS, Node and pnpm versions, and the tai-skeleton version the Studio was pointed at.
-      placeholder: 'Chrome 140, macOS 15, Node 22.x, pnpm 11.9.0, tai-skeleton 0.1.0'
+      description: Browser + version, OS, Node and pnpm versions, and the tai42-skeleton version the Studio was pointed at.
+      placeholder: 'Chrome 140, macOS 15, Node 22.x, pnpm 11.9.0, tai42-skeleton 0.1.0'
     validations:
       required: true

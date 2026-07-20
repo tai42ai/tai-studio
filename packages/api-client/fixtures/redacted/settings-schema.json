@@ -2,7 +2,7 @@
   "groups": [
     {
       "name": "Core",
-      "module": "tai_skeleton.settings",
+      "module": "tai42_skeleton.settings",
       "qualname": "CoreSettings",
       "fields": [
         {

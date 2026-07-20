@@ -1,5 +1,5 @@
 /**
- * @tai42/api-client — the typed transport for the tai-skeleton HTTP API.
+ * @tai42/api-client — the typed transport for the tai42-skeleton HTTP API.
  *
  * One zod schema per consumed endpoint; every response is
  * validated and every failure throws. No caching of its own — server state

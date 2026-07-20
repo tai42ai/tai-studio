@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from tai_contract.monitoring import SpanKind, TraceContext
+from tai42_contract.monitoring import SpanKind, TraceContext
 
 from docs_demo_monitoring.store import TraceStore
 from docs_demo_monitoring.writer import DemoWriter

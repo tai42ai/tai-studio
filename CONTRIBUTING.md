@@ -1,6 +1,6 @@
 # Contributing to tai-studio
 
-`tai-studio` is the React 19 + TypeScript web UI for a `tai-skeleton` MCP server.
+`tai-studio` is the React 19 + TypeScript web UI for a `tai42-skeleton` MCP server.
 It is a pnpm-workspaces monorepo: a shell app composes feature packages that all
 build on a shared SDK and a typed API client.
 
@@ -40,7 +40,7 @@ provisions pnpm via corepack, Homebrew, or a global npm install.
 **maintainer command**, not part of the ordinary loop. The boot recipe
 (`e2e/boot/boot.sh`) needs Docker (it brings up a loopback Redis and Postgres),
 `uv`, and five checkouts beside this repo: `tai-skeleton` — run from its own
-`.venv` — plus `tai-contract`, `tai-kit`, `tai-toolbox`, and `tai-identity-redis`,
+`.venv` — plus `tai42-contract`, `tai42-kit`, `tai42-toolbox`, and `tai42-identity-redis`,
 which the skeleton's `uv.lock` resolves as editable siblings. CI runs it for you
 on every pull request from this repo.
 

@@ -1,4 +1,4 @@
-# tai-skeleton manifest for the DOCS-DEMO boot — the permanent Studio
+# tai42-skeleton manifest for the DOCS-DEMO boot — the permanent Studio
 # screenshot pipeline (e2e/scripts/docs-screenshots.sh).
 #
 # NOT A PRODUCTION TEMPLATE. Like the e2e boot it pairs with a test-only API key
@@ -18,7 +18,7 @@
 # PACKAGE form registers exactly once). boot.sh enables access control, so a
 # concrete identity provider MUST be loaded.
 #
-# tai_accounts_postgres: the Postgres accounts provider (password login + opaque
+# tai42_accounts_postgres: the Postgres accounts provider (password login + opaque
 # tai-sess- sessions). Importing it registers "accounts-postgres" in BOTH the
 # accounts and identity registries, so ACCESS_CONTROL_AUTH_PROVIDERS may name it
 # and its /api/login + /api/auth/users routes have a live provider. Its own
@@ -27,8 +27,8 @@
 # so the login screen renders its password form and the users-admin page renders a
 # populated table.
 lifecycle_modules:
-  - tai_identity_redis
-  - tai_accounts_postgres
+  - tai42_identity_redis
+  - tai42_accounts_postgres
 
 # --- HTTP routers -----------------------------------------------------------
 # ORDER IS LOAD-BEARING: FastMCP matches custom routes in registration (import)
@@ -38,25 +38,25 @@ lifecycle_modules:
 # or the catch-all serves index.html for /health and /metrics and the System
 # screen renders the SPA document instead of its ops cards.
 routers_modules:
-  - tai_skeleton.routers.health # /health + /ready       (System screen)
-  - tai_skeleton.routers.metrics # /metrics               (System screen)
-  - tai_skeleton.routers.interactions
-  - tai_skeleton.routers.channels # /api/channels          (Interactions delivery channels)
-  - tai_skeleton.routers.notifications # /api/notifications      (Notifications inbox)
-  - tai_skeleton.routers.tools
-  - tai_skeleton.routers.extensions
-  - tai_skeleton.routers.tool_extensions
-  - tai_skeleton.routers.presets
-  - tai_skeleton.routers.sub_mcp
-  - tai_skeleton.routers.config
-  - tai_skeleton.routers.templates
-  - tai_skeleton.routers.manifest
-  - tai_skeleton.routers.connectors
-  - tai_skeleton.routers.hooks
-  - tai_skeleton.routers.tool_runs
-  - tai_skeleton.routers.agents # /api/agents*           (Agents screen)
-  - tai_skeleton.routers.observability # /api/observability/*   (Dashboard screen)
-  - tai_skeleton.routers.backend # /api/backend -> present:false (honest System card)
+  - tai42_skeleton.routers.health # /health + /ready       (System screen)
+  - tai42_skeleton.routers.metrics # /metrics               (System screen)
+  - tai42_skeleton.routers.interactions
+  - tai42_skeleton.routers.channels # /api/channels          (Interactions delivery channels)
+  - tai42_skeleton.routers.notifications # /api/notifications      (Notifications inbox)
+  - tai42_skeleton.routers.tools
+  - tai42_skeleton.routers.extensions
+  - tai42_skeleton.routers.tool_extensions
+  - tai42_skeleton.routers.presets
+  - tai42_skeleton.routers.sub_mcp
+  - tai42_skeleton.routers.config
+  - tai42_skeleton.routers.templates
+  - tai42_skeleton.routers.manifest
+  - tai42_skeleton.routers.connectors
+  - tai42_skeleton.routers.hooks
+  - tai42_skeleton.routers.tool_runs
+  - tai42_skeleton.routers.agents # /api/agents*           (Agents screen)
+  - tai42_skeleton.routers.observability # /api/observability/*   (Dashboard screen)
+  - tai42_skeleton.routers.backend # /api/backend -> present:false (honest System card)
   # Accounts + kind-status surfaces (all BEFORE the SPA catch-all below):
   #   api_keys     -> /api/auth/roles (the users-admin role picker) + /api/auth/keys
   #   login        -> /api/login/methods aggregator + /api/auth/logout dispatcher
@@ -66,27 +66,27 @@ routers_modules:
   #                   invite/accept} routes (public via the /api/login prefix)
   #   routes_users -> the accounts plugin's authed /api/auth/users* admin API
   #                   (the users-admin Studio page's data source)
-  - tai_skeleton.routers.api_keys # /api/auth/roles + /api/auth/keys
-  - tai_skeleton.routers.login # /api/login/methods    (Login screen)
-  - tai_skeleton.routers.system_kinds # /api/system/kinds     (System screen kinds table)
-  - tai_accounts_postgres.routes_login # /api/login/password + bootstrap + invite
-  - tai_accounts_postgres.routes_users # /api/auth/users*      (Users-admin page)
-  - tai_skeleton.routers.plugins # LAST — SPA catch-all
+  - tai42_skeleton.routers.api_keys # /api/auth/roles + /api/auth/keys
+  - tai42_skeleton.routers.login # /api/login/methods    (Login screen)
+  - tai42_skeleton.routers.system_kinds # /api/system/kinds     (System screen kinds table)
+  - tai42_accounts_postgres.routes_login # /api/login/password + bootstrap + invite
+  - tai42_accounts_postgres.routes_users # /api/auth/users*      (Users-admin page)
+  - tai42_skeleton.routers.plugins # LAST — SPA catch-all
 
 # --- Tool extensions --------------------------------------------------------
 # `ask_external` wraps a callback_url-taking tool into an external human-in-the-
-# loop question (the extensions catalog screen). `prometheus_metrics` (tai-toolbox)
+# loop question (the extensions catalog screen). `prometheus_metrics` (tai42-toolbox)
 # is the WRAPPER that branches a tool into a metrics-emitting variant, so warm-up
 # calls populate /metrics — the System screen's Metrics card.
 extensions_modules:
-  - tai_skeleton.extensions.builtin.ask_external
-  - tai_toolbox.extensions.prometheus
+  - tai42_skeleton.extensions.builtin.ask_external
+  - tai42_toolbox.extensions.prometheus
 
 # --- Tools ------------------------------------------------------------------
 # The reference plugin's demo tools, plus the ask_user builtin. The
 # `prometheus_metrics` extension is attached to studio_demo_echo, branching it
 # into studio_demo_echo_prometheus_metrics — the variant the runner warms up so
-# /metrics serves real tai_tool_* counter families.
+# /metrics serves real tai42_tool_* counter families.
 #
 # The management capabilities (config/manifest/templates/hooks/notify) are served
 # by the routers loaded above and project onto the MCP tool surface from the
@@ -99,7 +99,7 @@ tools:
       studio_demo_echo:
         - prometheus_metrics
   - title: ask-user
-    module: tai_skeleton.tools.builtin.interactions
+    module: tai42_skeleton.tools.builtin.interactions
 
 # --- Agents -----------------------------------------------------------------
 # Registers `tools_agent` (spec_runnable) so GET /api/agents populates the Agents
@@ -109,14 +109,14 @@ tools:
 # an agent would; the capture never does).
 agents:
   - title: demo-agents
-    module: tai_agents.tools_agent
+    module: tai42_agents.tools_agent
     include:
       - tools_agent
 
 # --- Storage ----------------------------------------------------------------
 # Local-filesystem storage backend so GET /api/templates lists the seeded
 # templates (root path is set by the runner via STORAGE_LOCAL_ROOT_PATH).
-storage_module: tai_storage_local
+storage_module: tai42_storage_local
 
 # --- Monitoring -------------------------------------------------------------
 # The self-contained docs-demo monitoring backend: it seeds a realistic
@@ -126,12 +126,12 @@ monitoring_module: docs_demo_monitoring
 
 # --- Studio plugins ---------------------------------------------------------
 # reference_plugin contributes the "Reference" nav entry every signed-in shot
-# waits on; tai_accounts_postgres contributes the users-admin page (nav entry
-# "Users", route /plugins/tai_accounts_postgres/users) — its API routers above
+# waits on; tai42_accounts_postgres contributes the users-admin page (nav entry
+# "Users", route /plugins/tai42_accounts_postgres/users) — its API routers above
 # register no Studio page, so it MUST be listed here for the page to mount.
 studio_plugins:
   - reference_plugin
-  - tai_accounts_postgres
+  - tai42_accounts_postgres
 
 # --- Curated user tools -----------------------------------------------------
 # A non-empty user_tools set makes GET /api/manifest return a populated payload,

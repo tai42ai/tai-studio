@@ -1,5 +1,5 @@
 {
   "present": true,
   "provider": "FilesystemStorage",
-  "module": "tai_storage_fs.provider"
+  "module": "tai42_storage_fs.provider"
 }

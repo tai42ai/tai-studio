@@ -81,7 +81,7 @@ interface Row {
 /**
  * A `JqAuthContext` skeleton pre-seeding the sample-context editor, so the author
  * sees the exact shape enforcement evaluates the condition against
- * (`tai_contract.access_control.models.JqAuthContext`).
+ * (`tai42_contract.access_control.models.JqAuthContext`).
  */
 const SAMPLE_CONTEXT_SKELETON = JSON.stringify(
   { sub: 'anon', scopes: [], identity: {}, policy: {}, context: {}, request: {}, system: {} },

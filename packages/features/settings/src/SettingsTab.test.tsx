@@ -12,8 +12,8 @@ function schemaFixture(): SettingsSchema {
     groups: [
       {
         name: 'AppSettings',
-        module: 'tai_app.settings',
-        qualname: 'tai_app.settings.AppSettings',
+        module: 'tai42_app.settings',
+        qualname: 'tai42_app.settings.AppSettings',
         fields: [
           {
             name: 'port',
@@ -86,7 +86,7 @@ describe('SettingsTab', () => {
     renderWithProviders(<SettingsTab readOnly={false} />, { client });
 
     expect(await screen.findByRole('heading', { name: 'AppSettings' })).toBeInTheDocument();
-    expect(screen.getByText('tai_app.settings')).toBeInTheDocument();
+    expect(screen.getByText('tai42_app.settings')).toBeInTheDocument();
     expect(screen.getByLabelText('port')).toHaveValue(100);
     expect(screen.getByRole('checkbox', { name: 'debug' })).toBeInTheDocument();
     // The required secret field carries a marker.

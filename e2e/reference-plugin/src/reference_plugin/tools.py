@@ -11,10 +11,10 @@
 
 from typing import Any, Literal
 
-from tai_contract.app import tai_app
+from tai42_contract.app import tai42_app
 
 
-@tai_app.tools.tool
+@tai42_app.tools.tool
 async def studio_demo_echo(message: str, shout: bool = False) -> dict[str, Any]:
     """Echo a message back, optionally upper-cased.
 
@@ -29,7 +29,7 @@ async def studio_demo_echo(message: str, shout: bool = False) -> dict[str, Any]:
     return {"original": message, "echoed": echoed, "shouted": shout}
 
 
-@tai_app.tools.tool
+@tai42_app.tools.tool
 async def studio_demo_form(
     name: str,
     count: int = 1,
@@ -59,7 +59,7 @@ async def studio_demo_form(
     return {"greeting": greeting, "inputs": {"name": name, "count": count, "mood": mood, "loud": loud}}
 
 
-@tai_app.tools.tool
+@tai42_app.tools.tool
 async def studio_demo_fail(reason: str = "intentional failure") -> Any:
     """Always raise, so the Studio's error handling can be exercised.
 

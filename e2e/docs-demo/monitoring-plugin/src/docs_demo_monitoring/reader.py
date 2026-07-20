@@ -1,6 +1,6 @@
 """The docs-demo monitoring reader — real aggregation over the trace store.
 
-Implements the full :class:`~tai_contract.monitoring.MonitoringReader` contract
+Implements the full :class:`~tai42_contract.monitoring.MonitoringReader` contract
 by aggregating the seeded (and any live-recorded) traces in-process. The Studio
 dashboard, run list, and trace drill-in are all served from here, so the pixels
 in the screenshots are produced by the same code path a production reader uses —
@@ -16,7 +16,7 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
-from tai_contract.monitoring import (
+from tai42_contract.monitoring import (
     MetricsFilter,
     MetricsResult,
     MetricsRow,

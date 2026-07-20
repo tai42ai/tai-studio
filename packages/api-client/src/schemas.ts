@@ -679,7 +679,7 @@ export const notifications = z.object({
 export type Notifications = z.infer<typeof notifications>;
 
 // -- hooks -------------------------------------------------------------------
-// Shapes match tai_contract.hooks.HookParams: a hook fires a `tool` on a `topic`,
+// Shapes match tai42_contract.hooks.HookParams: a hook fires a `tool` on a `topic`,
 // optionally gated by a `condition` and shaped by an `expr` (each either an inline
 // spec or a registered id, with its own kwargs).
 

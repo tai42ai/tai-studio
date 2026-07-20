@@ -10,7 +10,7 @@ changes.**
 ## [Unreleased]
 
 First release (0.1.0) in preparation. This is the initial build of the Studio, a
-React 19 + TypeScript web workbench for a running `tai-skeleton` MCP server.
+React 19 + TypeScript web workbench for a running `tai42-skeleton` MCP server.
 
 ### Added
 

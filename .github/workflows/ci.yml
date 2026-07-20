@@ -74,11 +74,11 @@ jobs:
       - name: Require a changeset
         run: pnpm changeset status --since=origin/main
 
-  # End-to-end: Playwright drives the SPA against a real tai-skeleton backend.
+  # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) resolves the skeleton as the sibling
   # ``../tai-skeleton`` and runs it from its own ``.venv``; the skeleton's
-  # uv.lock in turn resolves tai-contract, tai-kit, tai-toolbox (the last via the
-  # ``dev`` extra's ``tai-skeleton[toolbox]`` self-reference), and tai-identity-redis
+  # uv.lock in turn resolves tai42-contract, tai42-kit, tai42-toolbox (the last via the
+  # ``dev`` extra's ``tai42-skeleton[toolbox]`` self-reference), and tai42-identity-redis
   # (the e2e manifest's ``redis`` identity provider, pinned editable in uv.lock)
   # from sibling editable paths, so all five are checked out next to this repo.
   # Cross-repo checkout uses TAI_CI_TOKEN (fine-grained, Contents:read) to

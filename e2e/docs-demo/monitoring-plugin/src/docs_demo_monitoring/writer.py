@@ -22,7 +22,7 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
-from tai_contract.monitoring import (
+from tai42_contract.monitoring import (
     DEFAULT_LEVEL,
     MonitoringLevel,
     MonitoringObservation,
