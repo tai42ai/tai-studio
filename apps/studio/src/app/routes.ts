@@ -29,25 +29,34 @@ export const PATH: Record<RouteToken, string> = {
   marketplace: '/marketplace',
 };
 
-/** The feature routes the shell mounts (every token EXCEPT `login`), each backed
- * by its `@tai42/feature-*` page. */
+/**
+ * The standalone lead nav row, shown above the labeled sections with no section
+ * header of its own. Its {@link NAV_LABELS} label is already "Dashboard".
+ */
+export const DASHBOARD_TOKEN = 'observability' as const satisfies RouteToken;
+
+/**
+ * The primary nav's grouped structure and its ORDER: the single source of truth
+ * for how feature tokens are labelled into sections and the sequence they render
+ * in. {@link FEATURE_TOKENS} is derived from this (Dashboard first, then each
+ * section in turn), so nav order and the flat token list can never drift apart.
+ */
+export const NAV_SECTIONS = [
+  { label: 'Capabilities', tokens: ['tools', 'agents', 'presets', 'extensions', 'templates'] },
+  { label: 'Integrations', tokens: ['connectors', 'hooks', 'storage'] },
+  { label: 'Activity', tokens: ['scheduling', 'interactions', 'notifications'] },
+  { label: 'Administration', tokens: ['marketplace', 'manifest', 'settings', 'system'] },
+] as const satisfies readonly { readonly label: string; readonly tokens: readonly RouteToken[] }[];
+
+/**
+ * The feature routes the shell mounts (every token EXCEPT `login`), each backed
+ * by its `@tai42/feature-*` page. DERIVED from {@link DASHBOARD_TOKEN} +
+ * {@link NAV_SECTIONS} (order-preserving, Dashboard first) so the nav grouping is
+ * the one place tokens are declared — the type below and every consumer track it.
+ */
 export const FEATURE_TOKENS = [
-  'tools',
-  'agents',
-  'presets',
-  'extensions',
-  'interactions',
-  'notifications',
-  'connectors',
-  'hooks',
-  'templates',
-  'storage',
-  'manifest',
-  'settings',
-  'system',
-  'scheduling',
-  'observability',
-  'marketplace',
+  DASHBOARD_TOKEN,
+  ...NAV_SECTIONS.flatMap((section) => section.tokens),
 ] as const satisfies readonly RouteToken[];
 
 export type FeatureToken = (typeof FEATURE_TOKENS)[number];

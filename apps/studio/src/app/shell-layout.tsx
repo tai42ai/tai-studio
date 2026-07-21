@@ -34,10 +34,10 @@ import {
   type RegisteredNavEntry,
 } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
-import { ApiError } from '@tai42/api-client';
+import { ApiError, type MeProjection } from '@tai42/api-client';
 import { InteractionsBadge } from '@tai42/feature-interactions';
 
-import { FEATURE_TOKENS, PATH, type FeatureToken } from './routes';
+import { DASHBOARD_TOKEN, NAV_SECTIONS, PATH, type FeatureToken } from './routes';
 import { contributionCovered, tokenCovered } from './token-requirements';
 import { RouteCapabilityBoundary } from './route-capability-boundary';
 import { SIGN_OUT_NOTICE_KEY } from './login-page';
@@ -130,6 +130,54 @@ const navListStyle = {
   display: 'grid',
   gap: '2px',
 } as const;
+
+/** Vertical rhythm between the Dashboard row and each labelled nav section. */
+const navGroupsStyle = {
+  display: 'grid',
+  gap: 'var(--tai-space-3)',
+} as const;
+
+/** The DOM id of a section's header, so its item list can be `aria-labelledby` it
+ * (the list is named by the visible header, not a duplicated `aria-label`). */
+function sectionHeaderId(label: string): string {
+  return `nav-section-${label.toLowerCase()}`;
+}
+
+/**
+ * The primary nav body under a ready projection: the standalone Dashboard row
+ * first, then each {@link NAV_SECTIONS} group as an uppercase muted header over
+ * its items. Every row is capability-filtered by {@link tokenCovered}; a section
+ * whose items are ALL filtered out renders NOTHING (no empty labelled group), and
+ * the Dashboard row hides the same way.
+ */
+function NavSections({ projection }: { projection: MeProjection }): ReactNode {
+  return (
+    <div style={navGroupsStyle}>
+      {tokenCovered(projection, DASHBOARD_TOKEN) ? (
+        <ul style={navListStyle}>
+          <NavItem token={DASHBOARD_TOKEN} />
+        </ul>
+      ) : null}
+      {NAV_SECTIONS.map((section) => {
+        const tokens = section.tokens.filter((token) => tokenCovered(projection, token));
+        if (tokens.length === 0) return null;
+        const headerId = sectionHeaderId(section.label);
+        return (
+          <div key={section.label}>
+            <div id={headerId} className="tai-nav-section-header">
+              {section.label}
+            </div>
+            <ul style={navListStyle} aria-labelledby={headerId}>
+              {tokens.map((token) => (
+                <NavItem key={token} token={token} />
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Placeholder nav rows shown while the capability projection loads, so the
  * sidebar reserves its space instead of flashing an empty or full nav. */
@@ -254,13 +302,7 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
               onRetry={retry}
             />
           ) : (
-            <ul style={navListStyle}>
-              {FEATURE_TOKENS.filter((token) => tokenCovered(state.projection, token)).map(
-                (token) => (
-                  <NavItem key={token} token={token} />
-                ),
-              )}
-            </ul>
+            <NavSections projection={state.projection} />
           )}
         </nav>
         {visibleNavEntries.length > 0 ? (

@@ -9,7 +9,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { PluginContext } from '@tai42/studio-sdk';
 import type { MeProjection } from '@tai42/api-client';
@@ -149,6 +149,78 @@ describe('capability-gated nav', () => {
     expect(await screen.findByRole('link', { name: 'Tools' })).toBeInTheDocument();
     expect(attempts).toBe(2);
     spy.mockRestore();
+  });
+});
+
+describe('grouped nav structure', () => {
+  const SECTIONS = ['Capabilities', 'Integrations', 'Activity', 'Administration'] as const;
+
+  it('leads with Dashboard, then renders the four sections in order with their headers', async () => {
+    landAuthed();
+    const nav = await screen.findByRole('navigation', { name: 'Primary' });
+
+    // The section headers appear in the approved order.
+    const headers = Array.from(nav.querySelectorAll('.tai-nav-section-header')).map(
+      (el) => el.textContent,
+    );
+    expect(headers).toEqual([...SECTIONS]);
+
+    // Each header names its own item list (accessible group, not a fake link).
+    for (const label of SECTIONS) {
+      expect(within(nav).getByRole('list', { name: label })).toBeInTheDocument();
+    }
+
+    // Dashboard leads: its row precedes the first section header in the DOM.
+    const dashboard = within(nav).getByRole('link', { name: 'Dashboard' });
+    const firstHeader = nav.querySelector('.tai-nav-section-header');
+    expect(firstHeader).not.toBeNull();
+    expect(
+      dashboard.compareDocumentPosition(firstHeader as Node) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('places each token under its section (a representative from each)', async () => {
+    landAuthed();
+    await screen.findByRole('link', { name: 'Tools' });
+    // A representative link lives inside the list named by its section header.
+    const inSection = (section: string, link: string): HTMLElement =>
+      within(screen.getByRole('list', { name: section })).getByRole('link', { name: link });
+    expect(inSection('Capabilities', 'Templates')).toBeInTheDocument();
+    expect(inSection('Integrations', 'Connectors')).toBeInTheDocument();
+    expect(inSection('Activity', 'Scheduling')).toBeInTheDocument();
+    expect(inSection('Administration', 'Marketplace')).toBeInTheDocument();
+  });
+
+  it('hides a section whose items are all filtered out (no empty labelled header)', async () => {
+    // Only `/api/tools` is reachable: Capabilities has a covered item (Tools), and
+    // Administration shows via always-on Settings — Integrations and Activity have
+    // no covered item, and Dashboard's route is uncovered.
+    server.use(meHandler(scoped(['/api/tools'])), okPlugins, okChannels);
+    renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap' });
+
+    await screen.findByRole('link', { name: 'Tools' });
+    expect(screen.getByText('Capabilities')).toBeInTheDocument();
+    expect(screen.getByText('Administration')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
+
+    // Fail-closed grouping: no header AND no list for a fully-filtered section.
+    expect(screen.queryByText('Integrations')).toBeNull();
+    expect(screen.queryByText('Activity')).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Integrations' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Activity' })).toBeNull();
+
+    // The standalone Dashboard row respects the filter too.
+    expect(screen.queryByRole('link', { name: 'Dashboard' })).toBeNull();
+  });
+
+  it('shows the Dashboard lead row when its route is covered', async () => {
+    server.use(meHandler(scoped(['/api/observability'])), okPlugins, okChannels);
+    renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap' });
+
+    // Dashboard leads; the only other visible row is always-on Settings.
+    expect(await screen.findByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByText('Administration')).toBeInTheDocument();
+    expect(screen.queryByText('Capabilities')).toBeNull();
   });
 });
 

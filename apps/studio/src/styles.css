@@ -47,6 +47,19 @@ body {
   color: var(--tai-color-primary-text);
 }
 
+/* Section headers grouping the sidebar nav links. Non-interactive labels — small,
+   uppercase, and muted so the grouped links stay the visual focus. They label
+   their item list via aria-labelledby, keeping the group accessible without a
+   fake link. */
+.tai-nav-section-header {
+  padding: var(--tai-space-2) var(--tai-space-3) var(--tai-space-1);
+  font: var(--tai-text-sm) var(--tai-font-sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--tai-color-text-muted);
+}
+
 /* Skip-to-content link: off-screen until focused, so a keyboard or screen-reader
    user can bypass the sidebar nav and jump straight to the page content
    (WCAG 2.4.1). It is the first focusable element in the shell. */
