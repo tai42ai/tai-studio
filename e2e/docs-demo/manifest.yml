@@ -30,6 +30,12 @@ lifecycle_modules:
   - tai42_identity_redis
   - tai42_accounts_postgres
 
+# --- Default router set ------------------------------------------------------
+# Mount no default routers; `routers_modules` below already names every UI-facing
+# door the docs screenshots need. Pinning "none" keeps that curated surface exact
+# rather than layering the full built-in default set on top.
+default_routers: none
+
 # --- HTTP routers -----------------------------------------------------------
 # ORDER IS LOAD-BEARING: FastMCP matches custom routes in registration (import)
 # order, and the `plugins` SPA catch-all (`/{path}`) matches any path except

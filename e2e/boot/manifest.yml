@@ -22,6 +22,12 @@
 lifecycle_modules:
   - tai42_identity_redis
 
+# --- Default router set ------------------------------------------------------
+# Mount no default routers; the explicit `routers_modules` list below is the
+# exact surface the Studio e2e suites drive. Pinning "none" keeps it from
+# expanding to the full built-in default set.
+default_routers: none
+
 # --- HTTP routers -----------------------------------------------------------
 # ORDER IS LOAD-BEARING: `plugins` is LAST. Its SPA catch-all (`/{path}`) matches
 # any path, and FastMCP matches custom routes in registration (import) order, so a
