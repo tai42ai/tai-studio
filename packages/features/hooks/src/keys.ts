@@ -21,3 +21,13 @@ export function hooksListKey(topic: string): readonly [typeof HOOKS_KEY_ROOT, st
  * a bind fires must not needlessly refetch it.
  */
 export const hookVerifiersKey = ['hook-verifiers'] as const;
+
+/** The shared root segment the trigger-links list key starts with. It sits under
+ * its OWN root, distinct from {@link HOOKS_KEY_ROOT}: a hook register/unregister
+ * must not needlessly refetch the trigger links, and vice versa. */
+export const TRIGGER_LINKS_KEY_ROOT = 'trigger-links' as const;
+
+/** Key for the trigger-links list (there is one unfiltered list). */
+export function triggerLinksListKey(): readonly [typeof TRIGGER_LINKS_KEY_ROOT] {
+  return [TRIGGER_LINKS_KEY_ROOT];
+}

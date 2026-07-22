@@ -8,14 +8,34 @@
  * error surfaces owned by {@link HooksList} and {@link RegisterHookForm}.
  */
 import { useState, type ReactNode } from 'react';
-import { Card, Field, TextInput, type PageProps } from '@tai42/studio-sdk';
+import {
+  Card,
+  Field,
+  TextInput,
+  coversAnyRoute,
+  isFullProjection,
+  useCapabilities,
+  type PageProps,
+} from '@tai42/studio-sdk';
 
 import { HooksList } from './HooksList';
 import { RegisterHookForm } from './RegisterHookForm';
 import { TopicVerifierForm } from './TopicVerifierForm';
+import { TriggerLinksList } from './TriggerLinksList';
+
+/** The trigger-links CRUD read/write surface, matched by prefix for section
+ * VISIBILITY: a full (admin / gate-off) projection or a hooks-granted (read or
+ * write) non-admin whose projection reaches these routes sees the section; an
+ * ungranted caller does not. Fails closed until the projection is ready. */
+const TRIGGER_LINKS_ROUTE = '/api/hooks/trigger-links';
 
 export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
   const [topic, setTopic] = useState('');
+  const { state } = useCapabilities();
+
+  const triggerLinksVisible =
+    state.status === 'ready' &&
+    (isFullProjection(state.projection) || coversAnyRoute(state.projection, [TRIGGER_LINKS_ROUTE]));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
@@ -37,6 +57,7 @@ export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
       </Card>
 
       <HooksList topic={topic} />
+      {triggerLinksVisible ? <TriggerLinksList /> : null}
       <TopicVerifierForm />
       <RegisterHookForm />
     </div>

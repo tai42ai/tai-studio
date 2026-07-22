@@ -50,6 +50,7 @@ REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/0"
 CONNECTOR_STORE_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/1"
 INTERACTIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/2"
 TOOL_RUNS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/3"
+HOOKS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/4"
 PG_HOST_PORT=55432
 
 # The accounts docs-demo (APPLY_ACCOUNTS_DDL=1, set by docs-screenshots.sh) needs
@@ -197,6 +198,12 @@ export INTERACTIONS_PUBLIC_BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
 # (db 3, isolated from access-control/connector/interactions). Every RunPanel GETs
 # `/api/tool-runs?tool_name=...` on mount, so this must resolve.
 export TAI_TOOL_RUNS_REDIS_URL="${TOOL_RUNS_REDIS_URL}"
+
+# Hooks registry: with no HOOKS_REDIS_URL the hooks manager runs in-memory
+# per-process, and trigger links (a durable public URL must be shared across
+# workers) refuse with a loud 501. Point it at the compose Redis (db 4, isolated
+# from the stores above) so the hooks-page trigger-link flow works end to end.
+export HOOKS_REDIS_URL="${HOOKS_REDIS_URL}"
 
 # Connectors engine: a throwaway HMAC/KEK so the connectors router boots and the
 # oauth/complete route can sign/verify state. The bridge origin (optional) and

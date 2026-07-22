@@ -1,19 +1,34 @@
 /**
  * Test harness for the hooks feature. `renderWithProviders` wraps the unit under
  * test in the exact provider stack the shell supplies at runtime — a
- * retry-disabled TanStack Query client, the SDK's raw `ApiProvider` (a stub
- * client), `ThemeProvider`, and a `NavigationProvider` whose `navigate` is a spy.
- * Only test dependencies are imported here; no production module is stubbed.
+ * retry-disabled TanStack Query client, `AuthProvider` + `CapabilityProvider` (so
+ * the capability-gated trigger-links section resolves), the SDK's raw `ApiProvider`
+ * (a stub client), `ThemeProvider`, and a `NavigationProvider` whose `navigate` is
+ * a spy. Only test dependencies are imported here; no production module is stubbed.
+ *
+ * A `projection` seeds the capability context to `ready`: a session key is set so
+ * `AuthProvider` is authenticated and `CapabilityProvider` fetches a stubbed
+ * `getMe`. With no projection the context stays `loading` and the gated section
+ * stays hidden (fail closed) — the shape the pre-existing tests expect.
  */
 import type { ReactElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
-import type { ApiClient, HookParams } from '@tai42/api-client';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
+import type { ApiClient, HookParams, MeProjection } from '@tai42/api-client';
 import { render, type RenderResult } from '@testing-library/react';
 import { vi, type Mock } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;
+
+/** The session key `useAuth` reads/writes; set so `CapabilityProvider` fetches. */
+const SESSION_KEY = 'tai-studio.apiKey';
 
 export interface RenderWithProvidersResult extends RenderResult {
   readonly navigate: Mock;
@@ -22,25 +37,39 @@ export interface RenderWithProvidersResult extends RenderResult {
 
 export function renderWithProviders(
   ui: ReactElement,
-  { client }: { client: StubApiClient },
+  { client, projection }: { client: StubApiClient; projection?: MeProjection },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const navigate = vi.fn();
+
+  if (projection !== undefined) {
+    globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
+  } else {
+    globalThis.sessionStorage.removeItem(SESSION_KEY);
+  }
   // The stub only implements the methods exercised by a given test; the cast
-  // asserts the shape the SDK context expects.
-  const apiClient = client as ApiClient;
+  // asserts the shape the SDK context expects. A seeded projection stubs `getMe`
+  // so `CapabilityProvider` resolves to `ready`.
+  const apiClient =
+    projection !== undefined
+      ? ({ ...client, getMe: () => Promise.resolve(projection) } as ApiClient)
+      : (client as ApiClient);
 
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <ApiProvider value={apiClient}>
-        <ThemeProvider>
-          <NavigationProvider value={{ navigate, resolvePath: () => '/x' }}>
-            {ui}
-          </NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider value={apiClient}>
+          <CapabilityProvider>
+            <ThemeProvider>
+              <NavigationProvider value={{ navigate, resolvePath: () => '/x' }}>
+                {ui}
+              </NavigationProvider>
+            </ThemeProvider>
+          </CapabilityProvider>
+        </ApiProvider>
+      </AuthProvider>
     </QueryClientProvider>,
   );
 
@@ -63,4 +92,27 @@ export function hook(overrides: Partial<HookParams> = {}): HookParams {
     expr_kwargs: {},
     ...overrides,
   };
+}
+
+const baseProjection: MeProjection = {
+  user_id: 'u-test',
+  owner_user_id: null,
+  admin: false,
+  scopes: [],
+  routes: [],
+  route_patterns: [],
+  sub_mcp: [],
+  tools: [],
+  agents: [],
+  mintable: false,
+};
+
+/** A total (admin / gate-off) projection: every surface reachable. */
+export function fullProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return { ...baseProjection, admin: true, ...overrides };
+}
+
+/** A scoped (non-admin) projection restricted to the given slice. */
+export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return { ...baseProjection, ...overrides };
 }

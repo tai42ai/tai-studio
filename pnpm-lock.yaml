@@ -406,6 +406,9 @@ importers:
       '@tai42/studio-sdk':
         specifier: workspace:*
         version: link:../../studio-sdk
+      uqr:
+        specifier: 'catalog:'
+        version: 0.1.3
     devDependencies:
       '@tanstack/react-query':
         specifier: 'catalog:'

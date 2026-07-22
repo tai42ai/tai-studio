@@ -82,6 +82,20 @@ export interface TopicVerifierBody {
   readonly config?: Record<string, unknown>;
 }
 
+/**
+ * Body for minting a trigger link (POST `/api/hooks/trigger-links`). `ttl_seconds`
+ * is REQUIRED and nullable — a positive int is a timed link, `null` is a permanent
+ * link (`0`/negative is a loud server 400); it is always sent EXPLICITLY (a dropped
+ * key 400s server-side). `name` is optional (the server generates one when omitted);
+ * `tool_kwargs` is the optional per-link params merged last into every fire.
+ */
+export interface TriggerLinkCreateBody {
+  readonly topic: string;
+  readonly name?: string;
+  readonly ttl_seconds: number | null;
+  readonly tool_kwargs?: Record<string, unknown> | null;
+}
+
 /** Body for adding a URL to a scope (POST `/api/auth/scopes`). */
 export interface AddUrlToScopeBody {
   readonly scope_id: string;
@@ -336,6 +350,13 @@ export function createApiClient(config: ApiConfig) {
   ) => apiRequest(config, path, schema, options);
 
   return {
+    // The configured API base — the exact `baseUrl` this client was constructed
+    // with (`''` for a same-origin deployment). Read-only: features that must
+    // compose an ABSOLUTE API URL (a QR-encoded public path the API origin must
+    // receive, not the SPA origin) read it instead of assuming same-origin. The
+    // transport itself still joins it per request; this only surfaces the value.
+    baseUrl: config.baseUrl ?? '',
+
     // -- tools ---------------------------------------------------------------
     listTools: (signal?: AbortSignal) => req('/api/tools', s.toolNames, { signal }),
     getToolSchema: (name: string, signal?: AbortSignal) =>
@@ -601,6 +622,30 @@ export function createApiClient(config: ApiConfig) {
     // Unbind a topic's verifier (re-opens its public ingress). 404 when no binding.
     deleteTopicVerifier: (topic: string) =>
       req(`/api/hooks/topics/${encodeSegment(topic)}/verifier`, s.topicVerifierRemoved, {
+        method: 'DELETE',
+      }),
+
+    // -- hooks: trigger links -------------------------------------------------
+    // Mint a public trigger link for a topic. `ttl_seconds` is sent EXPLICITLY
+    // (including `null` for a permanent link) — the server requires the key present
+    // and 400s a dropped one; `tool_kwargs` is omitted when undefined. The raw
+    // `token` rides the response ONCE (composed into the QR URL client-side).
+    createTriggerLink: (body: TriggerLinkCreateBody) =>
+      req('/api/hooks/trigger-links', s.triggerLinkCreated, {
+        method: 'POST',
+        body: {
+          topic: body.topic,
+          name: body.name,
+          ttl_seconds: body.ttl_seconds,
+          tool_kwargs: body.tool_kwargs,
+        },
+      }),
+    // Every live trigger-link record (hash prefix only — never a raw token).
+    listTriggerLinks: (signal?: AbortSignal) =>
+      req('/api/hooks/trigger-links', s.triggerLinkList, { signal }),
+    // Revoke a link by name (immediate + durable). 404 when the name is unknown.
+    deleteTriggerLink: (name: string) =>
+      req(`/api/hooks/trigger-links/${encodeSegment(name)}`, s.triggerLinkDeleted, {
         method: 'DELETE',
       }),
 

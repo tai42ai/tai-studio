@@ -45,7 +45,8 @@
   },
   "dependencies": {
     "@tai42/api-client": "workspace:*",
-    "@tai42/studio-sdk": "workspace:*"
+    "@tai42/studio-sdk": "workspace:*",
+    "uqr": "catalog:"
   },
   "devDependencies": {
     "@tanstack/react-query": "catalog:",

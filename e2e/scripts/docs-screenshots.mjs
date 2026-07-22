@@ -255,6 +255,30 @@ const AUTHED_PAGES = [
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
+  {
+    // The trigger-link create flow: driven with the FULL key (the section + create
+    // control show for a full/admin projection), the shot frames the create dialog's
+    // QR step. The action opens the create dialog, fills a permanent link with a
+    // params JSON, submits, and waits on the rendered QR svg. Like the claim-link
+    // shot, the modal makes the background nav inert, so the plugin-nav wait is
+    // skipped and the QR wait is the stable signal.
+    name: 'hooks-trigger-link',
+    path: '/hooks',
+    wait: 'text=Trigger links',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Create trigger link' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByLabel('Topic').fill('orders.created');
+      await dialog.getByLabel('Name').fill('lobby-poster');
+      await dialog.getByRole('radio', { name: 'Permanent' }).click();
+      await dialog.getByLabel('Tool params (JSON)').fill('{ "priority": "high" }');
+      await dialog.getByRole('button', { name: 'Create link' }).click();
+      await page
+        .locator('[data-testid="trigger-link-qr"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
 ];
 
 /** The credential screen — captured SIGNED OUT (no seeded key). */
