@@ -4,22 +4,26 @@
  * Environment / API keys / Backup) followed by any settings tabs Studio plugins
  * contributed.
  *
- * The config mode read (`GET /api/config/mode`) lives behind `/api/config`, so it
- * is issued only once the projection is known to reach that surface — the same
- * coverage check that gates the Settings/Environment sub-tabs. When config is
- * covered the page follows the shared state convention: a <Skeleton> while the mode
- * is loading, a loud <ErrorState> on any failure (a rejected request or a zod
- * mismatch is always a visible error, never a silent render), and the tabbed content
- * with the mode card otherwise. When a scoped session does NOT cover `/api/config`,
- * the mode read is skipped entirely and the shell renders with a conservative
- * read-only default and no mode card, so the always-shown API keys tab stays
- * reachable and a scoped mode 403 never walls the page.
+ * The Settings and Environment tabs read the deployment's ADMIN-ONLY `secret` config
+ * routes (`GET /api/config/settings-schema` and `GET /api/config/env`), so they render
+ * only when the caller's projection reaches those routes — a scoped editor/viewer, who
+ * can reach the plain `GET /api/config/mode` read but NOT the secret routes, never opens
+ * a tab whose reads would 403. The config mode read is issued together with those tabs
+ * (it feeds the mode card shown above them), so it too is skipped for a caller who cannot
+ * reach the admin config surface. When that surface is covered the page follows the shared
+ * state convention: a <Skeleton> while the mode is loading, a loud <ErrorState> on any
+ * failure (a rejected request or a zod mismatch is always a visible error, never a silent
+ * render), and the tabbed content with the mode card otherwise. When a caller does NOT
+ * cover the admin config routes, the mode read is skipped entirely and the shell renders
+ * with a conservative read-only default and no mode card, so the always-shown API keys tab
+ * stays reachable and a scoped mode 403 never walls the page.
  *
  * The deployment-wide `read_only` flag is threaded to every core tab so editing is
  * disabled identically across the surface. VISIBILITY is the capability boundary:
  * the Settings, Environment, and Backup tabs render only when the caller's projection
- * reaches their backing read route (`/api/config` and `/api/backup`), so a scoped
- * session never opens a tab whose reads would 403; the API keys tab is an own-key
+ * reaches their backing read route (the admin-only `GET /api/config/settings-schema` /
+ * `GET /api/config/env`, and `/api/backup`), so a scoped session never opens a tab whose
+ * reads would 403; the API keys tab is an own-key
  * surface the server self-limits, so it is always shown. A full (admin / gate-off)
  * projection shows every tab. Each tab owns its own server reads; this container
  * reads only the mode.
@@ -60,6 +64,7 @@ import { SettingsTab } from './SettingsTab';
 import { EnvironmentTab } from './EnvironmentTab';
 import { ApiKeysTab } from './ApiKeysTab';
 import { BackupTab } from './BackupTab';
+import { RolesTab } from './RolesTab';
 import { configModeKey } from './keys';
 
 const pageStyle: CSSProperties = {
@@ -93,12 +98,22 @@ const modeLabelStyle: CSSProperties = {
 
 /**
  * The read routes the core tabs load, matched by prefix to decide tab VISIBILITY.
- * The Settings and Environment tabs both read `GET /api/config/*` (settings-schema
- * and the env config); the Backup tab reads `GET /api/backup/sections`. A scoped
- * session that cannot reach a tab's reads never sees the tab.
+ * The Settings and Environment tabs read the deployment's ADMIN-ONLY `secret` config
+ * routes (`GET /api/config/settings-schema` and `GET /api/config/env`); a caller whose
+ * projection cannot reach them — a scoped editor/viewer, who reaches only the sibling
+ * plain `GET /api/config/mode` read — never sees either tab, so their admin-only reads
+ * never 403-wall the surface. Gating on the bare `/api/config` prefix (which the plain
+ * `mode` read also satisfies) would over-show both tabs to editors. The Backup tab reads
+ * `GET /api/backup/sections`.
  */
-const CONFIG_READ_ROUTE = '/api/config';
+const CONFIG_READ_ROUTES = ['/api/config/settings-schema', '/api/config/env'] as const;
 const BACKUP_READ_ROUTE = '/api/backup';
+/**
+ * The Roles tab reads `GET /api/auth/roles` — an admin-only `secret` route. A caller
+ * whose projection cannot reach it (a scoped editor/viewer) never sees the tab, so
+ * its admin-only reads never 403-wall the surface; a full (admin) projection shows it.
+ */
+const ROLES_READ_ROUTE = '/api/auth/roles';
 
 /**
  * Whether a core tab whose reads live under `prefixes` is visible to this caller. A
@@ -149,13 +164,16 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
   const { status, contributions } = usePluginContributions();
   const { state: capabilityState } = useCapabilities();
 
-  // Tab VISIBILITY and the mode read share one gate: the Settings/Environment tabs
-  // and the mode read all live behind `/api/config`, Backup behind `/api/backup`.
-  // `coreTabVisible` is true ONLY once the projection is ready and covers the route,
-  // so the mode read is issued only then — a scoped session that cannot reach
-  // `/api/config` never fires it (it would 403 and wall the always-shown API keys tab).
-  const configVisible = coreTabVisible(capabilityState, [CONFIG_READ_ROUTE]);
+  // Tab VISIBILITY and the mode read share one gate. The Settings/Environment tabs read
+  // the deployment's ADMIN-ONLY `secret` config routes; the mode read feeds the card shown
+  // above them and is issued alongside them. `coreTabVisible` is true ONLY once the
+  // projection is ready and reaches one of those secret routes, so a scoped editor/viewer —
+  // who can reach the plain `/api/config/mode` read but NOT the secret routes — never opens
+  // the Settings/Environment tabs (whose reads would 403) and never fires the mode read.
+  // Backup lives behind `/api/backup`.
+  const configVisible = coreTabVisible(capabilityState, CONFIG_READ_ROUTES);
   const backupVisible = coreTabVisible(capabilityState, [BACKUP_READ_ROUTE]);
+  const rolesVisible = coreTabVisible(capabilityState, [ROLES_READ_ROUTE]);
 
   const modeQuery = useQuery({
     queryKey: configModeKey,
@@ -180,16 +198,16 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
   } else if (configVisible && modeQuery.isPending) {
     body = <SettingsLoading />;
   } else {
-    // Ready: config covered → the resolved mode; otherwise (a scoped session that
-    // cannot reach `/api/config`) `mode` is null, the mode card is dropped, and editing
+    // Ready: config covered → the resolved mode; otherwise (a scoped session that cannot
+    // reach the admin config routes) `mode` is null, the mode card is dropped, and editing
     // defaults conservatively to read-only so the always-shown API keys tab stays usable.
     const mode = configVisible ? (modeQuery.data ?? null) : null;
     const readOnly = mode?.read_only ?? true;
     // Tab VISIBILITY is the capability boundary; the deployment `read_only` flag alone
     // governs each visible tab's write controls (the API keys tab runs its own
-    // method-aware mint gate internally). The Settings/Environment tabs read
-    // `/api/config`, Backup reads `/api/backup`; a scoped session that cannot reach
-    // those reads never sees the tab. The API keys tab is always shown.
+    // method-aware mint gate internally). The Settings/Environment tabs read the
+    // admin-only `secret` config routes, Backup reads `/api/backup`; a scoped session that
+    // cannot reach those reads never sees the tab. The API keys tab is always shown.
     const tabs: TabItem[] = [];
     if (configVisible) {
       tabs.push(
@@ -208,6 +226,9 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
     });
     if (backupVisible) {
       tabs.push({ value: 'backup', label: 'Backup', content: <BackupTab readOnly={readOnly} /> });
+    }
+    if (rolesVisible) {
+      tabs.push({ value: 'roles', label: 'Roles', content: <RolesTab readOnly={readOnly} /> });
     }
     // Plugin tabs appear only once the load pass has committed them; until then the
     // tab bar is exactly the core tabs (no churn). Each tab is gated on its optional

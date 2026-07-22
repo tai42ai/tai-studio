@@ -772,18 +772,111 @@ export const removeUrlFromScopeResult = z.object({ url: z.string() });
 export const removeScopeResult = z.object({ scope_id: z.string(), deleted_keys: z.number() });
 
 /**
+ * A route's authorization ACTION class, joined onto the catalog from the route
+ * registry. `read`/`write` routes are GRANTABLE — a role's per-tag level opens
+ * them; `fenced`/`secret` routes are ADMIN-ONLY and never grantable (no per-tag
+ * level reaches them). `null` marks a path the registry carries no metadata for
+ * (an unregistered/ungated path — no feature tags, no action).
+ */
+export const routeAction = z.enum(['read', 'write', 'fenced', 'secret']);
+export type RouteAction = z.infer<typeof routeAction>;
+
+/**
  * One row of the route catalog (`GET /api/auth/routes`) — a plain HTTP route with
- * its current mapping. `mapped` is the scope id, the public marker, or `null` when
- * the path is unmapped (the mapper's "unassigned" bucket source). `methods` is the
- * route's method set with `HEAD` removed.
+ * its current mapping, JOINED with its route-registry metadata. `mapped` is the
+ * scope id, the public marker, or `null` when the path is unmapped (the mapper's
+ * "unassigned" bucket source). `methods` is the route's method set with `HEAD`
+ * removed. `tags` are the route's feature-group labels, `summary` its one-line
+ * description, and `action` its authorization class — the join fields the Roles
+ * grant editor reads to derive grantable feature groups and mark the admin-only
+ * (fenced/secret) routes it must never offer a grant for. An unregistered path
+ * carries `tags: []`, `summary: ''`, `action: null`.
  */
 export const authRoute = z.object({
   path: z.string(),
   methods: z.array(z.string()),
   mapped: z.string().nullable(),
+  tags: z.array(z.string()),
+  summary: z.string(),
+  action: routeAction.nullable(),
 });
 export type AuthRoute = z.infer<typeof authRoute>;
 export const authRoutes = z.array(authRoute);
+
+// -- auth: roles (editable per-tag RBAC) -------------------------------------
+
+/** A role's per-tag ACCESS LEVEL: `none` (no access), `read`, or `write`. */
+export const grantLevel = z.enum(['none', 'read', 'write']);
+export type GrantLevel = z.infer<typeof grantLevel>;
+
+/** A role's editable grant map: feature-group TAG name → the role's access level. */
+export const roleGrants = z.record(z.string(), grantLevel);
+export type RoleGrants = z.infer<typeof roleGrants>;
+
+/**
+ * A role body (`GET /api/auth/roles`, and the write routes' echo). Layer 1 is the
+ * read-only base-tier ceiling — the seeded jq `condition` plus `base_tier`
+ * (`editor`/`viewer`, or `null` for the reserved `allow_all` admin). Layer 2 is the
+ * editable per-tag `grants` map. `allow_all` (admin) carries an empty `grants` map
+ * and reaches everything, un-lockable. `condition`/`condition_id`/`condition_kwargs`
+ * are the base-tier jq — READ-ONLY here (no raw-jq authoring surface).
+ */
+export const roleBody = z.object({
+  name: z.string(),
+  description: z.string(),
+  scopes: z.array(z.string()),
+  condition: z.string().nullable(),
+  condition_id: z.string().nullable(),
+  condition_kwargs: jsonValue.nullable(),
+  base_tier: z.string().nullable(),
+  allow_all: z.boolean(),
+  grants: roleGrants,
+});
+export type RoleBody = z.infer<typeof roleBody>;
+export const roleList = z.array(roleBody);
+
+/** `DELETE /api/auth/roles/{name}` — the deleted role's name. */
+export const roleDeleted = z.object({ name: z.string(), deleted: z.boolean() });
+
+/**
+ * One immutable role-version row (`GET /api/auth/roles/{name}/versions` →
+ * `versions`). `body` is the role body at that version; `is_current` flags the
+ * active pointer. Mirrors the generic versioned-store row shape.
+ */
+export const roleVersion = z.object({
+  version: z.number(),
+  body: roleBody,
+  tags: z.array(z.string()),
+  created_at: z.string(),
+  is_current: z.boolean(),
+});
+export type RoleVersion = z.infer<typeof roleVersion>;
+
+/**
+ * One who/action/before→after audit row (`GET /api/auth/roles/{name}/versions` →
+ * `audit`). Its `body` carries the mutation kind, the actor, and the before/after
+ * role bodies (both `null` for a create's `before` / a delete's `after`).
+ */
+export const roleAuditEvent = z.object({
+  version: z.number(),
+  body: z.object({
+    action: z.string(),
+    actor: z.string().nullable(),
+    before: jsonValue.nullable(),
+    after: jsonValue.nullable(),
+  }),
+  tags: z.array(z.string()),
+  created_at: z.string(),
+  is_current: z.boolean(),
+});
+export type RoleAuditEvent = z.infer<typeof roleAuditEvent>;
+
+/** `GET /api/auth/roles/{name}/versions` — the append-only history + audit trail. */
+export const roleVersions = z.object({
+  versions: z.array(roleVersion),
+  audit: z.array(roleAuditEvent),
+});
+export type RoleVersions = z.infer<typeof roleVersions>;
 
 /** `GET /api/auth/public-routes` — the sorted urls pinned to the public marker. */
 export const publicRoutes = z.array(z.string());

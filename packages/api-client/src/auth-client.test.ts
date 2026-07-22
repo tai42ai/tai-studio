@@ -115,12 +115,26 @@ describe('auth scopes client transport', () => {
 });
 
 describe('auth route-catalog client transport', () => {
-  it('listAuthRoutes GETs the routes catalog and parses each route mapping', async () => {
+  it('listAuthRoutes GETs the routes catalog and parses each mapping + its feature-tag join', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: [
-          { path: '/api/tools', methods: ['GET'], mapped: 'scope_1' },
-          { path: '/api/health', methods: ['GET'], mapped: null },
+          {
+            path: '/api/tools',
+            methods: ['GET'],
+            mapped: 'scope_1',
+            tags: ['tools'],
+            summary: 'List the registered tools.',
+            action: 'read',
+          },
+          {
+            path: '/api/backup/export',
+            methods: ['POST'],
+            mapped: null,
+            tags: ['backup'],
+            summary: 'Export a backup.',
+            action: 'fenced',
+          },
         ],
       }),
     );
@@ -128,6 +142,10 @@ describe('auth route-catalog client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/auth/routes');
     expect(out[1]?.mapped).toBeNull();
+    // The join fields the Roles grant editor derives feature groups + admin-only markers from.
+    expect(out[0]?.tags).toEqual(['tools']);
+    expect(out[0]?.action).toBe('read');
+    expect(out[1]?.action).toBe('fenced');
   });
 
   it('listPublicRoutes GETs the public-routes route and parses the pinned url list', async () => {
@@ -275,5 +293,151 @@ describe('auth api-key client transport', () => {
     expect(captured).toHaveLength(0);
     await client.editApiKey('u 1', { description: 'x', scopes: [] });
     expect(captured[0]?.url).toBe('/api/auth/api-keys/u%201');
+  });
+});
+
+describe('auth roles client transport', () => {
+  // A full role body as the roles routes echo it (the base-tier ceiling fields are
+  // READ-ONLY here; only `grants` + `description` are editable).
+  const editorBody = {
+    name: 'editor',
+    description: 'read + write on granted feature groups',
+    scopes: ['*'],
+    condition: '.foo',
+    condition_id: null,
+    condition_kwargs: null,
+    base_tier: 'editor',
+    allow_all: false,
+    grants: { tools: 'write', config: 'read' },
+  };
+
+  it('listRoles GETs the roles route and parses each full role body + grant map', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: [
+          editorBody,
+          {
+            name: 'admin',
+            description: 'full access',
+            scopes: ['*'],
+            condition: null,
+            condition_id: null,
+            condition_kwargs: null,
+            base_tier: null,
+            allow_all: true,
+            grants: {},
+          },
+        ],
+      }),
+    );
+    const out = await client.listRoles();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/auth/roles');
+    expect(out[0]?.grants).toEqual({ tools: 'write', config: 'read' });
+    expect(out[1]?.allow_all).toBe(true);
+  });
+
+  it('rejects (loudly) a role whose grant level is outside none/read/write', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: [{ ...editorBody, grants: { tools: 'admin' } }] }),
+    );
+    await expect(client.listRoles()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('createRole POSTs the create body (name + base tier + grant map)', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: editorBody }));
+    const out = await client.createRole({
+      name: 'releaser',
+      description: 'ships',
+      base_tier: 'editor',
+      grants: { tools: 'write' },
+    });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/auth/roles');
+    expect(captured[0]?.body).toEqual({
+      name: 'releaser',
+      description: 'ships',
+      base_tier: 'editor',
+      grants: { tools: 'write' },
+    });
+    expect(out.name).toBe('editor');
+  });
+
+  it('updateRole PUTs the (omit-means-keep) grant map to the name-encoded route', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: editorBody }));
+    const out = await client.updateRole('ci runner', { grants: { tools: 'read' } });
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.url).toBe('/api/auth/roles/ci%20runner');
+    expect(captured[0]?.body).toEqual({ grants: { tools: 'read' } });
+    expect(out.grants).toEqual({ tools: 'write', config: 'read' });
+  });
+
+  it('deleteRole DELETEs the name-encoded route and parses the deleted flag', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { name: 'releaser', deleted: true } }),
+    );
+    const out = await client.deleteRole('releaser');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/auth/roles/releaser');
+    expect(out.deleted).toBe(true);
+  });
+
+  it('surfaces a 409 delete-of-assigned-role as a LOUD ApiError', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ error: 'role is still assigned to 2 principals' }, 409),
+    );
+    await expect(client.deleteRole('editor')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('listRoleVersions GETs the versions route and parses the history + audit', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          versions: [
+            {
+              version: 2,
+              body: editorBody,
+              tags: [],
+              created_at: '2026-07-21T00:00:00Z',
+              is_current: true,
+            },
+          ],
+          audit: [
+            {
+              version: 2,
+              body: { action: 'update', actor: 'admin', before: null, after: editorBody },
+              tags: [],
+              created_at: '2026-07-21T00:00:00Z',
+              is_current: true,
+            },
+          ],
+        },
+      }),
+    );
+    const out = await client.listRoleVersions('editor');
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/auth/roles/editor/versions');
+    expect(out.versions[0]?.is_current).toBe(true);
+    expect(out.audit[0]?.body.action).toBe('update');
+  });
+
+  it('rollbackRole POSTs { version } to the rollback route and parses the re-pointed body', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: editorBody }));
+    const out = await client.rollbackRole('ci runner', 1);
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/auth/roles/ci%20runner/rollback');
+    expect(captured[0]?.body).toEqual({ version: 1 });
+    expect(out.name).toBe('editor');
+  });
+
+  // A `.`/`..`/absolute/empty role name would be collapsed by the browser URL parser
+  // and silently retarget the request, so the name→path encoder rejects it first.
+  it('rejects an unsafe role name before any request leaves', async () => {
+    const rule = /path segment must not be/;
+    const { client, captured } = harness(() => jsonResponse({ data: editorBody }));
+    expect(() => client.updateRole('..', { grants: {} })).toThrow(rule);
+    expect(() => client.deleteRole('.')).toThrow(rule);
+    expect(() => client.rollbackRole('', 1)).toThrow(rule);
+    expect(captured).toHaveLength(0);
   });
 });

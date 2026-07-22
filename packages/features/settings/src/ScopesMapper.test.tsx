@@ -29,8 +29,11 @@ function stubClient(methods: Stub): ApiClient {
   return methods as unknown as ApiClient;
 }
 
-function routes(...entries: AuthRoute[]): AuthRoute[] {
-  return entries;
+// The scope mapper reads only path/methods/mapped; the route catalog's feature-tag
+// join fields (tags/summary/action) default here so a fixture states only what it tests.
+type RouteInput = Pick<AuthRoute, 'path' | 'methods' | 'mapped'> & Partial<AuthRoute>;
+function routes(...entries: RouteInput[]): AuthRoute[] {
+  return entries.map((entry) => ({ tags: [], summary: '', action: null, ...entry }));
 }
 
 /** A mapper stub: empty catalog/public/sub-MCP unless overridden. */

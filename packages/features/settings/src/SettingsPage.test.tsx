@@ -101,7 +101,7 @@ describe('SettingsPage plugin tabs', () => {
       getSettingsSchema: vi.fn(emptySchema),
     });
 
-  const CORE_LABELS = ['Settings', 'Environment', 'API keys', 'Backup'];
+  const CORE_LABELS = ['Settings', 'Environment', 'API keys', 'Backup', 'Roles'];
 
   it('renders a contributed tab after the core tabs once the load pass is ready', async () => {
     await loadPlugin('acme', (ctx) => {
@@ -310,10 +310,14 @@ describe('SettingsPage plugin tabs', () => {
 
 describe('SettingsPage — capability-gated sub-tab visibility', () => {
   // Tab visibility is the capability boundary: a core tab is shown only when the
-  // projection reaches its backing READ route. Settings/Environment read `/api/config`,
-  // Backup reads `/api/backup`; the API keys tab is a self-limited own-key surface, so
-  // it is always shown.
+  // projection reaches its backing READ route. Settings/Environment read the admin-only
+  // `secret` routes `/api/config/settings-schema` + `/api/config/env`, Backup reads
+  // `/api/backup`; the API keys tab is a self-limited own-key surface, so it is always
+  // shown. The sibling plain read `/api/config/mode` is editor-reachable and must NOT open
+  // the config tabs on its own — gating on the bare `/api/config` prefix would 403-wall
+  // editors on the tabs' secret reads.
   const CONFIG_READ = { path: '/api/config/settings-schema', methods: ['GET'] };
+  const MODE_READ = { path: '/api/config/mode', methods: ['GET'] };
   const BACKUP_READ = { path: '/api/backup/sections', methods: ['GET'] };
 
   /** A client stubbing every core tab's reads (including the always-on API keys tab,
@@ -385,6 +389,37 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
     for (const label of ['Settings', 'Environment', 'Backup']) {
       expect(screen.queryByRole('tab', { name: label })).not.toBeInTheDocument();
     }
+  });
+
+  it('hides Settings/Environment for an editor reaching only /api/config/mode', async () => {
+    // `GET /api/config/env` and `GET /api/config/settings-schema` are admin-only `secret`
+    // routes; a scoped editor/viewer reaches only the plain `GET /api/config/mode` read.
+    // The bare `/api/config` prefix would over-show both tabs (which then 403 on their
+    // secret reads), so the gate is the secret routes themselves: `mode` alone must not
+    // open the tabs, and the mode read must not fire.
+    const getConfigMode = vi.fn().mockResolvedValue({ config_mode: 'env-file', read_only: false });
+    const client = {
+      getConfigMode,
+      getSettingsSchema: vi.fn(emptySchema),
+      getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [] })),
+      listTokensPayload: vi.fn(() => Promise.resolve([])),
+      listScopes: vi.fn(() => Promise.resolve({})),
+      getAuthCapabilities: vi.fn(() => Promise.resolve({ mintable: false })),
+    } as unknown as ApiClient;
+
+    renderWithProviders(<SettingsPage search={{}} />, {
+      client,
+      projection: scopedProjection({ routes: [MODE_READ] }),
+    });
+
+    // Only the always-on API keys tab renders: no mode card, no Settings/Environment tab.
+    expect(await screen.findByRole('tab', { name: 'API keys' })).toBeInTheDocument();
+    expect(screen.queryByText('env-file')).not.toBeInTheDocument();
+    for (const label of ['Settings', 'Environment', 'Backup']) {
+      expect(screen.queryByRole('tab', { name: label })).not.toBeInTheDocument();
+    }
+    // The mode read (gated with the admin config tabs) was never issued.
+    expect(getConfigMode).not.toHaveBeenCalled();
   });
 
   it('skips the mode read for a scoped session covering /api/auth but not /api/config', async () => {

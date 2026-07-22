@@ -90,6 +90,31 @@ export interface AddUrlToScopeBody {
 }
 
 /**
+ * Body for creating a role (POST `/api/auth/roles`). `base_tier` is the security
+ * tier the role inherits (`editor`/`viewer` — `admin` is reserved); its jq is
+ * resolved server-side, never authored here. `grants` is the editable per-tag
+ * access-level map (feature-group tag → `none`/`read`/`write`); it defaults to
+ * empty (every group `none`, fail-closed) when omitted.
+ */
+export interface RoleCreateBody {
+  readonly name: string;
+  readonly description?: string;
+  readonly base_tier: string;
+  readonly grants?: Record<string, s.GrantLevel>;
+}
+
+/**
+ * Body for editing a role (PUT `/api/auth/roles/{name}`). Both fields are
+ * omit-means-KEEP: an absent `grants` preserves the stored map (never a silent
+ * wipe), an absent `description` preserves the stored description. The base-tier jq
+ * is seed-fixed and not editable here.
+ */
+export interface RoleUpdateBody {
+  readonly grants?: Record<string, s.GrantLevel>;
+  readonly description?: string;
+}
+
+/**
  * Body for pinning a route public (POST `/api/auth/public-routes`). `pattern` is an
  * optional regex the AC verifier full-matches request paths against, mapping every
  * match to the `url` key (so a mount's whole subtree can be pinned in one call).
@@ -609,6 +634,35 @@ export function createApiClient(config: ApiConfig) {
     // Unpin a public url. A url that is absent or scope-mapped is a loud 404.
     unpinPublicRoute: (url: string) =>
       req('/api/auth/public-routes', s.unpinPublicResult, { method: 'DELETE', body: { url } }),
+
+    // -- auth: roles (editable per-tag RBAC) ---------------------------------
+    // The seeded + operator-authored roles as full bodies (base-tier ceiling +
+    // editable per-tag grant map). ADMIN-ONLY — the route is `secret` (a listing
+    // exposes each role's raw base-tier jq); a non-admin projection never reaches it.
+    listRoles: (signal?: AbortSignal) => req('/api/auth/roles', s.roleList, { signal }),
+    // Create an operator-authored role. The server validates the grant map + base
+    // tier and 409s on a name collision; the reserved `admin` role cannot be created.
+    createRole: (body: RoleCreateBody) =>
+      req('/api/auth/roles', s.roleBody, { method: 'POST', body }),
+    // Edit a role's per-tag grant map + description (omit-means-keep). The reserved
+    // `admin` role and any `allow_all` role are block-downgrade guarded server-side.
+    updateRole: (name: string, body: RoleUpdateBody) =>
+      req(`/api/auth/roles/${encodeSegment(name)}`, s.roleBody, { method: 'PUT', body }),
+    // Delete a role. The reserved `admin` role is undeletable; a role still assigned
+    // to any principal is a loud 409.
+    deleteRole: (name: string) =>
+      req(`/api/auth/roles/${encodeSegment(name)}`, s.roleDeleted, { method: 'DELETE' }),
+    // A role's append-only version history + who/action/before→after audit trail.
+    // ADMIN-ONLY (`secret`).
+    listRoleVersions: (name: string, signal?: AbortSignal) =>
+      req(`/api/auth/roles/${encodeSegment(name)}/versions`, s.roleVersions, { signal }),
+    // Re-point a role's active version to a prior one (LIVE — holders follow on
+    // their next request); returns the re-pointed role body.
+    rollbackRole: (name: string, version: number) =>
+      req(`/api/auth/roles/${encodeSegment(name)}/rollback`, s.roleBody, {
+        method: 'POST',
+        body: { version },
+      }),
 
     // -- auth: api keys ------------------------------------------------------
     listTokensPayload: (signal?: AbortSignal) =>

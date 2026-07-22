@@ -14,6 +14,8 @@ export { ApiKeysTab } from './ApiKeysTab';
 export type { ApiKeysTabProps } from './ApiKeysTab';
 export { BackupTab } from './BackupTab';
 export type { BackupTabProps } from './BackupTab';
+export { RolesTab } from './RolesTab';
+export type { RolesTabProps } from './RolesTab';
 export {
   configModeKey,
   envConfigKey,
@@ -22,5 +24,7 @@ export {
   authRoutesKey,
   publicRoutesKey,
   tokensPayloadKey,
+  rolesKey,
+  roleVersionsKey,
   backupSectionsKey,
 } from './keys';

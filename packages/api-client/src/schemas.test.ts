@@ -218,20 +218,62 @@ describe('toolMediaResult schema — direct-run media wire object', () => {
 });
 
 describe('route catalog + public-pin schemas', () => {
-  it('parses a route catalog row with a scope id, the public marker, or null', () => {
+  it('parses a route catalog row with its scope mapping + feature-tag join fields', () => {
     const parsed = schemas.authRoutes.parse([
-      { path: '/a', methods: ['GET', 'POST'], mapped: 's1' },
-      { path: '/b', methods: ['GET'], mapped: 'public' },
-      { path: '/c', methods: [], mapped: null },
+      {
+        path: '/a',
+        methods: ['GET', 'POST'],
+        mapped: 's1',
+        tags: ['tools'],
+        summary: 'x',
+        action: 'read',
+      },
+      { path: '/b', methods: ['GET'], mapped: 'public', tags: [], summary: '', action: 'write' },
+      { path: '/c', methods: [], mapped: null, tags: ['backup'], summary: 'y', action: 'fenced' },
+      {
+        path: '/d',
+        methods: ['GET'],
+        mapped: null,
+        tags: ['config'],
+        summary: 'z',
+        action: 'secret',
+      },
+      { path: '/e', methods: ['GET'], mapped: null, tags: [], summary: '', action: null },
     ]);
     expect(parsed[0]?.mapped).toBe('s1');
     expect(parsed[1]?.mapped).toBe('public');
     expect(parsed[2]?.mapped).toBeNull();
     expect(parsed[0]?.methods).toEqual(['GET', 'POST']);
+    // The join fields the Roles grant editor reads: the feature tags + the action class.
+    expect(parsed[0]?.tags).toEqual(['tools']);
+    expect(parsed[0]?.action).toBe('read');
+    expect(parsed[2]?.action).toBe('fenced');
+    expect(parsed[3]?.action).toBe('secret');
+    // An unregistered/ungated path carries no metadata: empty tags, null action.
+    expect(parsed[4]?.action).toBeNull();
   });
 
   it('rejects (loudly) a route row whose mapped is a non-string, non-null value', () => {
-    expect(() => schemas.authRoutes.parse([{ path: '/a', methods: ['GET'], mapped: 5 }])).toThrow();
+    expect(() =>
+      schemas.authRoutes.parse([
+        { path: '/a', methods: ['GET'], mapped: 5, tags: [], summary: '', action: 'read' },
+      ]),
+    ).toThrow();
+  });
+
+  it('rejects (loudly) a route row whose action is outside the known class set', () => {
+    expect(() =>
+      schemas.authRoutes.parse([
+        {
+          path: '/a',
+          methods: ['GET'],
+          mapped: null,
+          tags: [],
+          summary: '',
+          action: 'destructive',
+        },
+      ]),
+    ).toThrow();
   });
 
   it('parses the public-routes list and the pin/unpin results', () => {

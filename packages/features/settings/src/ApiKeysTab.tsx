@@ -94,6 +94,15 @@ const createNoteStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
 };
 
+// Distinguishes an API key (a delegated credential) from an account (the managed human
+// login that holds a role), so the User ID / Owner columns read unambiguously.
+const descriptionStyle: CSSProperties = {
+  margin: '0 0 var(--tai-space-4)',
+  color: 'var(--tai-color-text-muted)',
+  fontSize: 'var(--tai-text-sm)',
+  maxWidth: '52rem',
+};
+
 const headingRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -299,6 +308,13 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
             <span style={createNoteStyle}>Your access does not permit minting keys.</span>
           )}
         </div>
+
+        <p style={descriptionStyle}>
+          An API key is a scoped credential a user creates to delegate a slice of their own access —
+          it is not an account. An account is the human login an admin manages, and it carries a
+          role. Below, <strong>User ID</strong> is the account a key acts as, and{' '}
+          <strong>Owner</strong> is the account that created the key.
+        </p>
 
         {keys.length === 0 ? (
           <EmptyState title="No API keys" description="Create a key to provision access." />

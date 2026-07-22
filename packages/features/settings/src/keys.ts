@@ -36,6 +36,12 @@ export const authCapabilitiesKey = ['auth-capabilities'] as const;
 /** Key for a user's append-only AC-policy version history. */
 export const policyVersionsKey = (userId: string) => ['auth-policy-versions', userId] as const;
 
+/** Key for the editable role list (full bodies incl. the per-tag grant map). */
+export const rolesKey = ['auth-roles'] as const;
+
+/** Key for a role's append-only version history + audit trail. */
+export const roleVersionsKey = (name: string) => ['auth-role-versions', name] as const;
+
 /** Key for the template-manager template ids (named-condition selector source). */
 export const templateNamesKey = ['auth-template-names'] as const;
 
