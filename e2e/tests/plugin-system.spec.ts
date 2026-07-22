@@ -91,7 +91,7 @@ test('the reference plugin contributes a Settings tab that mounts after the core
   const pluginTab = tablist.getByRole('tab', { name: 'Reference' });
   await expect(pluginTab).toBeVisible();
   const tabNames = await tablist.getByRole('tab').allInnerTexts();
-  expect(tabNames).toEqual(['Settings', 'Environment', 'API keys', 'Backup', 'Reference']);
+  expect(tabNames).toEqual(['Settings', 'Environment', 'API keys', 'Backup', 'Roles', 'Reference']);
 
   // Selecting it mounts the plugin's tab content through the host's SDK singletons.
   await pluginTab.click();
