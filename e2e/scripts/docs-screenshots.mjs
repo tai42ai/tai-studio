@@ -262,6 +262,11 @@ const AUTHED_PAGES = [
     // params JSON, submits, and waits on the rendered QR svg. Like the claim-link
     // shot, the modal makes the background nav inert, so the plugin-nav wait is
     // skipped and the QR wait is the stable signal.
+    //
+    // The Name is left blank on purpose: the light and dark passes run against the
+    // same booted server, so a fixed name would be taken on the second pass and the
+    // create would fail. Blank lets the server mint a unique name each pass (the QR
+    // step frames only the URL + QR, so the name never shows in the shot).
     name: 'hooks-trigger-link',
     path: '/hooks',
     wait: 'text=Trigger links',
@@ -270,7 +275,6 @@ const AUTHED_PAGES = [
       await page.getByRole('button', { name: 'Create trigger link' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Topic').fill('orders.created');
-      await dialog.getByLabel('Name').fill('lobby-poster');
       await dialog.getByRole('radio', { name: 'Permanent' }).click();
       await dialog.getByLabel('Tool params (JSON)').fill('{ "priority": "high" }');
       await dialog.getByRole('button', { name: 'Create link' }).click();
