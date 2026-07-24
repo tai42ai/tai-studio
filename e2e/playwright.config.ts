@@ -21,6 +21,9 @@ const baseURL = `http://127.0.0.1:${String(STUDIO_PORT)}`;
  * boot.sh's default so a bare `pnpm e2e` works with no extra env. */
 export const STUDIO_API_KEY = process.env.STUDIO_API_KEY ?? 'sk-e2e-DO-NOT-USE-IN-PRODUCTION-000';
 
+/** The `user_id` that key resolves to. Must match boot.sh's default. */
+export const STUDIO_USER_ID = process.env.STUDIO_USER_ID ?? 'studio-e2e';
+
 export default defineConfig({
   testDir: './tests',
   // Serial: the suites share one live skeleton + one Redis; the key-expiry and
@@ -46,6 +49,7 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       STUDIO_API_KEY,
+      STUDIO_USER_ID,
       STUDIO_PORT: String(STUDIO_PORT),
       // Locally, reuse a prebuilt dist for a fast loop; CI builds fresh.
       SKIP_SPA_BUILD: process.env.CI ? '0' : (process.env.SKIP_SPA_BUILD ?? '1'),

@@ -14,7 +14,7 @@
  * `useTheme` seeds its initial theme from `prefers-color-scheme`, so the browser
  * context's `colorScheme` selects the theme with no UI clicks.
  *
- * PAGE SET — all 12 Studio screens, each populated by the docs-demo backend. Each
+ * PAGE SET — the core Studio screens, each populated by the docs-demo backend. Each
  * `wait` selector asserts POPULATED content (a real row, card, chart, or result),
  * and every capture is guarded against the shared loud `ErrorState`
  * ("Something went wrong"): a page that renders one FAILS the run rather than
@@ -42,6 +42,8 @@
  *                  populated from `GET /api/system/kinds`.
  *   - users-admin — the accounts plugin's users-admin page (usr-* human accounts),
  *                  mounted via `studio_plugins`, populated by the runner's seed.
+ *   - hooks-trigger-link / -execution-key — the mint→QR dialog, and the register
+ *                  form's execution-key picker.
  *   - login      — the credential screen, captured signed out.
  *
  * SCOPED SET — authenticated as the seeded OWNED key (a capability-scoped session),
@@ -97,6 +99,12 @@ const OWNED_KEY = process.env.STUDIO_OWNED_KEY;
 /** The loud, shared error card. Its presence on any page means the capture is
  * broken; the script throws rather than shooting it. */
 const ERROR_SELECTOR = '[role="alert"]:has-text("Something went wrong")';
+
+/** Take the FIRST listed execution key inside `scope`. */
+async function pickFirstExecutionKey(page, scope) {
+  await scope.getByRole('combobox', { name: 'Execution key' }).click();
+  await page.getByRole('option').first().click();
+}
 
 /**
  * Pages captured while SIGNED IN. `wait` is a selector proving the screen rendered
@@ -258,10 +266,8 @@ const AUTHED_PAGES = [
   {
     // The trigger-link create flow: driven with the FULL key (the section + create
     // control show for a full/admin projection), the shot frames the create dialog's
-    // QR step. The action opens the create dialog, fills a permanent link with a
-    // params JSON, submits, and waits on the rendered QR svg. Like the claim-link
-    // shot, the modal makes the background nav inert, so the plugin-nav wait is
-    // skipped and the QR wait is the stable signal.
+    // QR step. Like the claim-link shot, the modal makes the background nav inert,
+    // so the plugin-nav wait is skipped and the QR wait is the stable signal.
     //
     // The Name is left blank on purpose: the light and dark passes run against the
     // same booted server, so a fixed name would be taken on the second pass and the
@@ -275,11 +281,31 @@ const AUTHED_PAGES = [
       await page.getByRole('button', { name: 'Create trigger link' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Topic').fill('orders.created');
+      await pickFirstExecutionKey(page, dialog);
       await dialog.getByRole('radio', { name: 'Permanent' }).click();
       await dialog.getByLabel('Tool params (JSON)').fill('{ "priority": "high" }');
       await dialog.getByRole('button', { name: 'Create link' }).click();
       await page
         .locator('[data-testid="trigger-link-qr"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The register form's execution-key picker with a key chosen. Nothing is
+    // submitted: a hook would survive into the second pass.
+    name: 'hooks-execution-key',
+    path: '/hooks',
+    wait: 'text=Register hook',
+    action: async (page) => {
+      const form = page.getByRole('form', { name: 'Register hook' });
+      await form.getByLabel('Name').fill('notify-on-order');
+      await form.getByLabel('Topic').fill('orders.created');
+      await form.getByLabel('Tool', { exact: true }).fill('slack.post_message');
+      await pickFirstExecutionKey(page, form);
+      // Wait on the picked value so the shot shows a bound key, not the placeholder.
+      await form
+        .getByRole('combobox', { name: 'Execution key' })
+        .filter({ hasNotText: 'Select an execution key' })
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },

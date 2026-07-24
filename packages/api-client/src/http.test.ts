@@ -200,15 +200,33 @@ describe('createApiClient', () => {
     const fetchImpl = vi.fn(async (url: string) => {
       capturedUrl = url;
       return jsonResponse({
-        data: { items: [{ name: 'h', topic: 't', tool: 'notify' }], total: 1 },
+        data: {
+          items: [
+            {
+              name: 'h',
+              topic: 't',
+              tool: 'notify',
+              execution_key: 'svc-notify',
+            },
+          ],
+          total: 1,
+          trigger_auth: { t: 'public' },
+        },
       });
     });
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
     const out = await client.listHooks();
     expect(capturedUrl).toContain('/api/hooks');
     expect(capturedUrl).not.toContain('topic=');
-    // The optional condition/expr fields default rather than being required.
-    expect(out.items[0]).toMatchObject({ name: 'h', tool_kwargs: {}, condition: null, expr: null });
+    // Optional fields default; `execution_key` does not. The door is a top-level map.
+    expect(out.items[0]).toMatchObject({
+      name: 'h',
+      tool_kwargs: {},
+      condition: null,
+      expr: null,
+      execution_key: 'svc-notify',
+    });
+    expect(out.trigger_auth).toEqual({ t: 'public' });
   });
 
   it('encodes the topic filter as a query param', async () => {
@@ -234,6 +252,7 @@ describe('createApiClient', () => {
       name: 'h',
       topic: 't',
       tool: 'notify',
+      execution_key: 'svc-notify',
       tool_kwargs: { to: '#ops' },
       condition: null,
       condition_id: null,
@@ -243,7 +262,11 @@ describe('createApiClient', () => {
       expr_kwargs: {},
     });
     expect(out).toEqual({ registered: true, name: 'h' });
-    expect(capturedBody).toMatchObject({ name: 'h', tool: 'notify' });
+    expect(capturedBody).toMatchObject({
+      name: 'h',
+      tool: 'notify',
+      execution_key: 'svc-notify',
+    });
   });
 
   it('unregisters a hook via DELETE on the name-scoped path', async () => {

@@ -13,31 +13,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 
-import type { TriggerLinkRecord } from '@tai42/api-client';
-
 import { HooksPage } from './HooksPage';
 import {
   fullProjection,
   renderWithProviders,
   scopedProjection,
+  triggerLink,
   type StubApiClient,
 } from './test-utils';
-
-const LINK: TriggerLinkRecord = {
-  name: 'wall-poster',
-  topic: 'orders.created',
-  tool_kwargs: null,
-  created_by: null,
-  created_at: '2026-07-22T09:00:00Z',
-  expires_at: null,
-  token_hash_prefix: 'abc123def456',
-};
 
 function client(): StubApiClient {
   return {
     listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     listHookVerifiers: vi.fn().mockResolvedValue([]),
-    listTriggerLinks: vi.fn().mockResolvedValue({ items: [LINK], total: 1 }),
+    listTokensPayload: vi.fn().mockResolvedValue([]),
+    listTriggerLinks: vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 }),
   };
 }
 

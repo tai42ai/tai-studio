@@ -1,7 +1,8 @@
 /**
  * The trigger-links section on the hooks page: a table of live links (name, topic,
- * expiry, a params indicator, hash prefix, and a per-row revoke behind a confirm
- * dialog) plus a "Create trigger link" button that opens the create/QR flow.
+ * the bound execution key, the trigger-auth door, expiry, a params indicator, hash
+ * prefix, and a per-row revoke behind a confirm dialog) plus a "Create trigger
+ * link" button that opens the create/QR flow.
  *
  * Server state is surfaced loudly: loading → `Skeleton`, empty → `EmptyState`, and
  * any failed request → an always-visible `ErrorState` (a swallowed list error would
@@ -40,6 +41,7 @@ import type { TriggerLinkRecord } from '@tai42/api-client';
 
 import { TRIGGER_LINKS_KEY_ROOT, triggerLinksListKey } from './keys';
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
+import { describeTriggerAuth } from './trigger-auth';
 
 /** The write route whose POST capability gates create AND revoke (see the header). */
 const TRIGGER_LINKS_WRITE_ROUTE = '/api/hooks/trigger-links';
@@ -115,6 +117,8 @@ export function TriggerLinksList(): ReactNode {
           <TR>
             <TH>Name</TH>
             <TH>Topic</TH>
+            <TH>Runs as</TH>
+            <TH>Trigger auth</TH>
             <TH>Expiry</TH>
             <TH>Params</TH>
             <TH>Hash</TH>
@@ -126,6 +130,12 @@ export function TriggerLinksList(): ReactNode {
             <TR key={record.name}>
               <TD>{record.name}</TD>
               <TD>{record.topic}</TD>
+              <TD>
+                <code style={{ fontSize: 'var(--tai-text-sm)' }}>{record.execution_key}</code>
+              </TD>
+              <TD>
+                <Badge variant="neutral">{describeTriggerAuth(record.trigger_auth)}</Badge>
+              </TD>
               <TD>{formatExpiryCell(record.expires_at)}</TD>
               <TD>{hasParams(record) ? <Badge variant="neutral">params</Badge> : null}</TD>
               <TD>

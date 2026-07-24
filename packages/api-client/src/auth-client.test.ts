@@ -199,6 +199,32 @@ describe('auth api-key client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/auth/tokens-payload');
     expect(out[0]?.user_id).toBe('u1');
+    // `policy_data` rides through opaque (the picker reads the mint fingerprint from it).
+    expect(out[0]?.policy_data).toEqual({ limit: 5 });
+  });
+
+  it('passes policy_data through opaque, including a nested key_fingerprint', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: [
+          {
+            user_id: 'u1',
+            description: 'deploy key',
+            scopes: ['deploy'],
+            policy_data: { key_fingerprint: 'kf-9f2c1d' },
+          },
+        ],
+      }),
+    );
+    const out = await client.listTokensPayload();
+    expect(out[0]?.policy_data).toEqual({ key_fingerprint: 'kf-9f2c1d' });
+  });
+
+  it('throws ApiSchemaError LOUDLY on a key row with an EMPTY user_id', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: [{ user_id: '', description: 'x', scopes: [], policy_data: {} }] }),
+    );
+    await expect(client.listTokensPayload()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('createApiKey POSTs the FULL policy-authoring body and returns the raw key string', async () => {

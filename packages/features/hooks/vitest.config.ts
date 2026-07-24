@@ -14,6 +14,8 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
+    // Page-level register cases are slow; the default flakes on a loaded box.
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

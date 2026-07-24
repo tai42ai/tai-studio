@@ -1,10 +1,10 @@
 /**
  * The registered-hooks list. Reads `api.listHooks` through TanStack Query,
  * keyed on the active `topic` filter so the query refetches whenever the filter
- * changes (empty = list all). A hook's row shows its name / topic / tool plus a
- * `condition` and/or `expr` badge when either gate is set. Each row deletes
- * behind a confirm `<Dialog>` that calls `api.unregisterHook`; a successful
- * removal invalidates the whole list.
+ * changes (empty = list all). A hook's row shows its name / topic / tool, the
+ * execution key, its trigger-auth door, plus a `condition` and/or `expr` badge
+ * when either gate is set. Each row deletes behind a confirm `<Dialog>` that calls
+ * `api.unregisterHook`; a successful removal invalidates the whole list.
  *
  * Server state is surfaced loudly: loading → `Skeleton`, empty →
  * `EmptyState`, and any failed request → an always-visible `ErrorState` — never
@@ -30,9 +30,15 @@ import {
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { HookParams } from '@tai42/api-client';
+import type { HookList, HookParams, TriggerAuth } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
+import { describeTriggerAuth } from './trigger-auth';
+
+/** A topic's server-derived door; `undefined` when the list omits it. */
+function topicDoor(doors: HookList['trigger_auth'], topic: string): TriggerAuth | undefined {
+  return Object.hasOwn(doors, topic) ? doors[topic] : undefined;
+}
 
 function hasCondition(hook: HookParams): boolean {
   return hook.condition !== null || hook.condition_id !== null;
@@ -201,6 +207,9 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
       />
     );
   } else {
+    // Schema-defaulted for real responses; guarded for a raw/stub payload that omits it.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- stubs bypass the schema default
+    const doors = query.data.trigger_auth ?? {};
     body = (
       <Table>
         <THead>
@@ -208,35 +217,48 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
             <TH>Name</TH>
             <TH>Topic</TH>
             <TH>Tool</TH>
+            <TH>Runs as</TH>
+            <TH>Trigger auth</TH>
             <TH>Gates</TH>
             <TH aria-label="Actions" />
           </TR>
         </THead>
         <TBody>
-          {query.data.items.map((hook) => (
-            <TR key={hook.name}>
-              <TD>{hook.name}</TD>
-              <TD>{hook.topic}</TD>
-              <TD>{hook.tool}</TD>
-              <TD>
-                <div style={{ display: 'flex', gap: 'var(--tai-space-1)' }}>
-                  {hasCondition(hook) ? <Badge variant="primary">condition</Badge> : null}
-                  {hasExpr(hook) ? <Badge variant="neutral">expr</Badge> : null}
-                </div>
-              </TD>
-              <TD style={{ textAlign: 'right' }}>
-                <Button
-                  variant="danger"
-                  aria-label={`Delete hook ${hook.name}`}
-                  onClick={() => {
-                    setPendingDelete(hook.name);
-                  }}
-                >
-                  Delete
-                </Button>
-              </TD>
-            </TR>
-          ))}
+          {query.data.items.map((hook) => {
+            const door = topicDoor(doors, hook.topic);
+            return (
+              <TR key={hook.name}>
+                <TD>{hook.name}</TD>
+                <TD>{hook.topic}</TD>
+                <TD>{hook.tool}</TD>
+                <TD>
+                  <code style={{ fontSize: 'var(--tai-text-sm)' }}>{hook.execution_key}</code>
+                </TD>
+                <TD>
+                  <Badge variant="neutral">
+                    {door === undefined ? 'Unknown' : describeTriggerAuth(door)}
+                  </Badge>
+                </TD>
+                <TD>
+                  <div style={{ display: 'flex', gap: 'var(--tai-space-1)' }}>
+                    {hasCondition(hook) ? <Badge variant="primary">condition</Badge> : null}
+                    {hasExpr(hook) ? <Badge variant="neutral">expr</Badge> : null}
+                  </div>
+                </TD>
+                <TD style={{ textAlign: 'right' }}>
+                  <Button
+                    variant="danger"
+                    aria-label={`Delete hook ${hook.name}`}
+                    onClick={() => {
+                      setPendingDelete(hook.name);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </TD>
+              </TR>
+            );
+          })}
         </TBody>
       </Table>
     );

@@ -4,7 +4,8 @@
  * encoding), HTTP method, request-body shaping, the `{ data }` envelope unwrap, and
  * the loud failure mappings (an unknown verifier name is a 400, an unbind with no
  * binding is a 404). `listHooks` (list + topic filter) is exercised in
- * `http.test.ts`. A fake `fetch` records each request and returns a canned body.
+ * `http.test.ts`; its listed-record contract is pinned here. A fake `fetch`
+ * records each request and returns a canned body.
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -127,5 +128,57 @@ describe('hooks topic-verifier client transport', () => {
     expect(captured).toHaveLength(0);
     await client.deleteTopicVerifier('a b');
     expect(captured[0]?.url).toBe('/api/hooks/topics/a%20b/verifier');
+  });
+});
+
+/** A listed hook with the fields every registered hook carries (no door — that is topic-level). */
+function hookRecord(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    name: 'notify-on-order',
+    topic: 'orders.created',
+    tool: 'slack.post_message',
+    execution_key: 'svc-orders',
+    ...overrides,
+  };
+}
+
+describe('hook listed-record contract', () => {
+  it('parses a listed hook and the top-level topic → door map', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { items: [hookRecord()], total: 1, trigger_auth: { 'orders.created': 'verifier' } },
+      }),
+    );
+    const out = await client.listHooks();
+    expect(out.items[0]?.execution_key).toBe('svc-orders');
+    expect(out.trigger_auth).toEqual({ 'orders.created': 'verifier' });
+  });
+
+  it('defaults the door map to {} when the server omits it (older response)', async () => {
+    const { client } = harness(() => jsonResponse({ data: { items: [hookRecord()], total: 1 } }));
+    const out = await client.listHooks();
+    expect(out.trigger_auth).toEqual({});
+  });
+
+  it('throws ApiSchemaError LOUDLY on a listed hook with no execution_key', async () => {
+    const { execution_key: _dropped, ...keyless } = hookRecord();
+    const { client } = harness(() => jsonResponse({ data: { items: [keyless], total: 1 } }));
+    await expect(client.listHooks()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a listed hook with an EMPTY execution_key', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { items: [hookRecord({ execution_key: '' })], total: 1 } }),
+    );
+    await expect(client.listHooks()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on an unknown door in the topic → door map', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { items: [hookRecord()], total: 1, trigger_auth: { 'orders.created': 'sso' } },
+      }),
+    );
+    await expect(client.listHooks()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });

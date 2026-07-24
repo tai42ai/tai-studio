@@ -92,6 +92,9 @@ export interface TopicVerifierBody {
 export interface TriggerLinkCreateBody {
   readonly topic: string;
   readonly name?: string;
+  readonly execution_key: string;
+  // The link is a token door; this is its only auth knob (token → token+api_key).
+  readonly require_api_key: boolean;
   readonly ttl_seconds: number | null;
   readonly tool_kwargs?: Record<string, unknown> | null;
 }
@@ -626,7 +629,7 @@ export function createApiClient(config: ApiConfig) {
       }),
 
     // -- hooks: trigger links -------------------------------------------------
-    // Mint a public trigger link for a topic. `ttl_seconds` is sent EXPLICITLY
+    // Mint a trigger link for a topic. `ttl_seconds` is sent EXPLICITLY
     // (including `null` for a permanent link) — the server requires the key present
     // and 400s a dropped one; `tool_kwargs` is omitted when undefined. The raw
     // `token` rides the response ONCE (composed into the QR URL client-side).
@@ -636,6 +639,8 @@ export function createApiClient(config: ApiConfig) {
         body: {
           topic: body.topic,
           name: body.name,
+          execution_key: body.execution_key,
+          require_api_key: body.require_api_key,
           ttl_seconds: body.ttl_seconds,
           tool_kwargs: body.tool_kwargs,
         },

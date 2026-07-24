@@ -683,10 +683,22 @@ export type Notifications = z.infer<typeof notifications>;
 // optionally gated by a `condition` and shaped by an `expr` (each either an inline
 // spec or a registered id, with its own kwargs).
 
+/** A fire door — who may trigger a path, not what the fire may do. A string enum. */
+export const triggerAuth = z.enum([
+  'public',
+  'verifier',
+  'token',
+  'token+api_key',
+  'out-of-service',
+]);
+export type TriggerAuth = z.infer<typeof triggerAuth>;
+
 export const hookParams = z.object({
   name: z.string(),
   topic: z.string(),
   tool: z.string(),
+  // The api-key `user_id` the fire runs AS.
+  execution_key: z.string().min(1),
   tool_kwargs: z.record(z.string(), z.unknown()).default({}),
   condition: z.string().nullable().default(null),
   condition_id: z.string().nullable().default(null),
@@ -711,7 +723,10 @@ export const hookList = z.object({
       z.object({ verifier: z.string(), config: z.record(z.string(), z.unknown()) }),
     )
     .default({}),
+  // Per-topic fire door (topic → door). Tolerant of an older response omitting it.
+  trigger_auth: z.record(z.string(), triggerAuth).default({}),
 });
+export type HookList = z.infer<typeof hookList>;
 
 export const hookRegistered = z.object({
   registered: z.boolean(),
@@ -765,6 +780,8 @@ export type TriggerLinkCreated = z.infer<typeof triggerLinkCreated>;
 export const triggerLinkRecord = z.object({
   name: z.string(),
   topic: z.string(),
+  execution_key: z.string().min(1),
+  trigger_auth: triggerAuth,
   tool_kwargs: z.record(z.string(), z.unknown()).nullable(),
   created_by: z.string().nullable(),
   created_at: z.string(),
@@ -936,9 +953,12 @@ export const pinPublicResult = z.object({ url: z.string() });
 /** `DELETE /api/auth/public-routes` — the unpinned url (404 when not pinned). */
 export const unpinPublicResult = z.object({ url: z.string() });
 
+/** The per-key payloads (`GET /api/auth/tokens-payload`). The stable per-mint
+ * `key_fingerprint` is nested under `policy_data`; the picker reads it there. */
 export const tokensPayload = z.array(
   z.object({
-    user_id: z.string(),
+    // The value an `execution_key` binding names.
+    user_id: z.string().min(1),
     description: z.string(),
     scopes: z.array(z.string()),
     policy_data: jsonValue,

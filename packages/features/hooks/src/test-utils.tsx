@@ -20,7 +20,13 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
-import type { ApiClient, HookParams, MeProjection } from '@tai42/api-client';
+import type {
+  ApiClient,
+  HookParams,
+  MeProjection,
+  TokensPayload,
+  TriggerLinkRecord,
+} from '@tai42/api-client';
 import { render, type RenderResult } from '@testing-library/react';
 import { vi, type Mock } from 'vitest';
 
@@ -83,6 +89,7 @@ export function hook(overrides: Partial<HookParams> = {}): HookParams {
     name: 'notify-on-order',
     topic: 'orders.created',
     tool: 'slack.post_message',
+    execution_key: 'svc-orders',
     tool_kwargs: {},
     condition: null,
     condition_id: null,
@@ -90,6 +97,34 @@ export function hook(overrides: Partial<HookParams> = {}): HookParams {
     expr: null,
     expr_id: null,
     expr_kwargs: {},
+    ...overrides,
+  };
+}
+
+/** Build a full `TriggerLinkRecord` from a partial override. */
+export function triggerLink(overrides: Partial<TriggerLinkRecord> = {}): TriggerLinkRecord {
+  return {
+    name: 'wall-poster',
+    topic: 'orders.created',
+    execution_key: 'svc-orders',
+    trigger_auth: 'token',
+    tool_kwargs: null,
+    created_by: null,
+    created_at: '2026-07-22T09:00:00Z',
+    expires_at: null,
+    token_hash_prefix: 'abc123def456',
+    ...overrides,
+  };
+}
+
+/** One api-key payload row for the execution-key picker. */
+export function apiKey(overrides: Partial<TokensPayload[number]> = {}): TokensPayload[number] {
+  return {
+    user_id: 'svc-orders',
+    description: 'Order service key',
+    scopes: ['hooks'],
+    // The server nests the mint fingerprint here; the picker reads it from here.
+    policy_data: { key_fingerprint: 'kf-9f2c1d' },
     ...overrides,
   };
 }

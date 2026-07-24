@@ -18,6 +18,7 @@
 #
 # Env knobs (all have safe defaults for local runs):
 #   STUDIO_API_KEY   the seeded key the Studio pastes at /login (default below)
+#   STUDIO_USER_ID   the user_id that key resolves to (default below)
 #   SKELETON_DIR     path to the tai-skeleton checkout (default: sibling repo)
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist
@@ -43,7 +44,7 @@ COMPOSE_FILE="${BOOT_DIR}/compose.yaml"
 # --- Test-only configuration (see the header — NOT for production) ----------
 export STUDIO_API_KEY="${STUDIO_API_KEY:-sk-e2e-DO-NOT-USE-IN-PRODUCTION-000}"
 STUDIO_PORT="${STUDIO_PORT:-8765}"
-STUDIO_USER_ID="studio-e2e"
+export STUDIO_USER_ID="${STUDIO_USER_ID:-studio-e2e}"
 
 REDIS_HOST_PORT=6380
 REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/0"

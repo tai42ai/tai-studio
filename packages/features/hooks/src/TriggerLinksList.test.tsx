@@ -11,32 +11,18 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ApiError } from '@tai42/api-client';
-import type { TriggerLinkRecord } from '@tai42/api-client';
 
 import { TriggerLinksList } from './TriggerLinksList';
-import { fullProjection, renderWithProviders, type StubApiClient } from './test-utils';
-
-function record(overrides: Partial<TriggerLinkRecord> = {}): TriggerLinkRecord {
-  return {
-    name: 'wall-poster',
-    topic: 'orders.created',
-    tool_kwargs: null,
-    created_by: null,
-    created_at: '2026-07-22T09:00:00Z',
-    expires_at: null,
-    token_hash_prefix: 'abc123def456',
-    ...overrides,
-  };
-}
+import { fullProjection, renderWithProviders, triggerLink, type StubApiClient } from './test-utils';
 
 describe('TriggerLinksList — table', () => {
   it('renders a permanent row and a params Badge only for a NON-empty tool_kwargs', async () => {
     const client: StubApiClient = {
       listTriggerLinks: vi.fn().mockResolvedValue({
         items: [
-          record({ name: 'with-params', tool_kwargs: { priority: 'high' } }),
-          record({ name: 'perma-empty', tool_kwargs: {} }),
-          record({ name: 'perma-null', tool_kwargs: null }),
+          triggerLink({ name: 'with-params', tool_kwargs: { priority: 'high' } }),
+          triggerLink({ name: 'perma-empty', tool_kwargs: {} }),
+          triggerLink({ name: 'perma-null', tool_kwargs: null }),
         ],
         total: 3,
       }),
@@ -56,6 +42,58 @@ describe('TriggerLinksList — table', () => {
     expect(within(emptyRow as HTMLElement).getByText('Permanent')).toBeInTheDocument();
     // The hash prefix is shown (never a raw token).
     expect(screen.getAllByText('abc123def456').length).toBeGreaterThan(0);
+  });
+
+  it("shows every row's execution key and trigger-auth door, never a blank", async () => {
+    const client: StubApiClient = {
+      listTriggerLinks: vi.fn().mockResolvedValue({
+        items: [
+          triggerLink({ name: 'plain-token' }),
+          triggerLink({
+            name: 'keyed-token',
+            execution_key: 'svc-least-privilege',
+            trigger_auth: 'token+api_key',
+          }),
+          triggerLink({
+            name: 'signed',
+            trigger_auth: 'verifier',
+          }),
+        ],
+        total: 3,
+      }),
+    };
+    renderWithProviders(<TriggerLinksList />, { client, projection: fullProjection() });
+
+    const plain = (await screen.findByText('plain-token')).closest('tr');
+    expect(within(plain as HTMLElement).getByText('svc-orders')).toBeInTheDocument();
+    expect(within(plain as HTMLElement).getByText('QR token')).toBeInTheDocument();
+
+    const keyed = screen.getByText('keyed-token').closest('tr');
+    expect(within(keyed as HTMLElement).getByText('svc-least-privilege')).toBeInTheDocument();
+    expect(within(keyed as HTMLElement).getByText('QR token + api key')).toBeInTheDocument();
+
+    const signed = screen.getByText('signed').closest('tr');
+    expect(within(signed as HTMLElement).getByText('Verifier-signed')).toBeInTheDocument();
+
+    // By index, not by text: a swapped key/door pair still satisfies a text lookup.
+    const plainCells = within(plain as HTMLElement).getAllByRole('cell');
+    expect(plainCells[2]).toHaveTextContent('svc-orders');
+    expect(plainCells[3]).toHaveTextContent('QR token');
+
+    // Headers, in order — a header/body mismatch would silently mislabel the table.
+    const headers = within((plain as HTMLElement).closest('table') as HTMLElement).getAllByRole(
+      'columnheader',
+    );
+    expect(headers.map((h) => h.textContent)).toEqual([
+      'Name',
+      'Topic',
+      'Runs as',
+      'Trigger auth',
+      'Expiry',
+      'Params',
+      'Hash',
+      '',
+    ]);
   });
 
   it('renders a loud error state when the list query rejects', async () => {
@@ -82,7 +120,7 @@ describe('TriggerLinksList — revoke', () => {
     const user = userEvent.setup();
     const deleteTriggerLink = vi.fn();
     const client: StubApiClient = {
-      listTriggerLinks: vi.fn().mockResolvedValue({ items: [record()], total: 1 }),
+      listTriggerLinks: vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 }),
       deleteTriggerLink,
     };
     renderWithProviders(<TriggerLinksList />, { client, projection: fullProjection() });
@@ -99,7 +137,7 @@ describe('TriggerLinksList — revoke', () => {
 
   it('revokes behind the confirm dialog and invalidates the list', async () => {
     const user = userEvent.setup();
-    const listTriggerLinks = vi.fn().mockResolvedValue({ items: [record()], total: 1 });
+    const listTriggerLinks = vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 });
     const deleteTriggerLink = vi.fn().mockResolvedValue({ removed: true, name: 'wall-poster' });
     const client: StubApiClient = { listTriggerLinks, deleteTriggerLink };
     renderWithProviders(<TriggerLinksList />, { client, projection: fullProjection() });
@@ -123,7 +161,7 @@ describe('TriggerLinksList — revoke', () => {
     const user = userEvent.setup();
     const deleteTriggerLink = vi.fn().mockRejectedValue(new ApiError('unknown trigger link', 404));
     const client: StubApiClient = {
-      listTriggerLinks: vi.fn().mockResolvedValue({ items: [record()], total: 1 }),
+      listTriggerLinks: vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 }),
       deleteTriggerLink,
     };
     renderWithProviders(<TriggerLinksList />, { client, projection: fullProjection() });
@@ -147,7 +185,7 @@ describe('TriggerLinksList — revoke', () => {
       .mockRejectedValue(new ApiError('revoke of link-a forbidden', 403));
     const client: StubApiClient = {
       listTriggerLinks: vi.fn().mockResolvedValue({
-        items: [record({ name: 'link-a' }), record({ name: 'link-b' })],
+        items: [triggerLink({ name: 'link-a' }), triggerLink({ name: 'link-b' })],
         total: 2,
       }),
       deleteTriggerLink,

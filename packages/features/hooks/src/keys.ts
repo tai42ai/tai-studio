@@ -6,6 +6,8 @@
  * register or unregister refreshes the list regardless of the active filter.
  */
 
+export { tokensPayloadKey } from '@tai42/studio-sdk';
+
 /** The shared root segment every hooks-list key starts with. */
 export const HOOKS_KEY_ROOT = 'hooks' as const;
 

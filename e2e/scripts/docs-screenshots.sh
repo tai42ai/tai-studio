@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 16 Studio screens (light + dark = 32 PNGs) into
+# pipeline. Regenerates ALL 18 Studio screens (light + dark = 36 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -17,7 +17,7 @@
 #   2. waits for /health, warms up the Prometheus counters with real tool runs,
 #      then seeds the demo accounts AND the scoped surfaces (an owned key plus its
 #      audience-addressed notification + pending question);
-#   3. captures the 16 screens in both themes with e2e/scripts/docs-screenshots.mjs
+#   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
 #   4. copies the five shell screens the tai-studio README embeds into
 #      docs/screenshots/, from the same capture (one source of truth).
@@ -35,7 +35,7 @@
 #
 # Env knobs (all default to sibling checkouts / sensible values):
 #   SKELETON_DIR TAI_DOCS_DIR TAI_AGENTS_DIR TAI_STORAGE_LOCAL_DIR TAI_TOOLBOX_DIR
-#   OUT_DIR          where the 32 PNGs are written (default: <tai-docs>/images/studio)
+#   OUT_DIR          where the PNGs are written (default: <tai-docs>/images/studio)
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist (fast reruns)
 #   KEEP_UP          set to 1 to leave the skeleton running after capture (debug)
@@ -43,6 +43,7 @@ set -euo pipefail
 
 log() { printf '\033[1;35m[docs-shots]\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[1;31m[docs-shots] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+count_pngs() { find "$1" -maxdepth 1 -name '*.png' | wc -l | tr -d ' '; }
 
 # --- 1. Resolve paths -------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -356,4 +357,4 @@ log "refreshed ${README_SHOTS_DIR} (5 shell screens × 2 themes)"
 # (via die, or set -e on the capture/refresh steps), so the log survives on disk
 # for post-mortem (the readiness dies also tail it first).
 rm -f "${BOOT_LOG}"
-log "done — 32 PNGs in ${OUT_DIR}, 10 in ${README_SHOTS_DIR}"
+log "done — $(count_pngs "${OUT_DIR}") PNGs in ${OUT_DIR}, $(count_pngs "${README_SHOTS_DIR}") in ${README_SHOTS_DIR}"

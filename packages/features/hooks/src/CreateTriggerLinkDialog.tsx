@@ -1,20 +1,23 @@
 /**
  * The create-trigger-link flow, in the `MintedKeyDialog` shape: a form (topic +
- * optional name + the explicit expiry picker + an optional per-link params JSON
- * editor) that, on success, becomes a QR dialog for the minted link.
+ * optional name + the execution key + the "require an api key" toggle + the
+ * explicit expiry picker + an optional per-link params JSON editor) that, on
+ * success, becomes a QR dialog for the minted link. Required fields nag on submit;
+ * an unsatisfiable fire gate (see `fireGateUnsatisfiable`) disables it.
  *
  * The link is SHOWN ONCE: the create reply's raw `token` lives only in this
  * dialog's local state, rendered as a QR + copy field with a loud "shown once"
  * caption. There is no "show QR again" affordance anywhere — the server cannot
  * reproduce the token; regenerating means revoke + create. Every failure (an
- * invalid ttl / name, a verifier-bound topic, a taken name, a 403, the in-memory
- * 501, or any other status) surfaces LOUDLY inline — never swallowed.
+ * invalid ttl / name, a taken name, a 403, the in-memory 501, or any other status)
+ * surfaces LOUDLY inline — never swallowed.
  */
 import { useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renderSVG } from 'uqr';
 import {
   Button,
+  Checkbox,
   CopyField,
   Dialog,
   ErrorState,
@@ -31,6 +34,8 @@ import type { TriggerLinkCreateBody, TriggerLinkCreated } from '@tai42/api-clien
 import { TRIGGER_LINKS_KEY_ROOT } from './keys';
 import { composeTriggerUrl } from './compose-trigger-url';
 import { EXPIRY_OPTIONS, resolveTtlSeconds, type ExpiryChoice } from './expiry';
+import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
+import { fireGateUnsatisfiable } from './fire-path-gate';
 
 const qrWrapperStyle: CSSProperties = {
   maxWidth: '14rem',
@@ -83,6 +88,9 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
 
   const [topic, setTopic] = useState('');
   const [name, setName] = useState('');
+  const [executionKey, setExecutionKey] = useState('');
+  // A link is a token door; this toggle is its only auth knob (→ token+api_key).
+  const [requireApiKey, setRequireApiKey] = useState(false);
   const [expiryChoice, setExpiryChoice] = useState<ExpiryChoice | undefined>(undefined);
   const [customSeconds, setCustomSeconds] = useState('');
   const [toolKwargs, setToolKwargs] = useState('');
@@ -90,6 +98,8 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
   const [submitted, setSubmitted] = useState(false);
   const [expiryError, setExpiryError] = useState<string | null>(null);
   const [kwargsError, setKwargsError] = useState<string | null>(null);
+
+  const keysQuery = useExecutionKeys();
 
   // The minted link is held in local state (shown once): the raw token rides
   // this reply exactly once and never leaves the rendered QR/copy value.
@@ -106,6 +116,8 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
   });
 
   const topicMissing = topic.trim() === '';
+  const executionKeyMissing = executionKey === '';
+  const unsatisfiable = fireGateUnsatisfiable(keysQuery);
   const url = link !== null ? composeTriggerUrl(api.baseUrl, link.trigger_path) : null;
 
   const onSubmit = (event: SyntheticEvent): void => {
@@ -113,7 +125,9 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
     setSubmitted(true);
     setExpiryError(null);
     setKwargsError(null);
-    if (topicMissing || expiryChoice === undefined) return;
+    if (topicMissing || expiryChoice === undefined || executionKeyMissing || unsatisfiable) {
+      return;
+    }
 
     let ttlSeconds: number | null;
     try {
@@ -135,6 +149,8 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
     mutation.mutate({
       topic: topic.trim(),
       name: trimmedName === '' ? undefined : trimmedName,
+      execution_key: executionKey,
+      require_api_key: requireApiKey,
       ttl_seconds: ttlSeconds,
       tool_kwargs: toolKwargsValue,
     });
@@ -200,6 +216,16 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
               }}
             />
           </Field>
+          <ExecutionKeyPicker
+            value={executionKey}
+            onValueChange={setExecutionKey}
+            error={submitted && executionKeyMissing ? 'An execution key is required.' : undefined}
+          />
+          <Checkbox
+            label="Also require an api key"
+            checked={requireApiKey}
+            onCheckedChange={setRequireApiKey}
+          />
           <Field
             label="Expiry"
             description="Pick when the link stops working. There is no default — choose one."
@@ -248,11 +274,7 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
             <Button type="button" onClick={onClose} disabled={mutation.isPending}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={mutation.isPending || topicMissing || expiryChoice === undefined}
-            >
+            <Button type="submit" variant="primary" disabled={mutation.isPending || unsatisfiable}>
               {mutation.isPending ? <Spinner label="Creating" /> : null}
               Create link
             </Button>

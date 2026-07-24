@@ -74,7 +74,7 @@ export { errorMessage } from './errors';
 export { downloadBlob } from './download';
 
 // -- Cross-feature query keys ------------------------------------------------
-export { toolsListKey, extensionsQueryKey, subMcpKey } from './query-keys';
+export { toolsListKey, extensionsQueryKey, subMcpKey, tokensPayloadKey } from './query-keys';
 
 // -- Extension-combo editing helpers -----------------------------------------
 export { comboElementNames, extensionElementName } from './extension-combos';

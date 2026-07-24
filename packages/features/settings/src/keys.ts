@@ -3,11 +3,9 @@
  * keeps the query definitions and the post-mutation invalidations referring to
  * the exact same tuples.
  *
- * `subMcpKey` is the one key another feature (manifest) also reads and
- * invalidates, so it is the authoritative SDK constant, re-exported here under
- * the same local name for this feature's call sites.
+ * `subMcpKey` and `tokensPayloadKey` are SDK-owned — two features read each.
  */
-export { subMcpKey } from '@tai42/studio-sdk';
+export { subMcpKey, tokensPayloadKey } from '@tai42/studio-sdk';
 
 /** Key for the config-source mode (mode label + read-only flag). */
 export const configModeKey = ['config-mode'] as const;
@@ -26,9 +24,6 @@ export const authRoutesKey = ['auth-routes'] as const;
 
 /** Key for the urls pinned to the public marker. */
 export const publicRoutesKey = ['auth-public-routes'] as const;
-
-/** Key for the per-key token payloads (user_id, description, scopes, policy). */
-export const tokensPayloadKey = ['auth-tokens-payload'] as const;
 
 /** Key for the deployment's auth capabilities (`{ mintable, providers }`). */
 export const authCapabilitiesKey = ['auth-capabilities'] as const;

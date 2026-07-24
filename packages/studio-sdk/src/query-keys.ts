@@ -29,3 +29,6 @@ export const extensionsQueryKey = ['extensions'] as const;
  * features (which cannot import each other).
  */
 export const subMcpKey = ['sub-mcp'] as const;
+
+/** The api-key payloads; read by settings AND the hooks execution-key picker. */
+export const tokensPayloadKey = ['auth-tokens-payload'] as const;

@@ -1,12 +1,14 @@
 /**
- * Register form: builds a {@link HookParams} and posts it to
- * `api.registerHook`. `name`, `topic`, and `tool` are required text inputs;
- * optional `condition`/`expr` text fields default to `null` when left blank. The
+ * Register form: builds a {@link HookParams} and posts it to `api.registerHook`.
+ * `name`, `topic`, `tool` and the execution key are required. The fire door is
+ * topic-level (server-derived, shown in the list), not a register input. Optional
+ * `condition`/`expr` text fields default to `null` when left blank. The
  * `tool_kwargs` textarea is parsed with `JSON.parse` — a parse failure (or a
  * non-object result) is a LOUD inline field error that blocks submit, so no API
- * call fires on bad input. On success the whole hooks list is invalidated so the
- * new hook appears, and the form resets. A failed request surfaces loudly in an
- * inline `ErrorState`.
+ * call fires on bad input.
+ *
+ * On success the whole hooks list is invalidated so the new hook appears, and the
+ * form resets. A failed request surfaces loudly in an inline `ErrorState`.
  */
 import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +26,8 @@ import {
 import type { HookParams } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT } from './keys';
+import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
+import { fireGateUnsatisfiable } from './fire-path-gate';
 
 /** Parse the `tool_kwargs` textarea; blank means `{}`. Throws a loud message on bad input. */
 function parseToolKwargs(raw: string): Record<string, unknown> {
@@ -56,9 +60,12 @@ export function RegisterHookForm(): ReactNode {
   const [toolKwargs, setToolKwargs] = useState('');
   const [condition, setCondition] = useState('');
   const [expr, setExpr] = useState('');
+  const [executionKey, setExecutionKey] = useState('');
 
   const [submitted, setSubmitted] = useState(false);
   const [kwargsError, setKwargsError] = useState<string | null>(null);
+
+  const keysQuery = useExecutionKeys();
 
   const mutation = useMutation({
     mutationFn: (params: HookParams) => api.registerHook(params),
@@ -69,6 +76,7 @@ export function RegisterHookForm(): ReactNode {
       setToolKwargs('');
       setCondition('');
       setExpr('');
+      setExecutionKey('');
       setSubmitted(false);
       setKwargsError(null);
       void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === HOOKS_KEY_ROOT });
@@ -78,12 +86,16 @@ export function RegisterHookForm(): ReactNode {
   const nameMissing = name.trim() === '';
   const topicMissing = topic.trim() === '';
   const toolMissing = tool.trim() === '';
+  const executionKeyMissing = executionKey === '';
+  const unsatisfiable = fireGateUnsatisfiable(keysQuery);
 
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
     setSubmitted(true);
     setKwargsError(null);
-    if (nameMissing || topicMissing || toolMissing) return;
+    if (nameMissing || topicMissing || toolMissing || executionKeyMissing || unsatisfiable) {
+      return;
+    }
 
     let toolKwargsValue: Record<string, unknown>;
     try {
@@ -97,6 +109,7 @@ export function RegisterHookForm(): ReactNode {
       name: name.trim(),
       topic: topic.trim(),
       tool: tool.trim(),
+      execution_key: executionKey,
       tool_kwargs: toolKwargsValue,
       condition: orNull(condition),
       condition_id: null,
@@ -145,6 +158,11 @@ export function RegisterHookForm(): ReactNode {
             }}
           />
         </Field>
+        <ExecutionKeyPicker
+          value={executionKey}
+          onValueChange={setExecutionKey}
+          error={submitted && executionKeyMissing ? 'An execution key is required.' : undefined}
+        />
         <Field
           label="Tool kwargs (JSON)"
           description="A JSON object of keyword arguments passed to the tool. Blank means none."
@@ -180,7 +198,7 @@ export function RegisterHookForm(): ReactNode {
         </Field>
         {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-          <Button type="submit" variant="primary" disabled={mutation.isPending}>
+          <Button type="submit" variant="primary" disabled={mutation.isPending || unsatisfiable}>
             {mutation.isPending ? <Spinner label="Registering" /> : null}
             Register
           </Button>

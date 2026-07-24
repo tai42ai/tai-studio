@@ -105,6 +105,8 @@ export type {
   Notification,
   Notifications,
   HookParams,
+  HookList,
+  TriggerAuth,
   SettingsSchema,
   TokensPayload,
   LoginFormField,

@@ -95,8 +95,12 @@ export function TopicVerifierForm(): ReactNode {
   const verifierMissing = verifier.trim() === '';
 
   const trimmedTopic = topic.trim();
+  const bindings = hooksQuery.data?.topic_verifiers;
+  // Own-property only; a prototype key must not read as a binding.
   const existingBinding =
-    trimmedTopic === '' ? undefined : hooksQuery.data?.topic_verifiers[trimmedTopic];
+    trimmedTopic === '' || bindings === undefined || !Object.hasOwn(bindings, trimmedTopic)
+      ? undefined
+      : bindings[trimmedTopic];
   const topicSuggestions = [...new Set((hooksQuery.data?.items ?? []).map((h) => h.topic))].sort();
 
   const onSubmit = (event: SyntheticEvent): void => {

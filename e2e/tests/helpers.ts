@@ -3,10 +3,13 @@
  * THE SKELETON (the boot recipe) — real login, real server-injected import map,
  * real plugin bundles.
  */
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /** The seeded, obviously test-only key (matches boot.sh's default). */
 export const API_KEY = process.env.STUDIO_API_KEY ?? 'sk-e2e-DO-NOT-USE-IN-PRODUCTION-000';
+
+/** The `user_id` behind {@link API_KEY}. */
+export const EXECUTION_KEY_ID = process.env.STUDIO_USER_ID ?? 'studio-e2e';
 
 /** The sessionStorage key `useAuth` reads/writes for the "remember" opt-in. */
 const SESSION_KEY = 'tai-studio.apiKey';
@@ -35,6 +38,24 @@ export async function loginViaUi(page: Page, key: string = API_KEY): Promise<voi
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForURL('**/tools');
+}
+
+/** Escape a value for literal use inside a `RegExp`. */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Pick an execution key in `scope`'s picker. The portalled listbox matches at page
+ * level; the id is escaped and boundary-anchored — a bare prefix fails strict mode.
+ */
+export async function pickExecutionKey(
+  page: Page,
+  scope: Locator,
+  keyId: string = EXECUTION_KEY_ID,
+): Promise<void> {
+  await scope.getByRole('combobox', { name: 'Execution key' }).click();
+  await page.getByRole('option', { name: new RegExp(`^${escapeRegExp(keyId)}(?:\\s|$)`) }).click();
 }
 
 /** The loud plugin/registry error card is an `alert` role carrying this copy. */

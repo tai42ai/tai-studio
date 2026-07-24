@@ -1,7 +1,7 @@
 /**
  * The trigger-link expiry picker's choices and their mapping to the wire
  * `ttl_seconds`. Expiry is the creator's EXPLICIT choice: there is no default
- * option (the picker starts unselected and submit is blocked until one is picked),
+ * option (the picker starts unselected; submitting without one is a loud error),
  * and `Permanent` maps to an explicit `null` — never `0` (the null-vs-0 trap: the
  * server reads `0` as a loud 400, `null` as a permanent link).
  */
