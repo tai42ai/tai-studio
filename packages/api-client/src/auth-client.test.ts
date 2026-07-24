@@ -237,7 +237,11 @@ describe('auth api-key client transport', () => {
       condition_id: null,
       condition_kwargs: { tier: 'pro' },
     };
-    const { client, captured } = harness(() => jsonResponse({ data: 'sk-abc123' }));
+    // The mint reply carries the raw key AND its per-mint fingerprint; createApiKey
+    // returns just the raw key string (the fingerprint is read from the tokens payload).
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { api_key: 'sk-abc123', key_fingerprint: 'kf-abc123' } }),
+    );
     const out = await client.createApiKey(body);
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/auth/api-keys');

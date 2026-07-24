@@ -28,6 +28,9 @@ const contentStyle: CSSProperties = {
   left: '50%',
   transform: 'translate(-50%, -50%)',
   width: 'min(90vw, 30rem)',
+  // Cap to the viewport and scroll overflow so a taller-than-window form stays reachable.
+  maxHeight: 'calc(100vh - var(--tai-space-8))',
+  overflowY: 'auto',
   background: 'var(--tai-color-surface-raised)',
   color: 'var(--tai-color-text)',
   border: '1px solid var(--tai-color-border)',

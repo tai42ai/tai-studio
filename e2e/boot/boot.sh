@@ -54,14 +54,13 @@ TOOL_RUNS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/3"
 HOOKS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/4"
 PG_HOST_PORT=55432
 
-# The accounts docs-demo (APPLY_ACCOUNTS_DDL=1, set by docs-screenshots.sh) needs
-# two extra Postgres env groups pointed at the SAME compose database:
+# The accounts docs-demo (APPLY_ACCOUNTS_DDL=1, set by docs-screenshots.sh) needs the
+# accounts plugin's own Postgres env group pointed at the SAME compose database:
 #   TAI_ACCOUNTS_PG_*    the accounts plugin's own tables (double-PG is correct —
 #                        the PostgresConnectionSettings field `pg_host` under the
 #                        `TAI_ACCOUNTS_PG_` env_prefix reads `TAI_ACCOUNTS_PG_PG_HOST`).
-#   VERSIONING_STORE_*   the versioned store that backs the seeded role templates —
-#                        `seed_roles` (and the users-admin role picker's
-#                        `GET /api/auth/roles`) is a no-op unless it is configured.
+# (The `VERSIONING_STORE_*` group, which also backs the seeded role templates, is
+# exported in step 5.)
 # Exported here (before the DDL apply and the skeleton launch, both of which read
 # them) using PG_HOST_PORT; gated so the lean e2e boot is untouched.
 if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
@@ -70,11 +69,6 @@ if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
   export TAI_ACCOUNTS_PG_PG_USER=postgres
   export TAI_ACCOUNTS_PG_PG_PASSWORD=postgres
   export TAI_ACCOUNTS_PG_PG_DB=tai
-  export VERSIONING_STORE_PG_HOST=127.0.0.1
-  export VERSIONING_STORE_PG_PORT="${PG_HOST_PORT}"
-  export VERSIONING_STORE_PG_USER=postgres
-  export VERSIONING_STORE_PG_PASSWORD=postgres
-  export VERSIONING_STORE_PG_DB=tai
 fi
 
 # A deterministic throwaway base64 32-byte key (test-only).
@@ -106,6 +100,17 @@ if [[ ! -x "${SKELETON_PY}" ]]; then
 fi
 log "installing reference-plugin into the skeleton env"
 uv pip install --python "${SKELETON_PY}" --quiet "${E2E_DIR}/reference-plugin"
+
+# The GitHub webhook-verifier plugin; its import registers a "github" verifier on the
+# app's `webhook_verifiers` facet. Import-only, no env config.
+WEBHOOK_VERIFIER_DIR="${SKELETON_DIR}/../tai-webhook-verifier-github"
+if [[ -d "${WEBHOOK_VERIFIER_DIR}" ]]; then
+  log "installing webhook-verifier-github into the skeleton env"
+  uv pip install --python "${SKELETON_PY}" --quiet "${WEBHOOK_VERIFIER_DIR}"
+else
+  log "ERROR: webhook-verifier-github not found at ${WEBHOOK_VERIFIER_DIR}"
+  exit 1
+fi
 
 # Extra plugin packages installed into the skeleton venv (space-separated uv-pip
 # install specs; paths must not contain spaces). The docs-screenshot runner uses
@@ -154,7 +159,11 @@ redis_cli HSET "ac:key:${KEY_HASH}" user_id "${STUDIO_USER_ID}" description "e2e
 # Policy body — Postgres `access_control_policies` (the SOLE policy store).
 # Full-privilege wildcard scope: the Studio key is full-execution; the `*` scope
 # satisfies every protected resource id. ON CONFLICT keeps a boot re-run idempotent.
-pg_exec -c "INSERT INTO access_control_policies (user_id, scopes) VALUES ('${STUDIO_USER_ID}', ARRAY['*']::text[]) ON CONFLICT (user_id) DO UPDATE SET scopes = EXCLUDED.scopes;" >/dev/null
+#
+# `policy_data` carries the `key_fingerprint` claim an execution-key binding resolves
+# at fire time. This key is seeded out-of-band, so set it here to a stable test-only value.
+STUDIO_KEY_FINGERPRINT="e2e00000000000000000000000000000"
+pg_exec -c "INSERT INTO access_control_policies (user_id, scopes, policy_data) VALUES ('${STUDIO_USER_ID}', ARRAY['*']::text[], '{\"key_fingerprint\":\"${STUDIO_KEY_FINGERPRINT}\"}'::jsonb) ON CONFLICT (user_id) DO UPDATE SET scopes = EXCLUDED.scopes, policy_data = EXCLUDED.policy_data;" >/dev/null
 
 # Route mappings — Postgres `access_control_routes`. Each row's `url` is the route
 # TEMPLATE the ACCESS_CONTROL_PATH_PATTERNS regexes below resolve to (the verifier
@@ -184,6 +193,14 @@ export ACCESS_CONTROL_STORE_PG_PORT="${PG_HOST_PORT}"
 export ACCESS_CONTROL_STORE_PG_USER=postgres
 export ACCESS_CONTROL_STORE_PG_PASSWORD=postgres
 export ACCESS_CONTROL_STORE_PG_DB=tai
+
+# The versioned-document store (`VERSIONING_STORE_*` DSN) backs the policy-version
+# history every api-key mint/edit appends. Point it at the same compose Postgres.
+export VERSIONING_STORE_PG_HOST=127.0.0.1
+export VERSIONING_STORE_PG_PORT="${PG_HOST_PORT}"
+export VERSIONING_STORE_PG_USER=postgres
+export VERSIONING_STORE_PG_PASSWORD=postgres
+export VERSIONING_STORE_PG_DB=tai
 export STUDIO_DIST_PATH="${STUDIO_DIST}"
 
 # Interactions (ask_user): its Redis defaults to loopback :6379 and always

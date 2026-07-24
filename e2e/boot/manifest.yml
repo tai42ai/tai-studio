@@ -21,6 +21,13 @@
 # SECOND time, tripping the duplicate guard). The package form registers exactly once.
 lifecycle_modules:
   - tai42_identity_redis
+  # The GitHub webhook-signature verifier. Importing the package registers a concrete
+  # verifier under the name "github" on the app's `webhook_verifiers` facet (import-only
+  # side effect), so `GET /api/hooks/verifiers` lists a bindable verifier and the
+  # hooks-page bind-topic-verifier + verifier-signed-door flow can run. Without a
+  # registered verifier the deployment reports "webhook_verifiers: off" and that leg
+  # cannot be exercised. boot.sh installs the package into the skeleton env.
+  - tai42_webhook_verifier_github
 
 # --- Default router set ------------------------------------------------------
 # Mount no default routers; the explicit `routers_modules` list below is the

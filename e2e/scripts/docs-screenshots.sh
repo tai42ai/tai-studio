@@ -273,8 +273,10 @@ print(json.dumps({
     "condition": os.environ["OWNED_CONDITION"],
 }))')"
 mint_resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/auth/api-keys" -d "${mint_body}")"
-# The raw sk- key is the response `data` (surfaced exactly once).
-OWNED_KEY="$(printf '%s' "${mint_resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"])' 2>/dev/null || true)"
+# The mint reply is `{"data": {"api_key": "sk-…", "key_fingerprint": "…"}}` — the raw
+# sk- key (surfaced exactly once) is `data.api_key`, alongside the key's per-mint
+# fingerprint. We only need the raw key here.
+OWNED_KEY="$(printf '%s' "${mint_resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["api_key"])' 2>/dev/null || true)"
 [[ "${OWNED_KEY}" == sk-* ]] || die "minting the scoped owned key failed: ${mint_resp}"
 export STUDIO_OWNED_KEY="${OWNED_KEY}"
 

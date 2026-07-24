@@ -55,6 +55,10 @@ const contentStyle: CSSProperties = {
   boxShadow: 'var(--tai-shadow-md)',
   padding: 'var(--tai-space-1)',
   zIndex: 50,
+  // Cap to available height and scroll overflow so a long list stays reachable;
+  // the Radix var is set only in `position="popper"` mode.
+  maxHeight: 'var(--radix-select-content-available-height)',
+  overflowY: 'auto',
 };
 
 const itemStyle: CSSProperties = {

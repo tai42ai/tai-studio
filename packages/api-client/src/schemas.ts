@@ -969,8 +969,11 @@ export const tokensPayload = z.array(
 );
 export type TokensPayload = z.infer<typeof tokensPayload>;
 
-/** The raw `sk-…` key string, returned once at creation time and never again. */
-export const createdApiKey = z.string();
+/** Mint reply `{ api_key, key_fingerprint }` narrowed to the raw `sk-…` key,
+ *  returned once at creation and never again. */
+export const createdApiKey = z
+  .object({ api_key: z.string(), key_fingerprint: z.string() })
+  .transform((minted) => minted.api_key);
 export const editApiKeyResult = z.object({ user_id: z.string(), updated: z.boolean() });
 export const revokeApiKeyResult = z.object({ user_id: z.string(), revoked: z.boolean() });
 
