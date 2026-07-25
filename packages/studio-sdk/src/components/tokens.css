@@ -1,0 +1,130 @@
+/*
+ * The design-system token contract: colors, spacing, typography, radii, and
+ * the dark-mode scheme, all as CSS variables. This ships as PRECOMPILED CSS with
+ * preflight disabled (the SHELL owns preflight). Both builds declare the same
+ * @layer order so host utilities have deterministic precedence over DS component
+ * styles — the shell stylesheet is the canonical layer-order emitter and loads
+ * FIRST. Plugins style via these tokens + SDK components ONLY.
+ *
+ * Dark mode is required and token-driven: the default follows prefers-color-
+ * scheme, and the viewer's toggle stamps data-theme on the root, which wins.
+ */
+@layer tai-tokens, tai-components, tai-utilities;
+
+@keyframes tai-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes tai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Indeterminate progress: a short fill sweeps across the track when a running
+   tool reports progress but no total is known. */
+@keyframes tai-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@layer tai-tokens {
+  :root {
+    --tai-color-bg: #ffffff;
+    --tai-color-surface: #f7f8fa;
+    --tai-color-surface-raised: #ffffff;
+    --tai-color-border: #e3e6ea;
+    --tai-color-text: #1a1d21;
+    --tai-color-text-muted: #5b626b;
+    --tai-color-primary: #3b5bdb;
+    --tai-color-primary-text: #ffffff;
+    --tai-color-danger: #d64545;
+    --tai-color-danger-text: #ffffff;
+    --tai-color-success: #2f9e44;
+    --tai-color-warning: #e8a13a;
+    --tai-color-focus-ring: #7aa2ff;
+
+    --tai-space-1: 0.25rem;
+    --tai-space-2: 0.5rem;
+    --tai-space-3: 0.75rem;
+    --tai-space-4: 1rem;
+    --tai-space-6: 1.5rem;
+    --tai-space-8: 2rem;
+
+    --tai-radius-sm: 4px;
+    --tai-radius-md: 8px;
+    --tai-radius-lg: 12px;
+
+    --tai-font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --tai-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    --tai-text-sm: 0.8125rem;
+    --tai-text-md: 0.9375rem;
+    --tai-text-lg: 1.125rem;
+
+    --tai-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+    --tai-shadow-md: 0 4px 12px rgba(16, 24, 40, 0.1);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --tai-color-bg: #0f1115;
+      --tai-color-surface: #161a20;
+      --tai-color-surface-raised: #1c222b;
+      --tai-color-border: #2a313b;
+      --tai-color-text: #e7eaee;
+      --tai-color-text-muted: #9aa2ac;
+      --tai-color-primary: #5c7cfa;
+      --tai-color-primary-text: #ffffff;
+      --tai-color-danger: #e06767;
+      --tai-color-success: #51cf66;
+      --tai-color-warning: #f2b455;
+      --tai-color-focus-ring: #4763b8;
+      --tai-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --tai-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  /* The viewer's explicit toggle wins over the system preference, in BOTH
+     directions (data-theme is stamped on the root by useTheme). */
+  :root[data-theme='light'] {
+    --tai-color-bg: #ffffff;
+    --tai-color-surface: #f7f8fa;
+    --tai-color-surface-raised: #ffffff;
+    --tai-color-border: #e3e6ea;
+    --tai-color-text: #1a1d21;
+    --tai-color-text-muted: #5b626b;
+    --tai-color-primary: #3b5bdb;
+  }
+
+  :root[data-theme='dark'] {
+    --tai-color-bg: #0f1115;
+    --tai-color-surface: #161a20;
+    --tai-color-surface-raised: #1c222b;
+    --tai-color-border: #2a313b;
+    --tai-color-text: #e7eaee;
+    --tai-color-text-muted: #9aa2ac;
+    --tai-color-primary: #5c7cfa;
+  }
+}
+
+@layer tai-components {
+  /* Radix moves DOM focus to the highlighted Select.Item during keyboard and
+     pointer navigation. This gives that item a visible cue (WCAG 2.4.7) — a
+     token-driven highlight readable in both light and dark — and suppresses the
+     native focus ring the highlight replaces. */
+  .tai-select-item[data-highlighted] {
+    background: var(--tai-color-primary);
+    color: var(--tai-color-primary-text);
+    outline: none;
+  }
+}

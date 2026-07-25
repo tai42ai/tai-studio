@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a defect in tai-studio (the React web UI for a tai42-skeleton server)
+labels: ['bug']
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal steps or code that reproduce the problem.
+      render: typescript
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: tai-studio version
+      placeholder: '0.1.0'
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser + version, OS, Node and pnpm versions, and the tai42-skeleton version the Studio was pointed at.
+      placeholder: 'Chrome 140, macOS 15, Node 22.x, pnpm 11.9.0, tai42-skeleton 0.1.0'
+    validations:
+      required: true

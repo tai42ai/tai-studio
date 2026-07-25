@@ -1,0 +1,25 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [],
+    // The reference plugin lives in a Python package dir, outside the pnpm
+    // workspace graph, so react / react-dom / @tai42/studio-sdk are not symlinked
+    // into a local node_modules. They are marked EXTERNAL by the build (resolved
+    // at runtime through the host import map), and typechecked here against the
+    // monorepo's own copies via explicit path maps — the SDK (and the api-client
+    // it re-exports types from) from source, react from the workspace @types.
+    // baseUrl is the repo root so these paths are stable (never
+    // .pnpm-version-pinned).
+    "baseUrl": "../../..",
+    "paths": {
+      "@tai42/studio-sdk": ["packages/studio-sdk/src/index.ts"],
+      "@tai42/api-client": ["packages/api-client/src/index.ts"],
+      "react": ["packages/studio-sdk/node_modules/@types/react"],
+      "react/*": ["packages/studio-sdk/node_modules/@types/react/*"],
+      "react-dom": ["packages/studio-sdk/node_modules/@types/react-dom"],
+      "react-dom/*": ["packages/studio-sdk/node_modules/@types/react-dom/*"]
+    }
+  },
+  "include": ["."]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "user_id": "svc-ingest",
+    "description": "Ingestion service key",
+    "scopes": ["read:runs", "write:runs"],
+    "policy_data": { "rate_limit": 100 },
+    "condition": null,
+    "condition_id": null,
+    "condition_kwargs": null
+  },
+  {
+    "user_id": "svc-dashboard",
+    "description": "Dashboard read-only key",
+    "scopes": ["read:runs"],
+    "policy_data": {},
+    "condition": "business_hours",
+    "condition_id": "cond_01",
+    "condition_kwargs": { "tz": "UTC" }
+  }
+]

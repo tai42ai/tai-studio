@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Completing sign-in…</title>
+  </head>
+  <body>
+    <!--
+      STANDALONE OAuth bridge — the multi-tenant deployable variant.
+
+      This is a SELF-CONTAINED static artifact (this html + its sibling script,
+      no references outside this directory) for an operator hosting one shared
+      bridge origin across many deployments. Unlike the SPA-shipped
+      public/oauth-bridge.html (which allows ONLY its own exact origin), this
+      build validates the routing target against an ANCHORED-ROOT allow-list
+      baked at build time — see oauth-bridge.ts.
+    -->
+    <main id="status">Completing sign-in…</main>
+    <script type="module" src="./oauth-bridge.ts"></script>
+  </body>
+</html>

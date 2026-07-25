@@ -1,0 +1,94 @@
+import type { ReactNode } from 'react';
+
+import type { PresetRecord } from '@tai42/api-client';
+import { Button, Card, Field, TextInput, Textarea } from '@tai42/studio-sdk';
+
+import type { InlineSubAgentSpec } from './authoring-types';
+import { MultiToolPicker } from './MultiToolPicker';
+import { PresetSpecEditor } from './PresetSpecEditor';
+import { rowStyle, smallStackStyle } from './authoring-styles';
+
+/** One inline sub-agent editor card (name + prompt + tools + presets). */
+export function SubAgentCard({
+  spec,
+  toolNames,
+  tagsByTool,
+  presetRecords,
+  onChange,
+  onRemove,
+  disabled,
+  index,
+}: {
+  readonly spec: InlineSubAgentSpec;
+  readonly toolNames: readonly string[];
+  readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
+  readonly presetRecords: readonly PresetRecord[];
+  readonly onChange: (next: InlineSubAgentSpec) => void;
+  readonly onRemove: () => void;
+  readonly disabled?: boolean;
+  readonly index: number;
+}): ReactNode {
+  const idPrefix = `subagent-${String(index)}`;
+  return (
+    <Card>
+      <div style={smallStackStyle} data-testid={idPrefix}>
+        <div style={rowStyle}>
+          <strong>Sub-agent {index + 1}</strong>
+          <div style={{ marginLeft: 'auto' }} />
+          <Button
+            type="button"
+            variant="danger"
+            aria-label={`Remove sub-agent ${String(index + 1)}`}
+            disabled={disabled}
+            onClick={onRemove}
+          >
+            Remove
+          </Button>
+        </div>
+        <Field label="Name">
+          <TextInput
+            value={spec.name}
+            disabled={disabled}
+            onChange={(event) => {
+              onChange({ ...spec, name: event.target.value });
+            }}
+            placeholder="researcher"
+          />
+        </Field>
+        <Field label="System prompt">
+          <Textarea
+            value={spec.system_prompt}
+            disabled={disabled}
+            onChange={(event) => {
+              onChange({ ...spec, system_prompt: event.target.value });
+            }}
+            placeholder="Research the question."
+          />
+        </Field>
+        <Field label="Tools">
+          <MultiToolPicker
+            toolNames={toolNames}
+            tagsByTool={tagsByTool}
+            value={spec.tool_names}
+            onChange={(next) => {
+              onChange({ ...spec, tool_names: next });
+            }}
+            disabled={disabled}
+            idPrefix={`${idPrefix}-tools`}
+          />
+        </Field>
+        <Field label="Presets">
+          <PresetSpecEditor
+            presetRecords={presetRecords}
+            value={spec.presets}
+            onChange={(next) => {
+              onChange({ ...spec, presets: next });
+            }}
+            disabled={disabled}
+            idPrefix={`${idPrefix}-presets`}
+          />
+        </Field>
+      </div>
+    </Card>
+  );
+}

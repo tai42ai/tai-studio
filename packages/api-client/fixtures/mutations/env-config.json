@@ -1,0 +1,8 @@
+{
+  "status": "ok",
+  "env_keys": 5,
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

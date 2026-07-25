@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "jsx": "react-jsx",
+    "useDefineForClassFields": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@tai42/studio-sdk": ["packages/studio-sdk/src/index.ts"],
+      "@tai42/studio-sdk/host": ["packages/studio-sdk/src/host.ts"],
+      "@tai42/studio-sdk/testing": ["packages/studio-sdk/src/testing.ts"],
+      "@tai42/api-client": ["packages/api-client/src/index.ts"],
+      "@tai42/feature-tools": ["packages/features/tools/src/index.ts"],
+      "@tai42/feature-agents": ["packages/features/agents/src/index.ts"],
+      "@tai42/feature-presets": ["packages/features/presets/src/index.ts"],
+      "@tai42/feature-extensions": ["packages/features/extensions/src/index.ts"],
+      "@tai42/feature-interactions": ["packages/features/interactions/src/index.ts"],
+      "@tai42/feature-connectors": ["packages/features/connectors/src/index.ts"],
+      "@tai42/feature-hooks": ["packages/features/hooks/src/index.ts"],
+      "@tai42/feature-templates": ["packages/features/templates/src/index.ts"],
+      "@tai42/feature-manifest": ["packages/features/manifest/src/index.ts"],
+      "@tai42/feature-settings": ["packages/features/settings/src/index.ts"],
+      "@tai42/feature-observability": ["packages/features/observability/src/index.ts"],
+      "@tai42/feature-marketplace": ["packages/features/marketplace/src/index.ts"],
+      "@tai42/feature-scheduling": ["packages/features/scheduling/src/index.ts"],
+      "@tai42/feature-system": ["packages/features/system/src/index.ts"]
+    }
+  }
+}
