@@ -1,16 +1,17 @@
 /**
- * `ExternalLinkButton` — an open-link action whose href is scheme-checked
- * against an http/https allow-list. A `javascript:`/`data:`/other-scheme URL is
- * NOT navigable: it is NEUTRALIZED, rendered as plain text (no anchor, no
- * href), so a hostile URL can never become a live navigation target. This is an
- * XSS pin.
+ * `ExternalLinkButton` — an open-link action for a URL the Studio did not author
+ * (a registry homepage, an interaction payload's link). Only an ABSOLUTE
+ * `http(s)` URL is navigable here: every other spelling — another scheme, and a
+ * relative reference, which would be a same-origin in-app navigation the caller
+ * never intended — is NEUTRALIZED into plain text with no anchor and no href.
+ * This is an XSS pin.
  *
- * The check and the rendering both live in `Button`'s link form — this module
- * is the named entry point for it, not a second implementation.
+ * The check and the neutralized rendering are `Button`'s; this module chooses the
+ * stricter of the two link policies rather than re-implementing either.
  */
 import type { ReactNode } from 'react';
 
-import { Button } from './primitives';
+import { Button, isSafeHttpUrl, NeutralizedLink } from './primitives';
 
 export { isSafeHttpUrl } from './primitives';
 
@@ -20,5 +21,9 @@ export interface ExternalLinkButtonProps {
 }
 
 export function ExternalLinkButton({ url, children }: ExternalLinkButtonProps) {
-  return <Button href={url}>{children ?? url}</Button>;
+  const label = children ?? url;
+  if (!isSafeHttpUrl(url)) {
+    return <NeutralizedLink className="tai-btn tai-btn-secondary">{label}</NeutralizedLink>;
+  }
+  return <Button href={url}>{label}</Button>;
 }

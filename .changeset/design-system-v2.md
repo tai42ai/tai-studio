@@ -39,9 +39,12 @@ layer, the icon set, and the layout primitives every screen builds on.
   absent from the `exports` map.
 - **Additive component API:** `PageHeader`, `Page`, `Stack`, `Drawer`,
   `ScrollRegion`, the `useProseScrollRegions` hook, and the `useBreakpoint` hook.
-  `Button` gains a `ghost` variant and a link form — given an `href` it renders an anchor, with the
-  same scheme allow-list `ExternalLinkButton` already applied (that component
-  now delegates to it rather than duplicating the check). `RadioGroup` gains
+  `Button` gains a `ghost` variant and a link form — given an `href` it renders an
+  anchor: a relative reference stays in-app, an absolute http(s) URL opens in a
+  new tab, and any other scheme is neutralized into plain text.
+  `ExternalLinkButton` now delegates to it rather than holding a second copy of
+  that check, and keeps its own stricter policy — for a URL the Studio did not
+  author, only an absolute http(s) URL is navigable. `RadioGroup` gains
   per-option `icon` and `visuallyHiddenLabel`, a standalone `label`, an
   `orientation`, and a compact `segmented` variant. `Card` gains `interactive`
   for the hover/focus lift, `EmptyState` an `action` slot, and `JsonTree` a

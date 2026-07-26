@@ -49,6 +49,17 @@ describe('ExternalLinkButton', () => {
     );
   });
 
+  it.each(['/settings/api-keys', '?tab=admin', '#anchor', './relative'])(
+    'NEUTRALIZES the relative reference %s, which Button alone would navigate in-app',
+    (url) => {
+      render(<ExternalLinkButton url={url}>Homepage</ExternalLinkButton>);
+      expect(screen.queryByRole('link')).toBeNull();
+      const text = screen.getByText('Homepage');
+      expect(text.tagName).not.toBe('A');
+      expect(text).toHaveAttribute('data-neutralized', 'true');
+    },
+  );
+
   it('NEUTRALIZES a data: URL', () => {
     render(
       <ExternalLinkButton url="data:text/html,<script>alert(1)</script>">

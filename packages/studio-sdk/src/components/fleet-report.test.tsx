@@ -182,7 +182,9 @@ describe('FleetReport', () => {
       };
       render(<FleetReport summary={summary} />);
       const alert = screen.getByRole('alert');
-      expect(alert).toHaveClass('tai-error-state');
+      // A degraded fleet is a WARNING: panel and headline state one severity.
+      expect(alert).toHaveClass('tai-warn-state');
+      expect(alert).not.toHaveClass('tai-error-state');
       expect(statusFor(alert, /did not converge/)).toHaveClass('tai-status-warn');
       expect(statusFor(alert, /^apply failed$/)).toHaveClass('tai-status-err');
       expect(within(alert).getByText('serve-a')).toHaveClass('tai-mono');

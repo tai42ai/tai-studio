@@ -92,9 +92,11 @@ export function FleetReport({
     );
   }
 
-  // degraded — the bus was reached but named origins did not converge.
+  // degraded — the bus was reached but named origins did not converge. That is a
+  // warning, not a failure, so it takes the warning surface: a warn-toned
+  // headline inside an error-toned panel would state two different severities.
   return (
-    <div role="alert" className="tai-error-state tai-stack tai-stack-2">
+    <div role="alert" className="tai-warn-state tai-stack tai-stack-2">
       <strong className="tai-status tai-status-warn">
         <AlertTriangleIcon />
         {action === 'reload'

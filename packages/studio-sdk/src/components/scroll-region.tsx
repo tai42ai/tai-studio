@@ -61,8 +61,10 @@ export interface OverflowRegionAttributes {
  * The box is measured on mount, whenever it or any child resizes, and whenever
  * its content changes — replaced, appended, or edited in place. A replaced child
  * is a NEW element, so the resize observer is re-pointed at the current children
- * before each measurement. Both observers live for the lifetime of the mount;
- * neither mutates the DOM, so neither can re-trigger the other.
+ * before each measurement. Both observers live for the lifetime of the mount.
+ * The only DOM change a measurement can cause is the region ATTRIBUTES this hook
+ * returns, and attributes are deliberately left unobserved — that, not an absence
+ * of mutation, is what stops the pair from re-triggering each other.
  *
  * @param ref - the scrolling element.
  * @param label - its accessible name, applied only while it actually scrolls.
@@ -93,7 +95,8 @@ export function useOverflowRegion(
     // longer code string, a different JSON body — as it is replaced, and React
     // reuses the element when it does, so watching the direct child list alone
     // would freeze the measurement at whatever the first content needed.
-    // `observeAll` mutates nothing, so it cannot re-trigger this.
+    // ATTRIBUTES are deliberately absent: the region attributes are what a
+    // measurement writes, and observing them would make each pass trigger the next.
     const contentObserver = new MutationObserver(observeAll);
     contentObserver.observe(box, { childList: true, subtree: true, characterData: true });
     observeAll();

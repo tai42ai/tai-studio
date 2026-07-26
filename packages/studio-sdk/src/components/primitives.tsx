@@ -40,6 +40,33 @@ const RELATIVE_HREF = /^(?:[/?#](?![/\\])|\.{1,2}\/)/;
 /** The text a neutralized href carries in place of a navigation. */
 const BLOCKED_HREF_TITLE = 'This link was blocked because it is not an http(s) URL.';
 
+/**
+ * A blocked href, rendered as plain text: no anchor, no `href`, no handlers, so
+ * it can never become a live navigation target. Shared by `Button`'s link form
+ * and by `ExternalLinkButton`, which applies the stricter http(s)-only policy.
+ */
+export function NeutralizedLink({
+  className,
+  style,
+  children,
+}: {
+  readonly className?: string;
+  readonly style?: CSSProperties;
+  readonly children?: ReactNode;
+}) {
+  return (
+    <span
+      data-neutralized="true"
+      aria-disabled="true"
+      title={BLOCKED_HREF_TITLE}
+      className={className}
+      style={style}
+    >
+      {children}
+    </span>
+  );
+}
+
 type HrefKind = 'internal' | 'external' | 'blocked';
 
 /** Sorts an href into the three link forms the button renders. */
@@ -90,17 +117,10 @@ export function Button(props: ButtonProps) {
   const kind = classifyHref(href);
 
   if (kind === 'blocked') {
-    // Neutralized: plain text, never a navigable anchor, and no event handlers.
     return (
-      <span
-        data-neutralized="true"
-        aria-disabled="true"
-        title={BLOCKED_HREF_TITLE}
-        className={classes}
-        style={style}
-      >
+      <NeutralizedLink className={classes} style={style}>
         {children}
-      </span>
+      </NeutralizedLink>
     );
   }
 

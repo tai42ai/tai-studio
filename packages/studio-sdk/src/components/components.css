@@ -429,6 +429,10 @@
      pointer navigation. This gives that item a visible cue (WCAG 2.4.7) — the
      accent tint, readable in both themes — and suppresses the native focus ring
      the highlight replaces. */
+  /* Radix stamps `data-highlighted` for keyboard and pointer navigation inside a
+     Select; the completion list wears the same classes on its own buttons, which
+     never get that attribute, so pointer hover is stated separately. */
+  .tai-select-item:not([data-disabled]):hover,
   .tai-select-item[data-highlighted] {
     background: var(--tai-color-accent-tint);
     color: var(--tai-color-accent-on-tint);
@@ -1073,12 +1077,17 @@
     animation: tai-spin 0.7s linear infinite;
   }
 
+  /* The track's ground is barely off the page ground, so its BOUNDARY is what
+     makes the bar visible at all — and a progress bar's outline identifies the
+     component, which rules out the decorative border tier. */
   .tai-progress-track {
     position: relative;
     overflow: hidden;
+    box-sizing: border-box;
     width: 100%;
-    height: 6px;
+    height: 8px;
     background: var(--tai-color-surface);
+    border: 1px solid var(--tai-color-control-border);
     border-radius: var(--tai-radius-full);
   }
 
@@ -1125,6 +1134,18 @@
     gap: var(--tai-space-2);
     color: var(--tai-color-err-text);
     font-weight: 600;
+  }
+
+  /* The same panel one tone down, for a state that degraded rather than failed. */
+  .tai-warn-state {
+    padding: var(--tai-space-4);
+    background: var(--tai-color-warn-tint);
+    border: 1px solid var(--tai-color-warn-text);
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.5;
+    color: var(--tai-color-text);
   }
 
   /* -- Prose --------------------------------------------------------------------
@@ -1617,9 +1638,12 @@
       animation: none;
     }
 
+    /* Without the sweep the fill has to STATE that work is in flight, so it
+       fills the track in the accent itself. The tint it would otherwise carry is
+       an 8 % wash that is invisible against the track. */
     .tai-progress-fill-indeterminate {
       width: 100%;
-      background: var(--tai-color-accent-tint);
+      background: var(--tai-color-accent);
     }
 
     .tai-btn,
