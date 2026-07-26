@@ -23,7 +23,16 @@ pnpm add @tai42/studio-sdk
 - `@tai42/studio-sdk/host` — the host-only plugin registry.
 - `@tai42/studio-sdk/testing` — test-only helpers: a registry reset and
   `installJsdomStubs()`, which fills the browser APIs jsdom omits.
-- `@tai42/studio-sdk/tokens.css` — the design-token stylesheet.
+- `@tai42/studio-sdk/tokens.css` — the design-token stylesheet. It also emits the
+  canonical `@layer` order, so a host imports it FIRST.
+- `@tai42/studio-sdk/fonts.css` — the self-hosted Inter Variable and Geist Mono
+  Variable faces, loaded once per host app.
+- `@tai42/studio-sdk/components.css` — the component, layout, responsive, and
+  prose classes the design system is drawn with.
+
+A host that bundles the SDK gets all three through the barrel's side-effect
+imports. A host that consumes the SDK as an external module (the Studio shell
+resolves it through the served import map) imports the three stylesheets itself.
 
 ## Usage
 

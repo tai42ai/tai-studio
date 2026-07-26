@@ -143,6 +143,48 @@ export type { CopyFieldProps } from './components/copy-field';
 export { TOKEN_NAMES } from './components/tokens';
 export type { TokenName } from './components/tokens';
 
+// -- Iconography (the only sanctioned marks; Unicode glyphs are banned) -------
+export {
+  NAV_ICONS,
+  DashboardIcon,
+  ToolsIcon,
+  AgentsIcon,
+  PresetsIcon,
+  ExtensionsIcon,
+  TemplatesIcon,
+  ConnectorsIcon,
+  HooksIcon,
+  StorageIcon,
+  SchedulingIcon,
+  InteractionsIcon,
+  NotificationsIcon,
+  MarketplaceIcon,
+  ManifestIcon,
+  SettingsIcon,
+  SystemIcon,
+  SearchIcon,
+  SignOutIcon,
+  MenuIcon,
+  CloseIcon,
+  FilterIcon,
+  ArrowLeftIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CheckIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  SortAscIcon,
+  SortDescIcon,
+  SunIcon,
+  MoonIcon,
+  MonitorIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+  XCircleIcon,
+  PendingIcon,
+} from './components/icons';
+export type { IconProps, IconComponent } from './components/icons';
+
 // -- Schema-driven forms -----------------------------------------------------
 export {
   SchemaForm,

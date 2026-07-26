@@ -340,6 +340,14 @@ export default tseslint.config(
     plugins: { boundaries },
     rules: { 'boundaries/dependencies': 'off' },
   },
+  {
+    // The design-token scanner READS the monorepo's source from disk rather than
+    // importing an architectural layer, so it needs Node core (`node:fs` and
+    // friends) that the layer allowlist deliberately withholds from library code.
+    files: ['packages/studio-sdk/src/components/token-usage.test.ts'],
+    plugins: { boundaries },
+    rules: { 'boundaries/dependencies': 'off' },
+  },
   // Byte-constant OAuth relay scripts: hand-written classic browser scripts
   // shipped verbatim from `public/`, outside the TS build. Type-checked rules do
   // not apply; give them the browser globals they use.
