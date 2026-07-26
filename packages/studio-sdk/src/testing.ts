@@ -4,6 +4,78 @@ export { __resetContributions } from './plugin/registry';
 export { __resetPluginHostState } from './plugin/host-state';
 
 /**
+ * Every `ResizeObserver` the stub has handed out and not yet had disconnected,
+ * with the elements each one is watching. `flushResizeObservers` drives the
+ * callbacks from here.
+ */
+interface LiveResizeObserver {
+  readonly callback: ResizeObserverCallback;
+  readonly targets: Set<Element>;
+  readonly observer: ResizeObserver;
+}
+
+const liveResizeObservers = new Set<LiveResizeObserver>();
+
+/**
+ * A full `ResizeObserverEntry` shape for `target`. Radix's `useSize` reads
+ * `borderBoxSize[0].inlineSize`, so a `target`-only entry would throw there;
+ * jsdom reports zero geometry, which is exactly what a real headless observer
+ * would report for an unlaid-out element.
+ */
+function resizeObserverEntry(target: Element): ResizeObserverEntry {
+  const rect = target.getBoundingClientRect();
+  const size: ResizeObserverSize = { inlineSize: rect.width, blockSize: rect.height };
+  return {
+    target,
+    contentRect: rect,
+    borderBoxSize: [size],
+    contentBoxSize: [size],
+    devicePixelContentBoxSize: [size],
+  };
+}
+
+/**
+ * Fires every live `ResizeObserver` stub's callback for the elements it is
+ * observing. Pair it with `setElementOverflow` to drive a component that
+ * measures itself (`ScrollRegion` and `useProseTableRegions` re-read
+ * `scrollWidth`/`clientWidth` from their observer callbacks):
+ *
+ *     setElementOverflow(region, true);
+ *     flushResizeObservers();
+ *
+ * Only meaningful once `installJsdomStubs` has installed the stub; with a real
+ * `ResizeObserver` present (a browser environment) there is nothing to flush.
+ */
+export function flushResizeObservers(): void {
+  for (const live of [...liveResizeObservers]) {
+    if (live.targets.size === 0) continue;
+    live.callback([...live.targets].map(resizeObserverEntry), live.observer);
+  }
+}
+
+/** The faked widths: equal reads as "fits", unequal as "scrolls". */
+const FITTING_WIDTH = 100;
+const OVERFLOWING_SCROLL_WIDTH = 400;
+
+/**
+ * Makes `element` report itself as horizontally overflowing (or not). jsdom runs
+ * no layout, so `scrollWidth` and `clientWidth` are both 0 and every
+ * overflow test reads as "fits"; this shadows the prototype getters with own,
+ * configurable values so a test can drive either state. Call it again with the
+ * opposite flag to flip the element back.
+ *
+ * @param element - the element whose scroll metrics to fake.
+ * @param overflowing - true to report content wider than the box.
+ */
+export function setElementOverflow(element: HTMLElement, overflowing: boolean): void {
+  Object.defineProperty(element, 'clientWidth', { configurable: true, value: FITTING_WIDTH });
+  Object.defineProperty(element, 'scrollWidth', {
+    configurable: true,
+    value: overflowing ? OVERFLOWING_SCROLL_WIDTH : FITTING_WIDTH,
+  });
+}
+
+/**
  * jsdom omits a handful of browser APIs the Studio components reach for while a
  * test drives them. Installing every stub in one place keeps each feature's
  * `test-setup.ts` identical and lets interaction tests exercise the real
@@ -15,6 +87,14 @@ export { __resetPluginHostState } from './plugin/host-state';
  * - File-import flows read the picked file via `Blob.text()`.
  * - Router scroll restoration calls `scrollTo` on navigation.
  *
+ * The `ResizeObserver` stub is a WORKING observer, not an inert one: it keeps a
+ * registry of the observers still in use, delivers an entry to the callback as
+ * each element is observed (as a real observer does for its initial
+ * observation), and lets a test re-deliver on demand via
+ * `flushResizeObservers`. Components that size themselves — `ScrollRegion` and
+ * `useProseTableRegions` — are therefore exercised for real, with
+ * `setElementOverflow` supplying the scroll metrics jsdom cannot compute.
+ *
  * Each stub only fills a MISSING API, so installing the whole set everywhere is
  * harmless — the one exception is `window.scrollTo`, which jsdom ships as a "Not
  * implemented" stub that logs loudly on every navigation, so it is replaced
@@ -22,15 +102,26 @@ export { __resetPluginHostState } from './plugin/host-state';
  */
 export function installJsdomStubs(): void {
   if (typeof globalThis.ResizeObserver !== 'function') {
-    class ResizeObserverStub {
-      observe(): void {
-        /* jsdom stub */
+    class ResizeObserverStub implements ResizeObserver {
+      readonly #live: LiveResizeObserver;
+
+      constructor(callback: ResizeObserverCallback) {
+        this.#live = { callback, targets: new Set<Element>(), observer: this };
+        liveResizeObservers.add(this.#live);
       }
-      unobserve(): void {
-        /* jsdom stub */
+
+      observe(target: Element): void {
+        this.#live.targets.add(target);
+        this.#live.callback([resizeObserverEntry(target)], this);
       }
+
+      unobserve(target: Element): void {
+        this.#live.targets.delete(target);
+      }
+
       disconnect(): void {
-        /* jsdom stub */
+        this.#live.targets.clear();
+        liveResizeObservers.delete(this.#live);
       }
     }
     globalThis.ResizeObserver = ResizeObserverStub;

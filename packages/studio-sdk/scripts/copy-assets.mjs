@@ -88,3 +88,22 @@ const missing = stylesheets
 if (missing.length > 0) {
   throw new Error(`Stylesheet(s) missing from dist/ after the copy step: ${missing.join(', ')}.`);
 }
+
+// A stylesheet a consumer cannot address by subpath is only half-published: the
+// barrel delivers it, but `@tai42/studio-sdk/<name>.css` 404s. The exports map
+// is hand-written, so it is checked against the same file list.
+const exported = new Set(
+  Object.values(JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).exports).filter(
+    (target) => typeof target === 'string' && target.endsWith('.css'),
+  ),
+);
+
+const unexported = stylesheets
+  .map((stylesheet) => `./dist/${posixRelative(srcDir, stylesheet)}`)
+  .filter((distPath) => !exported.has(distPath));
+
+if (unexported.length > 0) {
+  throw new Error(
+    `Stylesheet(s) absent from the package "exports" map, so no consumer can import them by subpath: ${unexported.join(', ')}.`,
+  );
+}

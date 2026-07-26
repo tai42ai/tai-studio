@@ -57,6 +57,8 @@ export {
 export type { CapabilityState, CapabilityContextValue } from './hooks/useCapabilities';
 export { ThemeProvider, useTheme } from './hooks/useTheme';
 export type { Theme, ThemeState } from './hooks/useTheme';
+export { useBreakpoint } from './hooks/useBreakpoint';
+export type { Breakpoint, BreakpointState } from './hooks/useBreakpoint';
 export { useInteractionsStream } from './hooks/useSse';
 export type { InteractionsStreamState, StreamInteraction } from './hooks/useSse';
 
@@ -83,7 +85,9 @@ export { comboElementNames, extensionElementName } from './extension-combos';
 
 // -- Design system -----------------------------------------------------------
 export { Button, Card, Skeleton, EmptyState, ErrorState, Spinner } from './components/primitives';
-export type { ButtonProps } from './components/primitives';
+export type { ButtonProps, ButtonVariant, CardProps } from './components/primitives';
+export { PageHeader, Page, Stack } from './components/page-header';
+export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
 export { ErrorBoundary } from './components/error-boundary';
 export type { ErrorBoundaryProps } from './components/error-boundary';
 export { Field, useFieldControl } from './components/field';
@@ -104,9 +108,13 @@ export { Dialog } from './components/dialog';
 export type { DialogProps } from './components/dialog';
 export { ConfirmDialog } from './components/confirm-dialog';
 export type { ConfirmDialogProps } from './components/confirm-dialog';
+export { Drawer } from './components/drawer';
+export type { DrawerProps } from './components/drawer';
 export { Tooltip } from './components/tooltip';
 export type { TooltipProps } from './components/tooltip';
 export { Table, THead, TBody, TR, TH, TD } from './components/table';
+export { ScrollRegion, useProseTableRegions } from './components/scroll-region';
+export type { ScrollRegionProps } from './components/scroll-region';
 export { JsonTree } from './components/json-tree';
 export type { JsonTreeProps } from './components/json-tree';
 export { JsonDiff, diffJson } from './components/json-diff';
