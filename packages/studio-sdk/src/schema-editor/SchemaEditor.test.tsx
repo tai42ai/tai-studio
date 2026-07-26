@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SchemaEditor, type SchemaEditorChange } from './SchemaEditor';
 
@@ -14,6 +14,10 @@ function lastChange(onChange: ReturnType<typeof vi.fn>): SchemaEditorChange {
 function setText(value: string): void {
   fireEvent.change(screen.getByLabelText('Schema JSON'), { target: { value } });
 }
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 describe('SchemaEditor', () => {
   it('seeds the textarea from the value dict', () => {
@@ -123,5 +127,75 @@ describe('SchemaEditor', () => {
     };
     setText(JSON.stringify(schema));
     expect(lastChange(onChange)).toEqual({ schema, valid: true });
+  });
+
+  it('writes the schema in the mono textarea and frames the preview as a card', () => {
+    render(
+      <SchemaEditor
+        value={{ type: 'object', title: 'Report', properties: {} }}
+        onChange={vi.fn()}
+        requireTitle={false}
+      />,
+    );
+
+    expect(screen.getByTestId('schema-editor')).toHaveClass('tai-stack', 'tai-stack-3');
+    expect(screen.getByLabelText('Schema JSON')).toHaveClass('tai-textarea', 'tai-textarea-mono');
+    expect(screen.getByText('Preview')).toHaveClass('tai-label');
+
+    const preview = screen.getByTestId('schema-editor-preview');
+    expect(preview).toHaveClass('tai-card');
+    // A wide preview scrolls inside its own pane rather than the dialog.
+    expect(preview).toHaveClass('tai-scroll-region');
+  });
+
+  it('renders no preview block while the text does not parse', () => {
+    render(<SchemaEditor value={null} onChange={vi.fn()} requireTitle={false} />);
+    setText('{ not json');
+    expect(screen.queryByTestId('schema-editor-preview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+  });
+
+  it('disables the textarea when disabled', () => {
+    render(<SchemaEditor value={null} onChange={vi.fn()} requireTitle={false} disabled />);
+    expect(screen.getByLabelText('Schema JSON')).toBeDisabled();
+  });
+
+  it('keeps a custom label on both the field and the textarea name', () => {
+    render(
+      <SchemaEditor
+        value={null}
+        onChange={vi.fn()}
+        requireTitle={false}
+        label="Output schema"
+        description="What the tool returns."
+        idPrefix="output-schema"
+      />,
+    );
+    expect(screen.getByTestId('output-schema')).toBeInTheDocument();
+    expect(screen.getByLabelText('Output schema JSON')).toBeInTheDocument();
+    expect(screen.getByText('What the tool returns.')).toBeInTheDocument();
+  });
+
+  it('renders the editor and its preview under both themes', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const { unmount } = render(
+        <SchemaEditor
+          value={{
+            type: 'object',
+            title: 'Report',
+            properties: { headline: { type: 'string', title: 'Headline' } },
+          }}
+          onChange={vi.fn()}
+          requireTitle={false}
+        />,
+      );
+
+      expect(screen.getByLabelText('Schema JSON')).toHaveClass('tai-textarea-mono');
+      const preview = screen.getByTestId('schema-editor-preview');
+      expect(within(preview).getByText('Headline')).toBeVisible();
+
+      unmount();
+    }
   });
 });

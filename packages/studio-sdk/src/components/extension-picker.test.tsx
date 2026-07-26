@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Extension } from '@tai42/api-client';
 
@@ -24,6 +24,10 @@ function Controlled({ initial = [] as string[] }: { initial?: string[] }) {
     </>
   );
 }
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 describe('ExtensionPicker', () => {
   it('groups the catalog by kind with a kind badge per group', () => {
@@ -112,4 +116,41 @@ describe('ExtensionPicker', () => {
     expect(within(picker).getByRole('checkbox', { name: 'markb' })).toBeChecked();
     expect(within(picker).getByRole('checkbox', { name: 'marka' })).not.toBeChecked();
   });
+
+  it('builds its layout from the design-system classes, carrying no inline palette', () => {
+    render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
+
+    const picker = screen.getByTestId('extension-picker');
+    expect(picker).toHaveClass('tai-stack');
+    expect(picker.getAttribute('style')).toBeNull();
+
+    // Each kind group is a stack whose heading row and option row are `tai-row`s.
+    const groups = [...picker.children];
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(group).toHaveClass('tai-stack', 'tai-stack-2');
+      expect(group.children).toHaveLength(2);
+      for (const row of group.children) expect(row).toHaveClass('tai-row');
+      expect(group.getAttribute('style')).toBeNull();
+    }
+  });
+
+  it('renders the single-select qualifier in the shared label style', () => {
+    render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
+    expect(screen.getByText('(single-select)')).toHaveClass('tai-label');
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'renders every option with its accessible name under the %s theme',
+    (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      render(<ExtensionPicker available={CATALOG} value={['markb']} onChange={vi.fn()} />);
+
+      expect(screen.getByTestId('extension-picker')).toHaveClass('tai-stack');
+      for (const entry of CATALOG) {
+        expect(screen.getByRole('checkbox', { name: entry.name })).toBeInTheDocument();
+      }
+      expect(screen.getByRole('checkbox', { name: 'markb' })).toBeChecked();
+    },
+  );
 });

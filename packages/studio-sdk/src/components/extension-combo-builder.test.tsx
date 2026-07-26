@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 
@@ -28,6 +28,10 @@ function Controlled({
     </>
   );
 }
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 describe('ExtensionComboBuilder', () => {
   it('Add is disabled until the draft has at least one member (no empty combo)', async () => {
@@ -258,4 +262,79 @@ describe('ExtensionComboBuilder', () => {
       ]),
     );
   });
+
+  it('renders each committed combo as a design-system card, with no inline palette', () => {
+    render(
+      <ExtensionComboBuilder
+        available={CATALOG}
+        value={[['marka', 'backendx']]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    const builder = screen.getByTestId('extension-combo-builder');
+    expect(builder).toHaveClass('tai-stack');
+    expect(builder.getAttribute('style')).toBeNull();
+
+    const [row] = screen.getAllByRole('listitem');
+    if (row === undefined) throw new Error('no combo row rendered');
+    expect(row).toHaveClass('tai-card', 'tai-stack', 'tai-stack-2');
+    expect(row.getAttribute('style')).toBeNull();
+  });
+
+  it('removes a combo through an icon button that keeps its accessible name', async () => {
+    const user = userEvent.setup();
+    render(<Controlled initial={[['marka'], ['backendx']]} />);
+
+    const remove = screen.getByRole('button', { name: 'Remove combo marka' });
+    expect(remove).toHaveClass('tai-icon-btn');
+    // The mark is an icon, never a Unicode glyph: the control carries no text of its own.
+    expect(remove.querySelector('svg')).not.toBeNull();
+    expect(remove.textContent).toBe('');
+
+    await user.click(remove);
+    expect(screen.getByTestId('combos')).toHaveTextContent('[["backendx"]]');
+  });
+
+  it('states the duplicate and unknown-name faults as a field error carrying a mark', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Controlled initial={[['marka']]} />);
+
+    await user.click(screen.getByRole('checkbox', { name: 'marka' }));
+    const duplicate = screen.getByRole('alert');
+    expect(duplicate).toHaveClass('tai-field-error');
+    expect(duplicate.querySelector('svg')).not.toBeNull();
+    unmount();
+
+    render(
+      <ExtensionComboBuilder available={CATALOG} value={[['marka', 'gone']]} onChange={vi.fn()} />,
+    );
+    const unknown = screen.getByRole('alert');
+    expect(unknown).toHaveClass('tai-field-error');
+    expect(unknown).toHaveTextContent('unknown extension: gone');
+    expect(unknown.querySelector('svg')).not.toBeNull();
+  });
+
+  it('renders the no-combos note as the shared empty state', () => {
+    render(<ExtensionComboBuilder available={CATALOG} value={[]} onChange={vi.fn()} />);
+    expect(screen.getByText('No extension combos.')).toHaveClass('tai-empty-state');
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'renders its combos and keeps every action name under the %s theme',
+    (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      render(<ExtensionComboBuilder available={CATALOG} value={[['marka']]} onChange={vi.fn()} />);
+
+      expect(screen.getByTestId('extension-combo-builder')).toHaveClass('tai-stack');
+      const [row] = screen.getAllByRole('listitem');
+      if (row === undefined) throw new Error('no combo row rendered');
+      expect(within(row).getByText('marka')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Edit combo marka' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Remove combo marka' })).toHaveClass(
+        'tai-icon-btn',
+      );
+      expect(screen.getByRole('button', { name: 'Add combo' })).toBeInTheDocument();
+    },
+  );
 });

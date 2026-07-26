@@ -1,11 +1,21 @@
 /**
- * `RadioGroup` — a token-styled wrapper over Radix RadioGroup (role `radiogroup`
- * with `radio` items). Each option renders a linked label so the text is the
- * radio's accessible name.
+ * `RadioGroup` — a design-system wrapper over Radix RadioGroup (role `radiogroup`
+ * with `radio` items), in two shapes.
+ *
+ * `list` (the default) renders one row per option: a dot indicator inside a
+ * linked `<label>`, so the option text is the radio's accessible name.
+ * `segmented` renders each option AS a segment — the Radix item itself is the
+ * control, carrying its icon and its label with no dot — which is the shape a
+ * compact single-choice control (a light / dark / system switcher) needs.
+ *
+ * The group takes its accessible name from an enclosing `Field`, from a `label`
+ * it renders itself, or from `aria-label`. Roving tabindex and arrow-key movement
+ * belong to Radix and follow `orientation`; this component only chooses the
+ * layout that matches it.
  */
 import * as RadixRadioGroup from '@radix-ui/react-radio-group';
 import { useId } from 'react';
-import type { CSSProperties } from 'react';
+import type { ReactNode } from 'react';
 
 import { useFieldControl, useFieldLabelId } from './field';
 
@@ -13,6 +23,10 @@ export interface RadioOption {
   readonly value: string;
   readonly label: string;
   readonly disabled?: boolean;
+  /** Mark rendered alongside the label. Decorative — the label carries the name. */
+  readonly icon?: ReactNode;
+  /** Render the label for screen readers only; it stays the option's accessible name. */
+  readonly visuallyHiddenLabel?: boolean;
 }
 
 export interface RadioGroupProps {
@@ -22,43 +36,24 @@ export interface RadioGroupProps {
   readonly onValueChange?: (value: string) => void;
   readonly disabled?: boolean;
   readonly name?: string;
+  /** Visible group label, rendered above the options and wired as the group's name. */
+  readonly label?: string;
+  /** Accessible group name when neither `label` nor an enclosing `Field` supplies one. */
+  readonly 'aria-label'?: string;
+  /** Arrow-key axis and layout. Defaults to `vertical`. */
+  readonly orientation?: 'horizontal' | 'vertical';
+  /** `list` is a stack of labelled radios; `segmented` is a compact segment strip. */
+  readonly variant?: 'list' | 'segmented';
 }
 
-const rootStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-
-const optionStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-  cursor: 'pointer',
-};
-
-const itemStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  width: '1.15rem',
-  height: '1.15rem',
-  background: 'var(--tai-color-surface-raised)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: '50%',
-  cursor: 'pointer',
-  padding: 0,
-};
-
-const indicatorStyle: CSSProperties = {
-  width: '0.55rem',
-  height: '0.55rem',
-  borderRadius: '50%',
-  background: 'var(--tai-color-primary)',
-  display: 'block',
-};
+/** The option's name text, hidden from sight but not from assistive tech on request. */
+function OptionLabel({ option }: { readonly option: RadioOption }): ReactNode {
+  return (
+    <span className={option.visuallyHiddenLabel === true ? 'tai-visually-hidden' : undefined}>
+      {option.label}
+    </span>
+  );
+}
 
 export function RadioGroup({
   options,
@@ -67,13 +62,31 @@ export function RadioGroup({
   onValueChange,
   disabled,
   name,
+  label,
+  'aria-label': ariaLabel,
+  orientation = 'vertical',
+  variant = 'list',
 }: RadioGroupProps) {
   const field = useFieldControl();
-  const labelId = useFieldLabelId();
+  const fieldLabelId = useFieldLabelId();
   const baseId = useId();
-  return (
+  const ownLabelId = `${baseId}-label`;
+  // An enclosing Field names the group first; a `label` this component renders
+  // is the standalone fallback. Neither means the group is named by `aria-label`.
+  const labelledBy = fieldLabelId ?? (label === undefined ? undefined : ownLabelId);
+
+  const rootClassName =
+    variant === 'segmented'
+      ? 'tai-segmented'
+      : orientation === 'horizontal'
+        ? 'tai-row'
+        : 'tai-stack tai-stack-2';
+
+  const group = (
     <RadixRadioGroup.Root
-      aria-labelledby={labelId}
+      className={rootClassName}
+      aria-labelledby={labelledBy}
+      aria-label={ariaLabel}
       aria-describedby={field['aria-describedby']}
       aria-invalid={field['aria-invalid']}
       value={value}
@@ -81,24 +94,48 @@ export function RadioGroup({
       onValueChange={onValueChange}
       disabled={disabled}
       name={name}
-      style={rootStyle}
+      orientation={orientation}
     >
       {options.map((option) => {
-        const itemId = `${baseId}-${option.value}`;
-        return (
-          <label key={option.value} htmlFor={itemId} style={optionStyle}>
+        if (variant === 'segmented') {
+          return (
             <RadixRadioGroup.Item
-              id={itemId}
+              key={option.value}
+              className="tai-segment"
               value={option.value}
               disabled={option.disabled}
-              style={itemStyle}
             >
-              <RadixRadioGroup.Indicator style={indicatorStyle} />
+              {option.icon}
+              <OptionLabel option={option} />
             </RadixRadioGroup.Item>
-            <span>{option.label}</span>
+          );
+        }
+        const itemId = `${baseId}-${option.value}`;
+        return (
+          <label key={option.value} htmlFor={itemId} className="tai-choice">
+            <RadixRadioGroup.Item
+              id={itemId}
+              className="tai-radio"
+              value={option.value}
+              disabled={option.disabled}
+            >
+              <RadixRadioGroup.Indicator className="tai-radio-indicator" />
+            </RadixRadioGroup.Item>
+            {option.icon}
+            <OptionLabel option={option} />
           </label>
         );
       })}
     </RadixRadioGroup.Root>
+  );
+
+  if (label === undefined) return group;
+  return (
+    <div className="tai-stack tai-stack-2">
+      <span id={ownLabelId} className="tai-field-label">
+        {label}
+      </span>
+      {group}
+    </div>
   );
 }

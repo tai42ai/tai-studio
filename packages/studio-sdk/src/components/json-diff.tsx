@@ -14,6 +14,10 @@
  * before/after values as a `JsonTree` for objects/arrays or escaped text for
  * scalars. Every value renders as React TEXT, so payload markup is escaped and this
  * is never an HTML sink.
+ *
+ * Each row also carries its `tai-diff-*` tint, but the tint only REINFORCES the
+ * kind — the Badge spells the kind out in words, so a row is never identified by
+ * color alone.
  */
 import { type ReactNode } from 'react';
 
@@ -98,17 +102,22 @@ const KIND_VARIANT = {
   changed: 'neutral',
 } as const;
 
+/** The row tint for each kind — a reinforcement of the Badge, never the sole cue. */
+const KIND_ROW_CLASS = {
+  added: 'tai-diff-added',
+  removed: 'tai-diff-removed',
+  changed: 'tai-diff-changed',
+} as const;
+
 /** Render one side's value: a `JsonTree` for objects/arrays, escaped text for scalars. */
 function DiffValue({ value }: { readonly value: unknown }): ReactNode {
   if (Array.isArray(value) || isRecord(value)) {
     return <JsonTree data={value} defaultExpanded={false} />;
   }
-  return (
-    <code style={{ font: 'var(--tai-text-sm) var(--tai-font-mono)' }}>{JSON.stringify(value)}</code>
-  );
+  return <code className="tai-code">{JSON.stringify(value)}</code>;
 }
 
-const emptyCell = <span style={{ color: 'var(--tai-color-text-muted)' }}>—</span>;
+const emptyCell = <span className="tai-muted">—</span>;
 
 export interface JsonDiffProps {
   readonly before: unknown;
@@ -119,11 +128,7 @@ export function JsonDiff({ before, after }: JsonDiffProps): ReactNode {
   const rows = diffJson(before, after);
 
   if (rows.length === 0) {
-    return (
-      <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-        No differences between the two versions.
-      </p>
-    );
+    return <p className="tai-muted">No differences between the two versions.</p>;
   }
 
   return (
@@ -138,8 +143,12 @@ export function JsonDiff({ before, after }: JsonDiffProps): ReactNode {
       </THead>
       <TBody>
         {rows.map((row, index) => (
-          <TR key={`${row.kind}-${row.path}-${String(index)}`} data-testid={`diff-row-${row.path}`}>
-            <TD style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}>
+          <TR
+            key={`${row.kind}-${row.path}-${String(index)}`}
+            className={KIND_ROW_CLASS[row.kind]}
+            data-testid={`diff-row-${row.path}`}
+          >
+            <TD className="tai-table-id" style={{ wordBreak: 'break-all' }}>
               {row.path === '' ? '(root)' : row.path}
             </TD>
             <TD>

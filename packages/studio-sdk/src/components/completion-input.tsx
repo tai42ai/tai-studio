@@ -5,13 +5,16 @@
  * selectable list; picking one fills the field. A fetch failure clears the
  * suggestions and surfaces through `onError` — never a silent swallow.
  *
+ * The field is a `tai-input` and its popup wears the Select popup's classes
+ * (`tai-select-content` / `tai-select-item`), so a suggestion list and a select
+ * list are the same object to a reader.
+ *
  * Reusable by any feature; the intended consumer is a `SchemaForm` string field
  * that has a completion provider for its tool/prompt/resource argument.
  */
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { controlBaseStyle } from './control-styles';
 import { useFieldControl } from './field';
 
 export interface CompletionInputProps {
@@ -26,29 +29,8 @@ export interface CompletionInputProps {
 
 const wrapStyle: CSSProperties = { position: 'relative' };
 
-const listStyle: CSSProperties = {
-  listStyle: 'none',
-  margin: 'var(--tai-space-1) 0 0',
-  padding: 'var(--tai-space-1)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-md)',
-  background: 'var(--tai-color-surface-raised)',
-  boxShadow: 'var(--tai-shadow-sm)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.125rem',
-};
-
-const optionStyle: CSSProperties = {
-  textAlign: 'left',
-  padding: 'var(--tai-space-1) var(--tai-space-2)',
-  borderRadius: 'var(--tai-radius-sm)',
-  border: 'none',
-  background: 'transparent',
-  color: 'var(--tai-color-text)',
-  font: 'var(--tai-text-sm) var(--tai-font-sans)',
-  cursor: 'pointer',
-};
+/** The popup sits directly under the field rather than against its top edge. */
+const listStyle: CSSProperties = { marginTop: 'var(--tai-space-1)' };
 
 /**
  * A completion-backed text input. Suggestions refresh on every edit (a
@@ -102,6 +84,7 @@ export function CompletionInput({
     <div style={wrapStyle}>
       <input
         {...field}
+        className="tai-input"
         type="text"
         role="combobox"
         aria-expanded={showList}
@@ -113,17 +96,16 @@ export function CompletionInput({
           setOpen(true);
           onChange(event.target.value);
         }}
-        style={controlBaseStyle}
       />
       {showList && (
-        <ul id={listboxId} role="listbox" style={listStyle}>
+        <ul id={listboxId} role="listbox" className="tai-select-content" style={listStyle}>
           {suggestions.map((suggestion) => (
             <li key={suggestion} role="presentation">
               <button
                 type="button"
                 role="option"
                 aria-selected={false}
-                style={optionStyle}
+                className="tai-select-item"
                 onClick={() => {
                   select(suggestion);
                 }}

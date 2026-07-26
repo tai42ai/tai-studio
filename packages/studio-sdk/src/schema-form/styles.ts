@@ -1,20 +1,20 @@
 /**
- * Shared layout styles for the schema-form field tree: the vertical field stack
- * and the indented, border-left group container that nests object/array/union
- * children.
+ * The design-system CLASS NAMES the schema-form field tree is built from. One
+ * module owns them so the form root, the group wrapper and the union editor
+ * cannot drift apart — and so no field component re-derives control geometry or
+ * color of its own: every name below is defined in `components.css`, which is
+ * the single source of truth for what they look like.
  */
-import type { CSSProperties } from 'react';
 
-export const stackStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
+/** The vertical rhythm a sibling set of fields sits in. */
+export const stackClass = 'tai-stack';
 
-export const groupStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-3)',
-  paddingLeft: 'var(--tai-space-3)',
-  borderLeft: '2px solid var(--tai-color-border)',
-};
+/** The label + description + error block that introduces a nested group. */
+export const groupHeaderClass = 'tai-stack tai-stack-2';
+
+/**
+ * The surface a nested object / array / union renders its children on. A card
+ * makes every level of nesting a visible container on its own ground, so depth
+ * reads without any hand-drawn indent rail.
+ */
+export const groupClass = 'tai-card tai-stack tai-stack-3';

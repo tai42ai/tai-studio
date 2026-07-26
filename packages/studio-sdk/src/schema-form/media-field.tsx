@@ -5,26 +5,17 @@
  * effective byte cap and the declared MIME, rejecting an over-cap value or a
  * mismatched type LOUDLY — never silently truncated or accepted.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useContext, useId, useState } from 'react';
 
 import { Badge } from '../components/badge';
+import { XCircleIcon } from '../components/icons';
 import { Button } from '../components/primitives';
 import { Field, useFieldControl } from '../components/field';
 import { TextInput } from '../components/inputs';
 import type { MediaUpload } from './classify';
 import { MaxUploadBytesContext } from './context';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
-
-const dropZoneStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-  padding: 'var(--tai-space-4)',
-  border: '1px dashed var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-md)',
-  background: 'var(--tai-color-surface)',
-};
 
 /**
  * The drag-drop surface + file input. Split out so its `useFieldControl` call
@@ -42,7 +33,10 @@ function UploadDropZone({
   const field = useFieldControl();
   return (
     <div
-      style={dropZoneStyle}
+      className="tai-card tai-stack tai-stack-2"
+      // The dashed edge is the drop target's own affordance; the card class owns
+      // the ground, the boundary color, the radius and the padding.
+      style={{ borderStyle: 'dashed' }}
       onDragOver={(event) => {
         event.preventDefault();
       }}
@@ -61,9 +55,7 @@ function UploadDropZone({
           event.target.value = '';
         }}
       />
-      <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-        Drag & drop a file here, or choose one above.
-      </span>
+      <span className="tai-field-hint">Drag &amp; drop a file here, or choose one above.</span>
     </div>
   );
 }
@@ -137,16 +129,18 @@ export function MediaField({
       <UploadDropZone accept={media.mediaType} onFile={accept} />
 
       {fileName !== undefined ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
+        <div className="tai-row">
           {isImage && previewUrl !== undefined ? (
             <img
               src={previewUrl}
               alt={fileName}
+              // A thumbnail is per-instance geometry: it is capped to a fixed
+              // height and can never exceed the width it is given.
               style={{
-                maxWidth: 96,
-                maxHeight: 96,
-                borderRadius: 'var(--tai-radius-sm)',
-                border: '1px solid var(--tai-color-border)',
+                maxWidth: '100%',
+                maxHeight: '6rem',
+                borderRadius: 'var(--tai-radius-md)',
+                border: '1px solid var(--tai-color-control-border)',
               }}
             />
           ) : (
@@ -159,19 +153,14 @@ export function MediaField({
       ) : null}
 
       {uploadError !== undefined ? (
-        <span
-          role="alert"
-          style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-danger)' }}
-        >
+        <span role="alert" className="tai-field-error">
+          <XCircleIcon />
           {uploadError}
         </span>
       ) : null}
 
-      <label
-        htmlFor={pasteId}
-        style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
-      >
-        Or paste a value
+      <label htmlFor={pasteId} className="tai-field">
+        <span className="tai-field-hint">Or paste a value</span>
         <TextInput
           id={pasteId}
           type="text"

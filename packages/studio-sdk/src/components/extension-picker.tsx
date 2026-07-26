@@ -16,9 +16,10 @@
  * SAFETY: an extension name AND its kind are server-supplied, so every name/kind
  * renders as TEXT through the DS `Checkbox`/`Badge` (React escapes it) — never an
  * HTML sink. Pinned by a test.
+ *
+ * Geometry and ink come from the design-system layout classes (`tai-stack`,
+ * `tai-row`, `tai-label`); the component carries no palette of its own.
  */
-import type { CSSProperties } from 'react';
-
 import type { Extension } from '@tai42/api-client';
 
 import { Badge } from './badge';
@@ -35,28 +36,6 @@ export interface ExtensionPickerProps {
   readonly disabled?: boolean;
   readonly idPrefix?: string;
 }
-
-const groupStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-
-const groupHeadingStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-  margin: 0,
-  fontSize: 'var(--tai-text-sm)',
-  fontWeight: 600,
-  color: 'var(--tai-color-text-muted)',
-};
-
-const optionsStyle: CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--tai-space-3)',
-};
 
 export function ExtensionPicker({
   available,
@@ -89,17 +68,16 @@ export function ExtensionPicker({
   };
 
   return (
-    <div
-      data-testid={idPrefix}
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
-    >
+    <div data-testid={idPrefix} className="tai-stack">
       {groups.map((group) => (
-        <div key={group.kind} style={groupStyle}>
-          <p style={groupHeadingStyle}>
+        <div key={group.kind} className="tai-stack tai-stack-2">
+          {/* The kind heading is a layout row, not prose: its badge names the kind and
+              the single-select qualifier rides beside it in the shared label style. */}
+          <div className="tai-row">
             <Badge variant={kindVariant(group.kind)}>{group.kind}</Badge>
-            {group.nonStackable ? <span style={{ fontWeight: 400 }}>(single-select)</span> : null}
-          </p>
-          <div style={optionsStyle}>
+            {group.nonStackable ? <span className="tai-label">(single-select)</span> : null}
+          </div>
+          <div className="tai-row">
             {group.members.map((extension) => (
               <Checkbox
                 key={extension.name}

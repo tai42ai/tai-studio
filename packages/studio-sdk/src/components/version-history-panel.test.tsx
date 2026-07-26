@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { VersionHistoryPanel, type VersionHistoryEntry } from './version-history-panel';
 
@@ -36,6 +36,19 @@ function taggedPair(tags: string[]): VersionHistoryEntry[] {
       created_at: '2024-01-01T00:00:03+00:00',
     },
   ];
+}
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
+
+/** One version row's cell at `column` (0-based), failing loudly when it is absent. */
+function cellOf(version: number, column: number): HTMLElement {
+  const cells = within(screen.getByTestId(`version-row-${String(version)}`)).getAllByRole('cell');
+  const cell = cells[column];
+  if (cell === undefined)
+    throw new Error(`version row ${String(version)} has no cell ${String(column)}`);
+  return cell;
 }
 
 describe('VersionHistoryPanel', () => {
@@ -254,4 +267,73 @@ describe('VersionHistoryPanel', () => {
     expect(screen.getAllByText(/<script>alert\(1\)<\/script>/).length).toBeGreaterThan(0);
     expect(container.querySelector('script')).toBeNull();
   });
+
+  it('states each row status as a mark PLUS a label, never color alone', () => {
+    render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
+
+    const current = within(cellOf(2, 2)).getByText('Current');
+    expect(current).toHaveClass('tai-status', 'tai-status-ok');
+    expect(current.querySelector('svg')).not.toBeNull();
+
+    const historical = within(cellOf(1, 2)).getByText('Historical');
+    expect(historical).toHaveClass('tai-status', 'tai-status-pending');
+    expect(historical.querySelector('svg')).not.toBeNull();
+  });
+
+  it('renders the version number and the timestamp in the machine voice', () => {
+    render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
+
+    expect(cellOf(1, 0)).toHaveClass('tai-table-id');
+    expect(cellOf(1, 0)).toHaveAttribute('data-numeric', 'true');
+    expect(cellOf(1, 1)).toHaveClass('tai-mono');
+    expect(screen.getByRole('columnheader', { name: 'Version' })).toHaveAttribute(
+      'data-numeric',
+      'true',
+    );
+  });
+
+  it('scrolls the version table inside its own region and stacks the panel by class', () => {
+    const { container } = render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
+
+    const panel = container.firstElementChild;
+    expect(panel).toHaveClass('tai-stack');
+    expect(panel?.getAttribute('style')).toBeNull();
+
+    const table = screen.getByRole('table');
+    expect(table.parentElement).toHaveClass('tai-scroll-region');
+  });
+
+  it('puts every dialog action row on the shared dialog-actions class', async () => {
+    const user = userEvent.setup();
+    render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Roll back to version 1' }));
+    const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Roll back' });
+    expect(confirm.parentElement).toHaveClass('tai-dialog-actions');
+  });
+
+  it.each(['light', 'dark'] as const)(
+    'renders the history and keeps every action name under the %s theme',
+    (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      render(
+        <VersionHistoryPanel
+          versions={taggedPair(['stable'])}
+          onRollback={vi.fn()}
+          onEditTags={() => Promise.resolve()}
+        />,
+      );
+
+      expect(screen.getByText('Current')).toHaveClass('tai-status-ok');
+      expect(screen.getByText('Version 2 body')).toHaveClass('tai-section-title');
+      for (const name of [
+        'View version 1',
+        'Compare version 1',
+        'Edit tags for version 1',
+        'Roll back to version 1',
+      ]) {
+        expect(screen.getByRole('button', { name })).toBeInTheDocument();
+      }
+    },
+  );
 });

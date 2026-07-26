@@ -1,42 +1,22 @@
 /**
- * Semantic table primitives — thin token-styled wrappers over the native table
- * elements. They keep the real `table`/`row`/`columnheader`/`cell` roles so
- * assistive tech and tests read a proper table.
+ * Semantic table primitives — thin wrappers over the native table elements.
+ * They keep the real `table`/`row`/`columnheader`/`cell` roles so assistive
+ * tech and tests read a proper table. Only the root carries a class: the header
+ * and cell rules in the stylesheet are descendants of `.tai-table`, so a cell
+ * cannot drift out of the system by forgetting one.
+ *
+ * A numeric column opts in with `numeric`, which stamps `data-numeric="true"` —
+ * the hook the stylesheet right-aligns on tabular figures so digits line up.
  */
-import type {
-  CSSProperties,
-  HTMLAttributes,
-  ReactNode,
-  TdHTMLAttributes,
-  ThHTMLAttributes,
-} from 'react';
-
-const tableStyle: CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
-
-const cellStyle: CSSProperties = {
-  textAlign: 'left',
-  padding: 'var(--tai-space-2) var(--tai-space-3)',
-  borderBottom: '1px solid var(--tai-color-border)',
-};
-
-const headStyle: CSSProperties = {
-  ...cellStyle,
-  fontWeight: 600,
-  color: 'var(--tai-color-text-muted)',
-};
+import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 
 export function Table({
   children,
-  style,
+  className,
   ...props
 }: HTMLAttributes<HTMLTableElement> & { children?: ReactNode }) {
   return (
-    <table {...props} style={{ ...tableStyle, ...style }}>
+    <table {...props} className={className === undefined ? 'tai-table' : `tai-table ${className}`}>
       {children}
     </table>
   );
@@ -63,13 +43,18 @@ export function TR({
   return <tr {...props}>{children}</tr>;
 }
 
+/** Right-align a column of digits on tabular figures. */
+interface NumericColumnProps {
+  readonly numeric?: boolean;
+}
+
 export function TH({
   children,
-  style,
+  numeric = false,
   ...props
-}: ThHTMLAttributes<HTMLTableCellElement> & { children?: ReactNode }) {
+}: ThHTMLAttributes<HTMLTableCellElement> & NumericColumnProps & { children?: ReactNode }) {
   return (
-    <th {...props} style={{ ...headStyle, ...style }}>
+    <th {...props} data-numeric={numeric ? 'true' : undefined}>
       {children}
     </th>
   );
@@ -77,11 +62,11 @@ export function TH({
 
 export function TD({
   children,
-  style,
+  numeric = false,
   ...props
-}: TdHTMLAttributes<HTMLTableCellElement> & { children?: ReactNode }) {
+}: TdHTMLAttributes<HTMLTableCellElement> & NumericColumnProps & { children?: ReactNode }) {
   return (
-    <td {...props} style={{ ...cellStyle, ...style }}>
+    <td {...props} data-numeric={numeric ? 'true' : undefined}>
       {children}
     </td>
   );

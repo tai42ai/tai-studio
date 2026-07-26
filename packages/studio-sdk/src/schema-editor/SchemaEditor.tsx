@@ -19,7 +19,7 @@
  * SAFETY: the schema text is operator-authored and every derived value renders as
  * React TEXT (through the DS controls / `JsonTree` / `SchemaForm`), never an HTML sink.
  */
-import { Component, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { Component, useMemo, useState, type ReactNode } from 'react';
 
 import { Field } from '../components/field';
 import { Textarea } from '../components/inputs';
@@ -50,21 +50,6 @@ export interface SchemaEditorProps {
   readonly disabled?: boolean;
   readonly idPrefix?: string;
 }
-
-const monoTextareaStyle: CSSProperties = { fontFamily: 'var(--tai-font-mono)' };
-
-const previewLabelStyle: CSSProperties = {
-  fontSize: 'var(--tai-text-sm)',
-  fontWeight: 600,
-  color: 'var(--tai-color-text-muted)',
-};
-
-const previewBoxStyle: CSSProperties = {
-  padding: 'var(--tai-space-3)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-md)',
-  background: 'var(--tai-color-surface)',
-};
 
 function seedText(value: Record<string, unknown> | null): string {
   return value === null ? '' : JSON.stringify(value, null, 2);
@@ -140,10 +125,7 @@ export function SchemaEditor({
   };
 
   return (
-    <div
-      data-testid={idPrefix}
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}
-    >
+    <div data-testid={idPrefix} className="tai-stack tai-stack-3">
       <Field label={label} description={description} error={result.error}>
         <Textarea
           value={text}
@@ -153,15 +135,18 @@ export function SchemaEditor({
           }}
           rows={10}
           aria-label={`${label} JSON`}
-          style={monoTextareaStyle}
+          className="tai-textarea tai-textarea-mono"
           spellCheck={false}
         />
       </Field>
 
       {result.schema !== null ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-          <span style={previewLabelStyle}>Preview</span>
-          <div style={previewBoxStyle} data-testid={`${idPrefix}-preview`}>
+        <div className="tai-stack tai-stack-2">
+          <span className="tai-label">Preview</span>
+          {/* A deep schema's preview can outrun its column; adopt `ScrollRegion`
+              here once it is wired through, so the pane is a keyboard target
+              only while it actually scrolls. */}
+          <div className="tai-card tai-scroll-region" data-testid={`${idPrefix}-preview`}>
             <SchemaPreview
               // Re-seed the preview (and reset its error boundary) whenever the
               // authored schema changes.

@@ -1,11 +1,13 @@
 /**
  * The wrapper around a nested group of fields (object, array, or union). At the
  * form root it lays children out in a plain stack; below the root it renders a
- * heading, optional description/error, and an indented group container.
+ * heading, an optional description, an optional error — an icon beside the
+ * message, never a hue on its own — and the nested group surface.
  */
 import type { ReactNode } from 'react';
 
-import { groupStyle, stackStyle } from './styles';
+import { AlertTriangleIcon } from '../components/icons';
+import { groupClass, groupHeaderClass, stackClass } from './styles';
 
 export function FieldGroup({
   heading,
@@ -21,29 +23,19 @@ export function FieldGroup({
   children: ReactNode;
 }): ReactNode {
   if (atRoot) {
-    return <div style={stackStyle}>{children}</div>;
+    return <div className={stackClass}>{children}</div>;
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-      <span
-        style={{ fontSize: 'var(--tai-text-sm)', fontWeight: 600, color: 'var(--tai-color-text)' }}
-      >
-        {heading}
-      </span>
-      {description !== undefined ? (
-        <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-          {description}
-        </span>
-      ) : null}
+    <div className={groupHeaderClass}>
+      <span className="tai-field-label">{heading}</span>
+      {description !== undefined ? <span className="tai-field-hint">{description}</span> : null}
       {error !== undefined ? (
-        <span
-          role="alert"
-          style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-danger)' }}
-        >
+        <span role="alert" className="tai-field-error">
+          <AlertTriangleIcon />
           {error}
         </span>
       ) : null}
-      <div style={groupStyle}>{children}</div>
+      <div className={groupClass}>{children}</div>
     </div>
   );
 }

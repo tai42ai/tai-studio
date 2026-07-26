@@ -9,6 +9,8 @@
 import { createContext, useContext, useId } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
+import { AlertTriangleIcon } from './icons';
+
 interface FieldContextValue {
   readonly controlId: string;
   readonly labelId: string;
@@ -77,42 +79,20 @@ export function Field({ label, description, error, children, style }: FieldProps
 
   return (
     <FieldContext.Provider value={value}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--tai-space-2)',
-          font: 'var(--tai-text-md) var(--tai-font-sans)',
-          color: 'var(--tai-color-text)',
-          ...style,
-        }}
-      >
-        <label
-          id={labelId}
-          htmlFor={controlId}
-          style={{ fontSize: 'var(--tai-text-sm)', fontWeight: 600 }}
-        >
+      <div className="tai-field" style={style}>
+        <label id={labelId} htmlFor={controlId} className="tai-field-label">
           {label}
         </label>
         {children}
         {description !== undefined ? (
-          <p
-            id={descriptionId}
-            style={{
-              margin: 0,
-              fontSize: 'var(--tai-text-sm)',
-              color: 'var(--tai-color-text-muted)',
-            }}
-          >
+          <p id={descriptionId} className="tai-field-hint" style={{ margin: 0 }}>
             {description}
           </p>
         ) : null}
+        {/* The icon carries the invalid state alongside the color, never the color alone. */}
         {error !== undefined ? (
-          <p
-            id={errorId}
-            role="alert"
-            style={{ margin: 0, fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-danger)' }}
-          >
+          <p id={errorId} role="alert" className="tai-field-error" style={{ margin: 0 }}>
+            <AlertTriangleIcon />
             {error}
           </p>
         ) : null}

@@ -3,25 +3,32 @@
  * labels as escaped chips (server strings are arbitrary — React escapes every one,
  * never an HTML sink). `TagsInput` is the controlled add/remove editor.
  *
+ * A tag is a `tai-chip tai-chip-static`: it reads, it is not a control. The
+ * control beside it is the `tai-icon-btn` that removes it, which carries the
+ * accessible name ("Remove tag <tag>") because its `CloseIcon` is decorative.
+ *
  * These live in the SDK because more than one feature (presets, agents, and the
  * version-history panel's per-version tag editor) needs the same control; a single
  * canonical copy keeps the affordance identical everywhere.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 
-import { Badge } from './badge';
+import { CloseIcon } from './icons';
 import { Button } from './primitives';
 import { TextInput } from './inputs';
+
+/** A tag and its remove control read as one unit, tighter than the row default. */
+const tagGroupStyle: CSSProperties = { gap: 'var(--tai-space-1)' };
 
 /** Read-only chips for a list of tags. Renders nothing when there are none. */
 export function TagChips({ tags }: { readonly tags: readonly string[] }): ReactNode {
   if (tags.length === 0) return null;
   return (
-    <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
+    <span className="tai-row" style={tagGroupStyle}>
       {tags.map((tag) => (
-        <Badge key={tag} variant="primary">
+        <span key={tag} className="tai-chip tai-chip-static">
           {tag}
-        </Badge>
+        </span>
       ))}
     </span>
   );
@@ -58,47 +65,48 @@ export function TagsInput({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-      <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
-        <TextInput
-          value={draft}
-          onChange={(event) => {
-            setDraft(event.target.value);
-          }}
-          onKeyDown={(event) => {
-            // Enter or comma commits the draft chip.
-            if (event.key === 'Enter' || event.key === ',') {
-              event.preventDefault();
-              add();
-            }
-          }}
-          placeholder="Add a tag…"
-          aria-label="Add a tag"
-          disabled={disabled}
-        />
+    <div className="tai-stack tai-stack-2">
+      <div className="tai-row">
+        {/* The input takes the row; the button keeps its intrinsic width. */}
+        <div style={{ flex: 1 }}>
+          <TextInput
+            className="tai-input"
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value);
+            }}
+            onKeyDown={(event) => {
+              // Enter or comma commits the draft chip.
+              if (event.key === 'Enter' || event.key === ',') {
+                event.preventDefault();
+                add();
+              }
+            }}
+            placeholder="Add a tag…"
+            aria-label="Add a tag"
+            disabled={disabled}
+          />
+        </div>
         <Button type="button" onClick={add} disabled={disabled}>
           Add tag
         </Button>
       </div>
       {value.length > 0 ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
+        <div className="tai-row">
           {value.map((tag) => (
-            <span
-              key={tag}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--tai-space-1)' }}
-            >
-              <Badge variant="primary">{tag}</Badge>
-              <Button
+            <span key={tag} className="tai-row" style={tagGroupStyle}>
+              <span className="tai-chip tai-chip-static">{tag}</span>
+              <button
                 type="button"
+                className="tai-icon-btn"
                 aria-label={`Remove tag ${tag}`}
                 onClick={() => {
                   remove(tag);
                 }}
                 disabled={disabled}
-                style={{ padding: '0 var(--tai-space-2)' }}
               >
-                ×
-              </Button>
+                <CloseIcon />
+              </button>
             </span>
           ))}
         </div>

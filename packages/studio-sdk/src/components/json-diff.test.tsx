@@ -98,6 +98,31 @@ describe('JsonDiff — rendered table', () => {
     expect(within(changed).getByText('changed')).toBeInTheDocument();
   });
 
+  it('tints each row by kind while keeping the kind spelled out in words', () => {
+    render(<JsonDiff before={{ a: 1, b: 2 }} after={{ b: 3, c: 4 }} />);
+
+    const removed = screen.getByTestId('diff-row-a');
+    expect(removed).toHaveClass('tai-diff-removed');
+    const changed = screen.getByTestId('diff-row-b');
+    expect(changed).toHaveClass('tai-diff-changed');
+    const added = screen.getByTestId('diff-row-c');
+    expect(added).toHaveClass('tai-diff-added');
+    // The tint only reinforces the Badge — every row still names its kind.
+    for (const [row, kind] of [
+      [removed, 'removed'],
+      [changed, 'changed'],
+      [added, 'added'],
+    ] as const) {
+      expect(within(row).getByText(kind)).toBeInTheDocument();
+    }
+  });
+
+  it('renders a scalar value on the shared inline code style', () => {
+    render(<JsonDiff before={{ a: 1 }} after={{ a: 2 }} />);
+    expect(screen.getByText('1')).toHaveClass('tai-code');
+    expect(screen.getByText('2')).toHaveClass('tai-code');
+  });
+
   it('renders identical bodies as a no-difference message', () => {
     render(<JsonDiff before={{ a: 1 }} after={{ a: 1 }} />);
     expect(screen.getByText(/No differences/i)).toBeInTheDocument();

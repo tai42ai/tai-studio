@@ -10,7 +10,7 @@
  * accept-or-raise); the optional `onCancel` is a UI affordance, not an MCP
  * decline round-trip. Reusable by any feature that must answer an elicit.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 
 import { Button } from '../components/primitives';
@@ -32,20 +32,6 @@ export interface ElicitationFormProps {
   readonly busy?: boolean;
   readonly submitLabel?: string;
 }
-
-const messageStyle: CSSProperties = {
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-  marginBottom: 'var(--tai-space-3)',
-};
-
-const actionsStyle: CSSProperties = {
-  display: 'flex',
-  gap: 'var(--tai-space-2)',
-  marginTop: 'var(--tai-space-4)',
-};
-
-const stackStyle: CSSProperties = { display: 'flex', flexDirection: 'column' };
 
 /**
  * Render the elicit message + a schema-driven answer form. On submit the answer
@@ -72,8 +58,10 @@ export function ElicitationForm({
   };
 
   return (
-    <div style={stackStyle} data-testid="elicitation-form">
-      <p style={messageStyle}>{message}</p>
+    <div className="tai-stack" data-testid="elicitation-form">
+      {/* The message is text the Studio did not author — the prose measure keeps
+          a long elicit prompt to a readable line length. */}
+      <p className="tai-prose">{message}</p>
       <SchemaForm
         schema={schema}
         value={value}
@@ -81,7 +69,7 @@ export function ElicitationForm({
         errors={errors}
         idPrefix="elicit-form"
       />
-      <div style={actionsStyle}>
+      <div className="tai-row">
         <Button variant="primary" onClick={submit} disabled={busy}>
           {submitLabel}
         </Button>

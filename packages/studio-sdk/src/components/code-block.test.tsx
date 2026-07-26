@@ -19,8 +19,20 @@ describe('CodeBlock', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
-  it('shows an optional language caption', () => {
+  it('shows an optional language caption on the shared label style', () => {
     render(<CodeBlock code="{}" language="json" />);
-    expect(screen.getByText('json')).toBeInTheDocument();
+    expect(screen.getByText('json')).toHaveClass('tai-label');
+  });
+
+  it('omits the caption entirely when no language is given', () => {
+    const { container } = render(<CodeBlock code="{}" />);
+    expect(container.querySelector('.tai-label')).toBeNull();
+  });
+
+  it('renders on the terminal ground with no inline palette', () => {
+    const { container } = render(<CodeBlock code="{}" language="json" />);
+    const pre = container.querySelector('pre');
+    expect(pre).toHaveClass('tai-code-block');
+    expect(pre?.getAttribute('style')).toBeNull();
   });
 });

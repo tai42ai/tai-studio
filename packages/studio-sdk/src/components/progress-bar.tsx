@@ -1,7 +1,11 @@
 /**
- * `ProgressBar` — a token-styled, accessible progress indicator for a running
+ * `ProgressBar` — a design-system, accessible progress indicator for a running
  * tool that reports progress (`ctx.report_progress`). Determinate when a
  * positive `total` is known (fills to `value/total`); otherwise indeterminate.
+ *
+ * The track and fill are classes; only the determinate fill's WIDTH stays inline,
+ * because it is the one genuinely per-instance value here. The indeterminate
+ * sweep is `tai-progress-fill-indeterminate`.
  *
  * Reusable by any feature's run surface — it takes only the raw
  * progress/total/message a `report_progress` notification carries and renders
@@ -26,37 +30,8 @@ function clampFraction(value: number, total: number): number {
   return fraction;
 }
 
-const trackStyle: CSSProperties = {
-  position: 'relative',
-  overflow: 'hidden',
-  width: '100%',
-  height: '0.5rem',
-  borderRadius: 'var(--tai-radius-sm)',
-  background: 'var(--tai-color-surface-raised)',
-  border: '1px solid var(--tai-color-border)',
-};
-
-const fillStyle: CSSProperties = {
-  height: '100%',
-  background: 'var(--tai-color-primary)',
-  transition: 'width 150ms ease-out',
-};
-
-const indeterminateFillStyle: CSSProperties = {
-  height: '100%',
-  width: '35%',
-  background: 'var(--tai-color-primary)',
-  animation: 'tai-progress-indeterminate 1.1s ease-in-out infinite',
-};
-
-const labelRowStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  gap: 'var(--tai-space-2)',
-  marginBottom: 'var(--tai-space-1)',
-  font: 'var(--tai-text-sm) var(--tai-font-sans)',
-  color: 'var(--tai-color-text-muted)',
-};
+/** The status sits at one end of the row and the percentage at the other. */
+const labelRowStyle: CSSProperties = { justifyContent: 'space-between' };
 
 /**
  * Render a progress bar. With a positive `total`, `value/total` fills the track
@@ -69,25 +44,28 @@ export function ProgressBar({ value = 0, total, message }: ProgressBarProps): Re
   const percent = fraction === undefined ? undefined : Math.round(fraction * 100);
 
   return (
-    <div>
+    <div className="tai-stack tai-stack-2">
       {(message !== undefined || percent !== undefined) && (
-        <div style={labelRowStyle}>
+        <div className="tai-row tai-field-hint" style={labelRowStyle}>
           <span>{message ?? 'Working…'}</span>
           {percent !== undefined && <span>{percent}%</span>}
         </div>
       )}
       <div
         role="progressbar"
+        className="tai-progress-track"
         aria-valuemin={0}
         aria-valuemax={determinate ? total : undefined}
         aria-valuenow={determinate ? value : undefined}
         aria-label={message ?? 'Progress'}
-        style={trackStyle}
       >
         {determinate ? (
-          <div style={{ ...fillStyle, width: `${String((fraction ?? 0) * 100)}%` }} />
+          <div
+            className="tai-progress-fill"
+            style={{ width: `${String((fraction ?? 0) * 100)}%` }}
+          />
         ) : (
-          <div style={indeterminateFillStyle} />
+          <div className="tai-progress-fill tai-progress-fill-indeterminate" />
         )}
       </div>
     </div>

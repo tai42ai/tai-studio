@@ -3,7 +3,7 @@
  * document's history. It knows nothing about presets, AC policies, or authored
  * agents: it takes a plain versions list (`{version, body, is_current,
  * created_at}`, optionally `tags`) plus a `onRollback` callback, renders the list
- * (a "current" badge driven by `is_current`), a `JsonTree` view of the selected
+ * (a "Current" status mark driven by `is_current`), a `JsonTree` view of the selected
  * version's opaque body, a per-row Rollback action behind a confirm dialog, and a
  * per-row Compare action that opens a structural `JsonDiff` of two versions' bodies.
  * Each consumer (e.g. presets, AC policies) wires it to its own routes.
@@ -18,12 +18,18 @@
  *
  * SAFETY: `body` and tags are arbitrary server JSON, rendered through `JsonTree` /
  * `Badge` (React escapes every value) — never an HTML sink.
+ *
+ * Geometry and ink come from the design-system classes. Two rules shape the table:
+ * a row's state is a MARK plus a label (`tai-status` + `CheckCircleIcon` /
+ * `PendingIcon`), never color alone, and the version number and timestamp are the
+ * machine voice (`tai-table-id` / `tai-mono`). The table itself sits in a
+ * `tai-scroll-region` so a narrow viewport scrolls it instead of the page.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { errorMessage } from '../errors';
-import { Badge } from './badge';
 import { Dialog } from './dialog';
+import { CheckCircleIcon, PendingIcon } from './icons';
 import { JsonDiff } from './json-diff';
 import { JsonTree } from './json-tree';
 import { Button, Card, ErrorState, Spinner } from './primitives';
@@ -121,23 +127,23 @@ function EditTagsDialog({
         if (!next && !pending) onClose();
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+      <div className="tai-stack">
         <TagsInput value={tags} onChange={setTags} disabled={pending} />
         {error !== undefined ? <ErrorState message={error} /> : null}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
-          <Button
-            onClick={() => {
-              onClose();
-            }}
-            disabled={pending}
-          >
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={submit} disabled={pending}>
-            {pending ? <Spinner label="Saving tags" /> : null}
-            Save tags
-          </Button>
-        </div>
+      </div>
+      <div className="tai-dialog-actions">
+        <Button
+          onClick={() => {
+            onClose();
+          }}
+          disabled={pending}
+        >
+          Cancel
+        </Button>
+        <Button variant="primary" onClick={submit} disabled={pending}>
+          {pending ? <Spinner label="Saving tags" /> : null}
+          Save tags
+        </Button>
       </div>
     </Dialog>
   );
@@ -205,96 +211,110 @@ export function VersionHistoryPanel({
   const toBody = versions.find((entry) => entry.version === comparePair?.to)?.body;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+    <div className="tai-stack">
       <Card>
-        <Table>
-          <THead>
-            <TR>
-              <TH>Version</TH>
-              <TH>Created</TH>
-              <TH>Status</TH>
-              {showTags ? <TH>Tags</TH> : null}
-              <TH>Actions</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {versions.map((entry) => (
-              <TR key={entry.version} data-testid={`version-row-${String(entry.version)}`}>
-                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{entry.version}</TD>
-                <TD>{entry.created_at}</TD>
-                <TD>
-                  {entry.is_current ? (
-                    <Badge variant="success">Current</Badge>
-                  ) : (
-                    <Badge variant="neutral">Historical</Badge>
-                  )}
-                </TD>
-                {showTags ? (
-                  <TD>
-                    {(entry.tags ?? []).length > 0 ? <TagChips tags={entry.tags ?? []} /> : '—'}
-                  </TD>
-                ) : null}
-                <TD>
-                  <div style={{ display: 'flex', gap: 'var(--tai-space-2)', flexWrap: 'wrap' }}>
-                    <Button
-                      aria-label={`View version ${String(entry.version)}`}
-                      onClick={() => {
-                        view(entry.version);
-                      }}
-                    >
-                      View
-                    </Button>
-                    {canCompare ? (
-                      <Button
-                        aria-label={`Compare version ${String(entry.version)}`}
-                        onClick={() => {
-                          compare(entry.version);
-                        }}
-                      >
-                        {compareFrom === entry.version ? 'Comparing…' : 'Compare'}
-                      </Button>
-                    ) : null}
-                    {onEditTags !== undefined ? (
-                      <Button
-                        aria-label={`Edit tags for version ${String(entry.version)}`}
-                        onClick={() => {
-                          setEditingTags(entry.version);
-                        }}
-                      >
-                        Edit tags
-                      </Button>
-                    ) : null}
-                    {readOnly ? null : (
-                      <Button
-                        variant="secondary"
-                        aria-label={`Roll back to version ${String(entry.version)}`}
-                        disabled={entry.is_current}
-                        onClick={() => {
-                          setConfirming(entry.version);
-                        }}
-                      >
-                        Roll back
-                      </Button>
-                    )}
-                  </div>
-                </TD>
+        {/* The action column makes this table wider than a phone viewport; it scrolls
+            inside its own region rather than pushing the page sideways. */}
+        <div className="tai-scroll-region">
+          <Table>
+            <THead>
+              <TR>
+                <TH numeric>Version</TH>
+                <TH>Created</TH>
+                <TH>Status</TH>
+                {showTags ? <TH>Tags</TH> : null}
+                <TH>Actions</TH>
               </TR>
-            ))}
-          </TBody>
-        </Table>
+            </THead>
+            <TBody>
+              {versions.map((entry) => (
+                <TR key={entry.version} data-testid={`version-row-${String(entry.version)}`}>
+                  <TD className="tai-table-id" numeric>
+                    {entry.version}
+                  </TD>
+                  <TD className="tai-mono">{entry.created_at}</TD>
+                  <TD>
+                    {entry.is_current ? (
+                      <span className="tai-status tai-status-ok">
+                        <CheckCircleIcon />
+                        Current
+                      </span>
+                    ) : (
+                      <span className="tai-status tai-status-pending">
+                        <PendingIcon />
+                        Historical
+                      </span>
+                    )}
+                  </TD>
+                  {showTags ? (
+                    <TD>
+                      {(entry.tags ?? []).length > 0 ? (
+                        <TagChips tags={entry.tags ?? []} />
+                      ) : (
+                        <span className="tai-muted">—</span>
+                      )}
+                    </TD>
+                  ) : null}
+                  <TD>
+                    <div className="tai-row">
+                      <Button
+                        aria-label={`View version ${String(entry.version)}`}
+                        onClick={() => {
+                          view(entry.version);
+                        }}
+                      >
+                        View
+                      </Button>
+                      {canCompare ? (
+                        <Button
+                          aria-label={`Compare version ${String(entry.version)}`}
+                          onClick={() => {
+                            compare(entry.version);
+                          }}
+                        >
+                          {compareFrom === entry.version ? 'Comparing…' : 'Compare'}
+                        </Button>
+                      ) : null}
+                      {onEditTags !== undefined ? (
+                        <Button
+                          aria-label={`Edit tags for version ${String(entry.version)}`}
+                          onClick={() => {
+                            setEditingTags(entry.version);
+                          }}
+                        >
+                          Edit tags
+                        </Button>
+                      ) : null}
+                      {readOnly ? null : (
+                        <Button
+                          variant="secondary"
+                          aria-label={`Roll back to version ${String(entry.version)}`}
+                          disabled={entry.is_current}
+                          onClick={() => {
+                            setConfirming(entry.version);
+                          }}
+                        >
+                          Roll back
+                        </Button>
+                      )}
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </div>
       </Card>
 
       {compareFrom !== null && comparePair === null ? (
-        <p role="status" style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
+        <p role="status" className="tai-muted">
           Comparing from version {compareFrom} — pick another version, or Compare again to cancel.
         </p>
       ) : null}
 
       {selectedEntry !== undefined ? (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-          <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>
-            Version {selectedEntry.version} body
-          </h3>
+        <section className="tai-stack tai-stack-2">
+          <h3 className="tai-section-title">Version {selectedEntry.version} body</h3>
           <Card>
             <JsonTree data={selectedEntry.body} />
           </Card>
@@ -310,11 +330,12 @@ export function VersionHistoryPanel({
             if (!next) closeCompare();
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+          {/* A deep diff row can run wider than the dialog; it scrolls in place. */}
+          <div className="tai-scroll-region">
             <JsonDiff before={fromBody} after={toBody} />
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <Button onClick={closeCompare}>Close</Button>
-            </div>
+          </div>
+          <div className="tai-dialog-actions">
+            <Button onClick={closeCompare}>Close</Button>
           </div>
         </Dialog>
       ) : null}
@@ -342,27 +363,25 @@ export function VersionHistoryPanel({
             if (!next) setConfirming(null);
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-            {rollbackError !== undefined ? <ErrorState message={rollbackError} /> : null}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
-              <Button
-                onClick={() => {
-                  setConfirming(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
-                disabled={rollbackPending}
-                onClick={() => {
-                  onRollback(confirming);
-                }}
-              >
-                {rollbackPending ? <Spinner label="Rolling back" /> : null}
-                Roll back
-              </Button>
-            </div>
+          {rollbackError !== undefined ? <ErrorState message={rollbackError} /> : null}
+          <div className="tai-dialog-actions">
+            <Button
+              onClick={() => {
+                setConfirming(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={rollbackPending}
+              onClick={() => {
+                onRollback(confirming);
+              }}
+            >
+              {rollbackPending ? <Spinner label="Rolling back" /> : null}
+              Roll back
+            </Button>
           </div>
         </Dialog>
       ) : null}

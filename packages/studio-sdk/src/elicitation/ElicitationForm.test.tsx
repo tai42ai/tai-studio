@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { JsonSchema } from '../schema-form/types';
 import { ElicitationForm } from './ElicitationForm';
@@ -10,6 +10,10 @@ const schema: JsonSchema = {
   properties: { city: { type: 'string', title: 'City' } },
   required: ['city'],
 };
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 describe('ElicitationForm', () => {
   it('renders the message and returns the typed answer on submit (round-trip)', async () => {
@@ -39,5 +43,50 @@ describe('ElicitationForm', () => {
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
     rerender(<ElicitationForm message="m" schema={schema} onSubmit={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('lays the widget out on the design-system stack, prose and row classes', () => {
+    render(
+      <ElicitationForm message="Where to?" schema={schema} onSubmit={vi.fn()} onCancel={vi.fn()} />,
+    );
+
+    const root = screen.getByTestId('elicitation-form');
+    expect(root).toHaveClass('tai-stack');
+    expect(screen.getByText('Where to?')).toHaveClass('tai-prose');
+
+    const actions = root.querySelector('.tai-row');
+    expect(actions).not.toBeNull();
+    expect(within(actions as HTMLElement).getByRole('button', { name: 'Submit' })).toBeVisible();
+    expect(within(actions as HTMLElement).getByRole('button', { name: 'Cancel' })).toBeVisible();
+  });
+
+  it('disables both actions while an answer is in flight', () => {
+    render(
+      <ElicitationForm
+        message="Where to?"
+        schema={schema}
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        busy
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
+  it('renders the message, the form and its actions under both themes', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const { unmount } = render(
+        <ElicitationForm message="Where to?" schema={schema} onSubmit={vi.fn()} />,
+      );
+
+      expect(screen.getByTestId('elicitation-form')).toHaveClass('tai-stack');
+      expect(screen.getByText('Where to?')).toBeVisible();
+      expect(screen.getByRole('textbox', { name: 'City' })).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Submit' })).toHaveAccessibleName('Submit');
+
+      unmount();
+    }
   });
 });

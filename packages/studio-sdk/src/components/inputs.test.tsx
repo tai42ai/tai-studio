@@ -13,6 +13,14 @@ describe('TextInput', () => {
     await user.type(input, 'hello');
     expect(input).toHaveValue('hello');
   });
+
+  it("wears the shared control class and appends the caller's", () => {
+    render(<TextInput aria-label="name" className="tai-input-mono" />);
+    expect(screen.getByRole('textbox', { name: 'name' })).toHaveAttribute(
+      'class',
+      'tai-input tai-input-mono',
+    );
+  });
 });
 
 describe('Textarea', () => {
@@ -22,6 +30,12 @@ describe('Textarea', () => {
     const area = screen.getByRole('textbox', { name: 'notes' });
     await user.type(area, 'line');
     expect(area).toHaveValue('line');
+    expect(area).toHaveClass('tai-textarea');
+  });
+
+  it('is disabled when it says so', () => {
+    render(<Textarea aria-label="notes" disabled />);
+    expect(screen.getByRole('textbox', { name: 'notes' })).toBeDisabled();
   });
 });
 
@@ -32,6 +46,7 @@ describe('NumberInput', () => {
     const input = screen.getByRole('spinbutton', { name: 'count' });
     await user.type(input, '42');
     expect(input).toHaveValue(42);
+    expect(input).toHaveClass('tai-input');
   });
 });
 
@@ -73,5 +88,22 @@ describe('Field', () => {
     expect(input).not.toHaveAttribute('aria-invalid');
     const ids = (input.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
     expect(ids).toHaveLength(1);
+  });
+
+  it('carries the design-system classes and pairs the error with an icon', () => {
+    const { container } = render(
+      <Field label="Email" description="work address" error="required">
+        <TextInput />
+      </Field>,
+    );
+
+    expect(container.querySelector('.tai-field')).not.toBeNull();
+    expect(screen.getByText('Email')).toHaveClass('tai-field-label');
+    expect(screen.getByText('work address')).toHaveClass('tai-field-hint');
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveClass('tai-field-error');
+    // The invalid state is an icon plus the message, never the color alone.
+    expect(alert.querySelector('svg')).not.toBeNull();
   });
 });

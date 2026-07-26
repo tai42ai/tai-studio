@@ -1,13 +1,18 @@
 /**
- * `Select` — a token-styled wrapper over Radix Select (an accessible listbox with
+ * `Select` — a design-system wrapper over Radix Select (an accessible listbox with
  * a `combobox` trigger). Options are passed declaratively; the trigger auto-wires
  * to an enclosing `Field`.
+ *
+ * Every surface is a class — `tai-select-trigger` for the control, and
+ * `tai-select-content` / `tai-select-item` for the popup, which is where the
+ * shared keyboard-highlight rule lives. The disclosure mark is the design
+ * system's `ChevronDownIcon`, decorative behind the trigger's own name.
  */
 import * as RadixSelect from '@radix-ui/react-select';
-import type { CSSProperties } from 'react';
 
-import { controlBaseStyle } from './control-styles';
+import { SELECT_TRIGGER_CLASS } from './control-styles';
 import { useFieldControl } from './field';
+import { ChevronDownIcon } from './icons';
 
 export interface SelectOption {
   readonly value: string;
@@ -39,53 +44,9 @@ export interface SelectProps {
   readonly 'aria-label'?: string;
 }
 
-const triggerStyle: CSSProperties = {
-  ...controlBaseStyle,
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 'var(--tai-space-2)',
-  cursor: 'pointer',
-};
-
-const contentStyle: CSSProperties = {
-  background: 'var(--tai-color-surface-raised)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-md)',
-  boxShadow: 'var(--tai-shadow-md)',
-  padding: 'var(--tai-space-1)',
-  zIndex: 50,
-  // Cap to available height and scroll overflow so a long list stays reachable;
-  // the Radix var is set only in `position="popper"` mode.
-  maxHeight: 'var(--radix-select-content-available-height)',
-  overflowY: 'auto',
-};
-
-const itemStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  padding: 'var(--tai-space-2) var(--tai-space-3)',
-  borderRadius: 'var(--tai-radius-sm)',
-  color: 'var(--tai-color-text)',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  cursor: 'pointer',
-};
-
-const groupLabelStyle: CSSProperties = {
-  padding: 'var(--tai-space-2) var(--tai-space-3) var(--tai-space-1)',
-  fontSize: 'var(--tai-text-sm)',
-  fontWeight: 600,
-  color: 'var(--tai-color-text-muted)',
-};
-
 function OptionItem({ option }: { option: SelectOption }) {
   return (
-    <RadixSelect.Item
-      className="tai-select-item"
-      value={option.value}
-      disabled={option.disabled}
-      style={itemStyle}
-    >
+    <RadixSelect.Item className="tai-select-item" value={option.value} disabled={option.disabled}>
       <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
     </RadixSelect.Item>
   );
@@ -113,21 +74,25 @@ export function Select({
     >
       <RadixSelect.Trigger
         id={field.id}
+        className={SELECT_TRIGGER_CLASS}
         aria-label={ariaLabel}
         aria-describedby={field['aria-describedby']}
         aria-invalid={field['aria-invalid']}
-        style={triggerStyle}
       >
         <RadixSelect.Value placeholder={placeholder} />
-        <RadixSelect.Icon aria-hidden="true">▾</RadixSelect.Icon>
+        <RadixSelect.Icon aria-hidden="true">
+          <ChevronDownIcon />
+        </RadixSelect.Icon>
       </RadixSelect.Trigger>
       <RadixSelect.Portal>
-        <RadixSelect.Content position="popper" sideOffset={4} style={contentStyle}>
+        <RadixSelect.Content className="tai-select-content" position="popper" sideOffset={4}>
           <RadixSelect.Viewport>
             {groups !== undefined
               ? groups.map((group) => (
                   <RadixSelect.Group key={group.label}>
-                    <RadixSelect.Label style={groupLabelStyle}>{group.label}</RadixSelect.Label>
+                    <RadixSelect.Label className="tai-select-group-label tai-label">
+                      {group.label}
+                    </RadixSelect.Label>
                     {group.options.map((option) => (
                       <OptionItem key={option.value} option={option} />
                     ))}

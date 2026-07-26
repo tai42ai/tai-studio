@@ -1,8 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RevealInput } from './reveal-input';
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 describe('RevealInput', () => {
   it('masks the value by default (type=password) and exposes a "Show value" toggle', () => {
@@ -74,5 +78,36 @@ describe('RevealInput', () => {
     await user.type(screen.getByLabelText('Secret'), 'x');
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('puts the field on tai-input and the toggle on tai-icon-btn', () => {
+    render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
+
+    expect(screen.getByLabelText('Secret')).toHaveClass('tai-input');
+    expect(screen.getByRole('button', { name: 'Show value' })).toHaveClass('tai-icon-btn');
+  });
+
+  it('draws the reveal mark as an icon whose only name is the button label', async () => {
+    const user = userEvent.setup();
+    render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
+
+    const toggle = screen.getByRole('button', { name: 'Show value' });
+    expect(toggle.querySelector('svg')).toHaveClass('tai-icon');
+    expect(toggle.textContent).toBe('');
+
+    await user.click(toggle);
+    expect(screen.getByRole('button', { name: 'Hide value' }).querySelector('svg')).toHaveClass(
+      'tai-icon',
+    );
+  });
+});
+
+describe.each(['light', 'dark'] as const)('RevealInput under the %s theme', (theme) => {
+  it('renders the field and toggle and keeps their accessible names', () => {
+    document.documentElement.setAttribute('data-theme', theme);
+    render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
+
+    expect(screen.getByLabelText('Secret')).toHaveClass('tai-input');
+    expect(screen.getByRole('button', { name: 'Show value' })).toHaveClass('tai-icon-btn');
   });
 });

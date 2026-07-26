@@ -34,8 +34,13 @@
  *
  * SAFETY: an extension name is server-supplied, so every name renders as TEXT through
  * the DS `Badge`/`Checkbox` (React escapes it) — never an HTML sink.
+ *
+ * Geometry and ink come from the design-system classes: each committed combo is a
+ * `tai-card` row, the invalid notes are `tai-field-error` (icon + message, never
+ * color alone), and Remove is a `tai-icon-btn` carrying `CloseIcon` under an
+ * explicit accessible name.
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 
@@ -43,6 +48,7 @@ import { comboElementNames, extensionElementName } from '../extension-combos';
 import { SchemaEditor, type SchemaEditorChange } from '../schema-editor';
 import { Badge } from './badge';
 import { ExtensionPicker } from './extension-picker';
+import { AlertTriangleIcon, CloseIcon } from './icons';
 import { Button } from './primitives';
 
 /** The one config-taking extension this builder authors inline. */
@@ -92,13 +98,6 @@ function outputSchemaConfig(
   }
   return null;
 }
-
-const comboRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  flexWrap: 'wrap',
-  gap: 'var(--tai-space-2)',
-};
 
 /** The element names in a combo that are absent from the known catalog. */
 function unknownNames(
@@ -192,21 +191,9 @@ export function ExtensionComboBuilder({
   };
 
   return (
-    <div
-      data-testid={idPrefix}
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
-    >
+    <div data-testid={idPrefix} className="tai-stack">
       {value.length > 0 ? (
-        <ul
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--tai-space-2)',
-          }}
-        >
+        <ul className="tai-stack tai-stack-2">
           {value.map((combo, index) => {
             const names = comboElementNames(combo);
             const unknown = availableReady ? unknownNames(combo, availableNames) : [];
@@ -214,23 +201,20 @@ export function ExtensionComboBuilder({
               // The index IS the identity here: the list mutates by append, in-place
               // update, and remove-by-index (no reorder), and a combo has no stable id
               // of its own — so an index key is stable and cannot collide.
-              <li
-                key={index}
-                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}
-              >
-                <div style={comboRowStyle}>
-                  <span style={comboRowStyle}>
+              <li key={index} className="tai-card tai-stack tai-stack-2">
+                <div className="tai-row">
+                  <span className="tai-row">
                     {names.map((name, position) => (
-                      <span key={`${name}-${String(position)}`} style={comboRowStyle}>
+                      <Fragment key={`${name}-${String(position)}`}>
                         {position > 0 ? (
-                          <span aria-hidden style={{ color: 'var(--tai-color-text-muted)' }}>
+                          <span aria-hidden className="tai-muted">
                             +
                           </span>
                         ) : null}
                         <Badge variant={unknown.includes(name) ? 'danger' : 'primary'}>
                           {name}
                         </Badge>
-                      </span>
+                      </Fragment>
                     ))}
                   </span>
                   <Button
@@ -243,19 +227,21 @@ export function ExtensionComboBuilder({
                   >
                     {editing === index ? 'Editing' : 'Edit'}
                   </Button>
-                  <Button
+                  <button
                     type="button"
+                    className="tai-icon-btn"
                     aria-label={`Remove combo ${names.join('+')}`}
                     disabled={disabled}
                     onClick={() => {
                       removeCombo(index);
                     }}
                   >
-                    Remove
-                  </Button>
+                    <CloseIcon />
+                  </button>
                 </div>
                 {unknown.length > 0 ? (
-                  <p role="alert" style={{ margin: 0, color: 'var(--tai-color-danger)' }}>
+                  <p role="alert" className="tai-field-error">
+                    <AlertTriangleIcon />
                     unknown extension: {unknown.join(', ')}
                   </p>
                 ) : null}
@@ -264,10 +250,10 @@ export function ExtensionComboBuilder({
           })}
         </ul>
       ) : (
-        <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>No extension combos.</p>
+        <p className="tai-empty-state">No extension combos.</p>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      <div className="tai-stack tai-stack-2">
         <ExtensionPicker
           available={available}
           value={draft}
@@ -292,12 +278,13 @@ export function ExtensionComboBuilder({
         ) : null}
 
         {isDuplicate ? (
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-danger)' }}>
+          <p role="alert" className="tai-field-error">
+            <AlertTriangleIcon />
             This combo is already added.
           </p>
         ) : null}
 
-        <div style={{ display: 'flex', gap: 'var(--tai-space-2)', flexWrap: 'wrap' }}>
+        <div className="tai-row">
           <Button type="button" variant="primary" onClick={commitCombo} disabled={!canAdd}>
             {editing === null ? 'Add combo' : 'Update combo'}
           </Button>

@@ -146,10 +146,7 @@ export function ToolPicker({
     );
 
   return (
-    <div
-      data-testid={idPrefix}
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}
-    >
+    <div data-testid={idPrefix} className="tai-stack tai-stack-2">
       {tagsByTool !== undefined && allTags.length > 0 ? (
         <Field label="Filter by tag">
           <Select

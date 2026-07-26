@@ -14,7 +14,7 @@ import { FieldGroup } from './field-group';
 import { FieldNode } from './field-node';
 import { ObjectFields } from './object-fields';
 import { resolveRef } from './resolve';
-import { groupStyle } from './styles';
+import { groupClass } from './styles';
 import { activeVariantIndex } from './union';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
@@ -91,7 +91,7 @@ export function UnionField({
         />
       </Field>
       {activeClassified?.model.kind === 'object' ? (
-        <div style={groupStyle}>
+        <div className={groupClass}>
           <ObjectFields
             properties={activeClassified.model.properties}
             requiredKeys={activeClassified.model.required}

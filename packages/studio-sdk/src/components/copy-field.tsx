@@ -5,13 +5,19 @@
  * shows a transient "Copied" affordance. It is PRESENTATIONAL: the caller owns
  * the value; this component fetches nothing and never re-reads the secret.
  *
+ * The button holds BOTH states stacked in one grid cell, so the widest of them
+ * sets the width once and the flip never reflows the row. Only the active state
+ * is exposed to assistive tech, and the button's accessible name is the constant
+ * `aria-label` — so the flip is announced exactly once, by the polite live region
+ * beside it, and never a second time as a renamed control.
+ *
  * SAFETY: the value and caption render as TEXT (React escapes them) — never an
  * HTML sink. The value is never logged. Pinned by a test.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-import { Button } from './primitives';
+import { CheckIcon, CopyIcon } from './icons';
 
 export interface CopyFieldProps {
   readonly value: string;
@@ -22,42 +28,31 @@ export interface CopyFieldProps {
 
 const COPIED_RESET_MS = 2000;
 
-const containerStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
+/** The button's accessible name. Constant across the flip, by design. */
+const COPY_LABEL = 'Copy';
 
-const labelStyle: CSSProperties = {
-  fontSize: 'var(--tai-text-sm)',
-  fontWeight: 600,
-  color: 'var(--tai-color-text)',
-};
+/** Announced once, and worded so it is never mistaken for the visible label. */
+const COPIED_ANNOUNCEMENT = 'Copied to clipboard';
 
-const rowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'stretch',
-  gap: 'var(--tai-space-2)',
-};
-
-const codeStyle: CSSProperties = {
+const valueStyle: CSSProperties = {
   flex: 1,
-  display: 'block',
   padding: 'var(--tai-space-2) var(--tai-space-3)',
-  background: 'var(--tai-color-surface)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-md)',
-  color: 'var(--tai-color-text)',
-  font: 'var(--tai-text-sm) var(--tai-font-mono)',
   wordBreak: 'break-all',
   userSelect: 'all',
 };
 
-const captionStyle: CSSProperties = {
-  fontSize: 'var(--tai-text-sm)',
-  color: 'var(--tai-color-text-muted)',
+/** Both states share one grid cell, so the button is as wide as the wider one. */
+const statesStyle: CSSProperties = {
+  display: 'grid',
+  alignItems: 'center',
+  justifyItems: 'center',
+};
+
+const stateStyle: CSSProperties = {
+  gridArea: '1 / 1',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 'var(--tai-space-2)',
 };
 
 export function CopyField({ value, caption, idPrefix = 'copy-field', label }: CopyFieldProps) {
@@ -92,61 +87,41 @@ export function CopyField({ value, caption, idPrefix = 'copy-field', label }: Co
   };
 
   return (
-    <div data-testid={idPrefix} style={containerStyle}>
-      {label !== undefined ? <span style={labelStyle}>{label}</span> : null}
-      <div style={rowStyle}>
-        <code style={codeStyle}>{value}</code>
-        <Button
+    <div data-testid={idPrefix} className="tai-stack tai-stack-2">
+      {label !== undefined ? <span className="tai-field-label">{label}</span> : null}
+      <div className="tai-row">
+        <code className="tai-code" style={valueStyle}>
+          {value}
+        </code>
+        <button
           type="button"
-          variant="secondary"
-          aria-label="Copy"
+          className="tai-btn tai-btn-secondary"
+          aria-label={COPY_LABEL}
           data-testid={`${idPrefix}-copy`}
           onClick={handleCopy}
         >
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          <span>{copied ? 'Copied' : 'Copy'}</span>
-        </Button>
+          <span style={statesStyle}>
+            <span
+              aria-hidden={copied}
+              style={{ ...stateStyle, visibility: copied ? 'hidden' : 'visible' }}
+            >
+              <CopyIcon />
+              Copy
+            </span>
+            <span
+              aria-hidden={!copied}
+              style={{ ...stateStyle, visibility: copied ? 'visible' : 'hidden' }}
+            >
+              <CheckIcon />
+              Copied
+            </span>
+          </span>
+        </button>
+        <span aria-live="polite" className="tai-visually-hidden">
+          {copied ? COPIED_ANNOUNCEMENT : ''}
+        </span>
       </div>
-      {caption !== undefined ? <span style={captionStyle}>{caption}</span> : null}
+      {caption !== undefined ? <span className="tai-field-hint">{caption}</span> : null}
     </div>
-  );
-}
-
-// -- Icons (inline SVG; the SDK ships no icon dependency) --------------------
-
-function CopyIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
   );
 }

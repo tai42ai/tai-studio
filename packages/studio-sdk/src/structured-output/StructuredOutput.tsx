@@ -9,7 +9,7 @@
  * content-derived value renders as React TEXT (through `JsonTree` / plain text
  * nodes), so a payload carrying markup is escaped, never interpreted.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { JsonTree } from '../components/json-tree';
 import { resolveRef } from '../schema-form/resolve';
@@ -37,25 +37,6 @@ function isObjectSchema(
   return isObject && isRecord(resolved.properties);
 }
 
-const rowStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-1)',
-  paddingBottom: 'var(--tai-space-2)',
-};
-
-const labelStyle: CSSProperties = {
-  font: 'var(--tai-text-sm) var(--tai-font-sans)',
-  fontWeight: 600,
-  color: 'var(--tai-color-text-muted)',
-};
-
-const stackStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-
 /**
  * Render `content` through `schema`. An object schema drives a labeled,
  * ordered field list (each value shown with a `JsonTree`); anything else — no
@@ -65,7 +46,10 @@ const stackStyle: CSSProperties = {
 export function StructuredOutput({ schema, content }: StructuredOutputProps): ReactNode {
   if (!isObjectSchema(schema, schema) || !isRecord(content)) {
     return (
-      <div data-testid="structured-output-raw">
+      /* A deeply nested payload outruns its column; adopt `ScrollRegion` here
+         once it is wired through, so the pane is a keyboard target only while it
+         actually scrolls. */
+      <div data-testid="structured-output-raw" className="tai-scroll-region">
         <JsonTree data={content} defaultExpanded />
       </div>
     );
@@ -78,12 +62,14 @@ export function StructuredOutput({ schema, content }: StructuredOutputProps): Re
   const properties = resolved.properties ?? {};
 
   return (
-    <div style={stackStyle} data-testid="structured-output">
+    <div className="tai-stack tai-stack-2" data-testid="structured-output">
       {Object.entries(properties).map(([key, propSchema]) => {
         const field = propSchema.$ref ? resolveRef(propSchema, schema) : propSchema;
         return (
-          <div key={key} style={rowStyle}>
-            <span style={labelStyle}>{field.title ?? key}</span>
+          // A wide value scrolls inside its own row; adopt `ScrollRegion` here
+          // once it is wired through.
+          <div key={key} className="tai-field tai-scroll-region">
+            <span className="tai-label">{field.title ?? key}</span>
             <JsonTree data={content[key]} defaultExpanded />
           </div>
         );

@@ -1,9 +1,11 @@
 /**
- * `Tabs` — a token-styled wrapper over Radix Tabs (roles `tablist` / `tab` /
- * `tabpanel`, arrow-key roving focus). Panels are declared inline per item.
+ * `Tabs` — a wrapper over Radix Tabs (roles `tablist` / `tab` / `tabpanel`,
+ * arrow-key roving focus). Panels are declared inline per item. The selected
+ * tab's accent rail and heavier label come from `.tai-tab[data-state='active']`
+ * in the stylesheet, keyed off the `data-state` Radix stamps on each trigger.
  */
 import * as RadixTabs from '@radix-ui/react-tabs';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export interface TabItem {
   readonly value: string;
@@ -19,28 +21,6 @@ export interface TabsProps {
   readonly onValueChange?: (value: string) => void;
 }
 
-const listStyle: CSSProperties = {
-  display: 'flex',
-  gap: 'var(--tai-space-1)',
-  borderBottom: '1px solid var(--tai-color-border)',
-};
-
-const triggerStyle: CSSProperties = {
-  appearance: 'none',
-  background: 'transparent',
-  border: 'none',
-  borderBottom: '2px solid transparent',
-  padding: 'var(--tai-space-2) var(--tai-space-3)',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text-muted)',
-  cursor: 'pointer',
-};
-
-const panelStyle: CSSProperties = {
-  padding: 'var(--tai-space-4) 0',
-  color: 'var(--tai-color-text)',
-};
-
 export function Tabs({ items, value, defaultValue, onValueChange }: TabsProps) {
   const firstValue = items[0]?.value;
   return (
@@ -49,20 +29,20 @@ export function Tabs({ items, value, defaultValue, onValueChange }: TabsProps) {
       defaultValue={defaultValue ?? firstValue}
       onValueChange={onValueChange}
     >
-      <RadixTabs.List style={listStyle}>
+      <RadixTabs.List className="tai-tablist">
         {items.map((item) => (
           <RadixTabs.Trigger
             key={item.value}
             value={item.value}
             disabled={item.disabled}
-            style={triggerStyle}
+            className="tai-tab"
           >
             {item.label}
           </RadixTabs.Trigger>
         ))}
       </RadixTabs.List>
       {items.map((item) => (
-        <RadixTabs.Content key={item.value} value={item.value} style={panelStyle}>
+        <RadixTabs.Content key={item.value} value={item.value} className="tai-tabpanel">
           {item.content}
         </RadixTabs.Content>
       ))}

@@ -1,9 +1,15 @@
 /**
- * `Dialog` — a token-styled wrapper over Radix Dialog: an accessible modal (role
+ * `Dialog` — a design-system wrapper over Radix Dialog: an accessible modal (role
  * `dialog`, `aria-modal`, focus trap, Escape to close) labelled by its title.
+ *
+ * Radix owns every modal behaviour — the focus trap, the background scroll lock,
+ * Escape, and focus return to the trigger — so this component adds no second
+ * mechanism. It contributes only the design-system surface: `tai-overlay` paints
+ * the scrim from `--tai-color-scrim`, and `tai-dialog` sizes the panel with a
+ * `min()` so it still fits a 320 px viewport.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 export interface DialogProps {
   readonly title: string;
@@ -15,29 +21,6 @@ export interface DialogProps {
   readonly defaultOpen?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
 }
-
-const overlayStyle: CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(0, 0, 0, 0.45)',
-};
-
-const contentStyle: CSSProperties = {
-  position: 'fixed',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 'min(90vw, 30rem)',
-  // Cap to the viewport and scroll overflow so a taller-than-window form stays reachable.
-  maxHeight: 'calc(100vh - var(--tai-space-8))',
-  overflowY: 'auto',
-  background: 'var(--tai-color-surface-raised)',
-  color: 'var(--tai-color-text)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-lg)',
-  boxShadow: 'var(--tai-shadow-md)',
-  padding: 'var(--tai-space-6)',
-};
 
 export function Dialog({
   title,
@@ -52,19 +35,15 @@ export function Dialog({
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger !== undefined ? <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger> : null}
       <RadixDialog.Portal>
-        <RadixDialog.Overlay style={overlayStyle} />
-        <RadixDialog.Content style={contentStyle}>
-          <RadixDialog.Title style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>
-            {title}
-          </RadixDialog.Title>
-          {description !== undefined ? (
-            <RadixDialog.Description
-              style={{ marginTop: 'var(--tai-space-2)', color: 'var(--tai-color-text-muted)' }}
-            >
-              {description}
-            </RadixDialog.Description>
-          ) : null}
-          <div style={{ marginTop: 'var(--tai-space-4)' }}>{children}</div>
+        <RadixDialog.Overlay className="tai-overlay" />
+        <RadixDialog.Content className="tai-dialog">
+          <RadixDialog.Title className="tai-dialog-title">{title}</RadixDialog.Title>
+          <div className="tai-stack">
+            {description !== undefined ? (
+              <RadixDialog.Description className="tai-muted">{description}</RadixDialog.Description>
+            ) : null}
+            {children}
+          </div>
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>

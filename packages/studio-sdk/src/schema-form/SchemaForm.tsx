@@ -38,7 +38,7 @@ import type { ReactNode } from 'react';
 import { CompletionProviderContext, MaxUploadBytesContext } from './context';
 import { FieldNode } from './field-node';
 import { DEFAULT_MAX_UPLOAD_BYTES } from './media';
-import { stackStyle } from './styles';
+import { stackClass } from './styles';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
 // -- Public API --------------------------------------------------------------
@@ -88,7 +88,7 @@ export function SchemaForm({
   return (
     <CompletionProviderContext.Provider value={completionProvider}>
       <MaxUploadBytesContext.Provider value={maxUploadBytes}>
-        <div style={stackStyle} data-testid={idPrefix}>
+        <div className={stackClass} data-testid={idPrefix}>
           <FieldNode
             schema={schema}
             root={schema}

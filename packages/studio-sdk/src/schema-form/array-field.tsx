@@ -5,6 +5,7 @@
  */
 import type { ReactNode } from 'react';
 
+import { CloseIcon } from '../components/icons';
 import { Button } from '../components/primitives';
 import { classifySchema } from './classify';
 import { defaultValueForSchema } from './default-value';
@@ -48,18 +49,15 @@ export function ArrayField({
 
   return (
     <FieldGroup heading={heading} description={description} error={error} atRoot={false}>
-      {list.length === 0 ? (
-        <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-          No items
-        </span>
-      ) : null}
+      {list.length === 0 ? <span className="tai-field-hint">No items</span> : null}
       {list.map((item, index) => (
         <div
           // Index keys are correct here: items have no stable identity and the
           // whole list re-renders as one controlled value on every edit.
           key={index}
-          style={{ display: 'flex', gap: 'var(--tai-space-2)', alignItems: 'flex-start' }}
+          className="tai-row"
         >
+          {/* The item takes the row's spare width; the control beside it stays square. */}
           <div style={{ flex: 1 }}>
             <FieldNode
               schema={items}
@@ -75,16 +73,16 @@ export function ArrayField({
               idPrefix={idPrefix}
             />
           </div>
-          <Button
+          <button
             type="button"
-            variant="secondary"
+            className="tai-icon-btn"
             aria-label={`Remove item ${String(index + 1)}`}
             onClick={() => {
               removeItem(index);
             }}
           >
-            Remove
-          </Button>
+            <CloseIcon />
+          </button>
         </div>
       ))}
       <div>

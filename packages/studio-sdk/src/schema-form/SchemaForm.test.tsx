@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultValueForSchema } from './default-value';
 import { SchemaForm, type CompletionProvider } from './SchemaForm';
@@ -39,6 +39,10 @@ function Harness({
 function emitted(): string {
   return screen.getByTestId('value').textContent;
 }
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 describe('SchemaForm — primitives', () => {
   it('edits a string and emits the typed string', async () => {
@@ -716,5 +720,204 @@ describe('SchemaForm — safety', () => {
     expect(within(container).getAllByText(payload).length).toBeGreaterThan(0);
     // …and no <script> element was ever created from the schema string.
     expect(container.querySelector('script')).toBeNull();
+  });
+});
+
+describe('SchemaForm — design system', () => {
+  const nestedSchema: JsonSchema = {
+    type: 'object',
+    properties: {
+      user: {
+        type: 'object',
+        title: 'User',
+        description: 'Who is asking',
+        properties: { name: { type: 'string', title: 'Full name' } },
+      },
+    },
+  };
+
+  it('lays the form root out on the shared stack class', () => {
+    render(<Harness schema={nestedSchema} initial={{}} />);
+    expect(screen.getByTestId('schema-form')).toHaveClass('tai-stack');
+  });
+
+  it('renders a nested group on the card surface with a field label and hint', () => {
+    const { container } = render(<Harness schema={nestedSchema} initial={{}} />);
+
+    expect(screen.getByText('User')).toHaveClass('tai-field-label');
+    expect(screen.getByText('Who is asking')).toHaveClass('tai-field-hint');
+
+    const group = container.querySelector('.tai-card');
+    expect(group).not.toBeNull();
+    expect(group).toHaveClass('tai-stack', 'tai-stack-3');
+    expect(within(group as HTMLElement).getByRole('textbox', { name: 'Full name' })).toBeVisible();
+  });
+
+  it('pairs a group-level error with an icon AND the message, never a hue alone', () => {
+    render(
+      <SchemaForm
+        schema={nestedSchema}
+        value={{}}
+        onChange={() => undefined}
+        errors={{ user: 'User is incomplete' }}
+      />,
+    );
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveClass('tai-field-error');
+    expect(alert).toHaveTextContent('User is incomplete');
+    expect(alert.querySelector('svg')).toHaveClass('tai-icon');
+  });
+
+  it('gives the array remove control an icon, the icon-button class and a real name', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { tags: { type: 'array', items: { type: 'string' }, title: 'Tags' } },
+    };
+    render(<Harness schema={schema} initial={{ tags: ['a'] }} />);
+
+    const remove = screen.getByRole('button', { name: 'Remove item 1' });
+    expect(remove).toHaveClass('tai-icon-btn');
+    expect(remove.querySelector('svg')).toHaveClass('tai-icon');
+    // The mark is the whole control — no Unicode glyph stands in for it.
+    expect(remove.textContent).toBe('');
+  });
+
+  it('renders the empty array state as a field hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { tags: { type: 'array', items: { type: 'string' }, title: 'Tags' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByText('No items')).toHaveClass('tai-field-hint');
+  });
+
+  it('renders the union variant picker and its object fields on the group surface', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      anyOf: [
+        {
+          type: 'object',
+          title: 'A',
+          properties: { a: { type: 'string', default: 'x', title: 'a' } },
+          required: ['a'],
+        },
+        {
+          type: 'object',
+          title: 'B',
+          properties: { b: { type: 'string', default: 'y', title: 'b' } },
+          required: ['b'],
+        },
+      ],
+    };
+    const { container } = render(<Harness schema={schema} initial={undefined} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Variant' }));
+    await user.click(await screen.findByRole('option', { name: 'B' }));
+
+    const cards = container.querySelectorAll('.tai-card');
+    const variantFields = cards[cards.length - 1] as HTMLElement;
+    expect(variantFields).toHaveClass('tai-stack', 'tai-stack-3');
+    expect(within(variantFields).getByRole('textbox', { name: 'b' })).toBeVisible();
+  });
+
+  it('renders the unsupported notice as a warning badge: a mark plus a label', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { anything: { title: 'anything' } },
+      required: ['anything'],
+    };
+    render(<Harness schema={schema} initial={{}} />);
+
+    const badge = screen.getByText('Unsupported');
+    expect(badge).toHaveAttribute('data-variant', 'warning');
+    expect(badge.querySelector('svg')).toHaveClass('tai-icon');
+    expect(screen.getByText(/unsupported field: anything/)).toHaveClass('tai-field-hint');
+  });
+
+  it('renders the media drop zone, its hint and the paste fallback on DS classes', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        avatar: {
+          type: 'string',
+          title: 'Avatar',
+          format: 'data-url',
+          contentMediaType: 'image/*',
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+
+    const file = screen.getByLabelText('Avatar');
+    expect(file.parentElement).toHaveClass('tai-card', 'tai-stack', 'tai-stack-2');
+    expect(screen.getByText(/Drag & drop a file here/)).toHaveClass('tai-field-hint');
+    expect(screen.getByText('Or paste a value')).toHaveClass('tai-field-hint');
+    expect(screen.getByLabelText('Or paste a value')).toHaveAttribute('type', 'text');
+  });
+
+  it('pairs a rejected upload with an icon AND the message', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        avatar: {
+          type: 'string',
+          title: 'Avatar',
+          format: 'data-url',
+          contentMediaType: 'image/*',
+          contentMaxBytes: 4,
+        },
+      },
+      required: ['avatar'],
+    };
+    render(<Harness schema={schema} initial={{}} />);
+
+    await user.upload(
+      screen.getByLabelText('Avatar'),
+      new File(['hello world'], 'big.png', { type: 'image/png' }),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveClass('tai-field-error');
+    expect(alert).toHaveTextContent(/over the/i);
+    expect(alert.querySelector('svg')).toHaveClass('tai-icon');
+  });
+
+  it('caps an image preview at the width it is given', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        avatar: {
+          type: 'string',
+          title: 'Avatar',
+          format: 'data-url',
+          contentMediaType: 'image/*',
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+
+    await user.upload(
+      screen.getByLabelText('Avatar'),
+      new File(['hello'], 'a.png', { type: 'image/png' }),
+    );
+
+    const preview = await screen.findByRole('img', { name: 'a.png' });
+    expect(preview).toHaveStyle({ maxWidth: '100%' });
+  });
+
+  it('renders its fields and keeps their accessible names under both themes', () => {
+    for (const theme of ['light', 'dark'] as const) {
+      document.documentElement.setAttribute('data-theme', theme);
+      const { unmount } = render(<Harness schema={nestedSchema} initial={{}} />);
+
+      expect(screen.getByTestId('schema-form')).toHaveClass('tai-stack');
+      expect(screen.getByText('User')).toHaveClass('tai-field-label');
+      expect(screen.getByRole('textbox', { name: 'Full name' })).toBeVisible();
+
+      unmount();
+    }
   });
 });

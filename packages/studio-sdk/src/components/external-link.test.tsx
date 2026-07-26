@@ -26,6 +26,13 @@ describe('ExternalLinkButton', () => {
     const link = screen.getByRole('link', { name: 'Open' });
     expect(link).toHaveAttribute('href', 'https://example.com');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveClass('tai-btn', 'tai-btn-secondary');
+  });
+
+  it('falls back to the url as its own label', () => {
+    render(<ExternalLinkButton url="https://example.com/docs" />);
+    expect(screen.getByRole('link', { name: 'https://example.com/docs' })).toBeInTheDocument();
   });
 
   it('NEUTRALIZES a javascript: URL — plain text, not a link, no href', () => {
@@ -35,6 +42,11 @@ describe('ExternalLinkButton', () => {
     const text = screen.getByText('Click me');
     expect(text.tagName).not.toBe('A');
     expect(text).not.toHaveAttribute('href');
+    expect(text).toHaveAttribute('data-neutralized', 'true');
+    expect(text).toHaveAttribute(
+      'title',
+      'This link was blocked because it is not an http(s) URL.',
+    );
   });
 
   it('NEUTRALIZES a data: URL', () => {

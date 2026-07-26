@@ -1,8 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from './error-boundary';
+
+afterEach(() => {
+  document.documentElement.removeAttribute('data-theme');
+});
 
 /** A component whose render throws the given value. */
 function Throw({ value }: { readonly value: unknown }): ReactElement {
@@ -69,6 +73,35 @@ describe('ErrorBoundary', () => {
     // The subtree is replaced by the loud state — a null throw must not slip past.
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('sibling')).not.toBeInTheDocument();
+  });
+
+  it('dresses the fallback as the shared error surface with a marked title', () => {
+    renderContained(
+      <ErrorBoundary>
+        <Throw value={new Error('boom')} />
+      </ErrorBoundary>,
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveClass('tai-error-state');
+    const title = within(alert).getByText('Something went wrong');
+    expect(title).toHaveClass('tai-error-state-title');
+    // The failure is announced by a mark and words, never by color alone.
+    expect(title.querySelector('svg')).not.toBeNull();
+  });
+
+  describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
+    it('keeps the alert, its title and the caught message', () => {
+      document.documentElement.setAttribute('data-theme', theme);
+      renderContained(
+        <ErrorBoundary label="acme">
+          <Throw value={new Error('boom')} />
+        </ErrorBoundary>,
+      );
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveClass('tai-error-state');
+      expect(within(alert).getByText('Something went wrong')).toBeInTheDocument();
+      expect(alert).toHaveTextContent('acme: boom');
+    });
   });
 
   it('reports the caught value to onError', () => {

@@ -9,8 +9,11 @@
  * Mount it only while the confirmation is active; any close gesture — Cancel,
  * Escape, the overlay — calls `onClose`. The confirm button is destructive
  * (`danger`) by default; pass `confirmVariant` for a non-destructive confirm.
+ *
+ * The footer is the design system's `tai-dialog-actions` row, so every confirm
+ * across Studio lands its buttons in the same place.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { Dialog } from './dialog';
 import { Button, ErrorState, Spinner } from './primitives';
@@ -32,15 +35,6 @@ export interface ConfirmDialogProps {
   readonly children: ReactNode;
 }
 
-const errorStyle: CSSProperties = { marginTop: 'var(--tai-space-3)' };
-
-const actionsStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'flex-end',
-  gap: 'var(--tai-space-2)',
-  marginTop: 'var(--tai-space-4)',
-};
-
 export function ConfirmDialog({
   title,
   confirmLabel,
@@ -61,12 +55,8 @@ export function ConfirmDialog({
       }}
     >
       {children}
-      {error != null ? (
-        <div style={errorStyle}>
-          <ErrorState message={errorMessage(error)} />
-        </div>
-      ) : null}
-      <div style={actionsStyle}>
+      {error != null ? <ErrorState message={errorMessage(error)} /> : null}
+      <div className="tai-dialog-actions">
         <Button type="button" onClick={onClose}>
           Cancel
         </Button>

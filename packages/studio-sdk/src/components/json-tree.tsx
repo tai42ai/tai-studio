@@ -1,9 +1,12 @@
 /**
- * `JsonTree` — a collapsible viewer for arbitrary JSON. Objects and arrays are
- * native `<details>`/`<summary>` disclosures (keyboard-accessible, no custom ARIA
- * needed); primitives render inline. All values render as React TEXT children, so
- * a payload containing markup (e.g. `<script>`) is escaped by React and never
- * interpreted — this component is never an HTML sink.
+ * `JsonTree` — a collapsible viewer for arbitrary JSON on the design system's
+ * terminal ground (`tai-code-block`, which also supplies the mono face, the code
+ * size and the line rhythm every row inherits). Objects and arrays are native
+ * `<details>`/`<summary>` disclosures (keyboard-accessible, no custom ARIA
+ * needed); primitives render inline, tinted by the `tai-syntax-*` class for their
+ * type so a value's kind is readable at a glance. All values render as React TEXT
+ * children, so a payload containing markup (e.g. `<script>`) is escaped by React
+ * and never interpreted — this component is never an HTML sink.
  */
 import type { CSSProperties, ReactElement } from 'react';
 
@@ -36,19 +39,19 @@ function primitiveText(value: unknown): string {
   }
 }
 
-const rowStyle: CSSProperties = {
-  font: 'var(--tai-text-sm) var(--tai-font-mono)',
-  color: 'var(--tai-color-text)',
-  padding: '0.05rem 0',
-};
-
-const keyStyle: CSSProperties = { color: 'var(--tai-color-text-muted)' };
-const summaryStyle: CSSProperties = { ...rowStyle, cursor: 'pointer' };
+/**
+ * One nesting level's indent: the child block insets and draws its own guide
+ * rail. The depth is expressed by the DOM nesting, so each level repeats this
+ * single step rather than computing an absolute offset.
+ */
 const childrenStyle: CSSProperties = {
   paddingLeft: 'var(--tai-space-4)',
-  borderLeft: '1px solid var(--tai-color-border)',
   marginLeft: 'var(--tai-space-1)',
+  borderLeft: '1px solid var(--tai-color-decor)',
 };
+
+/** A `<summary>` is a click target; browsers do not style it as one by default. */
+const summaryStyle: CSSProperties = { cursor: 'pointer' };
 
 interface NodeProps {
   readonly name?: string;
@@ -56,11 +59,13 @@ interface NodeProps {
   readonly defaultExpanded: boolean;
 }
 
-function primitiveColor(value: unknown): string {
-  if (typeof value === 'string') return 'var(--tai-color-success)';
-  if (typeof value === 'number' || typeof value === 'bigint') return 'var(--tai-color-primary)';
-  if (typeof value === 'boolean' || value === null) return 'var(--tai-color-warning)';
-  return 'var(--tai-color-text)';
+/** The syntax class for a primitive's type; anything outside JSON reads as muted. */
+function primitiveClass(value: unknown): string {
+  if (typeof value === 'string') return 'tai-syntax-string';
+  if (typeof value === 'number' || typeof value === 'bigint') return 'tai-syntax-number';
+  if (typeof value === 'boolean') return 'tai-syntax-bool';
+  if (value === null || value === undefined) return 'tai-syntax-null';
+  return 'tai-muted';
 }
 
 function JsonNode({ name, value, defaultExpanded }: NodeProps): ReactElement {
@@ -72,10 +77,10 @@ function JsonNode({ name, value, defaultExpanded }: NodeProps): ReactElement {
       ? `Array(${String(value.length)})`
       : `Object(${String(entries.length)})`;
     return (
-      <details open={defaultExpanded} style={rowStyle}>
+      <details open={defaultExpanded}>
         <summary style={summaryStyle}>
-          {name !== undefined ? <span style={keyStyle}>{name}: </span> : null}
-          <span style={keyStyle}>{summary}</span>
+          {name !== undefined ? <span className="tai-syntax-key">{name}: </span> : null}
+          <span className="tai-muted">{summary}</span>
         </summary>
         <div style={childrenStyle}>
           {entries.map(([childName, childValue]) => (
@@ -92,13 +97,17 @@ function JsonNode({ name, value, defaultExpanded }: NodeProps): ReactElement {
   }
 
   return (
-    <div style={rowStyle}>
-      {name !== undefined ? <span style={keyStyle}>{name}: </span> : null}
-      <span style={{ color: primitiveColor(value) }}>{primitiveText(value)}</span>
+    <div>
+      {name !== undefined ? <span className="tai-syntax-key">{name}: </span> : null}
+      <span className={primitiveClass(value)}>{primitiveText(value)}</span>
     </div>
   );
 }
 
 export function JsonTree({ data, defaultExpanded = true }: JsonTreeProps) {
-  return <JsonNode value={data} defaultExpanded={defaultExpanded} />;
+  return (
+    <div className="tai-code-block">
+      <JsonNode value={data} defaultExpanded={defaultExpanded} />
+    </div>
+  );
 }

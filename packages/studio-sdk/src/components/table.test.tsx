@@ -24,6 +24,7 @@ describe('Table primitives', () => {
 
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
+    expect(table).toHaveClass('tai-table');
     expect(screen.getAllByRole('columnheader')).toHaveLength(2);
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeInTheDocument();
 
@@ -34,5 +35,33 @@ describe('Table primitives', () => {
     expect(bodyCells).toHaveLength(2);
     expect(bodyCells[0]).toHaveTextContent('echo');
     expect(bodyCells[1]).toHaveTextContent('builtin');
+  });
+
+  it('marks a numeric column on both the header and the cell', () => {
+    render(
+      <Table className="tai-mono">
+        <THead>
+          <TR>
+            <TH>Name</TH>
+            <TH numeric>Calls</TH>
+          </TR>
+        </THead>
+        <TBody>
+          <TR>
+            <TD>echo</TD>
+            <TD numeric>1204</TD>
+          </TR>
+        </TBody>
+      </Table>,
+    );
+
+    expect(screen.getByRole('table')).toHaveAttribute('class', 'tai-table tai-mono');
+    expect(screen.getByRole('columnheader', { name: 'Calls' })).toHaveAttribute(
+      'data-numeric',
+      'true',
+    );
+    expect(screen.getByRole('columnheader', { name: 'Name' })).not.toHaveAttribute('data-numeric');
+    expect(screen.getByRole('cell', { name: '1204' })).toHaveAttribute('data-numeric', 'true');
+    expect(screen.getByRole('cell', { name: 'echo' })).not.toHaveAttribute('data-numeric');
   });
 });
