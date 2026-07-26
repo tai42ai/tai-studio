@@ -2,7 +2,8 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { useRef, useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { ScrollRegion, useProseTableRegions } from './scroll-region';
+import { ScrollRegion, useProseScrollRegions } from './scroll-region';
+import type { ProseScrollLabels } from './scroll-region';
 import { flushResizeObservers, setElementOverflow } from '../testing';
 
 /** The one `.tai-scroll-region` in the tree, failing loudly when it is missing. */
@@ -10,6 +11,13 @@ function scrollRegion(container: HTMLElement): HTMLElement {
   const region = container.querySelector<HTMLElement>('.tai-scroll-region');
   if (region === null) throw new Error('no .tai-scroll-region rendered');
   return region;
+}
+
+/** The one injected `<pre>` in the tree, failing loudly when it is missing. */
+function codeBlock(container: HTMLElement): HTMLElement {
+  const pre = container.querySelector<HTMLElement>('pre');
+  if (pre === null) throw new Error('no <pre> rendered');
+  return pre;
 }
 
 /** Flips the region's measured overflow and lets its observer see the change. */
@@ -137,15 +145,16 @@ describe('ScrollRegion', () => {
   });
 });
 
-function ProseHost({ html, fallbackLabel }: { html: string; fallbackLabel?: string }) {
+function ProseHost({ html, labels }: { html: string; labels?: ProseScrollLabels }) {
   const ref = useRef<HTMLDivElement>(null);
-  useProseTableRegions(ref, fallbackLabel === undefined ? undefined : { fallbackLabel });
+  useProseScrollRegions(ref, labels);
   return <div ref={ref} data-testid="prose" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 const TABLE_HTML = '<table><tbody><tr><td>cell</td></tr></tbody></table>';
+const PRE_HTML = '<pre><code>pnpm add @tai42/studio-sdk</code></pre>';
 
-describe('useProseTableRegions', () => {
+describe('useProseScrollRegions', () => {
   it('wraps each injected table in a scroll region', () => {
     const { container } = render(<ProseHost html={`<h2>Options</h2>${TABLE_HTML}`} />);
 
@@ -182,7 +191,9 @@ describe('useProseTableRegions', () => {
   });
 
   it('honours a caller-supplied fallback label', () => {
-    const { container } = render(<ProseHost html={TABLE_HTML} fallbackLabel="Manifest table" />);
+    const { container } = render(
+      <ProseHost html={TABLE_HTML} labels={{ table: 'Manifest table' }} />,
+    );
 
     setOverflowing(scrollRegion(container), true);
     expect(screen.getByRole('region', { name: 'Manifest table' })).toBeInTheDocument();
@@ -228,10 +239,33 @@ describe('useProseTableRegions', () => {
     expect(screen.getAllByRole('region', { name: 'Limits' })).toHaveLength(2);
   });
 
+  it('instruments an overflowing code block in place, with no wrapper', () => {
+    const { container } = render(<ProseHost html={`<h2>Install</h2>${PRE_HTML}`} />);
+
+    const pre = codeBlock(container);
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(0);
+    expect(pre).not.toHaveAttribute('tabindex');
+
+    setOverflowing(pre, true);
+    expect(screen.getByRole('region', { name: 'Install' })).toBe(pre);
+    expect(pre).toHaveAttribute('tabindex', '0');
+  });
+
+  it('falls back to the README code-block label, and honours a caller override', () => {
+    const { container, unmount } = render(<ProseHost html={PRE_HTML} />);
+    setOverflowing(codeBlock(container), true);
+    expect(screen.getByRole('region', { name: 'README code block' })).toBeInTheDocument();
+    unmount();
+
+    const withLabel = render(<ProseHost html={PRE_HTML} labels={{ pre: 'Install snippet' }} />);
+    setOverflowing(codeBlock(withLabel.container), true);
+    expect(screen.getByRole('region', { name: 'Install snippet' })).toBeInTheDocument();
+  });
+
   it('does nothing when the ref is unattached', () => {
     function Detached() {
       const ref = useRef<HTMLDivElement>(null);
-      useProseTableRegions(ref);
+      useProseScrollRegions(ref);
       return <div data-testid="empty" />;
     }
     const { container } = render(<Detached />);

@@ -85,6 +85,7 @@ export const TOKEN_NAMES = [
   '--tai-z-dropdown',
   '--tai-z-overlay',
   '--tai-z-dialog',
+  '--tai-z-popover',
   '--tai-z-tooltip',
 ] as const;
 

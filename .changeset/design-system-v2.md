@@ -13,7 +13,9 @@ layer, the icon set, and the layout primitives every screen builds on.
   its light and its dark value in one `light-dark()` pair, with `color-scheme`
   selecting between them — the root follows the OS preference and `data-theme`
   pins it in both directions, which also drives native scrollbars, selects, and
-  form autofill. `TOKEN_NAMES` grows ADDITIVELY (no rename, no removal, so the
+  form autofill. A `--tai-z-popover` layer joins the z-scale between `dialog`
+  and `tooltip`, for the popups that portal to the document body and so have to
+  clear a dialog's scrim to be usable. `TOKEN_NAMES` grows ADDITIVELY (no rename, no removal, so the
   plugin styling API is unchanged): the accent tier
   (`accent`, `accent-hover`, `accent-on-tint`, `accent-tint`, `on-accent`), the
   contrast-safe `control-border`, the `decor` non-text tier, the semantic
@@ -35,7 +37,7 @@ layer, the icon set, and the layout primitives every screen builds on.
   build now fails if any `src/**/*.css` is unimported, missing from `dist/`, or
   absent from the `exports` map.
 - **Additive component API:** `PageHeader`, `Page`, `Stack`, `Drawer`,
-  `ScrollRegion`, the `useProseTableRegions` hook, and the `useBreakpoint` hook.
+  `ScrollRegion`, the `useProseScrollRegions` hook, and the `useBreakpoint` hook.
   `Button` gains a `ghost` variant and a link form — given an `href` it renders an anchor, with the
   same scheme allow-list `ExternalLinkButton` already applied (that component
   now delegates to it rather than duplicating the check). `RadioGroup` gains

@@ -82,6 +82,7 @@ exports[`token contract > pins the documented token names (styling API must not 
   "--tai-z-dropdown",
   "--tai-z-overlay",
   "--tai-z-dialog",
+  "--tai-z-popover",
   "--tai-z-tooltip",
 ]
 `;

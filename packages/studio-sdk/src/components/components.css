@@ -379,9 +379,14 @@
     font-size: var(--tai-text-code);
   }
 
+  /* The listbox is portalled to the document body, so it is a SIBLING of any
+     open dialog rather than a descendant — hence the popover layer, which
+     clears the dialog scrim that would otherwise cover and swallow it. The
+     height cap yields to the space the popper actually has, so a long list in a
+     short viewport still scrolls inside the screen. */
   .tai-select-content {
-    z-index: var(--tai-z-dropdown);
-    max-height: 18rem;
+    z-index: var(--tai-z-popover);
+    max-height: min(18rem, var(--radix-select-content-available-height));
     overflow-y: auto;
     padding: var(--tai-space-1);
     background: var(--tai-color-surface-raised);

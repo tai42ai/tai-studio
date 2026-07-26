@@ -9,9 +9,10 @@
  * `scrollWidth > clientWidth`, re-taken whenever the container or its content
  * resizes and whenever the content is replaced.
  *
- * `useProseTableRegions` applies the same rules to tables React never renders —
- * those inside `dangerouslySetInnerHTML` (rendered README/markdown), which
- * cannot be wrapped in a component and are therefore instrumented imperatively.
+ * `useProseScrollRegions` applies the same rules to the surfaces React never
+ * renders — the tables and code blocks inside `dangerouslySetInnerHTML`
+ * (rendered README/markdown), which cannot be wrapped in a component and are
+ * therefore instrumented imperatively.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
@@ -24,8 +25,14 @@ export interface ScrollRegionProps {
   readonly style?: CSSProperties;
 }
 
-/** The default name for a prose table that has no heading above it. */
-const DEFAULT_PROSE_TABLE_LABEL = 'README table';
+/** The names for a prose surface that has no heading above it. */
+const DEFAULT_PROSE_LABELS = { table: 'README table', pre: 'README code block' } as const;
+
+/** The fallback name per instrumented surface, when no heading precedes it. */
+export interface ProseScrollLabels {
+  readonly table?: string;
+  readonly pre?: string;
+}
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6';
 
@@ -127,26 +134,30 @@ function applyScrollRegionAttributes(wrapper: HTMLElement, label: string): void 
 }
 
 /**
- * Instruments every `<table>` under `ref` as a scroll region. React cannot wrap
- * markup it did not create, so this walks the DOM instead: each table is moved
- * into a `div.tai-scroll-region` (once — the pass is idempotent) which then
- * carries the same conditional `tabindex`/`role`/`aria-label` as `ScrollRegion`.
+ * Instruments the scrollable surfaces under `ref` — every `<table>` and every
+ * `<pre>` — as scroll regions. React cannot wrap markup it did not create, so
+ * this walks the DOM instead. A table is moved into a `div.tai-scroll-region`
+ * (once — the pass is idempotent) because the table itself is not the scrolling
+ * box; a `<pre>` already IS its own scrolling box, so it is instrumented in
+ * place. Either way the scrolling element carries the same conditional
+ * `tabindex`/`role`/`aria-label` as `ScrollRegion`.
  *
  * The name is the nearest preceding heading, so a reader landing on the region
- * hears which section's table it is; `options.fallbackLabel` covers a table with
- * no heading above it.
+ * hears which section it belongs to; `labels` covers a surface with no heading
+ * above it.
  *
  * Injected HTML is replaced wholesale when its source changes, so the pass is
  * re-run from a `MutationObserver` on the subtree rather than on mount alone.
  *
  * @param ref - the element whose subtree holds the injected markup.
- * @param options.fallbackLabel - the name for a table with no preceding heading.
+ * @param labels - the names for surfaces with no preceding heading.
  */
-export function useProseTableRegions(
+export function useProseScrollRegions(
   ref: RefObject<HTMLElement | null>,
-  options?: { readonly fallbackLabel?: string },
+  labels?: ProseScrollLabels,
 ): void {
-  const fallbackLabel = options?.fallbackLabel ?? DEFAULT_PROSE_TABLE_LABEL;
+  const tableLabel = labels?.table ?? DEFAULT_PROSE_LABELS.table;
+  const preLabel = labels?.pre ?? DEFAULT_PROSE_LABELS.pre;
 
   useEffect(() => {
     const root = ref.current;
@@ -156,6 +167,14 @@ export function useProseTableRegions(
     // notification, which would make each pass trigger the next one forever.
     const observed = new WeakSet<Element>();
 
+    const track = (element: HTMLElement, fallbackLabel: string): void => {
+      if (!observed.has(element)) {
+        observed.add(element);
+        resizeObserver.observe(element);
+      }
+      applyScrollRegionAttributes(element, precedingHeadingText(element, root) ?? fallbackLabel);
+    };
+
     // A pass over the whole subtree. It reads the observers declared below it —
     // safe because nothing calls it until both exist, and it must be declared
     // here so `root` stays narrowed to a non-null element.
@@ -164,12 +183,10 @@ export function useProseTableRegions(
       // re-trigger itself, and drop the records it generated before resuming.
       mutationObserver.disconnect();
       for (const table of root.querySelectorAll('table')) {
-        const wrapper = ensureScrollWrapper(table);
-        if (!observed.has(wrapper)) {
-          observed.add(wrapper);
-          resizeObserver.observe(wrapper);
-        }
-        applyScrollRegionAttributes(wrapper, precedingHeadingText(wrapper, root) ?? fallbackLabel);
+        track(ensureScrollWrapper(table), tableLabel);
+      }
+      for (const pre of root.querySelectorAll('pre')) {
+        track(pre, preLabel);
       }
       mutationObserver.takeRecords();
       mutationObserver.observe(root, { childList: true, subtree: true });
@@ -184,5 +201,5 @@ export function useProseTableRegions(
       resizeObserver.disconnect();
       mutationObserver.disconnect();
     };
-  }, [ref, fallbackLabel]);
+  }, [ref, tableLabel, preLabel]);
 }

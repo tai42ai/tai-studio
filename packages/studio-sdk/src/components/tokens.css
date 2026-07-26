@@ -180,11 +180,17 @@
     --tai-shadow-sm: var(--tai-shadow-lift);
     --tai-shadow-md: var(--tai-shadow-overlay);
 
-    /* -- Stacking ------------------------------------------------------------ */
+    /* -- Stacking ------------------------------------------------------------
+       `popover` and `tooltip` sit ABOVE the modal layers on purpose. Both are
+       portalled to the document body as siblings of a dialog, and both can only
+       be opened from whatever layer is on top — so a listbox or a tip raised
+       from inside a dialog has to clear that dialog's scrim to be usable.
+       `dropdown` is the in-flow menu surface, which stacks against the page. */
     --tai-z-sticky: 10;
     --tai-z-dropdown: 20;
     --tai-z-overlay: 30;
     --tai-z-dialog: 40;
+    --tai-z-popover: 45;
     --tai-z-tooltip: 50;
   }
 
