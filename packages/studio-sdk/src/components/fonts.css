@@ -1,0 +1,12 @@
+/*
+ * The two webfonts the design system is drawn in, self-hosted so no request ever
+ * leaves the deployment (`font-src 'self'`): Inter Variable for the interface and
+ * Geist Mono Variable for the machine voice — identifiers, timestamps, code, and
+ * the uppercase label style.
+ *
+ * This is a separate stylesheet so a HOST app loads the faces exactly once. A
+ * plugin never imports it; it inherits the families through `--tai-font-sans` and
+ * `--tai-font-mono`.
+ */
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/geist-mono';

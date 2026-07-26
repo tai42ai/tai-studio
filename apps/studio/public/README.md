@@ -3,6 +3,14 @@
 Files here are copied verbatim to the built SPA root by Vite and served
 byte-constant by the skeleton (no import-map injection, no per-response nonce).
 
+## Brand marks
+
+`tai42-logo-icon.png` (155x155) is the tab favicon, wired from `index.html`;
+`apple-touch-icon.png` (180x180) is its iOS home-screen counterpart.
+`tai42-logo-icon-dark.png` is the same mark redrawn for dark surfaces — the
+gradient runs to near-black at one end, so the light mark is not legible against
+a dark ground and the shell picks the variant that matches the active theme.
+
 ## OAuth popup relay
 
 Connector OAuth runs in a popup window. Two byte-constant pages relay the

@@ -3,14 +3,24 @@
  * SDK component renders — so the design-system token contract and the documented
  * `@layer` order are established before anything can reference them.
  *
+ * The shell consumes `@tai42/studio-sdk` through the server-injected import map,
+ * so the SDK module is EXTERNAL to this bundle and its barrel's side-effect CSS
+ * imports never reach the page. The three design-system stylesheets are therefore
+ * imported here, by the one host that owns the document: the token contract
+ * (which also emits the canonical layer order), the self-hosted webfonts, and the
+ * component + responsive layer every screen applies by class name.
+ *
  * The DS ships precompiled with preflight DISABLED; the SHELL owns preflight and
- * the Tailwind utility layer. `tokens.css` (imported first) declares the canonical
- * cascade order `@layer tai-tokens, tai-components, tai-utilities;`. Tailwind's own
- * layers are declared by the import below — parsed AFTER the tai-* order, so host
- * preflight + utilities gain deterministic precedence over DS component styles
- * (the layer-order pin, e2e).
+ * the Tailwind utility layer. `tokens.css` declares the cascade order
+ * `@layer theme, base, tai-tokens, tai-components, tai-utilities;` — the host
+ * reset sorts BEFORE the DS layers, so preflight cannot erase a component class,
+ * and Tailwind's `components`/`utilities` layers are declared by the import below
+ * and so sort AFTER them, keeping host utilities the final word (the layer-order
+ * pin, e2e).
  */
 @import '@tai42/studio-sdk/tokens.css';
+@import '@tai42/studio-sdk/fonts.css';
+@import '@tai42/studio-sdk/components.css';
 @import 'tailwindcss';
 
 html,
@@ -21,62 +31,10 @@ body,
 
 body {
   margin: 0;
-  background: var(--tai-color-surface);
+  background: var(--tai-color-bg);
   color: var(--tai-color-text);
   font-family: var(--tai-font-sans);
-}
-
-/* Sidebar navigation links (the shell's primary nav). The current-page link is
-   marked with aria-current="page" and gets a filled highlight so operators can
-   see where they are; both states are token-driven and theme-aware. */
-.tai-nav-link {
-  display: block;
-  padding: var(--tai-space-2) var(--tai-space-3);
-  border-radius: var(--tai-radius-md);
-  font: var(--tai-text-md) var(--tai-font-sans);
-  color: var(--tai-color-text);
-  text-decoration: none;
-}
-
-.tai-nav-link:hover {
-  background: var(--tai-color-surface);
-}
-
-.tai-nav-link[aria-current='page'] {
-  background: var(--tai-color-primary);
-  color: var(--tai-color-primary-text);
-}
-
-/* Section headers grouping the sidebar nav links. Non-interactive labels — small,
-   uppercase, and muted so the grouped links stay the visual focus. They label
-   their item list via aria-labelledby, keeping the group accessible without a
-   fake link. */
-.tai-nav-section-header {
-  padding: var(--tai-space-2) var(--tai-space-3) var(--tai-space-1);
-  font: var(--tai-text-sm) var(--tai-font-sans);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--tai-color-text-muted);
-}
-
-/* Skip-to-content link: off-screen until focused, so a keyboard or screen-reader
-   user can bypass the sidebar nav and jump straight to the page content
-   (WCAG 2.4.1). It is the first focusable element in the shell. */
-.tai-skip-link {
-  position: absolute;
-  left: var(--tai-space-2);
-  top: -3rem;
-  z-index: 100;
-  padding: var(--tai-space-2) var(--tai-space-3);
-  border-radius: var(--tai-radius-md);
-  background: var(--tai-color-primary);
-  color: var(--tai-color-primary-text);
-  font: var(--tai-text-md) var(--tai-font-sans);
-  text-decoration: none;
-  transition: top 0.1s ease-in;
-}
-
-.tai-skip-link:focus {
-  top: var(--tai-space-2);
+  font-size: var(--tai-text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }

@@ -1,15 +1,30 @@
 /*
- * The design-system token contract: colors, spacing, typography, radii, and
- * the dark-mode scheme, all as CSS variables. This ships as PRECOMPILED CSS with
- * preflight disabled (the SHELL owns preflight). Both builds declare the same
- * @layer order so host utilities have deterministic precedence over DS component
- * styles — the shell stylesheet is the canonical layer-order emitter and loads
- * FIRST. Plugins style via these tokens + SDK components ONLY.
+ * The design-system token contract: colors, spacing, typography, radii, motion,
+ * elevation, and the z-scale, all as CSS variables. This ships as PRECOMPILED CSS
+ * with preflight disabled (the SHELL owns preflight). Plugins style via these
+ * tokens + SDK components ONLY.
  *
- * Dark mode is required and token-driven: the default follows prefers-color-
- * scheme, and the viewer's toggle stamps data-theme on the root, which wins.
+ * CASCADE ORDER. This file is the canonical layer-order emitter and loads FIRST.
+ * The host's reset/`base` layer is ordered BEFORE the design-system layers so a
+ * preflight that zeroes borders and heading typography cannot erase a DS
+ * component class; the host's own utility layers are declared afterwards and so
+ * sort AFTER `tai-utilities`, keeping host utilities the final word over DS
+ * component styles.
+ *
+ * THEMING. Every themed token carries both values in one `light-dark()` pair, so
+ * a color exists in exactly one place. `color-scheme` selects between them: the
+ * root defaults to `light dark` (follow the OS preference) and the viewer's
+ * toggle stamps `data-theme` on the root, which pins the scheme in BOTH
+ * directions. `color-scheme` also drives native scrollbars, selects, and form
+ * autofill.
+ *
+ * UNITS. Type and spacing tokens are authored in rem so a viewer's font-size
+ * preference scales them; radius, elevation, and z tokens stay px/unitless. The
+ * comment beside each type/space token is its rendered px at a 16 px root.
+ * Line-height and weight are NOT baked into these tokens — the component classes
+ * own them, so a `font:` shorthand never resets them.
  */
-@layer tai-tokens, tai-components, tai-utilities;
+@layer theme, base, tai-tokens, tai-components, tai-utilities;
 
 @keyframes tai-pulse {
   0%,
@@ -40,91 +55,148 @@
 
 @layer tai-tokens {
   :root {
-    --tai-color-bg: #ffffff;
-    --tai-color-surface: #f7f8fa;
-    --tai-color-surface-raised: #ffffff;
-    --tai-color-border: #e3e6ea;
-    --tai-color-text: #1a1d21;
-    --tai-color-text-muted: #5b626b;
-    --tai-color-primary: #3b5bdb;
-    --tai-color-primary-text: #ffffff;
-    --tai-color-danger: #d64545;
-    --tai-color-danger-text: #ffffff;
-    --tai-color-success: #2f9e44;
-    --tai-color-warning: #e8a13a;
-    --tai-color-focus-ring: #7aa2ff;
+    color-scheme: light dark;
 
-    --tai-space-1: 0.25rem;
-    --tai-space-2: 0.5rem;
-    --tai-space-3: 0.75rem;
-    --tai-space-4: 1rem;
-    --tai-space-6: 1.5rem;
-    --tai-space-8: 2rem;
+    /* -- Grounds ---------------------------------------------------------- */
+    --tai-color-bg: light-dark(#ffffff, #0c0e12);
+    --tai-color-surface: light-dark(#f9fafb, #12151b);
+    --tai-color-surface-raised: light-dark(#ffffff, #171c24);
+    --tai-color-surface-disabled: var(--tai-color-surface);
+    --tai-color-code-bg: light-dark(#f3f4f6, #10131a);
 
+    /* -- Lines ------------------------------------------------------------
+       `border` and `border-strong` are decorative: they are below 3:1 and may
+       never be a control's only boundary. `control-border` is the contrast-safe
+       boundary for inputs, checkboxes, and secondary buttons. */
+    --tai-color-border: light-dark(#e5e7eb, #262c36);
+    --tai-color-border-strong: light-dark(#d1d5db, #39414e);
+    --tai-color-control-border: light-dark(#767c85, #646c79);
+    --tai-color-border-disabled: var(--tai-color-border);
+
+    /* -- Ink ---------------------------------------------------------------
+       `decor` is the NON-TEXT tier (dividers, watermarks, decorative SVG fill
+       or stroke). It never appears on `color:` and never identifies a component
+       or a state. */
+    --tai-color-text: light-dark(#111827, #e6e8ec);
+    --tai-color-heading: light-dark(#000000, #ffffff);
+    --tai-color-text-muted: light-dark(rgba(17, 24, 39, 0.62), rgba(230, 232, 236, 0.64));
+    --tai-color-text-disabled: light-dark(rgba(17, 24, 39, 0.38), rgba(230, 232, 236, 0.36));
+    --tai-color-placeholder: var(--tai-color-text-muted);
+    --tai-color-decor: light-dark(rgba(17, 24, 39, 0.44), rgba(230, 232, 236, 0.42));
+
+    /* -- Accent (crimson) --------------------------------------------------
+       The accent is brand, never status. `accent-hover` darkens in light and
+       LIGHTENS in dark. `accent-on-tint` is accent TEXT sitting on accent-tint;
+       `on-accent` is the label on an accent FILL. */
+    --tai-color-accent: light-dark(#dc143c, #ed4c67);
+    --tai-color-accent-hover: light-dark(#800020, #f4718a);
+    --tai-color-accent-on-tint: light-dark(#be123c, #f4718a);
+    --tai-color-on-accent: light-dark(#ffffff, #0c0e12);
+    --tai-color-accent-tint: light-dark(rgba(220, 20, 60, 0.08), rgba(237, 76, 103, 0.12));
+
+    /* -- Semantic ----------------------------------------------------------
+       The `-text` members are the ONLY ones legible as text, dots, or icons;
+       the `-fill` members are for fills and charts and carry `on-fill` ink
+       labels in both themes. */
+    --tai-color-ok-text: light-dark(#047857, #34d399);
+    --tai-color-err-text: light-dark(#b91c1c, #f87171);
+    --tai-color-warn-text: light-dark(#92400e, #fbbf24);
+    --tai-color-ok-fill: light-dark(#10b981, #34d399);
+    --tai-color-err-fill: light-dark(#ef4444, #f87171);
+    --tai-color-warn-fill: light-dark(#d97706, #fbbf24);
+    --tai-color-ok-tint: light-dark(rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.12));
+    --tai-color-err-tint: light-dark(rgba(239, 68, 68, 0.1), rgba(248, 113, 113, 0.12));
+    --tai-color-warn-tint: light-dark(rgba(217, 119, 6, 0.1), rgba(251, 191, 36, 0.12));
+    --tai-color-on-fill: #0c0e12;
+
+    /* -- Focus + overlay ---------------------------------------------------- */
+    --tai-color-focus-ring: light-dark(#dc143c, #ed4c67);
+    --tai-color-scrim: light-dark(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.6));
+
+    /* -- Syntax (JSON/code on code-bg) -------------------------------------- */
+    --tai-color-syntax-key: var(--tai-color-text-muted);
+    --tai-color-syntax-string: var(--tai-color-ok-text);
+    --tai-color-syntax-number: var(--tai-color-accent);
+    --tai-color-syntax-bool: var(--tai-color-warn-text);
+
+    /* -- Legacy token slots -------------------------------------------------
+       The names a plugin already styles against, re-pointed at the members of
+       the contract above that keep them legible. `danger-text` is the label on
+       the danger FILL, so it is white in light and ink in dark. */
+    --tai-color-primary: var(--tai-color-accent);
+    --tai-color-primary-text: var(--tai-color-on-accent);
+    --tai-color-danger: var(--tai-color-err-text);
+    --tai-color-danger-text: light-dark(#ffffff, #0c0e12);
+    --tai-color-danger-hover: light-dark(#7f1d1d, #fca5a5);
+    --tai-color-danger-surface: var(--tai-color-err-tint);
+    --tai-color-success: var(--tai-color-ok-text);
+    --tai-color-warning: var(--tai-color-warn-text);
+
+    /* -- Spacing (n x 4; there is deliberately no space-7) ------------------ */
+    --tai-space-1: 0.25rem; /* 4px */
+    --tai-space-2: 0.5rem; /* 8px */
+    --tai-space-3: 0.75rem; /* 12px */
+    --tai-space-4: 1rem; /* 16px */
+    --tai-space-5: 1.25rem; /* 20px */
+    --tai-space-6: 1.5rem; /* 24px */
+    --tai-space-8: 2rem; /* 32px */
+
+    /* -- Radius ------------------------------------------------------------- */
     --tai-radius-sm: 4px;
+    --tai-radius-code: 6px;
     --tai-radius-md: 8px;
+    --tai-radius-tile: 10px;
     --tai-radius-lg: 12px;
+    --tai-radius-overlay: 14px;
+    --tai-radius-full: 999px;
 
-    --tai-font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-    --tai-font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
-    --tai-text-sm: 0.8125rem;
-    --tai-text-md: 0.9375rem;
-    --tai-text-lg: 1.125rem;
+    /* -- Type --------------------------------------------------------------- */
+    --tai-font-sans:
+      'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --tai-font-mono:
+      'Geist Mono Variable', ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+    --tai-text-display: 1.625rem; /* 26px — KPI numbers */
+    --tai-text-xl: 1.4375rem; /* 23px — page title */
+    --tai-text-section: 1.0625rem; /* 17px — section heading */
+    --tai-text-lg: 0.9375rem; /* 15px — card title */
+    --tai-text-md: 0.84375rem; /* 13.5px — body */
+    --tai-text-sm: 0.78125rem; /* 12.5px — secondary */
+    --tai-text-code: 0.75rem; /* 12px — mono blocks */
+    --tai-text-xs: 0.6875rem; /* 11px — labels, badges, axes (the floor) */
 
-    --tai-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
-    --tai-shadow-md: 0 4px 12px rgba(16, 24, 40, 0.1);
-  }
+    /* -- Control geometry ---------------------------------------------------
+       One height for every button, input, and select trigger; the coarse value
+       is the pointer-target minimum a touch device gets instead. */
+    --tai-control-height: 36px;
+    --tai-control-height-coarse: 44px;
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --tai-color-bg: #0f1115;
-      --tai-color-surface: #161a20;
-      --tai-color-surface-raised: #1c222b;
-      --tai-color-border: #2a313b;
-      --tai-color-text: #e7eaee;
-      --tai-color-text-muted: #9aa2ac;
-      --tai-color-primary: #5c7cfa;
-      --tai-color-primary-text: #ffffff;
-      --tai-color-danger: #e06767;
-      --tai-color-success: #51cf66;
-      --tai-color-warning: #f2b455;
-      --tai-color-focus-ring: #4763b8;
-      --tai-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-      --tai-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
-    }
+    /* -- Motion -------------------------------------------------------------- */
+    --tai-motion-fast: 150ms;
+    --tai-motion-base: 250ms;
+
+    /* -- Elevation ----------------------------------------------------------- */
+    --tai-shadow-lift: 0 12px 32px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.45));
+    --tai-shadow-overlay: 0 24px 48px light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.6));
+    --tai-shadow-sm: var(--tai-shadow-lift);
+    --tai-shadow-md: var(--tai-shadow-overlay);
+
+    /* -- Stacking ------------------------------------------------------------ */
+    --tai-z-sticky: 10;
+    --tai-z-dropdown: 20;
+    --tai-z-overlay: 30;
+    --tai-z-dialog: 40;
+    --tai-z-tooltip: 50;
   }
 
   /* The viewer's explicit toggle wins over the system preference, in BOTH
-     directions (data-theme is stamped on the root by useTheme). */
+     directions (data-theme is stamped on the root by useTheme). Pinning
+     `color-scheme` is all it takes: every themed token above resolves through
+     it, and native UI (scrollbars, selects, autofill) follows the same pin. */
   :root[data-theme='light'] {
-    --tai-color-bg: #ffffff;
-    --tai-color-surface: #f7f8fa;
-    --tai-color-surface-raised: #ffffff;
-    --tai-color-border: #e3e6ea;
-    --tai-color-text: #1a1d21;
-    --tai-color-text-muted: #5b626b;
-    --tai-color-primary: #3b5bdb;
+    color-scheme: light;
   }
 
   :root[data-theme='dark'] {
-    --tai-color-bg: #0f1115;
-    --tai-color-surface: #161a20;
-    --tai-color-surface-raised: #1c222b;
-    --tai-color-border: #2a313b;
-    --tai-color-text: #e7eaee;
-    --tai-color-text-muted: #9aa2ac;
-    --tai-color-primary: #5c7cfa;
-  }
-}
-
-@layer tai-components {
-  /* Radix moves DOM focus to the highlighted Select.Item during keyboard and
-     pointer navigation. This gives that item a visible cue (WCAG 2.4.7) — a
-     token-driven highlight readable in both light and dark — and suppresses the
-     native focus ring the highlight replaces. */
-  .tai-select-item[data-highlighted] {
-    background: var(--tai-color-primary);
-    color: var(--tai-color-primary-text);
-    outline: none;
+    color-scheme: dark;
   }
 }

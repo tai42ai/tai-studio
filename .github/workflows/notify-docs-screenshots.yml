@@ -1,8 +1,9 @@
 # Studio screenshot regeneration hook.
 #
-# On a push to `main` that touches the Studio UI (the rendered screens, the API
-# client whose shapes they render, the app shell/branding, or the docs-demo
-# capture config), this fires a `repository_dispatch` at the org's tai-docs repo,
+# On a push to `main` that touches the Studio UI (the rendered screens, the design
+# system every screen is drawn with, the API client whose shapes they render, the
+# app shell/branding, or the docs-demo capture config), this fires a
+# `repository_dispatch` at the org's tai-docs repo,
 # triggering the `screenshots` job in tai-docs' docs-screenshots.yml. That job
 # rebuilds the SPA, boots a docs-demo backend, recaptures the Studio shots, and
 # opens an automated PR if any changed.
@@ -21,6 +22,7 @@ on:
     branches: [main]
     paths:
       - 'packages/features/**'
+      - 'packages/studio-sdk/**'
       - 'packages/api-client/**'
       - 'apps/studio/**'
       - 'e2e/scripts/docs-screenshots.mjs'

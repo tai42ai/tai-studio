@@ -1,0 +1,1584 @@
+/*
+ * The design-system COMPONENT + LAYOUT layer: the real classes every Studio
+ * surface is built from. It is the only place in the monorepo that may ship CSS
+ * — feature packages compile with `tsc` and `sideEffects: false`, so a stylesheet
+ * inside one would never reach a bundle. Screens therefore apply these classes BY
+ * NAME rather than re-deriving geometry inline.
+ *
+ * Everything resolves from `tokens.css`; there are no literal colors, radii, or
+ * shadows below. Each interactive class defines rest / hover / active / disabled,
+ * and focus is one shared rule: a 2 px outline at 2 px offset, never a
+ * box-shadow, so it survives an `overflow: hidden` ancestor.
+ *
+ * Breakpoints, desktop-first with real mobile: <640 phone, 640-1023 compact,
+ * 1024-1279 medium, >=1280 full.
+ */
+@layer tai-components {
+  /* -- Global typography ---------------------------------------------------
+     Headings are black and tight in every context; the host preflight resets
+     their size and weight, and this layer sorts after it. Sizes follow the
+     scale so an unclassed heading is still on-system; a component class or an
+     explicit style overrides them. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--tai-color-heading);
+    font-family: var(--tai-font-sans);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-feature-settings: 'cv01', 'cv02';
+  }
+
+  h1 {
+    font-size: var(--tai-text-xl);
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: var(--tai-text-section);
+    line-height: 1.25;
+  }
+
+  h3 {
+    font-size: var(--tai-text-lg);
+    line-height: 1.3;
+    font-weight: 600;
+  }
+
+  h4,
+  h5,
+  h6 {
+    font-size: var(--tai-text-md);
+    line-height: 1.4;
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: var(--tai-color-accent-tint);
+    color: var(--tai-color-text);
+  }
+
+  /* Chromium paints its own opaque autofill background, which reads as a light
+     patch inside a dark form. Repaint it from the surface token and force the
+     text color to match. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--tai-color-text);
+    -webkit-box-shadow: 0 0 0 100px var(--tai-color-surface-raised) inset;
+    caret-color: var(--tai-color-text);
+  }
+
+  /* -- The uppercase mono label ---------------------------------------------
+     ONE owner for the 11 px tracked-mono label style: nav section headers,
+     table headers, page eyebrows, chart axis labels. Never re-derived inline.
+     `.tai-nav-section-header` is the shell's existing name for the same style. */
+  .tai-label,
+  .tai-nav-section-header {
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-nav-section-header {
+    padding: var(--tai-space-4) var(--tai-space-3) var(--tai-space-2);
+  }
+
+  /* -- Shared focus ---------------------------------------------------------
+     An outline (not a box-shadow) at a 2 px offset, so the ring sits ON the
+     ground and is never clipped by a scrolling or rounded ancestor. */
+  .tai-btn:focus-visible,
+  .tai-icon-btn:focus-visible,
+  .tai-link:focus-visible,
+  .tai-input:focus-visible,
+  .tai-textarea:focus-visible,
+  .tai-select-trigger:focus-visible,
+  .tai-select-item:focus-visible,
+  .tai-checkbox:focus-visible,
+  .tai-radio:focus-visible,
+  .tai-segment:focus-visible,
+  .tai-chip:focus-visible,
+  .tai-tab:focus-visible,
+  .tai-nav-item:focus-visible,
+  .tai-nav-link:focus-visible,
+  .tai-skip-link:focus-visible,
+  .tai-card-interactive:focus-visible,
+  .tai-scroll-region:focus-visible,
+  .tai-drawer:focus-visible,
+  .tai-dialog:focus-visible {
+    outline: 2px solid var(--tai-color-focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* The input's own boundary is the focus indicator's partner: it strengthens
+     to the accent so the field reads as active even at 200 % zoom. */
+  .tai-input:focus-visible,
+  .tai-textarea:focus-visible,
+  .tai-select-trigger:focus-visible {
+    border-color: var(--tai-color-accent);
+  }
+
+  /* -- Buttons --------------------------------------------------------------
+     One 36 px geometry for every control; the label sits on `line-height: 1`
+     inside it. Hover lifts 2 px; a coarse pointer trades the lift for a 44 px
+     target (the pointer-target rule wins on touch). */
+  .tai-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tai-space-2);
+    box-sizing: border-box;
+    min-height: var(--tai-control-height);
+    padding: var(--tai-space-2) var(--tai-space-4);
+    border: 1px solid transparent;
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--tai-motion-fast) ease,
+      border-color var(--tai-motion-fast) ease,
+      color var(--tai-motion-fast) ease,
+      box-shadow var(--tai-motion-fast) ease,
+      transform var(--tai-motion-fast) ease;
+  }
+
+  .tai-btn:hover:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(-2px);
+    box-shadow: var(--tai-shadow-lift);
+  }
+
+  .tai-btn:active:not(:disabled):not([aria-disabled='true']) {
+    transform: translateY(0);
+    box-shadow: none;
+  }
+
+  .tai-btn:disabled,
+  .tai-btn[aria-disabled='true'] {
+    background: var(--tai-color-surface-disabled);
+    color: var(--tai-color-text-disabled);
+    border-color: var(--tai-color-border-disabled);
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  .tai-btn-primary {
+    background: var(--tai-color-accent);
+    border-color: var(--tai-color-accent);
+    color: var(--tai-color-on-accent);
+  }
+
+  .tai-btn-primary:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--tai-color-accent-hover);
+    border-color: var(--tai-color-accent-hover);
+  }
+
+  .tai-btn-secondary {
+    background: var(--tai-color-surface-raised);
+    border-color: var(--tai-color-control-border);
+    color: var(--tai-color-text);
+  }
+
+  .tai-btn-secondary:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--tai-color-surface);
+    border-color: var(--tai-color-text);
+  }
+
+  .tai-btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-btn-ghost:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--tai-color-surface);
+    color: var(--tai-color-text);
+  }
+
+  .tai-btn-danger {
+    background: var(--tai-color-danger);
+    border-color: var(--tai-color-danger);
+    color: var(--tai-color-danger-text);
+  }
+
+  .tai-btn-danger:hover:not(:disabled):not([aria-disabled='true']) {
+    background: var(--tai-color-danger-hover);
+    border-color: var(--tai-color-danger-hover);
+  }
+
+  /* A square button whose only content is a 16 px icon; its accessible name
+     comes from the consumer's aria-label. */
+  .tai-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: var(--tai-control-height);
+    height: var(--tai-control-height);
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--tai-radius-md);
+    background: transparent;
+    color: var(--tai-color-text-muted);
+    cursor: pointer;
+    transition:
+      background-color var(--tai-motion-fast) ease,
+      color var(--tai-motion-fast) ease;
+  }
+
+  .tai-icon-btn:hover:not(:disabled) {
+    background: var(--tai-color-surface);
+    color: var(--tai-color-text);
+  }
+
+  .tai-icon-btn:disabled {
+    color: var(--tai-color-text-disabled);
+    cursor: not-allowed;
+  }
+
+  /* -- Links ---------------------------------------------------------------- */
+  .tai-link {
+    color: var(--tai-color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    border-radius: var(--tai-radius-sm);
+  }
+
+  .tai-link:hover {
+    color: var(--tai-color-accent-hover);
+  }
+
+  /* -- Icons ----------------------------------------------------------------
+     Rendered at 16 px in currentColor at full opacity; a 24-unit viewBox and a
+     1.6 stroke keep the whole set optically consistent. */
+  .tai-icon {
+    display: inline-block;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    vertical-align: -0.15em;
+  }
+
+  /* -- Fields, inputs, selects ---------------------------------------------- */
+  .tai-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-2);
+  }
+
+  .tai-field-label {
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-sm);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--tai-color-text);
+  }
+
+  .tai-field-hint {
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-sm);
+    line-height: 1.5;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-field-error {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-sm);
+    line-height: 1.5;
+    color: var(--tai-color-err-text);
+  }
+
+  .tai-input,
+  .tai-textarea,
+  .tai-select-trigger {
+    box-sizing: border-box;
+    width: 100%;
+    background: var(--tai-color-surface-raised);
+    color: var(--tai-color-text);
+    border: 1px solid var(--tai-color-control-border);
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    transition:
+      border-color var(--tai-motion-fast) ease,
+      background-color var(--tai-motion-fast) ease;
+  }
+
+  .tai-input,
+  .tai-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    height: var(--tai-control-height);
+    padding: 0 var(--tai-space-3);
+    line-height: 1;
+  }
+
+  .tai-select-trigger {
+    justify-content: space-between;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .tai-textarea {
+    display: block;
+    min-height: calc(var(--tai-control-height) * 2);
+    padding: var(--tai-space-2) var(--tai-space-3);
+    line-height: 1.5;
+    resize: vertical;
+  }
+
+  .tai-input::placeholder,
+  .tai-textarea::placeholder {
+    color: var(--tai-color-placeholder);
+    opacity: 1;
+  }
+
+  .tai-input:hover:not(:disabled),
+  .tai-textarea:hover:not(:disabled),
+  .tai-select-trigger:hover:not(:disabled) {
+    border-color: var(--tai-color-text);
+  }
+
+  .tai-input:disabled,
+  .tai-textarea:disabled,
+  .tai-select-trigger:disabled {
+    background: var(--tai-color-surface-disabled);
+    color: var(--tai-color-text-disabled);
+    border-color: var(--tai-color-border-disabled);
+    cursor: not-allowed;
+  }
+
+  /* An invalid field is announced by its message and icon; the border is a
+     supporting cue, never the only one. */
+  .tai-input[aria-invalid='true'],
+  .tai-textarea[aria-invalid='true'],
+  .tai-select-trigger[aria-invalid='true'] {
+    border-color: var(--tai-color-err-text);
+  }
+
+  .tai-input-mono,
+  .tai-textarea-mono {
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-code);
+  }
+
+  .tai-select-content {
+    z-index: var(--tai-z-dropdown);
+    max-height: 18rem;
+    overflow-y: auto;
+    padding: var(--tai-space-1);
+    background: var(--tai-color-surface-raised);
+    border: 1px solid var(--tai-color-border);
+    border-radius: var(--tai-radius-md);
+    box-shadow: var(--tai-shadow-overlay);
+  }
+
+  .tai-select-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    padding: var(--tai-space-2) var(--tai-space-3);
+    border-radius: var(--tai-radius-sm);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.4;
+    color: var(--tai-color-text);
+    cursor: pointer;
+  }
+
+  .tai-select-group-label {
+    padding: var(--tai-space-2) var(--tai-space-3) var(--tai-space-1);
+  }
+
+  /* Radix moves DOM focus to the highlighted Select.Item during keyboard and
+     pointer navigation. This gives that item a visible cue (WCAG 2.4.7) — the
+     accent tint, readable in both themes — and suppresses the native focus ring
+     the highlight replaces. */
+  .tai-select-item[data-highlighted] {
+    background: var(--tai-color-accent-tint);
+    color: var(--tai-color-accent-on-tint);
+    outline: none;
+  }
+
+  .tai-select-item[data-disabled] {
+    color: var(--tai-color-text-disabled);
+    cursor: not-allowed;
+  }
+
+  /* -- Checkbox + radio ------------------------------------------------------ */
+  .tai-checkbox,
+  .tai-radio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    padding: 0;
+    background: var(--tai-color-surface-raised);
+    border: 1px solid var(--tai-color-control-border);
+    color: var(--tai-color-on-accent);
+    cursor: pointer;
+  }
+
+  .tai-checkbox {
+    border-radius: var(--tai-radius-sm);
+  }
+
+  .tai-radio {
+    border-radius: var(--tai-radius-full);
+  }
+
+  .tai-checkbox[data-state='checked'],
+  .tai-checkbox[data-state='indeterminate'] {
+    background: var(--tai-color-accent);
+    border-color: var(--tai-color-accent);
+  }
+
+  .tai-radio-indicator {
+    display: block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: var(--tai-radius-full);
+    background: var(--tai-color-accent);
+  }
+
+  .tai-checkbox:disabled,
+  .tai-radio:disabled {
+    background: var(--tai-color-surface-disabled);
+    border-color: var(--tai-color-border-disabled);
+    cursor: not-allowed;
+  }
+
+  .tai-choice {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    min-height: var(--tai-control-height);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.4;
+    color: var(--tai-color-text);
+    cursor: pointer;
+  }
+
+  /* -- Segmented control -----------------------------------------------------
+     A compact radiogroup whose options ARE their content: no dot indicator, an
+     icon plus a visually-hidden label. Vertical is the rail's layout, where a
+     horizontal trio cannot fit in 72 px. */
+  .tai-segmented {
+    display: inline-flex;
+    gap: var(--tai-space-1);
+    padding: var(--tai-space-1);
+    background: var(--tai-color-surface);
+    border: 1px solid var(--tai-color-border);
+    border-radius: var(--tai-radius-md);
+  }
+
+  .tai-segmented[data-orientation='vertical'] {
+    flex-direction: column;
+  }
+
+  .tai-segment {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tai-space-2);
+    box-sizing: border-box;
+    min-width: 28px;
+    min-height: 28px;
+    padding: var(--tai-space-1) var(--tai-space-2);
+    border: 1px solid transparent;
+    border-radius: var(--tai-radius-sm);
+    background: transparent;
+    color: var(--tai-color-text-muted);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-sm);
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background-color var(--tai-motion-fast) ease,
+      color var(--tai-motion-fast) ease;
+  }
+
+  .tai-segment:hover:not(:disabled) {
+    background: var(--tai-color-surface-raised);
+    color: var(--tai-color-text);
+  }
+
+  .tai-segment[data-state='checked'] {
+    background: var(--tai-color-accent-tint);
+    border-color: var(--tai-color-accent);
+    color: var(--tai-color-accent-on-tint);
+  }
+
+  .tai-segment:disabled {
+    color: var(--tai-color-text-disabled);
+    cursor: not-allowed;
+  }
+
+  /* -- Cards ----------------------------------------------------------------- */
+  .tai-card {
+    box-sizing: border-box;
+    background: var(--tai-color-surface-raised);
+    border: 1px solid var(--tai-color-border);
+    border-radius: var(--tai-radius-lg);
+    padding: var(--tai-space-5);
+    color: var(--tai-color-text);
+    transition:
+      border-color var(--tai-motion-fast) ease,
+      box-shadow var(--tai-motion-base) ease,
+      transform var(--tai-motion-base) ease;
+  }
+
+  .tai-card-interactive:hover,
+  .tai-card-interactive:focus-within {
+    transform: translateY(-4px);
+    border-color: var(--tai-color-border-strong);
+    box-shadow: var(--tai-shadow-lift);
+  }
+
+  .tai-card-title {
+    margin: 0;
+    font-size: var(--tai-text-lg);
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--tai-color-heading);
+    letter-spacing: -0.03em;
+  }
+
+  /* -- Tabs ------------------------------------------------------------------ */
+  .tai-tablist {
+    display: flex;
+    gap: var(--tai-space-1);
+    border-bottom: 1px solid var(--tai-color-border);
+  }
+
+  .tai-tab {
+    appearance: none;
+    box-sizing: border-box;
+    min-height: var(--tai-control-height);
+    padding: var(--tai-space-2) var(--tai-space-3);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    font-weight: 500;
+    line-height: 1;
+    color: var(--tai-color-text-muted);
+    cursor: pointer;
+    transition:
+      color var(--tai-motion-fast) ease,
+      border-color var(--tai-motion-fast) ease;
+  }
+
+  .tai-tab:hover:not(:disabled) {
+    color: var(--tai-color-text);
+  }
+
+  .tai-tab[data-state='active'] {
+    color: var(--tai-color-text);
+    border-bottom-color: var(--tai-color-accent);
+    font-weight: 600;
+  }
+
+  .tai-tab:disabled {
+    color: var(--tai-color-text-disabled);
+    cursor: not-allowed;
+  }
+
+  .tai-tabpanel {
+    padding: var(--tai-space-4) 0;
+    color: var(--tai-color-text);
+  }
+
+  /* -- Navigation ------------------------------------------------------------
+     The current item carries three cues at once: an accent tint, accent-on-tint
+     text, and a 3 px inset rail — plus `aria-current="page"` for assistive tech.
+     `.tai-nav-link` is the shell's existing name for the same item. */
+  .tai-nav-item,
+  .tai-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    box-sizing: border-box;
+    min-height: var(--tai-control-height);
+    padding: var(--tai-space-2) var(--tai-space-3);
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--tai-color-text);
+    text-decoration: none;
+    transition:
+      background-color var(--tai-motion-fast) ease,
+      color var(--tai-motion-fast) ease;
+  }
+
+  .tai-nav-item:hover,
+  .tai-nav-link:hover {
+    background: var(--tai-color-surface);
+  }
+
+  .tai-nav-item[aria-current='page'],
+  .tai-nav-link[aria-current='page'] {
+    background: var(--tai-color-accent-tint);
+    color: var(--tai-color-accent-on-tint);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 0 var(--tai-color-accent);
+  }
+
+  /* Skip-to-content: off-screen until focused, so a keyboard or screen-reader
+     user can bypass the sidebar nav and jump straight to the page content
+     (WCAG 2.4.1). It is the first focusable element in the shell. */
+  .tai-skip-link {
+    position: absolute;
+    left: var(--tai-space-2);
+    top: -4rem;
+    z-index: var(--tai-z-tooltip);
+    padding: var(--tai-space-2) var(--tai-space-3);
+    border-radius: var(--tai-radius-md);
+    background: var(--tai-color-accent);
+    color: var(--tai-color-on-accent);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.4;
+    text-decoration: none;
+    transition: top var(--tai-motion-fast) ease-in;
+  }
+
+  .tai-skip-link:focus {
+    top: var(--tai-space-2);
+  }
+
+  /* -- Chips ------------------------------------------------------------------ */
+  .tai-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tai-space-1);
+    box-sizing: border-box;
+    min-height: 24px;
+    padding: var(--tai-space-1) var(--tai-space-3);
+    border: 1px solid var(--tai-color-control-border);
+    border-radius: var(--tai-radius-full);
+    background: var(--tai-color-surface-raised);
+    color: var(--tai-color-text);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-sm);
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background-color var(--tai-motion-fast) ease,
+      border-color var(--tai-motion-fast) ease,
+      color var(--tai-motion-fast) ease;
+  }
+
+  .tai-chip:hover:not(:disabled) {
+    background: var(--tai-color-surface);
+  }
+
+  .tai-chip[aria-pressed='true'] {
+    background: var(--tai-color-accent-tint);
+    border-color: var(--tai-color-accent);
+    color: var(--tai-color-accent-on-tint);
+  }
+
+  .tai-chip:disabled {
+    color: var(--tai-color-text-disabled);
+    border-color: var(--tai-color-border-disabled);
+    cursor: not-allowed;
+  }
+
+  /* A chip that only reads (a tag, a "+N more" count) is not a control. */
+  .tai-chip-static {
+    cursor: default;
+  }
+
+  .tai-chip-static:hover {
+    background: var(--tai-color-surface-raised);
+  }
+
+  /* -- Badges -----------------------------------------------------------------
+     A badge is tint + its own `-text` color. The solid variants are for chart
+     legends and status fills, and always carry the ink label. */
+  .tai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tai-space-1);
+    box-sizing: border-box;
+    min-height: 20px;
+    padding: var(--tai-space-1) var(--tai-space-2);
+    border-radius: var(--tai-radius-full);
+    background: var(--tai-color-accent-tint);
+    color: var(--tai-color-accent-on-tint);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  .tai-badge-neutral {
+    background: var(--tai-color-surface);
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-badge-ok {
+    background: var(--tai-color-ok-tint);
+    color: var(--tai-color-ok-text);
+  }
+
+  .tai-badge-err {
+    background: var(--tai-color-err-tint);
+    color: var(--tai-color-err-text);
+  }
+
+  .tai-badge-warn {
+    background: var(--tai-color-warn-tint);
+    color: var(--tai-color-warn-text);
+  }
+
+  .tai-badge-solid-ok {
+    background: var(--tai-color-ok-fill);
+    color: var(--tai-color-on-fill);
+  }
+
+  .tai-badge-solid-err {
+    background: var(--tai-color-err-fill);
+    color: var(--tai-color-on-fill);
+  }
+
+  .tai-badge-solid-warn {
+    background: var(--tai-color-warn-fill);
+    color: var(--tai-color-on-fill);
+  }
+
+  /* -- Status ----------------------------------------------------------------
+     Status is always an icon plus a label; the color only reinforces it. */
+  .tai-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.4;
+  }
+
+  .tai-status-ok {
+    color: var(--tai-color-ok-text);
+  }
+
+  .tai-status-err {
+    color: var(--tai-color-err-text);
+  }
+
+  .tai-status-warn {
+    color: var(--tai-color-warn-text);
+  }
+
+  .tai-status-pending {
+    color: var(--tai-color-text-muted);
+  }
+
+  /* -- Tables -----------------------------------------------------------------
+     Mono uppercase headers, tinted row hover, numerics right-aligned on
+     tabular figures so columns line up. */
+  .tai-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.5;
+    color: var(--tai-color-text);
+  }
+
+  .tai-table th {
+    padding: var(--tai-space-2) var(--tai-space-3);
+    text-align: left;
+    vertical-align: bottom;
+    border-bottom: 1px solid var(--tai-color-border);
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-table td {
+    padding: var(--tai-space-3);
+    vertical-align: top;
+    border-bottom: 1px solid var(--tai-color-border);
+  }
+
+  .tai-table tbody tr:hover {
+    background: var(--tai-color-accent-tint);
+  }
+
+  .tai-table td[data-numeric='true'],
+  .tai-table th[data-numeric='true'] {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tai-table-id {
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-code);
+  }
+
+  /* -- Scroll regions ---------------------------------------------------------
+     Horizontal overflow scrolls inside its own container. The tab stop, the
+     `role="region"`, and the label are applied by `ScrollRegion` ONLY while the
+     container actually overflows — a table that fits is not a tab stop. */
+  .tai-scroll-region {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  /* -- Surfaces: dialog, drawer, tooltip --------------------------------------- */
+  .tai-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--tai-z-overlay);
+    background: var(--tai-color-scrim);
+  }
+
+  .tai-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: var(--tai-z-dialog);
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+    width: min(560px, calc(100vw - 2 * var(--tai-space-4)));
+    max-height: calc(100vh - 2 * var(--tai-space-6));
+    overflow-y: auto;
+    padding: var(--tai-space-6);
+    background: var(--tai-color-surface-raised);
+    border: 1px solid var(--tai-color-border);
+    border-radius: var(--tai-radius-overlay);
+    box-shadow: var(--tai-shadow-overlay);
+    color: var(--tai-color-text);
+  }
+
+  .tai-dialog-title {
+    margin: 0 0 var(--tai-space-2);
+    font-size: var(--tai-text-section);
+    line-height: 1.25;
+  }
+
+  .tai-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--tai-space-2);
+    margin-top: var(--tai-space-5);
+  }
+
+  /* A side-anchored, full-height modal panel — the shell's navigation drawer
+     below 640 px. Radix Dialog supplies the trap, the scroll lock, Esc, the
+     inert background, and focus return. */
+  .tai-drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: var(--tai-z-dialog);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-3);
+    width: min(280px, calc(100vw - var(--tai-space-8)));
+    overflow-y: auto;
+    padding: var(--tai-space-4);
+    background: var(--tai-color-surface-raised);
+    border-right: 1px solid var(--tai-color-border);
+    box-shadow: var(--tai-shadow-overlay);
+    color: var(--tai-color-text);
+  }
+
+  .tai-drawer[data-side='right'] {
+    left: auto;
+    right: 0;
+    border-right: none;
+    border-left: 1px solid var(--tai-color-border);
+  }
+
+  .tai-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tai-space-2);
+  }
+
+  .tai-tooltip {
+    z-index: var(--tai-z-tooltip);
+    max-width: 20rem;
+    padding: var(--tai-space-2) var(--tai-space-3);
+    background: var(--tai-color-surface-raised);
+    border: 1px solid var(--tai-color-border-strong);
+    border-radius: var(--tai-radius-md);
+    box-shadow: var(--tai-shadow-overlay);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-sm);
+    line-height: 1.5;
+    color: var(--tai-color-text);
+  }
+
+  /* -- Code, JSON, terminal surfaces -------------------------------------------- */
+  .tai-code {
+    padding: 0.1em 0.35em;
+    background: var(--tai-color-code-bg);
+    border-radius: var(--tai-radius-code);
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-code);
+    color: var(--tai-color-text);
+  }
+
+  .tai-code-block {
+    box-sizing: border-box;
+    margin: 0;
+    padding: var(--tai-space-4);
+    overflow-x: auto;
+    background: var(--tai-color-code-bg);
+    border: 1px solid var(--tai-color-border);
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-code);
+    line-height: 1.75;
+    color: var(--tai-color-text);
+    white-space: pre;
+    tab-size: 2;
+  }
+
+  .tai-syntax-key {
+    color: var(--tai-color-syntax-key);
+  }
+
+  .tai-syntax-string {
+    color: var(--tai-color-syntax-string);
+  }
+
+  .tai-syntax-number {
+    color: var(--tai-color-syntax-number);
+  }
+
+  .tai-syntax-bool {
+    color: var(--tai-color-syntax-bool);
+  }
+
+  .tai-syntax-null {
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-diff-added {
+    background: var(--tai-color-ok-tint);
+    color: var(--tai-color-ok-text);
+  }
+
+  .tai-diff-removed {
+    background: var(--tai-color-err-tint);
+    color: var(--tai-color-err-text);
+  }
+
+  .tai-diff-changed {
+    background: var(--tai-color-warn-tint);
+    color: var(--tai-color-warn-text);
+  }
+
+  /* -- Feedback surfaces --------------------------------------------------------- */
+  .tai-skeleton {
+    border-radius: var(--tai-radius-sm);
+    background: linear-gradient(
+      90deg,
+      var(--tai-color-surface) 0%,
+      var(--tai-color-surface-raised) 50%,
+      var(--tai-color-surface) 100%
+    );
+    background-size: 200% 100%;
+    animation: tai-pulse 1.4s ease-in-out infinite;
+  }
+
+  .tai-spinner {
+    display: inline-block;
+    box-sizing: border-box;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--tai-color-border-strong);
+    border-top-color: var(--tai-color-accent);
+    border-radius: var(--tai-radius-full);
+    animation: tai-spin 0.7s linear infinite;
+  }
+
+  .tai-progress-track {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 6px;
+    background: var(--tai-color-surface);
+    border-radius: var(--tai-radius-full);
+  }
+
+  .tai-progress-fill {
+    height: 100%;
+    background: var(--tai-color-accent);
+    border-radius: var(--tai-radius-full);
+  }
+
+  .tai-progress-fill-indeterminate {
+    width: 30%;
+    animation: tai-progress-indeterminate 1.2s ease-in-out infinite;
+  }
+
+  .tai-empty-state {
+    padding: var(--tai-space-8);
+    text-align: center;
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.5;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-empty-state-title {
+    margin: 0;
+    font-size: var(--tai-text-section);
+    line-height: 1.25;
+  }
+
+  .tai-error-state {
+    padding: var(--tai-space-4);
+    background: var(--tai-color-err-tint);
+    border: 1px solid var(--tai-color-err-text);
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.5;
+    color: var(--tai-color-text);
+  }
+
+  .tai-error-state-title {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    color: var(--tai-color-err-text);
+    font-weight: 600;
+  }
+
+  /* -- Prose --------------------------------------------------------------------
+     The style for HTML the Studio did not author: a registry README injected
+     into a plugin's detail page. Everything a CommonMark + GFM renderer can emit
+     has a rule here, and the measure is held to a readable line length. */
+  .tai-prose {
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.7;
+    color: var(--tai-color-text);
+    overflow-wrap: break-word;
+  }
+
+  .tai-prose > * + * {
+    margin-top: var(--tai-space-4);
+  }
+
+  .tai-prose p,
+  .tai-prose ul,
+  .tai-prose ol,
+  .tai-prose blockquote {
+    max-width: 68ch;
+  }
+
+  .tai-prose h1,
+  .tai-prose h2,
+  .tai-prose h3,
+  .tai-prose h4,
+  .tai-prose h5,
+  .tai-prose h6 {
+    margin: var(--tai-space-6) 0 var(--tai-space-2);
+  }
+
+  .tai-prose h1 {
+    font-size: var(--tai-text-xl);
+  }
+
+  .tai-prose h2 {
+    font-size: var(--tai-text-section);
+  }
+
+  .tai-prose h3 {
+    font-size: var(--tai-text-lg);
+  }
+
+  .tai-prose a {
+    color: var(--tai-color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .tai-prose a:hover {
+    color: var(--tai-color-accent-hover);
+  }
+
+  .tai-prose ul,
+  .tai-prose ol {
+    padding-left: var(--tai-space-6);
+    list-style-position: outside;
+  }
+
+  .tai-prose ul {
+    list-style-type: disc;
+  }
+
+  .tai-prose ol {
+    list-style-type: decimal;
+  }
+
+  .tai-prose li + li {
+    margin-top: var(--tai-space-1);
+  }
+
+  .tai-prose code {
+    padding: 0.1em 0.35em;
+    background: var(--tai-color-code-bg);
+    border-radius: var(--tai-radius-code);
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-code);
+  }
+
+  .tai-prose pre {
+    padding: var(--tai-space-4);
+    overflow-x: auto;
+    background: var(--tai-color-code-bg);
+    border: 1px solid var(--tai-color-border);
+    border-radius: var(--tai-radius-md);
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-code);
+    line-height: 1.75;
+  }
+
+  .tai-prose pre code {
+    padding: 0;
+    background: none;
+    font-size: inherit;
+  }
+
+  .tai-prose blockquote {
+    padding-left: var(--tai-space-4);
+    border-left: 3px solid var(--tai-color-border-strong);
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-prose hr {
+    border: none;
+    border-top: 1px solid var(--tai-color-border);
+  }
+
+  .tai-prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--tai-radius-md);
+  }
+
+  .tai-prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--tai-text-md);
+  }
+
+  .tai-prose th {
+    padding: var(--tai-space-2) var(--tai-space-3);
+    text-align: left;
+    border-bottom: 1px solid var(--tai-color-border-strong);
+    font-family: var(--tai-font-mono);
+    font-size: var(--tai-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-prose td {
+    padding: var(--tai-space-2) var(--tai-space-3);
+    border-bottom: 1px solid var(--tai-color-border);
+    vertical-align: top;
+  }
+
+  /* -- Page composition ----------------------------------------------------------
+     `.tai-page` is the screen wrapper, `.tai-stack` the vertical rhythm every
+     screen was hand-rolling as a flex column. */
+  .tai-page {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-6);
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--tai-space-6) var(--tai-space-8);
+  }
+
+  .tai-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-4);
+  }
+
+  .tai-stack-2 {
+    gap: var(--tai-space-2);
+  }
+
+  .tai-stack-3 {
+    gap: var(--tai-space-3);
+  }
+
+  .tai-stack-6 {
+    gap: var(--tai-space-6);
+  }
+
+  .tai-row {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-3);
+    flex-wrap: wrap;
+  }
+
+  .tai-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tai-space-4);
+    flex-wrap: wrap;
+  }
+
+  .tai-page-title {
+    margin: 0;
+    font-size: var(--tai-text-xl);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--tai-color-heading);
+  }
+
+  .tai-page-description {
+    margin: var(--tai-space-2) 0 0;
+    max-width: 60ch;
+    font-family: var(--tai-font-sans);
+    font-size: var(--tai-text-md);
+    line-height: 1.5;
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-page-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    flex-wrap: wrap;
+  }
+
+  .tai-section-title {
+    margin: 0;
+    font-size: var(--tai-text-section);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--tai-color-heading);
+  }
+
+  .tai-kpi {
+    font-size: var(--tai-text-display);
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--tai-color-heading);
+    letter-spacing: -0.03em;
+  }
+
+  .tai-muted {
+    color: var(--tai-color-text-muted);
+  }
+
+  .tai-mono {
+    font-family: var(--tai-font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Visually hidden but still announced — the accessible name behind an
+     icon-only segment or control. */
+  .tai-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* -- Shell -----------------------------------------------------------------------
+     The application frame: a fixed-width sidebar beside a scrolling main
+     column at >=1024, a 72 px labelled icon rail from 640, and a 56 px sticky
+     top bar with a drawer below 640. */
+  .tai-shell {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    min-height: 100%;
+    background: var(--tai-color-bg);
+  }
+
+  .tai-shell-sidebar {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-2);
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    padding: var(--tai-space-4) var(--tai-space-3);
+    background: var(--tai-color-surface);
+    border-right: 1px solid var(--tai-color-border);
+  }
+
+  .tai-shell-main {
+    min-width: 0;
+    background: var(--tai-color-bg);
+  }
+
+  .tai-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
+    padding: var(--tai-space-2) var(--tai-space-3);
+    font-size: var(--tai-text-lg);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--tai-color-heading);
+    text-decoration: none;
+  }
+
+  .tai-brand-mark {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--tai-radius-tile);
+  }
+
+  .tai-brand-label {
+    white-space: nowrap;
+  }
+
+  .tai-topbar {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: var(--tai-z-sticky);
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tai-space-2);
+    height: 56px;
+    padding: 0 var(--tai-space-3);
+    background: var(--tai-color-surface);
+    border-bottom: 1px solid var(--tai-color-border);
+  }
+
+  /* -- Master / detail ---------------------------------------------------------------
+     Two fluid panes side by side; below 1024 exactly ONE pane is on screen and
+     the consumer drives which through `data-pane`. */
+  .tai-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(480px, 1.4fr);
+    gap: var(--tai-space-6);
+    align-items: start;
+  }
+
+  .tai-split-list,
+  .tai-split-detail {
+    min-width: 0;
+  }
+
+  /* -- Card grids ------------------------------------------------------------------- */
+  .tai-grid-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--tai-space-4);
+  }
+
+  /* -- Responsive bands ---------------------------------------------------------------
+     1024-1279 medium: the sidebar keeps its width, the split goes fluid. */
+  @media (max-width: 1279px) {
+    .tai-grid-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* 640-1023 compact: the sidebar collapses to a 72 px icon rail that KEEPS a
+     short text label under each icon — this is a touch band, never
+     tooltip-only — and only one master/detail pane is on screen. */
+  @media (max-width: 1023px) {
+    .tai-shell {
+      grid-template-columns: 72px minmax(0, 1fr);
+    }
+
+    .tai-shell-sidebar {
+      align-items: stretch;
+      padding: var(--tai-space-3) var(--tai-space-1);
+    }
+
+    .tai-nav-item,
+    .tai-nav-link {
+      flex-direction: column;
+      gap: var(--tai-space-1);
+      padding: var(--tai-space-2) var(--tai-space-1);
+      font-size: var(--tai-text-xs);
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .tai-nav-item[aria-current='page'],
+    .tai-nav-link[aria-current='page'] {
+      box-shadow: inset 0 -3px 0 0 var(--tai-color-accent);
+    }
+
+    .tai-brand-label,
+    .tai-nav-section-header {
+      display: none;
+    }
+
+    .tai-split {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tai-split[data-pane='list'] > .tai-split-detail,
+    .tai-split[data-pane='detail'] > .tai-split-list {
+      display: none;
+    }
+
+    .tai-page {
+      padding: var(--tai-space-5) var(--tai-space-6);
+    }
+  }
+
+  /* <640 phone: the rail gives way to a sticky 56 px top bar plus the drawer. */
+  @media (max-width: 639px) {
+    .tai-shell {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tai-shell-sidebar {
+      display: none;
+    }
+
+    .tai-topbar {
+      display: flex;
+    }
+
+    .tai-page {
+      padding: var(--tai-space-4);
+      gap: var(--tai-space-5);
+    }
+
+    .tai-grid-cards {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tai-page-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  /* The sticky top bar would otherwise cover an element scrolled to by a
+     keyboard focus move or an in-page anchor (WCAG 2.2 — 2.4.11). Padding
+     covers focus scrolling, margin covers anchor jumps. */
+  @media (max-width: 639px) {
+    html {
+      scroll-padding-top: 56px;
+    }
+
+    [id] {
+      scroll-margin-top: 56px;
+    }
+  }
+
+  /* Touch: the pointer-target minimum wins over the 36 px control height. */
+  @media (pointer: coarse) {
+    .tai-btn,
+    .tai-tab,
+    .tai-nav-item,
+    .tai-nav-link,
+    .tai-choice,
+    .tai-chip {
+      min-height: var(--tai-control-height-coarse);
+    }
+
+    .tai-icon-btn {
+      width: var(--tai-control-height-coarse);
+      height: var(--tai-control-height-coarse);
+    }
+
+    .tai-input,
+    .tai-select-trigger {
+      height: var(--tai-control-height-coarse);
+    }
+
+    .tai-segment {
+      min-width: var(--tai-control-height-coarse);
+      min-height: var(--tai-control-height-coarse);
+    }
+  }
+
+  /* Reduced motion: nothing animates, nothing lifts. The loading surfaces keep
+     their accessible names, so the state is still announced without movement. */
+  @media (prefers-reduced-motion: reduce) {
+    .tai-skeleton,
+    .tai-spinner,
+    .tai-progress-fill-indeterminate {
+      animation: none;
+    }
+
+    .tai-progress-fill-indeterminate {
+      width: 100%;
+      background: var(--tai-color-accent-tint);
+    }
+
+    .tai-btn,
+    .tai-icon-btn,
+    .tai-card,
+    .tai-chip,
+    .tai-tab,
+    .tai-nav-item,
+    .tai-nav-link,
+    .tai-segment,
+    .tai-input,
+    .tai-textarea,
+    .tai-select-trigger,
+    .tai-skip-link {
+      transition: none;
+    }
+
+    .tai-btn:hover:not(:disabled):not([aria-disabled='true']),
+    .tai-card-interactive:hover,
+    .tai-card-interactive:focus-within {
+      transform: none;
+    }
+  }
+}

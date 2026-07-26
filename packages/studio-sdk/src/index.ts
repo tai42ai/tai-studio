@@ -16,6 +16,8 @@
  * (the `ApiClient`/`Interaction` types are type-only imports).
  */
 import './components/tokens.css';
+import './components/fonts.css';
+import './components/components.css';
 
 // -- Plugin API --------------------------------------------------------------
 export type {
