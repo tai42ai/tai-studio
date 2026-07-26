@@ -116,6 +116,8 @@
   .tai-skip-link:focus-visible,
   .tai-card-interactive:focus-visible,
   .tai-scroll-region:focus-visible,
+  .tai-code-block:focus-visible,
+  .tai-prose pre:focus-visible,
   .tai-drawer:focus-visible,
   .tai-dialog:focus-visible {
     outline: 2px solid var(--tai-color-focus-ring);
@@ -559,9 +561,11 @@
   }
 
   /* The selected segment KEEPS its tint on hover — it is the only cue an
-     icon-only option has — and deepens its ink instead. */
+     icon-only option has — and strengthens its border instead. The border is the
+     part that moves in BOTH themes: in dark the accent-hover ink is the same
+     value as accent-on-tint, so a color change there would be invisible. */
   .tai-segment[data-state='checked']:hover:not(:disabled) {
-    color: var(--tai-color-accent-hover);
+    border-color: var(--tai-color-accent-hover);
   }
 
   .tai-segment:disabled {
@@ -737,9 +741,10 @@
     color: var(--tai-color-accent-on-tint);
   }
 
-  /* A selected chip KEEPS its tint on hover and deepens its ink instead. */
+  /* A selected chip KEEPS its tint on hover and strengthens its border instead —
+     the one part that moves in both themes (see the segment rule above). */
   .tai-chip[aria-pressed='true']:hover:not(:disabled) {
-    color: var(--tai-color-accent-hover);
+    border-color: var(--tai-color-accent-hover);
   }
 
   .tai-chip:disabled {

@@ -57,7 +57,7 @@ export function ArrayField({
           key={index}
           className="tai-row"
         >
-          {/* The item takes the row's spare width; the control beside it stays square. */}
+          {/* The item takes the row's spare width; the Remove button keeps its own. */}
           <div style={{ flex: 1 }}>
             <FieldNode
               schema={items}

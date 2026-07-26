@@ -37,8 +37,8 @@
  *
  * Geometry and ink come from the design-system classes: each committed combo is a
  * `tai-card` row, the invalid notes are `tai-field-error` (icon + message, never
- * color alone), and Remove is a `tai-icon-btn` carrying `CloseIcon` under an
- * explicit accessible name.
+ * color alone), and Remove is a labelled `Button` carrying `CloseIcon` beside the
+ * word, under an accessible name that names the combo it removes.
  */
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 

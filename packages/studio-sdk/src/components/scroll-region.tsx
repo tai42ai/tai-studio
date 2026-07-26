@@ -58,11 +58,11 @@ export interface OverflowRegionAttributes {
  * `ScrollRegion` renders. Use it when wrapping the content in a `ScrollRegion`
  * would give the surface a second scroller.
  *
- * The box is measured on mount, whenever it or any child resizes, and whenever a
- * child is added or replaced — a replaced child is a NEW element, so the resize
- * observer is re-pointed at it before the measurement is re-taken. Both
- * observers live for the lifetime of the mount; neither mutates the DOM, so
- * neither can re-trigger the other.
+ * The box is measured on mount, whenever it or any child resizes, and whenever
+ * its content changes — replaced, appended, or edited in place. A replaced child
+ * is a NEW element, so the resize observer is re-pointed at the current children
+ * before each measurement. Both observers live for the lifetime of the mount;
+ * neither mutates the DOM, so neither can re-trigger the other.
  *
  * @param ref - the scrolling element.
  * @param label - its accessible name, applied only while it actually scrolls.
@@ -89,13 +89,18 @@ export function useOverflowRegion(
       setScrollable(overflows(box));
     };
 
-    const childObserver = new MutationObserver(observeAll);
-    childObserver.observe(box, { childList: true });
+    // The whole subtree, text included: content is as often EDITED IN PLACE — a
+    // longer code string, a different JSON body — as it is replaced, and React
+    // reuses the element when it does, so watching the direct child list alone
+    // would freeze the measurement at whatever the first content needed.
+    // `observeAll` mutates nothing, so it cannot re-trigger this.
+    const contentObserver = new MutationObserver(observeAll);
+    contentObserver.observe(box, { childList: true, subtree: true, characterData: true });
     observeAll();
 
     return () => {
       resizeObserver.disconnect();
-      childObserver.disconnect();
+      contentObserver.disconnect();
     };
   }, [ref]);
 
