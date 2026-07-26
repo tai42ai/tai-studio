@@ -5,16 +5,18 @@
  * background, and focus return to the opener all come from the primitive; only
  * the anchoring differs, and that lives entirely in `.tai-drawer`.
  *
- * Pass the opener as `trigger` (as `Dialog` does). Radix's own trigger is what
- * carries `aria-haspopup`/`aria-expanded`/`aria-controls` and what its close
- * sequence hands focus back to — a drawer opened purely by flipping `open`
- * leaves Radix with nothing to restore focus to, and returning focus by hand
- * would be a second mechanism competing with the primitive's.
+ * Pass the opener as `trigger` where there is one (as `Dialog` does): Radix's own
+ * trigger is what carries `aria-haspopup`/`aria-expanded`/`aria-controls` and
+ * what its close sequence hands focus back to. A drawer opened purely by flipping
+ * `open` renders no trigger, so `useModalFocusReturn` returns focus to the opener
+ * in that case alone — with a trigger present it stands down and Radix's own
+ * restore is the only mechanism.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
 
 import { CloseIcon } from './icons';
+import { useModalFocusReturn } from './modal-focus';
 
 export interface DrawerProps {
   readonly open: boolean;
@@ -35,6 +37,7 @@ export function Drawer({
   side = 'left',
   trigger,
 }: DrawerProps) {
+  const focusReturn = useModalFocusReturn(trigger !== undefined);
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       {trigger === undefined ? null : <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>}
@@ -42,7 +45,12 @@ export function Drawer({
         <RadixDialog.Overlay className="tai-overlay" />
         {/* The panel is named by its title alone; `aria-describedby={undefined}`
             is Radix's opt-out for a dialog that carries no description. */}
-        <RadixDialog.Content className="tai-drawer" data-side={side} aria-describedby={undefined}>
+        <RadixDialog.Content
+          className="tai-drawer"
+          data-side={side}
+          aria-describedby={undefined}
+          {...focusReturn}
+        >
           <div className="tai-drawer-header">
             <RadixDialog.Title className="tai-section-title">{title}</RadixDialog.Title>
             <RadixDialog.Close className="tai-icon-btn" aria-label="Close">

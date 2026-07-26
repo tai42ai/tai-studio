@@ -248,7 +248,7 @@ const routeRowStyle: CSSProperties = {
 };
 
 const monoStyle: CSSProperties = {
-  fontFamily: 'var(--tai-font-mono, monospace)',
+  fontFamily: 'var(--tai-font-mono)',
   fontSize: 'var(--tai-text-sm)',
 };
 

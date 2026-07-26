@@ -51,7 +51,7 @@ const pageStyle: CSSProperties = {
 
 const headingStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-xl, var(--tai-text-lg)) var(--tai-font-sans)',
+  font: 'var(--tai-text-xl) var(--tai-font-sans)',
   color: 'var(--tai-color-text)',
 };
 
@@ -61,11 +61,14 @@ const listStyle: CSSProperties = {
   gap: 'var(--tai-space-4)',
 };
 
+// The badge floats over the page, not over the modal layers: a bare `40` put it
+// level with a dialog and above its scrim, so it painted through an open modal.
+// `sticky` is the design system's rung for a surface that stacks against the page.
 const badgeFloatStyle: CSSProperties = {
   position: 'fixed',
   right: 'var(--tai-space-4)',
   bottom: 'var(--tai-space-4)',
-  zIndex: 40,
+  zIndex: 'var(--tai-z-sticky)',
 };
 
 /**

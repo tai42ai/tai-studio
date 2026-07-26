@@ -200,10 +200,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
 
       {save.isSuccess ? (
         <>
-          <p
-            role="status"
-            style={{ margin: 0, color: 'var(--tai-color-success, var(--tai-color-text))' }}
-          >
+          <p role="status" style={{ margin: 0, color: 'var(--tai-color-success)' }}>
             Extensions applied.
           </p>
           {/* The save persists then broadcasts a reload to the fleet; the shared

@@ -54,7 +54,10 @@ describe('RadioGroup', () => {
 
     const group = screen.getByRole('radiogroup');
     expect(group).toHaveClass('tai-stack', 'tai-stack-2');
-    expect(group).toHaveAttribute('aria-orientation', 'vertical');
+    // No orientation is claimed unless a caller names one: `aria-orientation`
+    // already defaults to vertical for a radiogroup, and pinning it here is what
+    // would take one arrow axis away from every group that never asked.
+    expect(group).not.toHaveAttribute('aria-orientation');
 
     const apple = screen.getByRole('radio', { name: 'Apple' });
     expect(apple).toHaveClass('tai-radio');
@@ -71,6 +74,33 @@ describe('RadioGroup', () => {
     const group = screen.getByRole('radiogroup');
     expect(group).toHaveClass('tai-row');
     expect(group).toHaveAttribute('aria-orientation', 'horizontal');
+  });
+
+  it('pins the axis only when a caller names one', () => {
+    render(<RadioGroup options={OPTIONS} orientation="vertical" />);
+    const group = screen.getByRole('radiogroup');
+    expect(group).toHaveClass('tai-stack', 'tai-stack-2');
+    expect(group).toHaveAttribute('aria-orientation', 'vertical');
+  });
+
+  it('moves on BOTH arrow axes when no orientation is named', async () => {
+    const user = userEvent.setup();
+    render(<RadioGroup options={OPTIONS} aria-label="Fruit" />);
+
+    const [apple, banana] = OPTIONS.map((option) =>
+      screen.getByRole('radio', { name: option.label }),
+    );
+    await user.tab();
+    expect(apple).toHaveFocus();
+
+    // Down and Right are the same movement for an unpinned group; pinning the
+    // axis is what turns one of the two into a dead key.
+    await user.keyboard('{ArrowDown}');
+    expect(banana).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(apple).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(banana).toHaveFocus();
   });
 
   it('names a standalone group from its own label', () => {
@@ -102,7 +132,10 @@ describe('RadioGroup (segmented)', () => {
 
     const group = screen.getByRole('radiogroup', { name: 'Theme' });
     expect(group).toHaveClass('tai-segmented');
-    expect(group).toHaveAttribute('data-orientation', 'vertical');
+    // `.tai-segmented` lays out as a row and turns into a column only for
+    // `[data-orientation='vertical']`, so an unnamed orientation must leave the
+    // attribute off — a strip is horizontal until a caller says otherwise.
+    expect(group).not.toHaveAttribute('data-orientation');
     expect(group.querySelector('.tai-radio-indicator')).toBeNull();
 
     for (const name of ['Light', 'Dark', 'System']) {

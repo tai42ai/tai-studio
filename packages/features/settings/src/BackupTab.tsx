@@ -79,7 +79,7 @@ const warningStyle: CSSProperties = {
   margin: '0 0 var(--tai-space-3)',
   padding: 'var(--tai-space-3)',
   borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-warning, var(--tai-color-border))',
+  border: '1px solid var(--tai-color-warning)',
   background: 'var(--tai-color-surface)',
   color: 'var(--tai-color-text)',
   fontSize: 'var(--tai-text-sm)',
@@ -245,11 +245,7 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
               <TR
                 key={name}
                 data-testid={`report-row-${name}`}
-                style={
-                  hasErrors
-                    ? { background: 'var(--tai-color-danger-surface, transparent)' }
-                    : undefined
-                }
+                style={hasErrors ? { background: 'var(--tai-color-danger-surface)' } : undefined}
               >
                 <TD>{name}</TD>
                 <TD>{section.created}</TD>

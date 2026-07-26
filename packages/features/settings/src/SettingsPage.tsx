@@ -75,7 +75,7 @@ const pageStyle: CSSProperties = {
 
 const pageHeadingStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-xl, var(--tai-text-lg)) var(--tai-font-sans)',
+  font: 'var(--tai-text-xl) var(--tai-font-sans)',
   color: 'var(--tai-color-text)',
 };
 

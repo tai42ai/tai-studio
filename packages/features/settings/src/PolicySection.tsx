@@ -150,7 +150,7 @@ const hintsStyle: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
   gap: 'var(--tai-space-1)',
-  fontFamily: 'var(--tai-font-mono, monospace)',
+  fontFamily: 'var(--tai-font-mono)',
 };
 
 const inlineConfirmStyle: CSSProperties = {

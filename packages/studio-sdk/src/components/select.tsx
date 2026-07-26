@@ -12,7 +12,7 @@ import * as RadixSelect from '@radix-ui/react-select';
 
 import { SELECT_TRIGGER_CLASS } from './control-styles';
 import { useFieldControl } from './field';
-import { ChevronDownIcon } from './icons';
+import { CheckIcon, ChevronDownIcon } from './icons';
 
 export interface SelectOption {
   readonly value: string;
@@ -48,6 +48,13 @@ function OptionItem({ option }: { option: SelectOption }) {
   return (
     <RadixSelect.Item className="tai-select-item" value={option.value} disabled={option.disabled}>
       <RadixSelect.ItemText>{option.label}</RadixSelect.ItemText>
+      {/* The highlight follows the reader through the list, so it cannot also
+          stand for the chosen value. The check is what marks that, and Radix
+          renders it for the selected option only. It is decorative: Radix already
+          puts `aria-selected` on the item. */}
+      <RadixSelect.ItemIndicator className="tai-select-item-indicator">
+        <CheckIcon />
+      </RadixSelect.ItemIndicator>
     </RadixSelect.Item>
   );
 }

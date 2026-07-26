@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './primitives';
@@ -69,6 +70,57 @@ describe('Dialog', () => {
     );
     const described = screen.getByRole('dialog');
     expect(described).toHaveAccessibleDescription('This cannot be undone');
+  });
+
+  it('returns focus to the opener of a trigger-less, controlled dialog', async () => {
+    const user = userEvent.setup();
+    function ControlledHost() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Button
+            onClick={() => {
+              setOpen(true);
+            }}
+          >
+            Delete
+          </Button>
+          <Dialog title="Confirm delete" open={open} onOpenChange={setOpen}>
+            <p>body</p>
+          </Dialog>
+        </>
+      );
+    }
+    render(<ControlledHost />);
+    const opener = screen.getByRole('button', { name: 'Delete' });
+
+    await user.click(opener);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // Radix returns focus to its own Trigger and cancels the focus scope's
+    // restore while doing it; with no Trigger that would strand the reader on
+    // <body>, so the opener is remembered on the way in instead.
+    await waitFor(() => {
+      expect(opener).toHaveFocus();
+    });
+  });
+
+  it('leaves focus return to Radix when a trigger IS rendered', async () => {
+    const user = userEvent.setup();
+    render(
+      <Dialog title="Confirm delete" trigger={<Button>Open</Button>}>
+        <p>body</p>
+      </Dialog>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Open' });
+
+    await user.click(trigger);
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
   });
 
   it('paints the scrim from the overlay class, never an inline color', () => {

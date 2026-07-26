@@ -62,7 +62,7 @@ const memberRowStyle: CSSProperties = {
 };
 
 const memberNameStyle: CSSProperties = {
-  font: 'var(--tai-text-md) var(--tai-font-mono, var(--tai-font-sans))',
+  font: 'var(--tai-text-md) var(--tai-font-mono)',
   color: 'var(--tai-color-text)',
   wordBreak: 'break-all',
 };
@@ -90,7 +90,7 @@ const familyCountStyle: CSSProperties = {
 
 const pageHeadingStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-xl, var(--tai-text-lg)) var(--tai-font-sans)',
+  font: 'var(--tai-text-xl) var(--tai-font-sans)',
   color: 'var(--tai-color-text)',
 };
 

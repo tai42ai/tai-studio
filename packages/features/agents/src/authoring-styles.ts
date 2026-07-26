@@ -14,12 +14,12 @@ export const smallStackStyle = {
   gap: 'var(--tai-space-2)',
 };
 export const rowStyle = { display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' };
-export const monoStyle = { fontFamily: 'var(--tai-font-mono, monospace)' };
+export const monoStyle = { fontFamily: 'var(--tai-font-mono)' };
 export const chipStyle = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 'var(--tai-space-2)',
   padding: 'var(--tai-space-1) var(--tai-space-2)',
   border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-sm, 4px)',
+  borderRadius: 'var(--tai-radius-sm)',
 };

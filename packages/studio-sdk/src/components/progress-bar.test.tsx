@@ -37,6 +37,15 @@ describe('ProgressBar', () => {
     expect(screen.getByText('Uploading')).toBeInTheDocument();
   });
 
+  it('says it is working even with no message, so a still bar is not read as done', () => {
+    // Under `prefers-reduced-motion` the indeterminate fill is a full, static
+    // track — visually a finished bar. This line is the only thing separating
+    // the two for a sighted reader, so it renders whether or not a caller
+    // supplied a message.
+    render(<ProgressBar />);
+    expect(screen.getByText('Working…')).toBeInTheDocument();
+  });
+
   it('is a track plus a fill whose width is the only per-instance value', () => {
     render(<ProgressBar value={3} total={10} />);
 

@@ -154,7 +154,7 @@ const pageStyle: CSSProperties = {
 };
 const headingStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-xl, var(--tai-text-lg)) var(--tai-font-sans)',
+  font: 'var(--tai-text-xl) var(--tai-font-sans)',
   color: 'var(--tai-color-text)',
 };
 const cardBodyStyle: CSSProperties = {
@@ -256,7 +256,7 @@ export function StreamRunView({
               </span>
               {bakedFields.map((field) => (
                 <div key={field.key} data-testid="run-baked-field" data-field={field.key}>
-                  <span style={{ font: 'var(--tai-text-sm) var(--tai-font-mono, monospace)' }}>
+                  <span style={{ font: 'var(--tai-text-sm) var(--tai-font-mono)' }}>
                     {field.key}
                   </span>
                   <JsonTree data={field.value} defaultExpanded={false} />

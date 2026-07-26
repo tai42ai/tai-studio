@@ -117,7 +117,7 @@ const infoTriggerStyle: CSSProperties = {
   height: '1.25rem',
   padding: 0,
   border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-full, 999px)',
+  borderRadius: 'var(--tai-radius-full)',
   background: 'transparent',
   color: 'var(--tai-color-text-muted)',
   fontSize: 'var(--tai-text-sm)',

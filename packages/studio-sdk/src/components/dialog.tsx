@@ -6,10 +6,14 @@
  * Escape, and focus return to the trigger — so this component adds no second
  * mechanism. It contributes only the design-system surface: `tai-overlay` paints
  * the scrim from `--tai-color-scrim`, and `tai-dialog` sizes the panel with a
- * `min()` so it still fits a 320 px viewport.
+ * `min()` so it still fits a 320 px viewport. The one gap Radix leaves — focus
+ * return for a dialog that renders no trigger — is filled by
+ * `useModalFocusReturn`, which stands down whenever a trigger IS rendered.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
+
+import { useModalFocusReturn } from './modal-focus';
 
 export interface DialogProps {
   readonly title: string;
@@ -31,6 +35,7 @@ export function Dialog({
   defaultOpen,
   onOpenChange,
 }: DialogProps) {
+  const focusReturn = useModalFocusReturn(trigger !== undefined);
   return (
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger !== undefined ? <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger> : null}
@@ -42,6 +47,7 @@ export function Dialog({
             ABSENT when a description IS rendered, or it would clear the wiring. */}
         <RadixDialog.Content
           className="tai-dialog"
+          {...focusReturn}
           {...(description === undefined ? { 'aria-describedby': undefined } : {})}
         >
           <RadixDialog.Title className="tai-dialog-title">{title}</RadixDialog.Title>

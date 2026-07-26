@@ -48,7 +48,19 @@ layer, the icon set, and the layout primitives every screen builds on.
   per-option `icon` and `visuallyHiddenLabel`, a standalone `label`, an
   `orientation`, and a compact `segmented` variant. `Card` gains `interactive`
   for the hover/focus lift, `EmptyState` an `action` slot, and `JsonTree` a
-  `label` for the region it becomes while its pane overflows.
+  `label` for the region it becomes while its pane overflows. `RadioGroup`'s
+  `orientation` is unset unless a caller names one, so an unnamed group keeps
+  moving on both arrow axes; naming one pins the axis and the layout together.
+  `Select` marks the chosen option with a check, so the keyboard highlight — which
+  only says where the reader is — is no longer the sole cue for what is set.
+  `Dialog` and `Drawer` return focus to the opener when they render no trigger,
+  which is the case Radix's own trigger-based restore cannot cover.
+- **Browser support:** the stylesheets ship as authored, so `light-dark()` sets
+  the floor — Chrome/Edge 123, Firefox 120, Safari and iOS Safari 17.5 — now
+  declared in `browserslist` rather than left implicit. Under
+  `prefers-reduced-motion` the published `--tai-motion-fast` / `--tai-motion-base`
+  durations resolve to `0ms`, so plugin CSS written against them honours the
+  preference without reading the media query itself.
 - **Icons:** a hand-authored inline-SVG set (24-unit grid, 1.6 stroke,
   `currentColor`, `aria-hidden` by default) plus the `NAV_ICONS` route-token
   map. It is the single source of iconography, so `RevealInput`'s eye marks join

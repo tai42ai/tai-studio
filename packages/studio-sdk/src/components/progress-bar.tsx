@@ -45,12 +45,14 @@ export function ProgressBar({ value = 0, total, message }: ProgressBarProps): Re
 
   return (
     <div className="tai-stack tai-stack-2">
-      {(message !== undefined || percent !== undefined) && (
-        <div className="tai-row tai-field-hint" style={labelRowStyle}>
-          <span>{message ?? 'Working…'}</span>
-          {percent !== undefined && <span>{percent}%</span>}
-        </div>
-      )}
+      {/* The status line always renders. An indeterminate bar under reduced
+          motion is a full, still track — visually identical to a finished one —
+          so the only thing separating "in flight" from "done" for a sighted
+          reader is this line saying so. */}
+      <div className="tai-row tai-field-hint" style={labelRowStyle}>
+        <span>{message ?? 'Working…'}</span>
+        {percent !== undefined && <span>{percent}%</span>}
+      </div>
       <div
         role="progressbar"
         className="tai-progress-track"

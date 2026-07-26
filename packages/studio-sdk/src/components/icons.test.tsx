@@ -181,6 +181,41 @@ describe('icon props', () => {
   });
 });
 
+describe('the sort pair', () => {
+  /**
+   * The three horizontal rows of a sort mark, top to bottom, as their widths.
+   * A row is a `M<x> <y>h<width>` path; the arrow paths carry no `h` and are
+   * skipped. Widths, not artwork: what the mark MEANS is whether the rows grow
+   * or shrink downwards, and swapping the two icons' rows is invisible to a
+   * check that only counts paths.
+   */
+  function rowWidths(Component: IconComponent): number[] {
+    return [...renderIcon(Component).querySelectorAll('path')]
+      .map((path) => /^M[\d.]+ ([\d.]+)h([\d.]+)$/.exec(path.getAttribute('d') ?? ''))
+      .filter((match): match is RegExpExecArray => match !== null)
+      .sort((a, b) => Number(a[1]) - Number(b[1]))
+      .map((match) => Number(match[2]));
+  }
+
+  it('draws ascending as narrow-to-wide rows, matching its own name', () => {
+    const widths = rowWidths(iconModule.SortAscIcon);
+    expect(widths).toHaveLength(3);
+    expect([...widths].sort((a, b) => a - b)).toEqual(widths);
+  });
+
+  it('draws descending as wide-to-narrow rows, matching its own name', () => {
+    const widths = rowWidths(iconModule.SortDescIcon);
+    expect(widths).toHaveLength(3);
+    expect([...widths].sort((a, b) => b - a)).toEqual(widths);
+  });
+
+  it('is a genuine pair: the same rows, one order each way', () => {
+    expect(rowWidths(iconModule.SortAscIcon)).toEqual(
+      [...rowWidths(iconModule.SortDescIcon)].reverse(),
+    );
+  });
+});
+
 describe('NAV_ICONS', () => {
   it('covers every route token except login', () => {
     expect(Object.keys(NAV_ICONS).sort()).toEqual([...ROUTE_TOKENS].sort());

@@ -63,6 +63,34 @@ describe('ScrollRegion', () => {
     expect(region).toHaveAttribute('tabindex', '0');
   });
 
+  it('keeps the tab stop while it holds focus, and releases it on blur', () => {
+    const { container } = render(
+      <ScrollRegion label="Tool results">
+        <p>wide</p>
+      </ScrollRegion>,
+    );
+    const region = scrollRegion(container);
+
+    setOverflowing(region, true);
+    act(() => {
+      region.focus();
+    });
+    expect(region).toHaveFocus();
+
+    // A window resize is not the reader's doing: taking `tabindex` off the
+    // element they are standing on would drop them onto the document body.
+    setOverflowing(region, false);
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toHaveFocus();
+
+    // The stop outlives its reason only for as long as they stay.
+    act(() => {
+      region.blur();
+    });
+    expect(region).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+  });
+
   it('re-evaluates when the measurement changes back', () => {
     const { container } = render(
       <ScrollRegion label="Tool results">
@@ -206,6 +234,27 @@ describe('useProseScrollRegions', () => {
 
     setOverflowing(scrollRegion(container), true);
     expect(screen.getByRole('region', { name: 'Manifest table' })).toBeInTheDocument();
+  });
+
+  it('keeps an injected region focusable while it holds focus, and lets go on blur', () => {
+    const { container } = render(<ProseHost html={TABLE_HTML} />);
+    const region = scrollRegion(container);
+
+    setOverflowing(region, true);
+    act(() => {
+      region.focus();
+    });
+    expect(region).toHaveFocus();
+
+    setOverflowing(region, false);
+    expect(region).toHaveAttribute('tabindex', '0');
+    expect(region).toHaveFocus();
+
+    act(() => {
+      region.blur();
+    });
+    expect(region).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
   });
 
   it('leaves a table that fits unnamed and untabbable', () => {

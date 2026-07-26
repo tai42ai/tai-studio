@@ -18,6 +18,15 @@
  * directions. `color-scheme` also drives native scrollbars, selects, and form
  * autofill.
  *
+ * BROWSER FLOOR. `light-dark()` ships as authored — it is not lowered at build
+ * time — so it sets this package's support floor: Chrome/Edge 123, Firefox 120,
+ * Safari and iOS Safari 17.5. That floor is declared in `browserslist` (this
+ * package's and the repo root's) rather than left implicit. It is a deliberate
+ * step up from the floor the app already had: the shell compiles Tailwind v4,
+ * whose own output needs `@property` and `color-mix()` (Chrome 111, Safari 16.4,
+ * Firefox 128), so lowering `light-dark()` alone would buy no working browser —
+ * anything below the Tailwind floor is already broken, with or without it.
+ *
  * UNITS. Type and spacing tokens are authored in rem so a viewer's font-size
  * preference scales them; radius, elevation, and z tokens stay px/unitless. The
  * comment beside each type/space token is its rendered px at a 16 px root.
@@ -186,7 +195,10 @@
        portalled to the document body as siblings of a dialog, and both can only
        be opened from whatever layer is on top — so a listbox or a tip raised
        from inside a dialog has to clear that dialog's scrim to be usable.
-       `dropdown` is the in-flow menu surface, which stacks against the page. */
+       `dropdown` is the rung reserved for an in-flow menu surface — one that
+       stacks against the page rather than being portalled. Nothing in this repo
+       is on it; it is part of the published scale so a plugin's own menu has a
+       rung to sit on instead of inventing a number. */
     --tai-z-sticky: 10;
     --tai-z-dropdown: 20;
     --tai-z-overlay: 30;
@@ -205,5 +217,18 @@
 
   :root[data-theme='dark'] {
     color-scheme: dark;
+  }
+
+  /* The motion durations are published API: a plugin writes
+     `transition: … var(--tai-motion-fast)` against them and has no other way to
+     learn the viewer's preference. Zeroing them here honours that preference for
+     every consumer at once — this repo's classes, and code the design system
+     never sees. (The component layer additionally pins `transition: none` on its
+     own controls, which covers any that do not spell their duration as a token.) */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --tai-motion-fast: 0ms;
+      --tai-motion-base: 0ms;
+    }
   }
 }

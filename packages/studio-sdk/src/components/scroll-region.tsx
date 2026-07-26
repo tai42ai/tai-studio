@@ -45,6 +45,19 @@ function overflows(element: HTMLElement): boolean {
   return element.scrollWidth > element.clientWidth;
 }
 
+/**
+ * Whether the element should carry the region attributes right now.
+ *
+ * A region that stops overflowing keeps its tab stop for as long as it holds
+ * focus: taking `tabindex` off the focused element drops the reader onto the
+ * document body, and a window resize is not their doing. Only an element that
+ * already has the stop can be the active element, so this can hold a stop open
+ * but never invent one.
+ */
+function needsRegion(element: HTMLElement): boolean {
+  return overflows(element) || element.ownerDocument.activeElement === element;
+}
+
 /** The attribute set a scrolling box wears; every value is absent while it fits. */
 export interface OverflowRegionAttributes {
   readonly tabIndex?: 0;
@@ -80,7 +93,7 @@ export function useOverflowRegion(
     if (box === null) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      setScrollable(overflows(box));
+      setScrollable(needsRegion(box));
     });
 
     // The box gives resize; its children give the overflowing width.
@@ -88,7 +101,7 @@ export function useOverflowRegion(
       resizeObserver.disconnect();
       resizeObserver.observe(box);
       for (const child of box.children) resizeObserver.observe(child);
-      setScrollable(overflows(box));
+      setScrollable(needsRegion(box));
     };
 
     // The whole subtree, text included: content is as often EDITED IN PLACE — a
@@ -101,9 +114,17 @@ export function useOverflowRegion(
     contentObserver.observe(box, { childList: true, subtree: true, characterData: true });
     observeAll();
 
+    // A stop held open only because the box had focus outlives its reason the
+    // moment the reader leaves, so re-measure then and let it go.
+    const releaseHeldStop = (): void => {
+      setScrollable(needsRegion(box));
+    };
+    box.addEventListener('blur', releaseHeldStop);
+
     return () => {
       resizeObserver.disconnect();
       contentObserver.disconnect();
+      box.removeEventListener('blur', releaseHeldStop);
     };
   }, [ref]);
 
@@ -173,7 +194,7 @@ function precedingHeadingText(from: Element, root: Element): string | undefined 
 
 /** Applies the same conditional attribute set `ScrollRegion` renders. */
 function applyScrollRegionAttributes(wrapper: HTMLElement, label: string): void {
-  if (overflows(wrapper)) {
+  if (needsRegion(wrapper)) {
     wrapper.setAttribute('tabindex', '0');
     wrapper.setAttribute('role', 'region');
     wrapper.setAttribute('aria-label', label);
@@ -250,11 +271,24 @@ export function useProseScrollRegions(
     const resizeObserver = new ResizeObserver(instrument);
     const mutationObserver = new MutationObserver(instrument);
 
+    // A stop held open only because the region had focus outlives its reason the
+    // moment the reader leaves. `focusout` bubbles, so one listener on the root
+    // covers every instrumented surface under it, however often they are
+    // replaced; the attribute pair is exactly what this hook writes, so it is
+    // also what identifies a region among the prose's other focusable content.
+    const releaseHeldStop = (event: FocusEvent): void => {
+      const left = event.target;
+      if (!(left instanceof HTMLElement)) return;
+      if (left.getAttribute('role') === 'region' && left.hasAttribute('tabindex')) instrument();
+    };
+    root.addEventListener('focusout', releaseHeldStop);
+
     instrument();
 
     return () => {
       resizeObserver.disconnect();
       mutationObserver.disconnect();
+      root.removeEventListener('focusout', releaseHeldStop);
     };
   }, [ref, tableLabel, preLabel]);
 }

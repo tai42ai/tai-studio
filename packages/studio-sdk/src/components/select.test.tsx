@@ -86,6 +86,23 @@ describe('Select', () => {
     expect(await screen.findByText('Group A')).toHaveClass('tai-select-group-label', 'tai-label');
   });
 
+  it('marks the chosen option, so the moving highlight is not the only cue', async () => {
+    const user = userEvent.setup();
+    render(<Select options={OPTIONS} defaultValue="2" aria-label="Number" />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Number' }));
+
+    const chosen = await screen.findByRole('option', { name: 'Two' });
+    const other = screen.getByRole('option', { name: 'One' });
+    // Radix renders the indicator for the selected option ONLY, so the mark is
+    // what says "this is the value" once the highlight has moved elsewhere.
+    expect(chosen.querySelector('.tai-select-item-indicator svg')).not.toBeNull();
+    expect(other.querySelector('.tai-select-item-indicator')).toBeNull();
+    // The mark is decorative: `aria-selected` is what carries the state.
+    expect(chosen).toHaveAttribute('aria-selected', 'true');
+    expect(chosen).toHaveTextContent('Two');
+  });
+
   it('draws the disclosure mark as an icon, never a Unicode glyph', () => {
     render(<Select options={OPTIONS} placeholder="Pick one" />);
 

@@ -10,8 +10,9 @@
  *
  * The group takes its accessible name from an enclosing `Field`, from a `label`
  * it renders itself, or from `aria-label`. Roving tabindex and arrow-key movement
- * belong to Radix and follow `orientation`; this component only chooses the
- * layout that matches it.
+ * belong to Radix; this component only chooses the layout that matches
+ * `orientation` and passes the prop straight through, so a caller that names no
+ * orientation keeps Radix's both-axes default rather than being pinned to one.
  */
 import * as RadixRadioGroup from '@radix-ui/react-radio-group';
 import { useId } from 'react';
@@ -40,7 +41,12 @@ export interface RadioGroupProps {
   readonly label?: string;
   /** Accessible group name when neither `label` nor an enclosing `Field` supplies one. */
   readonly 'aria-label'?: string;
-  /** Arrow-key axis and layout. Defaults to `vertical`. */
+  /**
+   * Layout, and — when given — the arrow-key axis. Omitted, the options stack
+   * and BOTH axes move between them, which is what Radix does with no
+   * orientation and what every caller that never passed one already had. Pass a
+   * value only to pin the axis as well.
+   */
   readonly orientation?: 'horizontal' | 'vertical';
   /** `list` is a stack of labelled radios; `segmented` is a compact segment strip. */
   readonly variant?: 'list' | 'segmented';
@@ -64,7 +70,7 @@ export function RadioGroup({
   name,
   label,
   'aria-label': ariaLabel,
-  orientation = 'vertical',
+  orientation,
   variant = 'list',
 }: RadioGroupProps) {
   const field = useFieldControl();

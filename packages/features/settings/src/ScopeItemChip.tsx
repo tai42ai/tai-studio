@@ -35,7 +35,7 @@ const chipStyle: CSSProperties = {
   border: '1px solid var(--tai-color-border)',
   borderRadius: 'var(--tai-radius-md)',
   background: 'var(--tai-color-surface)',
-  fontFamily: 'var(--tai-font-mono, monospace)',
+  fontFamily: 'var(--tai-font-mono)',
   fontSize: 'var(--tai-text-sm)',
 };
 

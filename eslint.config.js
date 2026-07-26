@@ -348,6 +348,8 @@ export default tseslint.config(
     files: [
       'packages/studio-sdk/src/components/token-usage.test.ts',
       'packages/studio-sdk/src/components/narrow-viewport.test.ts',
+      'packages/studio-sdk/src/components/focus-ring.test.ts',
+      'packages/studio-sdk/src/components/reduced-motion.test.ts',
     ],
     plugins: { boundaries },
     rules: { 'boundaries/dependencies': 'off' },

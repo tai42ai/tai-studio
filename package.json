@@ -18,6 +18,13 @@
   "engines": {
     "node": ">=22"
   },
+  "browserslist": [
+    "chrome >= 123",
+    "edge >= 123",
+    "firefox >= 120",
+    "safari >= 17.5",
+    "ios_saf >= 17.5"
+  ],
   "scripts": {
     "dev": "pnpm --filter @tai42/studio-app dev",
     "build": "pnpm -r build",

@@ -104,6 +104,65 @@ function lightDarkArguments(value: string): { light: string; dark: string } | un
   return undefined;
 }
 
+/** Every reference to the decor token, in a stylesheet or a JSX inline style. */
+const DECOR_REFERENCE = /var\(\s*--tai-color-decor/g;
+
+/**
+ * The property a declaration's value belongs to: the last `name:` before the
+ * value, with no statement boundary in between. Written as a backwards search
+ * rather than a forward `property: value` match so that a value containing its
+ * own commas and parentheses — `linear-gradient(90deg, …)`, or the next entry of
+ * a JSX style object — cannot make the scan attribute the value to the wrong
+ * property or miss it entirely.
+ */
+function governingProperty(source: string, valueIndex: number): string | undefined {
+  const match = /([-A-Za-z][\w-]*)\s*:\s*[^;{}:]*$/.exec(source.slice(0, valueIndex));
+  return match?.[1];
+}
+
+/**
+ * `--tai-color-decor` is the NON-TEXT tier — it sits below the text contrast
+ * floor, so as text or as a focus indicator it is a WCAG failure by
+ * construction. The gate is a WHITELIST of the declarations it may appear on, so
+ * a property nobody thought of (`caret-color`, `-webkit-text-fill-color`,
+ * `text-decoration-color`) fails rather than slipping through an enumeration of
+ * the forbidden ones.
+ */
+function decorIsAllowedOn(property: string): boolean {
+  // JSX writes `borderLeft`; CSS writes `border-left`. One spelling to test.
+  const kebab = property.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  return (
+    kebab === 'background' ||
+    kebab.startsWith('background-') ||
+    kebab === 'border' ||
+    kebab.startsWith('border-') ||
+    kebab === 'column-rule' ||
+    kebab.startsWith('column-rule-') ||
+    kebab === 'box-shadow' ||
+    kebab === 'fill' ||
+    kebab === 'stroke'
+  );
+}
+
+/**
+ * The properties in `source` that put `--tai-color-decor` somewhere it may not
+ * go, in the order they appear. A reference whose property cannot be read at all
+ * is reported too — an unattributable declaration is a hole in the gate, not a
+ * pass.
+ */
+function decorOffences(source: string): string[] {
+  const offences: string[] = [];
+  for (const match of source.matchAll(DECOR_REFERENCE)) {
+    const property = governingProperty(source, match.index);
+    if (property === undefined) {
+      offences.push('<no property found>');
+    } else if (!decorIsAllowedOn(property)) {
+      offences.push(property);
+    }
+  }
+  return offences;
+}
+
 // This file spells the forbidden declarations out in order to document them, so it
 // excludes itself from its own scan.
 const selfPath = fileURLToPath(import.meta.url);
@@ -164,18 +223,57 @@ describe('design-system token usage', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('never puts --tai-color-decor on a color declaration', () => {
-    // `color: var(--tai-color-decor)` in a stylesheet, and its JSX inline-style
-    // equivalent `color: 'var(--tai-color-decor)'`. Both spellings, one rule.
-    const asText = /(?<!-)\bcolor\s*:\s*'?\s*var\(\s*--tai-color-decor/g;
-    const offenders: string[] = [];
+  describe('--tai-color-decor stays off every text-painting declaration', () => {
+    it('flags exactly the forbidden properties in a hand-written sample', () => {
+      // The POSITIVE CONTROL for the scan below. Without it, a pattern that
+      // stopped matching would turn this gate green rather than red, and the
+      // repo-wide scan cannot tell "no offenders" from "no longer looking".
+      const sample = [
+        // Forbidden: each of these paints text, or the focus indicator.
+        'color: var(--tai-color-decor);',
+        'caret-color: var(--tai-color-decor);',
+        'text-decoration-color: var(--tai-color-decor);',
+        '-webkit-text-fill-color: var(--tai-color-decor);',
+        'outline-color: var(--tai-color-decor);',
+        'text-shadow: 0 1px var(--tai-color-decor);',
+        // The JSX inline-style spellings of the same declarations.
+        "{ background: '#fff', color: 'var(--tai-color-decor)' }",
+        "{ caretColor: 'var(--tai-color-decor)' }",
+        "{ WebkitTextFillColor: 'var(--tai-color-decor)' }",
+        // Allowed: the non-text tier — lines, grounds, decorative SVG.
+        'border-color: var(--tai-color-decor);',
+        'border-left: 1px solid var(--tai-color-decor);',
+        'background: linear-gradient(90deg, var(--tai-color-decor), transparent);',
+        'fill: var(--tai-color-decor);',
+        'stroke: var(--tai-color-decor);',
+        "{ borderLeft: '1px solid var(--tai-color-decor)' }",
+      ].join('\n');
 
-    for (const file of files) {
-      const source = readFileSync(file, 'utf8');
-      if (asText.test(source)) offenders.push(relative(repoRoot, file));
-      asText.lastIndex = 0;
-    }
+      // Each offence is reported under the property AS WRITTEN, so the CSS and
+      // the JSX spellings of the same mistake stay distinguishable in a failure.
+      expect(decorOffences(sample)).toEqual([
+        'color',
+        'caret-color',
+        'text-decoration-color',
+        '-webkit-text-fill-color',
+        'outline-color',
+        'text-shadow',
+        'color',
+        'caretColor',
+        'WebkitTextFillColor',
+      ]);
+    });
 
-    expect(offenders).toEqual([]);
+    it('never lands on one anywhere under packages/ or apps/', () => {
+      const offenders: string[] = [];
+
+      for (const file of files) {
+        for (const property of decorOffences(readFileSync(file, 'utf8'))) {
+          offenders.push(`${relative(repoRoot, file)}: ${property}`);
+        }
+      }
+
+      expect(offenders).toEqual([]);
+    });
   });
 });

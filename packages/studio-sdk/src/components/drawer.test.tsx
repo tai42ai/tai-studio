@@ -117,6 +117,41 @@ describe('Drawer', () => {
     });
   });
 
+  it('returns focus to the opener even with no trigger to restore to', async () => {
+    const user = userEvent.setup();
+    function TriggerlessHost() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(true);
+            }}
+          >
+            Open navigation
+          </button>
+          <Drawer open={open} onOpenChange={setOpen} title="Navigation">
+            <a href="/tools">Tools</a>
+          </Drawer>
+        </>
+      );
+    }
+    render(<TriggerlessHost />);
+    const opener = screen.getByRole('button', { name: 'Open navigation' });
+
+    await user.click(opener);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    // Radix returns focus to its own Trigger; with none rendered it would leave
+    // the reader on <body>, so the opener is remembered on the way in instead.
+    await waitFor(() => {
+      expect(opener).toHaveFocus();
+    });
+  });
+
   it('renders its header, content and accessible name under both themes', () => {
     for (const theme of ['light', 'dark'] as const) {
       document.documentElement.setAttribute('data-theme', theme);

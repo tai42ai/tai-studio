@@ -318,9 +318,9 @@ export const SortAscIcon: IconComponent = (props) => (
   <Icon {...props}>
     <path d="M6.5 20V5" />
     <path d="M3.5 8.5 6.5 5l3 3.5" />
-    <path d="M12.5 7h8" />
+    <path d="M12.5 7h3" />
     <path d="M12.5 12h5.5" />
-    <path d="M12.5 17h3" />
+    <path d="M12.5 17h8" />
   </Icon>
 );
 
@@ -329,9 +329,9 @@ export const SortDescIcon: IconComponent = (props) => (
   <Icon {...props}>
     <path d="M6.5 4v15" />
     <path d="M3.5 15.5 6.5 19l3-3.5" />
-    <path d="M12.5 7h3" />
+    <path d="M12.5 7h8" />
     <path d="M12.5 12h5.5" />
-    <path d="M12.5 17h8" />
+    <path d="M12.5 17h3" />
   </Icon>
 );
 

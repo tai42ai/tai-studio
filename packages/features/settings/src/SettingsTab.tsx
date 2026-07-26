@@ -59,7 +59,7 @@ const groupSubtitleStyle: CSSProperties = {
   margin: '2px 0 var(--tai-space-4)',
   fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text-muted)',
-  fontFamily: 'var(--tai-font-mono, monospace)',
+  fontFamily: 'var(--tai-font-mono)',
 };
 
 const fieldsStyle: CSSProperties = {

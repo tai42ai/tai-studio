@@ -16,6 +16,13 @@
   "publishConfig": {
     "access": "public"
   },
+  "browserslist": [
+    "chrome >= 123",
+    "edge >= 123",
+    "firefox >= 120",
+    "safari >= 17.5",
+    "ios_saf >= 17.5"
+  ],
   "type": "module",
   "sideEffects": [
     "**/*.css"

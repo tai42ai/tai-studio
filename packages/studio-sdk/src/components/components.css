@@ -77,12 +77,13 @@
      ONE owner for the 11 px tracked-mono label style: nav section headers,
      table headers, page eyebrows, chart axis labels. Never re-derived inline.
      `.tai-nav-section-header` is the shell's existing name for the same style;
-     the two `th` selectors are here because a table header cell — and, in
-     injected README markup, one this repo never renders — cannot carry a class. */
+     `.tai-table th` is here because a header cell in a table this repo renders
+     cannot carry a class. Prose tables are NOT in this set: their header text is
+     authored elsewhere, and shrinking it below its own body cells (11 px against
+     13.5 px) would invert the table's hierarchy — `.tai-prose th` styles itself. */
   .tai-label,
   .tai-nav-section-header,
-  .tai-table th,
-  .tai-prose th {
+  .tai-table th {
     font-family: var(--tai-font-mono);
     font-size: var(--tai-text-xs);
     font-weight: 500;
@@ -329,7 +330,9 @@
   .tai-input,
   .tai-select-trigger {
     height: var(--tai-control-height);
-    padding: 0 var(--tai-space-3);
+    /* The 8 × 16 control padding a button wears, so a field and the button
+       beside it start their text on the same inset. */
+    padding: var(--tai-space-2) var(--tai-space-4);
     line-height: 1;
   }
 
@@ -411,6 +414,8 @@
   .tai-select-item {
     display: flex;
     align-items: center;
+    /* The option text sits left; the chosen-value mark sits at the far edge. */
+    justify-content: space-between;
     gap: var(--tai-space-2);
     padding: var(--tai-space-2) var(--tai-space-3);
     border-radius: var(--tai-radius-sm);
@@ -421,8 +426,12 @@
     cursor: pointer;
   }
 
+  /* A group name is supplied by the caller — a plugin's own tag, not a string
+     this design system authored — so it keeps the label geometry but not the
+     uppercasing, which would rewrite a case-carrying name (`gRPC`, `iOS`). */
   .tai-select-group-label {
     padding: var(--tai-space-2) var(--tai-space-3) var(--tai-space-1);
+    text-transform: none;
   }
 
   /* Radix moves DOM focus to the highlighted Select.Item during keyboard and
@@ -436,12 +445,26 @@
     color: var(--tai-color-accent-on-tint);
   }
 
-  /* The highlight IS the focus cue for an item Radix has moved DOM focus to, so
-     the native ring it would otherwise draw is suppressed — for that state only.
-     Hover suppresses nothing: a hovered item can also be keyboard-focused, and
-     that item keeps the shared focus ring. */
-  .tai-select-item[data-highlighted] {
+  /* Radix stamps `data-highlighted` for pointer hover as well as for keyboard
+     movement, and it moves DOM focus either way — so the highlight alone cannot
+     say which one happened. `:focus-visible` can, and the shared ring above is
+     already keyed on it, so the only state left to suppress is the UA ring a
+     browser may still draw on plain `:focus`. Guarding this on
+     `:not(:focus-visible)` is what keeps the keyboard ring: without it this rule
+     matches the keyboard case too, at equal specificity and later in the sheet,
+     and every Select loses its visible focus indicator (WCAG 2.4.7). */
+  .tai-select-item[data-highlighted]:not(:focus-visible) {
     outline: none;
+  }
+
+  /* The highlight is only WHERE the reader is; it moves as they arrow through
+     the list. The chosen value needs a mark of its own, or it becomes
+     unidentifiable the moment any other option is highlighted. The mark is a
+     glyph rather than a color so it survives the highlight's own repaint, and it
+     renders only for the chosen option, so nothing shifts as the value moves. */
+  .tai-select-item-indicator {
+    display: flex;
+    flex: none;
   }
 
   .tai-select-item[data-disabled] {
@@ -1277,9 +1300,13 @@
     font-size: var(--tai-text-md);
   }
 
+  /* A markdown header cell is content, not chrome: it keeps the body's size and
+     the author's own casing, and reads as a header through weight and ink. */
   .tai-prose th {
     padding: var(--tai-space-2) var(--tai-space-3);
     text-align: left;
+    font-weight: 600;
+    color: var(--tai-color-heading);
     border-bottom: 1px solid var(--tai-color-border-strong);
   }
 
@@ -1641,6 +1668,13 @@
     .tai-spinner,
     .tai-progress-fill-indeterminate {
       animation: none;
+    }
+
+    /* The sweep is what made the block read as pending. Parked, its gradient sits
+       at one end and fades into the page ground; a flat line-tone block is a
+       placeholder that is still visibly THERE without moving. */
+    .tai-skeleton {
+      background: var(--tai-color-border);
     }
 
     /* Without the sweep, a short fill parked at one end says nothing, so the

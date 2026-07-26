@@ -79,11 +79,11 @@ const rowStyle: CSSProperties = {
 
 const keyInputStyle: CSSProperties = {
   flex: '1 1 30%',
-  fontFamily: 'var(--tai-font-mono, monospace)',
+  fontFamily: 'var(--tai-font-mono)',
 };
 const valueCellStyle: CSSProperties = {
   flex: '1 1 45%',
-  fontFamily: 'var(--tai-font-mono, monospace)',
+  fontFamily: 'var(--tai-font-mono)',
 };
 
 const noticeStyle: CSSProperties = {

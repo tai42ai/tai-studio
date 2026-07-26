@@ -34,6 +34,16 @@ A host that bundles the SDK gets all three through the barrel's side-effect
 imports. A host that consumes the SDK as an external module (the Studio shell
 resolves it through the served import map) imports the three stylesheets itself.
 
+## Browser support
+
+The stylesheets ship as authored, with no build-time lowering, so the CSS they
+use is the support floor: **Chrome/Edge 123, Firefox 120, Safari and iOS Safari
+17.5**. It is set by `light-dark()`, which is how every themed token carries its
+light and dark value in one place. The same floor is declared in this package's
+`browserslist`. Below it the tokens do not degrade gracefully — they stop
+resolving — so a host that must serve older browsers needs to lower the token
+stylesheet itself.
+
 ## Usage
 
 ```ts

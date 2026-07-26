@@ -299,9 +299,7 @@ function ToolRow({ item }: { readonly item: Extract<TimelineItem, { kind: 'tool'
       <div style={rowStackStyle} data-testid="timeline-tool" data-call-id={item.callId}>
         <div style={labelRowStyle}>
           <Badge variant={item.isError ? 'danger' : 'primary'}>Tool</Badge>
-          <span style={{ font: 'var(--tai-text-md) var(--tai-font-mono, monospace)' }}>
-            {item.tool}
-          </span>
+          <span style={{ font: 'var(--tai-text-md) var(--tai-font-mono)' }}>{item.tool}</span>
         </div>
         <CodeBlock code={pretty(item.args)} language="args" />
         {item.hasResult ? (
