@@ -47,6 +47,8 @@ describe('ExternalLinkButton', () => {
       'title',
       'This link was blocked because it is not an http(s) URL.',
     );
+    // It wears the navigable form's classes, so the two cannot drift apart.
+    expect(text).toHaveClass('tai-btn', 'tai-btn-secondary');
   });
 
   it.each(['/settings/api-keys', '?tab=admin', '#anchor', './relative'])(

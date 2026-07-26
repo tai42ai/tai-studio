@@ -80,6 +80,9 @@ function classifyHref(href: string): HrefKind {
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
+/** The variant a `Button` wears when the caller names none. */
+export const DEFAULT_BUTTON_VARIANT: ButtonVariant = 'secondary';
+
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary: 'tai-btn tai-btn-primary',
   secondary: 'tai-btn tai-btn-secondary',
@@ -100,7 +103,7 @@ export type ButtonProps =
   | (ButtonVariantProps & AnchorHTMLAttributes<HTMLAnchorElement> & { readonly href: string });
 
 /** The variant class plus the caller's, which sorts last so it can override. */
-function buttonClass(variant: ButtonVariant, className: string | undefined): string {
+export function buttonClass(variant: ButtonVariant, className: string | undefined): string {
   return className === undefined
     ? VARIANT_CLASS[variant]
     : `${VARIANT_CLASS[variant]} ${className}`;
@@ -108,11 +111,11 @@ function buttonClass(variant: ButtonVariant, className: string | undefined): str
 
 export function Button(props: ButtonProps) {
   if (props.href === undefined) {
-    const { variant = 'secondary', className, href: _href, ...rest } = props;
+    const { variant = DEFAULT_BUTTON_VARIANT, className, href: _href, ...rest } = props;
     return <button {...rest} className={buttonClass(variant, className)} />;
   }
 
-  const { variant = 'secondary', className, style, href, children, ...rest } = props;
+  const { variant = DEFAULT_BUTTON_VARIANT, className, style, href, children, ...rest } = props;
   const classes = buttonClass(variant, className);
   const kind = classifyHref(href);
 

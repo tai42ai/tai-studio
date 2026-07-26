@@ -54,6 +54,23 @@ describe('Dialog', () => {
     expect(screen.getByText('Confirm delete')).toHaveClass('tai-dialog-title');
   });
 
+  it('describes itself only when it has a description, never by a dangling id', () => {
+    const { rerender } = render(
+      <Dialog title="Confirm delete" defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
+
+    rerender(
+      <Dialog title="Confirm delete" description="This cannot be undone" defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const described = screen.getByRole('dialog');
+    expect(described).toHaveAccessibleDescription('This cannot be undone');
+  });
+
   it('paints the scrim from the overlay class, never an inline color', () => {
     render(
       <Dialog title="Confirm delete" defaultOpen>

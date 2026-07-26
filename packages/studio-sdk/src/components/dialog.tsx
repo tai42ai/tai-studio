@@ -36,7 +36,14 @@ export function Dialog({
       {trigger !== undefined ? <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger> : null}
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="tai-overlay" />
-        <RadixDialog.Content className="tai-dialog">
+        {/* Radix wires `aria-describedby` to its Description's id unconditionally,
+            so a dialog that renders no Description would ship a dangling IDREF.
+            Passing the prop as `undefined` is Radix's opt-out — it has to be
+            ABSENT when a description IS rendered, or it would clear the wiring. */}
+        <RadixDialog.Content
+          className="tai-dialog"
+          {...(description === undefined ? { 'aria-describedby': undefined } : {})}
+        >
           <RadixDialog.Title className="tai-dialog-title">{title}</RadixDialog.Title>
           <div className="tai-stack">
             {description !== undefined ? (

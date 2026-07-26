@@ -426,16 +426,21 @@
   }
 
   /* Radix moves DOM focus to the highlighted Select.Item during keyboard and
-     pointer navigation. This gives that item a visible cue (WCAG 2.4.7) — the
-     accent tint, readable in both themes — and suppresses the native focus ring
-     the highlight replaces. */
-  /* Radix stamps `data-highlighted` for keyboard and pointer navigation inside a
-     Select; the completion list wears the same classes on its own buttons, which
-     never get that attribute, so pointer hover is stated separately. */
+     pointer navigation, which stamps `data-highlighted`. The completion list
+     wears these same classes on its own buttons, which Radix never touches, so
+     pointer hover is named alongside it — the accent tint reads as the current
+     option in both themes (WCAG 2.4.7). */
   .tai-select-item:not([data-disabled]):hover,
   .tai-select-item[data-highlighted] {
     background: var(--tai-color-accent-tint);
     color: var(--tai-color-accent-on-tint);
+  }
+
+  /* The highlight IS the focus cue for an item Radix has moved DOM focus to, so
+     the native ring it would otherwise draw is suppressed — for that state only.
+     Hover suppresses nothing: a hovered item can also be keyboard-focused, and
+     that item keeps the shared focus ring. */
+  .tai-select-item[data-highlighted] {
     outline: none;
   }
 
@@ -1638,12 +1643,11 @@
       animation: none;
     }
 
-    /* Without the sweep the fill has to STATE that work is in flight, so it
-       fills the track in the accent itself. The tint it would otherwise carry is
-       an 8 % wash that is invisible against the track. */
+    /* Without the sweep, a short fill parked at one end says nothing, so the
+       accent fills the whole track: work is in flight, position unknown. The bar
+       carries no `aria-valuenow`, so it is not read as complete. */
     .tai-progress-fill-indeterminate {
       width: 100%;
-      background: var(--tai-color-accent);
     }
 
     .tai-btn,

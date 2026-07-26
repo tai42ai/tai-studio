@@ -11,7 +11,13 @@
  */
 import type { ReactNode } from 'react';
 
-import { Button, isSafeHttpUrl, NeutralizedLink } from './primitives';
+import {
+  Button,
+  buttonClass,
+  DEFAULT_BUTTON_VARIANT,
+  isSafeHttpUrl,
+  NeutralizedLink,
+} from './primitives';
 
 export { isSafeHttpUrl } from './primitives';
 
@@ -23,7 +29,12 @@ export interface ExternalLinkButtonProps {
 export function ExternalLinkButton({ url, children }: ExternalLinkButtonProps) {
   const label = children ?? url;
   if (!isSafeHttpUrl(url)) {
-    return <NeutralizedLink className="tai-btn tai-btn-secondary">{label}</NeutralizedLink>;
+    // The same classes the navigable form wears, so the two never drift apart.
+    return (
+      <NeutralizedLink className={buttonClass(DEFAULT_BUTTON_VARIANT, undefined)}>
+        {label}
+      </NeutralizedLink>
+    );
   }
   return <Button href={url}>{label}</Button>;
 }
