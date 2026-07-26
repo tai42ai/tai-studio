@@ -8,6 +8,10 @@
  * 2. `--tai-color-decor` never lands on a `color:` declaration. It is the NON-TEXT tier
  *    (dividers, watermarks, decorative SVG fill/stroke) and sits below the text contrast
  *    floor, so as text it is a WCAG failure by construction.
+ * 3. Every token carrying a literal color states BOTH themes, as a `light-dark()` pair
+ *    with two different values. A single-valued color token is a dark-mode bug that
+ *    renders correctly in the light theme and so survives review; the handful that are
+ *    deliberately the same ink in both themes are named below.
  *
  * The scan is source-level on purpose: it sees the JSX inline styles and the stylesheets
  * alike, and it needs no build.
@@ -21,10 +25,8 @@ import { describe, expect, it } from 'vitest';
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(packageRoot, '../..');
 const scanRoots = [resolve(repoRoot, 'packages'), resolve(repoRoot, 'apps')];
-const stylesheets = [
-  resolve(packageRoot, 'src/components/tokens.css'),
-  resolve(packageRoot, 'src/components/components.css'),
-];
+const tokenStylesheet = resolve(packageRoot, 'src/components/tokens.css');
+const stylesheets = [tokenStylesheet, resolve(packageRoot, 'src/components/components.css')];
 
 const SCANNED_EXTENSIONS = ['.ts', '.tsx', '.css'];
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo']);
@@ -60,6 +62,44 @@ function definedTokens(): ReadonlySet<string> {
   return defined;
 }
 
+/** Any hex or `rgb()`/`rgba()` literal, in a declaration or nested in a function. */
+const LITERAL_COLOR = /#[0-9a-f]{3,8}\b|rgba?\(/i;
+
+/**
+ * Tokens whose ink is deliberately IDENTICAL in both themes. `on-fill` is the
+ * label on a filled semantic chip: the fills are light enough in either theme
+ * that only the dark ink clears the contrast floor on both.
+ */
+const THEME_INVARIANT_COLOR_TOKENS = new Set(['--tai-color-on-fill']);
+
+/**
+ * The two arguments of the `light-dark()` call inside `value`, or `undefined`
+ * when there is none. Scanned with a paren depth counter rather than a regex
+ * because either argument may itself be a function call (`rgb(0 0 0 / 0.45)`).
+ */
+function lightDarkArguments(value: string): { light: string; dark: string } | undefined {
+  const start = value.indexOf('light-dark(');
+  if (start === -1) return undefined;
+
+  let depth = 0;
+  let comma = -1;
+  for (let index = start + 'light-dark('.length - 1; index < value.length; index++) {
+    const character = value[index];
+    if (character === '(') depth++;
+    else if (character === ')') {
+      depth--;
+      if (depth === 0) {
+        if (comma === -1) return undefined;
+        return {
+          light: value.slice(start + 'light-dark('.length, comma).trim(),
+          dark: value.slice(comma + 1, index).trim(),
+        };
+      }
+    } else if (character === ',' && depth === 1) comma = index;
+  }
+  return undefined;
+}
+
 // This file spells the forbidden declarations out in order to document them, so it
 // excludes itself from its own scan.
 const selfPath = fileURLToPath(import.meta.url);
@@ -84,6 +124,29 @@ describe('design-system token usage', () => {
     }
 
     expect(unresolved).toEqual([]);
+  });
+
+  it('states both themes for every token carrying a literal color', () => {
+    const declarations = readFileSync(tokenStylesheet, 'utf8').matchAll(
+      /^\s*(--tai-[\w-]+)\s*:\s*([^;]+);/gm,
+    );
+    const offenders: string[] = [];
+
+    for (const declaration of declarations) {
+      const name = captured(declaration);
+      const value = declaration[2]?.trim() ?? '';
+      if (!LITERAL_COLOR.test(value)) continue;
+      if (THEME_INVARIANT_COLOR_TOKENS.has(name)) continue;
+
+      const pair = lightDarkArguments(value);
+      if (pair === undefined) {
+        offenders.push(`${name}: not a light-dark() pair`);
+      } else if (pair.light === pair.dark) {
+        offenders.push(`${name}: both themes are ${pair.light}`);
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 
   it('never puts --tai-color-decor on a color declaration', () => {

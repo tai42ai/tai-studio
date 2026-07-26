@@ -4,10 +4,11 @@
 // `tsc -b` emits only JS/.d.ts, so this step ships the CSS assets alongside them.
 //
 // Every stylesheet under src/ is copied at its source-relative path, and the copy
-// is GATED: a stylesheet that no module imports would ship silently dead, and one
-// missing from dist/ would vanish from the published package with nothing to
-// catch it. Both conditions fail the build loudly.
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+// is GATED: a stylesheet no module imports would ship silently dead, one whose
+// dist/ copy is absent or stale would publish CSS that does not match its source,
+// and one absent from the package exports map cannot be imported by subpath. All
+// three fail the build loudly.
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -75,18 +76,21 @@ if (unimported.length > 0) {
   );
 }
 
-const missing = stylesheets
+// Post-condition: what is in dist/ is the source, byte for byte. A stale copy
+// left by an earlier build, or a copy that did not land, would publish a package
+// whose CSS does not match its own sources.
+const stale = stylesheets
   .map((stylesheet) => posixRelative(srcDir, stylesheet))
   .filter((sourceRelative) => {
-    try {
-      return !statSync(resolve(distDir, sourceRelative)).isFile();
-    } catch {
-      return true;
-    }
+    const copied = resolve(distDir, sourceRelative);
+    if (!existsSync(copied)) return true;
+    return !readFileSync(copied).equals(readFileSync(resolve(srcDir, sourceRelative)));
   });
 
-if (missing.length > 0) {
-  throw new Error(`Stylesheet(s) missing from dist/ after the copy step: ${missing.join(', ')}.`);
+if (stale.length > 0) {
+  throw new Error(
+    `Stylesheet(s) missing from dist/ or not matching their source after the copy step: ${stale.join(', ')}.`,
+  );
 }
 
 // A stylesheet a consumer cannot address by subpath is only half-published: the

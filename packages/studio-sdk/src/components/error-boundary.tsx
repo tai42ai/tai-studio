@@ -6,15 +6,15 @@
  * There is no in-place retry — the boundary resets by remounting, so callers that
  * want a reset give it a fresh `key`.
  *
- * The fallback is the design system's `tai-error-state` surface, headed by a
- * marked title (`tai-error-state-title` + `AlertTriangleIcon`) so the failure
- * announces itself with a mark and words, not with color alone. The caught text is
- * `pre-wrap` because a stack-ish message keeps its own line breaks.
+ * The fallback is the design system's `ErrorState`, so a contained render error
+ * looks exactly like a failed fetch: one `role="alert"` surface headed by a mark
+ * and words, never color alone. It is rendered without a retry, since the
+ * boundary resets by remounting.
  */
-import { Component, type CSSProperties, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { errorMessage } from '../errors';
-import { AlertTriangleIcon } from './icons';
+import { ErrorState } from './primitives';
 
 export interface ErrorBoundaryProps {
   readonly children: ReactNode;
@@ -33,8 +33,6 @@ interface ErrorBoundaryState {
   readonly error: unknown;
 }
 
-const messageStyle: CSSProperties = { whiteSpace: 'pre-wrap' };
-
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { hasError: false, error: null };
 
@@ -51,15 +49,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       const { label } = this.props;
       const text = errorMessage(this.state.error);
       const message = label !== undefined ? `${label}: ${text}` : text;
-      return (
-        <div role="alert" className="tai-error-state tai-stack tai-stack-2">
-          <p className="tai-error-state-title">
-            <AlertTriangleIcon />
-            Something went wrong
-          </p>
-          <p style={messageStyle}>{message}</p>
-        </div>
-      );
+      return <ErrorState message={message} />;
     }
     return this.props.children;
   }

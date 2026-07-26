@@ -1,8 +1,16 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { JsonSchema } from '../schema-form/types';
+import { flushResizeObservers, setElementOverflow } from '../testing';
 import { StructuredOutput } from './StructuredOutput';
+
+/** The JSON pane a value renders into — the element that does the scrolling. */
+function pane(container: HTMLElement): HTMLElement {
+  const found = container.querySelector<HTMLElement>('.tai-code-block');
+  if (found === null) throw new Error('no JSON pane rendered');
+  return found;
+}
 
 const schema: JsonSchema = {
   type: 'object',
@@ -50,14 +58,34 @@ describe('StructuredOutput', () => {
     expect(label.parentElement).toHaveClass('tai-field');
   });
 
-  it('lets a wide value scroll inside its own region rather than the page', () => {
-    const { rerender } = render(
+  it('names a wide value pane and makes it reachable ONLY while it overflows', () => {
+    const { container } = render(
       <StructuredOutput schema={schema} content={{ title: 'hello', score: 5 }} />,
     );
-    expect(screen.getByText('Report title').parentElement).toHaveClass('tai-scroll-region');
+    const valuePane = pane(container);
+    expect(valuePane).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
 
-    rerender(<StructuredOutput content={{ anything: [1, 2] }} />);
-    expect(screen.getByTestId('structured-output-raw')).toHaveClass('tai-scroll-region');
+    setElementOverflow(valuePane, true);
+    act(() => {
+      flushResizeObservers();
+    });
+
+    // Named after its own property, so a reader landing on it knows which value it is.
+    expect(screen.getByRole('region', { name: 'Report title' })).toBe(valuePane);
+    expect(valuePane).toHaveAttribute('tabindex', '0');
+  });
+
+  it('names the schemaless pane after the output itself', () => {
+    const { container } = render(<StructuredOutput content={{ anything: [1, 2] }} />);
+    const rawPane = pane(container);
+
+    setElementOverflow(rawPane, true);
+    act(() => {
+      flushResizeObservers();
+    });
+
+    expect(screen.getByRole('region', { name: 'Structured output' })).toBe(rawPane);
   });
 
   it('resolves a $ref property title through the schema root', () => {

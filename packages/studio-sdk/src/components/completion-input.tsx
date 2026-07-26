@@ -29,8 +29,15 @@ export interface CompletionInputProps {
 
 const wrapStyle: CSSProperties = { position: 'relative' };
 
-/** The popup sits directly under the field rather than against its top edge. */
-const listStyle: CSSProperties = { marginTop: 'var(--tai-space-1)' };
+/**
+ * The popup sits directly under the field rather than against its top edge. It
+ * is a `<ul>`, so it also drops the marker a host without a CSS reset would draw.
+ */
+const listStyle: CSSProperties = {
+  marginTop: 'var(--tai-space-1)',
+  marginBottom: 0,
+  listStyle: 'none',
+};
 
 /**
  * A completion-backed text input. Suggestions refresh on every edit (a

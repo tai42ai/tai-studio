@@ -43,10 +43,12 @@ layer, the icon set, and the layout primitives every screen builds on.
   now delegates to it rather than duplicating the check). `RadioGroup` gains
   per-option `icon` and `visuallyHiddenLabel`, a standalone `label`, an
   `orientation`, and a compact `segmented` variant. `Card` gains `interactive`
-  for the hover/focus lift, and `EmptyState` an `action` slot.
+  for the hover/focus lift, `EmptyState` an `action` slot, and `JsonTree` a
+  `label` for the region it becomes while its pane overflows.
 - **Icons:** a hand-authored inline-SVG set (24-unit grid, 1.6 stroke,
   `currentColor`, `aria-hidden` by default) plus the `NAV_ICONS` route-token
-  map. The Unicode glyphs that stood in for marks in `Checkbox`, `TagChips`, and
+  map. It is the single source of iconography, so `RevealInput`'s eye marks join
+  it as the exported `EyeIcon` / `EyeOffIcon`. The Unicode glyphs that stood in for marks in `Checkbox`, `TagChips`, and
   `Select` are replaced by real icons.
 - **Testing helpers** (`@tai42/studio-sdk/testing`): `installJsdomStubs` now
   installs a WORKING `ResizeObserver`, and `flushResizeObservers` +

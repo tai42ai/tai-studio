@@ -37,7 +37,7 @@ function resizeObserverEntry(target: Element): ResizeObserverEntry {
 /**
  * Fires every live `ResizeObserver` stub's callback for the elements it is
  * observing. Pair it with `setElementOverflow` to drive a component that
- * measures itself (`ScrollRegion` and `useProseTableRegions` re-read
+ * measures itself (`ScrollRegion` and `useProseScrollRegions` re-read
  * `scrollWidth`/`clientWidth` from their observer callbacks):
  *
  *     setElementOverflow(region, true);
@@ -92,7 +92,7 @@ export function setElementOverflow(element: HTMLElement, overflowing: boolean): 
  * each element is observed (as a real observer does for its initial
  * observation), and lets a test re-deliver on demand via
  * `flushResizeObservers`. Components that size themselves — `ScrollRegion` and
- * `useProseTableRegions` — are therefore exercised for real, with
+ * `useProseScrollRegions` — are therefore exercised for real, with
  * `setElementOverflow` supplying the scroll metrics jsdom cannot compute.
  *
  * Each stub only fills a MISSING API, so installing the whole set everywhere is

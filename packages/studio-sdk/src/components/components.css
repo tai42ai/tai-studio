@@ -76,9 +76,13 @@
   /* -- The uppercase mono label ---------------------------------------------
      ONE owner for the 11 px tracked-mono label style: nav section headers,
      table headers, page eyebrows, chart axis labels. Never re-derived inline.
-     `.tai-nav-section-header` is the shell's existing name for the same style. */
+     `.tai-nav-section-header` is the shell's existing name for the same style;
+     the two `th` selectors are here because a table header cell — and, in
+     injected README markup, one this repo never renders — cannot carry a class. */
   .tai-label,
-  .tai-nav-section-header {
+  .tai-nav-section-header,
+  .tai-table th,
+  .tai-prose th {
     font-family: var(--tai-font-mono);
     font-size: var(--tai-text-xs);
     font-weight: 500;
@@ -383,10 +387,12 @@
      open dialog rather than a descendant — hence the popover layer, which
      clears the dialog scrim that would otherwise cover and swallow it. The
      height cap yields to the space the popper actually has, so a long list in a
-     short viewport still scrolls inside the screen. */
+     short viewport still scrolls inside the screen; the fallback covers the
+     in-flow suggestion list, which wears these classes without a popper to
+     publish that measurement. */
   .tai-select-content {
     z-index: var(--tai-z-popover);
-    max-height: min(18rem, var(--radix-select-content-available-height));
+    max-height: min(18rem, var(--radix-select-content-available-height, 60vh));
     overflow-y: auto;
     padding: var(--tai-space-1);
     background: var(--tai-color-surface-raised);
@@ -430,6 +436,7 @@
   /* -- Checkbox + radio ------------------------------------------------------ */
   .tai-checkbox,
   .tai-radio {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -441,6 +448,17 @@
     border: 1px solid var(--tai-color-control-border);
     color: var(--tai-color-on-accent);
     cursor: pointer;
+  }
+
+  /* 16 px is the VISUAL size of the box. The pointer target is grown past it by
+     a transparent overlay so a box with no adjacent label — a table's selection
+     column — still clears the 24 px minimum (WCAG 2.5.8) without the row growing
+     around it. */
+  .tai-checkbox::after,
+  .tai-radio::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
   }
 
   .tai-checkbox {
@@ -822,13 +840,6 @@
     text-align: left;
     vertical-align: bottom;
     border-bottom: 1px solid var(--tai-color-border);
-    font-family: var(--tai-font-mono);
-    font-size: var(--tai-text-xs);
-    font-weight: 500;
-    line-height: 1.4;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--tai-color-text-muted);
   }
 
   .tai-table td {
@@ -974,6 +985,15 @@
     color: var(--tai-color-text);
     white-space: pre;
     tab-size: 2;
+  }
+
+  /* A code surface holding a message rather than a listing: it WRAPS instead of
+     scrolling, so a long line stays readable without becoming a scroll container
+     that a keyboard would have to reach. */
+  .tai-code-block-wrap {
+    overflow-x: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 
   .tai-syntax-key {
@@ -1133,14 +1153,18 @@
     font-size: var(--tai-text-lg);
   }
 
+  /* A prose link is always underlined, so color is a reinforcement rather than
+     the only cue. Dark rest is the LIGHTER crimson: the light-theme accent is
+     too dim against a dark ground, and the hover value is the legible one there
+     (6.17 on raised). Hover then moves to the other member in both themes. */
   .tai-prose a {
-    color: var(--tai-color-accent);
+    color: light-dark(var(--tai-color-accent), var(--tai-color-accent-hover));
     text-decoration: underline;
     text-underline-offset: 2px;
   }
 
   .tai-prose a:hover {
-    color: var(--tai-color-accent-hover);
+    color: light-dark(var(--tai-color-accent-hover), var(--tai-color-accent));
   }
 
   .tai-prose ul,
@@ -1213,12 +1237,6 @@
     padding: var(--tai-space-2) var(--tai-space-3);
     text-align: left;
     border-bottom: 1px solid var(--tai-color-border-strong);
-    font-family: var(--tai-font-mono);
-    font-size: var(--tai-text-xs);
-    font-weight: 500;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--tai-color-text-muted);
   }
 
   .tai-prose td {
@@ -1548,6 +1566,12 @@
     .tai-segment {
       min-width: var(--tai-control-height-coarse);
       min-height: var(--tai-control-height-coarse);
+    }
+
+    /* 16 px box + 14 px on each side = the 44 px touch target. */
+    .tai-checkbox::after,
+    .tai-radio::after {
+      inset: -14px;
     }
   }
 

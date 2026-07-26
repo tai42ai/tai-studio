@@ -70,7 +70,6 @@ export function TagsInput({
         {/* The input takes the row; the button keeps its intrinsic width. */}
         <div style={{ flex: 1 }}>
           <TextInput
-            className="tai-input"
             value={draft}
             onChange={(event) => {
               setDraft(event.target.value);

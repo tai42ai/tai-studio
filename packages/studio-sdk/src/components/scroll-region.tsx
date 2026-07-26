@@ -9,10 +9,12 @@
  * `scrollWidth > clientWidth`, re-taken whenever the container or its content
  * resizes and whenever the content is replaced.
  *
- * `useProseScrollRegions` applies the same rules to the surfaces React never
- * renders — the tables and code blocks inside `dangerouslySetInnerHTML`
- * (rendered README/markdown), which cannot be wrapped in a component and are
- * therefore instrumented imperatively.
+ * `useOverflowRegion` is the same measurement for a component that IS its own
+ * scrolling box (a `<pre>`, a JSON pane) and therefore cannot be wrapped in a
+ * `<div>` without gaining a second scroller. `useProseScrollRegions` applies the
+ * rules to the surfaces React never renders — the tables and code blocks inside
+ * `dangerouslySetInnerHTML` (rendered README/markdown), which cannot be wrapped
+ * in a component and are therefore instrumented imperatively.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
@@ -42,32 +44,57 @@ function overflows(element: HTMLElement): boolean {
   return element.scrollWidth > element.clientWidth;
 }
 
-export function ScrollRegion({ label, children, className, style }: ScrollRegionProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+/** The attribute set a scrolling box wears; every value is absent while it fits. */
+export interface OverflowRegionAttributes {
+  readonly tabIndex?: 0;
+  readonly role?: 'region';
+  readonly 'aria-label'?: string;
+}
+
+/**
+ * The conditional region attributes for the element `ref` points at, which must
+ * be the scrolling box itself. Measured on mount, on every resize of the box or
+ * its children, and whenever `content` changes identity — a replaced child is a
+ * NEW element, so the observer has to be re-pointed at it and the measurement
+ * re-taken.
+ *
+ * @param ref - the scrolling element.
+ * @param label - its accessible name, applied only while it actually scrolls.
+ * @param content - the rendered content, so a replacement re-triggers the measurement.
+ */
+export function useOverflowRegion(
+  ref: RefObject<HTMLElement | null>,
+  label: string,
+  content?: unknown,
+): OverflowRegionAttributes {
   const [scrollable, setScrollable] = useState(false);
 
-  // `children` is a dependency because a replaced child is a NEW element: the
-  // observer must be re-pointed at it and the measurement re-taken. Re-running
-  // is cheap — the measurement settles on the same value and React drops the
-  // no-op state update.
   useEffect(() => {
-    const container = containerRef.current;
-    if (container === null) return;
+    const box = ref.current;
+    if (box === null) return;
 
     const measure = (): void => {
-      setScrollable(overflows(container));
+      setScrollable(overflows(box));
     };
 
     const observer = new ResizeObserver(measure);
-    // The container gives resize; its content gives the overflowing width.
-    observer.observe(container);
-    for (const child of container.children) observer.observe(child);
+    // The box gives resize; its content gives the overflowing width.
+    observer.observe(box);
+    for (const child of box.children) observer.observe(child);
     measure();
 
     return () => {
       observer.disconnect();
     };
-  }, [children]);
+  }, [ref, content]);
+
+  if (!scrollable) return {};
+  return { tabIndex: 0, role: 'region', 'aria-label': label };
+}
+
+export function ScrollRegion({ label, children, className, style }: ScrollRegionProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const region = useOverflowRegion(containerRef, label, children);
 
   return (
     <div
@@ -76,9 +103,7 @@ export function ScrollRegion({ label, children, className, style }: ScrollRegion
         className === undefined ? SCROLL_REGION_CLASS : `${SCROLL_REGION_CLASS} ${className}`
       }
       style={style}
-      tabIndex={scrollable ? 0 : undefined}
-      role={scrollable ? 'region' : undefined}
-      aria-label={scrollable ? label : undefined}
+      {...region}
     >
       {children}
     </div>

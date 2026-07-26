@@ -181,6 +181,8 @@ export {
   CheckIcon,
   CopyIcon,
   ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
   SortAscIcon,
   SortDescIcon,
   SunIcon,

@@ -46,9 +46,56 @@ afterEach(() => {
   document.documentElement.removeAttribute('data-theme');
 });
 
+/**
+ * The marks the design system PINS by name: the sixteen route marks plus the
+ * shell, theme, control and status sets. Deleting or renaming any of them breaks
+ * a screen that names it, so the inventory is asserted explicitly rather than by
+ * counting whatever the module happens to export.
+ */
+const REQUIRED_ICONS = [
+  'DashboardIcon',
+  'ToolsIcon',
+  'AgentsIcon',
+  'PresetsIcon',
+  'ExtensionsIcon',
+  'TemplatesIcon',
+  'ConnectorsIcon',
+  'HooksIcon',
+  'StorageIcon',
+  'SchedulingIcon',
+  'InteractionsIcon',
+  'NotificationsIcon',
+  'MarketplaceIcon',
+  'ManifestIcon',
+  'SettingsIcon',
+  'SystemIcon',
+  'SearchIcon',
+  'SignOutIcon',
+  'MenuIcon',
+  'CloseIcon',
+  'SunIcon',
+  'MoonIcon',
+  'MonitorIcon',
+  'CopyIcon',
+  'ExternalLinkIcon',
+  'ChevronDownIcon',
+  'ChevronRightIcon',
+  'CheckIcon',
+  'SortAscIcon',
+  'SortDescIcon',
+  'FilterIcon',
+  'ArrowLeftIcon',
+  'EyeIcon',
+  'EyeOffIcon',
+  'CheckCircleIcon',
+  'AlertTriangleIcon',
+  'XCircleIcon',
+  'PendingIcon',
+] as const;
+
 describe('icon set', () => {
-  it('exports a non-trivial number of marks', () => {
-    expect(ICONS.length).toBeGreaterThanOrEqual(32);
+  it.each(REQUIRED_ICONS)('exports %s', (name) => {
+    expect(Object.keys(iconModule)).toContain(name);
   });
 
   it.each(ICONS)('%s renders an svg on the shared 24 grid', (_name, Component) => {

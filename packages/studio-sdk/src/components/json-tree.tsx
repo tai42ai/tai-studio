@@ -7,13 +7,26 @@
  * type so a value's kind is readable at a glance. All values render as React TEXT
  * children, so a payload containing markup (e.g. `<script>`) is escaped by React
  * and never interpreted — this component is never an HTML sink.
+ *
+ * The pane IS the scrolling box, so it carries the region attributes itself
+ * rather than sitting inside a `ScrollRegion` wrapper that would add a second
+ * scroller: a deeply indented value makes it a named keyboard target, a shallow
+ * one leaves it an ordinary block.
  */
+import { useRef } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
+
+import { useOverflowRegion } from './scroll-region';
 
 export interface JsonTreeProps {
   readonly data: unknown;
   readonly defaultExpanded?: boolean;
+  /** The region's accessible name, applied only while the pane actually scrolls. */
+  readonly label?: string;
 }
+
+/** The region's name when the caller supplies none. */
+const DEFAULT_LABEL = 'JSON';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -104,9 +117,12 @@ function JsonNode({ name, value, defaultExpanded }: NodeProps): ReactElement {
   );
 }
 
-export function JsonTree({ data, defaultExpanded = true }: JsonTreeProps) {
+export function JsonTree({ data, defaultExpanded = true, label }: JsonTreeProps) {
+  const paneRef = useRef<HTMLDivElement>(null);
+  const region = useOverflowRegion(paneRef, label ?? DEFAULT_LABEL, data);
+
   return (
-    <div className="tai-code-block">
+    <div ref={paneRef} className="tai-code-block" {...region}>
       <JsonNode value={data} defaultExpanded={defaultExpanded} />
     </div>
   );

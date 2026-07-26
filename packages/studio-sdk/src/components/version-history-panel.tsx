@@ -23,7 +23,7 @@
  * a row's state is a MARK plus a label (`tai-status` + `CheckCircleIcon` /
  * `PendingIcon`), never color alone, and the version number and timestamp are the
  * machine voice (`tai-table-id` / `tai-mono`). The table itself sits in a
- * `tai-scroll-region` so a narrow viewport scrolls it instead of the page.
+ * `ScrollRegion` so a narrow viewport scrolls it instead of the page.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
@@ -33,6 +33,7 @@ import { CheckCircleIcon, PendingIcon } from './icons';
 import { JsonDiff } from './json-diff';
 import { JsonTree } from './json-tree';
 import { Button, Card, ErrorState, Spinner } from './primitives';
+import { ScrollRegion } from './scroll-region';
 import { Table, TBody, TD, TH, THead, TR } from './table';
 import { TagChips, TagsInput } from './tags';
 
@@ -215,7 +216,7 @@ export function VersionHistoryPanel({
       <Card>
         {/* The action column makes this table wider than a phone viewport; it scrolls
             inside its own region rather than pushing the page sideways. */}
-        <div className="tai-scroll-region">
+        <ScrollRegion label="Version history">
           <Table>
             <THead>
               <TR>
@@ -303,7 +304,7 @@ export function VersionHistoryPanel({
               ))}
             </TBody>
           </Table>
-        </div>
+        </ScrollRegion>
       </Card>
 
       {compareFrom !== null && comparePair === null ? (
@@ -331,9 +332,9 @@ export function VersionHistoryPanel({
           }}
         >
           {/* A deep diff row can run wider than the dialog; it scrolls in place. */}
-          <div className="tai-scroll-region">
+          <ScrollRegion label="Version diff">
             <JsonDiff before={fromBody} after={toBody} />
-          </div>
+          </ScrollRegion>
           <div className="tai-dialog-actions">
             <Button onClick={closeCompare}>Close</Button>
           </div>

@@ -22,6 +22,9 @@ export interface StructuredOutputProps {
   readonly content: unknown;
 }
 
+/** The pane's name when the payload has no schema to name it by. */
+const RAW_OUTPUT_LABEL = 'Structured output';
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -46,11 +49,10 @@ function isObjectSchema(
 export function StructuredOutput({ schema, content }: StructuredOutputProps): ReactNode {
   if (!isObjectSchema(schema, schema) || !isRecord(content)) {
     return (
-      /* A deeply nested payload outruns its column; adopt `ScrollRegion` here
-         once it is wired through, so the pane is a keyboard target only while it
-         actually scrolls. */
-      <div data-testid="structured-output-raw" className="tai-scroll-region">
-        <JsonTree data={content} defaultExpanded />
+      // A deeply nested payload outruns its column; the tree's own pane scrolls
+      // it and is a keyboard target only while it actually does.
+      <div data-testid="structured-output-raw">
+        <JsonTree data={content} defaultExpanded label={RAW_OUTPUT_LABEL} />
       </div>
     );
   }
@@ -65,12 +67,12 @@ export function StructuredOutput({ schema, content }: StructuredOutputProps): Re
     <div className="tai-stack tai-stack-2" data-testid="structured-output">
       {Object.entries(properties).map(([key, propSchema]) => {
         const field = propSchema.$ref ? resolveRef(propSchema, schema) : propSchema;
+        const name = field.title ?? key;
         return (
-          // A wide value scrolls inside its own row; adopt `ScrollRegion` here
-          // once it is wired through.
-          <div key={key} className="tai-field tai-scroll-region">
-            <span className="tai-label">{field.title ?? key}</span>
-            <JsonTree data={content[key]} defaultExpanded />
+          <div key={key} className="tai-field">
+            <span className="tai-label">{name}</span>
+            {/* A wide value scrolls inside its own pane rather than widening the row. */}
+            <JsonTree data={content[key]} defaultExpanded label={name} />
           </div>
         );
       })}

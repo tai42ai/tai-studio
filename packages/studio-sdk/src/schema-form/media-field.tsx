@@ -34,9 +34,10 @@ function UploadDropZone({
   return (
     <div
       className="tai-card tai-stack tai-stack-2"
-      // The dashed edge is the drop target's own affordance; the card class owns
-      // the ground, the boundary color, the radius and the padding.
-      style={{ borderStyle: 'dashed' }}
+      // The dashed edge is the drop target's ONLY boundary, so it takes the
+      // contrast-safe control border rather than the card's decorative one; the
+      // card class still owns the ground, the radius and the padding.
+      style={{ borderStyle: 'dashed', borderColor: 'var(--tai-color-control-border)' }}
       onDragOver={(event) => {
         event.preventDefault();
       }}

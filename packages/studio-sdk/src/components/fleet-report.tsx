@@ -84,7 +84,10 @@ export function FleetReport({
             ? 'The worker bus was unreachable, so other workers may still be running the old config. Re-run the reload once the bus is back.'
             : 'The worker bus was unreachable, so other workers may still be running the old config. Re-run the reload from the System page once the bus is back.'}
         </p>
-        {summary.error !== null ? <p className="tai-code-block">{summary.error}</p> : null}
+        {/* The bus error is a message, not a listing: it wraps rather than scrolls. */}
+        {summary.error !== null ? (
+          <p className="tai-code-block tai-code-block-wrap">{summary.error}</p>
+        ) : null}
       </div>
     );
   }
