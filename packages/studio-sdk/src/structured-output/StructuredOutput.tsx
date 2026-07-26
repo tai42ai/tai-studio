@@ -70,7 +70,7 @@ export function StructuredOutput({ schema, content }: StructuredOutputProps): Re
         const name = field.title ?? key;
         return (
           <div key={key} className="tai-field">
-            <span className="tai-label">{name}</span>
+            <span className="tai-field-label">{name}</span>
             {/* A wide value scrolls inside its own pane rather than widening the row. */}
             <JsonTree data={content[key]} defaultExpanded label={name} />
           </div>

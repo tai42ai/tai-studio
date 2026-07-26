@@ -26,19 +26,20 @@
  */
 @layer theme, base, tai-tokens, tai-components, tai-utilities;
 
-@keyframes tai-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
 @keyframes tai-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Loading skeleton: the raised band sweeps across the surface ground, which is
+   what makes a placeholder read as pending rather than as empty content. */
+@keyframes tai-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
   }
 }
 

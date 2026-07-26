@@ -769,7 +769,7 @@ describe('SchemaForm — design system', () => {
     expect(alert.querySelector('svg')).toHaveClass('tai-icon');
   });
 
-  it('gives the array remove control an icon, the icon-button class and a real name', () => {
+  it('gives the array remove control its mark, its visible label and a real name', () => {
     const schema: JsonSchema = {
       type: 'object',
       properties: { tags: { type: 'array', items: { type: 'string' }, title: 'Tags' } },
@@ -777,10 +777,10 @@ describe('SchemaForm — design system', () => {
     render(<Harness schema={schema} initial={{ tags: ['a'] }} />);
 
     const remove = screen.getByRole('button', { name: 'Remove item 1' });
-    expect(remove).toHaveClass('tai-icon-btn');
+    expect(remove).toHaveClass('tai-btn', 'tai-btn-secondary');
+    // The mark accompanies the word; no Unicode glyph stands in for either.
     expect(remove.querySelector('svg')).toHaveClass('tai-icon');
-    // The mark is the whole control — no Unicode glyph stands in for it.
-    expect(remove.textContent).toBe('');
+    expect(remove).toHaveTextContent('Remove');
   });
 
   it('renders the empty array state as a field hint', () => {

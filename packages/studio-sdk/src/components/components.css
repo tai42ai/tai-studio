@@ -326,15 +326,17 @@
 
   .tai-input,
   .tai-select-trigger {
-    display: flex;
-    align-items: center;
-    gap: var(--tai-space-2);
     height: var(--tai-control-height);
     padding: 0 var(--tai-space-3);
     line-height: 1;
   }
 
+  /* The trigger lays out a label beside its chevron; a text input has no
+     children to lay out, so the flex box belongs here alone. */
   .tai-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--tai-space-2);
     justify-content: space-between;
     text-align: left;
     cursor: pointer;
@@ -354,9 +356,12 @@
     opacity: 1;
   }
 
-  .tai-input:hover:not(:disabled),
-  .tai-textarea:hover:not(:disabled),
-  .tai-select-trigger:hover:not(:disabled) {
+  /* Hover excludes the invalid state rather than sitting above it: `:not()`
+     carries its argument's specificity, so an unscoped hover rule would outrank
+     the attribute rule below and drop the error border on pointer-over. */
+  .tai-input:not([aria-invalid='true']):hover:not(:disabled),
+  .tai-textarea:not([aria-invalid='true']):hover:not(:disabled),
+  .tai-select-trigger:not([aria-invalid='true']):hover:not(:disabled) {
     border-color: var(--tai-color-text);
   }
 
@@ -542,7 +547,7 @@
       color var(--tai-motion-fast) ease;
   }
 
-  .tai-segment:hover:not(:disabled) {
+  .tai-segment:not([data-state='checked']):hover:not(:disabled) {
     background: var(--tai-color-surface-raised);
     color: var(--tai-color-text);
   }
@@ -551,6 +556,12 @@
     background: var(--tai-color-accent-tint);
     border-color: var(--tai-color-accent);
     color: var(--tai-color-accent-on-tint);
+  }
+
+  /* The selected segment KEEPS its tint on hover — it is the only cue an
+     icon-only option has — and deepens its ink instead. */
+  .tai-segment[data-state='checked']:hover:not(:disabled) {
+    color: var(--tai-color-accent-hover);
   }
 
   .tai-segment:disabled {
@@ -716,7 +727,7 @@
       color var(--tai-motion-fast) ease;
   }
 
-  .tai-chip:not(.tai-chip-static):hover:not(:disabled) {
+  .tai-chip:not(.tai-chip-static):not([aria-pressed='true']):hover:not(:disabled) {
     background: var(--tai-color-surface);
   }
 
@@ -724,6 +735,11 @@
     background: var(--tai-color-accent-tint);
     border-color: var(--tai-color-accent);
     color: var(--tai-color-accent-on-tint);
+  }
+
+  /* A selected chip KEEPS its tint on hover and deepens its ink instead. */
+  .tai-chip[aria-pressed='true']:hover:not(:disabled) {
+    color: var(--tai-color-accent-hover);
   }
 
   .tai-chip:disabled {
@@ -946,7 +962,7 @@
 
   .tai-tooltip {
     z-index: var(--tai-z-tooltip);
-    max-width: 20rem;
+    max-width: min(20rem, calc(100vw - 2 * var(--tai-space-4)));
     padding: var(--tai-space-2) var(--tai-space-3);
     background: var(--tai-color-surface-raised);
     border: 1px solid var(--tai-color-border-strong);
@@ -1038,7 +1054,7 @@
       var(--tai-color-surface) 100%
     );
     background-size: 200% 100%;
-    animation: tai-pulse 1.4s ease-in-out infinite;
+    animation: tai-shimmer 1.4s linear infinite;
   }
 
   .tai-spinner {
@@ -1443,7 +1459,9 @@
   }
 
   /* -- Responsive bands ---------------------------------------------------------------
-     1024-1279 medium: the sidebar keeps its width, the split goes fluid. */
+     1024-1279 medium: the card grid drops to two columns. The sidebar keeps the
+     width it has at every band above 1023, and `.tai-split` is already fluid —
+     its `minmax()` columns hold the detail pane at 480 px or wider. */
   @media (max-width: 1279px) {
     .tai-grid-cards {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1534,7 +1552,11 @@
       scroll-padding-top: 56px;
     }
 
-    [id] {
+    /* Scoped to the jump targets: the margin and the scrollport's padding are
+       ADDITIVE, so putting it on every element with an id would push a focused
+       control twice the bar's height down the page. */
+    :target,
+    #main-content {
       scroll-margin-top: 56px;
     }
   }

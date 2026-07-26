@@ -135,9 +135,12 @@ describe('ExtensionPicker', () => {
     }
   });
 
-  it('renders the single-select qualifier in the shared label style', () => {
+  it('renders the single-select qualifier as secondary text beside the kind badge', () => {
     render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
-    expect(screen.getByText('(single-select)')).toHaveClass('tai-label');
+    const qualifier = screen.getByText('(single-select)');
+    expect(qualifier).toHaveClass('tai-muted');
+    // Not the uppercase-mono label style: it reads as prose, not as an eyebrow.
+    expect(qualifier).not.toHaveClass('tai-label');
   });
 
   it.each(['light', 'dark'] as const)(

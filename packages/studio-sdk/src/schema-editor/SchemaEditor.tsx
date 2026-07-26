@@ -136,7 +136,7 @@ export function SchemaEditor({
           }}
           rows={10}
           aria-label={`${label} JSON`}
-          className="tai-textarea tai-textarea-mono"
+          className="tai-textarea-mono"
           spellCheck={false}
         />
       </Field>

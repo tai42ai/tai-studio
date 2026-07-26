@@ -227,9 +227,8 @@ export function ExtensionComboBuilder({
                   >
                     {editing === index ? 'Editing' : 'Edit'}
                   </Button>
-                  <button
+                  <Button
                     type="button"
-                    className="tai-icon-btn"
                     aria-label={`Remove combo ${names.join('+')}`}
                     disabled={disabled}
                     onClick={() => {
@@ -237,7 +236,8 @@ export function ExtensionComboBuilder({
                     }}
                   >
                     <CloseIcon />
-                  </button>
+                    Remove
+                  </Button>
                 </div>
                 {unknown.length > 0 ? (
                   <p role="alert" className="tai-field-error">
@@ -250,7 +250,7 @@ export function ExtensionComboBuilder({
           })}
         </ul>
       ) : (
-        <p className="tai-empty-state">No extension combos.</p>
+        <p className="tai-muted">No extension combos.</p>
       )}
 
       <div className="tai-stack tai-stack-2">

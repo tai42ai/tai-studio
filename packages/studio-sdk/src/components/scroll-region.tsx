@@ -210,10 +210,14 @@ export function useProseScrollRegions(
     // notification, which would make each pass trigger the next one forever.
     const observed = new WeakSet<Element>();
 
+    // The box gives resize; its children give the overflowing width. A table that
+    // grows wider inside a parent-constrained wrapper resizes nothing else, so
+    // watching the wrapper alone would freeze the mount-time measurement.
     const track = (element: HTMLElement, fallbackLabel: string): void => {
-      if (!observed.has(element)) {
-        observed.add(element);
-        resizeObserver.observe(element);
+      for (const target of [element, ...element.children]) {
+        if (observed.has(target)) continue;
+        observed.add(target);
+        resizeObserver.observe(target);
       }
       applyScrollRegionAttributes(element, precedingHeadingText(element, root) ?? fallbackLabel);
     };

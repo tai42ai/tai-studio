@@ -53,6 +53,22 @@ export function flushResizeObservers(): void {
   }
 }
 
+/**
+ * Delivers a resize for ONE element, to every stub observing it — the narrow
+ * form of {@link flushResizeObservers}. Use it to prove which element a
+ * component is watching: a measurement driven by a resize of a CHILD only
+ * arrives if that child is observed, so the assertion fails the moment a
+ * component narrows its observation to its own box.
+ *
+ * @param target - the element whose resize to deliver.
+ */
+export function flushResizeObserversFor(target: Element): void {
+  for (const live of [...liveResizeObservers]) {
+    if (!live.targets.has(target)) continue;
+    live.callback([resizeObserverEntry(target)], live.observer);
+  }
+}
+
 /** The faked widths: equal reads as "fits", unequal as "scrolls". */
 const FITTING_WIDTH = 100;
 const OVERFLOWING_SCROLL_WIDTH = 400;

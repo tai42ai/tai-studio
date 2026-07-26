@@ -341,10 +341,14 @@ export default tseslint.config(
     rules: { 'boundaries/dependencies': 'off' },
   },
   {
-    // The design-token scanner READS the monorepo's source from disk rather than
-    // importing an architectural layer, so it needs Node core (`node:fs` and
-    // friends) that the layer allowlist deliberately withholds from library code.
-    files: ['packages/studio-sdk/src/components/token-usage.test.ts'],
+    // The design-system source scanners READ the monorepo's own files from disk
+    // rather than importing an architectural layer, so they need Node core
+    // (`node:fs` and friends) that the layer allowlist deliberately withholds
+    // from library code.
+    files: [
+      'packages/studio-sdk/src/components/token-usage.test.ts',
+      'packages/studio-sdk/src/components/narrow-viewport.test.ts',
+    ],
     plugins: { boundaries },
     rules: { 'boundaries/dependencies': 'off' },
   },

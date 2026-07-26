@@ -18,7 +18,7 @@
  * HTML sink. Pinned by a test.
  *
  * Geometry and ink come from the design-system layout classes (`tai-stack`,
- * `tai-row`, `tai-label`); the component carries no palette of its own.
+ * `tai-row`, `tai-muted`); the component carries no palette of its own.
  */
 import type { Extension } from '@tai42/api-client';
 
@@ -71,11 +71,11 @@ export function ExtensionPicker({
     <div data-testid={idPrefix} className="tai-stack">
       {groups.map((group) => (
         <div key={group.kind} className="tai-stack tai-stack-2">
-          {/* The kind heading is a layout row, not prose: its badge names the kind and
-              the single-select qualifier rides beside it in the shared label style. */}
+          {/* The kind heading is a layout row, not prose: its badge names the kind
+              and the single-select qualifier rides beside it as secondary text. */}
           <div className="tai-row">
             <Badge variant={kindVariant(group.kind)}>{group.kind}</Badge>
-            {group.nonStackable ? <span className="tai-label">(single-select)</span> : null}
+            {group.nonStackable ? <span className="tai-muted">(single-select)</span> : null}
           </div>
           <div className="tai-row">
             {group.members.map((extension) => (

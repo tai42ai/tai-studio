@@ -73,16 +73,17 @@ export function ArrayField({
               idPrefix={idPrefix}
             />
           </div>
-          <button
+          <Button
             type="button"
-            className="tai-icon-btn"
+            variant="secondary"
             aria-label={`Remove item ${String(index + 1)}`}
             onClick={() => {
               removeItem(index);
             }}
           >
             <CloseIcon />
-          </button>
+            Remove
+          </Button>
         </div>
       ))}
       <div>

@@ -282,15 +282,15 @@ describe('ExtensionComboBuilder', () => {
     expect(row.getAttribute('style')).toBeNull();
   });
 
-  it('removes a combo through an icon button that keeps its accessible name', async () => {
+  it('removes a combo through a marked button that keeps its accessible name', async () => {
     const user = userEvent.setup();
     render(<Controlled initial={[['marka'], ['backendx']]} />);
 
     const remove = screen.getByRole('button', { name: 'Remove combo marka' });
-    expect(remove).toHaveClass('tai-icon-btn');
-    // The mark is an icon, never a Unicode glyph: the control carries no text of its own.
+    expect(remove).toHaveClass('tai-btn');
+    // The mark is an icon beside the word, never a Unicode glyph standing in for it.
     expect(remove.querySelector('svg')).not.toBeNull();
-    expect(remove.textContent).toBe('');
+    expect(remove).toHaveTextContent('Remove');
 
     await user.click(remove);
     expect(screen.getByTestId('combos')).toHaveTextContent('[["backendx"]]');
@@ -315,9 +315,11 @@ describe('ExtensionComboBuilder', () => {
     expect(unknown.querySelector('svg')).not.toBeNull();
   });
 
-  it('renders the no-combos note as the shared empty state', () => {
+  it('renders the no-combos note as a muted line, not a full empty-state panel', () => {
     render(<ExtensionComboBuilder available={CATALOG} value={[]} onChange={vi.fn()} />);
-    expect(screen.getByText('No extension combos.')).toHaveClass('tai-empty-state');
+    const note = screen.getByText('No extension combos.');
+    expect(note).toHaveClass('tai-muted');
+    expect(note).not.toHaveClass('tai-empty-state');
   });
 
   it.each(['light', 'dark'] as const)(
@@ -331,9 +333,7 @@ describe('ExtensionComboBuilder', () => {
       if (row === undefined) throw new Error('no combo row rendered');
       expect(within(row).getByText('marka')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Edit combo marka' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Remove combo marka' })).toHaveClass(
-        'tai-icon-btn',
-      );
+      expect(screen.getByRole('button', { name: 'Remove combo marka' })).toHaveClass('tai-btn');
       expect(screen.getByRole('button', { name: 'Add combo' })).toBeInTheDocument();
     },
   );

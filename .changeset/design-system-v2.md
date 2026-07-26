@@ -22,6 +22,7 @@ layer, the icon set, and the layout primitives every screen builds on.
   `-text`/`-fill`/`-tint` split with its `on-fill` ink, `scrim`, the syntax
   tints, `code-bg`, `heading`, `placeholder`, the disabled tier, the control
   heights, the motion pair, the `-lift`/`-overlay` shadows, and the z-scale.
+  `--tai-color-danger-hover` is new: the danger button had no hover fill.
   Five token names that were referenced but never defined now resolve:
   `--tai-text-xl`, `--tai-text-xs`, `--tai-space-5`, `--tai-radius-full`,
   `--tai-color-danger-surface`.
@@ -50,6 +51,11 @@ layer, the icon set, and the layout primitives every screen builds on.
   map. It is the single source of iconography, so `RevealInput`'s eye marks join
   it as the exported `EyeIcon` / `EyeOffIcon`. The Unicode glyphs that stood in for marks in `Checkbox`, `TagChips`, and
   `Select` are replaced by real icons.
+- **Removed:** `@keyframes tai-pulse`, which the loading skeleton was its only
+  user of. The skeleton builds a sweep gradient, so it now runs `tai-shimmer`,
+  which animates `background-position`; the opacity pulse never moved that
+  gradient. A plugin animating `tai-pulse` off the published `tokens.css` must
+  declare its own keyframe.
 - **Testing helpers** (`@tai42/studio-sdk/testing`): `installJsdomStubs` now
   installs a WORKING `ResizeObserver`, and `flushResizeObservers` +
   `setElementOverflow` let a suite drive a component that measures its own

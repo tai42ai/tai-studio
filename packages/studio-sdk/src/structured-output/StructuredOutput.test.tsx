@@ -54,7 +54,7 @@ describe('StructuredOutput', () => {
     expect(screen.getByTestId('structured-output')).toHaveClass('tai-stack', 'tai-stack-2');
 
     const label = screen.getByText('Report title');
-    expect(label).toHaveClass('tai-label');
+    expect(label).toHaveClass('tai-field-label');
     expect(label.parentElement).toHaveClass('tai-field');
   });
 
@@ -101,7 +101,7 @@ describe('StructuredOutput', () => {
   it('falls back to the property key when the schema declares no title', () => {
     const untitled: JsonSchema = { type: 'object', properties: { raw: { type: 'string' } } };
     render(<StructuredOutput schema={untitled} content={{ raw: 'x' }} />);
-    expect(screen.getByText('raw')).toHaveClass('tai-label');
+    expect(screen.getByText('raw')).toHaveClass('tai-field-label');
   });
 
   it('renders its labels and values under both themes', () => {
@@ -112,7 +112,7 @@ describe('StructuredOutput', () => {
       );
 
       expect(screen.getByTestId('structured-output')).toHaveClass('tai-stack');
-      expect(screen.getByText('Report title')).toHaveClass('tai-label');
+      expect(screen.getByText('Report title')).toHaveClass('tai-field-label');
       expect(screen.getByText('"hello"')).toBeVisible();
 
       unmount();

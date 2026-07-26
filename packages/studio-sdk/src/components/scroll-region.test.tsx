@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ScrollRegion, useProseScrollRegions } from './scroll-region';
 import type { ProseScrollLabels } from './scroll-region';
-import { flushResizeObservers, setElementOverflow } from '../testing';
+import { flushResizeObservers, flushResizeObserversFor, setElementOverflow } from '../testing';
 
 /** The one `.tai-scroll-region` in the tree, failing loudly when it is missing. */
 function scrollRegion(container: HTMLElement): HTMLElement {
@@ -269,6 +269,22 @@ describe('useProseScrollRegions', () => {
     const withLabel = render(<ProseHost html={PRE_HTML} labels={{ pre: 'Install snippet' }} />);
     setOverflowing(codeBlock(withLabel.container), true);
     expect(screen.getByRole('region', { name: 'Install snippet' })).toBeInTheDocument();
+  });
+
+  it('watches the TABLE, not just its wrapper, so a widening table is re-measured', () => {
+    const { container } = render(<ProseHost html={`<h2>Options</h2>${TABLE_HTML}`} />);
+    const wrapper = scrollRegion(container);
+    const table = wrapper.querySelector('table');
+    expect(table).not.toBeNull();
+
+    // The wrapper's own box is fixed by its parent: only the table grows. If the
+    // table were not observed, this resize would never reach the measurement.
+    setElementOverflow(wrapper, true);
+    act(() => {
+      flushResizeObserversFor(table as HTMLElement);
+    });
+
+    expect(screen.getByRole('region', { name: 'Options' })).toBe(wrapper);
   });
 
   it('does nothing when the ref is unattached', () => {
