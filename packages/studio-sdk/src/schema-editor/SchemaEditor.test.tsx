@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { flushResizeObservers, setElementOverflow } from '../testing';
 import { SchemaEditor, type SchemaEditorChange } from './SchemaEditor';
 
 /** The last change the editor reported, or a valid-empty default. */
@@ -142,10 +143,19 @@ describe('SchemaEditor', () => {
     expect(screen.getByLabelText('Schema JSON')).toHaveClass('tai-textarea', 'tai-textarea-mono');
     expect(screen.getByText('Preview')).toHaveClass('tai-label');
 
+    // A wide preview scrolls inside its own pane rather than the dialog, and is
+    // a keyboard target only while it actually does.
     const preview = screen.getByTestId('schema-editor-preview');
-    expect(preview).toHaveClass('tai-card');
-    // A wide preview scrolls inside its own pane rather than the dialog.
-    expect(preview).toHaveClass('tai-scroll-region');
+    expect(preview).toHaveClass('tai-card', 'tai-scroll-region');
+    expect(preview).not.toHaveAttribute('tabindex');
+
+    setElementOverflow(preview, true);
+    act(() => {
+      flushResizeObservers();
+    });
+
+    expect(screen.getByRole('region', { name: 'Schema preview' })).toBe(preview);
+    expect(preview).toHaveAttribute('tabindex', '0');
   });
 
   it('renders no preview block while the text does not parse', () => {

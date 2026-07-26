@@ -119,7 +119,7 @@ function JsonNode({ name, value, defaultExpanded }: NodeProps): ReactElement {
 
 export function JsonTree({ data, defaultExpanded = true, label }: JsonTreeProps) {
   const paneRef = useRef<HTMLDivElement>(null);
-  const region = useOverflowRegion(paneRef, label ?? DEFAULT_LABEL, data);
+  const region = useOverflowRegion(paneRef, label ?? DEFAULT_LABEL);
 
   return (
     <div ref={paneRef} className="tai-code-block" {...region}>

@@ -60,8 +60,11 @@ export function ElicitationForm({
   return (
     <div className="tai-stack" data-testid="elicitation-form">
       {/* The message is text the Studio did not author — the prose measure keeps
-          a long elicit prompt to a readable line length. */}
-      <p className="tai-prose">{message}</p>
+          a long elicit prompt to a readable line length. It applies to a
+          PARAGRAPH INSIDE `.tai-prose`, so the class goes on the wrapper. */}
+      <div className="tai-prose">
+        <p>{message}</p>
+      </div>
       <SchemaForm
         schema={schema}
         value={value}

@@ -24,6 +24,7 @@ import { Component, useMemo, useState, type ReactNode } from 'react';
 import { Field } from '../components/field';
 import { Textarea } from '../components/inputs';
 import { JsonTree } from '../components/json-tree';
+import { ScrollRegion } from '../components/scroll-region';
 import { classifySchema } from '../schema-form/classify';
 import { defaultValueForSchema } from '../schema-form/default-value';
 import { SchemaForm } from '../schema-form/SchemaForm';
@@ -143,17 +144,20 @@ export function SchemaEditor({
       {result.schema !== null ? (
         <div className="tai-stack tai-stack-2">
           <span className="tai-label">Preview</span>
-          {/* A deep schema's preview can outrun its column; adopt `ScrollRegion`
-              here once it is wired through, so the pane is a keyboard target
-              only while it actually scrolls. */}
-          <div className="tai-card tai-scroll-region" data-testid={`${idPrefix}-preview`}>
+          {/* A deep schema's preview can outrun its column, so it scrolls in
+              place — and is a keyboard target only while it actually does. */}
+          <ScrollRegion
+            label="Schema preview"
+            className="tai-card"
+            data-testid={`${idPrefix}-preview`}
+          >
             <SchemaPreview
               // Re-seed the preview (and reset its error boundary) whenever the
               // authored schema changes.
               key={JSON.stringify(result.schema)}
               schema={result.schema}
             />
-          </div>
+          </ScrollRegion>
         </div>
       ) : null}
     </div>

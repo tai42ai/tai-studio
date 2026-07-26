@@ -25,7 +25,7 @@ const DEFAULT_LABEL = 'Code';
 
 export function CodeBlock({ code, language }: CodeBlockProps) {
   const preRef = useRef<HTMLPreElement>(null);
-  const region = useOverflowRegion(preRef, language ?? DEFAULT_LABEL, code);
+  const region = useOverflowRegion(preRef, language ?? DEFAULT_LABEL);
 
   return (
     <div className="tai-stack tai-stack-2">

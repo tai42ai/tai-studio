@@ -8,7 +8,9 @@
  * 2. `--tai-color-decor` never lands on a `color:` declaration. It is the NON-TEXT tier
  *    (dividers, watermarks, decorative SVG fill/stroke) and sits below the text contrast
  *    floor, so as text it is a WCAG failure by construction.
- * 3. Every token carrying a literal color states BOTH themes, as a `light-dark()` pair
+ * 3. `TOKEN_NAMES` — the published plugin styling API — and the declarations in
+ *    `tokens.css` are the same set, in both directions.
+ * 4. Every token carrying a literal color states BOTH themes, as a `light-dark()` pair
  *    with two different values. A single-valued color token is a dark-mode bug that
  *    renders correctly in the light theme and so survives review; the handful that are
  *    deliberately the same ink in both themes are named below.
@@ -21,6 +23,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
+
+import { TOKEN_NAMES } from './tokens';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(packageRoot, '../..');
@@ -124,6 +128,17 @@ describe('design-system token usage', () => {
     }
 
     expect(unresolved).toEqual([]);
+  });
+
+  it('declares exactly the tokens TOKEN_NAMES documents, and no others', () => {
+    // `TOKEN_NAMES` is the published plugin styling API. A name in the list that
+    // the stylesheet never declares documents a token that resolves to nothing;
+    // a declared token missing from the list is undiscoverable to a plugin.
+    const declared = new Set(
+      [...readFileSync(tokenStylesheet, 'utf8').matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)].map(captured),
+    );
+
+    expect([...declared].sort()).toEqual([...TOKEN_NAMES].sort());
   });
 
   it('states both themes for every token carrying a literal color', () => {

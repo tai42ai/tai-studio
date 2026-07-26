@@ -79,21 +79,22 @@ describe('ScrollRegion', () => {
     expect(region).not.toHaveAttribute('tabindex');
   });
 
-  it('re-measures when the content is replaced', async () => {
+  it('re-measures, and observes the new child, when content is appended', async () => {
     function Host() {
-      const [wide, setWide] = useState(false);
+      const [extra, setExtra] = useState(false);
       return (
         <>
           <button
             type="button"
             onClick={() => {
-              setWide(true);
+              setExtra(true);
             }}
           >
             widen
           </button>
           <ScrollRegion label="Tool results">
-            {wide ? <p data-testid="wide">wide</p> : <p data-testid="narrow">narrow</p>}
+            <p data-testid="first">first</p>
+            {extra ? <p data-testid="second">second</p> : null}
           </ScrollRegion>
         </>
       );
@@ -102,8 +103,8 @@ describe('ScrollRegion', () => {
     const region = scrollRegion(container);
     expect(screen.queryByRole('region')).not.toBeInTheDocument();
 
-    // The replacement content overflows; swapping it must re-take the
-    // measurement rather than keep the mount-time answer.
+    // The appended content overflows; adding it must re-take the measurement
+    // rather than keep the mount-time answer.
     setElementOverflow(region, true);
     act(() => {
       screen.getByRole('button', { name: 'widen' }).click();
@@ -112,7 +113,15 @@ describe('ScrollRegion', () => {
     await waitFor(() => {
       expect(screen.getByRole('region', { name: 'Tool results' })).toBe(region);
     });
-    expect(screen.getByTestId('wide')).toBeInTheDocument();
+    expect(screen.getByTestId('second')).toBeInTheDocument();
+
+    // The child added after mount is under the observer too, so its own resize
+    // still drives the measurement.
+    setElementOverflow(region, false);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
   });
 
   it('merges the caller className and style onto the region', () => {

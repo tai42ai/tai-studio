@@ -25,6 +25,7 @@ export interface ScrollRegionProps {
   readonly children: ReactNode;
   readonly className?: string;
   readonly style?: CSSProperties;
+  readonly 'data-testid'?: string;
 }
 
 /** The names for a prose surface that has no heading above it. */
@@ -53,19 +54,22 @@ export interface OverflowRegionAttributes {
 
 /**
  * The conditional region attributes for the element `ref` points at, which must
- * be the scrolling box itself. Measured on mount, on every resize of the box or
- * its children, and whenever `content` changes identity — a replaced child is a
- * NEW element, so the observer has to be re-pointed at it and the measurement
- * re-taken.
+ * be the scrolling box ITSELF — a `<pre>`, a JSON pane, or the `div`
+ * `ScrollRegion` renders. Use it when wrapping the content in a `ScrollRegion`
+ * would give the surface a second scroller.
+ *
+ * The box is measured on mount, whenever it or any child resizes, and whenever a
+ * child is added or replaced — a replaced child is a NEW element, so the resize
+ * observer is re-pointed at it before the measurement is re-taken. Both
+ * observers live for the lifetime of the mount; neither mutates the DOM, so
+ * neither can re-trigger the other.
  *
  * @param ref - the scrolling element.
  * @param label - its accessible name, applied only while it actually scrolls.
- * @param content - the rendered content, so a replacement re-triggers the measurement.
  */
 export function useOverflowRegion(
   ref: RefObject<HTMLElement | null>,
   label: string,
-  content?: unknown,
 ): OverflowRegionAttributes {
   const [scrollable, setScrollable] = useState(false);
 
@@ -73,28 +77,41 @@ export function useOverflowRegion(
     const box = ref.current;
     if (box === null) return;
 
-    const measure = (): void => {
+    const resizeObserver = new ResizeObserver(() => {
+      setScrollable(overflows(box));
+    });
+
+    // The box gives resize; its children give the overflowing width.
+    const observeAll = (): void => {
+      resizeObserver.disconnect();
+      resizeObserver.observe(box);
+      for (const child of box.children) resizeObserver.observe(child);
       setScrollable(overflows(box));
     };
 
-    const observer = new ResizeObserver(measure);
-    // The box gives resize; its content gives the overflowing width.
-    observer.observe(box);
-    for (const child of box.children) observer.observe(child);
-    measure();
+    const childObserver = new MutationObserver(observeAll);
+    childObserver.observe(box, { childList: true });
+    observeAll();
 
     return () => {
-      observer.disconnect();
+      resizeObserver.disconnect();
+      childObserver.disconnect();
     };
-  }, [ref, content]);
+  }, [ref]);
 
   if (!scrollable) return {};
   return { tabIndex: 0, role: 'region', 'aria-label': label };
 }
 
-export function ScrollRegion({ label, children, className, style }: ScrollRegionProps) {
+export function ScrollRegion({
+  label,
+  children,
+  className,
+  style,
+  'data-testid': testId,
+}: ScrollRegionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const region = useOverflowRegion(containerRef, label, children);
+  const region = useOverflowRegion(containerRef, label);
 
   return (
     <div
@@ -103,6 +120,7 @@ export function ScrollRegion({ label, children, className, style }: ScrollRegion
         className === undefined ? SCROLL_REGION_CLASS : `${SCROLL_REGION_CLASS} ${className}`
       }
       style={style}
+      data-testid={testId}
       {...region}
     >
       {children}

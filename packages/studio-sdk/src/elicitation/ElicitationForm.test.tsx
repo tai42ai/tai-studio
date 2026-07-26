@@ -52,7 +52,11 @@ describe('ElicitationForm', () => {
 
     const root = screen.getByTestId('elicitation-form');
     expect(root).toHaveClass('tai-stack');
-    expect(screen.getByText('Where to?')).toHaveClass('tai-prose');
+    // The measure rule targets a paragraph INSIDE `.tai-prose`, so the class is
+    // on the wrapper and the message is the paragraph it applies to.
+    const message = screen.getByText('Where to?');
+    expect(message.tagName).toBe('P');
+    expect(message.parentElement).toHaveClass('tai-prose');
 
     const actions = root.querySelector('.tai-row');
     expect(actions).not.toBeNull();

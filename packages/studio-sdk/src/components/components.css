@@ -716,7 +716,7 @@
       color var(--tai-motion-fast) ease;
   }
 
-  .tai-chip:hover:not(:disabled) {
+  .tai-chip:not(.tai-chip-static):hover:not(:disabled) {
     background: var(--tai-color-surface);
   }
 
@@ -732,13 +732,10 @@
     cursor: not-allowed;
   }
 
-  /* A chip that only reads (a tag, a "+N more" count) is not a control. */
+  /* A chip that only reads (a tag, a "+N more" count) is not a control, so it
+     shows no pointer and is excluded from the hover rule above. */
   .tai-chip-static {
     cursor: default;
-  }
-
-  .tai-chip-static:hover {
-    background: var(--tai-color-surface-raised);
   }
 
   /* -- Badges -----------------------------------------------------------------
@@ -1563,15 +1560,24 @@
       height: var(--tai-control-height-coarse);
     }
 
+    .tai-select-item,
+    .tai-skip-link {
+      min-height: var(--tai-control-height-coarse);
+    }
+
     .tai-segment {
       min-width: var(--tai-control-height-coarse);
       min-height: var(--tai-control-height-coarse);
     }
 
-    /* 16 px box + 14 px on each side = the 44 px touch target. */
+    /* 16 px box + 14 px above and below = the 44 px touch target. The overlay
+       grows VERTICALLY only: a horizontal group sets its options a spacing step
+       apart, and 14 px sideways would reach across that gap into the previous
+       option's label. `.tai-choice`'s own 44 px covers a labelled box. */
     .tai-checkbox::after,
     .tai-radio::after {
-      inset: -14px;
+      inset-block: -14px;
+      inset-inline: -4px;
     }
   }
 

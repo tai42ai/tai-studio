@@ -111,6 +111,9 @@ export function installJsdomStubs(): void {
       }
 
       observe(target: Element): void {
+        // `disconnect()` stops observation; it does not destroy the observer, so
+        // observing again re-registers it exactly as the real API does.
+        liveResizeObservers.add(this.#live);
         this.#live.targets.add(target);
         this.#live.callback([resizeObserverEntry(target)], this);
       }

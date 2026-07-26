@@ -113,8 +113,12 @@ export type { DrawerProps } from './components/drawer';
 export { Tooltip } from './components/tooltip';
 export type { TooltipProps } from './components/tooltip';
 export { Table, THead, TBody, TR, TH, TD } from './components/table';
-export { ScrollRegion, useProseScrollRegions } from './components/scroll-region';
-export type { ScrollRegionProps, ProseScrollLabels } from './components/scroll-region';
+export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
+export type {
+  ScrollRegionProps,
+  OverflowRegionAttributes,
+  ProseScrollLabels,
+} from './components/scroll-region';
 export { JsonTree } from './components/json-tree';
 export type { JsonTreeProps } from './components/json-tree';
 export { JsonDiff, diffJson } from './components/json-diff';
