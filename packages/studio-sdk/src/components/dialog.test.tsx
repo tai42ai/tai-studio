@@ -26,6 +26,10 @@ describe('Dialog', () => {
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveAccessibleName('Confirm delete');
     expect(screen.getByText('This cannot be undone')).toBeInTheDocument();
+    // Modality comes from the focus trap and the inert background, NOT from an
+    // `aria-modal` attribute — the panel ships none, and the docblock says so.
+    // Pinned so the two can never drift apart again.
+    expect(dialog).not.toHaveAttribute('aria-modal');
   });
 
   it('closes on Escape', async () => {

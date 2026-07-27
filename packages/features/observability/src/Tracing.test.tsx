@@ -110,6 +110,11 @@ describe('TracingTab — runs table', () => {
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
 
     expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(screen.queryByTestId('run-row-r2')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Load more' }));
@@ -311,7 +316,7 @@ describe('TracingTab — trace view', () => {
       expect(exportTrace).toHaveBeenCalledWith('t1');
     });
 
-    await user.click(screen.getByRole('button', { name: '← Back to runs' }));
+    await user.click(screen.getByRole('button', { name: 'Back to runs' }));
     expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', status: 'success' });
   });
 });

@@ -107,6 +107,11 @@ export function useModalFocusReturn(hasTrigger: boolean): ModalFocusReturnHandle
 
   return {
     onOpenAutoFocus: (): void => {
+      // Recording is only ever read by the close handler, which stands down with
+      // a Trigger present. Standing down here too keeps the pair symmetric and
+      // stops the hook holding the opener and its whole ancestor chain alive for
+      // a modal that will never consult them.
+      if (hasTrigger) return;
       // The focus scope dispatches this BEFORE it focuses the panel, so the
       // active element is still whatever the reader activated to open the modal,
       // and its ancestors are still attached to record.

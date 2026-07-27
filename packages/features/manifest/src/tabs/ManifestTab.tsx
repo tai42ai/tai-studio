@@ -47,5 +47,5 @@ export function ManifestTab(): ReactNode {
     );
   }
 
-  return <JsonTree data={query.data} />;
+  return <JsonTree data={query.data} label="Manifest" />;
 }

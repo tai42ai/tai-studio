@@ -15,13 +15,14 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Skeleton,
-  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
+  Table,
   errorMessage,
   isFullProjection,
   useApi,
@@ -87,24 +88,26 @@ export const NotificationsPage: (props: PageProps<'notifications'>) => ReactNode
     );
   } else {
     body = (
-      <Table data-testid="notifications-table">
-        <THead>
-          <TR>
-            <TH>Message</TH>
-            <TH>Recipient</TH>
-            <TH>When</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {feed.data.notifications.map((notification) => (
-            <TR key={notification.id}>
-              <TD>{notification.message}</TD>
-              <TD>{notification.recipient ?? <span style={mutedStyle}>—</span>}</TD>
-              <TD>{formatTimestamp(notification.created_at)}</TD>
+      <ScrollRegion label="Notifications">
+        <Table data-testid="notifications-table">
+          <THead>
+            <TR>
+              <TH>Message</TH>
+              <TH>Recipient</TH>
+              <TH>When</TH>
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {feed.data.notifications.map((notification) => (
+              <TR key={notification.id}>
+                <TD>{notification.message}</TD>
+                <TD>{notification.recipient ?? <span style={mutedStyle}>—</span>}</TD>
+                <TD>{formatTimestamp(notification.created_at)}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     );
   }
 

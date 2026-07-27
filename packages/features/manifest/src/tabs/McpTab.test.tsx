@@ -58,6 +58,14 @@ describe('McpTab', () => {
     renderWithProviders(<McpTab />, { client });
 
     expect(await screen.findByText('srv')).toBeInTheDocument();
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
+    // The hidden Actions header wears the published clip class, not a partial
+    // hand-rolled copy of it that stays selectable and readable to a magnifier.
+    expect(screen.getByText('Actions')).toHaveClass('tai-visually-hidden');
     expect(screen.getByText('bad')).toBeInTheDocument();
     expect(screen.getByText('2 tools')).toBeInTheDocument();
     expect(screen.getByText('timeout')).toBeInTheDocument();

@@ -13,6 +13,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import type { ParsedAgentEvent } from '@tai42/api-client';
 import {
+  ArrowLeftIcon,
   Badge,
   Button,
   Card,
@@ -224,7 +225,8 @@ export function StreamRunView({
     <section style={pageStyle} aria-labelledby="agent-run-heading">
       <div style={rowStyle}>
         <Button type="button" variant="secondary" onClick={onBack} aria-label={backLabel}>
-          ← Back
+          <ArrowLeftIcon />
+          Back
         </Button>
         <h1 id="agent-run-heading" style={headingStyle}>
           {title}
@@ -259,7 +261,7 @@ export function StreamRunView({
                   <span style={{ font: 'var(--tai-text-sm) var(--tai-font-mono)' }}>
                     {field.key}
                   </span>
-                  <JsonTree data={field.value} defaultExpanded={false} />
+                  <JsonTree data={field.value} defaultExpanded={false} label={field.key} />
                 </div>
               ))}
             </div>

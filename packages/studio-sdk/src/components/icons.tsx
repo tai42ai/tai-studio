@@ -9,10 +9,11 @@
  * mute the surrounding text color, never the icon's alpha.
  *
  * Sizing is owned by the `tai-icon` class (16 px square, no shrink), which every
- * icon applies by DEFAULT. A caller-supplied `className` REPLACES that default
- * rather than merging with it, so a caller that wants a differently sized icon
- * passes its own class alone, and a caller that wants to add to the default
- * passes both (`className="tai-icon my-extra"`).
+ * icon applies unconditionally. A caller-supplied `className` is APPENDED to it,
+ * the way every other design-system primitive treats the prop — an inline `<svg>`
+ * with a `viewBox` and no width/height has no intrinsic size, so a `className`
+ * that replaced `tai-icon` would not make the mark slightly wrong, it would blow
+ * it up to the replaced-element default.
  *
  * Icons are decorative by default (`aria-hidden="true"`): they accompany a text
  * label or sit inside a control that carries its own accessible name. An icon
@@ -31,7 +32,11 @@ import type { ReactElement, SVGProps } from 'react';
 
 import type { RouteToken } from '../navigation/types';
 
-/** Props of every icon: the full SVG surface, so `style`, events and ARIA pass through. */
+/**
+ * Props of every icon: the full SVG surface, so `style`, events and ARIA pass
+ * through. `className` is APPENDED to the `tai-icon` sizing class rather than
+ * replacing it — the same merge every other design-system primitive does.
+ */
 export type IconProps = SVGProps<SVGSVGElement>;
 
 /** The shape every exported icon satisfies. */
@@ -40,7 +45,8 @@ export type IconComponent = (props: IconProps) => ReactElement;
 /**
  * The shared frame every mark is drawn in. Defaults are declared BEFORE the prop
  * spread so a caller can override any of them, while `className` is destructured
- * so a caller-supplied class replaces the default.
+ * out of the spread so the caller's class is merged with `tai-icon` instead of
+ * replacing it.
  *
  * The accessibility defaults are DERIVED from whether the caller gave the icon a
  * name rather than fixed. A hard-coded `aria-hidden="true"` is not self-serving:
@@ -49,7 +55,7 @@ export type IconComponent = (props: IconProps) => ReactElement;
  * `aria-hidden` is emitted only for an icon with NO accessible name, and an icon
  * that has one is given the `role="img"` that makes the name reachable.
  */
-function Icon({ className = 'tai-icon', children, ...props }: IconProps): ReactElement {
+function Icon({ className, children, ...props }: IconProps): ReactElement {
   const named = props['aria-label'] !== undefined || props['aria-labelledby'] !== undefined;
   return (
     <svg
@@ -62,7 +68,7 @@ function Icon({ className = 'tai-icon', children, ...props }: IconProps): ReactE
       strokeLinejoin="round"
       aria-hidden={named ? undefined : 'true'}
       role={named ? 'img' : undefined}
-      className={className}
+      className={className === undefined ? 'tai-icon' : `tai-icon ${className}`}
       {...props}
     >
       {children}
@@ -322,6 +328,13 @@ export const ChevronRightIcon: IconComponent = (props) => (
 export const CheckIcon: IconComponent = (props) => (
   <Icon {...props}>
     <path d="M4.5 12.5 9.5 17.5 19.5 6.5" />
+  </Icon>
+);
+
+/** A bare dash, for a partial selection — the tick's mixed-state counterpart. */
+export const MinusIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M5.5 12h13" />
   </Icon>
 );
 

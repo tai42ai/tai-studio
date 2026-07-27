@@ -213,12 +213,11 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
       {isPresetTool ? (
         <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
           <Badge variant="success">preset</Badge> Preset tools carry their combos on the preset —{' '}
-          <AppLink
-            to="presets"
-            search={{ preset: tool }}
-            aria-label={`Manage ${tool} on the presets page`}
-          >
-            manage them there
+          {/* The link names itself from its own visible text (WCAG 2.5.3, Label in
+              Name): an `aria-label` naming the tool and the destination said none of
+              the words the link shows. */}
+          <AppLink to="presets" search={{ preset: tool }}>
+            manage {tool} on the presets page
           </AppLink>
           .
         </p>

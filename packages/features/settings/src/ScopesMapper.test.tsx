@@ -22,7 +22,7 @@ import {
 } from './ScopesMapper';
 import type { ChipData, ZoneRef } from './ScopeItemChip';
 import { authRoutesKey, publicRoutesKey, scopesKey, tokensPayloadKey } from './keys';
-import { renderWithProviders } from './test-utils';
+import { decorBorderedControls, renderWithProviders } from './test-utils';
 
 type Stub = Partial<Record<keyof ApiClient, unknown>>;
 function stubClient(methods: Stub): ApiClient {
@@ -262,6 +262,9 @@ describe('ScopesMapper rendering', () => {
     const unassigned = zoneEl('zone-unassigned');
 
     expect(within(s1).getByText('/a')).toBeInTheDocument();
+    // A chip is a TAG, so it wears the published pair rather than a local copy of
+    // the shape — and with it the narrow-viewport wrapping that copy lacked.
+    expect(within(s1).getByText('/a').closest('.tai-chip')).toHaveClass('tai-chip-static');
     expect(within(s1).getByText('/b')).toBeInTheDocument();
     expect(within(s2).getByText('/app/x')).toBeInTheDocument();
 
@@ -314,6 +317,16 @@ describe('ScopesMapper rendering', () => {
     expect(screen.queryByLabelText('Add route to s1')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove URL /a' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Unpin /health' })).not.toBeInTheDocument();
+  });
+  it('draws the chip remove control with the contrast-safe border, never the decorative one', async () => {
+    // `tokens.css`: the decorative border sits below 3:1 and may never be a
+    // control's only boundary. Derived over the whole rendered mapper.
+    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
+      client: mapperStub(),
+    });
+
+    await screen.findByText('/a');
+    expect(decorBorderedControls(document.body)).toEqual([]);
   });
 });
 

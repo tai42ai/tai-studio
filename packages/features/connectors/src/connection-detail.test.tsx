@@ -38,6 +38,9 @@ describe('ConnectionDetail', () => {
       expect(screen.getByText('work')).toBeInTheDocument();
     });
     expect(screen.getByText('octocat')).toBeInTheDocument();
+    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
+    // platform fallback face beside Inter. The icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
   });
 
   it('saves sub-services via patchSubServices', async () => {

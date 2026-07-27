@@ -20,8 +20,12 @@ import { TextInput } from './inputs';
 /** A tag and its remove control read as one unit, tighter than the row default. */
 const tagGroupStyle: CSSProperties = { gap: 'var(--tai-space-1)' };
 
+export interface TagChipsProps {
+  readonly tags: readonly string[];
+}
+
 /** Read-only chips for a list of tags. Renders nothing when there are none. */
-export function TagChips({ tags }: { readonly tags: readonly string[] }): ReactNode {
+export function TagChips({ tags }: TagChipsProps): ReactNode {
   if (tags.length === 0) return null;
   return (
     <span className="tai-row" style={tagGroupStyle}>
@@ -34,20 +38,18 @@ export function TagChips({ tags }: { readonly tags: readonly string[] }): ReactN
   );
 }
 
+export interface TagsInputProps {
+  readonly value: readonly string[];
+  readonly onChange: (next: string[]) => void;
+  readonly disabled?: boolean;
+}
+
 /**
  * Controlled tag editor. The caller owns the `value` list; `onChange` receives the
  * next list on every add/remove. A blank or duplicate entry is ignored (never a
  * silent duplicate chip). Enter or comma commits the draft chip.
  */
-export function TagsInput({
-  value,
-  onChange,
-  disabled,
-}: {
-  readonly value: readonly string[];
-  readonly onChange: (next: string[]) => void;
-  readonly disabled?: boolean;
-}): ReactNode {
+export function TagsInput({ value, onChange, disabled }: TagsInputProps): ReactNode {
   const [draft, setDraft] = useState('');
 
   const add = (): void => {

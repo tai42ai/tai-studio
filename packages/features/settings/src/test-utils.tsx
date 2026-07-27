@@ -88,3 +88,38 @@ const baseProjection: MeProjection = {
   agents: [],
   mintable: false,
 };
+
+/**
+ * Every rendered CONTROL whose only boundary is the DECORATIVE border token.
+ *
+ * `tokens.css` states the rule this reads: `--tai-color-border` sits below 3:1
+ * and "may never be a control's only boundary" — `--tai-color-control-border` is
+ * the contrast-safe edge. Derived from the rendered DOM rather than from a list
+ * of call sites, so a control added later is judged by the same rule. The
+ * selector is the ARIA widget-role set plus the native form controls, not a
+ * repo-specific enumeration.
+ */
+const CONTROL_SELECTOR = [
+  'button',
+  'a[href]',
+  'input',
+  'select',
+  'textarea',
+  '[role="button"]',
+  '[role="link"]',
+  '[role="checkbox"]',
+  '[role="radio"]',
+  '[role="switch"]',
+  '[role="tab"]',
+  '[role="option"]',
+  '[role="menuitem"]',
+  '[role="combobox"]',
+].join(', ');
+
+export function decorBorderedControls(container: HTMLElement): string[] {
+  return [...container.querySelectorAll<HTMLElement>(CONTROL_SELECTOR)]
+    .filter((node) =>
+      /(^|;)\s*border:[^;]*var\(--tai-color-border\)/.test(node.getAttribute('style') ?? ''),
+    )
+    .map((node) => `${node.tagName.toLowerCase()}: ${node.textContent}`);
+}

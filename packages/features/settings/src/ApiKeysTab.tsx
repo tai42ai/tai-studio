@@ -30,20 +30,21 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Spinner,
-  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
+  Table,
   Tooltip,
   coversAnyRoute,
   errorMessage,
   isFullProjection,
   useApi,
-  useCapabilities,
   useCanWrite,
+  useCapabilities,
   type CapabilityState,
 } from '@tai42/studio-sdk';
 
@@ -116,7 +117,9 @@ const infoTriggerStyle: CSSProperties = {
   width: '1.25rem',
   height: '1.25rem',
   padding: 0,
-  border: '1px solid var(--tai-color-border)',
+  // The trigger's ground is transparent, so this edge is its ONLY boundary and
+  // takes the contrast-safe control token rather than the decorative one.
+  border: '1px solid var(--tai-color-control-border)',
   borderRadius: 'var(--tai-radius-full)',
   background: 'transparent',
   color: 'var(--tai-color-text-muted)',
@@ -319,77 +322,79 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
         {keys.length === 0 ? (
           <EmptyState title="No API keys" description="Create a key to provision access." />
         ) : (
-          <Table>
-            <THead>
-              <TR>
-                <TH>User ID</TH>
-                {/* The owner claim the server merges into `policy_data`; an admin
-                    view distinguishes owned (delegated) keys from ownerless ones. */}
-                <TH>Owner</TH>
-                <TH>Description</TH>
-                <TH>Scopes</TH>
-                {/* History is a read surface, available in readOnly too, so the
-                    Actions column always renders. */}
-                <TH>Actions</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {keys.map((payload) => (
-                <TR key={payload.user_id}>
-                  <TD>{payload.user_id}</TD>
-                  <TD>{ownerOf(payload) ?? '—'}</TD>
-                  <TD>{payload.description}</TD>
-                  <TD>
-                    <div style={badgeRowStyle}>
-                      {payload.scopes.map((scope) => (
-                        <Badge key={scope} variant="neutral">
-                          {scope}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TD>
-                  <TD>
-                    <div style={actionsStyle}>
-                      {readOnly ? null : (
-                        <Button
-                          type="button"
-                          aria-label={`Edit key ${payload.user_id}`}
-                          onClick={() => {
-                            setEditPayload(payload);
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      )}
-                      {/* History stays reachable in readOnly — only its Rollback
-                          action is hidden, inside the dialog. */}
-                      <Button
-                        type="button"
-                        aria-label={`Policy history for ${payload.user_id}`}
-                        onClick={() => {
-                          setPolicyUser(payload.user_id);
-                        }}
-                      >
-                        History
-                      </Button>
-                      {readOnly ? null : (
-                        <Button
-                          type="button"
-                          variant="danger"
-                          aria-label={`Revoke key ${payload.user_id}`}
-                          onClick={() => {
-                            setRevokeUser(payload.user_id);
-                          }}
-                        >
-                          Revoke
-                        </Button>
-                      )}
-                    </div>
-                  </TD>
+          <ScrollRegion label="API keys">
+            <Table>
+              <THead>
+                <TR>
+                  <TH>User ID</TH>
+                  {/* The owner claim the server merges into `policy_data`; an admin
+                      view distinguishes owned (delegated) keys from ownerless ones. */}
+                  <TH>Owner</TH>
+                  <TH>Description</TH>
+                  <TH>Scopes</TH>
+                  {/* History is a read surface, available in readOnly too, so the
+                      Actions column always renders. */}
+                  <TH>Actions</TH>
                 </TR>
-              ))}
-            </TBody>
-          </Table>
+              </THead>
+              <TBody>
+                {keys.map((payload) => (
+                  <TR key={payload.user_id}>
+                    <TD>{payload.user_id}</TD>
+                    <TD>{ownerOf(payload) ?? '—'}</TD>
+                    <TD>{payload.description}</TD>
+                    <TD>
+                      <div style={badgeRowStyle}>
+                        {payload.scopes.map((scope) => (
+                          <Badge key={scope} variant="neutral">
+                            {scope}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TD>
+                    <TD>
+                      <div style={actionsStyle}>
+                        {readOnly ? null : (
+                          <Button
+                            type="button"
+                            aria-label={`Edit key ${payload.user_id}`}
+                            onClick={() => {
+                              setEditPayload(payload);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        )}
+                        {/* History stays reachable in readOnly — only its Rollback
+                            action is hidden, inside the dialog. */}
+                        <Button
+                          type="button"
+                          aria-label={`Policy history for ${payload.user_id}`}
+                          onClick={() => {
+                            setPolicyUser(payload.user_id);
+                          }}
+                        >
+                          History
+                        </Button>
+                        {readOnly ? null : (
+                          <Button
+                            type="button"
+                            variant="danger"
+                            aria-label={`Revoke key ${payload.user_id}`}
+                            onClick={() => {
+                              setRevokeUser(payload.user_id);
+                            }}
+                          >
+                            Revoke
+                          </Button>
+                        )}
+                      </div>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </ScrollRegion>
         )}
       </Card>
 

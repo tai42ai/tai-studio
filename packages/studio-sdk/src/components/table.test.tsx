@@ -2,8 +2,59 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { Table, TBody, TD, TH, THead, TR } from './table';
+import type {
+  NumericColumnProps,
+  TableProps,
+  TableRowProps,
+  TableSectionProps,
+  TDProps,
+  THProps,
+} from '../index';
+
+/**
+ * PUBLISHED-TYPE GATE, enforced by `pnpm typecheck` (`tsc --noEmit` covers every
+ * file under `src`, tests included).
+ *
+ * Every one of these six components is re-exported from the package entry, so a
+ * plugin author writes against them — and a component whose props exist only as
+ * an inline literal cannot be named, extended, or wrapped without retyping it by
+ * hand. The types are imported from `../index`, the published entry, so dropping
+ * a re-export fails this gate too.
+ */
+interface PluginTableProps extends TableProps {
+  readonly density: 'compact' | 'comfortable';
+}
+interface PluginTableSectionProps extends TableSectionProps {
+  readonly sticky?: boolean;
+}
+interface PluginTableRowProps extends TableRowProps {
+  readonly selected?: boolean;
+}
+interface PluginTHProps extends THProps {
+  readonly sortable?: boolean;
+}
+interface PluginTDProps extends TDProps {
+  readonly truncate?: boolean;
+}
+const numericIsPublished: NumericColumnProps = { numeric: true };
 
 describe('Table primitives', () => {
+  it('publishes a nameable props type for every one of its six components', () => {
+    const table: PluginTableProps = { density: 'compact' };
+    const section: PluginTableSectionProps = { sticky: true };
+    const row: PluginTableRowProps = { selected: true };
+    const th: PluginTHProps = { sortable: true, numeric: true };
+    const td: PluginTDProps = { truncate: true, numeric: false };
+    expect([table.density, section.sticky, row.selected, th.numeric, td.numeric]).toEqual([
+      'compact',
+      true,
+      true,
+      true,
+      false,
+    ]);
+    expect(numericIsPublished.numeric).toBe(true);
+  });
+
   it('render a semantic table with proper roles', () => {
     render(
       <Table>

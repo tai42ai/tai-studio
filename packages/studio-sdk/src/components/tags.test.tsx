@@ -3,8 +3,28 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TagChips, TagsInput } from './tags';
+import type { TagChipsProps, TagsInputProps } from '../index';
+
+/**
+ * PUBLISHED-TYPE GATE, enforced by `pnpm typecheck` (`tsc --noEmit` covers every
+ * file under `src`, tests included). Both components are re-exported from the
+ * package entry, so a plugin author must be able to NAME what they accept; the
+ * types are imported from `../index` so dropping a re-export fails this too.
+ */
+interface PluginTagChipsProps extends TagChipsProps {
+  readonly tone?: 'quiet' | 'loud';
+}
+interface PluginTagsInputProps extends TagsInputProps {
+  readonly max?: number;
+}
 
 describe('TagChips', () => {
+  it('publishes a nameable props type a plugin can extend', () => {
+    const chips: PluginTagChipsProps = { tags: ['alpha'], tone: 'quiet' };
+    const input: PluginTagsInputProps = { value: ['beta'], onChange: vi.fn(), max: 3 };
+    expect([chips.tags, input.value, input.max]).toEqual([['alpha'], ['beta'], 3]);
+  });
+
   it('renders one static chip per tag', () => {
     render(<TagChips tags={['alpha', 'beta']} />);
 
@@ -96,17 +116,17 @@ describe('TagsInput', () => {
     expect(screen.getByRole('button', { name: 'Add tag' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remove tag alpha' })).toBeDisabled();
   });
-});
 
-it('renders both exports and keeps every accessible name', () => {
-  render(
-    <>
-      <TagChips tags={['alpha']} />
-      <TagsInput value={['beta']} onChange={vi.fn()} />
-    </>,
-  );
+  it('renders both exports and keeps every accessible name', () => {
+    render(
+      <>
+        <TagChips tags={['alpha']} />
+        <TagsInput value={['beta']} onChange={vi.fn()} />
+      </>,
+    );
 
-  expect(screen.getByText('alpha')).toHaveClass('tai-chip');
-  expect(screen.getByLabelText('Add a tag')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Remove tag beta' })).toBeInTheDocument();
+    expect(screen.getByText('alpha')).toHaveClass('tai-chip');
+    expect(screen.getByLabelText('Add a tag')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove tag beta' })).toBeInTheDocument();
+  });
 });

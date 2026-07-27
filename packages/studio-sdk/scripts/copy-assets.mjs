@@ -50,16 +50,26 @@ if (stylesheets.length === 0) {
 
 // A bare CSS import in either quote form — `import './x.css'` and
 // `import "./x.css"` are the same import to a bundler, so both count here and in
-// the sibling `sideEffects` gate (package-side-effects.test.ts).
-const MODULE_CSS_IMPORT = /import\s+['"]([^'"]+\.css)['"]/g;
+// the sibling `sideEffects` gate (package-side-effects.test.ts). ANCHORED to the
+// start of a line, as that gate is: only a statement delivers a stylesheet, so
+// the same text inside a comment (`// import './x.css';`, or a docblock line,
+// which opens with `*`) must not be mistaken for one.
+const MODULE_CSS_IMPORT = /^\s*import\s+['"]([^'"]+\.css)['"]/gm;
 // A stylesheet's own `@import`, in every form CSS allows it: either quote, with
-// or without the `url()` wrapper.
-const STYLESHEET_IMPORT = /@import\s+(?:url\(\s*)?['"]([^'"]+)['"]/g;
+// or without the `url()` wrapper — and, for the same reason, anchored too.
+const STYLESHEET_IMPORT = /^\s*@import\s+(?:url\(\s*)?['"]([^'"]+)['"]/gm;
 
-// The specifiers every TypeScript module side-effect-imports, so an unreferenced
-// stylesheet is caught here rather than by its absence from a running page.
+// Test and test-support modules, which `tsconfig.build.json` keeps out of the
+// build and `files` keeps out of the tarball. An import that exists only there
+// reaches no consumer, so it cannot be what keeps a stylesheet alive.
+const UNPUBLISHED_MODULE = /(?:\.test|\.spec)\.tsx?$|(?:^|\/)test-[^/]*\.tsx?$/;
+
+// The specifiers every PUBLISHED TypeScript module side-effect-imports, so an
+// unreferenced stylesheet is caught here rather than by its absence from a
+// running page.
 const importedSpecifiers = new Set();
 for (const module of filesWithin(srcDir, ['.ts', '.tsx'])) {
+  if (UNPUBLISHED_MODULE.test(posixRelative(srcDir, module))) continue;
   const source = readFileSync(module, 'utf8');
   for (const match of source.matchAll(MODULE_CSS_IMPORT)) {
     importedSpecifiers.add(posixRelative(srcDir, resolve(dirname(module), match[1])));

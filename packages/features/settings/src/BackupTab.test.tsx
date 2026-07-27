@@ -109,6 +109,11 @@ describe('BackupTab', () => {
     await user.click(await screen.findByRole('button', { name: 'Import selected' }));
 
     const errorRow = await screen.findByTestId('report-row-env');
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(within(errorRow).getByText('env var rejected')).toBeInTheDocument();
     expect(screen.getByTestId('report-row-manifest')).toBeInTheDocument();
   });

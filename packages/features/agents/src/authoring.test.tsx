@@ -180,6 +180,11 @@ describe('ComposeAgentDialog', () => {
     // Add a tool via the reused ToolPicker.
     await userEvent.click(await screen.findByRole('combobox', { name: 'Add a tool' }));
     await userEvent.click(await screen.findByRole('option', { name: 'echo' }));
+    // A picked tool reads as a TAG, so its chip wears the published pair rather
+    // than a local copy of the shape.
+    expect(screen.getByText('echo', { selector: 'span' }).closest('.tai-chip')).toHaveClass(
+      'tai-chip-static',
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 
@@ -248,7 +253,11 @@ describe('ComposeAgentDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add preset' }));
 
     // The stored preset resolved into an inline object.
-    await screen.findByTestId('compose-presets-entry');
+    const entry = await screen.findByTestId('compose-presets-entry');
+    // A chip is a TAG, so it wears the published pair rather than a third local
+    // copy of the shape — and with it the narrow-viewport wrapping that copy
+    // lacked.
+    expect(entry).toHaveClass('tai-chip', 'tai-chip-static');
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 
     await waitFor(() => {
@@ -547,6 +556,64 @@ describe('ComposeAgentDialog', () => {
     });
     invalidateSpy.mockRestore();
   });
+
+  it.each([
+    [
+      'listTools',
+      { listTools: () => Promise.reject(new Error('tools down')) },
+      'tools down',
+      'Add a tool',
+    ],
+    [
+      'listPresets',
+      { listPresets: () => Promise.reject(new Error('presets down')) },
+      'presets down',
+      'Preset to expand',
+    ],
+  ])(
+    'replaces the picker with a loud error and blocks submit when the %s read fails',
+    async (_label, override, message, pickerName) => {
+      // "the deployment has nothing to choose" and "the read failed" must never be
+      // the same screen: an enabled EMPTY picker composes an agent with no tools.
+      const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
+      renderWithProviders(
+        <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+        composeClient({ ...override, createPreset }),
+      );
+
+      await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+      await pickBaseAgent();
+
+      const alerts = await screen.findAllByRole('alert');
+      expect(alerts.map((node) => node.textContent).join('\n')).toContain(message);
+      // The empty picker is GONE, not merely empty.
+      expect(screen.queryByRole('combobox', { name: pickerName })).not.toBeInTheDocument();
+
+      const submit = screen.getByRole('button', { name: 'Compose agent' });
+      expect(submit).toBeDisabled();
+      const form = submit.closest('form');
+      if (form === null) throw new Error('expected the submit button to be inside a form');
+      fireEvent.submit(form);
+      expect(createPreset).not.toHaveBeenCalled();
+    },
+  );
+
+  it('states a failed TAG read without walling the tool picker or the submit', async () => {
+    // Tags only group the picker's options, so their failure degrades the control
+    // rather than emptying it — but it is stated, never silently ungrouped.
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ listToolTags: () => Promise.reject(new Error('tags down')) }),
+    );
+
+    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await pickBaseAgent();
+
+    const alerts = await screen.findAllByRole('alert');
+    expect(alerts.map((node) => node.textContent).join('\n')).toContain('tags down');
+    expect(await screen.findByRole('combobox', { name: 'Add a tool' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Compose agent' })).toBeEnabled();
+  });
 });
 
 describe('authored-agents list', () => {
@@ -564,6 +631,11 @@ describe('authored-agents list', () => {
     renderWithProviders(<AgentsPage />, authoredClient());
 
     const row = await screen.findByTestId('authored-agent-row');
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(row).toHaveAttribute('data-agent', 'support_bot');
     // Versioning/rollback/delete live on the presets page; Manage links out there
     // with the preset search param (never duplicating those controls here).
@@ -659,6 +731,26 @@ describe('authored-agents list', () => {
     const runInput = streamAuthoredAgentRun.mock.lastCall?.[1];
     expect(runInput).not.toHaveProperty('system_prompt');
     expect(runInput).toHaveProperty('user_message');
+  });
+
+  it('walls the authored run view when its preset detail read fails, keeping the way back', async () => {
+    // Without the preset detail there is no baked-field set and no reduced schema, so
+    // the run form cannot be rendered honestly — the read is walled and the operator
+    // keeps a route back to the list.
+    const getPreset = vi.fn(() => Promise.reject(new ApiError('preset read failed', 500)));
+    renderWithProviders(<AgentsPage />, authoredClient({ getPreset }), {
+      projection: fullProjection(),
+    });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Run authored agent support_bot' }),
+    );
+
+    expect(await screen.findByText('preset read failed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to agents' })).toBeInTheDocument();
+    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
+    // platform fallback face beside Inter. The icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
   });
 
   it('shows the authored run read-only (no Run) for a scoped caller who cannot reach the authored-run door', async () => {

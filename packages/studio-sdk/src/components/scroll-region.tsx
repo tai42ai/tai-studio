@@ -31,12 +31,26 @@ export interface ScrollRegionProps {
   readonly children: ReactNode;
   readonly className?: string;
   readonly style?: CSSProperties;
+  /**
+   * The one arbitrary attribute this component forwards. The measured attributes
+   * — `tabindex`, `role` and `aria-label` — are the component's own and appear
+   * and disappear with the overflow, so a general attribute spread would let a
+   * caller set them statically and defeat the measurement. A test hook cannot,
+   * which is why it is the exception rather than the first of a set.
+   */
   readonly 'data-testid'?: string;
   /** A consumer ref for the scrolling `div` itself. */
   readonly ref?: Ref<HTMLDivElement>;
 }
 
-/** The names for a prose surface that has no heading above it. */
+/**
+ * The names for a prose surface that has no heading above it.
+ *
+ * They name the ONE document this SDK injects today — a plugin README — because
+ * an unnamed region is worse than a specifically named one, and every surface
+ * that has a heading above it takes that heading instead. Prose that is not a
+ * README passes its own `labels`.
+ */
 const DEFAULT_PROSE_LABELS = { table: 'README table', pre: 'README code block' } as const;
 
 /** The fallback name per instrumented surface, when no heading precedes it. */

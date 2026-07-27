@@ -47,12 +47,27 @@ test('an interactive tool blocks; answering completes the run and the result lan
   await expect(page.getByText('yes proceed')).toBeVisible();
 });
 
-test('a failing tool surfaces the error loudly on the panel (never swallowed)', async ({
+test("a failing tool surfaces the server's OWN message loudly on the panel (never swallowed)", async ({
   page,
 }) => {
   await seedCredential(page);
   await page.goto('/tools?tool=studio_demo_fail');
+
+  // A unique reason, so the assertion cannot be satisfied by a stale or generic
+  // alert. `studio_demo_fail` raises with whatever `reason` carries and the
+  // run-tool door returns that text unchanged, so this exact string is what the
+  // panel owes the operator — a swallowed or re-worded failure fails here.
+  const reason = `intentional e2e failure ${String(Date.now())}`;
+  await page.getByLabel(/^reason/i).fill(reason);
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  // studio_demo_fail always raises; the panel shows the loud error surface.
-  await expect(page.getByRole('alert')).toBeVisible({ timeout: 15_000 });
+
+  // The GENERIC loud error surface specifically — the "still executing
+  // server-side" notice is a `role="alert"` of its own, as is a background-run
+  // failure, and any of them would satisfy a bare alert assertion.
+  const errorState = page.getByRole('alert').filter({ hasText: 'Something went wrong' });
+  await expect(errorState).toBeVisible({ timeout: 15_000 });
+  await expect(errorState).toContainText(reason);
+  await expect(page.getByTestId('tool-run-timeout')).toHaveCount(0);
+  // The run failed, so the typed result viewer must not have rendered.
+  await expect(page.getByRole('heading', { name: 'Result' })).toHaveCount(0);
 });

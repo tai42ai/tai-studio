@@ -1,13 +1,13 @@
 /**
  * The wrapper around a nested group of fields (object, array, or union). At the
  * form root it lays children out in a plain stack; below the root it renders a
- * heading, an optional description, an optional error — an icon beside the
- * message, never a hue on its own — and the nested group surface.
+ * heading, an optional description, an optional error — the ERROR mark beside
+ * the message, never a hue on its own — and the nested group surface.
  */
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 
-import { AlertTriangleIcon } from '../components/icons';
+import { XCircleIcon } from '../components/icons';
 import { groupClass, groupHeaderClass, stackClass } from './styles';
 
 export function FieldGroup({
@@ -54,7 +54,7 @@ export function FieldGroup({
       ) : null}
       {error !== undefined ? (
         <span id={errorId} role="alert" className="tai-field-error">
-          <AlertTriangleIcon />
+          <XCircleIcon />
           {error}
         </span>
       ) : null}

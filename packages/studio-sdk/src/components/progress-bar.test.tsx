@@ -119,13 +119,13 @@ describe('the announced value', () => {
     expect(bar).not.toHaveAttribute('aria-valuenow');
     expect(bar).not.toHaveAttribute('aria-valuemax');
   });
-});
 
-it('renders its track, fill and label unchanged', () => {
-  render(<ProgressBar value={5} total={10} message="Uploading" />);
+  it('renders the track, the fill and the percentage label', () => {
+    render(<ProgressBar value={5} total={10} message="Uploading" />);
 
-  const bar = screen.getByRole('progressbar', { name: 'Uploading' });
-  expect(bar).toHaveClass('tai-progress-track');
-  expect(bar.firstElementChild).toHaveClass('tai-progress-fill');
-  expect(screen.getByText('50%')).toBeInTheDocument();
+    const bar = screen.getByRole('progressbar', { name: 'Uploading' });
+    expect(bar).toHaveClass('tai-progress-track');
+    expect(bar.firstElementChild).toHaveClass('tai-progress-fill');
+    expect(screen.getByText('50%')).toBeInTheDocument();
+  });
 });

@@ -178,6 +178,21 @@ export function ComposeAgentDialog({
     [presetsQuery.data],
   );
 
+  // A failed read must never render as an enabled EMPTY picker: "the deployment
+  // has nothing to choose" and "the read failed" would be the same screen, and the
+  // operator would compose an agent with no tools believing there were none. Each
+  // failed read replaces its control with a loud `ErrorState`, and a read the
+  // rendered spec fields depend on blocks submit until it succeeds.
+  const needsTools =
+    baseAgent !== null && (hasField(baseSchema, 'tool_names') || hasField(baseSchema, 'subagents'));
+  const needsPresets =
+    baseAgent !== null && (hasField(baseSchema, 'presets') || hasField(baseSchema, 'subagents'));
+  const readFailed = (needsTools && toolsQuery.isError) || (needsPresets && presetsQuery.isError);
+  const retryReads = (): void => {
+    if (toolsQuery.isError) void toolsQuery.refetch();
+    if (presetsQuery.isError) void presetsQuery.refetch();
+  };
+
   // Undefined when there are no native tags, so the ToolPicker stays in its flat
   // (non-grouped) mode rather than forcing a single "Untagged" cluster.
   const tagsByTool = useMemo(() => {
@@ -281,6 +296,9 @@ export function ComposeAgentDialog({
     event.preventDefault();
     setSubmitted(true);
     if (baseAgent === null || nameMissing) return;
+    // A tool/preset read the spec fields depend on is in error, so the pickers show
+    // no choices this form could honestly submit.
+    if (readFailed) return;
     // A non-empty response_format that fails parse/lint (e.g. a missing `title`)
     // blocks submit — the SchemaEditor shows the loud inline message.
     if (hasResponseFormat && !responseFormat.valid) return;
@@ -376,14 +394,32 @@ export function ComposeAgentDialog({
 
             {hasField(baseSchema, 'tool_names') ? (
               <Field label="Tools" description="The tools this agent may call." group>
-                <MultiToolPicker
-                  toolNames={toolsQuery.data ?? []}
-                  tagsByTool={tagsByTool}
-                  value={toolNames}
-                  onChange={setToolNames}
-                  disabled={toolsQuery.isPending}
-                  idPrefix="compose-tools"
-                />
+                {toolsQuery.isError ? (
+                  <ErrorState
+                    message={errorMessage(toolsQuery.error)}
+                    onRetry={() => void toolsQuery.refetch()}
+                  />
+                ) : (
+                  <>
+                    {/* A tags failure must not take down tool picking: the picker
+                        keeps its flat mode and the failure is stated rather than
+                        silently ungrouping the list. */}
+                    {tagsQuery.isError ? (
+                      <ErrorState
+                        message={errorMessage(tagsQuery.error)}
+                        onRetry={() => void tagsQuery.refetch()}
+                      />
+                    ) : null}
+                    <MultiToolPicker
+                      toolNames={toolsQuery.data ?? []}
+                      tagsByTool={tagsByTool}
+                      value={toolNames}
+                      onChange={setToolNames}
+                      disabled={toolsQuery.isPending}
+                      idPrefix="compose-tools"
+                    />
+                  </>
+                )}
               </Field>
             ) : null}
 
@@ -393,12 +429,19 @@ export function ComposeAgentDialog({
                 description="Stored presets expand into inline, self-contained definitions."
                 group
               >
-                <PresetSpecEditor
-                  presetRecords={usablePresets}
-                  value={presets}
-                  onChange={setPresets}
-                  idPrefix="compose-presets"
-                />
+                {presetsQuery.isError ? (
+                  <ErrorState
+                    message={errorMessage(presetsQuery.error)}
+                    onRetry={() => void presetsQuery.refetch()}
+                  />
+                ) : (
+                  <PresetSpecEditor
+                    presetRecords={usablePresets}
+                    value={presets}
+                    onChange={setPresets}
+                    idPrefix="compose-presets"
+                  />
+                )}
               </Field>
             ) : null}
 
@@ -408,13 +451,22 @@ export function ComposeAgentDialog({
                 description="Inline sub-agent specs this agent can delegate to."
                 group
               >
-                <SubAgentComposer
-                  toolNames={toolsQuery.data ?? []}
-                  tagsByTool={tagsByTool}
-                  presetRecords={usablePresets}
-                  value={subagents}
-                  onChange={setSubagents}
-                />
+                {toolsQuery.isError || presetsQuery.isError ? (
+                  <ErrorState
+                    message={errorMessage(
+                      toolsQuery.isError ? toolsQuery.error : presetsQuery.error,
+                    )}
+                    onRetry={retryReads}
+                  />
+                ) : (
+                  <SubAgentComposer
+                    toolNames={toolsQuery.data ?? []}
+                    tagsByTool={tagsByTool}
+                    presetRecords={usablePresets}
+                    value={subagents}
+                    onChange={setSubagents}
+                  />
+                )}
               </Field>
             ) : null}
 
@@ -496,7 +548,9 @@ export function ComposeAgentDialog({
           <Button
             type="submit"
             variant="primary"
-            disabled={create.isPending || (hasResponseFormat && !responseFormat.valid)}
+            disabled={
+              create.isPending || readFailed || (hasResponseFormat && !responseFormat.valid)
+            }
           >
             {create.isPending ? <Spinner label="Composing agent" /> : null}
             Compose agent

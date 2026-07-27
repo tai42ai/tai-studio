@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Button, CloseIcon, ToolPicker } from '@tai42/studio-sdk';
 
-import { chipStyle, monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
+import { monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
 
 /**
  * A multi-select over tool names, built by REUSING the shared single-select
@@ -32,7 +32,7 @@ export function MultiToolPicker({
       {value.length > 0 ? (
         <div style={{ ...rowStyle, flexWrap: 'wrap' }}>
           {value.map((name) => (
-            <span key={name} style={chipStyle}>
+            <span key={name} className="tai-chip tai-chip-static">
               <span style={monoStyle}>{name}</span>
               <Button
                 type="button"

@@ -284,7 +284,7 @@ describe('SaveVersionDialog', () => {
     });
 
     // The unknown-name note surfaces with no combo edit at all.
-    expect(await screen.findByText('unknown extension: chain')).toBeInTheDocument();
+    expect(await screen.findByText('Unknown extension: chain.')).toBeInTheDocument();
 
     // Make the form dirty; submit still stays blocked while a name is unknown.
     await user.type(screen.getByLabelText('Add a tag'), 'eu');
@@ -301,6 +301,6 @@ describe('SaveVersionDialog', () => {
       }),
     });
 
-    expect(screen.queryByText(/unknown extension/)).toBeNull();
+    expect(screen.queryByText(/unknown extension/i)).toBeNull();
   });
 });

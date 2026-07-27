@@ -15,10 +15,11 @@
  * `Field` WITHOUT `group` around a RadioGroup is a mistake — the field's
  * `<label for>` dangles at an id no element carries and neither element ends up
  * named — and `field-group.test.ts` fails the build on it.
- * Roving tabindex and arrow-key movement
- * belong to Radix; this component only chooses the layout that matches
- * `orientation` and passes the prop straight through, so a caller that names no
- * orientation keeps Radix's both-axes default rather than being pinned to one.
+ *
+ * Roving tabindex and arrow-key movement belong to Radix; this component only
+ * chooses the layout that matches `orientation` and passes the prop straight
+ * through, so a caller that names no orientation keeps Radix's both-axes default
+ * rather than being pinned to one.
  */
 import * as RadixRadioGroup from '@radix-ui/react-radio-group';
 import { useId } from 'react';
@@ -45,7 +46,11 @@ export interface RadioGroupProps {
   readonly name?: string;
   /** Visible group label, rendered above the options and wired as the group's name. */
   readonly label?: string;
-  /** Accessible group name when neither `label` nor an enclosing `Field` supplies one. */
+  /**
+   * Accessible group name when `label` supplies none. `label` wins where both are
+   * given — it names the group from visible text, and emitting both would leave
+   * this string computed by nothing.
+   */
   readonly 'aria-label'?: string;
   /**
    * Layout, and — when given — the arrow-key axis. Omitted, the options stack
@@ -98,7 +103,9 @@ export function RadioGroup({
     <RadixRadioGroup.Root
       className={rootClassName}
       aria-labelledby={labelledBy}
-      aria-label={ariaLabel}
+      // The accessible-name computation takes `aria-labelledby` over `aria-label`,
+      // so emitting both would ship a caller string that nothing ever reads.
+      aria-label={labelledBy === undefined ? ariaLabel : undefined}
       aria-describedby={field['aria-describedby']}
       aria-invalid={field['aria-invalid']}
       value={value}

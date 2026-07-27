@@ -9,6 +9,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowLeftIcon,
   Badge,
   Button,
   Card,
@@ -18,13 +19,13 @@ import {
   ExternalLinkButton,
   ScrollRegion,
   Skeleton,
-  TagChips,
-  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
+  Table,
+  TagChips,
   errorMessage,
   useApi,
   useProseScrollRegions,
@@ -522,7 +523,10 @@ export function PluginDetail({
 function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
   return (
     <div>
-      <Button onClick={onBack}>← Back to marketplace</Button>
+      <Button onClick={onBack}>
+        <ArrowLeftIcon />
+        Back to marketplace
+      </Button>
     </div>
   );
 }
@@ -587,7 +591,7 @@ function ActionsCard({
               <Badge>Not in the registry</Badge>
             ) : installed.update_available && installed.latest !== null ? (
               <>
-                <Badge variant="warning">Update available → v{installed.latest}</Badge>
+                <Badge variant="warning">Update available: v{installed.latest}</Badge>
                 <Button
                   variant="primary"
                   onClick={() => {

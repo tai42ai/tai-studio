@@ -18,15 +18,16 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  ScrollRegion,
   Skeleton,
   Spinner,
-  Table,
   TBody,
   TD,
   TH,
   THead,
-  TextInput,
   TR,
+  Table,
+  TextInput,
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
@@ -94,45 +95,45 @@ function SubMcpList({
   onDelete: (slug: string) => void;
 }): ReactNode {
   return (
-    <Table>
-      <THead>
-        <TR>
-          <TH>Slug</TH>
-          <TH>Tools</TH>
-          <TH>
-            <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>
-              Actions
-            </span>
-          </TH>
-        </TR>
-      </THead>
-      <TBody>
-        {entries.map(([slug, entry]) => {
-          const tools = entryTools(entry);
-          return (
-            <TR key={slug}>
-              <TD>{slug}</TD>
-              <TD>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
-                  {tools.length === 0 ? (
-                    <span style={{ color: 'var(--tai-color-text-muted)' }}>none</span>
-                  ) : (
-                    tools.map((tool) => (
-                      <Badge key={tool} variant="neutral">
-                        {tool}
-                      </Badge>
-                    ))
-                  )}
-                </div>
-              </TD>
-              <TD>
-                <DeleteSubMcpDialog slug={slug} onConfirm={onDelete} />
-              </TD>
-            </TR>
-          );
-        })}
-      </TBody>
-    </Table>
+    <ScrollRegion label="Sub-MCP servers">
+      <Table>
+        <THead>
+          <TR>
+            <TH>Slug</TH>
+            <TH>Tools</TH>
+            <TH>
+              <span className="tai-visually-hidden">Actions</span>
+            </TH>
+          </TR>
+        </THead>
+        <TBody>
+          {entries.map(([slug, entry]) => {
+            const tools = entryTools(entry);
+            return (
+              <TR key={slug}>
+                <TD>{slug}</TD>
+                <TD>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
+                    {tools.length === 0 ? (
+                      <span style={{ color: 'var(--tai-color-text-muted)' }}>none</span>
+                    ) : (
+                      tools.map((tool) => (
+                        <Badge key={tool} variant="neutral">
+                          {tool}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </TD>
+                <TD>
+                  <DeleteSubMcpDialog slug={slug} onConfirm={onDelete} />
+                </TD>
+              </TR>
+            );
+          })}
+        </TBody>
+      </Table>
+    </ScrollRegion>
   );
 }
 

@@ -187,7 +187,9 @@ export function BackgroundRuns({
                     gap: 'var(--tai-space-3)',
                     width: '100%',
                     padding: 'var(--tai-space-2) var(--tai-space-3)',
-                    border: '1px solid var(--tai-color-border)',
+                    // An unselected row has a transparent ground, so this edge is
+                    // the control's ONLY boundary: contrast-safe token, not decor.
+                    border: '1px solid var(--tai-color-control-border)',
                     borderRadius: 'var(--tai-radius-sm)',
                     background:
                       run.run_id === selectedRunId

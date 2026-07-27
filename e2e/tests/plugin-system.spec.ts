@@ -3,10 +3,13 @@
  *
  * The reference plugin is discovered post-login through the authed registry, its
  * bundle loads through the SERVER-INJECTED import map, its page + tool panel
- * render, a tool without a panel falls back to the auto-form, and every loud-error
- * path (integrity mismatch, API-version mismatch, a mid-session 401) behaves
- * exactly as specified. The import map itself is asserted well-formed + CSP-
- * enforced, and the plugin's React is pinned identical to the host's.
+ * render, a tool without a panel falls back to the auto-form, and both loud-error
+ * paths this file owns (an integrity mismatch, a mid-session 401) behave exactly
+ * as specified. The import map itself is asserted well-formed + CSP-enforced, and
+ * the plugin's React is pinned identical to the host's.
+ *
+ * The API-version gate is `version-gate.spec.ts`, which pins EQUALITY in all
+ * three directions (lower, higher, equal) against this same live boot.
  */
 import { test, expect } from '@playwright/test';
 import { loginViaUi, seedCredential, expectPluginErrorCard } from './helpers';
@@ -200,28 +203,6 @@ test('an integrity mismatch (byte-mutated served chunk) rejects LOUDLY with a pl
   await page.goto('/plugins/reference_plugin/demo');
   await expectPluginErrorCard(page, /failed to load/i);
   // The registered page must NOT have rendered.
-  await expect(page.getByTestId('reference-demo-page')).toHaveCount(0);
-});
-
-test('an API-version mismatch (lower than current) rejects with a plugin error card', async ({
-  page,
-}) => {
-  await seedCredential(page);
-
-  // Rewrite the registry so the plugin targets a LOWER API version than the host.
-  // The gate pins EQUALITY, so a lower version must reject (a `<=` bug would pass).
-  await page.route(
-    (url) => url.pathname === REGISTRY_PATH,
-    async (route) => {
-      const response = await route.fetch();
-      const json = (await response.json()) as { data: { api_version: number }[] };
-      for (const manifest of json.data) manifest.api_version = 0;
-      await route.fulfill({ json });
-    },
-  );
-
-  await page.goto('/plugins/reference_plugin/demo');
-  await expectPluginErrorCard(page, /failed to load|api|version|rebuilt/i);
   await expect(page.getByTestId('reference-demo-page')).toHaveCount(0);
 });
 

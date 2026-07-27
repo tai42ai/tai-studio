@@ -1,8 +1,24 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AlertTriangleIcon, XCircleIcon } from './icons';
 import { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './primitives';
+import * as barrel from '../index';
+
+describe('the link-safety pair on the published surface', () => {
+  it('publishes BOTH halves, so a caller never re-parses to get the URL', () => {
+    // The barrel published only the boolean half, which forced every caller that
+    // wanted the URL into `isSafeHttpUrl(u) && new URL(u)` — parsing twice, and
+    // parsing the second time OUTSIDE the check that judged it.
+    expect(typeof barrel.isSafeHttpUrl).toBe('function');
+    expect(typeof barrel.safeHttpUrl).toBe('function');
+    expect(barrel.safeHttpUrl('https://example.com/a')).toBe('https://example.com/a');
+    expect(barrel.safeHttpUrl('javascript:alert(1)')).toBeUndefined();
+    expect(barrel.isSafeHttpUrl('javascript:alert(1)')).toBe(false);
+  });
+});
 
 describe('Button', () => {
   it('renders an accessible button and fires onClick', async () => {
@@ -122,6 +138,28 @@ describe('ErrorState', () => {
     expect(title?.querySelector('svg')).not.toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
+
+  it('wears the ERROR mark, not the warning one', () => {
+    // The mark vocabulary: the crossed circle is a failure, the triangle is a
+    // warning. Both `.tai-error-state` panels in the SDK must carry the same one
+    // — two marks on one class state two different severities for one state.
+    const { container } = render(<ErrorState message="it broke" />);
+    const mark = container.querySelector('.tai-error-state-title svg');
+    const error = render(<XCircleIcon />).container.querySelector('svg');
+    const warning = render(<AlertTriangleIcon />).container.querySelector('svg');
+
+    expect(mark?.innerHTML).toBe(error?.innerHTML);
+    expect(mark?.innerHTML).not.toBe(warning?.innerHTML);
+  });
+
+  it('lets a deliberate refusal replace the system-failure headline', () => {
+    // The default blames the system. A surface rendering a server's considered
+    // NO — a permission denial, a validation rejection — is not a malfunction
+    // and must not announce itself as one.
+    render(<ErrorState title="Not permitted" message="Your role cannot delete scopes." />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Not permitted');
+    expect(screen.queryByText('Something went wrong')).toBeNull();
+  });
 });
 
 describe('status/loading primitives', () => {
@@ -199,6 +237,28 @@ describe('status/loading primitives', () => {
     expect(screen.getByText('card body')).toBeInTheDocument();
     expect(container.querySelector('.tai-card')).not.toBeNull();
   });
+
+  it('Card forwards a consumer ref to its own element', () => {
+    // A ref a component accepts and drops is worse than one it refuses: React 19
+    // warns about neither, so the consumer's measurement silently reads null.
+    const ref = createRef<HTMLDivElement>();
+    render(<Card ref={ref}>card body</Card>);
+    expect(ref.current).not.toBeNull();
+    expect(ref.current).toHaveClass('tai-card');
+  });
+
+  it.each([
+    ['Skeleton', <Skeleton key="s" className="mine" />, 'tai-skeleton'],
+    ['EmptyState', <EmptyState key="e" title="none" className="mine" />, 'tai-empty-state'],
+    ['ErrorState', <ErrorState key="r" message="broke" className="mine" />, 'tai-error-state'],
+    ['Spinner', <Spinner key="p" className="mine" />, 'tai-spinner'],
+  ])('%s appends the caller class to its own, as Card does', (_name, element, own) => {
+    // The four siblings took no `className` at all while `Card` took one, so a
+    // caller could position a card and nothing else. Merging, never replacing:
+    // the surface can not lose its paint by being positioned.
+    const { container } = render(element);
+    expect(container.querySelector(`.${own}`)).toHaveClass(own, 'mine');
+  });
 });
 
 describe('Button link normalization', () => {
@@ -238,7 +298,7 @@ describe('Button link normalization', () => {
     // read the attribute back would stay green while the name did not exist.
     const blocked = screen.getByText(/Open docs/);
     expect(blocked.textContent).toBe(
-      'Open docs. This link was blocked because it is not an http(s) URL.',
+      'Open docs. This link was blocked because it is neither an in-app reference nor an http(s) URL.',
     );
     expect(blocked).toHaveClass('tai-visually-hidden');
     const neutralized = blocked.parentElement;
@@ -249,15 +309,36 @@ describe('Button link normalization', () => {
     expect(screen.queryByRole('link')).toBeNull();
   });
 
+  it('announces a named blocked link once, not twice', () => {
+    // `aria-label` REPLACES the content as the name on the live anchor, so the
+    // neutralized form has to do the same: rendering the caller's name as hidden
+    // text beside visible children that already say it reads the name twice.
+    render(
+      <Button href="javascript:alert(1)" aria-label="Open docs">
+        Open docs
+      </Button>,
+    );
+    const neutralized = screen.getByText(/Open docs\./).parentElement;
+    expect(neutralized).toHaveAttribute('data-neutralized', 'true');
+    expect(neutralized?.textContent).toBe(
+      'Open docsOpen docs. This link was blocked because it is neither an in-app reference nor an http(s) URL.',
+    );
+    // Only ONE of those two "Open docs" is in the accessibility tree.
+    const visible = screen.getByText('Open docs');
+    expect(visible.closest('[aria-hidden="true"]')).not.toBeNull();
+  });
+
   it('carries the blocked reason alone when the caller named nothing', () => {
     render(
       <Button href="javascript:alert(1)">
         <svg />
       </Button>,
     );
-    expect(screen.getByText('This link was blocked because it is not an http(s) URL.')).toHaveClass(
-      'tai-visually-hidden',
-    );
+    expect(
+      screen.getByText(
+        'This link was blocked because it is neither an in-app reference nor an http(s) URL.',
+      ),
+    ).toHaveClass('tai-visually-hidden');
   });
 
   it('renders the normalized absolute URL it validated', () => {
@@ -309,12 +390,14 @@ describe('Button link normalization', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
-  it.each([['#top'], ['#/agents'], ['?tab=logs'], ['./a'], ['../a']])(
+  it.each([['#top'], ['#/agents'], ['?tab=logs'], ['?/x'], ['#//evil.example'], ['./a'], ['../a']])(
     'renders the in-app reference form %j as a live anchor',
     (href) => {
-      // The five spellings this module's docblock says "stay in-app". Three of
-      // them had no coverage at all and two were neutralized as unsafe URLs —
-      // `#/agents` is a hash route, the commonest client-routed form there is.
+      // The five spellings this module's docblock says "stay in-app". `#/agents`
+      // is a hash route, the commonest client-routed form there is. `?/x` and
+      // `#//evil.example` are the two forms the docblock's own argument turns on:
+      // a query-only or fragment-only reference cannot carry an authority, so
+      // neither can leave the origin, and both belong on the live side.
       render(<Button href={href}>go</Button>);
       expect(screen.getByRole('link', { name: 'go' })).toHaveAttribute('href', href);
     },

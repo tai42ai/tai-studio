@@ -17,7 +17,7 @@ import {
 } from '@tai42/studio-sdk';
 
 import type { InlinePresetSpec } from './authoring-types';
-import { chipStyle, monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
+import { monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
 
 /**
  * The `presets` field editor: a picker over the NON-conflicted stored presets that
@@ -67,7 +67,11 @@ export function PresetSpecEditor({
       {value.length > 0 ? (
         <div style={smallStackStyle}>
           {value.map((entry) => (
-            <span key={entry.name} style={chipStyle} data-testid={`${idPrefix}-entry`}>
+            <span
+              key={entry.name}
+              className="tai-chip tai-chip-static"
+              data-testid={`${idPrefix}-entry`}
+            >
               <span style={monoStyle}>{entry.name}</span>
               <span style={{ color: 'var(--tai-color-text-muted)' }}>over {entry.base_tool}</span>
               <Button

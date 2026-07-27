@@ -38,6 +38,11 @@ describe('SchedulingPage — table', () => {
       expect(screen.getByText('nightly-report')).toBeInTheDocument();
     });
     expect(screen.getByText('run_report_schedule_task')).toBeInTheDocument();
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(screen.getByText('Cron: 0 2 * * *')).toBeInTheDocument();
     expect(screen.getByText('Every 3600s')).toBeInTheDocument();
     expect(screen.getByText('Enabled')).toBeInTheDocument();

@@ -26,6 +26,7 @@ import {
   Field,
   JsonTree,
   RadioGroup,
+  ScrollRegion,
   Skeleton,
   TBody,
   TD,
@@ -85,7 +86,7 @@ function StatDialog({ id, onClose }: { id: string; onClose: () => void }): React
       ) : stat.isError ? (
         <ErrorState message={errorMessage(stat.error)} onRetry={() => void stat.refetch()} />
       ) : (
-        <JsonTree data={stat.data} defaultExpanded />
+        <JsonTree data={stat.data} defaultExpanded label={`Metadata for ${id}`} />
       )}
     </Dialog>
   );
@@ -435,32 +436,34 @@ function ResourceBrowser({ filter }: { filter: string }): ReactNode {
       filtered.length === 0 ? (
         <EmptyState title="No matching resources" description="No id contains the filter text." />
       ) : (
-        <Table data-testid="storage-table">
-          <THead>
-            <TR>
-              <TH>Resource</TH>
-              <TH style={{ textAlign: 'right' }}>Actions</TH>
-            </TR>
-          </THead>
-          <TBody>
-            {filtered.map((id) => (
-              <ResourceRow
-                key={id}
-                id={id}
-                downloading={download.isPending}
-                onStat={() => {
-                  setStatId(id);
-                }}
-                onDelete={() => {
-                  setDeleteId(id);
-                }}
-                onDownload={() => {
-                  download.mutate(id);
-                }}
-              />
-            ))}
-          </TBody>
-        </Table>
+        <ScrollRegion label="Resources">
+          <Table data-testid="storage-table">
+            <THead>
+              <TR>
+                <TH>Resource</TH>
+                <TH style={{ textAlign: 'right' }}>Actions</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {filtered.map((id) => (
+                <ResourceRow
+                  key={id}
+                  id={id}
+                  downloading={download.isPending}
+                  onStat={() => {
+                    setStatId(id);
+                  }}
+                  onDelete={() => {
+                    setDeleteId(id);
+                  }}
+                  onDownload={() => {
+                    download.mutate(id);
+                  }}
+                />
+              ))}
+            </TBody>
+          </Table>
+        </ScrollRegion>
       );
   }
 

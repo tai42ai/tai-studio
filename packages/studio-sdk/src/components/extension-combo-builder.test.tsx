@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 
 import { ExtensionComboBuilder } from './extension-combo-builder';
+import { AlertTriangleIcon, XCircleIcon } from './icons';
 
 const CATALOG: Extension[] = [
   { name: 'marka', kind: 'wrapper' },
@@ -197,7 +198,7 @@ describe('ExtensionComboBuilder', () => {
     );
 
     // The danger note surfaces on the row without any user interaction.
-    expect(screen.getByRole('alert')).toHaveTextContent('unknown extension: gone');
+    expect(screen.getByRole('alert')).toHaveTextContent('Unknown extension: gone.');
     // And the validity callback reports invalid on mount.
     expect(onValidityChange).toHaveBeenLastCalledWith(false);
   });
@@ -307,8 +308,43 @@ describe('ExtensionComboBuilder', () => {
     );
     const unknown = screen.getByRole('alert');
     expect(unknown).toHaveClass('tai-field-error');
-    expect(unknown).toHaveTextContent('unknown extension: gone');
+    expect(unknown).toHaveTextContent('Unknown extension: gone.');
     expect(unknown.querySelector('svg')).not.toBeNull();
+  });
+
+  it('marks both inline errors with the ERROR mark, never the warning one', async () => {
+    // The mark vocabulary: the crossed circle is a failure, the triangle is a
+    // warning. Every `.tai-field-error` here states a rejected input, so both
+    // alerts take the same crossed circle — two marks on one class would state
+    // two different severities for one condition.
+    const user = userEvent.setup();
+    const error = render(<XCircleIcon />).container.querySelector('svg')?.innerHTML;
+    const warning = render(<AlertTriangleIcon />).container.querySelector('svg')?.innerHTML;
+    expect(error).not.toBe(warning);
+
+    const unknownRender = render(
+      <ExtensionComboBuilder available={CATALOG} value={[['marka', 'gone']]} onChange={vi.fn()} />,
+    );
+    expect(screen.getByRole('alert').querySelector('svg')?.innerHTML).toBe(error);
+    unknownRender.unmount();
+
+    render(<Controlled initial={[['marka']]} />);
+    await user.click(screen.getByRole('checkbox', { name: 'marka' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('This combo is already added.');
+    expect(screen.getByRole('alert').querySelector('svg')?.innerHTML).toBe(error);
+  });
+
+  it('names the Edit button with the words it is showing (WCAG 2.5.3)', async () => {
+    // A constant "Edit combo …" would leave a button reading "Editing" named
+    // "Edit": Label in Name fails, and a voice-control user is left naming a
+    // control they cannot see.
+    const user = userEvent.setup();
+    render(<Controlled initial={[['marka']]} />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit combo marka' }));
+    const editing = screen.getByRole('button', { name: 'Editing combo marka' });
+    expect(editing).toHaveTextContent('Editing');
+    expect(screen.queryByRole('button', { name: 'Edit combo marka' })).toBeNull();
   });
 
   it('renders the no-combos note as a muted line, not a full empty-state panel', () => {

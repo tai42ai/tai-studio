@@ -27,6 +27,11 @@ on:
       - 'apps/studio/**'
       - 'e2e/scripts/docs-screenshots.mjs'
       - 'e2e/docs-demo/**'
+      # The lockfile pins the rendered typeface: the SDK depends on
+      # `@fontsource-variable/*`, whose resolved version decides which webfont
+      # binaries the build materialises. A bump changes the glyphs in every shot
+      # while touching no path above it.
+      - 'pnpm-lock.yaml'
 
 permissions:
   contents: read

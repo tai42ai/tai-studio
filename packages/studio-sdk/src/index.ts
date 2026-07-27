@@ -97,6 +97,10 @@ export type {
   LinkButtonProps,
   ButtonVariant,
   CardProps,
+  SkeletonProps,
+  EmptyStateProps,
+  ErrorStateProps,
+  SpinnerProps,
 } from './components/primitives';
 export { PageHeader, Page, Stack } from './components/page-header';
 export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
@@ -130,6 +134,14 @@ export type { DrawerProps } from './components/drawer';
 export { Tooltip } from './components/tooltip';
 export type { TooltipProps } from './components/tooltip';
 export { Table, THead, TBody, TR, TH, TD } from './components/table';
+export type {
+  TableProps,
+  TableSectionProps,
+  TableRowProps,
+  THProps,
+  TDProps,
+  NumericColumnProps,
+} from './components/table';
 export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
 export type {
   ScrollRegionProps,
@@ -141,10 +153,15 @@ export type { JsonTreeProps } from './components/json-tree';
 export { JsonDiff, diffJson } from './components/json-diff';
 export type { JsonDiffProps, JsonDiffRow } from './components/json-diff';
 export { TagChips, TagsInput } from './components/tags';
+export type { TagChipsProps, TagsInputProps } from './components/tags';
 export { CodeBlock } from './components/code-block';
 export type { CodeBlockProps } from './components/code-block';
 export { FleetReport } from './components/fleet-report';
+export type { FleetReportProps } from './components/fleet-report';
 export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';
+// The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
+// hands back the parsed URL, so a caller that needs the URL does not re-parse it.
+export { safeHttpUrl } from './components/primitives';
 export type { ExternalLinkButtonProps } from './components/external-link';
 export { ToolPicker } from './components/tool-picker';
 export type { ToolPickerProps } from './components/tool-picker';
@@ -202,6 +219,7 @@ export {
   ChevronDownIcon,
   ChevronRightIcon,
   CheckIcon,
+  MinusIcon,
   CopyIcon,
   ExternalLinkIcon,
   EyeIcon,

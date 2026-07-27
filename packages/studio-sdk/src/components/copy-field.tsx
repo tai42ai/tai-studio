@@ -7,9 +7,11 @@
  *
  * The button holds BOTH states stacked in one grid cell, so the widest of them
  * sets the width once and the flip never reflows the row. Only the active state
- * is exposed to assistive tech, and the button's accessible name is the constant
- * `aria-label` — so the flip is announced exactly once, by the polite live region
- * beside it, and never a second time as a renamed control.
+ * is exposed to assistive tech, and that state's own words are the button's
+ * accessible name: a constant `aria-label` would leave a button reading "Copied"
+ * named "Copy", which fails WCAG 2.5.3 (Label in Name) and leaves a voice-control
+ * user naming a control they cannot see. The polite live region beside the button
+ * is what actually announces the flip.
  *
  * A clipboard write can FAIL — a permissions policy blocks it, or the page is
  * not in a secure context, where `navigator.clipboard` does not exist at all.
@@ -35,8 +37,9 @@ export interface CopyFieldProps {
 
 const COPIED_RESET_MS = 2000;
 
-/** The button's accessible name. Constant across the flip, by design. */
+/** The button's two faces. Whichever is exposed is also its accessible name. */
 const COPY_LABEL = 'Copy';
+const COPIED_LABEL = 'Copied';
 
 /** Announced once, and worded so it is never mistaken for the visible label. */
 const COPIED_ANNOUNCEMENT = 'Copied to clipboard';
@@ -139,7 +142,6 @@ export function CopyField({ value, caption, idPrefix = 'copy-field', label }: Co
         <button
           type="button"
           className="tai-btn tai-btn-secondary"
-          aria-label={COPY_LABEL}
           data-testid={`${idPrefix}-copy`}
           onClick={handleCopy}
         >
@@ -149,14 +151,14 @@ export function CopyField({ value, caption, idPrefix = 'copy-field', label }: Co
               style={{ ...stateStyle, visibility: copied ? 'hidden' : 'visible' }}
             >
               <CopyIcon />
-              Copy
+              {COPY_LABEL}
             </span>
             <span
               aria-hidden={!copied}
               style={{ ...stateStyle, visibility: copied ? 'visible' : 'hidden' }}
             >
               <CheckIcon />
-              Copied
+              {COPIED_LABEL}
             </span>
           </span>
         </button>

@@ -277,4 +277,44 @@ describe('CreatePresetForm', () => {
       expect(await screen.findByRole('combobox')).toBeEnabled();
     },
   );
+
+  it('says so when the base-tool SCHEMA read fails, without walling the kwargs field', async () => {
+    // The schema supplies only the "Base tool inputs: …" hint. A failure used to
+    // delete that sentence with nothing in its place, so a hintless kwargs box read
+    // as "this base declares no inputs".
+    const user = userEvent.setup();
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ getToolSchema: vi.fn().mockRejectedValue(new Error('schema down')) }),
+    });
+
+    await fillNameAndBase(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Base tool input names are unavailable: schema down',
+    );
+    expect(screen.getByLabelText('Fixed kwargs JSON')).toBeEnabled();
+  });
+
+  it('gives each failed enrichment read its OWN line, never one run-together sentence', async () => {
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({
+        listToolTags: vi.fn().mockRejectedValue(new Error('tags down')),
+        listAgents: vi.fn().mockRejectedValue(new Error('agents down')),
+      }),
+    });
+
+    const alert = await screen.findByRole('alert');
+    const lines = [...alert.querySelectorAll('p')];
+    expect(lines.map((line) => line.textContent)).toEqual([
+      'Tag grouping is unavailable: tags down',
+      'Agent labelling is unavailable: agents down',
+    ]);
+    // Each line is the published wrapping carrier, so a 320 px viewport never
+    // widens on a long server message — and each carries the ERROR mark, so the
+    // hue is never the only thing saying the read failed.
+    for (const line of lines) {
+      expect(line).toHaveClass('tai-field-error');
+      expect(line.querySelector('svg')).toHaveClass('tai-icon');
+    }
+  });
 });

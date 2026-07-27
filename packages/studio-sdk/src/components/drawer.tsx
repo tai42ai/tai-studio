@@ -11,35 +11,47 @@
  * `open` renders no trigger, so `useModalFocusReturn` returns focus to the opener
  * in that case alone — with a trigger present it stands down and Radix's own
  * restore is the only mechanism.
+ *
+ * Open state takes either form, the same three props `Dialog` publishes:
+ * `open`/`onOpenChange` to drive it from the caller's state, `defaultOpen` (or
+ * nothing at all) to let Radix own it behind a `trigger`.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 import { CloseIcon } from './icons';
 import { useModalFocusReturn } from './modal-focus';
 
 export interface DrawerProps {
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
   /** The dialog's accessible name. */
   readonly title: string;
   readonly children: ReactNode;
   readonly side?: 'left' | 'right';
-  /** The opener. Radix labels it and returns focus to it when the drawer closes. */
-  readonly trigger?: ReactNode;
+  /**
+   * The opener. Radix labels it and returns focus to it when the drawer closes.
+   *
+   * It is a single ELEMENT, not any node: Radix clones its props onto it, so a
+   * string throws and a fragment silently renders openers that carry neither the
+   * `aria-haspopup`/`aria-expanded`/`aria-controls` wiring nor a click handler.
+   */
+  readonly trigger?: ReactElement;
+  readonly open?: boolean;
+  readonly defaultOpen?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
 }
 
 export function Drawer({
-  open,
-  onOpenChange,
   title,
   children,
   side = 'left',
   trigger,
+  open,
+  defaultOpen,
+  onOpenChange,
 }: DrawerProps) {
   const focusReturn = useModalFocusReturn(trigger !== undefined);
   return (
-    <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
+    <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger === undefined ? null : <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>}
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="tai-overlay" />

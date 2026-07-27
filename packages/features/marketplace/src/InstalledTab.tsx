@@ -34,7 +34,7 @@ import { marketplaceAdvisoriesKey, marketplaceInstalledKey } from './keys';
 function StatusBadge({ row }: { readonly row: MarketplaceInstalledPlugin }): ReactNode {
   if (row.missing_upstream) return <Badge>Not in the registry</Badge>;
   if (row.update_available && row.latest !== null) {
-    return <Badge variant="warning">Update available → v{row.latest}</Badge>;
+    return <Badge variant="warning">Update available: v{row.latest}</Badge>;
   }
   return <Badge variant="success">Up to date</Badge>;
 }

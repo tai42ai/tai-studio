@@ -96,11 +96,11 @@ describe('RevealInput', () => {
       'tai-icon',
     );
   });
-});
 
-it('renders the field and toggle and keeps their accessible names', () => {
-  render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
+  it('renders the field and toggle and keeps their accessible names', () => {
+    render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
 
-  expect(screen.getByLabelText('Secret')).toHaveClass('tai-input');
-  expect(screen.getByRole('button', { name: 'Show value' })).toHaveClass('tai-icon-btn');
+    expect(screen.getByLabelText('Secret')).toHaveClass('tai-input');
+    expect(screen.getByRole('button', { name: 'Show value' })).toHaveClass('tai-icon-btn');
+  });
 });

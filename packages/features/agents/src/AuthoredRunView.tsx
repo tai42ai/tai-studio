@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import {
+  ArrowLeftIcon,
   Button,
   ErrorState,
   Skeleton,
@@ -78,7 +79,8 @@ export function AuthoredRunView({
     return (
       <section style={stackStyle}>
         <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to agents">
-          ← Back
+          <ArrowLeftIcon />
+          Back
         </Button>
         <ErrorState
           message={errorMessage(detailQuery.error)}

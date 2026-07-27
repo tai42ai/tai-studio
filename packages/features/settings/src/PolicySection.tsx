@@ -582,8 +582,11 @@ export function PolicySection({
       </div>
 
       <div>
-        <span style={fieldLabelStyle}>Condition</span>
+        {/* The group's name comes from `RadioGroup`'s own `label`, which renders the
+            heading AND wires `aria-labelledby`. A bare `<span>` beside it left the
+            `role="radiogroup"` with an empty accessible name. */}
         <RadioGroup
+          label="Condition"
           value={mode}
           disabled={disabled}
           options={[

@@ -1,6 +1,8 @@
 /**
  * `Dialog` — a design-system wrapper over Radix Dialog: an accessible modal (role
- * `dialog`, `aria-modal`, focus trap, Escape to close) labelled by its title.
+ * `dialog`, focus trap, Escape to close) labelled by its title. Modality is
+ * enforced by the focus trap and by Radix marking the rest of the page inert, not
+ * by an `aria-modal` attribute — the panel ships none.
  *
  * Radix owns every modal behaviour — the focus trap, the background scroll lock,
  * Escape, and focus return to the trigger — so this component adds no second
@@ -11,7 +13,7 @@
  * `useModalFocusReturn`, which stands down whenever a trigger IS rendered.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 import { useModalFocusReturn } from './modal-focus';
 
@@ -19,8 +21,14 @@ export interface DialogProps {
   readonly title: string;
   readonly description?: string;
   readonly children?: ReactNode;
-  /** A trigger element; when omitted, control the dialog via `open`/`onOpenChange`. */
-  readonly trigger?: ReactNode;
+  /**
+   * A trigger element; when omitted, control the dialog via `open`/`onOpenChange`.
+   *
+   * It is a single ELEMENT, not any node: Radix clones its props onto it, so a
+   * string throws and a fragment silently renders openers that carry neither the
+   * `aria-haspopup`/`aria-expanded`/`aria-controls` wiring nor a click handler.
+   */
+  readonly trigger?: ReactElement;
   readonly open?: boolean;
   readonly defaultOpen?: boolean;
   readonly onOpenChange?: (open: boolean) => void;

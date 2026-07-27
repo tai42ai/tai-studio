@@ -59,8 +59,9 @@ export interface VersionHistoryPanelProps {
   readonly rollbackError?: string;
   /**
    * A read-only history view: the version list and each version's body stay
-   * visible (history is a read surface), but the per-row Rollback action — the
-   * only mutation — is hidden. Defaults to interactive (Rollback shown).
+   * visible (history is a read surface), but EVERY mutating action is hidden —
+   * the per-row Rollback and, where `onEditTags` is supplied, Edit tags.
+   * Defaults to interactive.
    */
   readonly readOnly?: boolean;
   /**
@@ -276,7 +277,7 @@ export function VersionHistoryPanel({
                           {compareFrom === entry.version ? 'Comparing…' : 'Compare'}
                         </Button>
                       ) : null}
-                      {onEditTags !== undefined ? (
+                      {onEditTags !== undefined && !readOnly ? (
                         <Button
                           aria-label={`Edit tags for version ${String(entry.version)}`}
                           onClick={() => {

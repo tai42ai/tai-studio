@@ -127,6 +127,11 @@ describe('NotificationsPage', () => {
     renderWithProviders(<NotificationsPage search={{}} />, { client });
 
     const table = await screen.findByTestId('notifications-table');
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     const rows = within(table).getAllByRole('row');
     // Header row + two data rows.
     expect(rows).toHaveLength(3);

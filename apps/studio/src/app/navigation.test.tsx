@@ -147,6 +147,26 @@ describe('shell plugin nav', () => {
     expect(screen.getByRole('link', { name: 'Tools' })).toHaveAttribute('href', '/tools');
   });
 
+  it('gives the plugin nav icon box NO inline margin, so the icon gap is the row gap', async () => {
+    serveShell();
+    const importModule = vi.fn(() => Promise.resolve({ register: registerPageAndNav(true) }));
+
+    renderStudio({ initialPath: '/interactions', sessionKey: 'k-nav', importModule });
+
+    const link = await screen.findByRole('link', { name: 'Reference' });
+    const iconBox = link.querySelector<HTMLElement>('[aria-hidden="true"]');
+    expect(iconBox).not.toBeNull();
+    // `.tai-nav-link` is a flex row that already sets the icon-to-label gap from
+    // the spacing scale; any margin beside the icon is ADDITIVE and would set the
+    // plugin row apart from every other nav row. The declaration is read off the
+    // element rather than checked property by property, so a logical or shorthand
+    // margin is caught too.
+    const declared = Array.from(iconBox?.style ?? []);
+    expect(declared.filter((property) => property.startsWith('margin'))).toEqual([]);
+    // The box IS styled inline, so an empty declaration cannot pass vacuously.
+    expect(declared.length).toBeGreaterThan(0);
+  });
+
   it('drives the SDK plugin host state to ready as the load pass commits the nav entry', async () => {
     serveShell();
     const importModule = vi.fn(() => Promise.resolve({ register: registerPageAndNav(true) }));

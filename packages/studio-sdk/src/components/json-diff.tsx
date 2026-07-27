@@ -128,7 +128,7 @@ export function JsonDiff({ before, after }: JsonDiffProps): ReactNode {
   const rows = diffJson(before, after);
 
   if (rows.length === 0) {
-    return <p className="tai-muted">No differences between the two versions.</p>;
+    return <p className="tai-muted">No differences between the two values.</p>;
   }
 
   return (

@@ -343,7 +343,7 @@ export function PresetDetail({ name }: { readonly name: string }): ReactNode {
           <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
             <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Fixed kwargs</h3>
             <Card>
-              <JsonTree data={preset.fixed_kwargs} />
+              <JsonTree data={preset.fixed_kwargs} label="Fixed kwargs" />
             </Card>
           </section>
 
@@ -353,7 +353,7 @@ export function PresetDetail({ name }: { readonly name: string }): ReactNode {
             >
               <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Output schema</h3>
               <Card>
-                <JsonTree data={preset.output_schema} />
+                <JsonTree data={preset.output_schema} label="Output schema" />
               </Card>
             </section>
           ) : null}

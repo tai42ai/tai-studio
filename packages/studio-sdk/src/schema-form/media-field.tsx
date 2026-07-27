@@ -11,11 +11,35 @@ import { useContext, useId, useState } from 'react';
 import { Badge } from '../components/badge';
 import { XCircleIcon } from '../components/icons';
 import { Button } from '../components/primitives';
-import { Field, useFieldControl } from '../components/field';
+import { Field, useFieldControl, type FieldControlProps } from '../components/field';
 import { TextInput } from '../components/inputs';
 import type { MediaUpload } from './classify';
 import { MaxUploadBytesContext } from './context';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
+
+/**
+ * Add the upload error this module owns to the enclosing `Field`'s wiring.
+ *
+ * The upload error is raised by the input surfaces themselves rather than by the
+ * schema, so `Field` cannot see it: without this the message was announced by
+ * nothing and neither surface reported itself invalid. Used only where the
+ * element is a bare `<input>`; the SDK's `TextInput` composes the field wiring
+ * with the caller's own attributes itself, so the paste fallback states only the
+ * error's id and lets it do the joining.
+ */
+function withUploadError(
+  field: FieldControlProps,
+  uploadErrorId: string | undefined,
+): FieldControlProps {
+  if (uploadErrorId === undefined) return field;
+  const describedBy = field['aria-describedby'];
+  return {
+    ...field,
+    'aria-describedby':
+      describedBy === undefined ? uploadErrorId : `${describedBy} ${uploadErrorId}`,
+    'aria-invalid': true,
+  };
+}
 
 /**
  * The drag-drop surface + file input. Split out so its `useFieldControl` call
@@ -25,12 +49,15 @@ import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
  */
 function UploadDropZone({
   accept,
+  uploadErrorId,
   onFile,
 }: {
   accept: string | undefined;
+  /** Set while an upload error stands, so the input points at it and reads invalid. */
+  uploadErrorId: string | undefined;
   onFile: (file: File | undefined) => void;
 }): ReactNode {
-  const field = useFieldControl();
+  const field = withUploadError(useFieldControl(), uploadErrorId);
   return (
     <div
       className="tai-card tai-stack tai-stack-2"
@@ -83,6 +110,7 @@ export function MediaField({
   onChange: (value: string) => void;
 }): ReactNode {
   const pasteId = useId();
+  const uploadErrorId = useId();
   const defaultMax = useContext(MaxUploadBytesContext);
   const maxBytes = effectiveMaxBytes(media.maxBytes, defaultMax);
   const [uploadError, setUploadError] = useState<string | undefined>(undefined);
@@ -127,7 +155,11 @@ export function MediaField({
 
   return (
     <Field label={heading} description={description} error={error}>
-      <UploadDropZone accept={media.mediaType} onFile={accept} />
+      <UploadDropZone
+        accept={media.mediaType}
+        uploadErrorId={uploadError === undefined ? undefined : uploadErrorId}
+        onFile={accept}
+      />
 
       {fileName !== undefined ? (
         <div className="tai-row">
@@ -154,7 +186,7 @@ export function MediaField({
       ) : null}
 
       {uploadError !== undefined ? (
-        <span role="alert" className="tai-field-error">
+        <span id={uploadErrorId} role="alert" className="tai-field-error">
           <XCircleIcon />
           {uploadError}
         </span>
@@ -165,6 +197,10 @@ export function MediaField({
         <TextInput
           id={pasteId}
           type="text"
+          // Only the upload error's id: `TextInput` joins it with the enclosing
+          // Field's own description and error IDREFs rather than replacing them.
+          aria-describedby={uploadError === undefined ? undefined : uploadErrorId}
+          aria-invalid={uploadError === undefined ? undefined : true}
           value={value}
           onChange={(event) => {
             const next = event.target.value;

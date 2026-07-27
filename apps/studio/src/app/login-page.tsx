@@ -66,7 +66,9 @@ const buttonLinkStyle: CSSProperties = {
   font: 'var(--tai-text-md) var(--tai-font-sans)',
   background: 'var(--tai-color-surface-raised)',
   color: 'var(--tai-color-text)',
-  border: '1px solid var(--tai-color-border)',
+  // The same contrast-safe boundary a secondary `Button` draws — this anchor is a
+  // control, and a decorative border would be its only, sub-3:1 edge.
+  border: '1px solid var(--tai-color-control-border)',
   textDecoration: 'none',
   cursor: 'pointer',
 };

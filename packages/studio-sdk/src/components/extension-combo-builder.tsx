@@ -48,7 +48,7 @@ import { comboElementNames, extensionElementName } from '../extension-combos';
 import { SchemaEditor, type SchemaEditorChange } from '../schema-editor';
 import { Badge } from './badge';
 import { ExtensionPicker } from './extension-picker';
-import { AlertTriangleIcon, CloseIcon } from './icons';
+import { CloseIcon, XCircleIcon } from './icons';
 import { Button } from './primitives';
 
 /** The one config-taking extension this builder authors inline. */
@@ -219,7 +219,11 @@ export function ExtensionComboBuilder({
                   </span>
                   <Button
                     type="button"
-                    aria-label={`Edit combo ${names.join('+')}`}
+                    // The name starts with the words the button is SHOWING, which
+                    // is what WCAG 2.5.3 (Label in Name) asks: a constant "Edit …"
+                    // would leave a button reading "Editing" named "Edit", and a
+                    // voice-control user naming a control they cannot see.
+                    aria-label={`${editing === index ? 'Editing' : 'Edit'} combo ${names.join('+')}`}
                     disabled={disabled === true || editing === index}
                     onClick={() => {
                       startEdit(index);
@@ -241,8 +245,9 @@ export function ExtensionComboBuilder({
                 </div>
                 {unknown.length > 0 ? (
                   <p role="alert" className="tai-field-error">
-                    <AlertTriangleIcon />
-                    unknown extension: {unknown.join(', ')}
+                    <XCircleIcon />
+                    {unknown.length === 1 ? 'Unknown extension: ' : 'Unknown extensions: '}
+                    {unknown.join(', ')}.
                   </p>
                 ) : null}
               </li>
@@ -279,7 +284,7 @@ export function ExtensionComboBuilder({
 
         {isDuplicate ? (
           <p role="alert" className="tai-field-error">
-            <AlertTriangleIcon />
+            <XCircleIcon />
             This combo is already added.
           </p>
         ) : null}

@@ -10,11 +10,11 @@
  */
 import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 
-export function Table({
-  children,
-  className,
-  ...props
-}: HTMLAttributes<HTMLTableElement> & { children?: ReactNode }) {
+export interface TableProps extends HTMLAttributes<HTMLTableElement> {
+  readonly children?: ReactNode;
+}
+
+export function Table({ children, className, ...props }: TableProps) {
   return (
     <table {...props} className={className === undefined ? 'tai-table' : `tai-table ${className}`}>
       {children}
@@ -22,29 +22,29 @@ export function Table({
   );
 }
 
-export function THead({
-  children,
-  ...props
-}: HTMLAttributes<HTMLTableSectionElement> & { children?: ReactNode }) {
+/** `<thead>` and `<tbody>` take the same surface: the native one. */
+export interface TableSectionProps extends HTMLAttributes<HTMLTableSectionElement> {
+  readonly children?: ReactNode;
+}
+
+export function THead({ children, ...props }: TableSectionProps) {
   return <thead {...props}>{children}</thead>;
 }
 
-export function TBody({
-  children,
-  ...props
-}: HTMLAttributes<HTMLTableSectionElement> & { children?: ReactNode }) {
+export function TBody({ children, ...props }: TableSectionProps) {
   return <tbody {...props}>{children}</tbody>;
 }
 
-export function TR({
-  children,
-  ...props
-}: HTMLAttributes<HTMLTableRowElement> & { children?: ReactNode }) {
+export interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
+  readonly children?: ReactNode;
+}
+
+export function TR({ children, ...props }: TableRowProps) {
   return <tr {...props}>{children}</tr>;
 }
 
 /** Right-align a column of digits on tabular figures. */
-interface NumericColumnProps {
+export interface NumericColumnProps {
   readonly numeric?: boolean;
 }
 
@@ -54,12 +54,11 @@ interface NumericColumnProps {
  * below it: a screen reader announcing a data cell has no header to name it.
  * A row header — the leading cell of a body row — passes `scope="row"`.
  */
-export function TH({
-  children,
-  numeric = false,
-  scope = 'col',
-  ...props
-}: ThHTMLAttributes<HTMLTableCellElement> & NumericColumnProps & { children?: ReactNode }) {
+export interface THProps extends ThHTMLAttributes<HTMLTableCellElement>, NumericColumnProps {
+  readonly children?: ReactNode;
+}
+
+export function TH({ children, numeric = false, scope = 'col', ...props }: THProps) {
   return (
     <th {...props} scope={scope} data-numeric={numeric ? 'true' : undefined}>
       {children}
@@ -67,11 +66,11 @@ export function TH({
   );
 }
 
-export function TD({
-  children,
-  numeric = false,
-  ...props
-}: TdHTMLAttributes<HTMLTableCellElement> & NumericColumnProps & { children?: ReactNode }) {
+export interface TDProps extends TdHTMLAttributes<HTMLTableCellElement>, NumericColumnProps {
+  readonly children?: ReactNode;
+}
+
+export function TD({ children, numeric = false, ...props }: TDProps) {
   return (
     <td {...props} data-numeric={numeric ? 'true' : undefined}>
       {children}

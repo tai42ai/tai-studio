@@ -26,15 +26,16 @@ import {
   Field,
   FleetReport,
   SchemaForm,
+  ScrollRegion,
   Skeleton,
   Spinner,
-  Table,
   TBody,
   TD,
   TH,
   THead,
-  Textarea,
   TR,
+  Table,
+  Textarea,
   defaultValueForSchema,
   errorMessage,
   useApi,
@@ -61,48 +62,48 @@ function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode 
 
   return (
     <>
-      <Table>
-        <THead>
-          <TR>
-            <TH>Server</TH>
-            <TH>Status</TH>
-            <TH>Detail</TH>
-            <TH>
-              <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>
-                Actions
-              </span>
-            </TH>
-          </TR>
-        </THead>
-        <TBody>
-          {rows.map((row) => {
-            const pending = reload.isPending && reload.variables === row.title;
-            return (
-              <TR key={row.title}>
-                <TD>{row.title}</TD>
-                <TD>
-                  <Badge variant={row.healthy ? 'success' : 'danger'}>
-                    {row.healthy ? 'bound' : 'failed'}
-                  </Badge>
-                </TD>
-                <TD>{row.detail}</TD>
-                <TD>
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      reload.mutate(row.title);
-                    }}
-                    disabled={pending}
-                  >
-                    {pending ? <Spinner label={`Reloading ${row.title}`} /> : null}
-                    Reload
-                  </Button>
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+      <ScrollRegion label="MCP servers">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Server</TH>
+              <TH>Status</TH>
+              <TH>Detail</TH>
+              <TH>
+                <span className="tai-visually-hidden">Actions</span>
+              </TH>
+            </TR>
+          </THead>
+          <TBody>
+            {rows.map((row) => {
+              const pending = reload.isPending && reload.variables === row.title;
+              return (
+                <TR key={row.title}>
+                  <TD>{row.title}</TD>
+                  <TD>
+                    <Badge variant={row.healthy ? 'success' : 'danger'}>
+                      {row.healthy ? 'bound' : 'failed'}
+                    </Badge>
+                  </TD>
+                  <TD>{row.detail}</TD>
+                  <TD>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        reload.mutate(row.title);
+                      }}
+                      disabled={pending}
+                    >
+                      {pending ? <Spinner label={`Reloading ${row.title}`} /> : null}
+                      Reload
+                    </Button>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </ScrollRegion>
       {reload.isError ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
           <ErrorState message={errorMessage(reload.error)} />

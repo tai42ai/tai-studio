@@ -123,9 +123,13 @@ describe('JsonDiff — rendered table', () => {
     expect(screen.getByText('2')).toHaveClass('tai-code');
   });
 
-  it('renders identical bodies as a no-difference message', () => {
+  it('renders identical bodies as a no-difference message in no consumer’s vocabulary', () => {
+    // The component is documented GENERIC and kind-agnostic, and its callers
+    // include surfaces that are not versioning at all — so the empty state may
+    // not name one consumer's domain word. Asserted exactly, because a loose
+    // `/No differences/` match reads the same for every wording after it.
     render(<JsonDiff before={{ a: 1 }} after={{ a: 1 }} />);
-    expect(screen.getByText(/No differences/i)).toBeInTheDocument();
+    expect(screen.getByText('No differences between the two values.')).toBeInTheDocument();
   });
 
   it('renders a changed array as a single row (one-row-per-changed-array rule)', () => {

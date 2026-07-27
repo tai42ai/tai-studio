@@ -9,11 +9,18 @@
  * raised-surface token the bubble's background resolves from.
  */
 import * as RadixTooltip from '@radix-ui/react-tooltip';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 export interface TooltipProps {
   readonly content: ReactNode;
-  readonly children: ReactNode;
+  /**
+   * The element the bubble describes and hangs off.
+   *
+   * It is a single ELEMENT, not any node: Radix clones its props onto it, so a
+   * string throws and a fragment silently renders children that carry none of
+   * the hover/focus wiring or the `aria-describedby` back to the bubble.
+   */
+  readonly children: ReactElement;
   readonly delayDuration?: number;
 }
 

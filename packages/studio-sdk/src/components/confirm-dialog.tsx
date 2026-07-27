@@ -28,8 +28,15 @@ export interface ConfirmDialogProps {
   readonly onConfirm: () => void;
   readonly onClose: () => void;
   readonly isPending: boolean;
-  /** The failed action's error, rendered loudly; omit/`null` while there is none. */
-  readonly error?: Error | null;
+  /**
+   * The failed action's error, rendered loudly; omit/`null` while there is none.
+   *
+   * A thrown `Error` or the message on its own — `Field`'s `error` is a plain
+   * string, and the two props sit side by side on a form, so this one accepts
+   * that spelling too rather than making one surface's `error` unassignable to
+   * the other's.
+   */
+  readonly error?: Error | string | null;
   readonly confirmVariant?: 'primary' | 'danger';
   /** The prompt body — what the operator is confirming. */
   readonly children: ReactNode;

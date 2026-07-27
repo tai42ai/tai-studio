@@ -6,6 +6,7 @@
  * the OAuth popup flow.
  */
 import {
+  ArrowLeftIcon,
   Badge,
   Button,
   Card,
@@ -194,7 +195,8 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
           }}
           aria-label="Back to connectors"
         >
-          ← Back
+          <ArrowLeftIcon />
+          Back
         </Button>
         <h1 style={{ margin: 0, font: 'var(--tai-text-lg) var(--tai-font-sans)' }}>
           {connection.alias}

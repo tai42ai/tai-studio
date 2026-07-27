@@ -119,16 +119,16 @@ describe('Select', () => {
     expect(trigger).toHaveTextContent('Pick one');
     expect(trigger.textContent).not.toContain('▾');
   });
-});
 
-it('renders the trigger and its popup and keeps the accessible name', async () => {
-  const user = userEvent.setup();
-  render(<Select options={OPTIONS} aria-label="Number" placeholder="Pick one" />);
+  it('renders the trigger and its popup and keeps the accessible name', async () => {
+    const user = userEvent.setup();
+    render(<Select options={OPTIONS} aria-label="Number" placeholder="Pick one" />);
 
-  const trigger = screen.getByRole('combobox', { name: 'Number' });
-  expect(trigger).toHaveClass('tai-select-trigger');
-  expect(trigger).toHaveTextContent('Pick one');
+    const trigger = screen.getByRole('combobox', { name: 'Number' });
+    expect(trigger).toHaveClass('tai-select-trigger');
+    expect(trigger).toHaveTextContent('Pick one');
 
-  await user.click(trigger);
-  expect(await screen.findByRole('option', { name: 'One' })).toHaveClass('tai-select-item');
+    await user.click(trigger);
+    expect(await screen.findByRole('option', { name: 'One' })).toHaveClass('tai-select-item');
+  });
 });

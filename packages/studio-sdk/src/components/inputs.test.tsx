@@ -78,6 +78,46 @@ describe('Field', () => {
     expect(screen.getByText('work address')).toBeInTheDocument();
   });
 
+  it("keeps the field's description IDREFs when the caller adds one of its own", () => {
+    // The caller's props used to be spread AFTER the field wiring, so a caller's
+    // own `aria-describedby` silently deleted the field's description and error
+    // IDREFs — the wiring vanished and nothing said so. The list is shared: both
+    // sides keep their entries.
+    render(
+      <>
+        <span id="own-hint">no spaces allowed</span>
+        <Field label="Email" description="work address" error="required">
+          <TextInput aria-describedby="own-hint" />
+        </Field>
+      </>,
+    );
+
+    const input = screen.getByRole('textbox', { name: 'Email' });
+    const ids = (input.getAttribute('aria-describedby') ?? '').split(' ').filter(Boolean);
+    expect(ids).toHaveLength(3);
+    expect(ids[0]).toBe('own-hint');
+    for (const id of ids) expect(document.getElementById(id)).not.toBeNull();
+    expect(input).toHaveAccessibleDescription('no spaces allowed work address required');
+  });
+
+  it("lets the caller's own id and aria-invalid win over the field's", () => {
+    // `id` and `aria-invalid` are single-valued, so there is nothing to merge and
+    // an explicit prop is a decision: a Field hosting more than one control has
+    // to be able to give the second one an id of its own, and a control that
+    // knows itself invalid must be able to say so under a Field that does not.
+    render(
+      <Field label="Email" description="work address">
+        <TextInput id="my-own-id" aria-invalid="true" />
+      </Field>,
+    );
+
+    const input = screen.getByRole('textbox');
+    expect(input).toHaveAttribute('id', 'my-own-id');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    // The description IDREF the Field owns is untouched by either.
+    expect(input).toHaveAccessibleDescription('work address');
+  });
+
   it('omits aria-invalid and error wiring when there is no error', () => {
     render(
       <Field label="Email" description="work address">

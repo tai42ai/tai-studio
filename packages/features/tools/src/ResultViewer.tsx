@@ -128,7 +128,7 @@ export function ResultViewer({ result }: { result: unknown }): ReactNode {
     return <CodeBlock language="result" code={result} />;
   }
   if (isRecord(result) || Array.isArray(result)) {
-    return <JsonTree data={result} />;
+    return <JsonTree data={result} label="Tool result" />;
   }
   // Other primitives (number, boolean, null, bigint) — readable escaped text.
   return <p style={primitiveStyle}>{full}</p>;

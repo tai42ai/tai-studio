@@ -45,7 +45,7 @@ describe('ExternalLinkButton', () => {
     expect(text).toHaveAttribute('data-neutralized', 'true');
     expect(text).toHaveAttribute(
       'title',
-      'This link was blocked because it is not an http(s) URL.',
+      'This link was blocked because it is neither an in-app reference nor an http(s) URL.',
     );
     // It wears the navigable form's classes, so the two cannot drift apart.
     expect(text).toHaveClass('tai-btn', 'tai-btn-secondary');

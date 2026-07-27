@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -34,6 +34,23 @@ describe('RadioGroup', () => {
     await user.click(screen.getByRole('radio', { name: 'Banana' }));
     expect(onValueChange).toHaveBeenCalledWith('b');
     expect(screen.getByRole('radio', { name: 'Banana' })).toBeChecked();
+  });
+
+  it('emits one naming attribute, never both', () => {
+    // With `label` rendered the group is named by `aria-labelledby`, and the
+    // accessible-name computation takes that over `aria-label` — so shipping
+    // both leaves the caller's string computed by nothing while its own prop doc
+    // presents it as the fallback that applies when `label` supplies no name.
+    render(<RadioGroup options={OPTIONS} label="Fruit" aria-label="Ignored" />);
+    const group = screen.getByRole('radiogroup');
+    expect(group).toHaveAccessibleName('Fruit');
+    expect(group).not.toHaveAttribute('aria-label');
+
+    cleanup();
+    render(<RadioGroup options={OPTIONS} aria-label="Fruit" />);
+    const bare = screen.getByRole('radiogroup');
+    expect(bare).toHaveAttribute('aria-label', 'Fruit');
+    expect(bare).not.toHaveAttribute('aria-labelledby');
   });
 
   it('sits inside the group container the enclosing Field names', () => {
@@ -191,6 +208,14 @@ describe('RadioGroup', () => {
     expect(screen.getByRole('group', { name: 'Fruit' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Variety' })).toBeInTheDocument();
   });
+
+  it('renders the list variant and keeps every accessible name', () => {
+    render(<RadioGroup options={OPTIONS} label="Fruit" />);
+
+    expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toHaveClass('tai-stack');
+    expect(screen.getByRole('radio', { name: 'Apple' })).toHaveClass('tai-radio');
+    expect(screen.getByRole('radio', { name: 'Banana' })).toBeInTheDocument();
+  });
 });
 
 describe('RadioGroup (segmented)', () => {
@@ -271,21 +296,13 @@ describe('RadioGroup (segmented)', () => {
     );
     expect(screen.getByRole('radio', { name: 'Apple' })).toBeDisabled();
   });
-});
 
-it('renders the list variant and keeps every accessible name', () => {
-  render(<RadioGroup options={OPTIONS} label="Fruit" />);
+  it('renders the segmented variant and keeps every accessible name', () => {
+    render(<RadioGroup options={THEME_OPTIONS} variant="segmented" aria-label="Theme" />);
 
-  expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toHaveClass('tai-stack');
-  expect(screen.getByRole('radio', { name: 'Apple' })).toHaveClass('tai-radio');
-  expect(screen.getByRole('radio', { name: 'Banana' })).toBeInTheDocument();
-});
-
-it('renders the segmented variant and keeps every accessible name', () => {
-  render(<RadioGroup options={THEME_OPTIONS} variant="segmented" aria-label="Theme" />);
-
-  expect(screen.getByRole('radiogroup', { name: 'Theme' })).toHaveClass('tai-segmented');
-  for (const name of ['Light', 'Dark', 'System']) {
-    expect(screen.getByRole('radio', { name })).toHaveClass('tai-segment');
-  }
+    expect(screen.getByRole('radiogroup', { name: 'Theme' })).toHaveClass('tai-segmented');
+    for (const name of ['Light', 'Dark', 'System']) {
+      expect(screen.getByRole('radio', { name })).toHaveClass('tai-segment');
+    }
+  });
 });

@@ -112,16 +112,16 @@ describe('CompletionInput', () => {
     expect(input).toHaveAttribute('aria-expanded', 'true');
     expect(input).toHaveAttribute('aria-controls', listbox.id);
   });
-});
 
-it('renders the field and its suggestions unchanged', async () => {
-  const user = userEvent.setup();
-  const fetchCompletions = vi.fn(async (value: string) => [`${value}-alpha`]);
-  render(<Harness fetchCompletions={fetchCompletions} />);
+  it('wears the shared input class and renders suggestions as select items', async () => {
+    const user = userEvent.setup();
+    const fetchCompletions = vi.fn(async (value: string) => [`${value}-alpha`]);
+    render(<Harness fetchCompletions={fetchCompletions} />);
 
-  const input = screen.getByRole('combobox');
-  expect(input).toHaveClass('tai-input');
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveClass('tai-input');
 
-  await user.type(input, 'x');
-  expect(await screen.findByRole('option', { name: 'x-alpha' })).toHaveClass('tai-select-item');
+    await user.type(input, 'x');
+    expect(await screen.findByRole('option', { name: 'x-alpha' })).toHaveClass('tai-select-item');
+  });
 });

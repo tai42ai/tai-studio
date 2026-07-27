@@ -16,6 +16,14 @@ describe('SubMcpTab', () => {
     renderWithProviders(<SubMcpTab />, { client });
 
     expect(await screen.findByText('alpha')).toBeInTheDocument();
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
+    // The hidden Actions header wears the published clip class, not a partial
+    // hand-rolled copy of it that stays selectable and readable to a magnifier.
+    expect(screen.getByText('Actions')).toHaveClass('tai-visually-hidden');
     // The tool badge in the list row.
     expect(screen.getAllByText('echo').length).toBeGreaterThan(0);
   });

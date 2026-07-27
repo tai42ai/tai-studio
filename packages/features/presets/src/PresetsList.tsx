@@ -21,6 +21,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Skeleton,
   Spinner,
   TBody,
@@ -123,14 +124,16 @@ function PresetTable({
   readonly selected: string | undefined;
 }): ReactNode {
   return (
-    <Table>
-      <PresetTableHead />
-      <TBody>
-        {presets.map((preset) => (
-          <PresetRow key={preset.name} preset={preset} selected={preset.name === selected} />
-        ))}
-      </TBody>
-    </Table>
+    <ScrollRegion label="Presets">
+      <Table>
+        <PresetTableHead />
+        <TBody>
+          {presets.map((preset) => (
+            <PresetRow key={preset.name} preset={preset} selected={preset.name === selected} />
+          ))}
+        </TBody>
+      </Table>
+    </ScrollRegion>
   );
 }
 

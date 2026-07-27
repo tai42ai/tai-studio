@@ -218,6 +218,11 @@ describe('SystemPage', () => {
     // Each state renders its own badge variant: active→success, default→warning, off→neutral.
     const monitoring = await screen.findByText('monitoring');
     const monitoringRow = monitoring.closest('tr');
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(monitoringRow).not.toBeNull();
     expect(within(monitoringRow as HTMLElement).getByText('default')).toHaveAttribute(
       'data-variant',
@@ -284,6 +289,11 @@ describe('SystemPage', () => {
 
     expect(await screen.findByText('CeleryBackend')).toBeInTheDocument();
     expect(await screen.findByText('Workers (3)')).toBeInTheDocument();
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(screen.getByText('w1')).toBeInTheDocument();
     expect(screen.getByText('w3')).toBeInTheDocument();
   });

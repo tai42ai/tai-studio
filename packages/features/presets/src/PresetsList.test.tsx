@@ -114,6 +114,11 @@ describe('PresetsList', () => {
     renderWithProviders(<PresetsList selected="paris_weather" />, { client });
 
     const link = await screen.findByRole('link', { name: 'Open preset paris_weather' });
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(link).toHaveAttribute('aria-current', 'page');
   });
 

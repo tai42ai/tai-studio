@@ -26,6 +26,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Skeleton,
   Spinner,
   TBody,
@@ -168,42 +169,44 @@ function ScheduleTable({ schedules }: { schedules: readonly ScheduleItem[] }): R
 
   return (
     <Card>
-      <Table>
-        <THead>
-          <TR>
-            <TH>Name</TH>
-            <TH>Tool</TH>
-            <TH>Schedule</TH>
-            <TH>Status</TH>
-            <TH>Actions</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {schedules.map((item) => (
-            <TR key={item.name}>
-              <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{item.name}</TD>
-              <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{toolIdentity(item)}</TD>
-              <TD>{scheduleSummary(item.schedule)}</TD>
-              <TD>
-                <Badge variant={item.enabled ? 'success' : 'neutral'}>
-                  {item.enabled ? 'Enabled' : 'Disabled'}
-                </Badge>
-              </TD>
-              <TD>
-                <Button
-                  variant="danger"
-                  aria-label={`Delete schedule ${item.name}`}
-                  onClick={() => {
-                    setDeleting(item.name);
-                  }}
-                >
-                  Delete
-                </Button>
-              </TD>
+      <ScrollRegion label="Schedules">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Name</TH>
+              <TH>Tool</TH>
+              <TH>Schedule</TH>
+              <TH>Status</TH>
+              <TH>Actions</TH>
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {schedules.map((item) => (
+              <TR key={item.name}>
+                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{item.name}</TD>
+                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{toolIdentity(item)}</TD>
+                <TD>{scheduleSummary(item.schedule)}</TD>
+                <TD>
+                  <Badge variant={item.enabled ? 'success' : 'neutral'}>
+                    {item.enabled ? 'Enabled' : 'Disabled'}
+                  </Badge>
+                </TD>
+                <TD>
+                  <Button
+                    variant="danger"
+                    aria-label={`Delete schedule ${item.name}`}
+                    onClick={() => {
+                      setDeleting(item.name);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
       {deleting !== null ? (
         <DeleteScheduleDialog
           name={deleting}

@@ -70,6 +70,15 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
   });
 
+  it('renders a bare message string as loudly as a thrown Error', () => {
+    // `Field`'s `error` is a plain string and the two props sit side by side on
+    // a form, so this one takes that spelling too. A narrower type would leave
+    // one surface's `error` unassignable to the other's for no reason a caller
+    // could see.
+    renderConfirm({ error: 'scope is referenced by 3 agents' });
+    expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
+  });
+
   it('lands its actions in the shared dialog-actions row', () => {
     renderConfirm();
     const actions = document.querySelector('.tai-dialog-actions');

@@ -22,9 +22,9 @@
  * window is the first paint: `ThemeProvider` (`useTheme`) stamps `data-theme` on
  * mount, after which the media query no longer decides and an OS theme flip
  * while the app is open changes nothing. Following the OS live — a `matchMedia`
- * listener and a `system` preference — is PLAN_1's `useTheme` work, not this
- * sheet's. A host that mounts no provider keeps the media query as its theme
- * source. `color-scheme` follows the same three states, so native scrollbars,
+ * listener and a `system` preference — belongs to the host's theme provider, not
+ * to this sheet. A host that mounts no provider keeps the media query as its
+ * theme source. `color-scheme` follows the same three states, so native scrollbars,
  * selects and form autofill match the tokens.
  *
  * BROWSER FLOOR. Deliberately NOT `light-dark()`. That function would fold each

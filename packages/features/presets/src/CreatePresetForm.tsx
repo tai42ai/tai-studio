@@ -31,6 +31,7 @@ import {
   Textarea,
   TextInput,
   ToolPicker,
+  XCircleIcon,
   errorMessage,
   toolsListKey,
   useApi,
@@ -116,6 +117,13 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
     queryFn: () => api.getToolSchema(base ?? ''),
     enabled: base !== null && base !== '',
   });
+
+  const enrichmentFailed = tagsQuery.isError || agentsQuery.isError || schemaQuery.isError;
+  const retryEnrichment = (): void => {
+    if (tagsQuery.isError) void tagsQuery.refetch();
+    if (agentsQuery.isError) void agentsQuery.refetch();
+    if (schemaQuery.isError) void schemaQuery.refetch();
+  };
 
   const create = useMutation({
     mutationFn: (body: CreatePresetBody) => api.createPreset(body),
@@ -265,42 +273,41 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           </Field>
         )}
 
-        {/* The base picker's ENRICHMENT reads. Tags group the options; the agent list
-            adds the " (agent)" suffix that is the only thing telling an author a base
-            is an agent. Neither is load-bearing, so a failure keeps the picker usable
-            — but it must never degrade SILENTLY, or an unlabelled, ungrouped picker
-            reads as the truth about the deployment. */}
-        {tagsQuery.isError || agentsQuery.isError ? (
-          <div
-            role="alert"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--tai-space-2)',
-              flexWrap: 'wrap',
-            }}
-          >
-            <span style={{ color: 'var(--tai-color-danger)' }}>
-              {[
-                tagsQuery.isError
-                  ? `Tag grouping is unavailable: ${errorMessage(tagsQuery.error)}`
-                  : null,
-                agentsQuery.isError
-                  ? `Agent labelling is unavailable: ${errorMessage(agentsQuery.error)}`
-                  : null,
-              ]
-                .filter((line) => line !== null)
-                .join(' ')}
-            </span>
-            <Button
-              type="button"
-              onClick={() => {
-                if (tagsQuery.isError) void tagsQuery.refetch();
-                if (agentsQuery.isError) void agentsQuery.refetch();
-              }}
-            >
-              Retry
-            </Button>
+        {/* The base picker's and the kwargs hint's ENRICHMENT reads. Tags group the
+            options; the agent list adds the " (agent)" suffix that is the only thing
+            telling an author a base is an agent; the base tool's schema supplies the
+            "Base tool inputs: …" hint. None is load-bearing, so a failure keeps the
+            form usable — but it must never degrade SILENTLY, or an unlabelled,
+            ungrouped picker and a hintless kwargs box read as the truth about the
+            deployment. Each failed read gets its OWN line: joined into one string
+            the sentences ran together. `.tai-field-error` is the published carrier
+            for a wrapping message, so a 320 px viewport never widens on it, and each
+            line carries the ERROR mark so the hue is never the only signal. */}
+        {enrichmentFailed ? (
+          <div role="alert" className="tai-stack tai-stack-2">
+            {tagsQuery.isError ? (
+              <p className="tai-field-error" style={{ margin: 0 }}>
+                <XCircleIcon />
+                {`Tag grouping is unavailable: ${errorMessage(tagsQuery.error)}`}
+              </p>
+            ) : null}
+            {agentsQuery.isError ? (
+              <p className="tai-field-error" style={{ margin: 0 }}>
+                <XCircleIcon />
+                {`Agent labelling is unavailable: ${errorMessage(agentsQuery.error)}`}
+              </p>
+            ) : null}
+            {schemaQuery.isError ? (
+              <p className="tai-field-error" style={{ margin: 0 }}>
+                <XCircleIcon />
+                {`Base tool input names are unavailable: ${errorMessage(schemaQuery.error)}`}
+              </p>
+            ) : null}
+            <div>
+              <Button type="button" onClick={retryEnrichment}>
+                Retry
+              </Button>
+            </div>
           </div>
         ) : null}
 

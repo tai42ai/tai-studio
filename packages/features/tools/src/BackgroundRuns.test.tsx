@@ -14,7 +14,7 @@ import type { ToolRunListItem, ToolRunRecord } from '@tai42/api-client';
 
 import { BackgroundRuns } from './BackgroundRuns';
 import { POLL_INTERVAL_MS } from './backgroundRunsCommon';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { decorBorderedControls, renderWithProviders, type StubApiClient } from './test-utils';
 
 function listItem(over: Partial<ToolRunListItem> = {}): ToolRunListItem {
   return { run_id: 'r1', tool_name: 'echo', status: 'succeeded', started_at: 't1', ...over };
@@ -56,6 +56,15 @@ describe('BackgroundRuns — recent list', () => {
     renderWithProviders(<BackgroundRuns toolName="echo" />, { client });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('boom: list failed');
+  });
+  it('draws every run row with the contrast-safe border, never the decorative one', async () => {
+    // `tokens.css`: the decorative border sits below 3:1 and may never be a
+    // control's only boundary. Derived over the whole rendered panel.
+    const client: StubApiClient = { listToolRuns: vi.fn().mockResolvedValue([listItem()]) };
+    renderWithProviders(<BackgroundRuns toolName="echo" />, { client });
+
+    await screen.findByText('r1');
+    expect(decorBorderedControls(document.body)).toEqual([]);
   });
 });
 

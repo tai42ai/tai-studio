@@ -22,9 +22,10 @@
 #   SKELETON_DIR     path to the tai-skeleton checkout (default: sibling repo)
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist instead of
-#                    building it; unset (or anything else) builds the SPA from the
-#                    working tree, so the suites test the code they are run
-#                    against. Playwright's webServer passes it explicitly.
+#                    building it; unset (or anything else) builds the SPA AND every
+#                    workspace package it depends on from the working tree, so the
+#                    suites test the code they are run against. Playwright's
+#                    webServer passes it explicitly.
 #   MANIFEST_PATH    the skeleton manifest to serve (default: boot/manifest.yml,
 #                    the lean e2e manifest; the docs-screenshot runner overrides
 #                    this with boot/../docs-demo/manifest.yml)
@@ -147,7 +148,13 @@ if [[ "${SKIP_SPA_BUILD:-0}" == "1" && -f "${STUDIO_DIST}/index.html" ]]; then
   log "reusing existing SPA dist (SKIP_SPA_BUILD=1)"
 else
   log "building the Studio SPA + reference plugin bundle"
-  ( cd "${STUDIO_REPO}" && pnpm --filter @tai42/studio-app run build && pnpm --filter @tai42/e2e run build:reference-plugin )
+  # `@tai42/studio-app...` — the trailing `...` selects the app AND every workspace
+  # package it depends on, in topological order. The app resolves each of those
+  # through its `dist/` (`exports` points there), so filtering to the app alone
+  # rebuilt the SPA around whatever `dist/` happened to be on disk: a source change
+  # anywhere outside `apps/studio` was invisible to the suites under a green exit
+  # code, which is the same staleness this step exists to prevent.
+  ( cd "${STUDIO_REPO}" && pnpm --filter '@tai42/studio-app...' run build && pnpm --filter @tai42/e2e run build:reference-plugin )
 fi
 
 # --- 4. Seed the test API key (Redis), policy + route mappings (Postgres) ----

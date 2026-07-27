@@ -73,7 +73,10 @@ describe('TraceView', () => {
     };
     renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
-    expect(screen.getByRole('button', { name: '← Back to runs' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Back to runs' })).toBeInTheDocument();
+    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
+    // platform fallback face beside Inter. The icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
     expect(screen.queryByText('root-span')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -85,7 +88,7 @@ describe('TraceView', () => {
     renderWithProviders(<TraceView traceId="t1" onBack={onBack} />, { client });
 
     await screen.findByText('root-span');
-    await user.click(screen.getByRole('button', { name: '← Back to runs' }));
+    await user.click(screen.getByRole('button', { name: 'Back to runs' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
@@ -109,6 +112,35 @@ describe('TraceView', () => {
       screen.getByText((content) => content.includes('<script>alert(1)</script>')),
     ).toBeInTheDocument();
     expect(document.querySelector('script')).toBeNull();
+  });
+
+  it('names each JSON pane for the span and the side it holds, never all of them "JSON"', async () => {
+    // A `JsonTree` pane becomes a keyboard tab stop the moment it scrolls, and
+    // its name is whatever the call site passed — omitted, EVERY pane in the
+    // trace announces itself as "JSON" and a reader tabbing through cannot tell
+    // one span's input from another span's output. jsdom runs no layout, so the
+    // overflow the region keys on is stated on the prototype for this test.
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, value: 100 });
+    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, value: 400 });
+    try {
+      const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+      renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+      await screen.findByText('root-span');
+
+      const names = [...document.querySelectorAll('.tai-code-block')].map((pane) =>
+        pane.getAttribute('aria-label'),
+      );
+      expect(names).toEqual([
+        'root-span input',
+        'root-span output',
+        'child-span input',
+        'child-span output',
+      ]);
+    } finally {
+      // Unshadow the jsdom getters this test hid on the prototype.
+      Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
+      Reflect.deleteProperty(HTMLElement.prototype, 'scrollWidth');
+    }
   });
 
   it('renders a placeholder when the trace has no spans', async () => {

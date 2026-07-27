@@ -28,17 +28,8 @@ export interface ChipData {
   readonly methods: readonly string[];
 }
 
-const chipStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-  padding: 'var(--tai-space-1) var(--tai-space-2)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-md)',
-  background: 'var(--tai-color-surface)',
-  fontFamily: 'var(--tai-font-mono)',
-  fontSize: 'var(--tai-text-sm)',
-};
+/** A chip reads; it is not a control. The mono face is the only local addition. */
+const chipStyle: CSSProperties = { fontFamily: 'var(--tai-font-mono)' };
 
 const handleStyle: CSSProperties = {
   display: 'inline-flex',
@@ -64,7 +55,9 @@ const removeStyle: CSSProperties = {
   justifyContent: 'center',
   width: '1.25rem',
   height: '1.25rem',
-  border: '1px solid var(--tai-color-border)',
+  // Transparent ground: this edge is the button's ONLY boundary, so it takes the
+  // contrast-safe control token rather than the decorative one.
+  border: '1px solid var(--tai-color-control-border)',
   borderRadius: 'var(--tai-radius-sm)',
   background: 'transparent',
   color: 'var(--tai-color-text-muted)',
@@ -103,7 +96,7 @@ export function ScopeItemChip({
   const kindLabel = data.itemType === 'sub-mcp' ? 'sub-MCP mount' : data.methods.join(' ');
 
   return (
-    <span style={chipStyle}>
+    <span className="tai-chip tai-chip-static" style={chipStyle}>
       <button
         ref={setNodeRef}
         type="button"

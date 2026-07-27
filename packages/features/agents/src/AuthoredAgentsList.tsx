@@ -10,6 +10,7 @@ import {
   Button,
   Card,
   EmptyState,
+  ScrollRegion,
   TBody,
   TD,
   TH,
@@ -70,49 +71,51 @@ export function AuthoredAgentsList({
 
   return (
     <Card>
-      <Table>
-        <THead>
-          <TR>
-            <TH>Name</TH>
-            <TH>Description</TH>
-            <TH>Base agent</TH>
-            <TH>Active version</TH>
-            <TH>Actions</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {authored.map(({ preset, baseAgent }) => (
-            <TR key={preset.name} data-testid="authored-agent-row" data-agent={preset.name}>
-              <TD style={monoStyle}>{preset.name}</TD>
-              <TD>{preset.description}</TD>
-              <TD style={monoStyle}>{baseAgent.name}</TD>
-              <TD>{preset.active_version}</TD>
-              <TD>
-                <div style={{ ...rowStyle, flexWrap: 'wrap' }}>
-                  <Button
-                    variant="primary"
-                    aria-label={`Run authored agent ${preset.name}`}
-                    onClick={() => {
-                      onRunAuthored({ name: preset.name, baseAgent });
-                    }}
-                  >
-                    Run
-                  </Button>
-                  {/* Versioning, rollback, and delete for this preset live on the
-                      presets page — this links out rather than duplicating them. */}
-                  <AppLink
-                    to="presets"
-                    search={{ preset: preset.name }}
-                    aria-label={`Manage authored agent ${preset.name}`}
-                  >
-                    Manage
-                  </AppLink>
-                </div>
-              </TD>
+      <ScrollRegion label="Authored agents">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Name</TH>
+              <TH>Description</TH>
+              <TH>Base agent</TH>
+              <TH>Active version</TH>
+              <TH>Actions</TH>
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {authored.map(({ preset, baseAgent }) => (
+              <TR key={preset.name} data-testid="authored-agent-row" data-agent={preset.name}>
+                <TD style={monoStyle}>{preset.name}</TD>
+                <TD>{preset.description}</TD>
+                <TD style={monoStyle}>{baseAgent.name}</TD>
+                <TD>{preset.active_version}</TD>
+                <TD>
+                  <div style={{ ...rowStyle, flexWrap: 'wrap' }}>
+                    <Button
+                      variant="primary"
+                      aria-label={`Run authored agent ${preset.name}`}
+                      onClick={() => {
+                        onRunAuthored({ name: preset.name, baseAgent });
+                      }}
+                    >
+                      Run
+                    </Button>
+                    {/* Versioning, rollback, and delete for this preset live on the
+                        presets page — this links out rather than duplicating them. */}
+                    <AppLink
+                      to="presets"
+                      search={{ preset: preset.name }}
+                      aria-label={`Manage authored agent ${preset.name}`}
+                    >
+                      Manage
+                    </AppLink>
+                  </div>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     </Card>
   );
 }

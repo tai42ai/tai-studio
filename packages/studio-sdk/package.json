@@ -46,13 +46,19 @@
     },
     "./tokens.css": "./dist/components/tokens.css",
     "./fonts.css": "./dist/components/fonts.css",
-    "./components.css": "./dist/components/components.css"
+    "./components.css": "./dist/components/components.css",
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "src",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/test-setup.ts",
+    "!src/**/test-utils.ts",
+    "!src/**/test-utils.tsx",
     "!src/**/__snapshots__"
   ],
   "scripts": {

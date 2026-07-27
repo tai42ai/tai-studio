@@ -92,7 +92,8 @@ export const TEST_GLOBS = ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/test-
 
 /**
  * Builds the `boundaries/dependencies` allowlist. When `includeTestExternals` is
- * true the test-only packages are added; it is enabled for TEST_GLOBS only.
+ * true the test-only packages AND Node core are added; it is enabled for
+ * TEST_GLOBS only.
  *
  * @param {boolean} includeTestExternals
  */
@@ -103,6 +104,17 @@ export function boundariesDependenciesRule(includeTestExternals) {
       module: [...internal, ...runtime, ...(includeTestExternals ? test : [])],
     },
   });
+  // Node core (`node:fs` and friends) in the SDK and the shell app is a TEST-ONLY
+  // capability. The design-system source and manifest scanners READ the
+  // monorepo's own files from disk rather than importing an architectural layer,
+  // so their tests need it; production library code must not reach it, and does
+  // not get it. Scoped by LAYER and by the test override, so a new scanner test
+  // is covered the moment it is written — the alternative, an exemption naming
+  // each scanner file, both goes stale and switches the whole allowlist off for
+  // the files it names.
+  const coreInTests = includeTestExternals
+    ? [{ from: { type: ['sdk', 'app'] }, allow: { to: { origin: 'core' } } }]
+    : [];
   return [
     'error',
     {
@@ -142,6 +154,7 @@ export function boundariesDependenciesRule(includeTestExternals) {
           allow: external(API_CLIENT_INTERNAL, API_CLIENT_EXTERNAL, API_CLIENT_TEST_EXTERNAL),
         },
         { from: { type: 'api-client' }, allow: { to: { origin: 'core' } } },
+        ...coreInTests,
       ],
     },
   ];
@@ -337,27 +350,6 @@ export default tseslint.config(
     // The import-boundary fixture test imports the eslint config it exercises, so
     // the architectural boundary rule does not apply to the test file itself.
     files: ['apps/studio/src/app/eslint-boundaries.test.ts'],
-    plugins: { boundaries },
-    rules: { 'boundaries/dependencies': 'off' },
-  },
-  {
-    // The design-system source and manifest scanners READ the monorepo's own
-    // files from disk rather than importing an architectural layer, so they need
-    // Node core (`node:fs` and friends) that the layer allowlist deliberately
-    // withholds from library code.
-    files: [
-      'packages/studio-sdk/src/components/token-usage.test.ts',
-      'packages/studio-sdk/src/components/narrow-viewport.test.ts',
-      'packages/studio-sdk/src/components/focus-ring.test.ts',
-      'packages/studio-sdk/src/components/reduced-motion.test.ts',
-      'packages/studio-sdk/src/components/field-group.test.ts',
-      'packages/studio-sdk/src/components/sheet-contract.test.ts',
-      'packages/studio-sdk/src/components/class-contract.test.ts',
-      'packages/studio-sdk/src/components/banned-glyphs.test.ts',
-      'packages/studio-sdk/src/hooks/useBreakpoint.test.ts',
-      'packages/studio-sdk/src/package-side-effects.test.ts',
-      'apps/studio/src/app/font-licences.test.ts',
-    ],
     plugins: { boundaries },
     rules: { 'boundaries/dependencies': 'off' },
   },

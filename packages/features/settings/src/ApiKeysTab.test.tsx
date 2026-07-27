@@ -5,7 +5,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type ApiClient, type TokensPayload } from '@tai42/api-client';
 
 import { ApiKeysTab } from './ApiKeysTab';
-import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
+import {
+  decorBorderedControls,
+  fullProjection,
+  renderWithProviders,
+  scopedProjection,
+} from './test-utils';
 
 /** The mint route entry a projection carries when the caller can reach it. */
 const MINT_ROUTE = { path: '/api/auth/api-keys', methods: ['POST'] };
@@ -75,6 +80,11 @@ describe('ApiKeysTab', () => {
     expect(await screen.findByText('alice')).toBeInTheDocument();
     expect(screen.getByText('Alice key')).toBeInTheDocument();
     const row = screen.getByText('alice').closest('tr') as HTMLElement;
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(within(row).getByText('admin')).toBeInTheDocument();
   });
 
@@ -710,6 +720,10 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
+    // The Condition group is NAMED — a bare heading beside it left the radiogroup
+    // with an empty accessible name, so a reader entering it heard two unattributed
+    // choices.
+    expect(screen.getByRole('radiogroup')).toHaveAccessibleName('Condition');
     // Switch to inline mode and author an inline condition.
     await user.click(screen.getByRole('radio', { name: 'Inline jq expression' }));
     await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
@@ -1014,5 +1028,15 @@ describe('ApiKeysTab', () => {
     expect(screen.getByText('<b>scope</b>')).toBeInTheDocument();
     // The injected markup never became live DOM.
     expect(document.querySelector('img[onerror]')).toBeNull();
+  });
+
+  it('draws the info trigger with the contrast-safe control border, never the decorative one', async () => {
+    // `tokens.css`: the decorative border sits below 3:1 and may never be a
+    // control's only boundary. Derived over the whole rendered tab, so a control
+    // added later is judged by the same rule rather than by this list.
+    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub() });
+
+    await screen.findByRole('button', { name: 'About claim links' });
+    expect(decorBorderedControls(document.body)).toEqual([]);
   });
 });

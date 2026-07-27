@@ -9,7 +9,7 @@
 import { createContext, useContext, useId } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { AlertTriangleIcon } from './icons';
+import { XCircleIcon } from './icons';
 
 interface FieldContextValue {
   readonly controlId: string | undefined;
@@ -141,10 +141,12 @@ export function Field({ label, description, error, children, style, group = fals
             {description}
           </p>
         ) : null}
-        {/* The icon carries the invalid state alongside the color, never the color alone. */}
+        {/* The icon carries the invalid state alongside the color, never the color
+            alone — and it is the ERROR mark: a rejected value is a definite
+            negative, not the warning the triangle states. */}
         {error !== undefined ? (
           <p id={errorId} role="alert" className="tai-field-error" style={{ margin: 0 }}>
-            <AlertTriangleIcon />
+            <XCircleIcon />
             {error}
           </p>
         ) : null}

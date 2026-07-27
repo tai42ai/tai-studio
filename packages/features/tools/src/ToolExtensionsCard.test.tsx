@@ -61,7 +61,7 @@ describe('ToolExtensionsCard', () => {
       }),
     });
 
-    expect(screen.queryByText(/unknown extension/)).toBeNull();
+    expect(screen.queryByText(/unknown extension/i)).toBeNull();
   });
 
   it('flags a stale combo (name absent from the resolved catalog) once the editor opens', async () => {
@@ -75,7 +75,7 @@ describe('ToolExtensionsCard', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('unknown extension: gone')).toBeInTheDocument();
+    expect(within(dialog).getByText('Unknown extension: gone.')).toBeInTheDocument();
   });
 
   it('saves the full combos array', async () => {
@@ -251,10 +251,21 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ listPresets: vi.fn().mockResolvedValue(presets) }),
     });
 
-    expect(await screen.findByText(/manage them there/i)).toBeInTheDocument();
+    expect(await screen.findByText(/manage shout on the presets page/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit combos' })).not.toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /Manage shout on the presets page/i });
+    const link = screen.getByRole('link', { name: /manage shout on the presets page/i });
     expect(link).toBeInTheDocument();
+    // WCAG 2.5.3 (Label in Name): a voice-control user says what they can read, so
+    // no control here may carry an `aria-label` that omits its own visible text.
+    const mismatched = [...document.querySelectorAll<HTMLElement>('[aria-label]')].filter(
+      (node) => {
+        const visible = node.textContent.trim().toLowerCase();
+        return (
+          visible !== '' && !(node.getAttribute('aria-label') ?? '').toLowerCase().includes(visible)
+        );
+      },
+    );
+    expect(mismatched.map((node) => node.getAttribute('aria-label'))).toEqual([]);
   });
 
   it('shows a loud error state when the extensions load fails (a listed tool 404 is real)', async () => {
@@ -284,7 +295,7 @@ describe('ToolExtensionsCard', () => {
     expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
     expect(screen.getByText('marka')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.queryByText(/manage them there/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
   });
 
   it('renders the flat apply-result success line after a single-process save', async () => {
@@ -322,7 +333,7 @@ describe('ToolExtensionsCard', () => {
     // A conflicted (quarantined) preset name is a foreign live tool authored through the
     // manifest route, so the card must NOT show the presets hint — it shows the editor.
     expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
-    expect(screen.queryByText(/manage them there/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
   });
 
   it('clears a pending clear-confirm when a combo is added back in the builder', async () => {

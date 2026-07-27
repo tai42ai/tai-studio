@@ -49,16 +49,29 @@ test('the callback + bridge pages are byte-constant (no request-data reflection)
   }
 });
 
-test('the callback JS posts to the OWN-ORIGIN literal (never "*") and checks the opener origin', async ({
+test('EVERY postMessage in the callback JS targets the OWN-ORIGIN literal, and the opener origin is checked', async ({
   page,
 }) => {
   const js = await bodyOf(page, '/oauth-callback.js');
-  // The postMessage target is the page's own origin, and the opener origin is
-  // validated — never a wildcard target.
-  expect(js).toContain('window.location.origin');
+
+  // The call sites are read OUT OF the served bytes, so the pin does not rest on
+  // one spelling of one payload variable: a renamed argument, a second call added
+  // beside the first, or a wildcard written any other way all have to satisfy it.
+  const calls = [...js.matchAll(/\bpostMessage\s*\(([^()]*)\)/g)].map((match) => match[1] ?? '');
+  const callSites = js.match(/\bpostMessage\s*\(/g) ?? [];
+  expect(calls.length).toBeGreaterThan(0);
+  // A call whose arguments this reader cannot parse (a nested call, an inline
+  // function) leaves the two counts apart — fail loudly rather than skip it.
+  expect(calls).toHaveLength(callSites.length);
+  for (const args of calls) {
+    // The targetOrigin is the LAST argument; with no comma at all the whole
+    // argument list is compared and fails, which is the right direction.
+    const targetOrigin = args.slice(args.lastIndexOf(',') + 1).trim();
+    expect(targetOrigin).toBe('window.location.origin');
+  }
+
+  // Defense in depth: the opener's origin is validated before the dispatch.
   expect(js).toContain('opener.location.origin');
-  expect(js).not.toContain("postMessage(message, '*')");
-  expect(js).not.toContain('postMessage(message, "*")');
 });
 
 test('a same-origin opener receives the callback message; a direct open (no opener) is refused', async ({

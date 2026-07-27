@@ -27,6 +27,12 @@ export interface PageHeaderProps {
   readonly description?: string;
   readonly actions?: ReactNode;
   readonly titleRef?: Ref<HTMLHeadingElement>;
+  /**
+   * An id for the `<h1>`, not for the `<header>` root. The heading is the element
+   * a caller has a reason to address — an `aria-labelledby` pointing at it names
+   * the region from the screen's own title — and it is also the focus target a
+   * route change moves to.
+   */
   readonly id?: string;
 }
 

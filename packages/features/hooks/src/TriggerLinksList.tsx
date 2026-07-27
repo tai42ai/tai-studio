@@ -25,14 +25,15 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Skeleton,
   Spinner,
-  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
+  Table,
   errorMessage,
   useApi,
   useCanWrite,
@@ -112,53 +113,55 @@ export function TriggerLinksList(): ReactNode {
     );
   } else {
     body = (
-      <Table>
-        <THead>
-          <TR>
-            <TH>Name</TH>
-            <TH>Topic</TH>
-            <TH>Runs as</TH>
-            <TH>Trigger auth</TH>
-            <TH>Expiry</TH>
-            <TH>Params</TH>
-            <TH>Hash</TH>
-            <TH aria-label="Actions" />
-          </TR>
-        </THead>
-        <TBody>
-          {query.data.items.map((record) => (
-            <TR key={record.name}>
-              <TD>{record.name}</TD>
-              <TD>{record.topic}</TD>
-              <TD>
-                <code style={{ fontSize: 'var(--tai-text-sm)' }}>{record.execution_key}</code>
-              </TD>
-              <TD>
-                <Badge variant="neutral">{describeTriggerAuth(record.trigger_auth)}</Badge>
-              </TD>
-              <TD>{formatExpiryCell(record.expires_at)}</TD>
-              <TD>{hasParams(record) ? <Badge variant="neutral">params</Badge> : null}</TD>
-              <TD>
-                <code style={{ fontSize: 'var(--tai-text-sm)' }}>{record.token_hash_prefix}</code>
-              </TD>
-              <TD style={{ textAlign: 'right' }}>
-                {canWrite ? (
-                  <Button
-                    variant="danger"
-                    aria-label={`Revoke trigger link ${record.name}`}
-                    onClick={() => {
-                      revokeMutation.reset();
-                      setPendingRevoke(record.name);
-                    }}
-                  >
-                    Revoke
-                  </Button>
-                ) : null}
-              </TD>
+      <ScrollRegion label="Trigger links">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Name</TH>
+              <TH>Topic</TH>
+              <TH>Runs as</TH>
+              <TH>Trigger auth</TH>
+              <TH>Expiry</TH>
+              <TH>Params</TH>
+              <TH>Hash</TH>
+              <TH aria-label="Actions" />
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {query.data.items.map((record) => (
+              <TR key={record.name}>
+                <TD>{record.name}</TD>
+                <TD>{record.topic}</TD>
+                <TD>
+                  <code style={{ fontSize: 'var(--tai-text-sm)' }}>{record.execution_key}</code>
+                </TD>
+                <TD>
+                  <Badge variant="neutral">{describeTriggerAuth(record.trigger_auth)}</Badge>
+                </TD>
+                <TD>{formatExpiryCell(record.expires_at)}</TD>
+                <TD>{hasParams(record) ? <Badge variant="neutral">params</Badge> : null}</TD>
+                <TD>
+                  <code style={{ fontSize: 'var(--tai-text-sm)' }}>{record.token_hash_prefix}</code>
+                </TD>
+                <TD style={{ textAlign: 'right' }}>
+                  {canWrite ? (
+                    <Button
+                      variant="danger"
+                      aria-label={`Revoke trigger link ${record.name}`}
+                      onClick={() => {
+                        revokeMutation.reset();
+                        setPendingRevoke(record.name);
+                      }}
+                    >
+                      Revoke
+                    </Button>
+                  ) : null}
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     );
   }
 

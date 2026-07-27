@@ -88,7 +88,7 @@ describe('CopyField', () => {
     expect(done).toHaveAttribute('aria-hidden', 'false');
   });
 
-  it('announces the copy exactly once and keeps the button name stable', async () => {
+  it('announces the copy through one polite region', async () => {
     const user = userEvent.setup();
     mockClipboard();
     const { container } = render(<CopyField value="tai42_key_123" />);
@@ -103,8 +103,23 @@ describe('CopyField', () => {
     await settleClipboard();
 
     expect(live.textContent).toBe('Copied to clipboard');
-    // The name never changes, so the flip is not announced a second time.
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+  });
+
+  it('names the button with the words it is showing (WCAG 2.5.3)', async () => {
+    // A constant `aria-label` would leave a button reading "Copied" named
+    // "Copy": Label in Name fails, and a voice-control user is left naming a
+    // control they cannot see. The exposed face IS the name in both states.
+    const user = userEvent.setup();
+    mockClipboard();
+    render(<CopyField value="tai42_key_123" />);
+
+    const button = screen.getByRole('button', { name: 'Copy' });
+    expect(button).toHaveAccessibleName('Copy');
+
+    await user.click(button);
+    await settleClipboard();
+
+    expect(button).toHaveAccessibleName('Copied');
   });
 
   it('returns to the idle state once the copied window closes', async () => {
@@ -219,12 +234,12 @@ describe('CopyField', () => {
     unmount();
     expect(clearTimeoutSpy).toHaveBeenCalled();
   });
-});
 
-it('renders its content and keeps the button accessible name', () => {
-  render(<CopyField value="tai42_key_123" label="API key" caption="Copy it now." />);
+  it('renders its content and keeps the button accessible name', () => {
+    render(<CopyField value="tai42_key_123" label="API key" caption="Copy it now." />);
 
-  expect(screen.getByText('API key')).toHaveClass('tai-field-label');
-  expect(screen.getByText('tai42_key_123')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Copy' })).toHaveClass('tai-btn-secondary');
+    expect(screen.getByText('API key')).toHaveClass('tai-field-label');
+    expect(screen.getByText('tai42_key_123')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy' })).toHaveClass('tai-btn-secondary');
+  });
 });

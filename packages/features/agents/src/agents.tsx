@@ -144,7 +144,10 @@ function AgentsList({ onRun }: { readonly onRun: (agent: AgentSummary) => void }
               // The run tool is registered under the agent's REGISTRATION name (which
               // can differ from tool_name), so the tools page is keyed on that name.
               search={{ tool: agent.name }}
-              aria-label={`Open the ${agent.name} run tool`}
+              // The name BEGINS with the visible text (WCAG 2.5.3, Label in Name):
+              // "Open the … run tool" left a voice-control user naming a control that
+              // reads "Open run tool".
+              aria-label={`Open run tool for ${agent.name}`}
             >
               Open run tool
             </AppLink>

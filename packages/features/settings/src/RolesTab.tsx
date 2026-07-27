@@ -208,7 +208,9 @@ const roleButtonStyle = (selected: boolean): CSSProperties => ({
   gap: 'var(--tai-space-2)',
   padding: 'var(--tai-space-2) var(--tai-space-3)',
   borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-border)',
+  // An unselected row has a transparent ground, so this edge is the control's
+  // ONLY boundary and takes the contrast-safe control token.
+  border: '1px solid var(--tai-color-control-border)',
   background: selected ? 'var(--tai-color-surface-raised)' : 'transparent',
   color: 'var(--tai-color-text)',
   cursor: 'pointer',

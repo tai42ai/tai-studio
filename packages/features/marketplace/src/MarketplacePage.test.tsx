@@ -422,7 +422,7 @@ describe('MarketplacePage — tabs and drill-in', () => {
       { client },
     );
     await screen.findByText('Toolbox');
-    await user.click(screen.getByRole('button', { name: '← Back to marketplace' }));
+    await user.click(screen.getByRole('button', { name: 'Back to marketplace' }));
     expect(navigate).toHaveBeenCalledWith('marketplace', { q: 'uuid' });
   });
 });

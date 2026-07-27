@@ -71,16 +71,35 @@ describe('Checkbox', () => {
     expect(screen.getByRole('checkbox', { name: 'Accept terms' })).toBeInTheDocument();
   });
 
+  it('exposes the mixed state and gives it a mark of its own', () => {
+    // The sheet paints the checked and indeterminate grounds identically, so the
+    // MARK is the only thing that tells them apart. A box that drew the tick for
+    // both would render a partial selection as a complete one.
+    const mixed = render(<Checkbox label="All tools" checked="indeterminate" />);
+    const box = screen.getByRole('checkbox', { name: 'All tools' });
+    expect(box).toHaveAttribute('data-state', 'indeterminate');
+    expect(box).toHaveAttribute('aria-checked', 'mixed');
+    const mixedMark = box.querySelector('svg')?.innerHTML;
+    mixed.unmount();
+
+    render(<Checkbox label="All tools" checked />);
+    const checkedMark = screen
+      .getByRole('checkbox', { name: 'All tools' })
+      .querySelector('svg')?.innerHTML;
+    expect(mixedMark).toBeTruthy();
+    expect(mixedMark).not.toBe(checkedMark);
+  });
+
   it('puts the label row on the shared choice class', () => {
     render(<Checkbox label="Accept terms" />);
     expect(screen.getByText('Accept terms').closest('label')).toHaveClass('tai-choice');
   });
-});
 
-it('renders its content and keeps its accessible name', () => {
-  render(<Checkbox label="Accept terms" />);
+  it('renders its content and keeps its accessible name', () => {
+    render(<Checkbox label="Accept terms" />);
 
-  const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
-  expect(checkbox).toHaveClass('tai-checkbox');
-  expect(screen.getByText('Accept terms')).toBeInTheDocument();
+    const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
+    expect(checkbox).toHaveClass('tai-checkbox');
+    expect(screen.getByText('Accept terms')).toBeInTheDocument();
+  });
 });

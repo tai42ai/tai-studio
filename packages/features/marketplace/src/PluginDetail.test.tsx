@@ -147,7 +147,7 @@ describe('PluginDetail — gating', () => {
     const user = userEvent.setup();
     const onBack = vi.fn();
     renderWithProviders(<PluginDetail refValue="noslash" onBack={onBack} />, { client: {} });
-    await user.click(screen.getByRole('button', { name: '← Back to marketplace' }));
+    await user.click(screen.getByRole('button', { name: 'Back to marketplace' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 });
@@ -298,7 +298,10 @@ describe('PluginDetail — install state', () => {
     ]);
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
 
-    expect(await screen.findByText('Update available → v2.0.0')).toBeInTheDocument();
+    expect(await screen.findByText('Update available: v2.0.0')).toBeInTheDocument();
+    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
+    // platform fallback face beside Inter. The icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
     expect(screen.getByRole('button', { name: 'Update' })).toBeInTheDocument();
   });
 

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AlertTriangleIcon, XCircleIcon } from '../components/icons';
 import { defaultValueForSchema } from './default-value';
 import { SchemaForm, type CompletionProvider } from './SchemaForm';
 import type { JsonSchema } from './types';
@@ -765,6 +766,32 @@ describe('SchemaForm — design system', () => {
     expect(alert.querySelector('svg')).toHaveClass('tai-icon');
   });
 
+  it('marks every field error with the ERROR mark, never the warning one', () => {
+    // The mark vocabulary: the crossed circle is a definite negative, the
+    // triangle is a warning. A rejected value is a negative, so `.tai-field-error`
+    // takes the crossed circle at BOTH the leaf `Field` and the nested
+    // `FieldGroup` — one class stating two severities says neither. Derived over
+    // whatever the form rendered, so a third error surface is judged too.
+    const error = render(<XCircleIcon />).container.querySelector('svg')?.innerHTML;
+    const warning = render(<AlertTriangleIcon />).container.querySelector('svg')?.innerHTML;
+    expect(error).not.toBe(warning);
+
+    const { container } = render(
+      <SchemaForm
+        schema={nestedSchema}
+        value={{}}
+        onChange={() => undefined}
+        errors={{ user: 'User is incomplete', 'user.name': 'Full name is required' }}
+      />,
+    );
+
+    const marks = [...container.querySelectorAll('.tai-field-error')].map(
+      (node) => node.querySelector('svg')?.innerHTML,
+    );
+    expect(marks).toHaveLength(2);
+    expect(marks).toEqual([error, error]);
+  });
+
   it('gives the array remove control its mark, its visible label and a real name', () => {
     const schema: JsonSchema = {
       type: 'object',
@@ -860,6 +887,7 @@ describe('SchemaForm — design system', () => {
         avatar: {
           type: 'string',
           title: 'Avatar',
+          description: 'Upload one.',
           format: 'data-url',
           contentMediaType: 'image/*',
           contentMaxBytes: 4,
@@ -878,6 +906,56 @@ describe('SchemaForm — design system', () => {
     expect(alert).toHaveClass('tai-field-error');
     expect(alert).toHaveTextContent(/over the/i);
     expect(alert.querySelector('svg')).toHaveClass('tai-icon');
+
+    // The message is raised by the input surfaces, not by the schema, so `Field`
+    // cannot wire it: both surfaces that can raise it point AT it and report
+    // themselves invalid. Announced by nothing, the rejection was visual only —
+    // and it JOINS the field's own description rather than replacing it.
+    const alertId = alert.getAttribute('id');
+    expect(alertId).not.toBeNull();
+    const descriptionId = screen.getByText('Upload one.').id;
+    for (const control of [
+      screen.getByLabelText('Avatar'),
+      screen.getByLabelText('Or paste a value'),
+    ]) {
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      const describedBy = control.getAttribute('aria-describedby')?.split(' ');
+      expect(describedBy).toContain(alertId);
+      expect(describedBy).toContain(descriptionId);
+    }
+  });
+
+  it('drops the upload error wiring once the rejection is cleared', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        avatar: {
+          type: 'string',
+          title: 'Avatar',
+          description: 'Upload one.',
+          format: 'data-url',
+          contentMediaType: 'image/*',
+          contentMaxBytes: 4,
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+
+    await user.upload(
+      screen.getByLabelText('Avatar'),
+      new File(['hello world'], 'big.png', { type: 'image/png' }),
+    );
+    await screen.findByRole('alert');
+
+    // A within-cap paste clears the rejection: the invalid flag goes with it, and
+    // the field's own description is the only thing left describing the control.
+    await user.type(screen.getByLabelText('Or paste a value'), 'ok');
+
+    expect(screen.queryByRole('alert')).toBeNull();
+    const paste = screen.getByLabelText('Or paste a value');
+    expect(paste).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByText('Upload one.').id).toBe(paste.getAttribute('aria-describedby'));
   });
 
   it('caps an image preview at the width it is given', async () => {

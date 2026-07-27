@@ -22,6 +22,25 @@ function listOf(
   return () => Promise.resolve({ items: agents, total: agents.length });
 }
 
+/**
+ * Every rendered control whose accessible name omits the words it SHOWS.
+ *
+ * WCAG 2.5.3 (Label in Name): a voice-control user says what they can read, so
+ * an `aria-label` must contain the control's visible text. Derived over the
+ * rendered DOM, so a control added later is judged by the same rule. Controls
+ * with no visible text (an icon-only button) are outside the criterion.
+ */
+function labelInNameFailures(container: HTMLElement): string[] {
+  return [...container.querySelectorAll<HTMLElement>('[aria-label]')]
+    .filter((node) => {
+      const visible = node.textContent.trim().toLowerCase();
+      return (
+        visible !== '' && !(node.getAttribute('aria-label') ?? '').toLowerCase().includes(visible)
+      );
+    })
+    .map((node) => `${node.getAttribute('aria-label') ?? ''} !~ ${node.textContent.trim()}`);
+}
+
 describe('AgentsPage list', () => {
   it('lists registered agents with a link to the run tool', async () => {
     const client = stubClient({
@@ -33,7 +52,8 @@ describe('AgentsPage list', () => {
     expect(row).toHaveAttribute('data-agent', 'writer');
     // The run tool is registered under the REGISTRATION name ('writer'), not the
     // divergent tool_name ('writer_tool'), so the link targets the registration name.
-    expect(screen.getByRole('link', { name: 'Open the writer run tool' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open run tool for writer' })).toBeInTheDocument();
+    expect(labelInNameFailures(document.body)).toEqual([]);
   });
 
   it('shows an empty state when no agents are registered', async () => {
@@ -50,7 +70,7 @@ describe('AgentsPage list', () => {
     });
 
     expect(
-      await screen.findByRole('link', { name: 'Open the writer run tool' }),
+      await screen.findByRole('link', { name: 'Open run tool for writer' }),
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText('planner')).not.toBeInTheDocument();
@@ -64,10 +84,10 @@ describe('AgentsPage list', () => {
     renderWithProviders(<AgentsPage />, client, { projection: fullProjection() });
 
     expect(
-      await screen.findByRole('link', { name: 'Open the writer run tool' }),
+      await screen.findByRole('link', { name: 'Open run tool for writer' }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'Open the planner run tool' }),
+      await screen.findByRole('link', { name: 'Open run tool for planner' }),
     ).toBeInTheDocument();
   });
 
@@ -93,6 +113,9 @@ describe('AgentsPage run', () => {
 
     expect(await screen.findByText('Finished')).toBeInTheDocument();
     expect(screen.getByTestId('timeline-message')).toHaveTextContent('Here you go');
+    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
+    // platform fallback face beside Inter. The icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
   });
 
   it('settles Failed and surfaces a stream.error message exactly once (timeline only)', async () => {

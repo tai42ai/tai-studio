@@ -19,14 +19,15 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Skeleton,
   Spinner,
-  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
+  Table,
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
@@ -211,56 +212,58 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- stubs bypass the schema default
     const doors = query.data.trigger_auth ?? {};
     body = (
-      <Table>
-        <THead>
-          <TR>
-            <TH>Name</TH>
-            <TH>Topic</TH>
-            <TH>Tool</TH>
-            <TH>Runs as</TH>
-            <TH>Trigger auth</TH>
-            <TH>Gates</TH>
-            <TH aria-label="Actions" />
-          </TR>
-        </THead>
-        <TBody>
-          {query.data.items.map((hook) => {
-            const door = topicDoor(doors, hook.topic);
-            return (
-              <TR key={hook.name}>
-                <TD>{hook.name}</TD>
-                <TD>{hook.topic}</TD>
-                <TD>{hook.tool}</TD>
-                <TD>
-                  <code style={{ fontSize: 'var(--tai-text-sm)' }}>{hook.execution_key}</code>
-                </TD>
-                <TD>
-                  <Badge variant="neutral">
-                    {door === undefined ? 'Unknown' : describeTriggerAuth(door)}
-                  </Badge>
-                </TD>
-                <TD>
-                  <div style={{ display: 'flex', gap: 'var(--tai-space-1)' }}>
-                    {hasCondition(hook) ? <Badge variant="primary">condition</Badge> : null}
-                    {hasExpr(hook) ? <Badge variant="neutral">expr</Badge> : null}
-                  </div>
-                </TD>
-                <TD style={{ textAlign: 'right' }}>
-                  <Button
-                    variant="danger"
-                    aria-label={`Delete hook ${hook.name}`}
-                    onClick={() => {
-                      setPendingDelete(hook.name);
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+      <ScrollRegion label="Hooks">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Name</TH>
+              <TH>Topic</TH>
+              <TH>Tool</TH>
+              <TH>Runs as</TH>
+              <TH>Trigger auth</TH>
+              <TH>Gates</TH>
+              <TH aria-label="Actions" />
+            </TR>
+          </THead>
+          <TBody>
+            {query.data.items.map((hook) => {
+              const door = topicDoor(doors, hook.topic);
+              return (
+                <TR key={hook.name}>
+                  <TD>{hook.name}</TD>
+                  <TD>{hook.topic}</TD>
+                  <TD>{hook.tool}</TD>
+                  <TD>
+                    <code style={{ fontSize: 'var(--tai-text-sm)' }}>{hook.execution_key}</code>
+                  </TD>
+                  <TD>
+                    <Badge variant="neutral">
+                      {door === undefined ? 'Unknown' : describeTriggerAuth(door)}
+                    </Badge>
+                  </TD>
+                  <TD>
+                    <div style={{ display: 'flex', gap: 'var(--tai-space-1)' }}>
+                      {hasCondition(hook) ? <Badge variant="primary">condition</Badge> : null}
+                      {hasExpr(hook) ? <Badge variant="neutral">expr</Badge> : null}
+                    </div>
+                  </TD>
+                  <TD style={{ textAlign: 'right' }}>
+                    <Button
+                      variant="danger"
+                      aria-label={`Delete hook ${hook.name}`}
+                      onClick={() => {
+                        setPendingDelete(hook.name);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     );
   }
 

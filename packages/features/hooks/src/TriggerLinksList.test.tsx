@@ -30,6 +30,11 @@ describe('TriggerLinksList — table', () => {
     renderWithProviders(<TriggerLinksList />, { client, projection: fullProjection() });
 
     const withParams = (await screen.findByText('with-params')).closest('tr');
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(within(withParams as HTMLElement).getByText('params')).toBeInTheDocument();
 
     // `{}` and `null` both read as param-less — no Badge on those rows.

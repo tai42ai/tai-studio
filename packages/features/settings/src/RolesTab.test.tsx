@@ -18,7 +18,7 @@ import {
   featureGroupsOf,
   isGrantableAction,
 } from './RolesTab';
-import { renderWithProviders } from './test-utils';
+import { decorBorderedControls, renderWithProviders } from './test-utils';
 
 // -- fixtures ----------------------------------------------------------------
 
@@ -277,5 +277,16 @@ describe('RolesTab', () => {
     // ...and it is not dirty (the baseline moved with it), so Save is disabled — the
     // stale pre-rollback map can never be re-PUT over the restored one.
     expect(screen.getByRole('button', { name: 'Save grants' })).toBeDisabled();
+  });
+
+  it('draws every role control with the contrast-safe border, never the decorative one', async () => {
+    // `tokens.css`: the decorative border sits below 3:1 and may never be a
+    // control's only boundary. Derived over the whole rendered tab.
+    renderWithProviders(<RolesTab readOnly={false} />, {
+      client: baseStub([role({ grants: { tools: 'write' } })]),
+    });
+
+    await screen.findByRole('option', { name: /^editor/ });
+    expect(decorBorderedControls(document.body)).toEqual([]);
   });
 });

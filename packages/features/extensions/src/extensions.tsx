@@ -18,6 +18,7 @@ import {
   AppLink,
   Badge,
   Card,
+  ChevronRightIcon,
   EmptyState,
   ErrorState,
   Skeleton,
@@ -122,7 +123,8 @@ export function ExtensionFamilyCard({ family }: { family: ExtensionFamily }): Re
           search={{ tool: family.base }}
           aria-label={`Author ${family.base} extension combos on the tools page`}
         >
-          Author combos →
+          Author combos
+          <ChevronRightIcon />
         </AppLink>
       </div>
       <ul style={memberListStyle}>

@@ -58,6 +58,11 @@ describe('HooksPage — list', () => {
     renderWithProviders(<HooksPage search={{}} />, { client });
 
     const row = (await screen.findByText('notify-order')).closest('tr');
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
     expect(row).not.toBeNull();
     const cells = within(row as HTMLElement);
     expect(cells.getByText('orders.created')).toBeInTheDocument();

@@ -61,13 +61,13 @@ const OUTCOME_STATUS: Record<FleetFailureOutcome, StatusTone> = {
  * report (nothing to warn about) so callers can always mount it unconditionally
  * beside their own success line.
  */
-export function FleetReport({
-  summary,
-  action = 'save',
-}: {
+export interface FleetReportProps {
   readonly summary: FleetReportSummary | null;
+  /** Whose framing the copy takes: a saved config change, or a dispatched reload. */
   readonly action?: 'save' | 'reload';
-}): ReactNode {
+}
+
+export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
   if (summary === null || summary.status === 'converged') return null;
 
   if (summary.status === 'unreachable') {

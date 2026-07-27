@@ -1,7 +1,7 @@
 /**
  * The shared inline styles for the agent-authoring surface: stacked layouts, an
- * inline row, a monospace text style, and the removable-chip style used by the
- * pickers, editors, and lists.
+ * inline row, and a monospace text style. The removable chips wear the published
+ * `tai-chip tai-chip-static` pair rather than a local copy of it.
  */
 export const stackStyle = {
   display: 'flex',
@@ -15,11 +15,3 @@ export const smallStackStyle = {
 };
 export const rowStyle = { display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' };
 export const monoStyle = { fontFamily: 'var(--tai-font-mono)' };
-export const chipStyle = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-  padding: 'var(--tai-space-1) var(--tai-space-2)',
-  border: '1px solid var(--tai-color-border)',
-  borderRadius: 'var(--tai-radius-sm)',
-};

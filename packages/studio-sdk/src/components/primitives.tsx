@@ -11,15 +11,23 @@
  * `rel="noopener noreferrer external"`, and everything else — another scheme
  * (`javascript:`, `data:`, …), a protocol-relative `//host`, a bare `page.html` —
  * is NEUTRALIZED, rendered as plain text with no href, so a hostile URL can never
- * become a live navigation target. This is an XSS pin.
+ * become a live navigation target. This is an XSS pin. The neutralized text names
+ * BOTH admitted forms, because an in-app reference is not an http(s) URL either
+ * and saying only "not an http(s) URL" would describe `/tools` as blocked.
  *
  * The check reads the NORMALIZED reference and the anchor is given that same
  * normalized string, because the raw input and the URL the browser resolves are
  * not the same URL. See `normalizeHref`.
  */
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react';
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  CSSProperties,
+  ReactNode,
+  Ref,
+} from 'react';
 
-import { AlertTriangleIcon } from './icons';
+import { XCircleIcon } from './icons';
 
 // -- Link safety --------------------------------------------------------------
 
@@ -88,8 +96,21 @@ export function isSafeHttpUrl(url: string): boolean {
  */
 const RELATIVE_HREF = /^(?:\/(?![/\\])|[?#]|\.{1,2}\/)/;
 
-/** The text a neutralized href carries in place of a navigation. */
-const BLOCKED_HREF_TITLE = 'This link was blocked because it is not an http(s) URL.';
+/**
+ * The text a neutralized href carries in place of a navigation. It names both
+ * admitted forms: `/tools` and `#/agents` are in-app references rather than
+ * http(s) URLs and DO render as live anchors, so a reason citing only the
+ * http(s) rule would state a rule this component does not enforce.
+ */
+const BLOCKED_HREF_TITLE =
+  'This link was blocked because it is neither an in-app reference nor an http(s) URL.';
+
+/**
+ * Takes a subtree out of the accessibility tree without taking it out of the
+ * layout: `display: contents` generates no box, so wrapped children stay direct
+ * flex items of the button surface around them.
+ */
+const hiddenFromReadersStyle: CSSProperties = { display: 'contents' };
 
 /**
  * A blocked href, rendered as inert text: no anchor, no `href`, no handlers, so
@@ -106,6 +127,12 @@ const BLOCKED_HREF_TITLE = 'This link was blocked because it is not an http(s) U
  * `.tai-btn[aria-disabled='true']` is what paints the disabled look; it is inert
  * on a role-less element, and the missing `href` is what actually says this does
  * not navigate.
+ *
+ * A caller-supplied `label` REPLACES the children for assistive tech, exactly as
+ * the `aria-label` it comes from would have done on the live anchor: the children
+ * go behind an `aria-hidden` wrapper that is `display: contents`, so it generates
+ * no box and the button's own flex layout is unchanged. Without that the children
+ * and the label are both read and a blocked link announces its name twice.
  */
 export function NeutralizedLink({
   className,
@@ -121,8 +148,8 @@ export function NeutralizedLink({
   readonly id?: string;
   /**
    * The name the caller gave the link, rendered as hidden text. An icon-only
-   * link carries its whole meaning here; with visible children it repeats them,
-   * which is the same thing `aria-label` would have done.
+   * link carries its whole meaning here, and when it is given the children are
+   * hidden from assistive tech so the name is read once, not twice.
    */
   readonly label?: string;
 }) {
@@ -135,7 +162,13 @@ export function NeutralizedLink({
       style={style}
       id={id}
     >
-      {children}
+      {label === undefined ? (
+        children
+      ) : (
+        <span aria-hidden="true" style={hiddenFromReadersStyle}>
+          {children}
+        </span>
+      )}
       {/* `title` on a non-focusable span is not reliably announced, so the name
           and the reason the link is dead are carried as real text. An icon-only
           link would otherwise neutralize into a silent nothing. */}
@@ -163,6 +196,24 @@ function resolveHref(href: string): ResolvedHref {
   const normalized = normalizeHref(href);
   if (RELATIVE_HREF.test(normalized)) return { kind: 'internal', href: normalized };
   return { kind: 'blocked', href: '' };
+}
+
+// -- Shared surface props -----------------------------------------------------
+
+/**
+ * What every primitive in this file accepts alongside its own props: the
+ * design-system class it wears is its own, and the caller's `className` is
+ * APPENDED to it rather than replacing it, so a surface can never lose its paint
+ * by being positioned.
+ */
+interface SurfaceProps {
+  readonly className?: string;
+  readonly style?: CSSProperties;
+}
+
+/** The surface's own class plus the caller's, which sorts last so it can override. */
+function surfaceClass(base: string, className: string | undefined): string {
+  return className === undefined ? base : `${base} ${className}`;
 }
 
 // -- Button ------------------------------------------------------------------
@@ -222,6 +273,13 @@ interface ButtonActionProps extends ButtonProps {
 /**
  * The LINK form of `Button`: an `href`, so it carries anchor attributes and no
  * button ones.
+ *
+ * `target` and `rel` are inherited from `AnchorHTMLAttributes` and are settable,
+ * but on the EXTERNAL branch they are not the caller's to choose: an absolute
+ * http(s) URL always renders `target="_blank"` with
+ * `rel="noopener noreferrer external"`, whatever the caller passed. On the
+ * in-app branch `target` is the caller's and `rel` is pinned only when they ask
+ * for `_blank`.
  */
 export interface LinkButtonProps
   extends ButtonVariantProps, AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -230,9 +288,7 @@ export interface LinkButtonProps
 
 /** The variant class plus the caller's, which sorts last so it can override. */
 export function buttonClass(variant: ButtonVariant, className: string | undefined): string {
-  return className === undefined
-    ? VARIANT_CLASS[variant]
-    : `${VARIANT_CLASS[variant]} ${className}`;
+  return surfaceClass(VARIANT_CLASS[variant], className);
 }
 
 export function Button(props: ButtonActionProps | LinkButtonProps) {
@@ -272,6 +328,12 @@ export function Button(props: ButtonActionProps | LinkButtonProps) {
   return (
     <a
       {...rest}
+      // REVERSE TABNABBING. `target`/`rel` are settable on `LinkButtonProps`, so
+      // the hardening is carried by JSX property ORDER alone: the spread comes
+      // FIRST and these two are written after it, which is what makes them
+      // unoverridable. Below the spread, `rel="opener" target="_self"` from a
+      // caller would open a cross-origin `_blank` with a live `window.opener`
+      // onto the operator's authenticated tab.
       href={link.href}
       target="_blank"
       rel="noopener noreferrer external"
@@ -285,18 +347,18 @@ export function Button(props: ButtonActionProps | LinkButtonProps) {
 
 // -- Card --------------------------------------------------------------------
 
-export interface CardProps {
+export interface CardProps extends SurfaceProps {
   readonly children: ReactNode;
   /** Opt in to the hover/focus lift. A card that is not itself an affordance stays flat. */
   readonly interactive?: boolean;
-  readonly className?: string;
-  readonly style?: CSSProperties;
+  /** A consumer ref for the card element itself. */
+  readonly ref?: Ref<HTMLDivElement>;
 }
 
-export function Card({ children, interactive = false, className, style }: CardProps) {
+export function Card({ children, interactive = false, className, style, ref }: CardProps) {
   const base = interactive ? 'tai-card tai-card-interactive' : 'tai-card';
   return (
-    <div className={className === undefined ? base : `${base} ${className}`} style={style}>
+    <div className={surfaceClass(base, className)} style={style} ref={ref}>
       {children}
     </div>
   );
@@ -304,31 +366,34 @@ export function Card({ children, interactive = false, className, style }: CardPr
 
 // -- Skeleton (loading) ------------------------------------------------------
 
-export function Skeleton({
-  height = 16,
-  width = '100%',
-}: {
-  height?: number | string;
-  width?: number | string;
-}) {
+export interface SkeletonProps extends SurfaceProps {
+  readonly height?: number | string;
+  readonly width?: number | string;
+}
+
+export function Skeleton({ height = 16, width = '100%', className, style }: SkeletonProps) {
   // The block's extent is per-instance; the sheen animation lives in the class.
-  return <div aria-hidden="true" className="tai-skeleton" style={{ height, width }} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={surfaceClass('tai-skeleton', className)}
+      style={{ height, width, ...style }}
+    />
+  );
 }
 
 // -- EmptyState --------------------------------------------------------------
 
-export function EmptyState({
-  title,
-  description,
-  action,
-}: {
-  title: string;
-  description?: string;
+export interface EmptyStateProps extends SurfaceProps {
+  readonly title: string;
+  readonly description?: string;
   /** The guidance line's on-screen action — the control the description names. */
-  action?: ReactNode;
-}) {
+  readonly action?: ReactNode;
+}
+
+export function EmptyState({ title, description, action, className, style }: EmptyStateProps) {
   return (
-    <div role="status" className="tai-empty-state">
+    <div role="status" className={surfaceClass('tai-empty-state', className)} style={style}>
       <p className="tai-empty-state-title">{title}</p>
       {description === undefined ? null : (
         <p style={{ margin: 'var(--tai-space-2) 0 0' }}>{description}</p>
@@ -342,13 +407,35 @@ export function EmptyState({
 
 // -- ErrorState (loud, visible) ----------------------------------------------
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+/** The headline an `ErrorState` wears when the caller names none. */
+const DEFAULT_ERROR_TITLE = 'Something went wrong';
+
+export interface ErrorStateProps extends SurfaceProps {
+  readonly message: string;
+  /**
+   * The headline above the message. Defaults to a system-failure wording, which
+   * a surface rendering a DELIBERATE refusal (a permission denial, a validation
+   * rejection) replaces with one that does not blame the system.
+   */
+  readonly title?: string;
+  readonly onRetry?: () => void;
+}
+
+export function ErrorState({
+  message,
+  title = DEFAULT_ERROR_TITLE,
+  onRetry,
+  className,
+  style,
+}: ErrorStateProps) {
   return (
-    <div role="alert" className="tai-error-state">
-      {/* The icon carries the state alongside the color, never the color alone. */}
+    <div role="alert" className={surfaceClass('tai-error-state', className)} style={style}>
+      {/* The icon carries the state alongside the color, never the color alone,
+          and it is the ERROR mark: the crossed circle. The warning triangle is
+          the warn surfaces' mark and would state a second severity here. */}
       <strong className="tai-error-state-title">
-        <AlertTriangleIcon />
-        Something went wrong
+        <XCircleIcon />
+        {title}
       </strong>
       <p style={{ margin: 'var(--tai-space-2) 0 0', whiteSpace: 'pre-wrap' }}>{message}</p>
       {onRetry === undefined ? null : (
@@ -364,6 +451,17 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 
 // -- Spinner -----------------------------------------------------------------
 
-export function Spinner({ label = 'Loading' }: { label?: string }) {
-  return <span role="status" aria-label={label} className="tai-spinner" />;
+export interface SpinnerProps extends SurfaceProps {
+  readonly label?: string;
+}
+
+export function Spinner({ label = 'Loading', className, style }: SpinnerProps) {
+  return (
+    <span
+      role="status"
+      aria-label={label}
+      className={surfaceClass('tai-spinner', className)}
+      style={style}
+    />
+  );
 }

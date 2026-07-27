@@ -30,13 +30,14 @@ import {
   EmptyState,
   ErrorState,
   FleetReport,
+  ScrollRegion,
   Spinner,
-  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
+  Table,
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
@@ -228,45 +229,47 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
           Import failed — one or more sections reported errors. See the report below.
         </p>
       )}
-      <Table>
-        <THead>
-          <TR>
-            <TH>Section</TH>
-            <TH>Created</TH>
-            <TH>Updated</TH>
-            <TH>Skipped</TH>
-            <TH>Errors</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {entries.map(([name, section]) => {
-            const hasErrors = section.errors.length > 0;
-            return (
-              <TR
-                key={name}
-                data-testid={`report-row-${name}`}
-                style={hasErrors ? { background: 'var(--tai-color-danger-surface)' } : undefined}
-              >
-                <TD>{name}</TD>
-                <TD>{section.created}</TD>
-                <TD>{section.updated}</TD>
-                <TD>{section.skipped}</TD>
-                <TD>
-                  {hasErrors ? (
-                    <ul style={errorListStyle}>
-                      {section.errors.map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span style={{ color: 'var(--tai-color-text-muted)' }}>—</span>
-                  )}
-                </TD>
-              </TR>
-            );
-          })}
-        </TBody>
-      </Table>
+      <ScrollRegion label="Import report">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Section</TH>
+              <TH>Created</TH>
+              <TH>Updated</TH>
+              <TH>Skipped</TH>
+              <TH>Errors</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {entries.map(([name, section]) => {
+              const hasErrors = section.errors.length > 0;
+              return (
+                <TR
+                  key={name}
+                  data-testid={`report-row-${name}`}
+                  style={hasErrors ? { background: 'var(--tai-color-danger-surface)' } : undefined}
+                >
+                  <TD>{name}</TD>
+                  <TD>{section.created}</TD>
+                  <TD>{section.updated}</TD>
+                  <TD>{section.skipped}</TD>
+                  <TD>
+                    {hasErrors ? (
+                      <ul style={errorListStyle}>
+                        {section.errors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span style={{ color: 'var(--tai-color-text-muted)' }}>—</span>
+                    )}
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
+      </ScrollRegion>
 
       {fleetReports.map((entry) => (
         <div key={entry.name} style={{ marginTop: 'var(--tai-space-3)' }}>

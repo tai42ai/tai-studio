@@ -98,7 +98,15 @@ describe('InstalledTab — status badges', () => {
     };
     renderWithProviders(<InstalledTab search={{}} />, { client });
 
-    expect(await screen.findByText('Update available → v2.0.0')).toBeInTheDocument();
+    expect(await screen.findByText('Update available: v2.0.0')).toBeInTheDocument();
+    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
+    // widens the document instead of scrolling inside its own box.
+    for (const table of document.querySelectorAll('table')) {
+      expect(table.closest('.tai-scroll-region')).not.toBeNull();
+    }
+    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
+    // platform fallback face beside Inter. The icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
     expect(screen.getByText('Up to date')).toBeInTheDocument();
     expect(screen.getByText('Not in the registry')).toBeInTheDocument();
   });

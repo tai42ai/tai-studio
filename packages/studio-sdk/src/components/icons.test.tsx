@@ -80,10 +80,13 @@ const REQUIRED_ICONS = [
   'ChevronDownIcon',
   'ChevronRightIcon',
   'CheckIcon',
+  'MinusIcon',
   'SortAscIcon',
   'SortDescIcon',
   'FilterIcon',
   'ArrowLeftIcon',
+  'ArrowUpIcon',
+  'ArrowDownIcon',
   'EyeIcon',
   'EyeOffIcon',
   'CheckCircleIcon',
@@ -95,6 +98,13 @@ const REQUIRED_ICONS = [
 describe('icon set', () => {
   it.each(REQUIRED_ICONS)('exports %s', (name) => {
     expect(Object.keys(iconModule)).toContain(name);
+  });
+
+  it('exports no mark outside the pinned inventory', () => {
+    // The BASELINE the inventory above only half-asserted: `it.each` proves every
+    // pinned name is exported, and this proves the module exports nothing else,
+    // so a new mark has to be declared here rather than arriving unannounced.
+    expect(ICONS.map(([name]) => name)).toEqual([...REQUIRED_ICONS].sort());
   });
 
   it.each(ICONS)('%s renders an svg on the shared 24 grid', (_name, Component) => {
@@ -155,10 +165,13 @@ describe('icon set', () => {
 });
 
 describe('icon props', () => {
-  it('lets the caller replace the default class', () => {
+  it("appends the caller's class to the sizing class rather than replacing it", () => {
+    // `tai-icon` is what SIZES the mark, and an inline <svg> with a viewBox and
+    // no width/height has no intrinsic size — a className that replaced it would
+    // blow the icon up to the replaced-element default, not shift it slightly.
+    // Every other design-system primitive merges; this one is no exception.
     const svg = renderIcon(iconModule.SearchIcon, { className: 'my-icon' });
-    expect(svg).toHaveClass('my-icon');
-    expect(svg).not.toHaveClass('tai-icon');
+    expect(svg).toHaveAttribute('class', 'tai-icon my-icon');
   });
 
   it('exposes the icon as soon as the caller names it, with nothing else to pass', () => {
@@ -312,22 +325,13 @@ describe('NAV_ICONS', () => {
     const marks = new Set(Object.values(NAV_ICONS));
     expect(marks.size).toBe(ROUTE_TOKENS.length);
   });
-});
 
-it('renders every mark unchanged', () => {
-  for (const [, Component] of ICONS) {
-    const svg = renderIcon(Component);
-    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
-    expect(svg.getAttribute('stroke')).toBe('currentColor');
-    expect(svg).toHaveClass('tai-icon');
-  }
-});
-
-it('keeps a caller-supplied accessible name', () => {
-  const svg = renderIcon(NAV_ICONS.observability, {
-    'aria-hidden': false,
-    role: 'img',
-    'aria-label': 'Observability',
+  it('keeps a caller-supplied accessible name on a route mark', () => {
+    const svg = renderIcon(NAV_ICONS.observability, {
+      'aria-hidden': false,
+      role: 'img',
+      'aria-label': 'Observability',
+    });
+    expect(svg).toHaveAccessibleName('Observability');
   });
-  expect(svg).toHaveAccessibleName('Observability');
 });

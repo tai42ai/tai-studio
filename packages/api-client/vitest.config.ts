@@ -5,6 +5,10 @@ import { defineConfig } from 'vitest/config';
  * the transport, schema parsing, and SSE decoding as real code. Coverage is
  * opt-in via `--coverage` (v8); when enabled the thresholds fail the run on a
  * regression.
+ *
+ * The thresholds sit just under what the suite actually achieves. A number far
+ * below the measurement cannot fail: `functions: 40` against an actual 98.81 %
+ * would still pass with three fifths of the client's functions untested.
  */
 export default defineConfig({
   test: {
@@ -19,10 +23,10 @@ export default defineConfig({
       ],
       reporter: ['text'],
       thresholds: {
-        statements: 80,
-        branches: 80,
-        functions: 40,
-        lines: 80,
+        statements: 99,
+        branches: 93,
+        functions: 98,
+        lines: 99,
       },
     },
   },

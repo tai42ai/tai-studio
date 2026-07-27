@@ -11,6 +11,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { RunSpan, RunTrace } from '@tai42/api-client';
 import {
+  ArrowLeftIcon,
   Badge,
   Button,
   Card,
@@ -85,6 +86,7 @@ const disclosureStyle: CSSProperties = {
 
 function SpanRow({ span, depth }: FlatSpan): ReactNode {
   const duration = spanDurationMs(span);
+  const spanName = span.name ?? '(unnamed span)';
   return (
     <div
       style={{
@@ -103,9 +105,7 @@ function SpanRow({ span, depth }: FlatSpan): ReactNode {
         }}
       >
         {span.type !== null ? <Badge>{span.type}</Badge> : null}
-        <span style={{ fontWeight: 600, color: levelColor(span.level) }}>
-          {span.name ?? '(unnamed span)'}
-        </span>
+        <span style={{ fontWeight: 600, color: levelColor(span.level) }}>{spanName}</span>
         {span.level !== null ? (
           <span style={{ fontSize: 'var(--tai-text-sm)', color: levelColor(span.level) }}>
             {span.level}
@@ -148,13 +148,13 @@ function SpanRow({ span, depth }: FlatSpan): ReactNode {
             <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
               Input
             </span>
-            <JsonTree data={span.input} />
+            <JsonTree data={span.input} label={`${spanName} input`} />
           </div>
           <div>
             <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
               Output
             </span>
-            <JsonTree data={span.output} />
+            <JsonTree data={span.output} label={`${spanName} output`} />
           </div>
         </div>
       </details>
@@ -261,7 +261,10 @@ export function TraceView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
       <div>
-        <Button onClick={onBack}>← Back to runs</Button>
+        <Button onClick={onBack}>
+          <ArrowLeftIcon />
+          Back to runs
+        </Button>
       </div>
       {query.isPending ? (
         <Skeleton height={160} />

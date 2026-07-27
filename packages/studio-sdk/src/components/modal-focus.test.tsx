@@ -7,16 +7,18 @@
  * AFTER the one this module supplies and skips it only when ours prevented
  * default. That composition is the whole hazard — a hook called in isolation
  * cannot observe it, and would pass while the real modal stranded the reader on
- * `<body>`.
+ * `<body>`. The one exception is the OPEN handler's stand-down, which is a
+ * question about what the hook reads and is driven at the hook directly.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ConfirmDialog } from './confirm-dialog';
 import { Dialog } from './dialog';
 import { Drawer } from './drawer';
+import { useModalFocusReturn } from './modal-focus';
 import { Button } from './primitives';
 
 /**
@@ -200,6 +202,27 @@ describe('modal focus return without a trigger', () => {
     const shell = screen.getByTestId('shell');
     expect(shell).not.toHaveAttribute('tabindex');
     expect(document.activeElement).not.toBe(shell);
+  });
+
+  it('records nothing on the way in when a trigger IS rendered', () => {
+    // The recording exists only for the close handler, which stands down with a
+    // trigger present — so with one it was written on every open and never read,
+    // holding the opener and its whole ancestor chain alive behind it. Both
+    // handlers now stand down together, which is what the module's own docblock
+    // says the pair does. Driven at the hook rather than through a rendered
+    // dialog, because Radix and user-event read `activeElement` constantly and a
+    // spy over a whole open sequence would measure them instead.
+    const withTrigger = renderHook(() => useModalFocusReturn(true));
+    const activeElement = vi.spyOn(document, 'activeElement', 'get');
+    withTrigger.result.current.onOpenAutoFocus(new Event('focus'));
+    expect(activeElement).not.toHaveBeenCalled();
+
+    // The control: with NO trigger the same handler does read it, so the check
+    // above is measuring the stand-down and not a spy that never had a chance.
+    const withoutTrigger = renderHook(() => useModalFocusReturn(false));
+    withoutTrigger.result.current.onOpenAutoFocus(new Event('focus'));
+    expect(activeElement).toHaveBeenCalled();
+    activeElement.mockRestore();
   });
 
   it('still returns focus to a live trigger, so it never prevents Radix default', async () => {

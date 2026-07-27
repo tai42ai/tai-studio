@@ -29,9 +29,15 @@ import config, {
 // trailing slash is stripped so `boundaries/root-path` matches element patterns.
 const repoRoot = new URL('../../../../', import.meta.url).pathname.replace(/\/+$/, '');
 
-// A virtual path inside feature-hooks. The file is never written to disk —
-// `lintText` lints the provided source, and boundaries classifies it by path.
+// Virtual paths, one per layer the rules distinguish. No file is ever written to
+// disk — `lintText` lints the provided source, and boundaries classifies it by
+// path. The `.test.ts` variants are the paths TEST_GLOBS selects, which is what
+// decides whether the test-only half of the allowlist applies.
 const featureHooksFile = `${repoRoot}/packages/features/hooks/src/__boundary_fixture__.ts`;
+const featureHooksTestFile = `${repoRoot}/packages/features/hooks/src/__boundary_fixture__.test.ts`;
+const sdkFile = `${repoRoot}/packages/studio-sdk/src/components/__boundary_fixture__.ts`;
+const sdkTestFile = `${repoRoot}/packages/studio-sdk/src/components/__boundary_fixture__.test.ts`;
+const appTestFile = `${repoRoot}/apps/studio/src/app/__boundary_fixture__.test.ts`;
 
 /** Builds an ESLint instance wired with only the boundary config under test. */
 function makeLinter(rule: Linter.RuleEntry) {
@@ -52,11 +58,16 @@ function makeLinter(rule: Linter.RuleEntry) {
   });
 }
 
-/** Lints `code` as feature-hooks and returns only the boundary violations. */
-async function boundaryErrors(code: string, rule: Linter.RuleEntry) {
-  const [result] = await makeLinter(rule).lintText(code, { filePath: featureHooksFile });
+/** Lints `code` as `filePath` and returns only the boundary violations. */
+async function boundaryErrorsAt(filePath: string, code: string, rule: Linter.RuleEntry) {
+  const [result] = await makeLinter(rule).lintText(code, { filePath });
   if (result === undefined) throw new Error('ESLint returned no result for the fixture');
   return result.messages.filter((m) => m.ruleId === 'boundaries/dependencies');
+}
+
+/** Lints `code` as feature-hooks and returns only the boundary violations. */
+async function boundaryErrors(code: string, rule: Linter.RuleEntry) {
+  return boundaryErrorsAt(featureHooksFile, code, rule);
 }
 
 describe('eslint-plugin-boundaries allowlist', () => {
@@ -106,6 +117,87 @@ describe('eslint-plugin-boundaries allowlist', () => {
       return level === 'error' && files.includes('**/*.{ts,tsx}');
     });
     expect(sourceEnforced).toBe(true);
+  });
+});
+
+/**
+ * The Node-core grant.
+ *
+ * The design-system and manifest gate tests READ the monorepo's own files from
+ * disk, so they need `node:fs` and friends that the layer allowlist withholds
+ * from library code. That grant is scoped by LAYER (`sdk`, `app`) and by the test
+ * override, so it reaches a new scanner test the moment it is written and reaches
+ * nothing else.
+ *
+ * These cases pin all four edges, because the obvious alternative — a block naming
+ * each scanner file and setting `boundaries/dependencies` to `off` — silently
+ * removes the WHOLE allowlist from every file it names, and goes stale besides.
+ */
+describe('Node core in the read-from-disk gate tests', () => {
+  const testRule = boundariesDependenciesRule(true);
+  const strictRule = boundariesDependenciesRule(false);
+
+  it.each([
+    ['the SDK', sdkTestFile],
+    ['the shell app', appTestFile],
+  ])('permits Node core in a %s test', async (_layer, filePath) => {
+    const errors = await boundaryErrorsAt(
+      filePath,
+      "import 'node:fs';\nimport 'node:path';\nimport 'node:url';\n",
+      testRule,
+    );
+    expect(errors).toEqual([]);
+  });
+
+  it('keeps the rest of the allowlist ON in those same tests', async () => {
+    // The whole point: a per-file `off` exemption buys Node core by switching the
+    // architectural boundary off entirely, which would let an SDK gate test import
+    // any package at all. Scoping to `origin: core` leaves everything else denied.
+    const errors = await boundaryErrorsAt(
+      sdkTestFile,
+      "import 'zustand';\nimport '@dnd-kit/core';\n",
+      testRule,
+    );
+    expect(errors.map((error) => error.message).join('\n')).toContain('zustand');
+    expect(errors).toHaveLength(2);
+  });
+
+  it('withholds Node core from SDK production source', async () => {
+    // The grant rides on the test override; production library code never gets it.
+    const errors = await boundaryErrorsAt(sdkFile, "import 'node:fs';\n", strictRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('node:fs');
+  });
+
+  it('withholds Node core from a feature test', async () => {
+    // Scoped by layer: a feature renders, it does not read the repository.
+    const errors = await boundaryErrorsAt(featureHooksTestFile, "import 'node:fs';\n", testRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('node:fs');
+  });
+
+  it('leaves no per-file block that switches the whole boundary off', () => {
+    // A file list is an enumeration with a delay fuse: it goes stale, and every
+    // path on it loses the entire allowlist rather than the one capability it
+    // needed. Only two `off` blocks are legitimate — build/config tooling, which
+    // the architectural boundary does not govern, and this fixture file, which
+    // imports the config it exercises.
+    const disablingBlocks = config
+      .filter((c) => {
+        const entry = c.rules?.['boundaries/dependencies'];
+        return (Array.isArray(entry) ? entry[0] : entry) === 'off';
+      })
+      .map((c) => (Array.isArray(c.files) ? c.files : []));
+    expect(disablingBlocks).toEqual([
+      [
+        '**/*.config.{js,ts}',
+        'eslint.config.js',
+        'eslint.config.d.ts',
+        'apps/studio/vendor/**/*.ts',
+        '**/scripts/**/*.mjs',
+      ],
+      ['apps/studio/src/app/eslint-boundaries.test.ts'],
+    ]);
   });
 });
 

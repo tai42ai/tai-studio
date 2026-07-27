@@ -7,6 +7,13 @@ import { defineConfig } from 'vitest/config';
  * side-effect imports are ignored (`css: false`) — the token contract is asserted
  * via `TOKEN_NAMES`, not computed styles. Coverage is opt-in via `--coverage`
  * (v8); when enabled the thresholds fail the run on a regression.
+ *
+ * The thresholds sit just under what the suite actually achieves, not at a round
+ * number well below it. A global threshold with slack in it is a threshold a
+ * whole component can slip through: at 85 % against an achieved ~97 %, three
+ * published components could lose EVERY test they have and the gate would still
+ * be green. The headroom is ~2 points — enough that adding an uncovered branch
+ * is not a broken build, small enough that deleting a component's tests is.
  */
 export default defineConfig({
   plugins: [react()],
@@ -26,10 +33,10 @@ export default defineConfig({
       ],
       reporter: ['text'],
       thresholds: {
-        statements: 85,
-        branches: 75,
-        functions: 85,
-        lines: 85,
+        statements: 95,
+        branches: 88,
+        functions: 93,
+        lines: 95,
       },
     },
   },

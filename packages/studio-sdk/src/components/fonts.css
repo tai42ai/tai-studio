@@ -7,6 +7,16 @@
  * This is a separate stylesheet so a HOST app loads the faces exactly once. A
  * plugin never imports it; it inherits the families through `--tai-font-sans` and
  * `--tai-font-mono`.
+ *
+ * BUNDLER-RESOLVED ENTRY POINT. The two lines below are BARE PACKAGE specifiers,
+ * not URLs: only a bundler (or anything else applying Node resolution to CSS)
+ * turns them into the `@font-face` blocks and the hashed `.woff2` assets. Linked
+ * straight into a page — `<link href=".../@tai42/studio-sdk/dist/components/
+ * fonts.css">` — a browser resolves them against the stylesheet's own URL, both
+ * requests 404, and the page silently falls back to the platform font with
+ * nothing failing anywhere. So `@tai42/studio-sdk/fonts.css` is for a build that
+ * resolves package specifiers; `tokens.css` and `components.css`, which carry no
+ * `@import` at all, are the two subpaths a page may link directly.
  */
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/geist-mono';

@@ -252,6 +252,20 @@ describe('VersionHistoryPanel', () => {
     expect(screen.queryByRole('button', { name: /Edit tags/ })).toBeNull();
   });
 
+  it('hides EVERY mutation under readOnly, not only Rollback', () => {
+    // `readOnly` is what a consumer reaches for to make history a read surface,
+    // so a mutation left live under it is a mutation the consumer believes it
+    // has already withdrawn.
+    const tagged = taggedPair(['stable']).slice(0, 1);
+    render(
+      <VersionHistoryPanel versions={tagged} onRollback={vi.fn()} onEditTags={vi.fn()} readOnly />,
+    );
+    expect(screen.queryByRole('button', { name: /Edit tags/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Roll back/ })).toBeNull();
+    // The read surface itself stays: the list is still there to read.
+    expect(screen.getByRole('button', { name: /View version 1/ })).toBeInTheDocument();
+  });
+
   it('renders a body containing markup as escaped TEXT, never an element (XSS pin)', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(

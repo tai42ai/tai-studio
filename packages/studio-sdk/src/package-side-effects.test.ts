@@ -12,10 +12,18 @@
  * So the list is checked against the source rather than trusted: every module
  * under `src/` that carries a bare `*.css` import is found by SCANNING, and both
  * of the paths a consumer can resolve it at must come out side-effectful —
- * `./dist/<name>.js` (the build) and `./src/<name>.ts` (`files` ships `src` too,
- * and app configs do alias to it). The stylesheets themselves are checked the
- * same way, and every entry in the list must match something real so a typo
- * cannot sit there looking like cover.
+ * `./dist/<name>.js` (the build) and `./src/<name>.ts`. The source path counts
+ * because `files` publishes `src` and a bundler keys `sideEffects` on the module
+ * PATH: however a consumer's resolver arrives at the shipped source (an alias, a
+ * TS path mapping, an override), the flag has to be right there too or the
+ * barrel's three CSS imports are dropped again. The stylesheets themselves are
+ * checked the same way, and every entry in the list must match something real so
+ * a typo cannot sit there looking like cover.
+ *
+ * What `files` publishes is itself derived rather than assumed, and pinned
+ * against the set `tsconfig.build.json` keeps out of the build: the two lists
+ * answer the same question — what is test scaffolding — and a package that
+ * builds without a file but ships it publishes source the build never sees.
  *
  * `hasSideEffects` below reimplements the npm `sideEffects` contract as the
  * bundlers apply it, so the gate answers the question the bundler asks.
@@ -34,8 +42,22 @@ const manifest = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), '
   files?: string[];
 };
 
-/** Files `files` excludes, so the gate reasons only about what is published. */
-const UNPUBLISHED = /(\.test\.tsx?|__snapshots__)/;
+/**
+ * `tsconfig.build.json`'s `exclude` — the files the emitting build never sees.
+ *
+ * DECLARED LIMIT: whole-line `//` comments are stripped, which is every comment
+ * that file carries. A comment appended after a value would survive and
+ * `JSON.parse` would throw, which is a loud failure rather than a silent one.
+ */
+const buildExclude: string[] =
+  (
+    JSON.parse(
+      readFileSync(resolve(packageRoot, 'tsconfig.build.json'), 'utf8').replace(
+        /^\s*\/\/.*$/gm,
+        '',
+      ),
+    ) as { exclude?: string[] }
+  ).exclude ?? [];
 
 /**
  * One `sideEffects` glob as a regular expression, with the semantics webpack's
@@ -86,9 +108,34 @@ function filesWithin(dir: string, extensions: readonly string[]): string[] {
   return found;
 }
 
-const publishedSources = filesWithin(srcDir, ['.ts', '.tsx', '.css']).filter(
-  (path) => !UNPUBLISHED.test(path),
-);
+/**
+ * Whether `glob` matches `path` or any directory ABOVE it — a `files` entry or a
+ * tsconfig `exclude` entry naming a directory takes everything under it.
+ */
+function matchesPathOrAncestor(glob: string, path: string): boolean {
+  const pattern = globToRegExp(glob.startsWith('!') ? glob.slice(1) : glob);
+  const segments = path.split('/');
+  return segments.some((_, index) => pattern.test(segments.slice(0, index + 1).join('/')));
+}
+
+/** Whether `files` packs `path` — named by an entry and by no `!` negation. */
+function isPacked(path: string): boolean {
+  const entries = manifest.files ?? [];
+  const included = entries.filter((entry) => !entry.startsWith('!'));
+  const negated = entries.filter((entry) => entry.startsWith('!'));
+  return (
+    included.some((entry) => matchesPathOrAncestor(entry, path)) &&
+    !negated.some((entry) => matchesPathOrAncestor(entry, path))
+  );
+}
+
+/** Whether `tsconfig.build.json` compiles `path` into `dist/`. */
+function isBuilt(path: string): boolean {
+  return !buildExclude.some((entry) => matchesPathOrAncestor(entry, path));
+}
+
+const sourceTree = filesWithin(srcDir, ['.ts', '.tsx', '.css']);
+const publishedSources = sourceTree.filter(isPacked);
 
 /** The `dist/` path `tsc -b` + `copy-assets.mjs` emit for a `src/` file. */
 function distCounterpart(sourcePath: string): string {
@@ -123,7 +170,8 @@ describe('published sideEffects declaration', () => {
       path: distCounterpart(carrier),
       sideEffectful: true,
     });
-    // The source entry: `files` ships `src`, and configs alias to it.
+    // The source entry: `files` ships `src`, and a bundler applies `sideEffects`
+    // to whatever module path its resolver lands on.
     expect({ path: carrier, sideEffectful: hasSideEffects(carrier) }).toEqual({
       path: carrier,
       sideEffectful: true,
@@ -137,6 +185,45 @@ describe('published sideEffects declaration', () => {
       .flatMap((path) => [path, distCounterpart(path)])
       .filter((path) => !hasSideEffects(path));
     expect(dropped).toEqual([]);
+  });
+
+  it('packs exactly the source modules the build compiles', () => {
+    // `files` ships `src`, so every test and test-support module it fails to
+    // negate lands in the tarball — importing devDependencies a consumer never
+    // installs, and running module-scope setup nothing asked for. The build
+    // already decides which modules are scaffolding; the tarball must agree.
+    const modules = sourceTree.filter((path) => /\.tsx?$/.test(path));
+    expect(modules.length).toBeGreaterThan(0);
+    const packedNotBuilt = modules.filter((path) => isPacked(path) && !isBuilt(path));
+    const builtNotPacked = modules.filter((path) => isBuilt(path) && !isPacked(path));
+    expect({ packedNotBuilt, builtNotPacked }).toEqual({ packedNotBuilt: [], builtNotPacked: [] });
+  });
+
+  it.each([
+    'src/index.ts',
+    'src/components/button.tsx',
+    'src/components/button.test.tsx',
+    'src/components/button.spec.ts',
+    'src/test-setup.ts',
+    'src/components/test-utils.tsx',
+    'src/hooks/test-utils.ts',
+  ])('agrees with the build about whether %s is scaffolding', (path) => {
+    // The case above compares the two lists over the files that exist TODAY, so a
+    // negation matching nothing yet is cover it cannot prove. These paths need not
+    // exist: they pin the PATTERNS, so the first `test-utils.tsx` anyone writes is
+    // already out of the tarball rather than discovered in it.
+    expect({ path, packed: isPacked(path) }).toEqual({ path, packed: isBuilt(path) });
+  });
+
+  it('exports its own manifest', () => {
+    // `exports` closes every path it does not name, so without this entry
+    // `require('@tai42/studio-sdk/package.json')` — what a bundler asks for when
+    // it wants `sideEffects` or `browserslist`, and what dependency tooling reads
+    // — fails with ERR_PACKAGE_PATH_NOT_EXPORTED.
+    const exportsMap = JSON.parse(readSource('package.json')) as {
+      exports: Record<string, unknown>;
+    };
+    expect(exportsMap.exports['./package.json']).toBe('./package.json');
   });
 
   it('ships both directories the declaration names', () => {

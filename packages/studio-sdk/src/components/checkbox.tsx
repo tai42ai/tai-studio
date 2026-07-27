@@ -7,17 +7,25 @@
  *
  * Appearance is the `tai-checkbox` class: Radix stamps `data-state` on the root,
  * and the stylesheet paints the checked and indeterminate grounds from it, so the
- * tick shows for a controlled AND an uncontrolled box alike. The tick itself is
- * the design system's `CheckIcon`, decorative behind the control's own name.
+ * mark shows for a controlled AND an uncontrolled box alike. The two filled
+ * states share that ground, so the MARK is what tells them apart: `CheckIcon` for
+ * checked, `MinusIcon` for indeterminate, both decorative behind the control's
+ * own name.
  */
 import * as RadixCheckbox from '@radix-ui/react-checkbox';
 import { useId } from 'react';
 
 import { useFieldControl } from './field';
-import { CheckIcon } from './icons';
+import { CheckIcon, MinusIcon } from './icons';
 
 export interface CheckboxProps {
-  readonly checked?: boolean;
+  /**
+   * `'indeterminate'` is the MIXED state a parent box wears while only some of
+   * the children it governs are checked. Radix reports it as
+   * `aria-checked="mixed"`; clicking it resolves to checked, which is why the
+   * change callback stays boolean.
+   */
+  readonly checked?: boolean | 'indeterminate';
   readonly defaultChecked?: boolean;
   readonly onCheckedChange?: (checked: boolean) => void;
   readonly disabled?: boolean;
@@ -58,9 +66,11 @@ export function Checkbox({
       name={name}
       value={value}
     >
-      {/* The indicator only ever holds the mark, so it is a bare flex box. */}
+      {/* The indicator only ever holds the mark, so it is a bare flex box. The
+          checked and indeterminate grounds are the same accent fill, so a shared
+          mark would make the two states indistinguishable. */}
       <RadixCheckbox.Indicator aria-hidden="true" style={{ display: 'flex' }}>
-        <CheckIcon />
+        {checked === 'indeterminate' ? <MinusIcon /> : <CheckIcon />}
       </RadixCheckbox.Indicator>
     </RadixCheckbox.Root>
   );

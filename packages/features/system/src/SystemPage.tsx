@@ -36,6 +36,7 @@ import {
   EmptyState,
   ErrorState,
   FleetReport,
+  ScrollRegion,
   Skeleton,
   Spinner,
   TBody,
@@ -289,42 +290,44 @@ function WorkersCard(): ReactNode {
     );
   } else {
     body = (
-      <Table>
-        <THead>
-          <TR>
-            <TH style={{ width: '1px' }}>
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={toggleAll}
-                aria-label="Select all workers"
-              />
-            </TH>
-            <TH>Worker</TH>
-            <TH>Kind</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {origins.map((origin) => (
-            <TR key={origin.origin}>
-              <TD>
+      <ScrollRegion label="Live workers">
+        <Table>
+          <THead>
+            <TR>
+              <TH style={{ width: '1px' }}>
                 <Checkbox
-                  checked={selected.has(origin.origin)}
-                  onCheckedChange={(next) => {
-                    toggle(origin.origin, next);
-                  }}
-                  aria-label={`Select ${origin.origin}`}
+                  checked={allSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Select all workers"
                 />
-              </TD>
-              <TD style={monoStyle}>{origin.origin}</TD>
-              <TD>
-                <Badge variant={origin.kind === 'backend' ? 'primary' : 'neutral'}>
-                  {origin.kind}
-                </Badge>
-              </TD>
+              </TH>
+              <TH>Worker</TH>
+              <TH>Kind</TH>
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {origins.map((origin) => (
+              <TR key={origin.origin}>
+                <TD>
+                  <Checkbox
+                    checked={selected.has(origin.origin)}
+                    onCheckedChange={(next) => {
+                      toggle(origin.origin, next);
+                    }}
+                    aria-label={`Select ${origin.origin}`}
+                  />
+                </TD>
+                <TD style={monoStyle}>{origin.origin}</TD>
+                <TD>
+                  <Badge variant={origin.kind === 'backend' ? 'primary' : 'neutral'}>
+                    {origin.kind}
+                  </Badge>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     );
   }
 
@@ -468,28 +471,30 @@ function KindsCard(): ReactNode {
     );
   } else {
     body = (
-      <Table>
-        <THead>
-          <TR>
-            <TH>Kind</TH>
-            <TH>State</TH>
-            <TH>Plugin</TH>
-            <TH>Detail</TH>
-          </TR>
-        </THead>
-        <TBody>
-          {kinds.data.map((row) => (
-            <TR key={row.kind}>
-              <TD style={monoStyle}>{row.kind}</TD>
-              <TD>
-                <Badge variant={KIND_STATE_VARIANT[row.state]}>{row.state}</Badge>
-              </TD>
-              <TD style={monoStyle}>{row.plugin ?? '—'}</TD>
-              <TD>{row.detail}</TD>
+      <ScrollRegion label="Plugin kinds">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Kind</TH>
+              <TH>State</TH>
+              <TH>Plugin</TH>
+              <TH>Detail</TH>
             </TR>
-          ))}
-        </TBody>
-      </Table>
+          </THead>
+          <TBody>
+            {kinds.data.map((row) => (
+              <TR key={row.kind}>
+                <TD style={monoStyle}>{row.kind}</TD>
+                <TD>
+                  <Badge variant={KIND_STATE_VARIANT[row.state]}>{row.state}</Badge>
+                </TD>
+                <TD style={monoStyle}>{row.plugin ?? '—'}</TD>
+                <TD>{row.detail}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     );
   }
 
