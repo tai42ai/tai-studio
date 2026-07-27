@@ -40,6 +40,8 @@ const allSheets = SHEETS.map((path) =>
 interface Rule {
   readonly selector: string;
   readonly body: string;
+  /** The at-rule preludes this rule is nested inside, outermost first. */
+  readonly context: string[];
 }
 
 /**
@@ -92,12 +94,29 @@ function appliesAtEveryWidth(context: readonly string[]): boolean {
  * let the whole block be banded away with the suite green.
  */
 function rulesOf(source: string): Rule[] {
-  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
-    .filter((match) => appliesAtEveryWidth(contextAt(source, match.index)))
-    .map((match) => ({
-      selector: (match[1] ?? '').trim(),
-      body: match[2] ?? '',
-    }));
+  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
+    selector: (match[1] ?? '').trim(),
+    body: match[2] ?? '',
+    context: contextAt(source, match.index),
+  }));
+}
+
+/**
+ * The rules that apply at EVERY viewport width.
+ *
+ * This is the right universe for a PRESENCE assertion — "the shared ring exists",
+ * "something is flattened" — because a rule that only applies above 2000 px is
+ * exactly as absent as no rule at all.
+ *
+ * It is the WRONG universe for an OFFENCE hunt, and the filter used to sit in the
+ * reader itself, which silently applied it to both: a banded `outline: none` on a
+ * ring bearer, or a banded hover lift, became invisible. A rule that only applies
+ * below 640 px is not absent — it is present on every phone, which is the band
+ * this sheet spends seventeen rules restyling. Offence scans therefore read the
+ * UNFILTERED set and this filter is applied per assertion.
+ */
+function everywhere<T extends { readonly context: readonly string[] }>(rules: T[]): T[] {
+  return rules.filter((rule) => appliesAtEveryWidth(rule.context));
 }
 
 const rules: Rule[] = rulesOf(stylesheet);
@@ -296,9 +315,21 @@ function cancelsOutline(body: string): boolean {
 }
 
 /** The rule declaring the shared ring — the one every focusable class shares. */
-const sharedRing = rules.filter((rule) => /outline:\s*2px solid/.test(rule.body));
+const sharedRing = everywhere(rules).filter((rule) => /outline:\s*2px solid/.test(rule.body));
 
 describe('visible focus', () => {
+  it('reads BOTH directions of a width band, and filters only for presence', () => {
+    // The two-way control. A rule confined ABOVE every real screen is absent for a
+    // PRESENCE assertion; a rule confined to the phone band is present on every
+    // phone and must still be caught by an OFFENCE hunt. A reader that filtered
+    // for both — which is what closing the first hole did — traded a fail-open in
+    // one direction for a fail-open in the other.
+    const sample = rulesOf(
+      '.a { color: red } @media (min-width: 2000px) { .b { color: red } } @media (max-width: 639px) { .c { color: red } }',
+    );
+    expect(sample).toHaveLength(3);
+    expect(everywhere(sample)).toHaveLength(1);
+  });
   it('parses the stylesheet (a scan that found nothing would pass vacuously)', () => {
     expect(rules.length).toBeGreaterThan(100);
     expect(sharedRing).toHaveLength(1);

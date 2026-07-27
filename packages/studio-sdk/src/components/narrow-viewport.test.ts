@@ -296,6 +296,29 @@ describe('narrow-viewport contract', () => {
     expect([selector, declaredValue(selector, 'white-space')]).toEqual([selector, undefined]);
   });
 
+  it('pins every white-space: nowrap in the sheet to a stated reason', () => {
+    // Keying the item contract on the EXACT bare selector left a hole a live
+    // sibling rule walks through: `.tai-btn-primary { white-space: nowrap }` is a
+    // different selector, so `declaredValue('.tai-btn', …)` never sees it, and it
+    // restores the defect on every button with the gate green. `nowrap` is the
+    // one declaration that can undo the whole 320 px contract from anywhere in
+    // the sheet, so it is allow-listed by name rather than checked per rule.
+    const NOWRAP_ALLOWED: Readonly<Record<string, string>> = {
+      '.tai-visually-hidden':
+        'the standard clip pattern — the text is never painted, so it cannot push anything',
+      '.tai-brand-label':
+        'the product name, a constant this repo owns and deliberately keeps on one line',
+    };
+    const nowrap = sheet
+      .filter((rule) => /(?:^|;)\s*white-space\s*:\s*nowrap/.test(rule.body))
+      .flatMap((rule) => rule.selectors);
+    expect(nowrap.filter((selector) => !(selector in NOWRAP_ALLOWED))).toEqual([]);
+    // …and the allow-list is not stale: every entry still names a live rule.
+    expect(Object.keys(NOWRAP_ALLOWED).filter((selector) => !nowrap.includes(selector))).toEqual(
+      [],
+    );
+  });
+
   it('classifies every horizontal strip the sheet declares, in BOTH directions', () => {
     // The floor against the LIST going stale — the exact way the floating-surface
     // triple missed `.tai-select-content`. This is a set EQUALITY, so an

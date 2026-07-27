@@ -104,8 +104,17 @@ export function CompletionInput({
           onChange(event.target.value);
         }}
       />
+      {/* `tai-select-viewport` carries the inset that gives an option's focus ring
+          room. This popup is its own clip box — it has no Radix viewport to put
+          the class on — so it wears both, or preflight's `* { padding: 0 }` zeroes
+          the inset and clips every ring. */}
       {showList && (
-        <ul id={listboxId} role="listbox" className="tai-select-content" style={listStyle}>
+        <ul
+          id={listboxId}
+          role="listbox"
+          className="tai-select-content tai-select-viewport"
+          style={listStyle}
+        >
           {suggestions.map((suggestion) => (
             <li key={suggestion} role="presentation">
               <button

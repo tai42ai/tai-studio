@@ -266,8 +266,12 @@ const LITERAL_EXPRESSION =
 /**
  * A JavaScript string escape: `\u{1f600}`, `\u00d7`, `\xd7`, or any single
  * character. Anything else in a literal body is its own text.
+ *
+ * `\u{…}` takes UNBOUNDED hex digits deliberately: leading zeros are legal, so
+ * `\u{00000d7}` is the same `\u{d7}` the lexer reads and a six-digit cap simply
+ * gave the ban an entrance per extra zero. The value is range-checked instead.
  */
-const STRING_ESCAPE = /\\(?:u\{([0-9a-fA-F]{1,6})\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([\s\S]))/g;
+const STRING_ESCAPE = /\\(?:u\{([0-9a-fA-F]+)\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([\s\S]))/g;
 
 /** The control characters an escape names; every other escape paints itself. */
 const CONTROL_ESCAPES: Readonly<Record<string, string>> = {

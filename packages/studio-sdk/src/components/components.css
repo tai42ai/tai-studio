@@ -482,6 +482,13 @@
      ring. */
   .tai-select-viewport {
     padding: var(--tai-space-1);
+    /* Radix moves the keyboard highlight with `scrollIntoView({block:'nearest'})`,
+       which aligns to the PADDING box — so from the eighth option on, the scroll
+       consumes exactly the 4 px the padding above reserves and every step loses
+       its leading ring edge. `scroll-padding` keeps that gap on the scroll port
+       too. Measured over a 52-step keyboard walk: 36 steps clipped without it,
+       0 with it. */
+    scroll-padding: var(--tai-space-1);
   }
 
   .tai-select-item {
@@ -1007,6 +1014,27 @@
   /* -- Tables -----------------------------------------------------------------
      Mono uppercase headers, tinted row hover, numerics right-aligned on
      tabular figures so columns line up. */
+  /* A table cell is not a flex item. Auto table layout distributes width from
+     each column's MIN-CONTENT, and `overflow-wrap: anywhere` — unlike
+     `break-word` — is taken into account when that min-content is computed. So a
+     column holding one of these controls reported a min-content of ONE CHARACTER
+     and the label was laid out a letter per line: measured, a live 5-column
+     table rendered its "Revoke" button 6 lines / 99 px at 320-390 px and still 2
+     lines / 45 px at 768 px, which is not a narrow viewport at all. Because
+     `.tai-table` is `width: 100%`, this also fired INSIDE a `.tai-scroll-region`:
+     the table stopped wanting to be wider than the box, so the region's
+     `overflow-x: auto` never engaged and the control was mangled instead of the
+     table scrolling. Inside a table these controls therefore keep their
+     intrinsic minimum; the 320 px contract outside tables is untouched. */
+  .tai-table .tai-btn,
+  .tai-table .tai-badge,
+  .tai-table .tai-chip,
+  .tai-table .tai-status,
+  .tai-table .tai-choice {
+    min-width: auto;
+    overflow-wrap: normal;
+  }
+
   .tai-table {
     width: 100%;
     border-collapse: collapse;

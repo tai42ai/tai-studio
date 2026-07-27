@@ -57,6 +57,8 @@ function reducedMotionBlock(source: string): string {
 interface Rule {
   readonly selectors: string[];
   readonly body: string;
+  /** The at-rule preludes this rule is nested inside, outermost first. */
+  readonly context: string[];
 }
 
 /**
@@ -104,12 +106,29 @@ function appliesAtEveryWidth(context: readonly string[]): boolean {
  * real screen, so counting it would let the guard be banded away silently.
  */
 function rules(source: string): Rule[] {
-  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
-    .filter((match) => appliesAtEveryWidth(contextAt(source, match.index)))
-    .map((match) => ({
-      selectors: (match[1] ?? '').split(',').map((one) => one.trim()),
-      body: match[2] ?? '',
-    }));
+  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
+    selectors: (match[1] ?? '').split(',').map((one) => one.trim()),
+    body: match[2] ?? '',
+    context: contextAt(source, match.index),
+  }));
+}
+
+/**
+ * The rules that apply at EVERY viewport width.
+ *
+ * This is the right universe for a PRESENCE assertion — "a remedy exists",
+ * "something is flattened" — because a rule that only applies above 2000 px is
+ * exactly as absent as no rule at all.
+ *
+ * It is the WRONG universe for an OFFENCE hunt, and the filter used to sit in the
+ * reader itself, which silently applied it to both: a banded `outline: none` on a
+ * ring bearer, or a banded hover lift, became invisible. A rule that only applies
+ * below 640 px is not absent — it is present on every phone, which is the band
+ * this sheet spends seventeen rules restyling. Offence scans therefore read the
+ * UNFILTERED set and this filter is applied per assertion.
+ */
+function everywhere<T extends { readonly context: readonly string[] }>(rules: T[]): T[] {
+  return rules.filter((rule) => appliesAtEveryWidth(rule.context));
 }
 
 // Harvested from BOTH sheets: a keyframe declared beside the class that uses it
@@ -127,6 +146,18 @@ const SHEETS = [
 ] as const;
 
 describe('reduced motion', () => {
+  it('reads BOTH directions of a width band, and filters only for presence', () => {
+    // The two-way control. A rule confined ABOVE every real screen is absent for a
+    // PRESENCE assertion; a rule confined to the phone band is present on every
+    // phone and must still be caught by an OFFENCE hunt. A reader that filtered
+    // for both — which is what closing the first hole did — traded a fail-open in
+    // one direction for a fail-open in the other.
+    const sample = rules(
+      '.a { color: red } @media (min-width: 2000px) { .b { color: red } } @media (max-width: 639px) { .c { color: red } }',
+    );
+    expect(sample).toHaveLength(3);
+    expect(everywhere(sample)).toHaveLength(1);
+  });
   it('finds the keyframes and the guard (a scan that found nothing would pass)', () => {
     expect(keyframeNames.length).toBeGreaterThan(0);
     expect(componentsReduced.length).toBeGreaterThan(0);
@@ -148,7 +179,7 @@ describe('reduced motion', () => {
     // this gate green — the token file declares three of the four keyframes, so
     // it is exactly where such a rule would land.
     const stopped = new Set(
-      SHEETS.flatMap(([, , reduced]) => rules(reduced))
+      SHEETS.flatMap(([, , reduced]) => everywhere(rules(reduced)))
         .filter((rule) => /animation:\s*none/.test(rule.body))
         .flatMap((rule) => rule.selectors),
     );
@@ -196,7 +227,7 @@ describe('reduced motion', () => {
     // `translate(-50%, -50%)` is layout rather than motion, and `.tai-btn:active`'s
     // `translateY(0)` is the rest position itself.
     const flattened = new Set(
-      rules(componentsReduced)
+      everywhere(rules(componentsReduced))
         .filter((rule) => /transform:\s*none/.test(rule.body))
         .flatMap((rule) => rule.selectors),
     );

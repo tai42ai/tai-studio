@@ -143,6 +143,23 @@ describe('RadioGroup', () => {
     expect(screen.getByRole('radiogroup', { name: 'Fruit choice' })).toBeInTheDocument();
   });
 
+  it("exposes the group Field's invalid state on the control, not on the container", () => {
+    // `aria-invalid` is not supported on `role="group"` (ARIA 1.2), so if a group
+    // Field withheld the flag along with the id and the description, an errored
+    // group would expose its invalid state NOWHERE in the accessibility tree —
+    // which is what withholding the whole context did.
+    render(
+      <Field label="Expiry" error="Pick when it stops." group>
+        <RadioGroup options={OPTIONS} />
+      </Field>,
+    );
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('aria-invalid', 'true');
+    // …and the container carries the name and the description, not the flag.
+    const group = screen.getByRole('group', { name: 'Expiry' });
+    expect(group).toHaveAccessibleDescription(/Pick when it stops/);
+    expect(group).not.toHaveAttribute('aria-invalid');
+  });
+
   it('keeps its own label prop as the inner name, under the Field-named group', () => {
     render(
       <Field label="Fruit" group>

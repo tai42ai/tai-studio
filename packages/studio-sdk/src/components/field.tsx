@@ -12,7 +12,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { AlertTriangleIcon } from './icons';
 
 interface FieldContextValue {
-  readonly controlId: string;
+  readonly controlId: string | undefined;
   readonly describedBy: string | undefined;
   readonly invalid: boolean;
 }
@@ -26,7 +26,16 @@ export interface FieldControlProps {
   readonly 'aria-invalid': true | undefined;
 }
 
-/** Read the enclosing Field's wiring; a passthrough (all `undefined`) when standalone. */
+/**
+ * Read the enclosing Field's wiring.
+ *
+ * `id` and `aria-describedby` are `undefined` both when there is no Field AND
+ * inside a group `Field`: a group has no single element to carry them, and the
+ * group container itself already carries the name and the description. Only
+ * `aria-invalid` still crosses that boundary, because `role="group"` does not
+ * support it (ARIA 1.2), so the control is the sole place an errored group can
+ * expose its invalid state.
+ */
 export function useFieldControl(): FieldControlProps {
   const ctx = useContext(FieldContext);
   if (ctx === null) {
@@ -79,17 +88,18 @@ export function Field({ label, description, error, children, style, group = fals
   if (error !== undefined) describedByIds.push(errorId);
   const describedBy = describedByIds.length > 0 ? describedByIds.join(' ') : undefined;
 
-  const value: FieldContextValue = {
-    controlId,
-    describedBy,
-    invalid: error !== undefined,
-  };
+  // A group withholds the ID and the DESCRIPTION — there is no single element to
+  // carry them, and a control that spread them inside a group would take the
+  // group's own name and description for itself — but it still publishes
+  // `invalid`. `aria-invalid` is not supported on `role="group"` (ARIA 1.2), so
+  // if the group Field withheld it too, a group Field carrying an `error` would
+  // expose its invalid state NOWHERE in the accessibility tree.
+  const value: FieldContextValue = group
+    ? { controlId: undefined, describedBy: undefined, invalid: error !== undefined }
+    : { controlId, describedBy, invalid: error !== undefined };
 
-  // A group publishes NO control wiring: there is no single element to carry the
-  // id, and a control that spread `controlId` inside a group would take the
-  // group's own name and description for itself.
   return (
-    <FieldContext.Provider value={group ? null : value}>
+    <FieldContext.Provider value={value}>
       <div className="tai-field" style={style}>
         {group ? (
           <span id={labelId} className="tai-field-label">

@@ -8,8 +8,14 @@
  * control, carrying its icon and its label with no dot — which is the shape a
  * compact single-choice control (a light / dark / system switcher) needs.
  *
- * The group takes its accessible name from an enclosing `Field`, from a `label`
- * it renders itself, or from `aria-label`. Roving tabindex and arrow-key movement
+ * The group takes its accessible name from a `label` it renders itself or from
+ * `aria-label`. It does NOT read one from an enclosing `Field`: a group `Field`
+ * renders its own named `role="group"` container around this component, so the
+ * name lives one level up and this component would otherwise duplicate it. A
+ * `Field` WITHOUT `group` around a RadioGroup is a mistake — the field's
+ * `<label for>` dangles at an id no element carries and neither element ends up
+ * named — and `field-group.test.ts` fails the build on it.
+ * Roving tabindex and arrow-key movement
  * belong to Radix; this component only chooses the layout that matches
  * `orientation` and passes the prop straight through, so a caller that names no
  * orientation keeps Radix's both-axes default rather than being pinned to one.
