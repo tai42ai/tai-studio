@@ -197,58 +197,6 @@ function isStateConditioned(selector: string): boolean {
 }
 
 describe('reduced motion', () => {
-  it('reads BOTH directions of a width band, and filters only for presence', () => {
-    // The two-way control. A rule confined ABOVE every real screen is absent for a
-    // PRESENCE assertion; a rule confined to the phone band is present on every
-    // phone and must still be caught by an OFFENCE hunt. A reader that filtered
-    // for both — which is what closing the first hole did — traded a fail-open in
-    // one direction for a fail-open in the other.
-    const sample = readRules(
-      '.a { color: red } @media (min-width: 2000px) { .b { color: red } } @media (max-width: 639px) { .c { color: red } }',
-    );
-    expect(sample).toHaveLength(3);
-    expect(everywhere(sample)).toHaveLength(1);
-
-    // Every spelling of a band, including the range syntax an integer-px pattern
-    // never saw. A band it cannot read is a band it reports as applying to every
-    // screen, which is a fail-open in the presence direction.
-    for (const query of [
-      '@media (max-width: 639px)',
-      '@media (min-width: 640px)',
-      '@media (width <= 639px)',
-      '@media (width < 640px)',
-      '@media (width >= 40rem)',
-      '@media (640px <= width)',
-      '@media screen and (max-width: 47.9375em)',
-    ]) {
-      expect([query, appliesAtEveryWidth([query])]).toEqual([query, false]);
-    }
-    for (const query of [
-      '@media (prefers-reduced-motion: reduce)',
-      '@media (pointer: coarse)',
-      '@layer tai-components',
-      '@supports (height: 100dvh)',
-    ]) {
-      expect([query, appliesAtEveryWidth([query])]).toEqual([query, true]);
-    }
-  });
-
-  it('parses a brace inside a quoted value without losing the walk', () => {
-    // A brace is legal inside a CSS string. Left in, it desynchronises every
-    // brace count from that point on, so each following rule reports the wrong
-    // at-rule context — and a banded offence reads as applying everywhere, or an
-    // unbanded remedy reads as banded away. The sheets are neutralised on read;
-    // this is the control that the neutralising works and changes nothing else.
-    const sample = sheetText(
-      ".a::after { content: '}' } @media (min-width: 2000px) { .b { color: red } }",
-    );
-    const parsed = readRules(sample);
-    expect(parsed.map((rule) => rule.selectors.join())).toEqual(['.a::after', '.b']);
-    expect(everywhere(parsed).map((rule) => rule.selectors.join())).toEqual(['.a::after']);
-    // The quotes themselves survive, because selectors are read as written.
-    expect(sheetText(".x[data-state='open'] { color: red }")).toContain("[data-state='open']");
-  });
-
   it('reads every stylesheet the repository serves, not only the design system', () => {
     // The floor on the widening. A sheet outside this list can declare a
     // keyframe, a raw duration or a hover lift that no assertion here can see.

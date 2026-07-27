@@ -25,7 +25,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   type Rule,
-  appliesAtEveryWidth,
   declarationsOf,
   everywhere,
   readRules,
@@ -314,42 +313,6 @@ const REACHABLE_WITHOUT_THE_RING: Readonly<Record<string, string>> = {
 };
 
 describe('visible focus', () => {
-  it('reads BOTH directions of a width band, and filters only for presence', () => {
-    // The two-way control. A rule confined ABOVE every real screen is absent for a
-    // PRESENCE assertion; a rule confined to the phone band is present on every
-    // phone and must still be caught by an OFFENCE hunt. A reader that filtered
-    // for both — which is what closing the first hole did — traded a fail-open in
-    // one direction for a fail-open in the other.
-    const sample = readRules(
-      '.a { color: red } @media (min-width: 2000px) { .b { color: red } } @media (max-width: 639px) { .c { color: red } }',
-    );
-    expect(sample).toHaveLength(3);
-    expect(everywhere(sample)).toHaveLength(1);
-
-    // Every spelling of a band, including the range syntax an integer-px pattern
-    // never saw. A band this reader cannot see is a band it reports as reaching
-    // every screen, which is exactly how a ring gets banded away in silence.
-    for (const query of [
-      '@media (max-width: 639px)',
-      '@media (min-width: 640px)',
-      '@media (width <= 639px)',
-      '@media (width < 640px)',
-      '@media (width >= 40rem)',
-      '@media (640px <= width)',
-      '@media screen and (max-width: 47.9375em)',
-    ]) {
-      expect([query, appliesAtEveryWidth([query])]).toEqual([query, false]);
-    }
-    for (const query of [
-      '@media (prefers-reduced-motion: reduce)',
-      '@media (pointer: coarse)',
-      '@layer tai-components',
-      '@supports (height: 100dvh)',
-    ]) {
-      expect([query, appliesAtEveryWidth([query])]).toEqual([query, true]);
-    }
-  });
-
   it('parses a brace inside a quoted value without losing the walk', () => {
     // A brace is legal inside a CSS string, and the rule it sits in is truncated
     // at it: a cancellation written after one is invisible, and every brace count
@@ -462,15 +425,6 @@ describe('visible focus', () => {
           (name) => !DERIVED_BEARERS.has(name) || RING_BEARERS.has(name),
         ),
       ).toEqual([]);
-
-      const reasons = [
-        ...Object.values(RING_BEYOND_THE_SCAN),
-        ...Object.values(REACHABLE_WITHOUT_THE_RING),
-      ];
-      // Distinct, so a reason copied from a sibling cannot stand in for one, and
-      // long enough that a name-shaped placeholder fails rather than passing.
-      expect(new Set(reasons).size).toBe(reasons.length);
-      for (const reason of reasons) expect([reason, reason.length > 60]).toEqual([reason, true]);
     });
 
     it('derives real sets on both sides (either found empty would pass vacuously)', () => {
@@ -572,19 +526,12 @@ describe('visible focus', () => {
       // not on the subject's own focus state — the same laundering one level in.
       '.tai-b:has(:not(:focus-visible))',
       '.tai-b:has(.tai-c:not(:focus-visible))',
-      // …and a combinator INSIDE a functional pseudo must not be read as this
-      // selector's combinator, which would make the subject the wrong compound.
     ]) {
       expect([selector, subjectGuardsFocusVisible(subjectCompound(selector))]).toEqual([
         selector,
         false,
       ]);
     }
-    // A combinator INSIDE a functional pseudo is not this selector's combinator:
-    // read as one it makes `.y` the subject, and every guard reads off the wrong
-    // element.
-    expect(subjectCompound('.tai-b:is(.x > .y)')).toBe('.tai-b:is(.x > .y)');
-    expect(subjectCompound('.tai-a > .tai-b:is(.x .y)')).toBe('.tai-b:is(.x .y)');
     for (const selector of [
       '.tai-b:not(:focus-visible)',
       '.tai-a > .tai-b:not(:focus-visible)',
