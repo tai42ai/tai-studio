@@ -398,6 +398,16 @@
     justify-content: space-between;
     text-align: left;
     cursor: pointer;
+    /* `width: 100%` sizes the BOX; it says nothing about what is inside it. The
+       `<Select.Value>` span still reports its own min-content, and the chosen
+       value is caller data — a server id, a plugin tag — so an unbroken one
+       pushes the DOCUMENT sideways out of the field it sits in. Measured
+       headless: a 35 / 41 / 44-character value pushed a document scrollbar at
+       320 / 360 / 390 px, and with these two declarations no length does. The
+       span is a flex item of this row, so it needs the same pair every other
+       caller-sized control carries. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .tai-textarea {
@@ -660,8 +670,18 @@
     justify-content: center;
     gap: var(--tai-space-2);
     box-sizing: border-box;
+    /* A hit-target FLOOR (WCAG 2.5.8), not a content floor: 28 px is a small
+       fraction of the narrowest viewport, so the option can still shrink far
+       below its own label — which is the shape the 320 px contract asks for,
+       and the reason this rule keeps its `min-width` rather than dropping to
+       `0`. What the label needs on top of it is permission to BREAK.
+       `visuallyHiddenLabel` is opt-in PER OPTION, so the API default paints the
+       caller's own string beside the icon; measured headless, an unbroken one
+       pushed a document scrollbar from 43 / 48 / 53 characters at
+       320 / 360 / 390 px, and with `overflow-wrap` no length does. */
     min-width: 28px;
     min-height: 28px;
+    overflow-wrap: anywhere;
     padding: var(--tai-space-1) var(--tai-space-2);
     border: 1px solid transparent;
     border-radius: var(--tai-radius-sm);
@@ -1025,13 +1045,40 @@
      the table stopped wanting to be wider than the box, so the region's
      `overflow-x: auto` never engaged and the control was mangled instead of the
      table scrolling. Inside a table these controls therefore keep their
-     intrinsic minimum; the 320 px contract outside tables is untouched. */
+     intrinsic minimum; the 320 px contract outside tables is untouched.
+
+     The group is EVERY caller-sized item, not only the ones a cell holds today.
+     Live table call sites exist for four of them — `.tai-btn` in the actions
+     column of seven screens, `.tai-badge` in eleven tables, `.tai-chip` via
+     TagChips, `.tai-status` in VersionHistoryPanel. The rest are GUARD
+     declarations, and this comment is not claiming a nav item or a select is
+     rendered in a cell: they are not. That is deliberate rather than sloppy. A
+     rule matching nothing costs one line here and nothing at runtime, whereas a
+     hand-audited "these ones cannot appear in a table" list costs a live,
+     user-visible regression on the day someone adds the call site — and this
+     contract has now been bitten by exactly that twice. `narrow-viewport.test.ts`
+     reconciles this group against its caller-sized list as a set equality in
+     BOTH directions, so adding an item forces both rules or the gate reddens. */
   .tai-table .tai-btn,
   .tai-table .tai-badge,
   .tai-table .tai-chip,
   .tai-table .tai-status,
-  .tai-table .tai-choice {
+  .tai-table .tai-choice,
+  .tai-table .tai-nav-item,
+  .tai-table .tai-nav-link,
+  .tai-table .tai-select-trigger {
     min-width: auto;
+    overflow-wrap: normal;
+  }
+
+  /* `.tai-segment` takes the wrap half ONLY. The eight above carry
+     `min-width: 0`, so `auto` is what hands them an intrinsic minimum back;
+     this one carries a 28 px / 44 px POINTER TARGET (WCAG 2.5.8), and `auto` on
+     a flex item is the CONTENT-based minimum — for the icon-only option this
+     control is designed around that is roughly 26 px, i.e. below the target. Its
+     own floor already IS the non-zero minimum the rule above is restoring, so
+     restoring it would only lower it. */
+  .tai-table .tai-segment {
     overflow-wrap: normal;
   }
 

@@ -160,6 +160,24 @@ describe('RadioGroup', () => {
     expect(group).not.toHaveAttribute('aria-invalid');
   });
 
+  it("describes the group container from the Field's description AND its error", () => {
+    render(
+      <Field label="Expiry" description="Pick a month." error="Pick when it stops." group>
+        <RadioGroup options={OPTIONS} />
+      </Field>,
+    );
+
+    // Read as a consumer does: resolve the IDREF list to the elements it names
+    // and take their text. Every id has to LAND — `aria-describedby` pointing at
+    // an id no element carries computes an empty description, so the hint and
+    // the error are both announced by nothing.
+    const group = screen.getByRole('group', { name: 'Expiry' });
+    const ids = (group.getAttribute('aria-describedby') ?? '').split(' ').filter((id) => id !== '');
+    const described = ids.map((id) => document.getElementById(id)?.textContent);
+    expect(described).toEqual(['Pick a month.', 'Pick when it stops.']);
+    expect(group).toHaveAccessibleDescription('Pick a month. Pick when it stops.');
+  });
+
   it('keeps its own label prop as the inner name, under the Field-named group', () => {
     render(
       <Field label="Fruit" group>

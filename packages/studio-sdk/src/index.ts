@@ -107,7 +107,12 @@ export type { FieldProps, FieldControlProps } from './components/field';
 export { TextInput, Textarea, NumberInput } from './components/inputs';
 export type { TextInputProps, TextareaProps, NumberInputProps } from './components/inputs';
 export { Select } from './components/select';
-export type { SelectProps, SelectOption, SelectGroup } from './components/select';
+export type {
+  SelectProps,
+  SelectGroupsProps,
+  SelectOption,
+  SelectGroup,
+} from './components/select';
 export { Checkbox } from './components/checkbox';
 export type { CheckboxProps } from './components/checkbox';
 export { RadioGroup } from './components/radio-group';

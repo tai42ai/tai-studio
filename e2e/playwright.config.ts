@@ -24,6 +24,18 @@ export const STUDIO_API_KEY = process.env.STUDIO_API_KEY ?? 'sk-e2e-DO-NOT-USE-I
 /** The `user_id` that key resolves to. Must match boot.sh's default. */
 export const STUDIO_USER_ID = process.env.STUDIO_USER_ID ?? 'studio-e2e';
 
+/**
+ * The `SKIP_SPA_BUILD` value boot.sh receives. A bare `pnpm e2e` builds the SPA
+ * from the working tree, so the suites always test the code they are run against
+ * — a stale `apps/studio/dist` cannot be served under a green exit code. Reusing
+ * a prebuilt dist for a fast inner loop is an explicit `SKIP_SPA_BUILD=1`
+ * opt-in, and CI ignores that opt-in outright.
+ */
+export function spaBuildFlag(env: NodeJS.ProcessEnv): string {
+  if (env.CI) return '0';
+  return env.SKIP_SPA_BUILD === '1' ? '1' : '0';
+}
+
 export default defineConfig({
   testDir: './tests',
   // Serial: the suites share one live skeleton + one Redis; the key-expiry and
@@ -51,8 +63,7 @@ export default defineConfig({
       STUDIO_API_KEY,
       STUDIO_USER_ID,
       STUDIO_PORT: String(STUDIO_PORT),
-      // Locally, reuse a prebuilt dist for a fast loop; CI builds fresh.
-      SKIP_SPA_BUILD: process.env.CI ? '0' : (process.env.SKIP_SPA_BUILD ?? '1'),
+      SKIP_SPA_BUILD: spaBuildFlag(process.env),
     },
   },
 });

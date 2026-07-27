@@ -12,6 +12,12 @@
  *   - handing a `ButtonProps` value to a slot typed `ButtonHTMLAttributes<
  *     HTMLButtonElement>` → TS2322, because the anchor arm's `type` is `string`.
  *
+ * A third spelling narrows it just as effectively: `href?: undefined` declared on
+ * `ButtonProps` to discriminate the action form from the link form makes
+ * `interface MyButton extends ButtonProps { href: string }` a TS2430,
+ * "incorrectly extends" — so that discriminant belongs on `Button`'s own
+ * parameter type, not on the published interface.
+ *
  * The assertions below are TYPE-level and are enforced by `pnpm typecheck`
  * (`tsc --noEmit -p tsconfig.json` covers every file under `src`, tests
  * included). They deliberately do NOT use `expectTypeOf`, which vitest only
@@ -49,6 +55,14 @@ interface PluginLinkButtonProps extends LinkButtonProps {
   readonly tone: 'quiet' | 'loud';
 }
 
+/**
+ * GATE 4 — an extender may declare a member `ButtonProps` does not, `href`
+ * included. A `href?: undefined` on `ButtonProps` is TS2430 here.
+ */
+interface PluginHrefButtonProps extends ButtonProps {
+  readonly href: string;
+}
+
 describe('ButtonProps stays a compatible published type', () => {
   it('is an interface a plugin can extend', () => {
     const plugin: PluginButtonProps = { tone: 'loud', variant: 'primary', type: 'submit' };
@@ -71,6 +85,14 @@ describe('ButtonProps stays a compatible published type', () => {
       undefined,
     ];
     expect(variants).toHaveLength(5);
+  });
+
+  it('lets an extender declare its own href', () => {
+    // The action/link discriminant is `Button`'s to hold, not the published
+    // interface's: a downstream `interface MyButton extends ButtonProps { href:
+    // string }` compiles, and the plugin decides what its own href means.
+    const plugin: PluginHrefButtonProps = { href: '/agents', type: 'button' };
+    expect(plugin.href).toBe('/agents');
   });
 
   it('offers the link form as a separate extendable interface', () => {

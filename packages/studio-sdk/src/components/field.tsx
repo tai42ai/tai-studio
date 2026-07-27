@@ -61,18 +61,32 @@ export interface FieldProps {
    *
    * `<label for>` can only name a labelable element: pointed at a group it
    * either dangles at an id no element carries or names an element the browser
-   * refuses to label, and it is inert either way. So a group Field renders the
-   * group CONTAINER itself — `role="group"` carrying `aria-labelledby` and
-   * `aria-describedby` — and the label becomes a `<span>`, because a `<label>`
-   * associated with nothing is a semantics lie.
+   * refuses to label, and it is inert either way. So a group Field wraps
+   * `children` in the group CONTAINER itself — a `<div role="group">` carrying
+   * `aria-labelledby` at the label and `aria-describedby` at the description and
+   * error — and the label becomes a `<span>`, because a `<label>` associated
+   * with nothing is a semantics lie.
+   *
+   * IT ALSO CHANGES WHAT A CHILD READS FROM {@link useFieldControl}. The
+   * container is what carries the name and the description, so the group Field
+   * publishes NEITHER `id` NOR `aria-describedby` — both are `undefined`, and a
+   * control that spread them would take the group's own name and description for
+   * itself. `aria-invalid` still crosses: `role="group"` does not support it
+   * (ARIA 1.2), so the control is the only place an errored group can expose its
+   * invalid state.
    *
    * Naming therefore happens BY CONSTRUCTION rather than by the call site
-   * remembering to read a hook: the previous shape published the label id and
-   * left every group control to point at it, and ten live sites did not. The
-   * cost is one extra container announcement where the child has a group role of
-   * its own; that is accepted deliberately, because the two failure directions
-   * are asymmetric — a redundant container is audible, an unnamed group is
-   * silent.
+   * remembering to read a hook. The cost is one extra container announcement
+   * where the child has a group role of its own; that is accepted deliberately,
+   * because the two failure directions are asymmetric — a redundant container is
+   * audible, an unnamed group is silent.
+   *
+   * A group child left UNMARKED is a build failure, not a runtime surprise:
+   * `components/field-group.test.ts` ("Field group contract" → "marks every
+   * Field whose child does not claim its control id") scans every Field call
+   * site in the repository, and a child outside its list of control-id-claiming
+   * components — `RadioGroup` among them — reddens until the site passes
+   * `group`.
    */
   readonly group?: boolean;
 }

@@ -926,4 +926,25 @@ describe('SchemaForm — design system', () => {
     // …and the heading is the element the name comes FROM, not a stray label.
     expect(screen.getByText('User').id).toBe(group.getAttribute('aria-labelledby'));
   });
+
+  it('describes the nested group from its own description AND its error', () => {
+    render(
+      <SchemaForm
+        schema={nestedSchema}
+        value={{}}
+        onChange={() => undefined}
+        errors={{ user: 'User is incomplete' }}
+      />,
+    );
+
+    // Read as a consumer does: resolve the IDREF list to the elements it names
+    // and take their text. Every id has to LAND — `aria-describedby` pointing at
+    // an id no element carries computes an empty description, so the group's
+    // hint and its validation error are both announced by nothing.
+    const group = screen.getByRole('group', { name: 'User' });
+    const ids = (group.getAttribute('aria-describedby') ?? '').split(' ').filter((id) => id !== '');
+    const described = ids.map((id) => document.getElementById(id)?.textContent);
+    expect(described).toEqual(['Who is asking', 'User is incomplete']);
+    expect(group).toHaveAccessibleDescription('Who is asking User is incomplete');
+  });
 });

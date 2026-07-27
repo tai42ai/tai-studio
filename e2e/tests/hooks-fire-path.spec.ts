@@ -5,9 +5,9 @@
  * back from the row. (Pass-role refusal, unreachable as admin, is pinned in the
  * unit suite.)
  *
- * UNRUN in this studio-only workspace (no tai-skeleton backend) — a PLAN_7 gate.
  * The door-display and verifier-bind assertions below depend on the skeleton
- * populating the topic → door map; PLAN_7 validates them against the live server.
+ * populating the topic → door map, so they run against the booted skeleton this
+ * config starts, not against a stub.
  */
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { API_KEY, EXECUTION_KEY_ID, loginViaUi, pickExecutionKey } from './helpers';

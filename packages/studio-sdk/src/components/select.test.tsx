@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Select } from './select';
+import { Select, type SelectProps } from './select';
 
 const OPTIONS = [
   { value: '1', label: 'One' },
@@ -43,7 +43,6 @@ describe('Select', () => {
     const onValueChange = vi.fn();
     render(
       <Select
-        options={[]}
         groups={[
           { label: 'Group A', options: [{ value: 'a1', label: 'Alpha One' }] },
           { label: 'Group B', options: [{ value: 'b1', label: 'Bravo One' }] },
@@ -74,12 +73,24 @@ describe('Select', () => {
 
   it('gives a group label the shared uppercase label style', async () => {
     const user = userEvent.setup();
-    render(
-      <Select options={[]} groups={[{ label: 'Group A', options: OPTIONS }]} aria-label="Number" />,
-    );
+    render(<Select groups={[{ label: 'Group A', options: OPTIONS }]} aria-label="Number" />);
 
     await user.click(screen.getByRole('combobox', { name: 'Number' }));
     expect(await screen.findByText('Group A')).toHaveClass('tai-select-group-label', 'tai-label');
+  });
+
+  it('raises rather than discarding one of the two lists it was handed', () => {
+    // The parameter type admits `options` or `groups`, never both, so only
+    // untyped JavaScript reaches this. Rendering the groups and dropping every
+    // flat option — or the reverse — loses a whole list without a word.
+    const both = {
+      options: OPTIONS,
+      groups: [{ label: 'Group A', options: OPTIONS }],
+    } as unknown as SelectProps;
+    expect(() => render(<Select {...both} />)).toThrow(/exactly one of `options` or `groups`/);
+
+    const neither = {} as unknown as SelectProps;
+    expect(() => render(<Select {...neither} />)).toThrow(/exactly one of `options` or `groups`/);
   });
 
   it('marks the chosen option, so the moving highlight is not the only cue', async () => {

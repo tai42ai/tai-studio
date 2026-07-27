@@ -122,7 +122,6 @@ export function ToolPicker({
   const toolSelect =
     tagsByTool !== undefined ? (
       <Select
-        options={[]}
         groups={buildGroups(filtered, tagsByTool, agentToolNames)}
         value={value ?? ''}
         onValueChange={onChange}

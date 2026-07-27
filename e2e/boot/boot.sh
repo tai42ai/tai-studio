@@ -21,7 +21,10 @@
 #   STUDIO_USER_ID   the user_id that key resolves to (default below)
 #   SKELETON_DIR     path to the tai-skeleton checkout (default: sibling repo)
 #   STUDIO_PORT      skeleton port (default 8765)
-#   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist
+#   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist instead of
+#                    building it; unset (or anything else) builds the SPA from the
+#                    working tree, so the suites test the code they are run
+#                    against. Playwright's webServer passes it explicitly.
 #   MANIFEST_PATH    the skeleton manifest to serve (default: boot/manifest.yml,
 #                    the lean e2e manifest; the docs-screenshot runner overrides
 #                    this with boot/../docs-demo/manifest.yml)

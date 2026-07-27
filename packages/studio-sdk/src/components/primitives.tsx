@@ -190,8 +190,7 @@ interface ButtonVariantProps {
 }
 
 /**
- * The ACTION form of `Button`: no `href`, so it carries button attributes and no
- * anchor ones.
+ * The ACTION form of `Button`: button attributes, no anchor ones.
  *
  * This stays an INTERFACE extending `ButtonHTMLAttributes<HTMLButtonElement>`
  * because it is published plugin API: a plugin may write
@@ -200,12 +199,23 @@ interface ButtonVariantProps {
  * `ButtonHTMLAttributes<HTMLButtonElement>` (a union including anchor attributes
  * is not assignable — TS2322). The link form is the ADDITIVE `LinkButtonProps`,
  * and `Button` accepts either.
+ *
+ * It declares NO `href` member. `href?: undefined` here would make
+ * `interface MyButton extends ButtonProps { href: string }` a TS2430
+ * ("incorrectly extends"), which is a narrowing of a surface that is additive
+ * only. The discriminant `Button` narrows on lives on `ButtonActionProps`.
  */
-export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HTMLButtonElement> {
-  /**
-   * Never set on the action form — its only job is to discriminate this form
-   * from `LinkButtonProps` so `Button` can narrow on `props.href` without a cast.
-   */
+export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HTMLButtonElement> {}
+
+/**
+ * The action form as `Button` ACCEPTS it: `ButtonProps` plus the absent-`href`
+ * discriminant, which is what lets the body narrow `props.href` without a cast.
+ *
+ * Like `ButtonVariantProps` this is deliberately off the public surface — a
+ * plugin extends `ButtonProps` — and declaration emit keeps it visible inside
+ * `primitives.d.ts`, where `Button`'s signature references it.
+ */
+interface ButtonActionProps extends ButtonProps {
   readonly href?: undefined;
 }
 
@@ -225,7 +235,7 @@ export function buttonClass(variant: ButtonVariant, className: string | undefine
     : `${VARIANT_CLASS[variant]} ${className}`;
 }
 
-export function Button(props: ButtonProps | LinkButtonProps) {
+export function Button(props: ButtonActionProps | LinkButtonProps) {
   if (props.href === undefined) {
     const { variant = DEFAULT_BUTTON_VARIANT, className, href: _href, ...rest } = props;
     return <button {...rest} className={buttonClass(variant, className)} />;
