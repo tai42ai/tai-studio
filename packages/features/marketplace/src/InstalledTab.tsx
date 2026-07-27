@@ -13,6 +13,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  ScrollRegion,
   Skeleton,
   Table,
   TBody,
@@ -131,7 +132,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
       ) : null}
 
       <Card>
-        <div style={{ overflowX: 'auto' }}>
+        <ScrollRegion label="Installed plugins">
           <Table>
             <THead>
               <TR>
@@ -160,7 +161,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
               ))}
             </TBody>
           </Table>
-        </div>
+        </ScrollRegion>
       </Card>
     </div>
   );

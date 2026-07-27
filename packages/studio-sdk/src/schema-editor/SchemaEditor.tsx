@@ -96,11 +96,39 @@ class PreviewBoundary extends Component<
   }
 }
 
-function SchemaPreview({ schema }: { readonly schema: Record<string, unknown> }): ReactNode {
-  const jsonFallback = <JsonTree data={schema} />;
+/** The preview pane's accessible name, wherever the scrolling box turns out to be. */
+const PREVIEW_LABEL = 'Schema preview';
+
+/**
+ * The preview pane, framed as a card and scrollable — a deep schema's preview can
+ * outrun its column, so it scrolls in place rather than pushing the dialog sideways.
+ *
+ * WHICH element scrolls depends on the branch, and only the one that actually
+ * scrolls may carry the region attributes. {@link JsonTree} IS its own scrolling
+ * box, so on the fallback branch the card is a plain frame and the tree names
+ * itself; a `ScrollRegion` around it would take an overflow that never reaches it,
+ * leaving a name announced for a box that cannot move. The {@link SchemaForm}
+ * branch renders no scroller of its own, so there the card IS the region.
+ */
+function SchemaPreview({
+  schema,
+  testId,
+}: {
+  readonly schema: Record<string, unknown>;
+  readonly testId: string;
+}): ReactNode {
+  const jsonFallback = (
+    <div className="tai-card" data-testid={testId}>
+      <JsonTree data={schema} label={PREVIEW_LABEL} />
+    </div>
+  );
   if (!canRenderWithForm(schema)) return jsonFallback;
   return (
-    <PreviewBoundary fallback={jsonFallback}>{<PreviewForm schema={schema} />}</PreviewBoundary>
+    <PreviewBoundary fallback={jsonFallback}>
+      <ScrollRegion label={PREVIEW_LABEL} className="tai-card" data-testid={testId}>
+        <PreviewForm schema={schema} />
+      </ScrollRegion>
+    </PreviewBoundary>
   );
 }
 
@@ -144,20 +172,13 @@ export function SchemaEditor({
       {result.schema !== null ? (
         <div className="tai-stack tai-stack-2">
           <span className="tai-label">Preview</span>
-          {/* A deep schema's preview can outrun its column, so it scrolls in
-              place — and is a keyboard target only while it actually does. */}
-          <ScrollRegion
-            label="Schema preview"
-            className="tai-card"
-            data-testid={`${idPrefix}-preview`}
-          >
-            <SchemaPreview
-              // Re-seed the preview (and reset its error boundary) whenever the
-              // authored schema changes.
-              key={JSON.stringify(result.schema)}
-              schema={result.schema}
-            />
-          </ScrollRegion>
+          <SchemaPreview
+            // Re-seed the preview (and reset its error boundary) whenever the
+            // authored schema changes.
+            key={JSON.stringify(result.schema)}
+            schema={result.schema}
+            testId={`${idPrefix}-preview`}
+          />
         </div>
       ) : null}
     </div>

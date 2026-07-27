@@ -17,6 +17,7 @@ import {
   ErrorState,
   Field,
   NumberInput,
+  ScrollRegion,
   Select,
   Skeleton,
   TBody,
@@ -392,7 +393,7 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
         <EmptyState title="No runs" description="No runs match the current filters." />
       ) : (
         <Card>
-          <div style={{ overflowX: 'auto' }}>
+          <ScrollRegion label="Runs">
             <Table>
               <THead>
                 <TR>
@@ -413,7 +414,7 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
                 ))}
               </TBody>
             </Table>
-          </div>
+          </ScrollRegion>
           {query.hasNextPage ? (
             <div
               style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--tai-space-3)' }}

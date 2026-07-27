@@ -21,6 +21,7 @@
  */
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { readdir } from 'node:fs/promises';
 import { build } from 'vite';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,12 +52,45 @@ async function buildSpa() {
   });
 }
 
+/** The vendor stage emits ESM JS singletons and nothing else.
+ *
+ * `vendor/studio-sdk.ts` re-exports the SDK barrel, and that barrel is declared
+ * side-effectful (`sideEffects` in @tai42/studio-sdk) precisely so bundling
+ * consumers keep its three bare CSS imports. Rollup therefore keeps them here
+ * too, and Vite's lib mode would extract them into a `<pkg>.css` beside the
+ * vendor JS — an asset no served document references, because the shell delivers
+ * the design system itself through `src/styles.css` in stage 1. Dropping the
+ * extracted stylesheets keeps the served vendor directory free of dead weight
+ * without weakening the published `sideEffects` contract. */
+const dropExtractedCss = {
+  name: 'tai-vendor-drop-extracted-css',
+  enforce: 'post',
+  generateBundle(_options, bundle) {
+    for (const [fileName, output] of Object.entries(bundle)) {
+      if (output.type === 'asset' && fileName.endsWith('.css')) delete bundle[fileName];
+    }
+  },
+};
+
+/** Pin the property above: nothing in dist/vendor may be a stylesheet. */
+async function assertVendorHasNoCss() {
+  const vendorDir = resolve(appRoot, 'dist/vendor');
+  const stray = (await readdir(vendorDir)).filter((name) => name.endsWith('.css'));
+  if (stray.length > 0) {
+    throw new Error(
+      `dist/vendor must contain JS singletons only, but the build emitted ${stray.join(', ')}. ` +
+        'Nothing in dist references a vendor stylesheet; the shell loads the design system via src/styles.css.',
+    );
+  }
+}
+
 async function buildVendor() {
   for (const entry of VENDOR_ENTRIES) {
     await build({
       root: appRoot,
       configFile: false,
       logLevel: 'warn',
+      plugins: [dropExtractedCss],
       // The SPA stage already copied public/ into dist/; vendor stages must not
       // re-copy it into dist/vendor/.
       publicDir: false,
@@ -78,6 +112,7 @@ async function buildVendor() {
       },
     });
   }
+  await assertVendorHasNoCss();
 }
 
 async function buildBridge() {

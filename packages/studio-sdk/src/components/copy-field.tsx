@@ -58,17 +58,25 @@ const stateStyle: CSSProperties = {
 export function CopyField({ value, caption, idPrefix = 'copy-field', label }: CopyFieldProps) {
   const [copied, setCopied] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The clipboard write is async, so a copy can still be in flight when the
+  // component goes away — the caller's dialog closes on the same click. Clearing
+  // the timer alone would not cover that: at unmount there is no timer yet, and
+  // the resolution that follows would start one nothing is left to clear. This
+  // flag is what the resolution checks before it touches state at all.
+  const mounted = useRef(true);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       if (resetTimer.current !== null) clearTimeout(resetTimer.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   const handleCopy = (): void => {
     void navigator.clipboard.writeText(value).then(
       () => {
+        if (!mounted.current) return;
         setCopied(true);
         if (resetTimer.current !== null) clearTimeout(resetTimer.current);
         resetTimer.current = setTimeout(() => {

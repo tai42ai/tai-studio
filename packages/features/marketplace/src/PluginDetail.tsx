@@ -6,7 +6,7 @@
  * installed and advisory queries never blank it — their failures surface as loud
  * inline strips in their own sections.
  */
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -16,6 +16,7 @@ import {
   EmptyState,
   ErrorState,
   ExternalLinkButton,
+  ScrollRegion,
   Skeleton,
   TagChips,
   Table,
@@ -26,6 +27,7 @@ import {
   TR,
   errorMessage,
   useApi,
+  useProseScrollRegions,
 } from '@tai42/studio-sdk';
 import type {
   MarketplaceInstallResult,
@@ -88,6 +90,12 @@ function VersionStatusBadge({ status }: { readonly status: string }): ReactNode 
 /** The listing header + readme + metadata. */
 function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): ReactNode {
   const title = listingTitle(detail.display_name, detail.name);
+  const readmeRef = useRef<HTMLDivElement>(null);
+  // A rendered README carries the two surfaces that outrun their column — wide
+  // tables and code blocks — and React never rendered them, so they cannot be
+  // wrapped in a `ScrollRegion`. This instruments them in place instead, so each
+  // one that actually scrolls becomes a named keyboard target.
+  useProseScrollRegions(readmeRef);
   return (
     <Card>
       <div style={{ display: 'flex', gap: 'var(--tai-space-4)', alignItems: 'flex-start' }}>
@@ -145,6 +153,8 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
         // readme_md is server-sanitized trusted HTML (sanitized at ingest); the
         // client is not the sanitization boundary and renders it as-is.
         <div
+          ref={readmeRef}
+          className="tai-prose"
           style={{ marginTop: 'var(--tai-space-4)' }}
           dangerouslySetInnerHTML={{ __html: detail.readme_md }}
         />
@@ -162,7 +172,7 @@ function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): Re
       {items.length === 0 ? (
         <EmptyState title="No items" description="This plugin has no published items yet." />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <ScrollRegion label="Contained items">
           <Table>
             <THead>
               <TR>
@@ -187,7 +197,7 @@ function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): Re
               ))}
             </TBody>
           </Table>
-        </div>
+        </ScrollRegion>
       )}
     </Card>
   );
@@ -205,7 +215,7 @@ function VersionsCard({
       {versions.length === 0 ? (
         <EmptyState title="No versions" description="This plugin has no versions yet." />
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <ScrollRegion label="Versions">
           <Table>
             <THead>
               <TR>
@@ -226,7 +236,7 @@ function VersionsCard({
               ))}
             </TBody>
           </Table>
-        </div>
+        </ScrollRegion>
       )}
     </Card>
   );
