@@ -44,7 +44,7 @@ export function EnumField({
 
   if (options.length <= RADIO_MAX_OPTIONS) {
     return (
-      <Field label={heading} description={description} error={error}>
+      <Field label={heading} description={description} error={error} group>
         <RadioGroup
           options={options.map((option) => ({ value: option.key, label: option.label }))}
           value={selectedKey}

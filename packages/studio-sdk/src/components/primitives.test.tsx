@@ -232,9 +232,32 @@ describe('Button link normalization', () => {
         <svg />
       </Button>,
     );
-    const blocked = screen.getByLabelText('Open docs');
-    expect(blocked).toHaveAttribute('id', 'docs-link');
-    expect(blocked).toHaveAttribute('data-neutralized', 'true');
+    // The name is TEXT, not `aria-label`: ARIA prohibits both naming attributes
+    // on the `generic` role a bare <span> maps to, so a platform that honours
+    // the prohibition computes no name from them at all — and an assertion that
+    // read the attribute back would stay green while the name did not exist.
+    const blocked = screen.getByText(/Open docs/);
+    expect(blocked.textContent).toBe(
+      'Open docs. This link was blocked because it is not an http(s) URL.',
+    );
+    expect(blocked).toHaveClass('tai-visually-hidden');
+    const neutralized = blocked.parentElement;
+    expect(neutralized).toHaveAttribute('id', 'docs-link');
+    expect(neutralized).toHaveAttribute('data-neutralized', 'true');
+    expect(neutralized).not.toHaveAttribute('aria-label');
+    // Still not announced as a link, because it is not one.
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+
+  it('carries the blocked reason alone when the caller named nothing', () => {
+    render(
+      <Button href="javascript:alert(1)">
+        <svg />
+      </Button>,
+    );
+    expect(screen.getByText('This link was blocked because it is not an http(s) URL.')).toHaveClass(
+      'tai-visually-hidden',
+    );
   });
 
   it('renders the normalized absolute URL it validated', () => {

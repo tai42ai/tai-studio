@@ -84,25 +84,39 @@ const RELATIVE_HREF = /^(?:[/?#](?![/\\])|\.{1,2}\/)/;
 const BLOCKED_HREF_TITLE = 'This link was blocked because it is not an http(s) URL.';
 
 /**
- * A blocked href, rendered as plain text: no anchor, no `href`, no handlers, so
+ * A blocked href, rendered as inert text: no anchor, no `href`, no handlers, so
  * it can never become a live navigation target. Shared by `Button`'s link form
  * and by `ExternalLinkButton`, which applies the stricter http(s)-only policy.
+ *
+ * It stays ROLE-LESS on purpose — it is not a link and must not be announced as
+ * one. That is also why the caller's name arrives as visually-hidden TEXT rather
+ * than `aria-label`: ARIA prohibits both naming attributes on the `generic` role
+ * a bare `<span>` maps to, so a platform that honours the prohibition computes NO
+ * name from them and an icon-only blocked link announces as nothing at all. Text
+ * has no such restriction — a generic element contributes no accessible NAME, but
+ * its content is still read. `aria-disabled` stays because
+ * `.tai-btn[aria-disabled='true']` is what paints the disabled look; it is inert
+ * on a role-less element, and the missing `href` is what actually says this does
+ * not navigate.
  */
 export function NeutralizedLink({
   className,
   style,
   children,
   id,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledBy,
+  label,
 }: {
   readonly className?: string;
   readonly style?: CSSProperties;
   readonly children?: ReactNode;
   /** Kept so an external `aria-labelledby`/`aria-describedby` IDREF still lands. */
   readonly id?: string;
-  readonly 'aria-label'?: string;
-  readonly 'aria-labelledby'?: string;
+  /**
+   * The name the caller gave the link, rendered as hidden text. An icon-only
+   * link carries its whole meaning here; with visible children it repeats them,
+   * which is the same thing `aria-label` would have done.
+   */
+  readonly label?: string;
 }) {
   return (
     <span
@@ -112,14 +126,14 @@ export function NeutralizedLink({
       className={className}
       style={style}
       id={id}
-      aria-label={ariaLabel}
-      aria-labelledby={ariaLabelledBy}
     >
       {children}
-      {/* `title` on a non-focusable span is not reliably announced, so the reason
-          the link is dead is carried as real text for assistive tech. An
-          icon-only link would otherwise neutralize into an unnamed nothing. */}
-      <span className="tai-visually-hidden">{BLOCKED_HREF_TITLE}</span>
+      {/* `title` on a non-focusable span is not reliably announced, so the name
+          and the reason the link is dead are carried as real text. An icon-only
+          link would otherwise neutralize into a silent nothing. */}
+      <span className="tai-visually-hidden">
+        {label === undefined ? BLOCKED_HREF_TITLE : `${label}. ${BLOCKED_HREF_TITLE}`}
+      </span>
     </span>
   );
 }
@@ -215,13 +229,7 @@ export function Button(props: ButtonProps | LinkButtonProps) {
 
   if (link.kind === 'blocked') {
     return (
-      <NeutralizedLink
-        className={classes}
-        style={style}
-        id={rest.id}
-        aria-label={rest['aria-label']}
-        aria-labelledby={rest['aria-labelledby']}
-      >
+      <NeutralizedLink className={classes} style={style} id={rest.id} label={rest['aria-label']}>
         {children}
       </NeutralizedLink>
     );

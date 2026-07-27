@@ -182,7 +182,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           />
         </Field>
 
-        <Field label="Schedule type">
+        <Field label="Schedule type" group>
           <RadioGroup
             options={MODE_OPTIONS}
             value={mode}

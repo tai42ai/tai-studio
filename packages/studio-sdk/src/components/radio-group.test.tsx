@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Field } from './field';
+import { TextInput } from './inputs';
 import { MoonIcon, MonitorIcon, SunIcon } from './icons';
 import { RadioGroup } from './radio-group';
 
@@ -36,12 +37,36 @@ describe('RadioGroup', () => {
   });
 
   it('takes the enclosing Field label as its accessible group name', () => {
-    render(
-      <Field label="Fruit">
+    const { container } = render(
+      <Field label="Fruit" group>
         <RadioGroup options={OPTIONS} />
       </Field>,
     );
     expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toBeInTheDocument();
+
+    // A group Field's label carries no `for`. `<label for>` names a LABELABLE
+    // element, and a radiogroup is not one: the group never claims the Field's
+    // control id, so the attribute would point at an id no element in the
+    // document carries. The name comes from `aria-labelledby` instead — which is
+    // why the label keeps its `id`.
+    const label = container.querySelector('label.tai-field-label');
+    expect(label).not.toHaveAttribute('for');
+    expect(label?.id).not.toBe('');
+    expect(screen.getByRole('radiogroup')).toHaveAttribute('aria-labelledby', label?.id);
+  });
+
+  it('leaves a non-group Field pointing its label at the control it wraps', () => {
+    // The counterpart control: without this, dropping `for` unconditionally
+    // would pass the test above and silently unlabel every text input.
+    const { container } = render(
+      <Field label="Name">
+        <TextInput />
+      </Field>,
+    );
+    const label = container.querySelector('label.tai-field-label');
+    const target = label?.getAttribute('for');
+    expect(target).not.toBeNull();
+    expect(container.ownerDocument.getElementById(target ?? '')).not.toBeNull();
   });
 
   it('defaults to a vertical list of tai-radio items with a tai-choice label row', async () => {
@@ -112,7 +137,7 @@ describe('RadioGroup', () => {
 
   it('prefers the enclosing Field label over its own label prop', () => {
     render(
-      <Field label="Fruit">
+      <Field label="Fruit" group>
         <RadioGroup options={OPTIONS} label="Ignored" />
       </Field>,
     );

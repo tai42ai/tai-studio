@@ -253,7 +253,7 @@ function UploadDialog({ onClose }: { onClose: () => void }): ReactNode {
             }}
           />
         </Field>
-        <Field label="Content">
+        <Field label="Content" group>
           <RadioGroup
             name="upload-mode"
             value={mode}

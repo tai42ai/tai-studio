@@ -121,6 +121,9 @@
   .tai-prose a:focus-visible,
   .tai-prose pre:focus-visible,
   .tai-drawer:focus-visible,
+  /* Radix hard-codes `tabIndex: 0` on every `TabsContent`, so a tab panel is a
+     tab stop whether or not it holds one — it needs the ring like any other. */
+  .tai-tabpanel:focus-visible,
   .tai-dialog:focus-visible {
     outline: 2px solid var(--tai-color-focus-ring);
     outline-offset: 2px;
@@ -532,9 +535,16 @@
     background: var(--tai-color-accent);
   }
 
+  /* The tick is drawn in `currentColor`, so the disabled ground has to bring its
+     own foreground with it: repainting the box without one left a checked AND
+     disabled control showing white on white. A read-only pane is exactly where
+     the checked state must still READ, so this is the same disabled foreground
+     every other control uses rather than a hidden one. `.tai-radio-indicator`
+     paints its own background and is unaffected. */
   .tai-checkbox:disabled,
   .tai-radio:disabled {
     background: var(--tai-color-surface-disabled);
+    color: var(--tai-color-text-disabled);
     border-color: var(--tai-color-border-disabled);
     cursor: not-allowed;
   }

@@ -355,7 +355,7 @@ function RoleGrantEditor({
       ) : (
         grantableGroups.map((group) => (
           <div key={group.tag} style={groupStyle}>
-            <Field label={group.tag}>
+            <Field label={group.tag} group>
               <RadioGroup
                 options={GRANT_LEVELS.map((level) => ({ value: level, label: level }))}
                 value={draft[group.tag] ?? 'none'}

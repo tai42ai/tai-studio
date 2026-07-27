@@ -21,7 +21,7 @@ export function UnsupportedNotice({
   error: string | undefined;
 }): ReactNode {
   return (
-    <Field label={heading} description={description} error={error}>
+    <Field label={heading} description={description} error={error} group>
       <div role="alert" className="tai-row">
         <Badge variant="warning">
           <AlertTriangleIcon />

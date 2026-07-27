@@ -57,9 +57,20 @@ export interface FieldProps {
   readonly error?: string;
   readonly children: ReactNode;
   readonly style?: CSSProperties;
+  /**
+   * Set when the wrapped control is a GROUP rather than one labelable element —
+   * a `RadioGroup`, a set of checkboxes, any `role="radiogroup"`/`role="group"`
+   * panel. `<label for>` can only name a labelable element, so a group Field
+   * renders its label WITHOUT `htmlFor`: pointed at a group, the attribute
+   * either dangles at an id no element carries or names an element the browser
+   * refuses to label, and it is inert either way. A group takes the label as its
+   * accessible name through {@link useFieldLabelId} instead, which is why the
+   * label keeps its `id` in both shapes.
+   */
+  readonly group?: boolean;
 }
 
-export function Field({ label, description, error, children, style }: FieldProps) {
+export function Field({ label, description, error, children, style, group = false }: FieldProps) {
   const controlId = useId();
   const labelId = `${controlId}-label`;
   const descriptionId = `${controlId}-desc`;
@@ -80,7 +91,7 @@ export function Field({ label, description, error, children, style }: FieldProps
   return (
     <FieldContext.Provider value={value}>
       <div className="tai-field" style={style}>
-        <label id={labelId} htmlFor={controlId} className="tai-field-label">
+        <label id={labelId} htmlFor={group ? undefined : controlId} className="tai-field-label">
           {label}
         </label>
         {children}
