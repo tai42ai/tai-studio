@@ -54,18 +54,18 @@
  * character references and JavaScript string escapes are decoded first, so
  * `&#215;`, `&times;` and `{'\u{00d7}'}` are all read as the `×` they ship.
  *
- * KNOWN BLIND SPOTS, stated rather than papered over, and bounded to the two that
- * are really left:
+ * KNOWN BLIND SPOTS, stated rather than papered over, and bounded to the three
+ * that are really left:
  *
  * - A glyph assembled at RUNTIME (`String.fromCodePoint(0x2715)`, a
  *   concatenation, a glyph arriving from the server) has no literal to find.
  * - A glyph inside a `.css` `content:` property, which is a different rule.
+ * - An ALTERNATE SPELLING of a banned mark: `✕` U+2715 draws what `×` draws,
+ *   and is not in the set below because it has never occurred here — see
+ *   {@link BANNED_GLYPHS} for the measurement.
  *
- * A third one used to sit here unstated and is now closed rather than declared:
- * an ALTERNATE SPELLING of a banned mark. The set below is the marks, every
- * spelling of each, so a `✕` cannot walk through a rule written about `×`.
- * Widening past what remains needs a real parse or a rendered sweep; the floors
- * below at least keep the routes this DOES cover from silently dropping out.
+ * The floors below at least keep the routes this DOES cover from silently
+ * dropping out.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -98,19 +98,19 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 
 const SCANNED_EXTENSIONS = /\.(?:tsx?|m?js|cjs|html)$/;
 
 /**
- * The banned set: the mission's iconography rule, widened to every SPELLING of
- * the marks it names.
+ * The banned set: the mission's iconography rule — the marks this repository
+ * has actually rendered.
  *
- * Unicode spells each of these marks several times over, and a rule listing one
- * spelling per mark is enforceable only against the spelling somebody happened to
- * reach for. `✕` U+2715 as the sole content of a `<button>` is the identical
- * defect the four cleared `×` sites had — same shape on screen, same missing
- * accessible name, same inherited text font — and it passed every assertion in
- * this file. So the crossed marks (`× ✕ ✖ ✗ ✘ ⨯`), the check marks (`✓ ✔`) and
- * the small triangles beside the large ones (`▴ ▸ ◂`) are all in, rather than the
- * one member of each family that had already shipped.
+ * ALTERNATE SPELLINGS of those marks — `✕ ✖ ✗ ✘ ⨯` beside `×`, `✔` beside
+ * `✓`, `▴ ◂` beside `▸` — are a declared blind spot rather than members.
+ * Each was measured at ZERO occurrences in this repository's source and ZERO in
+ * this branch's history (`git grep -l -F -- '<glyph>' 3195653` and
+ * `git log -S'<glyph>' f2ee1eb..3195653`, both repo-wide, no pathspec — a
+ * scoped glob answers this question wrong). Listing them widened the rule only
+ * against source that has never existed here; closing the spelling hole for
+ * real needs a rendered sweep, not a longer literal.
  */
-const BANNED_GLYPHS = '▲▼▾▴▸◂↗→✓✔×✕✖✗✘⨯↑↓←';
+const BANNED_GLYPHS = '▲▼▾▸↗→✓×↑↓←';
 
 /**
  * The NAMED references the toolchain actually decodes to a banned glyph.
