@@ -9,11 +9,15 @@
  *    (dividers, watermarks, decorative SVG fill/stroke) and sits below the text contrast
  *    floor, so as text it is a WCAG failure by construction.
  * 3. `TOKEN_NAMES` — the published plugin styling API — and the declarations in
- *    `tokens.css` are the same set, in both directions.
- * 4. Every token carrying a literal color states BOTH themes, as a `light-dark()` pair
- *    with two different values. A single-valued color token is a dark-mode bug that
- *    renders correctly in the light theme and so survives review; the handful that are
- *    deliberately the same ink in both themes are named below.
+ *    `tokens.css` are the same set, in both directions, once the `--tai-dark-*` storage
+ *    half of each themed pair is set aside (it is mechanism, not API).
+ * 4. THE THEME MECHANISM. The light value is the token and the dark value sits beside it
+ *    under a `--tai-dark-` name; two blocks put the dark half into service — one keyed on
+ *    `prefers-color-scheme`, one on a `data-theme="dark"` pin. The gates below hold that
+ *    shape: every theme-varying token has both halves, the two blocks carry the SAME token
+ *    set and no values of their own, no dark value is read from anywhere else, none sits
+ *    dead, and `light-dark()` — which would fold each pair onto one line at the cost of a
+ *    Chrome 123 / Firefox 120 / Safari 17.5 floor — is banned outright.
  *
  * The scan is source-level on purpose: it sees the JSX inline styles and the stylesheets
  * alike, and it needs no build.
@@ -30,7 +34,10 @@ const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(packageRoot, '../..');
 const scanRoots = [resolve(repoRoot, 'packages'), resolve(repoRoot, 'apps')];
 const tokenStylesheet = resolve(packageRoot, 'src/components/tokens.css');
-const stylesheets = [tokenStylesheet, resolve(packageRoot, 'src/components/components.css')];
+const componentStylesheet = resolve(packageRoot, 'src/components/components.css');
+const stylesheets = [tokenStylesheet, componentStylesheet];
+
+const TOKENS_CSS = readFileSync(tokenStylesheet, 'utf8');
 
 const SCANNED_EXTENSIONS = ['.ts', '.tsx', '.css'];
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo']);
@@ -66,8 +73,52 @@ function definedTokens(): ReadonlySet<string> {
   return defined;
 }
 
-/** Any hex or `rgb()`/`rgba()` literal, in a declaration or nested in a function. */
-const LITERAL_COLOR = /#[0-9a-f]{3,8}\b|rgba?\(/i;
+/** `source` with its block comments removed, so prose can never read as code. */
+function withoutComments(source: string): string {
+  return source.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
+}
+
+/**
+ * The CSS named colours. A keyword is as literal a colour as a hex triplet, and
+ * `--tai-color-x: rebeccapurple` is exactly as much a dark-mode bug — so the
+ * literal scan has to know them by name, not just by notation.
+ */
+const NAMED_COLORS = [
+  'aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue',
+  'blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk',
+  'crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgrey|darkgreen|darkkhaki',
+  'darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen',
+  'darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue',
+  'dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite',
+  'gold|goldenrod|gray|grey|green|greenyellow|honeydew|hotpink|indianred|indigo|ivory|khaki',
+  'lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan',
+  'lightgoldenrodyellow|lightgray|lightgrey|lightgreen|lightpink|lightsalmon|lightseagreen',
+  'lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen',
+  'magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen',
+  'mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream',
+  'mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid',
+  'palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum',
+  'powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown',
+  'seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen',
+  'steelblue|tan|teal|thistle|tomato|turquoise|violet|wheat|white|whitesmoke|yellow',
+  'yellowgreen',
+].join('|');
+
+/**
+ * A colour written out rather than referenced, in ANY notation CSS accepts: hex,
+ * the legacy and modern function forms, the CIE/OKLab families, `color()`,
+ * `color-mix()`, and the named keywords. Matching only `#rgb` and `rgb(` — which
+ * this pattern did first — let `oklch()`, `hsl()` and `rebeccapurple` past the
+ * both-themes gate below, which is the one thing it exists to catch.
+ */
+const LITERAL_COLOR = new RegExp(
+  [
+    '#[0-9a-f]{3,8}\\b',
+    '(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\\s*\\(',
+    `\\b(?:${NAMED_COLORS})\\b`,
+  ].join('|'),
+  'i',
+);
 
 /**
  * Tokens whose ink is deliberately IDENTICAL in both themes. `on-fill` is the
@@ -76,32 +127,48 @@ const LITERAL_COLOR = /#[0-9a-f]{3,8}\b|rgba?\(/i;
  */
 const THEME_INVARIANT_COLOR_TOKENS = new Set(['--tai-color-on-fill']);
 
-/**
- * The two arguments of the `light-dark()` call inside `value`, or `undefined`
- * when there is none. Scanned with a paren depth counter rather than a regex
- * because either argument may itself be a function call (`rgb(0 0 0 / 0.45)`).
- */
-function lightDarkArguments(value: string): { light: string; dark: string } | undefined {
-  const start = value.indexOf('light-dark(');
-  if (start === -1) return undefined;
+/** Tokens whose value is authored per theme, matched by name. */
+const THEME_VARYING = /^--tai-(?:color|shadow)-/;
 
-  let depth = 0;
-  let comma = -1;
-  for (let index = start + 'light-dark('.length - 1; index < value.length; index++) {
-    const character = value[index];
-    if (character === '(') depth++;
-    else if (character === ')') {
-      depth--;
-      if (depth === 0) {
-        if (comma === -1) return undefined;
-        return {
-          light: value.slice(start + 'light-dark('.length, comma).trim(),
-          dark: value.slice(comma + 1, index).trim(),
-        };
-      }
-    } else if (character === ',' && depth === 1) comma = index;
+/** The name a theme-varying token's dark half is authored under, beside it. */
+function darkCounterpart(token: string): string {
+  return token.replace(/^--tai-/, '--tai-dark-');
+}
+
+/** The media query that applies the dark half to a root not pinned to light. */
+const DARK_MEDIA =
+  /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme='light'\]\)\s*\{/;
+/** The block that applies the dark half to a root explicitly pinned to dark. */
+const DARK_PINNED = /:root\[data-theme='dark'\]\s*\{/;
+/** The plain `:root` block — the declarations that apply at every theme. */
+const BASE_ROOT = /(?:^|\n)\s*:root\s*\{/;
+
+/**
+ * The body of a rule in `tokens.css`, found by its opening pattern, with nested
+ * blocks kept. A missing rule throws rather than yielding an empty body, so a
+ * selector edited out of step with this file fails loudly instead of silently
+ * emptying every assertion that reads it.
+ */
+function ruleBody(pattern: RegExp): string {
+  const opening = pattern.exec(TOKENS_CSS);
+  if (opening === null) throw new Error(`tokens.css has no rule matching ${pattern.source}`);
+  let depth = 1;
+  let end = opening.index + opening[0].length;
+  while (depth > 0) {
+    const character = TOKENS_CSS[end];
+    if (character === undefined) throw new Error(`the ${pattern.source} block is unterminated`);
+    if (character === '{') depth += 1;
+    if (character === '}') depth -= 1;
+    end += 1;
   }
-  return undefined;
+  return TOKENS_CSS.slice(opening.index + opening[0].length, end - 1);
+}
+
+/** `token: value` for every custom property a block declares, in order. */
+function declarationsIn(body: string): readonly (readonly [string, string])[] {
+  return [...body.matchAll(/^\s*(--tai-[\w-]+)\s*:\s*([^;]+);/gm)].map(
+    (match) => [captured(match), (match[2] ?? '').trim()] as const,
+  );
 }
 
 /** Every reference to the decor token, in a stylesheet or a JSX inline style. */
@@ -192,35 +259,161 @@ describe('design-system token usage', () => {
   it('declares exactly the tokens TOKEN_NAMES documents, and no others', () => {
     // `TOKEN_NAMES` is the published plugin styling API. A name in the list that
     // the stylesheet never declares documents a token that resolves to nothing;
-    // a declared token missing from the list is undiscoverable to a plugin.
+    // a declared token missing from the list is undiscoverable to a plugin. The
+    // `--tai-dark-*` half of each pair is the theme mechanism's own storage, not
+    // API — the assertions below are what hold it to that.
     const declared = new Set(
-      [...readFileSync(tokenStylesheet, 'utf8').matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)].map(captured),
+      [...TOKENS_CSS.matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)]
+        .map(captured)
+        .filter((token) => !token.startsWith('--tai-dark-')),
     );
 
     expect([...declared].sort()).toEqual([...TOKEN_NAMES].sort());
   });
 
-  it('states both themes for every token carrying a literal color', () => {
-    const declarations = readFileSync(tokenStylesheet, 'utf8').matchAll(
-      /^\s*(--tai-[\w-]+)\s*:\s*([^;]+);/gm,
-    );
-    const offenders: string[] = [];
+  describe('the theme mechanism', () => {
+    it('gives every theme-varying token both halves, side by side', () => {
+      // A single-valued colour token is a dark-mode bug that renders correctly in
+      // the light theme and so survives review.
+      const base = declarationsIn(ruleBody(BASE_ROOT));
+      const values = new Map(base);
+      const varying = base
+        .map(([token]) => token)
+        .filter((token) => THEME_VARYING.test(token) && !token.startsWith('--tai-dark-'));
+      // The pattern is the whole selection; one edited out of step with the token
+      // names would leave every assertion below reading an empty list.
+      expect(varying.length).toBeGreaterThan(25);
 
-    for (const declaration of declarations) {
-      const name = captured(declaration);
-      const value = declaration[2]?.trim() ?? '';
-      if (!LITERAL_COLOR.test(value)) continue;
-      if (THEME_INVARIANT_COLOR_TOKENS.has(name)) continue;
+      const missing = varying
+        // A derived token — the focus ring, the placeholder, the syntax colours,
+        // the disabled grounds — reads another token and follows it into either
+        // theme, so it needs no dark half of its own.
+        .filter((token) => !(values.get(token) ?? '').includes('var('))
+        .filter((token) => !THEME_INVARIANT_COLOR_TOKENS.has(token))
+        .filter((token) => !values.has(darkCounterpart(token)))
+        .map((token) => `${token} has no ${darkCounterpart(token)}`);
 
-      const pair = lightDarkArguments(value);
-      if (pair === undefined) {
-        offenders.push(`${name}: not a light-dark() pair`);
-      } else if (pair.light === pair.dark) {
-        offenders.push(`${name}: both themes are ${pair.light}`);
+      expect(missing).toEqual([]);
+    });
+
+    it('states both themes for every token carrying a literal colour', () => {
+      // The name-based check above misses a colour hiding under a name that does
+      // not read as one; this one is keyed on the VALUE, so it catches that too.
+      const values = new Map(declarationsIn(ruleBody(BASE_ROOT)));
+      const offenders = [...values]
+        .filter(([token]) => !token.startsWith('--tai-dark-'))
+        .filter(([token]) => !THEME_INVARIANT_COLOR_TOKENS.has(token))
+        .filter(([, value]) => LITERAL_COLOR.test(value))
+        .filter(([token]) => !values.has(darkCounterpart(token)))
+        .map(([token, value]) => `${token}: ${value}`);
+
+      expect(offenders).toEqual([]);
+
+      // Positive controls: the notations this pattern used to miss entirely.
+      for (const value of ['oklch(62% 0.2 25)', 'hsl(348 83% 47%)', 'rebeccapurple', '#dc143c']) {
+        expect([value, LITERAL_COLOR.test(value)]).toEqual([value, true]);
       }
-    }
+      // …and values that are NOT colours must not trip it, or every token would
+      // be demanded a dark half and the list above would stop meaning anything.
+      for (const value of ['0.75rem', '999px', 'var(--tai-color-accent)', '0 12px 32px']) {
+        expect([value, LITERAL_COLOR.test(value)]).toEqual([value, false]);
+      }
+    });
 
-    expect(offenders).toEqual([]);
+    it('writes every colour exactly once', () => {
+      // A raw value belongs in the base `:root` block and nowhere else. The two
+      // blocks that apply the dark half only re-point a token at its
+      // `--tai-dark-*` neighbour, so no light/dark pair is ever restated where
+      // the two halves could drift apart.
+      for (const [name, pattern] of [
+        ['the dark media query', DARK_MEDIA],
+        ['the pinned-dark block', DARK_PINNED],
+      ] as const) {
+        const restated = declarationsIn(ruleBody(pattern))
+          .filter(([token, value]) => value !== `var(${darkCounterpart(token)})`)
+          .map(([token, value]) => `${token}: ${value}`);
+        expect([name, restated]).toEqual([name, []]);
+      }
+    });
+
+    it('applies the dark half identically however the theme is chosen', () => {
+      // One block answers the operating system, the other an explicit choice. A
+      // token re-pointed under one and forgotten under the other would take the
+      // dark half for OS-dark readers and keep the light half for pinned ones.
+      const media = declarationsIn(ruleBody(DARK_MEDIA));
+      const pinned = declarationsIn(ruleBody(DARK_PINNED));
+      expect(media.length).toBeGreaterThan(25);
+      expect(pinned).toEqual(media);
+    });
+
+    it('never puts a dark value into service by any other route', () => {
+      // Every `--tai-dark-*` token exists to be read by the two blocks above. One
+      // read anywhere else — a component reaching past the theme, a base
+      // declaration wired to the wrong half — would ignore the reader's theme.
+      // Scoped by LOCATION, not by name: collecting the names the dark blocks
+      // re-point and then allowing those names everywhere would be a tautology,
+      // since every dark token IS re-pointed. What matters is WHERE each read sits.
+      const darkBlocks = [ruleBody(DARK_MEDIA), ruleBody(DARK_PINNED)];
+      const readsOutsideTheDarkBlocks = (source: string): readonly string[] =>
+        [...source.matchAll(/^.*var\(\s*--tai-dark-[\w-]+.*$/gm)]
+          .map((match) => match[0].trim())
+          .filter((line) => !darkBlocks.some((body) => body.includes(line)));
+
+      // No consumer anywhere may reach past the theme for a dark value at all.
+      // The token file itself is excluded here and checked by LOCATION below.
+      const strayInConsumers: string[] = [];
+      for (const file of files.filter((file) => file !== tokenStylesheet)) {
+        for (const match of readFileSync(file, 'utf8').matchAll(/var\(\s*(--tai-dark-[\w-]+)/g)) {
+          strayInConsumers.push(`${relative(repoRoot, file)}: ${captured(match)}`);
+        }
+      }
+      expect(strayInConsumers).toEqual([]);
+      // …and inside the token file itself, every read must sit in one of the two
+      // blocks — a base declaration wired to the wrong half is the live-bug shape.
+      expect(readsOutsideTheDarkBlocks(TOKENS_CSS)).toEqual([]);
+
+      // Positive controls: both shapes must actually be caught, or a pattern that
+      // stopped matching would read as an all-clear.
+      expect(
+        readsOutsideTheDarkBlocks('  --tai-color-focus-ring: var(--tai-dark-color-accent);'),
+      ).toEqual(['--tai-color-focus-ring: var(--tai-dark-color-accent);']);
+      expect(readsOutsideTheDarkBlocks(darkBlocks[0] ?? '')).toEqual([]);
+
+      // …and every dark value authored is actually applied, so none sits dead.
+      const applied = new Set(
+        darkBlocks.flatMap((body) => declarationsIn(body).map(([token]) => darkCounterpart(token))),
+      );
+      const authored = declarationsIn(ruleBody(BASE_ROOT))
+        .map(([token]) => token)
+        .filter((token) => token.startsWith('--tai-dark-'));
+      expect(authored.filter((token) => !applied.has(token))).toEqual([]);
+    });
+
+    it('raises no browser floor to express a theme', () => {
+      // `light-dark()` would fold each pair onto one line, but it is invalid at
+      // computed-value time below Chrome 123 / Firefox 120 / Safari 17.5, and
+      // since every themed token would use it the whole palette drops out at once
+      // below that line — text on text, not an unstyled page. These sheets ship as
+      // authored, so nothing lowers it away. Comments are stripped first: the token
+      // file names the function to explain why it is not used, and that sentence
+      // must not read as a use of it.
+      const raised = stylesheets
+        .filter((sheet) => /light-dark\s*\(/.test(withoutComments(readFileSync(sheet, 'utf8'))))
+        .map((sheet) => relative(repoRoot, sheet));
+      expect(raised).toEqual([]);
+      // Positive control: the ban has to be able to fire.
+      expect(/light-dark\s*\(/.test(withoutComments('a { color: light-dark(#fff, #000); }'))).toBe(
+        true,
+      );
+
+      // The floor these sheets DO set is declared rather than left implicit.
+      const declared = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8')) as {
+        browserslist?: readonly string[];
+      };
+      expect(declared.browserslist).toEqual(
+        expect.arrayContaining(['chrome >= 99', 'firefox >= 97', 'safari >= 15.4']),
+      );
+    });
   });
 
   describe('--tai-color-decor stays off every text-painting declaration', () => {

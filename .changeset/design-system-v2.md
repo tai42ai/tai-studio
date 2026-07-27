@@ -9,11 +9,14 @@ layer, the icon set, and the layout primitives every screen builds on.
   and `@fontsource-variable/geist-mono`. The SDK barrel side-effect-imports them
   beside `tokens.css`, so a host app loads each face once and a plugin never
   ships its own copy.
-- **Tokens** (`tokens.css` / `TOKEN_NAMES`): every themed value now carries both
-  its light and its dark value in one `light-dark()` pair, with `color-scheme`
-  selecting between them — the root follows the OS preference and `data-theme`
-  pins it in both directions, which also drives native scrollbars, selects, and
-  form autofill. A `--tai-z-popover` layer joins the z-scale between `dialog`
+- **Tokens** (`tokens.css` / `TOKEN_NAMES`): every themed value is written exactly
+  once — the light value under the token's own name, the dark value beside it
+  under a `--tai-dark-` name — and two blocks put the dark half into service: a
+  `prefers-color-scheme: dark` query for the OS preference and a
+  `[data-theme="dark"]` block for the viewer's explicit choice, which pins the
+  theme in both directions. `color-scheme` follows the same three states, so
+  native scrollbars, selects, and form autofill match the tokens. A
+  `--tai-z-popover` layer joins the z-scale between `dialog`
   and `tooltip`, for the popups that portal to the document body and so have to
   clear a dialog's scrim to be usable. `TOKEN_NAMES` grows ADDITIVELY (no rename, no removal, so the
   plugin styling API is unchanged): the accent tier
@@ -21,7 +24,9 @@ layer, the icon set, and the layout primitives every screen builds on.
   contrast-safe `control-border`, the `decor` non-text tier, the semantic
   `-text`/`-fill`/`-tint` split with its `on-fill` ink, `scrim`, the syntax
   tints, `code-bg`, `heading`, `placeholder`, the disabled tier, the control
-  heights, the motion pair, the `-lift`/`-overlay` shadows, and the z-scale.
+  heights, the motion pair, the `-lift`/`-overlay` shadows with the
+  `-lift-color`/`-overlay-color` halves they theme through, the
+  `prose-link`/`prose-link-hover` pair, and the z-scale.
   `--tai-color-danger-hover` is new: the danger button had no hover fill.
   Five token names that were referenced but never defined now resolve:
   `--tai-text-xl`, `--tai-text-xs`, `--tai-space-5`, `--tai-radius-full`,
@@ -55,9 +60,11 @@ layer, the icon set, and the layout primitives every screen builds on.
   only says where the reader is — is no longer the sole cue for what is set.
   `Dialog` and `Drawer` return focus to the opener when they render no trigger,
   which is the case Radix's own trigger-based restore cannot cover.
-- **Browser support:** the stylesheets ship as authored, so `light-dark()` sets
-  the floor — Chrome/Edge 123, Firefox 120, Safari and iOS Safari 17.5 — now
-  declared in `browserslist` rather than left implicit. Under
+- **Browser support:** the stylesheets ship as authored, so the CSS they use sets
+  the floor — `@layer` and `:focus-visible`, at Chrome/Edge 99, Firefox 97, Safari
+  and iOS Safari 15.4 — now declared in `browserslist` rather than left implicit.
+  `light-dark()` is deliberately not used: it would raise that floor to Chrome 123
+  / Firefox 120 / Safari 17.5 and drop the whole palette at once below it. Under
   `prefers-reduced-motion` the published `--tai-motion-fast` / `--tai-motion-base`
   durations resolve to `0ms`, so plugin CSS written against them honours the
   preference without reading the media query itself.

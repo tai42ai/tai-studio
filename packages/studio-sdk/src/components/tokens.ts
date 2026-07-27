@@ -3,6 +3,12 @@
  * snapshot test pins this list so the contract can't drift silently. The
  * SDK compatibility version bumps if any of these are renamed/removed; the list
  * grows additively.
+ *
+ * The `--tai-dark-*` half of each themed pair is deliberately NOT here. Those
+ * names are the theming mechanism's own storage — the two blocks in `tokens.css`
+ * that apply the dark theme are the only readers, and the scanner test holds
+ * them to that. A plugin styles against the name WITHOUT the `dark` segment and
+ * gets whichever half the viewer's theme resolves to.
  */
 export const TOKEN_NAMES = [
   '--tai-color-bg',
@@ -37,6 +43,8 @@ export const TOKEN_NAMES = [
   '--tai-color-on-fill',
   '--tai-color-focus-ring',
   '--tai-color-scrim',
+  '--tai-color-prose-link',
+  '--tai-color-prose-link-hover',
   '--tai-color-syntax-key',
   '--tai-color-syntax-string',
   '--tai-color-syntax-number',
@@ -77,6 +85,8 @@ export const TOKEN_NAMES = [
   '--tai-control-height-coarse',
   '--tai-motion-fast',
   '--tai-motion-base',
+  '--tai-shadow-lift-color',
+  '--tai-shadow-overlay-color',
   '--tai-shadow-lift',
   '--tai-shadow-overlay',
   '--tai-shadow-sm',

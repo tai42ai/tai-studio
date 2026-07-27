@@ -19,11 +19,11 @@
     "node": ">=22"
   },
   "browserslist": [
-    "chrome >= 123",
-    "edge >= 123",
-    "firefox >= 120",
-    "safari >= 17.5",
-    "ios_saf >= 17.5"
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 128",
+    "safari >= 16.4",
+    "ios_saf >= 16.4"
   ],
   "scripts": {
     "dev": "pnpm --filter @tai42/studio-app dev",

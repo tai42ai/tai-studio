@@ -11,21 +11,29 @@
  * sort AFTER `tai-utilities`, keeping host utilities the final word over DS
  * component styles.
  *
- * THEMING. Every themed token carries both values in one `light-dark()` pair, so
- * a color exists in exactly one place. `color-scheme` selects between them: the
- * root defaults to `light dark` (follow the OS preference) and the viewer's
- * toggle stamps `data-theme` on the root, which pins the scheme in BOTH
- * directions. `color-scheme` also drives native scrollbars, selects, and form
- * autofill.
+ * THEMING. The light value is the token; the dark value sits beside it under a
+ * `--tai-dark-` name. Each colour is therefore still written exactly once, and
+ * the two blocks that apply the dark half carry no values of their own — they
+ * only re-point each token at its `--tai-dark-*` neighbour, so a light and dark
+ * pair cannot drift apart. `prefers-color-scheme` is the default theme source;
+ * the viewer's toggle stamps `data-theme` on the root (see `useTheme`), which
+ * pins the theme in BOTH directions — the media query stands down for a root
+ * pinned to light, and the pinned-dark block applies the same set outright.
+ * `color-scheme` follows the same three states, so native scrollbars, selects
+ * and form autofill match the tokens.
  *
- * BROWSER FLOOR. `light-dark()` ships as authored — it is not lowered at build
- * time — so it sets this package's support floor: Chrome/Edge 123, Firefox 120,
- * Safari and iOS Safari 17.5. That floor is declared in `browserslist` (this
- * package's and the repo root's) rather than left implicit. It is a deliberate
- * step up from the floor the app already had: the shell compiles Tailwind v4,
- * whose own output needs `@property` and `color-mix()` (Chrome 111, Safari 16.4,
- * Firefox 128), so lowering `light-dark()` alone would buy no working browser —
- * anything below the Tailwind floor is already broken, with or without it.
+ * BROWSER FLOOR. Deliberately NOT `light-dark()`. That function would fold each
+ * pair onto one line, but it is invalid at computed-value time below Chrome 123 /
+ * Firefox 120 / Safari 17.5 — and because every themed token would use it, the
+ * whole palette drops out at once below that line, leaving text on text rather
+ * than an unstyled page. These sheets ship as authored (the SDK build is `tsc`
+ * plus a copy, so nothing lowers them), so what they ask for IS the floor: the
+ * highest thing here is `@layer` and `:focus-visible`, at Chrome/Edge 99,
+ * Firefox 97, and Safari / iOS Safari 15.4. That floor is declared in this
+ * package's `browserslist` rather than left implicit, and the token scanner test
+ * bans `light-dark()` so it cannot be raised back by accident. (The SHELL app
+ * sits higher — it compiles Tailwind v4, whose own output needs `@property` and
+ * `color-mix()` — and declares that floor in the repo root's `browserslist`.)
  *
  * UNITS. Type and spacing tokens are authored in rem so a viewer's font-size
  * preference scales them; radius, elevation, and z tokens stay px/unitless. The
@@ -65,63 +73,113 @@
 
 @layer tai-tokens {
   :root {
+    /* The OS preference is the default theme source; the data-theme blocks
+       below pin it. */
     color-scheme: light dark;
 
+    /* Every colour below carries the LIGHT value; the `--tai-dark-` line beside
+       it carries the dark one. Nothing else in the repo writes either — the two
+       blocks further down only re-point a token at its dark neighbour. */
+
     /* -- Grounds ---------------------------------------------------------- */
-    --tai-color-bg: light-dark(#ffffff, #0c0e12);
-    --tai-color-surface: light-dark(#f9fafb, #12151b);
-    --tai-color-surface-raised: light-dark(#ffffff, #171c24);
+    --tai-color-bg: #ffffff;
+    --tai-dark-color-bg: #0c0e12;
+    --tai-color-surface: #f9fafb;
+    --tai-dark-color-surface: #12151b;
+    --tai-color-surface-raised: #ffffff;
+    --tai-dark-color-surface-raised: #171c24;
     --tai-color-surface-disabled: var(--tai-color-surface);
-    --tai-color-code-bg: light-dark(#f3f4f6, #10131a);
+    --tai-color-code-bg: #f3f4f6;
+    --tai-dark-color-code-bg: #10131a;
 
     /* -- Lines ------------------------------------------------------------
        `border` and `border-strong` are decorative: they are below 3:1 and may
        never be a control's only boundary. `control-border` is the contrast-safe
        boundary for inputs, checkboxes, and secondary buttons. */
-    --tai-color-border: light-dark(#e5e7eb, #262c36);
-    --tai-color-border-strong: light-dark(#d1d5db, #39414e);
-    --tai-color-control-border: light-dark(#767c85, #646c79);
+    --tai-color-border: #e5e7eb;
+    --tai-dark-color-border: #262c36;
+    --tai-color-border-strong: #d1d5db;
+    --tai-dark-color-border-strong: #39414e;
+    --tai-color-control-border: #767c85;
+    --tai-dark-color-control-border: #646c79;
     --tai-color-border-disabled: var(--tai-color-border);
 
     /* -- Ink ---------------------------------------------------------------
        `decor` is the NON-TEXT tier (dividers, watermarks, decorative SVG fill
        or stroke). It never appears on `color:` and never identifies a component
        or a state. */
-    --tai-color-text: light-dark(#111827, #e6e8ec);
-    --tai-color-heading: light-dark(#000000, #ffffff);
-    --tai-color-text-muted: light-dark(rgba(17, 24, 39, 0.62), rgba(230, 232, 236, 0.64));
-    --tai-color-text-disabled: light-dark(rgba(17, 24, 39, 0.38), rgba(230, 232, 236, 0.36));
+    --tai-color-text: #111827;
+    --tai-dark-color-text: #e6e8ec;
+    --tai-color-heading: #000000;
+    --tai-dark-color-heading: #ffffff;
+    --tai-color-text-muted: rgba(17, 24, 39, 0.62);
+    --tai-dark-color-text-muted: rgba(230, 232, 236, 0.64);
+    --tai-color-text-disabled: rgba(17, 24, 39, 0.38);
+    --tai-dark-color-text-disabled: rgba(230, 232, 236, 0.36);
     --tai-color-placeholder: var(--tai-color-text-muted);
-    --tai-color-decor: light-dark(rgba(17, 24, 39, 0.44), rgba(230, 232, 236, 0.42));
+    --tai-color-decor: rgba(17, 24, 39, 0.44);
+    --tai-dark-color-decor: rgba(230, 232, 236, 0.42);
 
     /* -- Accent (crimson) --------------------------------------------------
        The accent is brand, never status. `accent-hover` darkens in light and
        LIGHTENS in dark. `accent-on-tint` is accent TEXT sitting on accent-tint;
        `on-accent` is the label on an accent FILL. */
-    --tai-color-accent: light-dark(#dc143c, #ed4c67);
-    --tai-color-accent-hover: light-dark(#800020, #f4718a);
-    --tai-color-accent-on-tint: light-dark(#be123c, #f4718a);
-    --tai-color-on-accent: light-dark(#ffffff, #0c0e12);
-    --tai-color-accent-tint: light-dark(rgba(220, 20, 60, 0.08), rgba(237, 76, 103, 0.12));
+    --tai-color-accent: #dc143c;
+    --tai-dark-color-accent: #ed4c67;
+    --tai-color-accent-hover: #800020;
+    --tai-dark-color-accent-hover: #f4718a;
+    --tai-color-accent-on-tint: #be123c;
+    --tai-dark-color-accent-on-tint: #f4718a;
+    --tai-color-on-accent: #ffffff;
+    --tai-dark-color-on-accent: #0c0e12;
+    --tai-color-accent-tint: rgba(220, 20, 60, 0.08);
+    --tai-dark-color-accent-tint: rgba(237, 76, 103, 0.12);
 
     /* -- Semantic ----------------------------------------------------------
        The `-text` members are the ONLY ones legible as text, dots, or icons;
        the `-fill` members are for fills and charts and carry `on-fill` ink
        labels in both themes. */
-    --tai-color-ok-text: light-dark(#047857, #34d399);
-    --tai-color-err-text: light-dark(#b91c1c, #f87171);
-    --tai-color-warn-text: light-dark(#92400e, #fbbf24);
-    --tai-color-ok-fill: light-dark(#10b981, #34d399);
-    --tai-color-err-fill: light-dark(#ef4444, #f87171);
-    --tai-color-warn-fill: light-dark(#d97706, #fbbf24);
-    --tai-color-ok-tint: light-dark(rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.12));
-    --tai-color-err-tint: light-dark(rgba(239, 68, 68, 0.1), rgba(248, 113, 113, 0.12));
-    --tai-color-warn-tint: light-dark(rgba(217, 119, 6, 0.1), rgba(251, 191, 36, 0.12));
+    --tai-color-ok-text: #047857;
+    --tai-dark-color-ok-text: #34d399;
+    --tai-color-err-text: #b91c1c;
+    --tai-dark-color-err-text: #f87171;
+    --tai-color-warn-text: #92400e;
+    --tai-dark-color-warn-text: #fbbf24;
+    --tai-color-ok-fill: #10b981;
+    --tai-dark-color-ok-fill: #34d399;
+    --tai-color-err-fill: #ef4444;
+    --tai-dark-color-err-fill: #f87171;
+    --tai-color-warn-fill: #d97706;
+    --tai-dark-color-warn-fill: #fbbf24;
+    --tai-color-ok-tint: rgba(16, 185, 129, 0.1);
+    --tai-dark-color-ok-tint: rgba(52, 211, 153, 0.12);
+    --tai-color-err-tint: rgba(239, 68, 68, 0.1);
+    --tai-dark-color-err-tint: rgba(248, 113, 113, 0.12);
+    --tai-color-warn-tint: rgba(217, 119, 6, 0.1);
+    --tai-dark-color-warn-tint: rgba(251, 191, 36, 0.12);
+    /* The one ink deliberately identical in both themes: every semantic fill is
+       light enough that only the dark label clears the contrast floor on it. */
     --tai-color-on-fill: #0c0e12;
 
-    /* -- Focus + overlay ---------------------------------------------------- */
-    --tai-color-focus-ring: light-dark(#dc143c, #ed4c67);
-    --tai-color-scrim: light-dark(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.6));
+    /* -- Focus + overlay ----------------------------------------------------
+       The ring is an ALIAS, not a restatement: it IS the accent, so referencing
+       it keeps two values that must move together from drifting apart, and it
+       needs no dark half of its own. */
+    --tai-color-focus-ring: var(--tai-color-accent);
+    --tai-color-scrim: rgba(0, 0, 0, 0.45);
+    --tai-dark-color-scrim: rgba(0, 0, 0, 0.6);
+
+    /* -- Prose --------------------------------------------------------------
+       A prose link is always underlined, so colour is a reinforcement rather
+       than the only cue. Dark rest is the LIGHTER crimson: the light-theme
+       accent is too dim against a dark ground, and the hover value is the
+       legible one there (6.17 on raised). Hover then moves to the other member
+       in both themes. Spelled out rather than aliased — the two halves of each
+       pair come from different members of the accent ramp. */
+    --tai-color-prose-link: #dc143c;
+    --tai-dark-color-prose-link: #f4718a;
+    --tai-color-prose-link-hover: #800020;
+    --tai-dark-color-prose-link-hover: #ed4c67;
 
     /* -- Syntax (JSON/code on code-bg) -------------------------------------- */
     --tai-color-syntax-key: var(--tai-color-text-muted);
@@ -136,8 +194,10 @@
     --tai-color-primary: var(--tai-color-accent);
     --tai-color-primary-text: var(--tai-color-on-accent);
     --tai-color-danger: var(--tai-color-err-text);
-    --tai-color-danger-text: light-dark(#ffffff, #0c0e12);
-    --tai-color-danger-hover: light-dark(#7f1d1d, #fca5a5);
+    --tai-color-danger-text: #ffffff;
+    --tai-dark-color-danger-text: #0c0e12;
+    --tai-color-danger-hover: #7f1d1d;
+    --tai-dark-color-danger-hover: #fca5a5;
     --tai-color-danger-surface: var(--tai-color-err-tint);
     --tai-color-success: var(--tai-color-ok-text);
     --tai-color-warning: var(--tai-color-warn-text);
@@ -184,9 +244,15 @@
     --tai-motion-fast: 150ms;
     --tai-motion-base: 250ms;
 
-    /* -- Elevation ----------------------------------------------------------- */
-    --tai-shadow-lift: 0 12px 32px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.45));
-    --tai-shadow-overlay: 0 24px 48px light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.6));
+    /* -- Elevation ------------------------------------------------------------
+       Only the shadow COLOUR varies by theme; the geometry is written once, so a
+       dark override cannot silently move an offset or a blur. */
+    --tai-shadow-lift-color: rgb(0 0 0 / 0.08);
+    --tai-dark-shadow-lift-color: rgb(0 0 0 / 0.45);
+    --tai-shadow-overlay-color: rgb(0 0 0 / 0.16);
+    --tai-dark-shadow-overlay-color: rgb(0 0 0 / 0.6);
+    --tai-shadow-lift: 0 12px 32px var(--tai-shadow-lift-color);
+    --tai-shadow-overlay: 0 24px 48px var(--tai-shadow-overlay-color);
     --tai-shadow-sm: var(--tai-shadow-lift);
     --tai-shadow-md: var(--tai-shadow-overlay);
 
@@ -207,16 +273,96 @@
     --tai-z-tooltip: 50;
   }
 
+  /*
+   * THE DARK HALF, APPLIED. The next two blocks are the only places the dark
+   * values are put into service, and neither carries a value of its own: every
+   * line re-points a token at its `--tai-dark-*` neighbour above. The media query
+   * stands down for a root explicitly pinned to light, so the viewer's choice
+   * always wins over the operating system's. The token scanner test holds the two
+   * blocks to the same token set, so a token can never take the dark half under
+   * one of them and keep the light half under the other.
+   */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --tai-color-bg: var(--tai-dark-color-bg);
+      --tai-color-surface: var(--tai-dark-color-surface);
+      --tai-color-surface-raised: var(--tai-dark-color-surface-raised);
+      --tai-color-code-bg: var(--tai-dark-color-code-bg);
+      --tai-color-border: var(--tai-dark-color-border);
+      --tai-color-border-strong: var(--tai-dark-color-border-strong);
+      --tai-color-control-border: var(--tai-dark-color-control-border);
+      --tai-color-text: var(--tai-dark-color-text);
+      --tai-color-heading: var(--tai-dark-color-heading);
+      --tai-color-text-muted: var(--tai-dark-color-text-muted);
+      --tai-color-text-disabled: var(--tai-dark-color-text-disabled);
+      --tai-color-decor: var(--tai-dark-color-decor);
+      --tai-color-accent: var(--tai-dark-color-accent);
+      --tai-color-accent-hover: var(--tai-dark-color-accent-hover);
+      --tai-color-accent-on-tint: var(--tai-dark-color-accent-on-tint);
+      --tai-color-on-accent: var(--tai-dark-color-on-accent);
+      --tai-color-accent-tint: var(--tai-dark-color-accent-tint);
+      --tai-color-ok-text: var(--tai-dark-color-ok-text);
+      --tai-color-err-text: var(--tai-dark-color-err-text);
+      --tai-color-warn-text: var(--tai-dark-color-warn-text);
+      --tai-color-ok-fill: var(--tai-dark-color-ok-fill);
+      --tai-color-err-fill: var(--tai-dark-color-err-fill);
+      --tai-color-warn-fill: var(--tai-dark-color-warn-fill);
+      --tai-color-ok-tint: var(--tai-dark-color-ok-tint);
+      --tai-color-err-tint: var(--tai-dark-color-err-tint);
+      --tai-color-warn-tint: var(--tai-dark-color-warn-tint);
+      --tai-color-scrim: var(--tai-dark-color-scrim);
+      --tai-color-prose-link: var(--tai-dark-color-prose-link);
+      --tai-color-prose-link-hover: var(--tai-dark-color-prose-link-hover);
+      --tai-color-danger-text: var(--tai-dark-color-danger-text);
+      --tai-color-danger-hover: var(--tai-dark-color-danger-hover);
+      --tai-shadow-lift-color: var(--tai-dark-shadow-lift-color);
+      --tai-shadow-overlay-color: var(--tai-dark-shadow-overlay-color);
+    }
+  }
+
   /* The viewer's explicit toggle wins over the system preference, in BOTH
      directions (data-theme is stamped on the root by useTheme). Pinning
-     `color-scheme` is all it takes: every themed token above resolves through
-     it, and native UI (scrollbars, selects, autofill) follows the same pin. */
+     `color-scheme` is what keeps native UI — scrollbars, selects, autofill — on
+     the same theme as the tokens. */
   :root[data-theme='light'] {
     color-scheme: light;
   }
 
   :root[data-theme='dark'] {
     color-scheme: dark;
+    --tai-color-bg: var(--tai-dark-color-bg);
+    --tai-color-surface: var(--tai-dark-color-surface);
+    --tai-color-surface-raised: var(--tai-dark-color-surface-raised);
+    --tai-color-code-bg: var(--tai-dark-color-code-bg);
+    --tai-color-border: var(--tai-dark-color-border);
+    --tai-color-border-strong: var(--tai-dark-color-border-strong);
+    --tai-color-control-border: var(--tai-dark-color-control-border);
+    --tai-color-text: var(--tai-dark-color-text);
+    --tai-color-heading: var(--tai-dark-color-heading);
+    --tai-color-text-muted: var(--tai-dark-color-text-muted);
+    --tai-color-text-disabled: var(--tai-dark-color-text-disabled);
+    --tai-color-decor: var(--tai-dark-color-decor);
+    --tai-color-accent: var(--tai-dark-color-accent);
+    --tai-color-accent-hover: var(--tai-dark-color-accent-hover);
+    --tai-color-accent-on-tint: var(--tai-dark-color-accent-on-tint);
+    --tai-color-on-accent: var(--tai-dark-color-on-accent);
+    --tai-color-accent-tint: var(--tai-dark-color-accent-tint);
+    --tai-color-ok-text: var(--tai-dark-color-ok-text);
+    --tai-color-err-text: var(--tai-dark-color-err-text);
+    --tai-color-warn-text: var(--tai-dark-color-warn-text);
+    --tai-color-ok-fill: var(--tai-dark-color-ok-fill);
+    --tai-color-err-fill: var(--tai-dark-color-err-fill);
+    --tai-color-warn-fill: var(--tai-dark-color-warn-fill);
+    --tai-color-ok-tint: var(--tai-dark-color-ok-tint);
+    --tai-color-err-tint: var(--tai-dark-color-err-tint);
+    --tai-color-warn-tint: var(--tai-dark-color-warn-tint);
+    --tai-color-scrim: var(--tai-dark-color-scrim);
+    --tai-color-prose-link: var(--tai-dark-color-prose-link);
+    --tai-color-prose-link-hover: var(--tai-dark-color-prose-link-hover);
+    --tai-color-danger-text: var(--tai-dark-color-danger-text);
+    --tai-color-danger-hover: var(--tai-dark-color-danger-hover);
+    --tai-shadow-lift-color: var(--tai-dark-shadow-lift-color);
+    --tai-shadow-overlay-color: var(--tai-dark-shadow-overlay-color);
   }
 
   /* The motion durations are published API: a plugin writes

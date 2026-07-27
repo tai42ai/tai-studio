@@ -1234,17 +1234,17 @@
   }
 
   /* A prose link is always underlined, so color is a reinforcement rather than
-     the only cue. Dark rest is the LIGHTER crimson: the light-theme accent is
-     too dim against a dark ground, and the hover value is the legible one there
-     (6.17 on raised). Hover then moves to the other member in both themes. */
+     the only cue. The two prose-link tokens carry the per-theme values (the dark
+     rest state is the LIGHTER crimson, and hover moves to the other member of
+     the ramp in both themes) — see the token file. */
   .tai-prose a {
-    color: light-dark(var(--tai-color-accent), var(--tai-color-accent-hover));
+    color: var(--tai-color-prose-link);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
 
   .tai-prose a:hover {
-    color: light-dark(var(--tai-color-accent-hover), var(--tai-color-accent));
+    color: var(--tai-color-prose-link-hover);
   }
 
   .tai-prose ul,

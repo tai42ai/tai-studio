@@ -17,11 +17,11 @@
     "access": "public"
   },
   "browserslist": [
-    "chrome >= 123",
-    "edge >= 123",
-    "firefox >= 120",
-    "safari >= 17.5",
-    "ios_saf >= 17.5"
+    "chrome >= 99",
+    "edge >= 99",
+    "firefox >= 97",
+    "safari >= 15.4",
+    "ios_saf >= 15.4"
   ],
   "type": "module",
   "sideEffects": [

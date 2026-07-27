@@ -37,12 +37,19 @@ resolves it through the served import map) imports the three stylesheets itself.
 ## Browser support
 
 The stylesheets ship as authored, with no build-time lowering, so the CSS they
-use is the support floor: **Chrome/Edge 123, Firefox 120, Safari and iOS Safari
-17.5**. It is set by `light-dark()`, which is how every themed token carries its
-light and dark value in one place. The same floor is declared in this package's
-`browserslist`. Below it the tokens do not degrade gracefully — they stop
-resolving — so a host that must serve older browsers needs to lower the token
-stylesheet itself.
+use is the support floor: **Chrome/Edge 99, Firefox 97, Safari and iOS Safari
+15.4**, set by `@layer` and `:focus-visible`. The same floor is declared in this
+package's `browserslist`.
+
+Theming deliberately does not use `light-dark()`. That function would fold each
+light/dark pair onto one line, but it is invalid at computed-value time below
+Chrome 123 / Firefox 120 / Safari 17.5 — and because every themed token would use
+it, the whole palette would drop out at once below that line, leaving text on
+text. Instead the dark value sits beside the light one under a `--tai-dark-` name
+and is applied by a `prefers-color-scheme` query plus a `[data-theme="dark"]`
+block, so each colour is still written exactly once. The Studio SHELL sits higher
+than the SDK — it compiles Tailwind v4, whose output needs `@property` and
+`color-mix()` — and declares that floor in the repository root's `browserslist`.
 
 ## Usage
 
