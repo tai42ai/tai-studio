@@ -55,6 +55,24 @@ function saved(): ReturnType<ApiClient['setEnvConfig']> {
   });
 }
 
+/** A save whose broadcast left a sibling unconverged, so `FleetReport` renders. */
+function degradedSave(): ReturnType<ApiClient['setEnvConfig']> {
+  return Promise.resolve({
+    status: 'reloaded',
+    env_keys: 1,
+    fanout: {
+      mode: 'fleet',
+      op: 'set_env',
+      reachable: true,
+      local_only: false,
+      results: [
+        { origin: 'worker-2', outcome: 'missing', payload: null, error: null, detail: null },
+      ],
+      error: null,
+    },
+  });
+}
+
 function baseStub(setEnvConfig?: ApiClient['setEnvConfig']): ApiClient {
   return stubClient({
     getEnvConfig: vi.fn(() => Promise.resolve(envFixture())),
@@ -176,6 +194,40 @@ describe('EnvironmentTab', () => {
 
     await user.click(screen.getByTestId('env-secret-FOO-toggle'));
     expect(container.querySelector('input')).toHaveAttribute('type', 'text');
+  });
+
+  it('re-seeds from the save-triggered refetch without detaching the operator', async () => {
+    // The refetch that follows a save returns the SERVER's shape of what was just
+    // written (here, a trimmed value), so the state the editor is seeded from
+    // moves under it. The re-seed has to land WITHOUT tearing the editor down: the
+    // operator is standing on the Save button, and the save's own fleet report is
+    // rendered by this component's mutation state.
+    const user = userEvent.setup();
+    const getEnvConfig = vi
+      .fn()
+      .mockResolvedValueOnce({ env: { A: '1' }, secret_keys: [] })
+      .mockResolvedValue({ env: { A: 'trimmed' }, secret_keys: [] });
+    const client = stubClient({
+      getEnvConfig: getEnvConfig as ApiClient['getEnvConfig'],
+      getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
+      setEnvConfig: vi.fn(degradedSave),
+    });
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client });
+
+    const valueInput = await screen.findByLabelText('Value of variable A');
+    await user.clear(valueInput);
+    await user.type(valueInput, ' 1 ');
+    const save = screen.getByRole('button', { name: 'Save' });
+    await user.click(save);
+
+    // The refetch landed and the rows carry the server's value, not the draft.
+    await waitFor(() => {
+      expect(screen.getByLabelText('Value of variable A')).toHaveValue('trimmed');
+    });
+    // The keyboard caret is still on Save, not on the body.
+    expect(save).toHaveFocus();
+    // The save's own report survived the re-seed.
+    expect(screen.getByRole('alert')).toHaveTextContent('did not converge');
   });
 
   it('disables every control in read-only mode', async () => {

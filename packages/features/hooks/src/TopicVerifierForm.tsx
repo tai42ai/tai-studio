@@ -190,7 +190,6 @@ export function TopicVerifierForm(): ReactNode {
             </p>
           ) : (
             <Select
-              aria-label="Verifier"
               options={(verifiersQuery.data ?? []).map((name) => ({ value: name, label: name }))}
               value={verifier}
               placeholder={verifiersQuery.isPending ? 'Loading verifiers…' : 'Select a verifier'}

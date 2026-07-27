@@ -19,7 +19,6 @@ import type {
   ValidatePresetBody,
 } from '@tai42/api-client';
 import {
-  Badge,
   Button,
   Dialog,
   ErrorState,
@@ -36,6 +35,7 @@ import {
 
 import { TagsInput } from './tags';
 import { jsonEqual, parseJsonObject } from './parse';
+import { ValidateVerdict } from './verdict';
 import { presetDetailKey, presetExtensionsKey, presetVersionsKey, presetsListKey } from './keys';
 
 export function SaveVersionDialog({
@@ -239,13 +239,7 @@ export function SaveVersionDialog({
         {validate.isError ? (
           <ErrorState message={errorMessage(validate.error)} />
         ) : validate.data !== undefined ? (
-          validate.data.valid ? (
-            <div>
-              <Badge variant="success">Draft binds cleanly</Badge>
-            </div>
-          ) : (
-            <ErrorState message={validate.data.error ?? 'Draft is invalid.'} />
-          )
+          <ValidateVerdict valid={validate.data.valid} error={validate.data.error} />
         ) : null}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>

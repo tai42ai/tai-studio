@@ -58,7 +58,7 @@ describe('CreatePresetForm', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     await fillNameAndBase(user);
-    await user.type(screen.getByLabelText('Add a tag'), 'geo');
+    await user.type(screen.getByLabelText('Tags'), 'geo');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
@@ -188,7 +188,11 @@ describe('CreatePresetForm', () => {
     expect(await screen.findByText('Draft binds cleanly')).toBeInTheDocument();
   });
 
-  it('validate — invalid verdict: renders the server message verbatim', async () => {
+  it('validate — invalid verdict: a rejected draft is a verdict, never an error state', async () => {
+    // The server ran the pre-store check and answered "no". That is a deliberate
+    // answer, so it reads as the counterpart of the clean verdict — a badge plus
+    // the reason verbatim — not as the crossed-circle surface that says the system
+    // broke. It still ANNOUNCES: the verdict lands after the press.
     const user = userEvent.setup();
     const validatePreset = vi
       .fn()
@@ -199,9 +203,11 @@ describe('CreatePresetForm', () => {
     await fillNameAndBase(user);
     await user.click(screen.getByRole('button', { name: 'Validate' }));
 
-    expect(
-      await screen.findByText("base tool 'weather' is not a registered tool"),
-    ).toBeInTheDocument();
+    const verdict = await screen.findByText("base tool 'weather' is not a registered tool");
+    expect(verdict.closest('[role="status"]')).not.toBeNull();
+    expect(screen.getByText('Draft is invalid')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Something went wrong')).toBeNull();
   });
 
   it('validate — a stale verdict clears on further edits', async () => {

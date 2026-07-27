@@ -43,7 +43,7 @@ describe('FleetReport', () => {
     };
     render(<FleetReport summary={summary} />);
     const alert = screen.getByRole('alert');
-    expect(within(alert).getByText(/4 worker\(s\) did not converge/)).toBeInTheDocument();
+    expect(within(alert).getByText(/4 workers did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText('serve-a')).toBeInTheDocument();
     // The per-origin message (from error/detail) renders alongside the origin.
     expect(within(alert).getByText(/reload raised/)).toBeInTheDocument();
@@ -140,7 +140,7 @@ describe('FleetReport', () => {
     render(<FleetReport summary={summary} action="reload" />);
     const alert = screen.getByRole('alert');
     // Nothing was saved on the reload surface, so the heading must not claim a save.
-    expect(within(alert).getByText(/2 worker\(s\) did not converge/)).toBeInTheDocument();
+    expect(within(alert).getByText(/2 workers did not converge/)).toBeInTheDocument();
     expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
     // The operator is already on the System page — no self-referential pointer.
     expect(within(alert).queryByText(/from the System page/)).not.toBeInTheDocument();
@@ -182,5 +182,36 @@ describe('FleetReport', () => {
     expect(statusFor(alert, /did not converge/)).toHaveClass('tai-status-warn');
     expect(statusFor(alert, /^apply failed$/)).toHaveClass('tai-status-err');
     expect(within(alert).getByText('serve-a')).toHaveClass('tai-mono');
+  });
+
+  it('agrees the count with its noun, singular and plural alike', () => {
+    // `worker(s)` is not a plural: it is machine output at the one moment the
+    // operator is being told something went wrong, and ONE unconverged worker is
+    // the commonest degraded fleet there is. Both halves of the copy agree — the
+    // headline's noun and the guidance line's subject and its pronoun.
+    const degraded = (origins: readonly string[]): FleetReportSummary => ({
+      status: 'degraded',
+      note: null,
+      failures: origins.map((origin) => ({ origin, outcome: 'failed', message: null })),
+      error: null,
+    });
+
+    const { rerender } = render(<FleetReport summary={degraded(['serve-a'])} />);
+    let alert = screen.getByRole('alert');
+    expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
+    expect(within(alert).getByText(/This worker may still be running/)).toBeInTheDocument();
+    expect(within(alert).getByText(/to converge it\./)).toBeInTheDocument();
+
+    rerender(<FleetReport summary={degraded(['serve-a', 'serve-b'])} />);
+    alert = screen.getByRole('alert');
+    expect(within(alert).getByText(/2 workers did not converge/)).toBeInTheDocument();
+    expect(within(alert).getByText(/These workers may still be running/)).toBeInTheDocument();
+    expect(within(alert).getByText(/to converge them\./)).toBeInTheDocument();
+
+    // Neither reading may reach the screen as a parenthesised suffix.
+    for (const origins of [['serve-a'], ['serve-a', 'serve-b']]) {
+      rerender(<FleetReport summary={degraded(origins)} />);
+      expect(screen.getByRole('alert').textContent).not.toContain('worker(s)');
+    }
   });
 });

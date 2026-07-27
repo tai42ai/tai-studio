@@ -48,6 +48,14 @@ export interface TagsInputProps {
  * Controlled tag editor. The caller owns the `value` list; `onChange` receives the
  * next list on every add/remove. A blank or duplicate entry is ignored (never a
  * silent duplicate chip). Enter or comma commits the draft chip.
+ *
+ * The draft input takes its NAME from the enclosing `Field`: it renders the SDK's
+ * `TextInput`, which spreads `useFieldControl()` and so claims the Field's control
+ * id. An `aria-label` of its own would replace that name, leaving a control whose
+ * visible label reads "Tags" and whose accessible name does not contain it (WCAG
+ * 2.5.3, Label in Name) — a voice-control user could not address the field they
+ * can see. So the editor is always wrapped in a `Field`, and what it adds is said
+ * by the placeholder instead.
  */
 export function TagsInput({ value, onChange, disabled }: TagsInputProps): ReactNode {
   const [draft, setDraft] = useState('');
@@ -84,7 +92,6 @@ export function TagsInput({ value, onChange, disabled }: TagsInputProps): ReactN
               }
             }}
             placeholder="Add a tag…"
-            aria-label="Add a tag"
             disabled={disabled}
           />
         </div>

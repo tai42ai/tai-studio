@@ -137,6 +137,17 @@ interface EditorProps {
   readonly readOnly: boolean;
 }
 
+/**
+ * The editable rows for a server env map. Each carries a row id independent of its
+ * key, so renaming a variable does not re-identify (and so remount) its inputs; the
+ * marks variable is managed through the per-row toggles and is never a raw row.
+ */
+function rowsFromEnv(env: Record<string, string>, nextId: () => number): Row[] {
+  return Object.entries(env)
+    .filter(([key]) => key !== SECRET_MARKS_ENV_VAR)
+    .map(([key, value]) => ({ id: `env-row-${String(nextId())}`, key, value }));
+}
+
 function EnvironmentEditor({
   initialEnv,
   initialSecretKeys,
@@ -147,13 +158,24 @@ function EnvironmentEditor({
   const queryClient = useQueryClient();
 
   const idRef = useRef(0);
-  const [rows, setRows] = useState<Row[]>(() =>
-    Object.entries(initialEnv)
-      // The marks variable is managed through the per-row toggles, not a raw row.
-      .filter(([key]) => key !== SECRET_MARKS_ENV_VAR)
-      .map(([key, value]) => ({ id: `env-row-${String(idRef.current++)}`, key, value })),
-  );
+  const nextId = (): number => idRef.current++;
+  const [rows, setRows] = useState<Row[]>(() => rowsFromEnv(initialEnv, nextId));
   const [secretKeys, setSecretKeys] = useState<Set<string>>(() => new Set(initialSecretKeys));
+
+  // The server state the rows were seeded from. When it MOVES — this editor's own
+  // save, or a background refetch — the rows are re-seeded DURING RENDER (React's
+  // adjust-state-on-prop-change pattern) so a stale edit can never clobber newer
+  // server state. Not by remounting on a `key`: this editor is what writes the env,
+  // so a remount keyed on it tears the editor down the instant its own Save lands,
+  // dropping the keyboard caret from the Save button onto `document.body`
+  // (WCAG 2.4.3) and deleting the fleet report the save just produced.
+  const baseline = JSON.stringify({ env: initialEnv, secret_keys: initialSecretKeys });
+  const [seededFrom, setSeededFrom] = useState(baseline);
+  if (seededFrom !== baseline) {
+    setSeededFrom(baseline);
+    setRows(rowsFromEnv(initialEnv, nextId));
+    setSecretKeys(new Set(initialSecretKeys));
+  }
 
   const mutation = useMutation({
     mutationFn: (env: Record<string, string>) => api.setEnvConfig(env),
@@ -163,10 +185,7 @@ function EnvironmentEditor({
   });
 
   const addRow = (): void => {
-    setRows((current) => [
-      ...current,
-      { id: `env-row-${String(idRef.current++)}`, key: '', value: '' },
-    ]);
+    setRows((current) => [...current, { id: `env-row-${String(nextId())}`, key: '', value: '' }]);
   };
   const setKey = (id: string, key: string): void => {
     setRows((current) => current.map((row) => (row.id === id ? { ...row, key } : row)));
@@ -393,13 +412,9 @@ export function EnvironmentTab({ readOnly }: EnvironmentTabProps): ReactNode {
 
   const { env, secret_keys } = envQuery.data;
   const ownedSecret = ownedSecretMap(schemaQuery.data);
-  // Re-seed the editor's local state whenever the server data changes (e.g. after
-  // a save-triggered refetch) by remounting under a data-derived key.
-  const version = JSON.stringify({ env, secret_keys });
 
   return (
     <EnvironmentEditor
-      key={version}
       initialEnv={env}
       initialSecretKeys={secret_keys}
       ownedSecret={ownedSecret}

@@ -29,6 +29,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { errorMessage } from '../errors';
 import { Dialog } from './dialog';
+import { Field } from './field';
 import { CheckCircleIcon, PendingIcon } from './icons';
 import { JsonDiff } from './json-diff';
 import { JsonTree } from './json-tree';
@@ -130,7 +131,11 @@ function EditTagsDialog({
       }}
     >
       <div className="tai-stack">
-        <TagsInput value={tags} onChange={setTags} disabled={pending} />
+        {/* The editor is named by its Field, like every other site: its draft input
+            claims the Field's control id, so the visible label IS the name. */}
+        <Field label="Tags" description="Labels on this version's immutable body.">
+          <TagsInput value={tags} onChange={setTags} disabled={pending} />
+        </Field>
         {error !== undefined ? <ErrorState message={error} /> : null}
       </div>
       <div className="tai-dialog-actions">
@@ -269,7 +274,14 @@ export function VersionHistoryPanel({
                       </Button>
                       {canCompare ? (
                         <Button
-                          aria-label={`Compare version ${String(entry.version)}`}
+                          // The name starts with the word the button is SHOWING,
+                          // which is what WCAG 2.5.3 (Label in Name) asks: a constant
+                          // "Compare …" would leave a button reading "Comparing…"
+                          // named "Compare", and a voice-control user naming a control
+                          // they cannot see. The button stays ENABLED while armed —
+                          // unlike an Edit action, a second click on the armed row is
+                          // the disarm, so there is nothing to take away.
+                          aria-label={`${compareFrom === entry.version ? 'Comparing' : 'Compare'} version ${String(entry.version)}`}
                           onClick={() => {
                             compare(entry.version);
                           }}

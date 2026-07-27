@@ -168,9 +168,13 @@ describe('VersionHistoryPanel', () => {
     const user = userEvent.setup();
     render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
 
-    // First click arms comparing-from v1 (the button label reflects the armed state).
+    // First click arms comparing-from v1. The NAME follows the label the button is
+    // showing (WCAG 2.5.3): a control reading "Comparing…" named "Compare version 1"
+    // is one a voice-control user cannot address by what they see. `Compare` is not
+    // a substring of `Comparing`, so each of these queries matches one state only.
     await user.click(screen.getByRole('button', { name: 'Compare version 1' }));
-    expect(screen.getByRole('button', { name: 'Compare version 1' })).toHaveTextContent(
+    expect(screen.queryByRole('button', { name: 'Compare version 1' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Comparing version 1' })).toHaveTextContent(
       'Comparing…',
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -188,7 +192,10 @@ describe('VersionHistoryPanel', () => {
     render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: 'Compare version 1' }));
-    await user.click(screen.getByRole('button', { name: 'Compare version 1' }));
+    // The armed control is still ENABLED — the disarm is a second click on it.
+    const armed = screen.getByRole('button', { name: 'Comparing version 1' });
+    expect(armed).toBeEnabled();
+    await user.click(armed);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Compare version 1' })).toHaveTextContent('Compare');
   });
@@ -227,7 +234,7 @@ describe('VersionHistoryPanel', () => {
     // Seeded from the row's tags: the existing chip has a Remove affordance.
     expect(within(dialog).getByRole('button', { name: 'Remove tag stable' })).toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText('Add a tag'), 'reviewed');
+    await user.type(within(dialog).getByLabelText('Tags'), 'reviewed');
     await user.click(within(dialog).getByRole('button', { name: 'Add tag' }));
     await user.click(within(dialog).getByRole('button', { name: 'Save tags' }));
 

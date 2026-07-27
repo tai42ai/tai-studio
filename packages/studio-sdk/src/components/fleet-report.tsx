@@ -95,18 +95,24 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
   // degraded — the bus was reached but named origins did not converge. That is a
   // warning, not a failure, so it takes the warning surface: a warn-toned
   // headline inside an error-toned panel would state two different severities.
+  //
+  // A count and its noun agree. `worker(s)` is machine output at the one moment
+  // an operator is being told something went wrong, and a single unconverged
+  // worker is the commonest degraded fleet there is.
+  const count = summary.failures.length;
+  const workers = `${String(count)} worker${count === 1 ? '' : 's'}`;
   return (
     <div role="alert" className="tai-warn-state tai-stack tai-stack-2">
       <strong className="tai-status tai-status-warn">
         <AlertTriangleIcon />
         {action === 'reload'
-          ? `${String(summary.failures.length)} worker(s) did not converge`
-          : `Change saved, but ${String(summary.failures.length)} worker(s) did not converge`}
+          ? `${workers} did not converge`
+          : `Change saved, but ${workers} did not converge`}
       </strong>
       <p>
-        {action === 'reload'
-          ? 'These workers may still be running the old config — re-run the reload to converge them.'
-          : 'These workers may still be running the old config — reload the fleet from the System page to converge them.'}
+        {`${count === 1 ? 'This worker' : 'These workers'} may still be running the old config — ` +
+          (action === 'reload' ? 're-run the reload' : 'reload the fleet from the System page') +
+          ` to converge ${count === 1 ? 'it' : 'them'}.`}
       </p>
       <ul className="tai-stack tai-stack-2">
         {summary.failures.map((failure) => {

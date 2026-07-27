@@ -11,6 +11,31 @@
  * A consumer `ref` is FORWARDED to the native control by that same spread, so a
  * caller that has to focus or measure its own input is not pushed out of the
  * design system to get at the element.
+ *
+ * WHERE A CALLER'S `aria-label` GOES, stated once for the whole SDK because the
+ * two families answer differently and only one of them said so:
+ *
+ * - NATIVE-ATTRIBUTE PASS-THROUGH — `TextInput`, `Textarea`, `NumberInput`,
+ *   `RevealInput`, `TagsInput`. Their props ARE the native element's attributes,
+ *   so a caller's `aria-label` reaches the element and WINS over the `Field`'s
+ *   `<label for>`, exactly as it does in plain HTML. Nothing intercepts it,
+ *   because an explicit prop is a decision (see {@link wireToField}) — a `Field`
+ *   that hosts two controls needs the second one nameable.
+ * - NAMED PROP WITH A DOCUMENTED FALLBACK — `Select` and `Checkbox`. Their
+ *   `aria-label` is a prop the component reads, and they DROP it when a `Field`
+ *   or an inline `label` already names the control from visible text. Their own
+ *   docblocks state that, and it is the behaviour their call sites depend on.
+ *
+ * The rule that binds BOTH families, and the reason the pass-through one is not a
+ * hole: whatever name reaches the control must CONTAIN the `Field`'s visible
+ * label (WCAG 2.5.3, Label in Name) — "Fixed kwargs" wrapping a control named
+ * "Fixed kwargs JSON" is fine, a control named "Add a tag" under a label reading
+ * "Tags" is not, because a voice-control user can only say what they can see.
+ * `components/field-group.test.ts` asserts that containment across every call
+ * site in the repository. It is deliberately NOT a "the Field always wins" rule:
+ * that would delete the per-row disambiguation `ScopesMapper.tsx` gives each of
+ * its route inputs, where several identical fields sit in one form and only the
+ * caller knows which scope a row belongs to.
  */
 import type { AriaAttributes, InputHTMLAttributes, Ref, TextareaHTMLAttributes } from 'react';
 

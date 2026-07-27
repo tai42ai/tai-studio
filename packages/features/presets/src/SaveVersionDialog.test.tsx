@@ -63,7 +63,7 @@ describe('SaveVersionDialog', () => {
     );
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
-    await user.type(screen.getByLabelText('Add a tag'), 'eu');
+    await user.type(screen.getByLabelText('Tags'), 'eu');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
@@ -171,7 +171,7 @@ describe('SaveVersionDialog', () => {
     });
 
     // Change only tags; the seeded output_schema is untouched, so it is NOT sent.
-    await user.type(screen.getByLabelText('Add a tag'), 'eu');
+    await user.type(screen.getByLabelText('Tags'), 'eu');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
@@ -243,7 +243,7 @@ describe('SaveVersionDialog', () => {
       client: client({ savePresetVersion }),
     });
 
-    await user.type(screen.getByLabelText('Add a tag'), 'eu');
+    await user.type(screen.getByLabelText('Tags'), 'eu');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
@@ -287,7 +287,7 @@ describe('SaveVersionDialog', () => {
     expect(await screen.findByText('Unknown extension: chain.')).toBeInTheDocument();
 
     // Make the form dirty; submit still stays blocked while a name is unknown.
-    await user.type(screen.getByLabelText('Add a tag'), 'eu');
+    await user.type(screen.getByLabelText('Tags'), 'eu');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
     expect(savePresetVersion).not.toHaveBeenCalled();

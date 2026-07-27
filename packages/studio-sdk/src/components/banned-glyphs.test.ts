@@ -1,10 +1,15 @@
 /**
  * The banned-glyph rule, enforced by a repository-wide SOURCE SCAN.
  *
- * Unicode glyphs used as icons are banned — `▲ ▼ ▾ ↗ ✓ ×` and the four arrows
- * `← → ↑ ↓` — because the icon set in `icons.tsx` is the only sanctioned source
- * of iconography: a glyph inherits the text font rather than the 24-grid/1.6-stroke
- * system, and no font stack draws these consistently.
+ * Unicode glyphs used as icons are banned — the triangles, the crossed marks, the
+ * check marks and the four arrows (see {@link BANNED_GLYPHS}) — because the icon
+ * set in `icons.tsx` is the only sanctioned source of iconography: a glyph
+ * inherits the text font rather than the 24-grid/1.6-stroke system, and no font
+ * stack draws these consistently.
+ *
+ * A second rule rides with it, because a sanctioned icon can still say the wrong
+ * thing: the SEVERITY VOCABULARY at the end of this file holds every mark to the
+ * severity the surface around it already states.
  *
  * The set is enforced at TWO strengths, because the repository holds the two
  * halves of it to two different rules:
@@ -53,12 +58,18 @@
  * character references and JavaScript string escapes are decoded first, so
  * `&#215;`, `&times;` and `{'\u{00d7}'}` are all read as the `×` they ship.
  *
- * KNOWN BLIND SPOT, stated rather than papered over: a glyph assembled at
- * runtime (`String.fromCodePoint(0x2715)`, a concatenation, a glyph arriving
- * from the server) has no literal to find and is invisible here. So is a glyph
- * inside a `.css` `content:` property, which is a different rule. Widening to
- * either needs a real parse or a rendered sweep; the floors below at least keep
- * the routes it DOES cover from silently dropping out.
+ * KNOWN BLIND SPOTS, stated rather than papered over, and bounded to the two that
+ * are really left:
+ *
+ * - A glyph assembled at RUNTIME (`String.fromCodePoint(0x2715)`, a
+ *   concatenation, a glyph arriving from the server) has no literal to find.
+ * - A glyph inside a `.css` `content:` property, which is a different rule.
+ *
+ * A third one used to sit here unstated and is now closed rather than declared:
+ * an ALTERNATE SPELLING of a banned mark. The set below is the marks, every
+ * spelling of each, so a `✕` cannot walk through a rule written about `×`.
+ * Widening past what remains needs a real parse or a rendered sweep; the floors
+ * below at least keep the routes this DOES cover from silently dropping out.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -90,8 +101,20 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 
  */
 const SCANNED_EXTENSIONS = /\.(?:tsx?|m?js|cjs|html)$/;
 
-/** The banned set, verbatim from the mission's iconography rule. */
-const BANNED_GLYPHS = '▲▼▾↗→✓×↑↓←';
+/**
+ * The banned set: the mission's iconography rule, widened to every SPELLING of
+ * the marks it names.
+ *
+ * Unicode spells each of these marks several times over, and a rule listing one
+ * spelling per mark is enforceable only against the spelling somebody happened to
+ * reach for. `✕` U+2715 as the sole content of a `<button>` is the identical
+ * defect the four cleared `×` sites had — same shape on screen, same missing
+ * accessible name, same inherited text font — and it passed every assertion in
+ * this file. So the crossed marks (`× ✕ ✖ ✗ ✘ ⨯`), the check marks (`✓ ✔`) and
+ * the small triangles beside the large ones (`▴ ▸ ◂`) are all in, rather than the
+ * one member of each family that had already shipped.
+ */
+const BANNED_GLYPHS = '▲▼▾▴▸◂↗→✓✔×✕✖✗✘⨯↑↓←';
 
 /**
  * The NAMED references the toolchain actually decodes to a banned glyph.
@@ -813,5 +836,209 @@ describe('banned glyphs', () => {
     // Negative control: a glyph beside real text is prose, not an icon stand-in.
     expect(jsxSoleGlyphHits('<span>3 × 4</span>')).toEqual([]);
     expect(jsxSoleGlyphHits('<span>{count}</span>')).toEqual([]);
+  });
+});
+
+/**
+ * The SEVERITY VOCABULARY: which mark states which outcome.
+ *
+ * `fleet-report.tsx` writes it down — error is the crossed circle, a warning is
+ * the triangle, an unresolved state is the pending clock — and `primitives.tsx`
+ * says the same thing again for `ErrorState`. It was stated in four places and
+ * gated at four OTHER places, which is not the same as being enforced: swapping
+ * the mark at `copy-field.tsx`, `media-field.tsx`, `string-field.tsx` and
+ * `unsupported-notice.tsx` left the whole suite green, and a warning triangle on
+ * a failure — or a crossed circle on a degradation — tells an operator the wrong
+ * thing at the one moment they are reading marks rather than prose.
+ *
+ * A mark is judged against what the SURFACE AROUND IT already says, which the
+ * source states in two readable ways: a severity class, or a `Badge variant`.
+ * Both are read from the tag the mark is written inside.
+ */
+const MARK_SEVERITY: Readonly<Record<string, string>> = {
+  XCircleIcon: 'err',
+  AlertTriangleIcon: 'warn',
+  PendingIcon: 'pending',
+  CheckCircleIcon: 'ok',
+};
+
+/** The severity a design-system class states about the surface wearing it. */
+const CLASS_SEVERITY: Readonly<Record<string, string>> = {
+  'tai-status-err': 'err',
+  'tai-status-warn': 'warn',
+  'tai-status-pending': 'pending',
+  'tai-status-ok': 'ok',
+  'tai-field-error': 'err',
+  'tai-error-state': 'err',
+  'tai-error-state-title': 'err',
+  'tai-warn-state': 'warn',
+  'tai-badge-err': 'err',
+  'tai-badge-warn': 'warn',
+  'tai-badge-ok': 'ok',
+};
+
+/** The severity a `Badge` variant states. Other variants state none. */
+const VARIANT_SEVERITY: Readonly<Record<string, string>> = {
+  danger: 'err',
+  warning: 'warn',
+  success: 'ok',
+};
+
+/** The offset of the `>` closing an open tag whose attributes start at `from`. */
+function closingAngle(source: string, from: number): number {
+  let index = from;
+  let depth = 0;
+  let quote: string | undefined;
+  for (; index < source.length; index += 1) {
+    const character = source[index] ?? '';
+    if (quote !== undefined) {
+      if (character === '\\') index += 1;
+      else if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') quote = character;
+    else if (character === '{') depth += 1;
+    else if (character === '}') depth -= 1;
+    else if (character === '>' && depth === 0) break;
+  }
+  return index;
+}
+
+/** The class list a tag writes literally — a string, or a template's static text. */
+function classesOf(attributes: string): string {
+  const match = /(?:^|\s)className\s*=\s*(?:"([^"]*)"|\{\s*`([^`]*)`)/.exec(attributes);
+  return (match?.[1] ?? match?.[2] ?? '').replaceAll(/\$\{[^}]*\}/g, ' ');
+}
+
+/** The severity a tag states about itself, or `undefined` when it states none. */
+export function statedSeverity(attributes: string): string | undefined {
+  const classes = classesOf(attributes);
+  for (const [className, severity] of Object.entries(CLASS_SEVERITY)) {
+    if (new RegExp(String.raw`(^|\s)${className}(\s|$)`).test(classes)) return severity;
+  }
+  const variant = /(?:^|\s)variant\s*=\s*"(\w+)"/.exec(attributes)?.[1];
+  return variant === undefined ? undefined : VARIANT_SEVERITY[variant];
+}
+
+/**
+ * How far into a tag's children a mark is looked for. The vocabulary is about the
+ * mark a surface OPENS with — `<span className="tai-status tai-status-err">
+ * <XCircleIcon />` — and a window keeps the reader from attributing a mark deep
+ * inside a long subtree to an ancestor that says nothing about it.
+ */
+const MARK_WINDOW = 400;
+
+/** Every `severity-stated tag → mark` pairing a source writes. `code` must be comment-free. */
+export function markPairings(code: string): { line: number; stated: string; mark: string }[] {
+  const pairs: { line: number; stated: string; mark: string }[] = [];
+  const marks = new RegExp(String.raw`<(${Object.keys(MARK_SEVERITY).join('|')})\b`);
+  for (const match of code.matchAll(/<([A-Za-z][\w.]*)/g)) {
+    const end = closingAngle(code, match.index + match[0].length);
+    const attributes = code.slice(match.index + match[0].length, end);
+    if (attributes.trimEnd().endsWith('/')) continue;
+    const stated = statedSeverity(attributes);
+    if (stated === undefined) continue;
+    const mark = marks.exec(code.slice(end + 1, end + 1 + MARK_WINDOW))?.[1];
+    if (mark === undefined) continue;
+    pairs.push({ line: lineAt(code, match.index), stated, mark });
+  }
+  return pairs;
+}
+
+/** A polite live region carrying a severity mark. `code` must be comment-free. */
+export function politeMarks(code: string): { line: number; mark: string }[] {
+  const found: { line: number; mark: string }[] = [];
+  const marks = new RegExp(String.raw`<(${Object.keys(MARK_SEVERITY).join('|')})\b`);
+  for (const match of code.matchAll(/<([A-Za-z][\w.]*)/g)) {
+    const end = closingAngle(code, match.index + match[0].length);
+    const attributes = code.slice(match.index + match[0].length, end);
+    if (attributes.trimEnd().endsWith('/')) continue;
+    if (!/(?:^|\s)role\s*=\s*"status"/.test(attributes)) continue;
+    const mark = marks.exec(code.slice(end + 1, end + 1 + MARK_WINDOW))?.[1];
+    if (mark !== undefined) found.push({ line: lineAt(code, match.index), mark });
+  }
+  return found;
+}
+
+describe('severity marks', () => {
+  const scripts = sources.filter((file) => !file.endsWith('.html'));
+
+  it('gives every stated severity the mark that states it', () => {
+    const wrong: string[] = [];
+    let judged = 0;
+    for (const file of scripts) {
+      const code = stripComments(readFileSync(file, 'utf8'));
+      for (const pair of markPairings(code)) {
+        judged += 1;
+        if (MARK_SEVERITY[pair.mark] === pair.stated) continue;
+        wrong.push(
+          `${relative(repoRoot, file)}:${String(pair.line)} ` +
+            `a ${pair.stated} surface wearing ${pair.mark}`,
+        );
+      }
+    }
+    expect(wrong).toEqual([]);
+    // A floor against the reader silently pairing nothing: these are real sites,
+    // and an empty sweep would report success while judging no mark at all.
+    expect(judged).toBeGreaterThanOrEqual(12);
+  });
+
+  it('keeps the failure mark out of a POLITE live region', () => {
+    // The severity a surface states is not always in its class list: a
+    // degradation notice (`string-field.tsx`) renders `role="status"` on the hint
+    // style, which names no severity — so the class rule above cannot see it. What
+    // `role="status"` DOES say is "this is not an interruption", and the crossed
+    // circle says the opposite. `AlertTriangleIcon` on such a notice is CORRECT: a
+    // degradation IS a warning.
+    const loud: string[] = [];
+    let judged = 0;
+    for (const file of scripts) {
+      const code = stripComments(readFileSync(file, 'utf8'));
+      for (const found of politeMarks(code)) {
+        judged += 1;
+        if (found.mark !== 'XCircleIcon') continue;
+        loud.push(`${relative(repoRoot, file)}:${String(found.line)} ${found.mark}`);
+      }
+    }
+    expect(loud).toEqual([]);
+    expect(judged).toBeGreaterThanOrEqual(1);
+  });
+
+  it('reads the severity a surface states, and the mark inside it', () => {
+    // Positive controls, in the two shapes the repo writes. Without them a reader
+    // that paired nothing would leave both sweeps green with nothing to report.
+    const status = '<span className="tai-status tai-status-err">\n  <XCircleIcon />\n  Failed';
+    expect(markPairings(status)).toEqual([{ line: 1, stated: 'err', mark: 'XCircleIcon' }]);
+
+    const badge = '<Badge variant="warning">\n  <AlertTriangleIcon />\n  Unsupported';
+    expect(markPairings(badge)).toEqual([{ line: 1, stated: 'warn', mark: 'AlertTriangleIcon' }]);
+
+    // The swap this gate exists to catch: the same surface, the other mark. The
+    // surface still states `err`; the mark states `warn`, and the pair is what
+    // fails.
+    const swapped = '<span role="alert" className="tai-field-error">\n  <AlertTriangleIcon />';
+    expect(markPairings(swapped).map((pair) => [pair.stated, pair.mark])).toEqual([
+      ['err', 'AlertTriangleIcon'],
+    ]);
+    expect(MARK_SEVERITY[markPairings(swapped)[0]?.mark ?? '']).not.toBe(
+      markPairings(swapped)[0]?.stated,
+    );
+
+    // A surface stating no severity is judged by neither rule, and a mark far
+    // outside the window belongs to whatever really encloses it.
+    expect(statedSeverity(' className="tai-field-hint"')).toBeUndefined();
+    expect(statedSeverity(' variant="neutral"')).toBeUndefined();
+    expect(
+      markPairings(`<div className="tai-status-ok">${' '.repeat(500)}<XCircleIcon />`),
+    ).toEqual([]);
+
+    // A class NAMED in a value that is not the class list is not the class list.
+    expect(statedSeverity(' data-tone="tai-status-err"')).toBeUndefined();
+    expect(statedSeverity(' className={`tai-status ${tone}`}')).toBeUndefined();
+    // …and every mark in the vocabulary is really in it.
+    for (const mark of Object.keys(MARK_SEVERITY)) {
+      const source = `<span className="tai-status-ok"><${mark} /></span>`;
+      expect([mark, markPairings(source).length]).toEqual([mark, 1]);
+    }
   });
 });

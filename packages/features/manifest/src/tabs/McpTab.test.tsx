@@ -129,7 +129,7 @@ describe('McpTab', () => {
 
     // A single-MCP reload persists nothing, so the alert must NOT claim a save.
     const alert = await screen.findByRole('alert');
-    expect(within(alert).getByText(/1 worker\(s\) did not converge/)).toBeInTheDocument();
+    expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
     expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
   });
@@ -214,6 +214,49 @@ describe('McpTab', () => {
       expect(setMcpConfig).toHaveBeenCalledWith([{ title: 'new', config: {} }]);
     });
     expect(await screen.findByText(/Saved \(1 env keys\)/)).toBeInTheDocument();
+  });
+
+  it('re-seeds from the save-triggered refetch without detaching the operator', async () => {
+    // The refetch that follows a save returns the config the server now holds, so
+    // the state the editor is seeded from moves under it. The re-seed has to land
+    // WITHOUT tearing the editor down: the operator is standing on Save config, and
+    // the "Saved" note is this component's own mutation state.
+    const user = userEvent.setup();
+    const setMcpConfig = vi.fn().mockResolvedValue({
+      status: 'ok',
+      env_keys: 2,
+      fanout: { mode: 'local-only', note: 'lone worker' },
+    });
+    const getManifest = vi
+      .fn()
+      .mockResolvedValueOnce(MANIFEST_CONFIGURED)
+      .mockResolvedValue({
+        mcp: [{ title: 'srv renamed', config: { command: 'run' } }],
+        user_tools: ['echo'],
+      });
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifest,
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      setMcpConfig,
+    };
+    renderWithProviders(<McpTab />, { client });
+
+    const entry = await screen.findByTestId('mcp-entry-0');
+    await user.type(within(entry).getByLabelText('Title'), ' renamed');
+    const save = screen.getByRole('button', { name: /Save config/ });
+    await user.click(save);
+
+    // The refetch landed and the form carries the server's config.
+    await waitFor(() => {
+      expect(within(screen.getByTestId('mcp-entry-0')).getByLabelText('Title')).toHaveValue(
+        'srv renamed',
+      );
+    });
+    // The save's own note survived the re-seed...
+    expect(screen.getByText(/Saved \(2 env keys\)/)).toBeInTheDocument();
+    // ...and the keyboard caret is still on Save, not on the body.
+    expect(save).toHaveFocus();
   });
 
   it('warns and confirms before discarding unsaved edits when toggling to JSON', async () => {

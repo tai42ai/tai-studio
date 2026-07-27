@@ -140,8 +140,8 @@ function grantsEqual(a: RoleGrants, b: RoleGrants, tags: readonly string[]): boo
 /**
  * A stable signature of a role's persisted grant map — it changes whenever the stored
  * grants change (a save, or an external rollback that re-points the role under the same
- * name). Keying the grant editor on it remounts + re-seeds the draft from the new
- * baseline, so a rollback is never silently re-PUT away with a pre-rollback draft.
+ * name). The grant editor re-seeds its draft from the new baseline whenever it moves,
+ * so a rollback is never silently re-PUT away with a pre-rollback draft.
  */
 function grantsSignature(grants: RoleGrants): string {
   return Object.entries(grants)
@@ -316,6 +316,12 @@ function RouteDetail({ routes }: { readonly routes: readonly AuthRoute[] }): Rea
  * admin-only (purely-fenced) groups listed read-only below, and a Save that persists
  * the draft grant map via `updateRole`. Keyed by role name in the parent, so
  * switching roles remounts and re-seeds the draft from the selected role's grants.
+ *
+ * A change to THIS role's stored grants — its own save, or an external rollback —
+ * re-seeds the draft DURING RENDER (React's adjust-state-on-prop-change pattern)
+ * instead. This editor is what writes those grants, so a remount keyed on them
+ * tears the editor down the instant its own Save lands, dropping the keyboard
+ * caret from the Save button onto `document.body` (WCAG 2.4.3).
  */
 function RoleGrantEditor({
   role,
@@ -335,11 +341,20 @@ function RoleGrantEditor({
     effectiveLevelsOf(role.grants, grantableTags),
   );
 
+  // The stored baseline the draft was seeded from; a move re-seeds it.
+  const baseline = grantsSignature(effectiveLevelsOf(role.grants, grantableTags));
+  const [seededFrom, setSeededFrom] = useState(baseline);
+  if (seededFrom !== baseline) {
+    setSeededFrom(baseline);
+    setDraft(effectiveLevelsOf(role.grants, grantableTags));
+  }
+
   const save = useMutation({
     mutationFn: (grants: RoleGrants) => api.updateRole(role.name, { grants }),
     onSuccess: (updated) => {
       // The saved body is the new baseline: re-seed the draft so the dirty check
-      // clears, and refresh the list (the effective-access view reads the same key).
+      // clears at once rather than waiting on the list refetch, and refresh the
+      // list (the effective-access view reads the same key).
       setDraft(effectiveLevelsOf(updated.grants, grantableTags));
       void queryClient.invalidateQueries({ queryKey: rolesKey });
       void queryClient.invalidateQueries({ queryKey: roleVersionsKey(role.name) });
@@ -617,8 +632,12 @@ export function RolesTab({ readOnly }: RolesTabProps): ReactNode {
 
                 {selected.description ? <p style={noteStyle}>{selected.description}</p> : null}
 
+                {/* Keyed on the role NAME only. A different role is a different
+                    subject, so a remount that also clears the previous role's save
+                    error is right; a change to the SELECTED role's stored grants is
+                    not, and the editor re-seeds itself for that instead. */}
                 <RoleGrantEditor
-                  key={`${selected.name}:${grantsSignature(selected.grants)}`}
+                  key={selected.name}
                   role={selected}
                   grantableGroups={grantableGroups}
                   adminOnlyGroups={adminOnlyGroups}

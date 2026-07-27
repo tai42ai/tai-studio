@@ -72,7 +72,7 @@ describe('PresetVersions', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     await user.click(await screen.findByRole('button', { name: 'Edit tags for version 2' }));
-    await user.type(screen.getByLabelText('Add a tag'), 'reviewed');
+    await user.type(screen.getByLabelText('Tags'), 'reviewed');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Save tags' }));
 

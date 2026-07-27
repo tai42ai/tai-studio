@@ -79,7 +79,6 @@ export function ExecutionKeyPicker({
         </p>
       ) : (
         <Select
-          aria-label="Execution key"
           options={pickableKeys(keysQuery.data ?? []).map((key) => ({
             value: key.user_id,
             label: keyLabel(key),

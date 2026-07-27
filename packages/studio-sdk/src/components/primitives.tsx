@@ -427,27 +427,26 @@ export function EmptyState({ title, description, action, className, style }: Emp
 
 // -- ErrorState (loud, visible) ----------------------------------------------
 
-/** The headline an `ErrorState` wears when the caller names none. */
-const DEFAULT_ERROR_TITLE = 'Something went wrong';
+/**
+ * The headline every `ErrorState` wears.
+ *
+ * It is fixed, and the whole surface says one thing with it: `role="alert"`
+ * interrupts, the crossed circle is the ERROR mark, and `.tai-error-state` is the
+ * error ground. A DELIBERATE refusal — a permission denial, a server's dry-run
+ * "no" — is an answer rather than a malfunction, and swapping this headline alone
+ * would leave the mark, the ground and the live-region politeness all still
+ * announcing a system failure. Such a surface takes the design system's warn
+ * ground (`.tai-warn-state`) with `role="status"` instead; `verdict.tsx`,
+ * `advisories.tsx` and `fleet-report.tsx` are the worked examples.
+ */
+const ERROR_TITLE = 'Something went wrong';
 
 export interface ErrorStateProps extends SurfaceProps {
   readonly message: string;
-  /**
-   * The headline above the message. Defaults to a system-failure wording, which
-   * a surface rendering a DELIBERATE refusal (a permission denial, a validation
-   * rejection) replaces with one that does not blame the system.
-   */
-  readonly title?: string;
   readonly onRetry?: () => void;
 }
 
-export function ErrorState({
-  message,
-  title = DEFAULT_ERROR_TITLE,
-  onRetry,
-  className,
-  style,
-}: ErrorStateProps) {
+export function ErrorState({ message, onRetry, className, style }: ErrorStateProps) {
   return (
     <div role="alert" className={surfaceClass('tai-error-state', className)} style={style}>
       {/* The icon carries the state alongside the color, never the color alone,
@@ -455,7 +454,7 @@ export function ErrorState({
           the warn surfaces' mark and would state a second severity here. */}
       <strong className="tai-error-state-title">
         <XCircleIcon />
-        {title}
+        {ERROR_TITLE}
       </strong>
       <p style={{ margin: 'var(--tai-space-2) 0 0', whiteSpace: 'pre-wrap' }}>{message}</p>
       {onRetry === undefined ? null : (

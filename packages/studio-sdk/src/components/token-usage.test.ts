@@ -305,6 +305,52 @@ function declarationsIn(body: string): readonly (readonly [string, string])[] {
 /** px per `rem`, at the root font size these sheets are written against. */
 const ROOT_FONT_PX = 16;
 
+/**
+ * The published token contract as the README states it: `token → value` for every
+ * row of every `| --tai-… | … |` table, with the DARK half of a themed pair
+ * expanded into the `--tai-dark-` name the sheet stores it under.
+ *
+ * The tables come in two shapes and the HEADER decides which: `| Token | Light |
+ * Dark |` states a themed pair, while `| Token | Value | at 16px |` states one
+ * value and an annotation. Reading the third cell positionally would take
+ * "12px — mono blocks" for a dark colour, so the header row is tracked as the
+ * scan walks and a table it cannot classify contributes nothing rather than
+ * guessing — which the row floor at the call site then catches.
+ *
+ * `_(same)_` in the Dark cell means the token does not theme, so there is no
+ * `--tai-dark-` twin to expect; every other Dark cell is a value that must be
+ * authored under that twin.
+ */
+function documentedTokenValues(): { readonly rows: number; readonly values: Map<string, string> } {
+  const readme = readFileSync(resolve(packageRoot, 'README.md'), 'utf8');
+  const values = new Map<string, string>();
+  let rows = 0;
+  let statesDark = false;
+
+  for (const line of readme.split('\n')) {
+    if (!line.startsWith('|')) continue;
+    const cells = line
+      .trim()
+      .replace(/^\|/, '')
+      .replace(/\|$/, '')
+      .split('|')
+      .map((cell) => cell.trim());
+    if (cells[0] === 'Token') {
+      statesDark = cells[2] === 'Dark';
+      continue;
+    }
+    const token = /^`(--tai-[\w-]+)`$/.exec(cells[0] ?? '')?.[1];
+    if (token === undefined) continue;
+    rows += 1;
+    values.set(token, (cells[1] ?? '').replaceAll('`', ''));
+    const dark = cells[2] ?? '';
+    if (statesDark && dark !== '_(same)_') {
+      values.set(`--tai-dark-${token.slice('--tai-'.length)}`, dark.replaceAll('`', ''));
+    }
+  }
+  return { rows, values };
+}
+
 /** `--token: value` for every custom property the base `:root` authors, in order. */
 function authoredValues(): string[] {
   return declarationsIn(ruleBody(BASE_ROOT)).map(
@@ -665,6 +711,33 @@ describe('design-system token usage', () => {
     it('reads the authoring block (a pin over an empty list would pass vacuously)', () => {
       expect(authoredValues().length).toBeGreaterThan(100);
       expect(remTokensWithDocumentedPx().length).toBeGreaterThan(10);
+    });
+
+    it('joins the published README table to the sheet, in BOTH directions', () => {
+      // `README.md` ships inside this package's `files` array and is the token
+      // contract as a plugin author reads it — it is the ONLY place they see a
+      // value at all. Nothing joined it to the sheet: a wrong hex, a deleted row
+      // and a row naming a token that does not exist could all be applied at once
+      // and the whole suite stayed green, so the published documentation could
+      // describe a design system this package does not ship.
+      //
+      // The join is a SET-AND-VALUE equality both ways, which is what makes each
+      // of those three edits a failure: a wrong hex is a value mismatch, a deleted
+      // row leaves a token the sheet authors and the table omits, and an invented
+      // row leaves a token the table names and the sheet does not.
+      const documented = documentedTokenValues();
+      expect(documented.rows).toBeGreaterThanOrEqual(80);
+      expect([...documented.values.keys()].length).toBeGreaterThan(100);
+
+      const authored = new Map(
+        authoredValues().map((declaration) => {
+          const colon = declaration.indexOf(':');
+          return [declaration.slice(0, colon), declaration.slice(colon + 1).trim()] as const;
+        }),
+      );
+      expect(authored.size).toBe(authoredValues().length);
+
+      expect([...documented.values].sort()).toEqual([...authored].sort());
     });
 
     it('pins the VALUE behind every token, not merely its name', () => {

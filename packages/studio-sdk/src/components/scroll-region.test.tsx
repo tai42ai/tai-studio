@@ -404,7 +404,211 @@ const PRE_HTML = '<pre><code>pnpm add @tai42/studio-sdk</code></pre>';
 const TABLE_WITH_HEADING_HTML =
   '<table><tbody><tr><td><h3>Inner</h3>cell</td></tr></tbody></table>';
 
+/**
+ * Records every `observe`/`unobserve` any live `ResizeObserver` makes, by patching
+ * the stub's PROTOTYPE rather than the constructor.
+ *
+ * The shared observer in `scroll-region.tsx` is built once, on first use, and held
+ * at module scope for the life of the process — so by the time a case runs it
+ * already exists and a counting SUBCLASS installed now would never be
+ * constructed. The prototype is the one seam that reaches the instance that is
+ * really doing the work.
+ *
+ * It is installed BEFORE the render it measures, deliberately. The stub delivers
+ * a target's initial notification from inside `observe()`, synchronously, so a
+ * recorder installed afterwards would miss exactly the registrations the
+ * assertions are about and report an empty list as agreement.
+ */
+function trackResizeRegistrations(): {
+  readonly observed: Element[];
+  readonly released: Element[];
+  restore: () => void;
+} {
+  const prototype = globalThis.ResizeObserver.prototype;
+  // The originals are held UNBOUND on purpose and re-supplied a `this` at every
+  // call below: the patched method has to run against whichever observer instance
+  // invoked it, and binding here would pin every call to the prototype.
+  /* eslint-disable @typescript-eslint/unbound-method -- re-invoked with `.call(this, …)`. */
+  const observe = prototype.observe;
+  const unobserve = prototype.unobserve;
+  /* eslint-enable @typescript-eslint/unbound-method */
+  const observed: Element[] = [];
+  const released: Element[] = [];
+  prototype.observe = function record(this: ResizeObserver, target: Element): void {
+    observed.push(target);
+    observe.call(this, target);
+  };
+  prototype.unobserve = function record(this: ResizeObserver, target: Element): void {
+    released.push(target);
+    unobserve.call(this, target);
+  };
+  return {
+    observed,
+    released,
+    restore: () => {
+      prototype.observe = observe;
+      prototype.unobserve = unobserve;
+    },
+  };
+}
+
+/** Counts `disconnect()` calls on every `MutationObserver`, prototype-patched. */
+function trackContentDisconnects(): { count: () => number; restore: () => void } {
+  const prototype = globalThis.MutationObserver.prototype;
+  // Held unbound and re-invoked with the calling observer's own `this`, as above.
+  // eslint-disable-next-line @typescript-eslint/unbound-method -- re-invoked with `.call(this)`.
+  const disconnect = prototype.disconnect;
+  let calls = 0;
+  prototype.disconnect = function record(this: MutationObserver): void {
+    calls += 1;
+    disconnect.call(this);
+  };
+  return {
+    count: () => calls,
+    restore: () => {
+      prototype.disconnect = disconnect;
+    },
+  };
+}
+
+describe('shared observer hygiene', () => {
+  it('hands back every shared registration when a scrolling box unmounts', async () => {
+    // Deleting `useOverflowRegion`'s ENTIRE teardown left the whole repository
+    // green: the shared observers are module-level and outlive the mount, so a
+    // registration nobody releases is a dead element the browser keeps measuring
+    // and a handler that fires for a component that no longer exists. The
+    // one-call-site prose hook's teardown WAS pinned; the per-instance hook's,
+    // which every code block and JSON pane on a page goes through, was not.
+    const tracked = trackResizeRegistrations();
+    try {
+      const { container, unmount } = render(
+        <ScrollRegion label="Tool results">
+          <p>wide</p>
+          <p>wider</p>
+        </ScrollRegion>,
+      );
+      const box = scrollRegion(container);
+      const held = [...tracked.observed];
+      // The box AND its children: the children are what report the overflowing
+      // width, so a teardown that released only the box would leave two behind.
+      expect(held).toContain(box);
+      expect(held.length).toBeGreaterThanOrEqual(3);
+
+      tracked.observed.length = 0;
+      unmount();
+
+      const releasedTargets = new Set(tracked.released);
+      expect(held.map((target) => releasedTargets.has(target))).toEqual(held.map(() => true));
+
+      // …and the CONTENT registration goes back too. Editing the detached box
+      // must reach no handler: one still registered would re-run the measurement
+      // and re-observe the box's children on the shared resize observer.
+      box.append(document.createElement('span'));
+      await Promise.resolve();
+      expect(tracked.observed).toEqual([]);
+    } finally {
+      tracked.restore();
+    }
+  });
+
+  it('keeps delivering to the boxes that survive a registration-shedding rebuild', async () => {
+    // `MutationObserver` has no `unobserve`, so the only way to drop ONE
+    // registration is to disconnect and re-observe everything else. That rebuild
+    // is deferred until the dead registrations outnumber the live ones — and it
+    // was asserted nowhere, in either half: not that it re-observes the survivors,
+    // and not that the records already QUEUED when it happens are still
+    // delivered. `takeRecords()` is what carries them across the disconnect, and
+    // dropping that call loses a content change silently.
+    const disconnects = trackContentDisconnects();
+    try {
+      const labels = ['a', 'b', 'c', 'd', 'e', 'f'];
+      const { container, rerender } = render(
+        <>
+          {labels.map((label) => (
+            <ScrollRegion key={label} label={label}>
+              <p>wide</p>
+            </ScrollRegion>
+          ))}
+        </>,
+      );
+      const boxes = [...container.querySelectorAll<HTMLElement>('.tai-scroll-region')];
+      expect(boxes).toHaveLength(labels.length);
+      const survivor = nth(boxes, 0);
+      setElementOverflow(survivor, true);
+      expect(survivor).not.toHaveAttribute('role');
+
+      const before = disconnects.count();
+      act(() => {
+        // The record is queued FIRST and the rebuild forced SECOND, inside one
+        // synchronous turn: `MutationObserver` delivers on a microtask, so this
+        // record is sitting on the observer at the moment it is disconnected.
+        survivor.append(document.createElement('span'));
+        rerender(
+          <>
+            <ScrollRegion key="a" label="a">
+              <p>wide</p>
+            </ScrollRegion>
+          </>,
+        );
+      });
+      // Five of six registrations died, so the rebuild really ran.
+      expect(disconnects.count()).toBeGreaterThan(before);
+
+      // The queued record survived it: the survivor re-measured and took the
+      // region attributes its faked overflow calls for.
+      await waitFor(() => {
+        expect(survivor).toHaveAttribute('role', 'region');
+      });
+
+      // …and the survivor is still watched AFTER the rebuild, not only across it.
+      survivor.append(document.createElement('em'));
+      setElementOverflow(survivor, false);
+      await waitFor(() => {
+        expect(survivor).not.toHaveAttribute('role');
+      });
+    } finally {
+      disconnects.restore();
+    }
+  });
+});
+
 describe('useProseScrollRegions', () => {
+  it('never re-observes a prose surface it is already watching', async () => {
+    // Re-observing an element already under a `ResizeObserver` RE-ARMS its
+    // initial notification, and the notification re-runs the measurement — so a
+    // re-instrumentation pass that re-observed its existing surfaces would make
+    // each pass trigger the next one for as long as the document is mounted.
+    // Membership of `observed` is the guard, and deleting it left every case in
+    // this file green while the identical guard on the shared path reddened.
+    //
+    // The recorder is installed BEFORE the first render: the stub delivers a
+    // target's initial notification from inside `observe()`, so a recorder that
+    // arrived later would miss the first pass entirely and read an empty list as
+    // proof of a guard that is not there.
+    const tracked = trackResizeRegistrations();
+    try {
+      const { container } = render(<ProseHost html={`<h2>Schema</h2>${TABLE_HTML}`} />);
+      const alreadyObserved = new Set(tracked.observed);
+      expect(alreadyObserved.size).toBeGreaterThanOrEqual(2);
+      tracked.observed.length = 0;
+
+      // A subtree edit that re-runs the whole pass and ADDS a surface, so the
+      // pass is proved to have run rather than assumed. The surfaces already
+      // instrumented are unchanged elements.
+      const prose = within(container).getByTestId('prose');
+      prose.insertAdjacentHTML('beforeend', `<h2>Install</h2>${PRE_HTML}`);
+      await waitFor(() => {
+        expect(tracked.observed.length).toBeGreaterThan(0);
+      });
+
+      // The new surface was observed; not one of the old ones was observed again.
+      expect(tracked.observed.filter((target) => alreadyObserved.has(target))).toEqual([]);
+      expect(tracked.observed).toContain(codeBlock(container));
+    } finally {
+      tracked.restore();
+    }
+  });
+
   it('wraps each injected table in a scroll region', () => {
     const { container } = render(<ProseHost html={`<h2>Options</h2>${TABLE_HTML}`} />);
 
@@ -478,7 +682,7 @@ describe('useProseScrollRegions', () => {
     const { container } = render(<ProseHost html={TABLE_WITH_HEADING_HTML} />);
 
     setOverflowing(scrollRegion(container), true);
-    expect(screen.getByRole('region', { name: 'README table' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Table' })).toBeInTheDocument();
   });
 
   it('lets a heading inside an earlier table name the surface that follows it', () => {
@@ -521,21 +725,21 @@ describe('useProseScrollRegions', () => {
     const { container } = render(<Sibling />);
 
     setOverflowing(scrollRegion(container), true);
-    expect(screen.getByRole('region', { name: 'README table' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Table' })).toBeInTheDocument();
   });
 
   it('ignores a heading that only FOLLOWS the code block', () => {
     const { container } = render(<ProseHost html={`${PRE_HTML}<h2>Later</h2>`} />);
 
     setOverflowing(codeBlock(container), true);
-    expect(screen.getByRole('region', { name: 'README code block' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Code block' })).toBeInTheDocument();
   });
 
-  it('falls back to the README table label with no preceding heading', () => {
+  it('falls back to the generic table label with no preceding heading', () => {
     const { container } = render(<ProseHost html={TABLE_HTML} />);
 
     setOverflowing(scrollRegion(container), true);
-    expect(screen.getByRole('region', { name: 'README table' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Table' })).toBeInTheDocument();
   });
 
   it('honours a caller-supplied fallback label', () => {
@@ -622,9 +826,9 @@ describe('useProseScrollRegions', () => {
     const { container } = render(<ProseHost html={`${PRE_HTML}${PRE_HTML}<h2>Install</h2>`} />);
 
     setEverythingOverflowing(container);
-    expect(screen.getByRole('region', { name: 'README code block (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'README code block (2)' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'README code block' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Code block (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Code block (2)' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Code block' })).not.toBeInTheDocument();
   });
 
   it('mints no region past the cap, and still wraps every table', () => {
@@ -711,10 +915,10 @@ describe('useProseScrollRegions', () => {
     expect(pre).toHaveAttribute('tabindex', '0');
   });
 
-  it('falls back to the README code-block label, and honours a caller override', () => {
+  it('falls back to the generic code-block label, and honours a caller override', () => {
     const { container, unmount } = render(<ProseHost html={PRE_HTML} />);
     setOverflowing(codeBlock(container), true);
-    expect(screen.getByRole('region', { name: 'README code block' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Code block' })).toBeInTheDocument();
     unmount();
 
     const withLabel = render(<ProseHost html={PRE_HTML} labels={{ pre: 'Install snippet' }} />);

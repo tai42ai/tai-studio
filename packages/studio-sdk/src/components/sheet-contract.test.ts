@@ -365,6 +365,39 @@ describe('component sheet contract', () => {
       }
     });
 
+    it('leaves the CURRENT nav row answering the pointer as well', () => {
+      // The hover ground above is (0,2,0) and `[aria-current='page']` is (0,2,0)
+      // too, and it is written LATER — so the cascade handed the current row the
+      // resting tint in every state and the one row a reader is standing on was
+      // the only row in the rail that did not respond. The remedy has to be a rule
+      // the cascade cannot swallow, which means the INTERSECTION of the two
+      // states, and it has to come after the rule it beats.
+      for (const className of ['.tai-nav-item', '.tai-nav-link']) {
+        const current = `${className}[aria-current='page']`;
+        const currentIndex = sheet.findIndex((rule) => rule.selectors.includes(current));
+        const hoveredIndex = sheet.findIndex((rule) => rule.selectors.includes(`${current}:hover`));
+        expect([className, currentIndex >= 0, hoveredIndex > currentIndex]).toEqual([
+          className,
+          true,
+          true,
+        ]);
+        // It really paints a different ground, and it keeps the accent tint the
+        // row is identified by rather than replacing it with the line tone: the
+        // tint is translucent, so a tone under it drops `accent-on-tint` below the
+        // 4.5:1 the label needs. A second layer of the same token is the step.
+        const layers = declaredValues(`${current}:hover`, 'background-image');
+        expect([className, layers.length]).toEqual([className, 1]);
+        expect([
+          className,
+          (layers[0] ?? '').match(/var\(--tai-color-accent-tint\)/g)?.length,
+        ]).toEqual([className, 2]);
+        // …and nothing in that rule replaces the tint underneath it.
+        expect(declaredValues(`${current}:hover`, 'background')).toEqual([]);
+        expect(declaredValues(`${current}:hover`, 'background-color')).toEqual([]);
+        expect(declaredValues(current, 'background')).toEqual(['var(--tai-color-accent-tint)']);
+      }
+    });
+
     it('keeps the skip link off screen until it is focused, and then on it', () => {
       // WCAG 2.4.1, and the rule an independent agent deleted outright with five
       // CSS suites green. Both halves: parked above the viewport, and moved back
@@ -409,12 +442,46 @@ describe('component sheet contract', () => {
       expect(literals).toEqual([]);
     });
 
-    it('measures the sidebar against the LIVE viewport where the browser can', () => {
-      // A full-height sticky column in a touch band: `vh` is the LARGE viewport,
-      // so on a phone with retracting browser chrome the column runs under it.
-      // `dvh` is the live value, and the pair is a FALLBACK — `dvh` arrived after
-      // this package's browser floor, so the `vh` line has to come first and stay.
-      expect(declaredValues('.tai-shell-sidebar', 'height')).toEqual(['100vh', '100dvh']);
+    it('measures every viewport height against the LIVE viewport where the browser can', () => {
+      // `vh` is the LARGE viewport, so on a phone with retracting browser chrome a
+      // box sized by it is taller than the screen by the height of that chrome.
+      // `dvh` is the live value, and the pair is a FALLBACK, not a preference —
+      // `dvh` arrived after this package's browser floor (Chrome 108, Firefox
+      // 101), so the `vh` line has to come first and stay.
+      //
+      // DERIVED from the sheet rather than named: with `.tai-shell-sidebar` listed
+      // here by hand, `.tai-dialog` capped itself in bare `vh` beside it and ran a
+      // modal's own actions row under the URL bar — with no page behind it to
+      // scroll the bar away — while this group stayed green.
+      const VH_EXEMPT: Readonly<Record<string, string>> = {
+        '.tai-select-content max-height':
+          'the `60vh` is the FALLBACK inside `var(--radix-select-content-available-height, …)`: Radix measures the space the popper really has and supplies the value, and the 18rem term of the `min()` is the smaller one on any viewport taller than 480 px anyway',
+      };
+      const usesViewportHeight = sheet.flatMap((rule) =>
+        rule.selectors.flatMap((selector) =>
+          declarations(rule.body)
+            .filter(([, value]) => /\b[\d.]+vh\b/.test(value))
+            .map(([property]) => `${selector} ${property}`),
+        ),
+      );
+      expect(usesViewportHeight.length).toBeGreaterThanOrEqual(3);
+      for (const site of usesViewportHeight) {
+        const reason = VH_EXEMPT[site];
+        if (reason !== undefined) {
+          expect([site, reason.length > 60]).toEqual([site, true]);
+          continue;
+        }
+        const [selector = '', property = ''] = site.split(' ');
+        // The pair, in order: the `vh` line first so a browser under the floor
+        // keeps it, the `dvh` line after it so every browser above takes the live
+        // value. A lone `dvh` is as wrong as a lone `vh`.
+        const values = declaredValues(selector, property);
+        expect([site, values.map((value) => /dvh\b/.test(value))]).toEqual([site, [false, true]]);
+      }
+      // …and the exemption is not stale.
+      expect(Object.keys(VH_EXEMPT).filter((site) => !usesViewportHeight.includes(site))).toEqual(
+        [],
+      );
     });
 
     it('leaves the rail band declaring only what the base rule does not', () => {
@@ -486,6 +553,71 @@ describe('component sheet contract', () => {
       .filter((className) => declaredBorders(className).length > 0)
       .filter((className) => !(className in DECORATIVE_BOUNDARY))
       .sort();
+
+    /**
+     * The FLOATING surfaces with nothing between them and the page: they paint
+     * `surface-raised`, which in light IS `bg` (both #ffffff, 1.000:1), so the
+     * boundary is the whole of what says where the surface begins. `.tai-dialog`
+     * and `.tai-drawer` are out via {@link DECORATIVE_BOUNDARY} — a scrim covers
+     * the page behind them, and it outranks a one-pixel edge.
+     *
+     * Derived from the sheet's own elevation token rather than named: with only
+     * the interactive derivation in place, the tooltip and the select popover
+     * drew their single edge from a tier `tokens.css` publishes as decorative and
+     * nothing anywhere noticed.
+     */
+    const FLOATING_SURFACES = bareClasses()
+      .filter((className) =>
+        declaredValues(className, 'box-shadow').some((value) =>
+          value.includes('var(--tai-shadow-overlay)'),
+        ),
+      )
+      .filter((className) => !(className in DECORATIVE_BOUNDARY))
+      .sort();
+
+    it('derives the floating set from the sheet, both halves of it', () => {
+      // Every surface the sheet elevates is judged: the two with a scrim by the
+      // decorative-boundary list, the rest by the rule below.
+      const elevated = bareClasses().filter((className) =>
+        declaredValues(className, 'box-shadow').some((value) =>
+          value.includes('var(--tai-shadow-overlay)'),
+        ),
+      );
+      expect(elevated.length).toBeGreaterThanOrEqual(4);
+      expect(FLOATING_SURFACES.length).toBeGreaterThanOrEqual(2);
+      for (const className of ['.tai-tooltip', '.tai-select-content']) {
+        expect([className, FLOATING_SURFACES.includes(className)]).toEqual([className, true]);
+      }
+      for (const className of ['.tai-dialog', '.tai-drawer']) {
+        expect([
+          className,
+          elevated.includes(className),
+          FLOATING_SURFACES.includes(className),
+        ]).toEqual([className, true, false]);
+      }
+    });
+
+    it.each(FLOATING_SURFACES)('%s draws its unscrimmed edge in the control tier', (className) => {
+      // Not merely above the decorative tier: the fill matches the ground it
+      // floats over, so the edge is the only thing drawn and it is held to the
+      // tier the controls use — 4.21:1 light / 3.65:1 dark, against the 1.47:1 /
+      // 1.88:1 the decorative tier gives.
+      const borders = declaredBorders(className);
+      expect([className, borders.length]).not.toEqual([className, 0]);
+      for (const border of borders) {
+        expect([className, border, border.includes('var(--tai-color-control-border)')]).toEqual([
+          className,
+          border,
+          true,
+        ]);
+      }
+      // …and the fill really is the raised ground, which is what makes the edge
+      // the whole of the boundary rather than one signal among several.
+      expect([className, declaredValues(className, 'background')]).toEqual([
+        className,
+        ['var(--tai-color-surface-raised)'],
+      ]);
+    });
 
     it('derives a real subject set (one that found nothing would pass vacuously)', () => {
       expect(IDENTIFYING_BOUNDARIES.length).toBeGreaterThanOrEqual(10);
@@ -606,11 +738,13 @@ describe('component sheet contract', () => {
       // A cap on the CONTENT box is not a cap: with the default `box-sizing` the
       // padding and boundary sit outside it, and `.tai-tooltip` painted 314 px
       // against its own 288 px cap for a consumer whose host ships no preflight.
-      // The group is every surface the sheet caps against the viewport.
-      const CAP_EXEMPT: Readonly<Record<string, string>> = {
-        '.tai-select-content':
-          'Radix SelectContentImpl inline-styles `boxSizing: "border-box"` on the element that carries this class, and an inline style outranks every layer — verified in @radix-ui/react-select 2.3.2',
-      };
+      // The group is every surface the sheet caps against the viewport, and it has
+      // no exemptions: `.tai-select-content` held one on the grounds that Radix
+      // inline-styles `box-sizing` on the element carrying the class, which is a
+      // fact about the Radix popper and not about the class — the in-flow
+      // suggestion list at `completion-input.tsx` wears the same class on a plain
+      // `<ul>` with no Radix near it, as that element's own docblock says. The
+      // sheet declares it instead.
       const capped = bareClasses()
         .filter((className) =>
           ['width', 'max-width'].some((property) =>
@@ -619,21 +753,13 @@ describe('component sheet contract', () => {
         )
         .sort();
       expect(capped.length).toBeGreaterThanOrEqual(4);
+      expect(capped).toContain('.tai-select-content');
       for (const className of capped) {
-        const reason = CAP_EXEMPT[className];
-        if (reason !== undefined) {
-          expect([className, reason.length > 60]).toEqual([className, true]);
-          continue;
-        }
         expect([className, declaredValues(className, 'box-sizing')]).toEqual([
           className,
           ['border-box'],
         ]);
       }
-      // …and the exemption is not stale.
-      expect(Object.keys(CAP_EXEMPT).filter((className) => !capped.includes(className))).toEqual(
-        [],
-      );
     });
 
     it('gives the option viewport more room than the ring it must not clip', () => {

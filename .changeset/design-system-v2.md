@@ -3,7 +3,7 @@
 ---
 
 Design system v2: the token contract, the webfonts, the component + responsive CSS
-layer, the icon set, and the layout primitives every screen builds on.
+layer, the icon set, and a new set of layout primitives a screen can build on.
 
 - **Runtime dependencies (new, published contract):** `@fontsource-variable/inter`
   and `@fontsource-variable/geist-mono`. The SDK barrel side-effect-imports them

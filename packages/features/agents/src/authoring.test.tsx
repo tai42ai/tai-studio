@@ -327,7 +327,7 @@ describe('ComposeAgentDialog', () => {
 
     await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
     await pickBaseAgent();
-    await userEvent.type(screen.getByLabelText('Add a tag'), 'helpdesk');
+    await userEvent.type(screen.getByLabelText('Tags'), 'helpdesk');
     await userEvent.click(screen.getByRole('button', { name: 'Add tag' }));
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 

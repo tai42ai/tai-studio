@@ -152,13 +152,15 @@ describe('ErrorState', () => {
     expect(mark?.innerHTML).not.toBe(warning?.innerHTML);
   });
 
-  it('lets a deliberate refusal replace the system-failure headline', () => {
-    // The default blames the system. A surface rendering a server's considered
-    // NO — a permission denial, a validation rejection — is not a malfunction
-    // and must not announce itself as one.
-    render(<ErrorState title="Not permitted" message="Your role cannot delete scopes." />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Not permitted');
-    expect(screen.queryByText('Something went wrong')).toBeNull();
+  it('speaks with one voice: the headline is the surface, not a caller choice', () => {
+    // The mark, the ground and `role="alert"` all say the system failed, so a
+    // caller-supplied headline could only ever contradict three things it does not
+    // reach. A server's considered NO takes `.tai-warn-state` with `role="status"`
+    // instead, which is what every such surface in the repo already does.
+    render(<ErrorState message="Your role cannot delete scopes." />);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Something went wrong');
+    expect(alert).toHaveTextContent('Your role cannot delete scopes.');
   });
 });
 

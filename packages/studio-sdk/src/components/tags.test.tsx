@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Field } from './field';
 import { TagChips, TagsInput } from './tags';
 import type { TagChipsProps, TagsInputProps } from '../index';
 
@@ -50,9 +51,13 @@ describe('TagsInput', () => {
   it('adds a tag from the button', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<TagsInput value={[]} onChange={onChange} />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={[]} onChange={onChange} />
+      </Field>,
+    );
 
-    await user.type(screen.getByLabelText('Add a tag'), 'alpha');
+    await user.type(screen.getByLabelText('Tags'), 'alpha');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
 
     expect(onChange).toHaveBeenCalledWith(['alpha']);
@@ -61,9 +66,13 @@ describe('TagsInput', () => {
   it('commits the draft on Enter and on comma', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<TagsInput value={[]} onChange={onChange} />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={[]} onChange={onChange} />
+      </Field>,
+    );
 
-    const input = screen.getByLabelText('Add a tag');
+    const input = screen.getByLabelText('Tags');
     await user.type(input, 'alpha{Enter}');
     expect(onChange).toHaveBeenLastCalledWith(['alpha']);
 
@@ -74,9 +83,13 @@ describe('TagsInput', () => {
   it('ignores a blank or duplicate entry', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<TagsInput value={['alpha']} onChange={onChange} />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={['alpha']} onChange={onChange} />
+      </Field>,
+    );
 
-    const input = screen.getByLabelText('Add a tag');
+    const input = screen.getByLabelText('Tags');
     await user.type(input, '   {Enter}');
     await user.type(input, 'alpha{Enter}');
 
@@ -86,7 +99,11 @@ describe('TagsInput', () => {
   it('gives every remove control a real accessible name and removes on click', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<TagsInput value={['alpha', 'beta']} onChange={onChange} />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={['alpha', 'beta']} onChange={onChange} />
+      </Field>,
+    );
 
     const remove = screen.getByRole('button', { name: 'Remove tag alpha' });
     expect(remove).toHaveClass('tai-icon-btn');
@@ -96,7 +113,11 @@ describe('TagsInput', () => {
   });
 
   it('draws the remove mark as an icon, never a Unicode glyph, keeping the name', () => {
-    render(<TagsInput value={['alpha']} onChange={vi.fn()} />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={['alpha']} onChange={vi.fn()} />
+      </Field>,
+    );
 
     const remove = screen.getByRole('button', { name: 'Remove tag alpha' });
     expect(remove.querySelector('svg')).not.toBeNull();
@@ -105,14 +126,22 @@ describe('TagsInput', () => {
   });
 
   it('shows each tag as a static chip beside its remove control', () => {
-    render(<TagsInput value={['alpha']} onChange={vi.fn()} />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={['alpha']} onChange={vi.fn()} />
+      </Field>,
+    );
     expect(screen.getByText('alpha')).toHaveClass('tai-chip', 'tai-chip-static');
   });
 
   it('disables the whole editor when disabled', () => {
-    render(<TagsInput value={['alpha']} onChange={vi.fn()} disabled />);
+    render(
+      <Field label="Tags">
+        <TagsInput value={['alpha']} onChange={vi.fn()} disabled />
+      </Field>,
+    );
 
-    expect(screen.getByLabelText('Add a tag')).toBeDisabled();
+    expect(screen.getByLabelText('Tags')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Add tag' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Remove tag alpha' })).toBeDisabled();
   });
@@ -121,12 +150,31 @@ describe('TagsInput', () => {
     render(
       <>
         <TagChips tags={['alpha']} />
-        <TagsInput value={['beta']} onChange={vi.fn()} />
+        <Field label="Tags">
+          <TagsInput value={['beta']} onChange={vi.fn()} />
+        </Field>
       </>,
     );
 
     expect(screen.getByText('alpha')).toHaveClass('tai-chip');
-    expect(screen.getByLabelText('Add a tag')).toBeInTheDocument();
+    expect(screen.getByLabelText('Tags')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remove tag beta' })).toBeInTheDocument();
+  });
+
+  it('takes the Field label as its name rather than overriding it (WCAG 2.5.3)', () => {
+    // The draft input claims the Field's control id, so the label a user SEES is
+    // the name a voice-control user says. An `aria-label` of the editor's own
+    // would replace it with a string that appears nowhere on screen.
+    render(
+      <Field label="Release tags">
+        <TagsInput value={[]} onChange={vi.fn()} />
+      </Field>,
+    );
+    const input = screen.getByLabelText('Release tags');
+    expect(input).toHaveAttribute('placeholder', 'Add a tag…');
+    expect(input).not.toHaveAttribute('aria-label');
+    // The visible label really is the label element wired to this control.
+    expect(screen.getByText('Release tags').tagName).toBe('LABEL');
+    expect(screen.getByText('Release tags')).toHaveAttribute('for', input.id);
   });
 });

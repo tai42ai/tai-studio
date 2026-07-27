@@ -60,6 +60,23 @@
  * `CALLER_SIZED_ITEMS`, so adding an item forces both rules, and dropping one
  * from either side reddens.
  *
+ * Two obligations ride alongside the overflow contract, because the same 320 px
+ * screen is where both of them fail:
+ *
+ * - The COARSE-POINTER FLOOR. `--tai-control-height-coarse` is read above as a
+ *   CEILING — the largest a caller-sized control's `min-width` may be before it
+ *   becomes a licence to push the document. It is also the pointer TARGET (WCAG
+ *   2.5.5), and nothing read it that way: `.tai-segment` at 20 px and
+ *   `.tai-icon-btn` at 18 px both passed with the band still spelled in the
+ *   token. The checkbox and radio target is the `::after` overlay around a 1rem
+ *   box, so its size is the box plus its insets — a number no declaration states
+ *   and no reader here computed.
+ * - The ESCAPE HATCH. `.tai-scroll-region` is the one surface that TAKES the
+ *   overflow rather than avoiding it, and every wide table, diff and JSON pane
+ *   depends on it. It is in no flex row, so `isRowFlex()` never reaches it and the
+ *   classification is blind to it: a band setting `overflow-x: hidden` below
+ *   640 px clipped all of them on a phone with every assertion here green.
+ *
  * What this gate proves about that, exactly: the DECLARATION. jsdom runs no
  * layout, so nothing here can show a column collapsing; the assertions say the
  * sheet still carries the override, in every state that reaches 320 px. The
@@ -779,6 +796,111 @@ describe('narrow-viewport contract', () => {
     // 1rem boxes are the one deliberate pair, and they are checked as a pair.
     expect(new Set(reasons).size).toBe(reasons.length - 1);
     expect(NOT_CALLER_SIZED['.tai-checkbox']).toBe(NOT_CALLER_SIZED['.tai-radio']);
+  });
+
+  it('holds every coarse-pointer target AT the target size, not merely under it', () => {
+    // `--tai-control-height-coarse` was read only as a CEILING — the largest a
+    // caller-sized control's `min-width` may be before it becomes a licence to
+    // push the document. Nothing read it as a FLOOR, which is what it IS: the
+    // pointer target itself (WCAG 2.5.5). So `.tai-segment` at 20 px and
+    // `.tai-icon-btn` at 18 px both passed, with the whole band still spelled in
+    // the token and every assertion in this file green.
+    //
+    // Derived from the band rather than listed: every dimension the coarse band
+    // declares is a target size by construction — that is the only reason the
+    // band exists — so a new rule added to it is held to the same floor without
+    // anyone remembering to name it here.
+    const floor = COARSE_TARGET_PX ?? 0;
+    expect(floor).toBeGreaterThanOrEqual(44);
+
+    const coarseRules = sheet.filter((rule) =>
+      rule.context.some((at) => /@media[^{]*\(\s*pointer\s*:\s*coarse\s*\)/.test(at)),
+    );
+    expect(coarseRules.length).toBeGreaterThanOrEqual(5);
+
+    const short: string[] = [];
+    let judged = 0;
+    for (const rule of coarseRules) {
+      for (const [property, value] of rule.body
+        .split(';')
+        .map((one) => one.split(':').map((part) => part.trim()))
+        .filter((pair): pair is [string, string] => pair.length === 2)) {
+        if (!/^(?:min-)?(?:width|height|block-size|inline-size)$/.test(property)) continue;
+        judged += 1;
+        const size = lengthPx(value);
+        if (size !== undefined && size >= floor) continue;
+        short.push(`${rule.selector} { ${property}: ${value} }`);
+      }
+    }
+    expect(short).toEqual([]);
+    expect(judged).toBeGreaterThanOrEqual(6);
+  });
+
+  it('grows the checkbox and radio overlay to a real target on both axes', () => {
+    // The box is 1rem and the target is the `::after` overlay around it, so the
+    // target size is the box PLUS its insets — a number no single declaration
+    // states and no reader here computed. Mutating the block inset to -2px left a
+    // 20 px target and every assertion green.
+    //
+    // The two axes are held to DIFFERENT floors, and deliberately: the overlay
+    // grows vertically to the full 44 px, while sideways it stops at the 24 px
+    // WCAG 2.5.8 minimum, because a horizontal group sets its options one spacing
+    // step apart and 14 px sideways would reach across that gap into the previous
+    // option's label. The sheet says so; this is that statement made checkable.
+    const MINIMUM_TARGET_PX = 24;
+    const boxWidth = lengthPx(unconditionalValues('.tai-checkbox', 'width')[0] ?? '');
+    const boxHeight = lengthPx(unconditionalValues('.tai-checkbox', 'height')[0] ?? '');
+    expect([boxWidth, boxHeight]).toEqual([16, 16]);
+
+    for (const selector of ['.tai-checkbox::after', '.tai-radio::after']) {
+      // The coarse band's insets, which are what turn the box into a target.
+      const block = declaredValues(selector, 'inset-block');
+      const inline = declaredValues(selector, 'inset-inline');
+      expect([selector, block.length, inline.length]).toEqual([selector, 1, 1]);
+      const blockInset = lengthPx(block[0] ?? '');
+      const inlineInset = lengthPx(inline[0] ?? '');
+      expect([selector, blockInset === undefined, inlineInset === undefined]).toEqual([
+        selector,
+        false,
+        false,
+      ]);
+      // An inset is NEGATIVE — it pushes the overlay outward — so the target is
+      // the box plus twice its magnitude on each axis.
+      const targetHeight = (boxHeight ?? 0) - 2 * (blockInset ?? 0);
+      const targetWidth = (boxWidth ?? 0) - 2 * (inlineInset ?? 0);
+      expect([selector, targetHeight >= (COARSE_TARGET_PX ?? 0)]).toEqual([selector, true]);
+      expect([selector, targetWidth >= MINIMUM_TARGET_PX]).toEqual([selector, true]);
+    }
+  });
+
+  it("keeps the sheet's one escape hatch actually scrolling at 320 px", () => {
+    // `.tai-scroll-region` is the only surface in this sheet that takes horizontal
+    // overflow instead of avoiding it, and it is what every wide table, diff and
+    // JSON pane relies on to stay inside the column. It lays its content out in no
+    // flex row, so `isRowFlex()` never reaches it and the whole classification
+    // above is blind to it: adding `@media (max-width: 639px) { .tai-scroll-region
+    // { overflow-x: hidden } }` clipped every one of those surfaces on a phone —
+    // content unreachable by any means, with all thirty-nine assertions green.
+    //
+    // EVERY value that can reach 320 px is checked, not the cascade winner: a band
+    // that takes the scroll away in one state takes it away on the screens in that
+    // state, and a winner-reading would only notice if the band happened to be
+    // last.
+    const SCROLLS = /^(?:auto|scroll)$/;
+    for (const property of ['overflow-x', 'overflow']) {
+      for (const value of declaredValues('.tai-scroll-region', property)) {
+        // `overflow` is a shorthand: its FIRST component is the x axis.
+        const axis = property === 'overflow' ? (value.split(/\s+/)[0] ?? '') : value;
+        expect([property, value, SCROLLS.test(axis)]).toEqual([property, value, true]);
+      }
+    }
+    // …and it really declares one, unconditionally, or "every value scrolls" is
+    // a statement about an empty list.
+    expect(unconditionalValues('.tai-scroll-region', 'overflow-x')).toEqual(['auto']);
+    // The cap that keeps the region itself inside its column is the other half:
+    // a scroller wider than its parent pushes the document exactly as its content
+    // would have.
+    expect(unconditionalValues('.tai-scroll-region', 'max-width')).toEqual(['100%']);
   });
 
   it.each([

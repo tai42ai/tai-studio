@@ -94,8 +94,14 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
   // A rendered README carries the two surfaces that outrun their column — wide
   // tables and code blocks — and React never rendered them, so they cannot be
   // wrapped in a `ScrollRegion`. This instruments them in place instead, so each
-  // one that actually scrolls becomes a named keyboard target.
-  const readmeRef = useProseScrollRegions();
+  // one that actually scrolls becomes a named keyboard target. The labels name
+  // the document these surfaces come from: an unheaded table on this page lands
+  // in the landmark list beside the listing's other regions, and "Table" alone
+  // would not say which of them a reader had arrived in.
+  const readmeRef = useProseScrollRegions({
+    table: 'README table',
+    pre: 'README code block',
+  });
   // The prop object, not its string, is what React compares: a fresh literal
   // makes every re-render of this card re-write the README's `innerHTML`,
   // destroying the instrumented regions and dropping a reader standing in one
@@ -399,7 +405,10 @@ export function PluginDetail({
             padding: 'var(--tai-space-4)',
             borderRadius: 'var(--tai-radius-md)',
             border: '1px solid var(--tai-color-success)',
-            background: 'color-mix(in srgb, var(--tai-color-success) 12%, transparent)',
+            // The published success ground, in both themes — the same token
+            // every other ok surface paints with. A local mix of the success
+            // TEXT tone would be a second, off-hue green beside them.
+            background: 'var(--tai-color-ok-tint)',
           }}
         >
           <strong>

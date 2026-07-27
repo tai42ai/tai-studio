@@ -279,6 +279,42 @@ describe('RolesTab', () => {
     expect(screen.getByRole('button', { name: 'Save grants' })).toBeDisabled();
   });
 
+  it('re-seeds from its OWN save without detaching the operator from Save grants', async () => {
+    // A save invalidates the roles list, and the refetch returns the grants just
+    // written — so the baseline the editor was seeded from moves under it. The
+    // re-seed has to land without tearing the editor down: the operator is standing
+    // on the Save button they pressed.
+    const user = userEvent.setup();
+    let grants: RoleGrants = { tools: 'write', config: 'none' };
+    const listRoles = vi.fn(() => Promise.resolve([role({ grants })]));
+    const updateRole = vi.fn((_name: string, body: { grants: RoleGrants }) => {
+      grants = body.grants;
+      return Promise.resolve(role({ grants }));
+    });
+    renderWithProviders(<RolesTab readOnly={false} />, {
+      client: baseStub([], { listRoles, updateRole }),
+    });
+    await selectRole(user, 'editor');
+
+    const tools = within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup');
+    await user.click(within(tools).getByRole('radio', { name: 'read' }));
+    const save = screen.getByRole('button', { name: 'Save grants' });
+    await user.click(save);
+
+    // The refetched baseline moved with the save, so the editor reads clean again.
+    await waitFor(() => {
+      expect(listRoles).toHaveBeenCalledTimes(2);
+    });
+    expect(
+      within(
+        within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup'),
+      ).getByRole('radio', { name: 'read' }),
+    ).toBeChecked();
+    // The very button the operator pressed is still the one on screen, still focused.
+    expect(screen.getByRole('button', { name: 'Save grants' })).toBe(save);
+    expect(save).toHaveFocus();
+  });
+
   it('draws every role control with the contrast-safe border, never the decorative one', async () => {
     // `tokens.css`: the decorative border sits below 3:1 and may never be a
     // control's only boundary. Derived over the whole rendered tab.

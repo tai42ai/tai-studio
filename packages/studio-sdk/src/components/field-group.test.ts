@@ -1,6 +1,23 @@
 /**
- * Every `Field` whose child does not CLAIM its control id is marked `group`,
- * asserted across the repo.
+ * The two things a `Field` call site owes, asserted across the repo: every
+ * `Field` whose child does not CLAIM its control id is marked `group`, and every
+ * name a claimed control answers to CONTAINS the `Field`'s visible label.
+ *
+ * The second is WCAG 2.5.3 (Label in Name). A control that names ITSELF inside a
+ * `Field` replaces the name the `<label for>` would have given it, and a
+ * voice-control user can only say the words they can see — so `<Field
+ * label="Tags">` around a control named "Add a tag" leaves a field nobody can
+ * address by what is on screen. It is a CONTAINMENT rule and not a "the Field
+ * always wins" rule on purpose: a caller may EXTEND the label ("Fixed kwargs" →
+ * "Fixed kwargs JSON") and `ScopesMapper.tsx` disambiguates several identical
+ * route fields per row, which only the caller can do. `inputs.tsx` states where a
+ * caller's `aria-label` goes for each family of control.
+ *
+ * Its reach is the CALL SITE, which is where a name is chosen: a name written
+ * INSIDE a composite the site merely mounts — `TagsInput` naming its own draft
+ * input — is invisible here, because nothing at the site says it exists. Those
+ * are covered by the composite's own rendered test, which is where the name can
+ * actually be computed.
  *
  * `Field` renders `<label for>` at the control id it publishes. Only a child
  * that spreads `useFieldControl()` onto a labelable element ever claims that id;
@@ -143,6 +160,26 @@ function sourcesWithin(directory: string): string[] {
 
 const sources = SCAN_ROOTS.flatMap((root) => sourcesWithin(resolve(repoRoot, root)));
 
+/**
+ * The STATIC text an attribute value paints, for a value written as a plain
+ * string or as a template literal, or `undefined` when it is neither.
+ *
+ * A template's `${…}` substitutions are blanked rather than dropped, because what
+ * they interpolate is runtime data — a scope id, a row key — and the only thing
+ * readable here is the text around them. Blanking to a SPACE keeps the two
+ * neighbouring runs apart, so `` `Add${x}route` `` cannot read as "Addroute" and
+ * satisfy a containment its rendered name never has.
+ */
+function literalText(attributes: string, name: string): string | undefined {
+  const pattern = new RegExp(
+    String.raw`(?:^|\s)${name}\s*=\s*(?:"([^"]*)"|\{\s*\`((?:[^\`\\]|\\.)*)\`\s*\})`,
+  );
+  const match = pattern.exec(attributes);
+  if (match === null) return undefined;
+  const written = match[1] ?? match[2] ?? '';
+  return written.replaceAll(/\$\{[^}]*\}/g, ' ');
+}
+
 /** One `<Field …>` open tag, split at the `>` that really closes it. */
 interface FieldOpen {
   readonly attributes: string;
@@ -192,31 +229,49 @@ function fieldSites(source: string): FieldSite[] {
   return sites;
 }
 
+/**
+ * The offset of the `>` that closes an open tag whose attribute run starts at
+ * `from`, brace depth and quote state tracked so a `>` inside an attribute VALUE
+ * is not mistaken for it.
+ */
+function closingAngle(source: string, from: number): number {
+  let index = from;
+  let depth = 0;
+  let quote: string | undefined;
+  for (; index < source.length; index += 1) {
+    const character = source[index] ?? '';
+    if (quote !== undefined) {
+      if (character === '\\') index += 1;
+      else if (character === quote) quote = undefined;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+    } else if (character === '{') {
+      depth += 1;
+    } else if (character === '}') {
+      depth -= 1;
+    } else if (character === '>' && depth === 0) {
+      break;
+    }
+  }
+  return index;
+}
+
+/** The first child element written inside a `Field`, with its own attribute run. */
+function firstChildOpen(rest: string): { name: string; attributes: string } | undefined {
+  const element = /^\s*(?:\{[^}]*\}\s*)?<([A-Za-z]\w*)/.exec(rest);
+  if (element === null) return undefined;
+  const from = element.index + element[0].length;
+  return { name: element[1] ?? '', attributes: rest.slice(from, closingAngle(rest, from)) };
+}
+
 function fieldOpens(source: string): FieldOpen[] {
   const opens: FieldOpen[] = [];
   const start = /<Field(?![A-Za-z])/g;
   let match: RegExpExecArray | null;
   while ((match = start.exec(source)) !== null) {
-    let index = match.index + match[0].length;
-    let depth = 0;
-    let quote: string | undefined;
-    for (; index < source.length; index += 1) {
-      const character = source[index] ?? '';
-      if (quote !== undefined) {
-        if (character === '\\') index += 1;
-        else if (character === quote) quote = undefined;
-        continue;
-      }
-      if (character === '"' || character === "'" || character === '`') {
-        quote = character;
-      } else if (character === '{') {
-        depth += 1;
-      } else if (character === '}') {
-        depth -= 1;
-      } else if (character === '>' && depth === 0) {
-        break;
-      }
-    }
+    const index = closingAngle(source, match.index + match[0].length);
     const attributes = source.slice(match.index + match[0].length, index);
     opens.push({
       attributes,
@@ -468,6 +523,93 @@ describe('Field group contract', () => {
     expect(marksGroup(' group={options.length <= MAX} label="Answer"')).toBe(true);
     // Nested braces are blanked all the way out.
     expect(marksGroup(' style={{ marginTop: group }}')).toBe(false);
+  });
+
+  it('keeps the Field label INSIDE every name its control answers to', () => {
+    // WCAG 2.5.3, Label in Name. A control that names itself inside a `Field`
+    // replaces the name the `<label for>` would have given it, and a voice-control
+    // user can only say the words they can SEE — so the name has to CONTAIN the
+    // label, not merely exist. `TagsInput` under `<Field label="Tags">` carried
+    // `aria-label="Add a tag"`, which shares not one word with its visible label.
+    //
+    // Deliberately NOT a "the Field always wins" rule. That would delete the
+    // per-row disambiguation `ScopesMapper.tsx` gives each of its route inputs —
+    // several identical fields in one form, where only the caller knows which
+    // scope a row belongs to — and it would contradict `inputs.tsx`'s written
+    // doctrine that an explicit prop is a decision. Containment lets a caller
+    // EXTEND the label ("Fixed kwargs" → "Fixed kwargs JSON") and refuses only a
+    // name that REPLACES it.
+    //
+    // Case-insensitive, as the criterion is read: speech input normalises case, so
+    // "Role name" satisfies a label reading "Name".
+    const mismatched: string[] = [];
+    let checked = 0;
+
+    for (const file of sources) {
+      const source = codeOf(file);
+      for (const open of fieldOpens(source)) {
+        if (open.selfClosing) continue;
+        // A GROUP field names the CONTAINER, not the control inside it, so the
+        // label is not that control's visible label and 2.5.3 asks nothing here.
+        if (marksGroupStatically(open.attributes)) continue;
+        const label = literalText(open.attributes, 'label');
+        if (label === undefined || label.trim() === '') continue;
+        const child = firstChildOpen(open.rest);
+        // Only a child that CLAIMS the control id is named by this label at all;
+        // anything else is judged by the group rule above.
+        if (child === undefined || !CLAIMING_CHILDREN.has(child.name)) continue;
+        // Both routes a control names itself by: the native attribute the
+        // pass-through family forwards, and the named prop `Select`/`Checkbox`
+        // read. A control that names itself by neither takes the Field's label
+        // whole and cannot fail this.
+        const name =
+          literalText(child.attributes, 'aria-label') ?? literalText(child.attributes, 'label');
+        if (name === undefined) continue;
+        checked += 1;
+        if (name.toLowerCase().includes(label.toLowerCase())) continue;
+        mismatched.push(
+          `${relative(repoRoot, file)}:${String(lineAt(source, open.index))} ` +
+            `<Field label=${JSON.stringify(label)}> names <${child.name}> ${JSON.stringify(name)}`,
+        );
+      }
+    }
+
+    expect(mismatched).toEqual([]);
+    // A floor against the reader silently reaching nothing: these are real sites,
+    // and an empty sweep would report success while checking no name at all.
+    expect(checked).toBeGreaterThanOrEqual(6);
+  });
+
+  it('reads a self-named control the way the call sites really write one', () => {
+    // Positive and negative controls on the containment reader. Without them a
+    // `literalText` that always answered `undefined` would leave the sweep above
+    // green with nothing to report.
+    expect(literalText(' label="Fixed kwargs"', 'label')).toBe('Fixed kwargs');
+    expect(literalText(' aria-label={`Add route to ${scopeId}`}', 'aria-label')).toBe(
+      'Add route to  ',
+    );
+    // A substitution blanks to a SPACE, so the runs either side stay apart: a
+    // template cannot splice two fragments into a word its rendered name lacks.
+    expect(literalText(' aria-label={`Add${x}route`}', 'aria-label')).toBe('Add route');
+    // Not a literal at all — a binding, a conditional — and deliberately unread:
+    // the text is decided at runtime and no regex can say what it will be.
+    expect(literalText(' label={heading}', 'label')).toBeUndefined();
+    expect(literalText(' label={required ? a : b}', 'label')).toBeUndefined();
+    // The name has to START an attribute, or `aria-label` reads as `label`.
+    expect(literalText(' aria-label="Body"', 'label')).toBeUndefined();
+
+    // The child's own attribute run is read past a `>` inside a VALUE.
+    const child = firstChildOpen('\n  <TextInput disabled={n > 0} aria-label="Add route to x" />');
+    expect(child?.name).toBe('TextInput');
+    expect(literalText(child?.attributes ?? '', 'aria-label')).toBe('Add route to x');
+
+    // The rule itself, both directions: extending the label passes, replacing it
+    // fails, and the comparison ignores case.
+    const contains = (label: string, name: string): boolean =>
+      name.toLowerCase().includes(label.toLowerCase());
+    expect(contains('Fixed kwargs', 'Fixed kwargs JSON')).toBe(true);
+    expect(contains('Name', 'Role name')).toBe(true);
+    expect(contains('Tags', 'Add a tag')).toBe(false);
   });
 
   it('reads FieldGroup as a different component', () => {

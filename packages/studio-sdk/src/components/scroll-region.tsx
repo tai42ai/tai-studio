@@ -46,12 +46,15 @@ export interface ScrollRegionProps {
 /**
  * The names for a prose surface that has no heading above it.
  *
- * They name the ONE document this SDK injects today — a plugin README — because
- * an unnamed region is worse than a specifically named one, and every surface
- * that has a heading above it takes that heading instead. Prose that is not a
- * README passes its own `labels`.
+ * They say what the surface IS and nothing about which document it came from,
+ * because this hook cannot know: it instruments whatever markup the caller
+ * injected. A default that named one document put that document's name on every
+ * caller's regions, and a region a reader hears the wrong name for is worse than
+ * a plain one. A caller that CAN say which document it is showing passes its own
+ * `labels`; a surface with a heading above it takes that heading instead, which
+ * is the usual case.
  */
-const DEFAULT_PROSE_LABELS = { table: 'README table', pre: 'README code block' } as const;
+const DEFAULT_PROSE_LABELS = { table: 'Table', pre: 'Code block' } as const;
 
 /** The fallback name per instrumented surface, when no heading precedes it. */
 export interface ProseScrollLabels {

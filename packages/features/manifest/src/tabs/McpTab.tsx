@@ -260,14 +260,31 @@ function McpConfigEditor({
 
   // Two views over one working list. The FORM view drives `entries`; the JSON
   // view drives `text`. A view switch converts one into the other so neither
-  // goes stale. `baseline` is the server state at mount — used to detect unsaved
-  // edits before a lossy-looking switch.
+  // goes stale. `baseline` is the server config as it currently stands — used to
+  // detect unsaved edits before a lossy-looking switch.
   const baseline = JSON.stringify(initialEntries);
   const [view, setView] = useState<ConfigView>('form');
   const [entries, setEntries] = useState<unknown[]>(() => [...initialEntries]);
   const [text, setText] = useState(() => JSON.stringify(initialEntries, null, 2));
   const [parseError, setParseError] = useState<string | undefined>(undefined);
   const [confirmTarget, setConfirmTarget] = useState<ConfigView | null>(null);
+
+  // Both buffers are re-seeded whenever the server config MOVES (a save that
+  // normalizes it, or a background/focus refetch) so a stale edit can't clobber
+  // newer server state. DURING RENDER — React's adjust-state-on-prop-change
+  // pattern — rather than by remounting on a `key`: this editor is what writes
+  // the config, so a remount keyed on it tears the editor down the instant its
+  // own save lands, dropping the keyboard caret from the Save button onto
+  // `document.body` (WCAG 2.4.3) and deleting the "Saved" badge and fleet report
+  // the save just produced. Re-seeding also leaves the operator in the view they
+  // chose, which a remount reset to Form.
+  const [seededFrom, setSeededFrom] = useState(baseline);
+  if (seededFrom !== baseline) {
+    setSeededFrom(baseline);
+    setEntries([...initialEntries]);
+    setText(JSON.stringify(initialEntries, null, 2));
+    setParseError(undefined);
+  }
 
   const save = useMutation({
     mutationFn: (mcp: unknown[]) => api.setMcpConfig(mcp),
@@ -448,11 +465,7 @@ function McpConfigSection(): ReactNode {
   }
   if (manifest.isPending || schema.isPending) return <Skeleton height={220} />;
 
-  // Re-seed the editor's local buffer whenever the server config changes (a save
-  // that normalizes it, or a background/focus refetch) so a stale edit can't
-  // clobber newer server state.
-  const version = JSON.stringify(manifest.data.mcp);
-  return <McpConfigEditor key={version} initialEntries={manifest.data.mcp} schema={schema.data} />;
+  return <McpConfigEditor initialEntries={manifest.data.mcp} schema={schema.data} />;
 }
 
 export function McpTab(): ReactNode {
