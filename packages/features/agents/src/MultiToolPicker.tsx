@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { Button, ToolPicker } from '@tai42/studio-sdk';
+import { Button, CloseIcon, ToolPicker } from '@tai42/studio-sdk';
 
 import { chipStyle, monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
 
@@ -42,7 +42,7 @@ export function MultiToolPicker({
                   onChange(value.filter((n) => n !== name));
                 }}
               >
-                ×
+                <CloseIcon />
               </Button>
             </span>
           ))}

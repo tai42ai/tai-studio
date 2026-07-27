@@ -6,7 +6,15 @@ import { useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import type { PresetRecord } from '@tai42/api-client';
-import { Button, ErrorState, Select, Spinner, errorMessage, useApi } from '@tai42/studio-sdk';
+import {
+  Button,
+  CloseIcon,
+  ErrorState,
+  Select,
+  Spinner,
+  errorMessage,
+  useApi,
+} from '@tai42/studio-sdk';
 
 import type { InlinePresetSpec } from './authoring-types';
 import { chipStyle, monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
@@ -70,7 +78,7 @@ export function PresetSpecEditor({
                   onChange(value.filter((e) => e.name !== entry.name));
                 }}
               >
-                ×
+                <CloseIcon />
               </Button>
             </span>
           ))}

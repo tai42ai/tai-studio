@@ -1,11 +1,13 @@
 /**
  * Tracing-tab behaviour: the runs table + pagination, sort-header and filter URL
  * writes, the row drill-in to the per-run trace, the trace tree render with XSS
- * escaping pinned, a surfaced 404, and the two export actions.
+ * escaping pinned, a surfaced 404, the two export actions, and the runs pane's
+ * keyboard reachability once it outruns its column.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { ApiError, type Run, type RunTrace } from '@tai42/api-client';
 
 import { ObservabilityPage } from './ObservabilityPage';
@@ -258,5 +260,34 @@ describe('TracingTab — trace view', () => {
 
     await user.click(screen.getByRole('button', { name: '← Back to runs' }));
     expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', status: 'success' });
+  });
+});
+
+describe('TracingTab — the runs pane is reachable without a pointer', () => {
+  it('names the pane holding the runs table, and only while it actually scrolls', async () => {
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+
+    await screen.findByTestId('run-row-r1');
+    // Located through the table it holds, so this fails on a pane that nothing
+    // measures rather than on a renamed class.
+    const pane = screen.getByRole('table').parentElement;
+    if (pane === null) throw new Error('the runs table has no containing pane');
+
+    setElementOverflow(pane, false);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(pane).not.toHaveAttribute('tabindex');
+
+    setElementOverflow(pane, true);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.getByRole('region', { name: 'Runs' })).toBe(pane);
+    expect(pane).toHaveAttribute('tabindex', '0');
   });
 });

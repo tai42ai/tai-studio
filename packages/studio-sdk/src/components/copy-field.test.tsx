@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { deferred } from '../testing';
 import { CopyField } from './copy-field';
 
 function firstOf<T extends Element>(nodes: NodeListOf<T>): T {
@@ -124,6 +125,33 @@ describe('CopyField', () => {
     expect(screen.getByText('Copied')).not.toBeVisible();
     expect(screen.getByText('Copy')).toBeVisible();
     expect(firstOf(container.querySelectorAll('[aria-live]')).textContent).toBe('');
+  });
+
+  it('starts no reset timer when the clipboard write resolves after unmount', async () => {
+    // Only the timer clock is faked; the clipboard promise still settles on the
+    // real microtask queue.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const write = deferred<undefined>();
+    const writeText = vi.fn<(text: string) => Promise<void>>(() => write.promise);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    const { unmount } = render(<CopyField value="tai42_key_123" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(writeText).toHaveBeenCalledWith('tai42_key_123');
+
+    // The caller's dialog closes on the same click, so the write is still in
+    // flight when the component goes away.
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+
+    write.resolve(undefined);
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // The unmount cleanup has already run, so a timer started now is one nothing
+    // is left to clear — the resolution must not touch state at all.
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('clears its pending reset timer on unmount', async () => {

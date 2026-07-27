@@ -154,6 +154,38 @@ describe('SchemaEditor', () => {
     expect(preview).toHaveAttribute('tabindex', '0');
   });
 
+  it('frames the JsonTree fallback in a plain card and lets the tree name itself', () => {
+    // The fallback branch's contract: only the element that ACTUALLY scrolls may
+    // carry the region attributes. `JsonTree` is its own scrolling box, so the
+    // card around it is a plain frame — a `ScrollRegion` there would announce a
+    // name for a box that cannot move.
+    render(<SchemaEditor value={{ type: 'object' }} onChange={vi.fn()} requireTitle={false} />);
+
+    const preview = screen.getByTestId('schema-editor-preview');
+    expect(preview).toHaveClass('tai-card');
+    expect(preview).not.toHaveClass('tai-scroll-region');
+
+    const pane = preview.querySelector<HTMLElement>('.tai-code-block');
+    if (pane === null) throw new Error('no JsonTree pane rendered');
+
+    // The frame is not a scroller: nothing measures it, and no region appears.
+    setElementOverflow(preview, true);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(preview).not.toHaveAttribute('tabindex');
+
+    // The pane IS the scroller, and it takes the preview's name, not JsonTree's
+    // generic default.
+    setElementOverflow(pane, true);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.getByRole('region', { name: 'Schema preview' })).toBe(pane);
+    expect(pane).toHaveAttribute('tabindex', '0');
+  });
+
   it('renders no preview block while the text does not parse', () => {
     render(<SchemaEditor value={null} onChange={vi.fn()} requireTitle={false} />);
     setText('{ not json');

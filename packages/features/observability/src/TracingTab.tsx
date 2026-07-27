@@ -20,6 +20,8 @@ import {
   ScrollRegion,
   Select,
   Skeleton,
+  SortAscIcon,
+  SortDescIcon,
   TBody,
   TD,
   TH,
@@ -281,7 +283,7 @@ function SortableHeader({
         }}
       >
         {label}
-        {active ? <span aria-hidden="true">{dir === 'asc' ? '▲' : '▼'}</span> : null}
+        {active ? dir === 'asc' ? <SortAscIcon /> : <SortDescIcon /> : null}
       </button>
     </TH>
   );

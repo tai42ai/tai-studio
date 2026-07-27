@@ -9,6 +9,7 @@
  */
 import { useDraggable } from '@dnd-kit/core';
 import type { CSSProperties, ReactNode } from 'react';
+import { CloseIcon } from '@tai42/studio-sdk';
 
 /** Where a chip currently lives — its origin zone. */
 export type ZoneRef =
@@ -123,7 +124,7 @@ export function ScopeItemChip({
             onRemove(data);
           }}
         >
-          ×
+          <CloseIcon />
         </button>
       ) : null}
     </span>

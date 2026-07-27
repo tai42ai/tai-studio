@@ -3,11 +3,14 @@
  * the malformed-ref guard, the listing/items/versions render, the advisories
  * warning block, the install-state badges from the installed query, and the
  * install / update / uninstall confirm flows (client call, pending, loud error,
- * the success line + receipt notes, and the unfiltered cache invalidation).
+ * the success line + receipt notes, and the unfiltered cache invalidation), and
+ * the keyboard reachability of every pane that outruns its column — the two
+ * tables React renders and the table/code surfaces inside the injected README.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 
 import type {
   MarketplaceAdvisory,
@@ -451,5 +454,89 @@ describe('PluginDetail — update and uninstall flows', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
     expect(installMarketplacePlugin).not.toHaveBeenCalled();
+  });
+});
+
+/** The `<table>` whose header row carries `columnHeader`, failing loudly if absent. */
+function tableUnder(columnHeader: string): HTMLElement {
+  const table = screen.getByRole('columnheader', { name: columnHeader }).closest('table');
+  if (table === null) throw new Error(`no table above the ${columnHeader} column`);
+  return table;
+}
+
+/** The pane wrapping `element`, failing loudly when it has none. */
+function paneOf(element: HTMLElement): HTMLElement {
+  const pane = element.parentElement;
+  if (pane === null) throw new Error('element has no containing pane');
+  return pane;
+}
+
+/** Reports every element in `elements` as overflowing and lets the observers see it. */
+function setOverflowing(...elements: readonly HTMLElement[]): void {
+  for (const element of elements) setElementOverflow(element, true);
+  act(() => {
+    flushResizeObservers();
+  });
+}
+
+describe('PluginDetail — panes that scroll are keyboard targets', () => {
+  it('names the items and versions panes, and only while they actually scroll', async () => {
+    const client = reads(detailFixture(), []);
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await screen.findByText('Toolbox');
+    // Located through the tables they hold, so this fails on an unmeasured pane
+    // rather than on a renamed class.
+    const items = paneOf(tableUnder('Kind'));
+    const versions = paneOf(tableUnder('Version'));
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+
+    setOverflowing(items, versions);
+
+    expect(screen.getByRole('region', { name: 'Contained items' })).toBe(items);
+    expect(items).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('region', { name: 'Versions' })).toBe(versions);
+    expect(versions).toHaveAttribute('tabindex', '0');
+  });
+
+  it('instruments the tables and code blocks inside the rendered README', async () => {
+    const client = reads(
+      detailFixture({
+        readme_md:
+          '<h3>Options</h3><table><tbody><tr><td>--flag</td></tr></tbody></table>' +
+          '<h3>Example</h3><pre><code>tai run toolbox</code></pre>',
+        latest: null,
+        versions: [],
+      }),
+      [],
+    );
+    const { container } = renderWithProviders(
+      <PluginDetail refValue="tai42/toolbox" onBack={noop} />,
+      { client },
+    );
+
+    await screen.findByText('Toolbox');
+    const prose = container.querySelector<HTMLElement>('.tai-prose');
+    if (prose === null) throw new Error('the rendered README is not marked as prose');
+    expect(prose).toContainElement(screen.getByText('--flag'));
+
+    // React never rendered these, so they are instrumented in place: the table
+    // gains a wrapper that scrolls, the `<pre>` IS its own scrolling box.
+    const readmeTable = within(prose).getByRole('table');
+    const tablePane = paneOf(readmeTable);
+    expect(tablePane).toHaveClass('tai-scroll-region');
+    const pre = prose.querySelector<HTMLElement>('pre');
+    if (pre === null) throw new Error('no <pre> in the rendered README');
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+
+    setOverflowing(tablePane, pre);
+
+    // Each surface takes the name of the heading it sits under.
+    expect(screen.getByRole('region', { name: 'Options' })).toBe(tablePane);
+    expect(tablePane).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('region', { name: 'Example' })).toBe(pre);
+    expect(pre).toHaveAttribute('tabindex', '0');
   });
 });

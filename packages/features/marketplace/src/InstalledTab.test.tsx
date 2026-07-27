@@ -2,11 +2,13 @@
  * Behavioural tests for the installed tab: the tri-state installed list, the
  * per-row update / up-to-date / not-in-registry status badges, the advisories
  * banner that appears only when an advisory matches an installed plugin (and
- * links to the detail), and the advisory-failure fallback that keeps the table.
+ * links to the detail), the advisory-failure fallback that keeps the table, and
+ * the table pane's keyboard reachability once it outruns its column.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 
 import type { MarketplaceAdvisory, MarketplaceInstalledPlugin } from '@tai42/api-client';
 
@@ -167,5 +169,34 @@ describe('InstalledTab — advisories banner', () => {
     expect(await screen.findByRole('table')).toBeInTheDocument();
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('boom: advisories');
+  });
+});
+
+describe('InstalledTab — the table pane is reachable without a pointer', () => {
+  it('names the pane holding the table, and only while it actually scrolls', async () => {
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([installedRow({})]),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, { client });
+
+    // The pane is located through the table it holds, not through a class, so
+    // this fails on a pane that is measured by nothing rather than on a rename.
+    const pane = (await screen.findByRole('table')).parentElement;
+    if (pane === null) throw new Error('the table has no containing pane');
+
+    setElementOverflow(pane, false);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(pane).not.toHaveAttribute('tabindex');
+
+    setElementOverflow(pane, true);
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.getByRole('region', { name: 'Installed plugins' })).toBe(pane);
+    expect(pane).toHaveAttribute('tabindex', '0');
   });
 });
