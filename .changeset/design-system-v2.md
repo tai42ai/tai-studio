@@ -35,7 +35,16 @@ layer, the icon set, and the layout primitives every screen builds on.
   bump): `--tai-text-lg` 18px → 15px, `--tai-text-md` 15px → 13.5px,
   `--tai-text-sm` 13px → 12.5px; `--tai-color-primary` and its siblings resolve
   to crimson rather than blue, and `--tai-color-danger`/`-success`/`-warning`
-  resolve to the `-text` members that stay legible as text. Type and spacing
+  resolve to the `-text` members that stay legible as text. The largest shift is
+  in the elevation pair: `--tai-shadow-sm` was a resting shadow
+  (`0 1px 2px rgba(16,24,40,.06)`) and now aliases `--tai-shadow-lift`
+  (`0 12px 32px`), and `--tai-shadow-md` was `0 4px 12px rgba(16,24,40,.1)` and
+  now aliases `--tai-shadow-overlay` (`0 24px 48px`) — so a plugin that used
+  either as a resting card shadow gets a lift or an overlay in its place and
+  should move to the tier it means. `--tai-color-primary-text` and
+  `--tai-color-danger-text` were `#ffffff` in BOTH themes and are now
+  per-theme — `#ffffff` light, `#0c0e12` dark — because white on the dark accent
+  and danger fills reaches only 3.6:1. Type and spacing
   tokens are authored in rem so a viewer's font-size preference scales them;
   line-height and weight moved out of the tokens into the component classes.
 - **New stylesheets:** `fonts.css` and `components.css`, both reachable as
@@ -78,6 +87,18 @@ layer, the icon set, and the layout primitives every screen builds on.
   which animates `background-position`; the opacity pulse never moved that
   gradient. A plugin animating `tai-pulse` off the published `tokens.css` must
   declare its own keyframe.
+- **How both themes are verified.** The primitive suites no longer re-render each
+  component a second time "in dark". `vitest.config.ts` sets `css: false`, so no
+  stylesheet ever loads in jsdom: those 30 blocks stamped `data-theme` on a
+  document with no rules attached to it and then asserted the same markup as the
+  light run — they could not fail for a theme reason, and a real dark render is
+  not reachable under `css: false` at all. Every assertion they made is kept in
+  the single remaining run; only the duplicate render went. What actually holds
+  the two themes together is static and repo-wide: `token-usage.test.ts` proves
+  every theme-varying token has both halves, that the two dark blocks carry the
+  same set and no values of their own, and that no dark value is read by any
+  other route — plus the rendered screenshot sweep in PLAN_5. Recorded here so
+  PLAN_1/2/3 build on a stated position rather than an unstated gap.
 - **Testing helpers** (`@tai42/studio-sdk/testing`): `installJsdomStubs` now
   installs a WORKING `ResizeObserver`, and `flushResizeObservers` +
   `setElementOverflow` let a suite drive a component that measures its own

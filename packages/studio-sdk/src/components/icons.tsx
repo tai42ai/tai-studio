@@ -16,9 +16,13 @@
  *
  * Icons are decorative by default (`aria-hidden="true"`): they accompany a text
  * label or sit inside a control that carries its own accessible name. An icon
- * that is the ONLY carrier of meaning must be given a name by the caller —
- * `aria-hidden={false} role="img" aria-label="…"` — which the prop spread
- * permits.
+ * that is the ONLY carrier of meaning is given a name by the caller —
+ * `<AlertTriangleIcon aria-label="Warning" />` — and NAMING IT IS ENOUGH: the
+ * frame derives the other two attributes from the name, so `aria-hidden` is
+ * dropped and `role="img"` supplied. A name and `aria-hidden` can therefore
+ * never ship together by omission. Both derived attributes are still
+ * overridable through the prop spread, and the older explicit three-prop form
+ * (`aria-hidden={false} role="img" aria-label="…"`) keeps working unchanged.
  *
  * {@link NAV_ICONS} is the canonical route-token → icon mapping so the shell
  * never re-derives which mark belongs to which Studio route.
@@ -35,10 +39,18 @@ export type IconComponent = (props: IconProps) => ReactElement;
 
 /**
  * The shared frame every mark is drawn in. Defaults are declared BEFORE the prop
- * spread so a caller can override any of them (notably `aria-hidden`), while
- * `className` is destructured so a caller-supplied class replaces the default.
+ * spread so a caller can override any of them, while `className` is destructured
+ * so a caller-supplied class replaces the default.
+ *
+ * The accessibility defaults are DERIVED from whether the caller gave the icon a
+ * name rather than fixed. A hard-coded `aria-hidden="true"` is not self-serving:
+ * it makes `<Icon aria-label="Warning" />` — the form a caller naturally reaches
+ * for — a named-but-hidden element, which exposes nothing and fails nowhere. So
+ * `aria-hidden` is emitted only for an icon with NO accessible name, and an icon
+ * that has one is given the `role="img"` that makes the name reachable.
  */
 function Icon({ className = 'tai-icon', children, ...props }: IconProps): ReactElement {
+  const named = props['aria-label'] !== undefined || props['aria-labelledby'] !== undefined;
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +60,8 @@ function Icon({ className = 'tai-icon', children, ...props }: IconProps): ReactE
       strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
-      aria-hidden="true"
+      aria-hidden={named ? undefined : 'true'}
+      role={named ? 'img' : undefined}
       className={className}
       {...props}
     >
@@ -414,10 +427,20 @@ export const XCircleIcon: IconComponent = (props) => (
   </Icon>
 );
 
-/** Pending / running / queued — a clock hand inside a dashed ring. */
+/**
+ * Pending / running / queued — a clock hand inside a dashed ring.
+ *
+ * The dash period has to TILE the circumference or the ring closes on a seam.
+ * At r = 9 the circumference is 2π·9 = 56.5487. A 3.2/3.2 array (period 6.4)
+ * fits 8.84 times, so the ring shut with a 2.15 gap instead of 3.2 — and with
+ * the inherited round linecap eating 1.6 at each end that seam rendered ~0.37 px
+ * wide at 16 px, reading as joined while every other gap read as a gap. Eight
+ * whole periods divide it exactly: 56.5487 / 8 = 7.0686, halved for the dash and
+ * the gap = 3.5343 each, giving 16 even segments and no seam.
+ */
 export const PendingIcon: IconComponent = (props) => (
   <Icon {...props}>
-    <circle cx="12" cy="12" r="9" strokeDasharray="3.2 3.2" />
+    <circle cx="12" cy="12" r="9" strokeDasharray="3.5343 3.5343" />
     <path d="M12 7.5V12l3 2" />
   </Icon>
 );

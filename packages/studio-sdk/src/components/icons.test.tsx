@@ -109,6 +109,15 @@ describe('icon set', () => {
     expect(svg.getAttribute('stroke-width')).toBe('1.6');
     expect(svg.getAttribute('stroke-linecap')).toBe('round');
     expect(svg.getAttribute('stroke-linejoin')).toBe('round');
+    // The paint is inherited from the frame, so a CHILD that names its own is
+    // the way a hard-coded colour or an odd stroke weight actually gets in —
+    // `<path fill="#F4718A">` on one shape is invisible to a root-only check and
+    // ignores the reader's theme outright.
+    for (const shape of svg.querySelectorAll('*')) {
+      expect(shape.getAttribute('fill')).toBeNull();
+      expect(shape.getAttribute('stroke')).toBeNull();
+      expect(shape.getAttribute('stroke-width')).toBeNull();
+    }
   });
 
   it.each(ICONS)('%s is decorative and 16 px by default', (_name, Component) => {
@@ -152,7 +161,30 @@ describe('icon props', () => {
     expect(svg).not.toHaveClass('tai-icon');
   });
 
-  it('lets the caller expose the icon to assistive technology', () => {
+  it('exposes the icon as soon as the caller names it, with nothing else to pass', () => {
+    // The form a caller reaches for naturally. A frame that hard-coded
+    // `aria-hidden="true"` would leave this a named-but-hidden element — the
+    // name unreachable, and no test anywhere failing — so the two supporting
+    // attributes are derived from the name rather than demanded alongside it.
+    const svg = renderIcon(iconModule.AlertTriangleIcon, { 'aria-label': 'Warning' });
+    expect(svg.getAttribute('aria-hidden')).toBeNull();
+    expect(svg.getAttribute('role')).toBe('img');
+    expect(svg).toHaveAccessibleName('Warning');
+  });
+
+  it('takes a name by reference too', () => {
+    const { container } = render(
+      <>
+        <span id="warn-label">Warning</span>
+        <iconModule.AlertTriangleIcon aria-labelledby="warn-label" />
+      </>,
+    );
+    const svg = container.querySelector('svg');
+    expect(svg?.getAttribute('aria-hidden')).toBeNull();
+    expect(svg?.getAttribute('role')).toBe('img');
+  });
+
+  it('lets the caller expose the icon to assistive technology explicitly', () => {
     const svg = renderIcon(iconModule.AlertTriangleIcon, {
       'aria-hidden': false,
       role: 'img',
@@ -173,10 +205,23 @@ describe('icon props', () => {
     expect(svg.style.width).toBe('24px');
   });
 
-  it('uses stroke-dasharray for the pending ring', () => {
+  it('dashes the pending ring on a period that tiles its circumference', () => {
+    // Asserted by ARITHMETIC rather than by pinning the pair, because the value
+    // only means anything relative to the radius. A period that does not divide
+    // 2πr closes the ring on a short seam — 3.2/3.2 fit 8.84 times at r = 9,
+    // leaving a 2.15 gap that the inherited round linecap shrank to ~0.37 px at
+    // 16 px, so one join read as solid in a ring of dashes.
     const svg = renderIcon(iconModule.PendingIcon);
     const ring = svg.querySelector('circle');
-    expect(ring?.getAttribute('stroke-dasharray')).toBe('3.2 3.2');
+    const radius = Number(ring?.getAttribute('r'));
+    const parts = (ring?.getAttribute('stroke-dasharray') ?? '').split(/[\s,]+/).map(Number);
+    expect(parts).toHaveLength(2);
+    const period = (parts[0] ?? Number.NaN) + (parts[1] ?? Number.NaN);
+    expect(radius).toBeGreaterThan(0);
+    expect(period).toBeGreaterThan(0);
+
+    const periods = (2 * Math.PI * radius) / period;
+    expect(Math.abs(periods - Math.round(periods))).toBeLessThan(0.005);
   });
 });
 
@@ -212,6 +257,42 @@ describe('the sort pair', () => {
     expect(rowWidths(iconModule.SortAscIcon)).toEqual(
       [...rowWidths(iconModule.SortDescIcon)].reverse(),
     );
+  });
+
+  /**
+   * The arrowhead's apex and its two barbs, in SVG y (smaller is higher up).
+   * The head is the one path of the form `M<bx> <by> <ax> <ay>l<dx> <dy>`: the
+   * two absolute pairs are a barb and the apex, and the relative leg runs back
+   * out to the second barb. The rows above carry `h` and the shaft carries `V`,
+   * so neither can be mistaken for it — and exactly one match is demanded, so a
+   * redrawn head fails loudly instead of emptying the check.
+   */
+  function arrowhead(Component: IconComponent): { apex: number; barbs: number[] } {
+    const heads = [...renderIcon(Component).querySelectorAll('path')]
+      .map((path) =>
+        /^M([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)l\s*(-?[\d.]+)[\s,]*(-?[\d.]+)$/.exec(
+          path.getAttribute('d') ?? '',
+        ),
+      )
+      .filter((match): match is RegExpExecArray => match !== null);
+    expect(heads).toHaveLength(1);
+    const [, , barbY, , apexY, , legY] = [...(heads[0] ?? [])].map(Number);
+    const apex = apexY ?? Number.NaN;
+    return { apex, barbs: [barbY ?? Number.NaN, apex + (legY ?? Number.NaN)] };
+  }
+
+  // The rows say narrow-to-wide, but the ARROW is what a reader looks at first,
+  // and it lives in the two paths `rowWidths` skips by construction — so the
+  // three checks above stay green with the two arrows swapped and the ascending
+  // mark pointing down. This pair shipped semantically swapped once already.
+  it('points the ascending arrow up, the way its own rows grow', () => {
+    const { apex, barbs } = arrowhead(iconModule.SortAscIcon);
+    for (const barb of barbs) expect(apex).toBeLessThan(barb);
+  });
+
+  it('points the descending arrow down, the way its own rows shrink', () => {
+    const { apex, barbs } = arrowhead(iconModule.SortDescIcon);
+    for (const barb of barbs) expect(apex).toBeGreaterThan(barb);
   });
 });
 

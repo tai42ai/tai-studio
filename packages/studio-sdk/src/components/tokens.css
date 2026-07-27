@@ -15,12 +15,17 @@
  * `--tai-dark-` name. Each colour is therefore still written exactly once, and
  * the two blocks that apply the dark half carry no values of their own — they
  * only re-point each token at its `--tai-dark-*` neighbour, so a light and dark
- * pair cannot drift apart. `prefers-color-scheme` is the default theme source;
- * the viewer's toggle stamps `data-theme` on the root (see `useTheme`), which
- * pins the theme in BOTH directions — the media query stands down for a root
- * pinned to light, and the pinned-dark block applies the same set outright.
- * `color-scheme` follows the same three states, so native scrollbars, selects
- * and form autofill match the tokens.
+ * pair cannot drift apart. A `data-theme` pin on the root decides the theme in
+ * BOTH directions — the media query stands down for a root pinned to light, and
+ * the pinned-dark block applies the same set outright — so `prefers-color-scheme`
+ * is the DEFAULT only for a root that carries no pin. In `apps/studio` that
+ * window is the first paint: `ThemeProvider` (`useTheme`) stamps `data-theme` on
+ * mount, after which the media query no longer decides and an OS theme flip
+ * while the app is open changes nothing. Following the OS live — a `matchMedia`
+ * listener and a `system` preference — is PLAN_1's `useTheme` work, not this
+ * sheet's. A host that mounts no provider keeps the media query as its theme
+ * source. `color-scheme` follows the same three states, so native scrollbars,
+ * selects and form autofill match the tokens.
  *
  * BROWSER FLOOR. Deliberately NOT `light-dark()`. That function would fold each
  * pair onto one line, but it is invalid at computed-value time below Chrome 123 /
@@ -49,8 +54,10 @@
   }
 }
 
-/* Loading skeleton: the raised band sweeps across the surface ground, which is
-   what makes a placeholder read as pending rather than as empty content. */
+/* Loading skeleton: the raised band sweeps across the LINE-tone ground the
+   block rests at, which is what makes a placeholder read as pending rather than
+   as empty content. Both ends of that gradient are the block's resting tone, so
+   the sweep adds a band rather than fading the block into the page. */
 @keyframes tai-shimmer {
   from {
     background-position: 200% 0;
@@ -253,6 +260,9 @@
     --tai-dark-shadow-overlay-color: rgb(0 0 0 / 0.6);
     --tai-shadow-lift: 0 12px 32px var(--tai-shadow-lift-color);
     --tai-shadow-overlay: 0 24px 48px var(--tai-shadow-overlay-color);
+    /* Legacy slots, re-pointed at the new elevation pair. Both names are kept
+       and both changed MEANING: they were resting shadows (`0 1px 2px` /
+       `0 4px 12px`) and now alias the lift and overlay geometry. */
     --tai-shadow-sm: var(--tai-shadow-lift);
     --tai-shadow-md: var(--tai-shadow-overlay);
 

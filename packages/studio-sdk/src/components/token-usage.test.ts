@@ -1,7 +1,7 @@
 /**
  * Static gates over the whole monorepo's use of the design-system token contract.
  *
- * 1. Every `var(--tai-*)` written anywhere under `packages/` or `apps/` names a token
+ * 1. Every `var(--tai-*)` written anywhere under `packages/`, `apps/` or `e2e/` names a token
  *    the design system actually defines. An undefined token resolves to nothing, which
  *    is invisible in review and silently ships an unstyled control — five of them were
  *    live before this contract existed.
@@ -32,7 +32,16 @@ import { TOKEN_NAMES } from './tokens';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(packageRoot, '../..');
-const scanRoots = [resolve(repoRoot, 'packages'), resolve(repoRoot, 'apps')];
+// `e2e/` is in the sweep for the reference plugin: it is the repo's one real
+// plugin and the worked example of the published styling API, so a token it
+// names that the design system does not define is the exact failure a plugin
+// author would hit. Leaving it out made the header's "whole monorepo" a claim
+// about two thirds of it. `dist`/`node_modules` are skipped below as everywhere.
+const scanRoots = [
+  resolve(repoRoot, 'packages'),
+  resolve(repoRoot, 'apps'),
+  resolve(repoRoot, 'e2e'),
+];
 const tokenStylesheet = resolve(packageRoot, 'src/components/tokens.css');
 
 const SCANNED_EXTENSIONS = ['.ts', '.tsx', '.css'];
@@ -414,10 +423,21 @@ describe('design-system token usage', () => {
       // makes the pair discriminate. A range grown to swallow the base `:root`
       // fails the control above, because the stray's offset would land inside
       // it; a range that no longer covers its block fails here.
-      const strayText = strayInBaseRoot.trim();
-      expect(readsOutsideTheDarkBlocks(strayText, [{ start: 0, end: strayText.length }])).toEqual(
-        [],
-      );
+      //
+      // Both halves are judged against the REAL `darkRanges`. Handing this one a
+      // synthetic `[{start: 0, end: strayText.length}]` — which it did first —
+      // made it a test of the range ARITHMETIC and nothing else: no edit to
+      // `ruleRange`, `DARK_MEDIA` or `DARK_PINNED` could reach it. So the stray
+      // is spliced into a COPY of the token file instead, on its own line at the
+      // foot of the pinned-dark block, where the offset it lands at is one the
+      // ranges above have to actually cover.
+      const pinned = ruleRange(DARK_PINNED);
+      const insertAt = TOKENS_CSS.lastIndexOf('\n', pinned.end) + 1;
+      expect(insertAt).toBeGreaterThan(pinned.start);
+      expect(insertAt).toBeLessThan(pinned.end);
+      const strayInsideADarkBlock =
+        TOKENS_CSS.slice(0, insertAt) + `${strayInBaseRoot}\n` + TOKENS_CSS.slice(insertAt);
+      expect(readsOutsideTheDarkBlocks(strayInsideADarkBlock, darkRanges)).toEqual([]);
 
       // …and every dark value authored is actually applied, so none sits dead.
       const applied = new Set(
@@ -499,7 +519,7 @@ describe('design-system token usage', () => {
       ]);
     });
 
-    it('never lands on one anywhere under packages/ or apps/', () => {
+    it('never lands on one anywhere under packages/, apps/ or e2e/', () => {
       const offenders: string[] = [];
 
       for (const file of files) {
