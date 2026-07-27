@@ -11,6 +11,16 @@ byte-constant by the skeleton (no import-map injection, no per-response nonce).
 shell to select: the gradient runs to near-black at one end, so the light mark is
 not legible against a dark ground.
 
+## Font licences
+
+`licenses/inter-OFL.txt` and `licenses/geist-mono-OFL.txt` are the upstream
+copyright notices and SIL Open Font License 1.1 text for the two families the
+build materialises into `assets/*.woff2`. OFL-1.1 §2 requires the notice and the
+licence to accompany the redistributed font binaries, and this directory is the
+only part of the build that is served verbatim, so they live here rather than in
+the repository alone. `font-licences.test.ts` keeps a file here for every
+`@fontsource-variable/*` the SDK depends on.
+
 ## OAuth popup relay
 
 Connector OAuth runs in a popup window. Two byte-constant pages relay the

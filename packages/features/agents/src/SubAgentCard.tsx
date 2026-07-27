@@ -65,7 +65,7 @@ export function SubAgentCard({
             placeholder="Research the question."
           />
         </Field>
-        <Field label="Tools">
+        <Field label="Tools" group>
           <MultiToolPicker
             toolNames={toolNames}
             tagsByTool={tagsByTool}
@@ -77,7 +77,7 @@ export function SubAgentCard({
             idPrefix={`${idPrefix}-tools`}
           />
         </Field>
-        <Field label="Presets">
+        <Field label="Presets" group>
           <PresetSpecEditor
             presetRecords={presetRecords}
             value={spec.presets}

@@ -375,7 +375,7 @@ export function ComposeAgentDialog({
             ) : null}
 
             {hasField(baseSchema, 'tool_names') ? (
-              <Field label="Tools" description="The tools this agent may call.">
+              <Field label="Tools" description="The tools this agent may call." group>
                 <MultiToolPicker
                   toolNames={toolsQuery.data ?? []}
                   tagsByTool={tagsByTool}
@@ -391,6 +391,7 @@ export function ComposeAgentDialog({
               <Field
                 label="Presets"
                 description="Stored presets expand into inline, self-contained definitions."
+                group
               >
                 <PresetSpecEditor
                   presetRecords={usablePresets}
@@ -405,6 +406,7 @@ export function ComposeAgentDialog({
               <Field
                 label="Sub-agents"
                 description="Inline sub-agent specs this agent can delegate to."
+                group
               >
                 <SubAgentComposer
                   toolNames={toolsQuery.data ?? []}
@@ -417,7 +419,7 @@ export function ComposeAgentDialog({
             ) : null}
 
             {extraSchema !== null ? (
-              <Field label="Strategy">
+              <Field label="Strategy" group>
                 <SchemaForm schema={extraSchema} value={extraSpec} onChange={setExtraSpec} />
               </Field>
             ) : null}

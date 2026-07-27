@@ -20,7 +20,7 @@
  * emptyOutDir:false so they never clobber the SPA or each other.
  */
 import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { readdir } from 'node:fs/promises';
 import { build } from 'vite';
 
@@ -67,15 +67,31 @@ const dropExtractedCss = {
   enforce: 'post',
   generateBundle(_options, bundle) {
     for (const [fileName, output] of Object.entries(bundle)) {
-      if (output.type === 'asset' && fileName.endsWith('.css')) delete bundle[fileName];
+      // `bundle` is Rollup's own keyed record, not a Map, so removal goes
+      // through Reflect rather than a computed `delete`.
+      if (output.type === 'asset' && fileName.endsWith('.css')) {
+        Reflect.deleteProperty(bundle, fileName);
+      }
     }
   },
 };
 
-/** Pin the property above: nothing in dist/vendor may be a stylesheet. */
-async function assertVendorHasNoCss() {
+/**
+ * Pin the property above: dist/vendor holds JS singletons and NOTHING else.
+ *
+ * The assertion is what the sentence says — every file must be a `.js` — rather
+ * than "no `.css`": a stylesheet is only the emission this plugin was written to
+ * stop, and an extracted `.woff2`, a source map or a `.json` in the served vendor
+ * directory is the same class of dead weight. It walks RECURSIVELY, because Vite
+ * emits extracted assets under `assets/` by default and a flat read would pass
+ * over `dist/vendor/assets/studio-app.css` without seeing it.
+ */
+async function assertVendorHasOnlyJs() {
   const vendorDir = resolve(appRoot, 'dist/vendor');
-  const stray = (await readdir(vendorDir)).filter((name) => name.endsWith('.css'));
+  const entries = await readdir(vendorDir, { recursive: true, withFileTypes: true });
+  const stray = entries
+    .filter((entry) => entry.isFile() && !entry.name.endsWith('.js'))
+    .map((entry) => relative(vendorDir, join(entry.parentPath, entry.name)));
   if (stray.length > 0) {
     throw new Error(
       `dist/vendor must contain JS singletons only, but the build emitted ${stray.join(', ')}. ` +
@@ -112,7 +128,7 @@ async function buildVendor() {
       },
     });
   }
-  await assertVendorHasNoCss();
+  await assertVendorHasOnlyJs();
 }
 
 async function buildBridge() {

@@ -175,6 +175,9 @@ export function TopicVerifierForm(): ReactNode {
           error={
             submitted && verifierMissing && !catalogEmpty ? 'A verifier is required.' : undefined
           }
+          // Only the Select branch claims the field's control id; the error and
+          // empty branches render no labelable element, so `for` would dangle.
+          group={verifiersQuery.isError || catalogEmpty}
         >
           {verifiersQuery.isError ? (
             <ErrorState

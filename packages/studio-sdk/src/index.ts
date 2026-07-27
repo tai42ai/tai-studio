@@ -102,7 +102,7 @@ export { PageHeader, Page, Stack } from './components/page-header';
 export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
 export { ErrorBoundary } from './components/error-boundary';
 export type { ErrorBoundaryProps } from './components/error-boundary';
-export { Field, useFieldControl } from './components/field';
+export { Field, useFieldControl, useFieldLabelId } from './components/field';
 export type { FieldProps, FieldControlProps } from './components/field';
 export { TextInput, Textarea, NumberInput } from './components/inputs';
 export type { TextInputProps, TextareaProps, NumberInputProps } from './components/inputs';

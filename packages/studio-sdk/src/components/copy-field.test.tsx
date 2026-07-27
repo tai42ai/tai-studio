@@ -127,6 +127,58 @@ describe('CopyField', () => {
     expect(firstOf(container.querySelectorAll('[aria-live]')).textContent).toBe('');
   });
 
+  it('shows a loud, actionable alert when the clipboard write is refused', async () => {
+    const writeText = vi
+      .fn<(text: string) => Promise<void>>()
+      .mockRejectedValue(new Error('clipboard denied by permissions policy'));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<CopyField value="tai42_key_123" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await settleClipboard();
+
+    // The secret is shown once: a failure the reader cannot see leaves them
+    // believing they hold a key they never copied.
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('clipboard denied by permissions policy');
+    expect(alert).toHaveTextContent('Select the value above and copy it.');
+    // Never the secret itself.
+    expect(alert).not.toHaveTextContent('tai42_key_123');
+    expect(screen.getByText('Copied')).not.toBeVisible();
+  });
+
+  it('says so when the browser offers no clipboard at all', async () => {
+    // Any non-secure context: `navigator.clipboard` does not exist, and reading
+    // through it used to throw a TypeError straight out of the click handler.
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    render(<CopyField value="tai42_key_123" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await settleClipboard();
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'This browser will not write to the clipboard here.',
+    );
+  });
+
+  it('clears a previous failure once a later copy succeeds', async () => {
+    const writeText = vi
+      .fn<(text: string) => Promise<void>>()
+      .mockRejectedValueOnce(new Error('nope'))
+      .mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(<CopyField value="tai42_key_123" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await settleClipboard();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    await settleClipboard();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('Copied')).toBeVisible();
+  });
+
   it('starts no reset timer when the clipboard write resolves after unmount', async () => {
     // Only the timer clock is faked; the clipboard promise still settles on the
     // real microtask queue.

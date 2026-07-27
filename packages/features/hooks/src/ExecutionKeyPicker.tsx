@@ -64,6 +64,9 @@ export function ExecutionKeyPicker({
       description="The api key this fire runs AS. Every tool call it makes is authorized against that key's live grants — prefer a least-privilege service key over a human's broad one."
       // Suppressed: the empty note / the ErrorState already say it.
       error={listEmpty || keysQuery.isError ? undefined : error}
+      // Only the Select branch claims the field's control id; the error and
+      // empty branches render no labelable element, so `for` would dangle.
+      group={keysQuery.isError || listEmpty}
     >
       {keysQuery.isError ? (
         <ErrorState
