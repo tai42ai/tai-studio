@@ -34,10 +34,6 @@ const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const repoRoot = resolve(packageRoot, '../..');
 const scanRoots = [resolve(repoRoot, 'packages'), resolve(repoRoot, 'apps')];
 const tokenStylesheet = resolve(packageRoot, 'src/components/tokens.css');
-const componentStylesheet = resolve(packageRoot, 'src/components/components.css');
-const stylesheets = [tokenStylesheet, componentStylesheet];
-
-const TOKENS_CSS = readFileSync(tokenStylesheet, 'utf8');
 
 const SCANNED_EXTENSIONS = ['.ts', '.tsx', '.css'];
 const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo']);
@@ -54,6 +50,27 @@ function sourceFiles(dir: string): string[] {
   }
   return found;
 }
+
+/**
+ * Every stylesheet the design system ships, DISCOVERED rather than listed. A
+ * hand-written list is a gate hole with a delay fuse: a fourth sheet added
+ * beside these would be read by nothing here, and the `light-dark()` ban below
+ * would pass over it. `fonts.css` and the shell's own `styles.css` are inside
+ * the sweep for exactly that reason.
+ */
+const stylesheets = scanRoots
+  .flatMap(sourceFiles)
+  .filter((file) => file.endsWith('.css'))
+  .sort();
+
+/**
+ * The token file with its comments stripped, because everything below parses it
+ * by counting braces. The header explains the theme mechanism in prose, and an
+ * unbalanced `}` inside a comment would silently truncate whichever block was
+ * being read — turning a real gate into an empty list. The sibling scanners
+ * (`focus-ring`, `reduced-motion`) strip first for the same reason.
+ */
+const TOKENS_CSS = withoutComments(readFileSync(tokenStylesheet, 'utf8'));
 
 /** The single capture of a match, or a loud failure if the pattern ever loses it. */
 function captured(match: RegExpMatchArray): string {
@@ -149,7 +166,7 @@ const BASE_ROOT = /(?:^|\n)\s*:root\s*\{/;
  * selector edited out of step with this file fails loudly instead of silently
  * emptying every assertion that reads it.
  */
-function ruleBody(pattern: RegExp): string {
+function ruleRange(pattern: RegExp): { readonly start: number; readonly end: number } {
   const opening = pattern.exec(TOKENS_CSS);
   if (opening === null) throw new Error(`tokens.css has no rule matching ${pattern.source}`);
   let depth = 1;
@@ -161,7 +178,12 @@ function ruleBody(pattern: RegExp): string {
     if (character === '}') depth -= 1;
     end += 1;
   }
-  return TOKENS_CSS.slice(opening.index + opening[0].length, end - 1);
+  return { start: opening.index + opening[0].length, end: end - 1 };
+}
+
+function ruleBody(pattern: RegExp): string {
+  const { start, end } = ruleRange(pattern);
+  return TOKENS_CSS.slice(start, end);
 }
 
 /** `token: value` for every custom property a block declares, in order. */
@@ -350,14 +372,21 @@ describe('design-system token usage', () => {
       // Every `--tai-dark-*` token exists to be read by the two blocks above. One
       // read anywhere else — a component reaching past the theme, a base
       // declaration wired to the wrong half — would ignore the reader's theme.
-      // Scoped by LOCATION, not by name: collecting the names the dark blocks
-      // re-point and then allowing those names everywhere would be a tautology,
-      // since every dark token IS re-pointed. What matters is WHERE each read sits.
-      const darkBlocks = [ruleBody(DARK_MEDIA), ruleBody(DARK_PINNED)];
-      const readsOutsideTheDarkBlocks = (source: string): readonly string[] =>
+      // Scoped by CHARACTER OFFSET. Collecting the names the dark blocks re-point
+      // and allowing those names everywhere would be a tautology, since every dark
+      // token IS re-pointed. Matching on the line's TEXT is barely better and was
+      // the shape this had first: a base-`:root` declaration wired to its own dark
+      // half — `--tai-color-bg: var(--tai-dark-color-bg);` in the light theme — is
+      // byte-identical to a line inside both dark blocks, so the filter dropped
+      // the one live bug it exists to catch. Only WHERE the read sits can decide.
+      const darkRanges = [ruleRange(DARK_MEDIA), ruleRange(DARK_PINNED)];
+      const readsOutsideTheDarkBlocks = (
+        source: string,
+        ranges: readonly { readonly start: number; readonly end: number }[],
+      ): readonly string[] =>
         [...source.matchAll(/^.*var\(\s*--tai-dark-[\w-]+.*$/gm)]
-          .map((match) => match[0].trim())
-          .filter((line) => !darkBlocks.some((body) => body.includes(line)));
+          .filter(({ index }) => !ranges.some(({ start, end }) => index >= start && index < end))
+          .map((match) => match[0].trim());
 
       // No consumer anywhere may reach past the theme for a dark value at all.
       // The token file itself is excluded here and checked by LOCATION below.
@@ -370,18 +399,24 @@ describe('design-system token usage', () => {
       expect(strayInConsumers).toEqual([]);
       // …and inside the token file itself, every read must sit in one of the two
       // blocks — a base declaration wired to the wrong half is the live-bug shape.
-      expect(readsOutsideTheDarkBlocks(TOKENS_CSS)).toEqual([]);
+      expect(readsOutsideTheDarkBlocks(TOKENS_CSS, darkRanges)).toEqual([]);
 
-      // Positive controls: both shapes must actually be caught, or a pattern that
-      // stopped matching would read as an all-clear.
-      expect(
-        readsOutsideTheDarkBlocks('  --tai-color-focus-ring: var(--tai-dark-color-accent);'),
-      ).toEqual(['--tai-color-focus-ring: var(--tai-dark-color-accent);']);
-      expect(readsOutsideTheDarkBlocks(darkBlocks[0] ?? '')).toEqual([]);
+      // Positive controls, both keyed on the shape that actually ships. The first
+      // is a line that ALSO appears verbatim inside both dark blocks — the case a
+      // text-based filter laundered — so it proves the scan judges position.
+      const strayInBaseRoot = '  --tai-color-bg: var(--tai-dark-color-bg);';
+      expect(readsOutsideTheDarkBlocks(strayInBaseRoot, darkRanges)).toEqual([
+        '--tai-color-bg: var(--tai-dark-color-bg);',
+      ]);
+      expect(ruleBody(DARK_MEDIA)).toContain(strayInBaseRoot.trim());
+      // …and a read genuinely inside a dark block is not flagged.
+      expect(readsOutsideTheDarkBlocks(TOKENS_CSS, darkRanges).length).toBe(0);
 
       // …and every dark value authored is actually applied, so none sits dead.
       const applied = new Set(
-        darkBlocks.flatMap((body) => declarationsIn(body).map(([token]) => darkCounterpart(token))),
+        [ruleBody(DARK_MEDIA), ruleBody(DARK_PINNED)].flatMap((body) =>
+          declarationsIn(body).map(([token]) => darkCounterpart(token)),
+        ),
       );
       const authored = declarationsIn(ruleBody(BASE_ROOT))
         .map(([token]) => token)

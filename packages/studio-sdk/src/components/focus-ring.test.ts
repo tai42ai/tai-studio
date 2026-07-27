@@ -67,7 +67,7 @@ describe('visible focus', () => {
   });
 
   it('puts every interactive class in the shared ring', () => {
-    // Naming ONE class here would let the other nineteen be deleted from the
+    // Naming ONE class here would let the other twenty-one be deleted from the
     // rule with every test still green. The list is the design system's own
     // set of keyboard-reachable surfaces; a new one is added here deliberately.
     const RING_BEARERS = [
@@ -109,16 +109,35 @@ describe('visible focus', () => {
     //
     // The guard is checked PER SELECTOR: in a comma group, one guarded member
     // would otherwise launder every unguarded sibling beside it. And the
-    // cancellation is matched on the longhands and the zero-with-a-unit
-    // spellings too, since `outline-width: 0` removes the ring just as
-    // completely as `outline: none`.
+    // cancellation is matched on the longhands, the zero-with-a-unit spellings
+    // and `!important`, since `outline-width: 0` removes the ring just as
+    // completely as `outline: none` — and `!important` is the one spelling that
+    // beats the shared ring regardless of specificity, so it matters most of all.
     const CANCELS_OUTLINE =
-      /outline(-width|-style|-color)?\s*:\s*(none|0(px|em|rem|%)?|transparent)\s*(;|$)/;
+      /outline(-width|-style|-color)?\s*:\s*(none|hidden|0(px|em|rem|%)?|transparent)(\s*!important)?\s*(;|$)/;
     const unguarded = rules
       .filter((rule) => CANCELS_OUTLINE.test(rule.body))
       .flatMap((rule) => selectorsOf(rule.selector))
       .filter((selector) => !selector.includes(':not(:focus-visible)'));
 
     expect(unguarded).toEqual([]);
+
+    // Positive controls: every spelling that removes the ring must be caught,
+    // or a pattern that stopped matching would turn this gate green.
+    for (const declaration of [
+      'outline: none;',
+      'outline: none !important;',
+      'outline: 0 !important;',
+      'outline: 0px;',
+      'outline-width: 0;',
+      'outline-style: hidden;',
+      'outline: transparent;',
+    ]) {
+      expect([declaration, CANCELS_OUTLINE.test(declaration)]).toEqual([declaration, true]);
+    }
+    // …and a real ring must not read as a cancellation.
+    for (const declaration of ['outline: 2px solid var(--tai-color-focus-ring);']) {
+      expect([declaration, CANCELS_OUTLINE.test(declaration)]).toEqual([declaration, false]);
+    }
   });
 });

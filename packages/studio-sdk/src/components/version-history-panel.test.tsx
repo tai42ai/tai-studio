@@ -181,7 +181,7 @@ describe('VersionHistoryPanel', () => {
     // Second click on another row opens the v1 → v2 diff dialog.
     await user.click(screen.getByRole('button', { name: 'Compare version 2' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('v1 → v2')).toBeInTheDocument();
+    expect(within(dialog).getByText('v1 compared with v2')).toBeInTheDocument();
     // The bodies differ only in fixed_kwargs.units → a single diff row at that path.
     expect(within(dialog).getByTestId('diff-row-fixed_kwargs.units')).toBeInTheDocument();
   });

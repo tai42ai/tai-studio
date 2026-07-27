@@ -76,6 +76,44 @@ describe('ProgressBar', () => {
   });
 });
 
+describe('the announced value', () => {
+  // `aria-valuenow` is derived from `value` directly. Computing it as
+  // `fraction * total` does not round-trip in binary floating point, so these
+  // pairs announced things like `7.000000000000001` to a screen reader.
+  it.each([
+    [7, 25],
+    [15, 22],
+    [1, 3],
+    [29, 60],
+  ])('announces %i/%i as an exact integer', (value, total) => {
+    render(<ProgressBar value={value} total={total} />);
+
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe(String(value));
+  });
+
+  it('clamps an out-of-range value into [0, total] rather than announcing it raw', () => {
+    render(<ProgressBar value={99} total={10} />);
+
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('10');
+  });
+
+  it('announces the floor for a negative or NaN value', () => {
+    const { rerender } = render(<ProgressBar value={-4} total={10} />);
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0');
+
+    rerender(<ProgressBar value={Number.NaN} total={10} />);
+    expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0');
+  });
+
+  it('never announces NaN when the total is not finite', () => {
+    render(<ProgressBar value={5} total={Number.POSITIVE_INFINITY} />);
+
+    const announced = screen.getByRole('progressbar').getAttribute('aria-valuenow');
+    expect(announced).not.toBe('NaN');
+    expect(announced).toBe('5');
+  });
+});
+
 describe.each(['light', 'dark'] as const)('ProgressBar under the %s theme', (theme) => {
   it('renders its track, fill and label unchanged', () => {
     document.documentElement.setAttribute('data-theme', theme);

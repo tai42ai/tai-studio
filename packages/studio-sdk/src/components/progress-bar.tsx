@@ -33,6 +33,19 @@ function clampFraction(value: number, total: number): number {
   return fraction;
 }
 
+/**
+ * The value to ANNOUNCE, clamped into `[0, total]`. Derived from `value`
+ * directly rather than by multiplying the fraction back up: `value / total *
+ * total` does not round-trip in binary floating point, so `value={7}
+ * total={25}` announced `7.000000000000001`, and a non-finite `total` announced
+ * `NaN`. The same `>= 0` shape as `clampFraction` keeps NaN at the floor.
+ */
+function clampValue(value: number, total: number): number {
+  if (!(value >= 0)) return 0;
+  if (!(value <= total)) return total;
+  return value;
+}
+
 /** The status sits at one end of the row and the percentage at the other. */
 const labelRowStyle: CSSProperties = { justifyContent: 'space-between' };
 
@@ -64,7 +77,7 @@ export function ProgressBar({ value = 0, total, message }: ProgressBarProps): Re
         // The clamped value, not the raw prop: a bar drawn full while it
         // announces `aria-valuenow="99"` against `aria-valuemax="10"` tells a
         // screen-reader user something the screen does not.
-        aria-valuenow={determinate && fraction !== undefined ? fraction * total : undefined}
+        aria-valuenow={determinate && fraction !== undefined ? clampValue(value, total) : undefined}
         aria-label={message ?? 'Progress'}
       >
         {determinate ? (

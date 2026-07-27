@@ -324,7 +324,7 @@ export function VersionHistoryPanel({
 
       {comparePair !== null ? (
         <Dialog
-          title={`v${String(comparePair.from)} → v${String(comparePair.to)}`}
+          title={`v${String(comparePair.from)} compared with v${String(comparePair.to)}`}
           description="A structural diff of the two version bodies. Arrays compare whole."
           open
           onOpenChange={(next) => {
