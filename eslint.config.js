@@ -352,6 +352,7 @@ export default tseslint.config(
       'packages/studio-sdk/src/components/reduced-motion.test.ts',
       'packages/studio-sdk/src/components/field-group.test.ts',
       'packages/studio-sdk/src/components/banned-glyphs.test.ts',
+      'packages/studio-sdk/src/hooks/useBreakpoint.test.ts',
       'packages/studio-sdk/src/package-side-effects.test.ts',
       'apps/studio/src/app/font-licences.test.ts',
     ],

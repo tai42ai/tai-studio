@@ -21,7 +21,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src bridge scripts",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"bridge/**/*.ts\" \"scripts/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"bridge/**/*.ts\" \"scripts/**/*.mjs\"",
     "test": "vitest run"
   },
   "dependencies": {

@@ -250,4 +250,31 @@ describe('CreatePresetForm', () => {
       "base tool 'weather' is itself a preset",
     );
   });
+
+  it.each([
+    [
+      'listToolTags',
+      { listToolTags: vi.fn().mockRejectedValue(new Error('tags down')) },
+      'Tag grouping is unavailable: tags down',
+    ],
+    [
+      'listAgents',
+      { listAgents: vi.fn().mockRejectedValue(new Error('agents down')) },
+      'Agent labelling is unavailable: agents down',
+    ],
+  ])(
+    'says so when the %s enrichment read fails, without walling the base picker',
+    async (_label, override, expected) => {
+      // These two only ENRICH the picker (grouping, the " (agent)" suffix), so they
+      // must not wall the form — but a silent degradation reads as the truth about
+      // the deployment: an unlabelled agent base looks like a plain tool.
+      renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+        client: baseClient(override),
+      });
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(expected);
+      // The picker is still there and still usable.
+      expect(await screen.findByRole('combobox')).toBeEnabled();
+    },
+  );
 });

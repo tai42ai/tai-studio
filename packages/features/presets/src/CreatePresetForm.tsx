@@ -265,6 +265,45 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           </Field>
         )}
 
+        {/* The base picker's ENRICHMENT reads. Tags group the options; the agent list
+            adds the " (agent)" suffix that is the only thing telling an author a base
+            is an agent. Neither is load-bearing, so a failure keeps the picker usable
+            — but it must never degrade SILENTLY, or an unlabelled, ungrouped picker
+            reads as the truth about the deployment. */}
+        {tagsQuery.isError || agentsQuery.isError ? (
+          <div
+            role="alert"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--tai-space-2)',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span style={{ color: 'var(--tai-color-danger)' }}>
+              {[
+                tagsQuery.isError
+                  ? `Tag grouping is unavailable: ${errorMessage(tagsQuery.error)}`
+                  : null,
+                agentsQuery.isError
+                  ? `Agent labelling is unavailable: ${errorMessage(agentsQuery.error)}`
+                  : null,
+              ]
+                .filter((line) => line !== null)
+                .join(' ')}
+            </span>
+            <Button
+              type="button"
+              onClick={() => {
+                if (tagsQuery.isError) void tagsQuery.refetch();
+                if (agentsQuery.isError) void agentsQuery.refetch();
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : null}
+
         <Field
           label="Fixed kwargs"
           description={

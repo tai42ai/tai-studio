@@ -55,6 +55,50 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 
 /** The banned set, verbatim from the mission's iconography rule. */
 const BANNED_GLYPHS = '▲▼▾↗→✓×';
 
+/**
+ * The HTML character references React renders as those same glyphs. An entity is
+ * neither of the stated blind spots — it is a LITERAL in the source, and it
+ * paints the banned mark — so `<button>&times;</button>` restored the exact
+ * defect the four cleared sites had, with no banned code point in the file for
+ * either detector to find. Named and numeric forms both; decoded before scanning.
+ */
+const GLYPH_ENTITIES: Readonly<Record<string, string>> = {
+  '&times;': '×',
+  '&#215;': '×',
+  '&#xd7;': '×',
+  '&check;': '✓',
+  '&checkmark;': '✓',
+  '&#10003;': '✓',
+  '&#x2713;': '✓',
+  '&rarr;': '→',
+  '&srarr;': '→',
+  '&#8594;': '→',
+  '&#x2192;': '→',
+  '&nearr;': '↗',
+  '&neArr;': '↗',
+  '&#8599;': '↗',
+  '&#x2197;': '↗',
+  '&#9650;': '▲',
+  '&#x25b2;': '▲',
+  '&#9660;': '▼',
+  '&#x25bc;': '▼',
+  '&#9662;': '▾',
+  '&#x25be;': '▾',
+};
+
+/**
+ * Rewrites every banned character reference to the glyph it paints, so both
+ * detectors below see the mark rather than its spelling. Length is NOT preserved
+ * — no detector here reports an offset, only a file and a snippet.
+ */
+function decodeGlyphEntities(source: string): string {
+  let out = source;
+  for (const [entity, glyph] of Object.entries(GLYPH_ENTITIES)) {
+    out = out.replaceAll(new RegExp(entity.replace('&', '&'), 'gi'), glyph);
+  }
+  return out;
+}
+
 /** Tests state their own expectations; a test file is not a rendering surface. */
 function isTestSource(fileName: string): boolean {
   return /\.(?:test|spec)\.tsx?$/.test(fileName);
@@ -179,7 +223,9 @@ export function glyphOnlyLiteralHits(code: string): { line: number; text: string
 
 /** Both detectors over one file's text, as `path:line glyph` strings. */
 function violationsIn(file: string): string[] {
-  const code = stripComments(readFileSync(file, 'utf8'));
+  // Entities are decoded AFTER comments are blanked, so an arrow spelled `&rarr;`
+  // in a docblock cannot trip the JSX detector the way a literal `→` would not.
+  const code = decodeGlyphEntities(stripComments(readFileSync(file, 'utf8')));
   const where = relative(repoRoot, file);
   return [...jsxSoleGlyphHits(code), ...glyphOnlyLiteralHits(code)].map(
     ({ line, text }) => `${where}:${String(line)} ${JSON.stringify(text)}`,
@@ -271,5 +317,21 @@ describe('banned glyphs', () => {
     // after it — that is how a literal detector goes silently blind.
     const apostrophe = "// the caller's mark\nconst m = '×';";
     expect(glyphOnlyLiteralHits(stripComments(apostrophe)).map((hit) => hit.text)).toEqual(['×']);
+  });
+
+  it('reads a banned glyph spelled as an HTML character reference', () => {
+    // An entity is a literal in the source that paints the banned mark, so it is
+    // neither stated blind spot — and it evaded both detectors, because the file
+    // then carries no banned code point at all.
+    for (const entity of ['&times;', '&#215;', '&#x2713;', '&rarr;', '&NEARR;']) {
+      const markup = `<button type="button">${entity}</button>`;
+      expect([entity, jsxSoleGlyphHits(decodeGlyphEntities(markup)).length]).toEqual([entity, 1]);
+    }
+    // …and via the indirection route the literal detector closes.
+    expect(
+      glyphOnlyLiteralHits(decodeGlyphEntities("const MARK = '&times;';")).map((hit) => hit.text),
+    ).toEqual(['×']);
+    // Negative control: an entity that is not a banned glyph stays untouched.
+    expect(decodeGlyphEntities('&amp; &nbsp; &larr;')).toBe('&amp; &nbsp; &larr;');
   });
 });

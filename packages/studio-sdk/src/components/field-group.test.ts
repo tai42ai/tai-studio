@@ -64,18 +64,100 @@ function sourcesWithin(directory: string): string[] {
 
 const sources = SCAN_ROOTS.flatMap((root) => sourcesWithin(resolve(repoRoot, root)));
 
-/**
- * A `<Field …>` opening tag and everything up to the first element inside it.
- * `[^>]*` cannot cross the tag's own `>`, so the captured attribute text belongs
- * to that `Field` alone and never bleeds in from the child. The negative
- * lookahead is load-bearing: without it `<FieldGroup …>` — a different component
- * that publishes no control id — reads as a `Field` and is judged by these rules.
- */
-const FIELD_WITH_CHILD =
-  /<Field(?![A-Za-z])(?<attributes>[^>]*)>\s*(?:\{[^}]*\}\s*)?<(?<child>[A-Za-z]+)/g;
+/** One `<Field …>` open tag, split at the `>` that really closes it. */
+interface FieldOpen {
+  readonly attributes: string;
+  /** Everything after the open tag, from which the first child is read. */
+  readonly rest: string;
+  readonly selfClosing: boolean;
+  /** Offset of the `<` in the source, for the line number in a failure. */
+  readonly index: number;
+}
 
-/** A `<Field …>` whose first child is a JSX expression, which the scan cannot read. */
-const FIELD_WITH_EXPRESSION_CHILD = /<Field(?![A-Za-z])[^>]*>\s*\{\s*[^<]/g;
+/** A classified `<Field>` site: the element it wraps, or an unreadable expression. */
+interface FieldSite {
+  readonly attributes: string;
+  /** The first child ELEMENT's name, or `undefined` for an expression child. */
+  readonly child: string | undefined;
+  readonly index: number;
+}
+
+/**
+ * Every non-self-closing `<Field>` in a source, with its first child element.
+ *
+ * This is what the whole gate scans, and it SCANS the open tag rather than
+ * matching it with a `[^>]*` attribute run. A run like that stops at the first
+ * `>` in the file, which need not be the one closing the tag: a single
+ * `description={hints.length > 0 ? … }` puts a `>` inside an attribute VALUE, and
+ * the site then matches neither the element-child nor the expression-child shape
+ * — judged by nothing, absent from the audited expression list, uncounted by the
+ * floors. `child` is `undefined` exactly when the first child is an expression.
+ *
+ * The scanner tracks brace depth, quote state and comments, so the `>` it stops
+ * at is the real one. `<FieldGroup …>` is excluded by the lookahead on the start
+ * pattern: it is a different component and publishes no control id.
+ */
+function fieldSites(source: string): FieldSite[] {
+  const sites: FieldSite[] = [];
+  for (const open of fieldOpens(source)) {
+    if (open.selfClosing) continue;
+    const element = /^\s*(?:\{[^}]*\}\s*)?<([A-Za-z]+)/.exec(open.rest);
+    sites.push({
+      attributes: open.attributes,
+      child: element?.[1],
+      index: open.index,
+    });
+  }
+  return sites;
+}
+
+function fieldOpens(source: string): FieldOpen[] {
+  const opens: FieldOpen[] = [];
+  const start = /<Field(?![A-Za-z])/g;
+  let match: RegExpExecArray | null;
+  while ((match = start.exec(source)) !== null) {
+    let index = match.index + match[0].length;
+    let depth = 0;
+    let quote: string | undefined;
+    for (; index < source.length; index += 1) {
+      const character = source[index] ?? '';
+      if (quote !== undefined) {
+        if (character === '\\') index += 1;
+        else if (character === quote) quote = undefined;
+        continue;
+      }
+      // Comments first. An apostrophe inside one (`the field's control id`)
+      // otherwise opens a phantom string that swallows the tag's own `>`.
+      if (character === '/' && source[index + 1] === '/') {
+        const end = source.indexOf('\n', index);
+        index = end === -1 ? source.length : end;
+        continue;
+      }
+      if (character === '/' && source[index + 1] === '*') {
+        const end = source.indexOf('*/', index + 2);
+        index = end === -1 ? source.length : end + 1;
+        continue;
+      }
+      if (character === '"' || character === "'" || character === '`') {
+        quote = character;
+      } else if (character === '{') {
+        depth += 1;
+      } else if (character === '}') {
+        depth -= 1;
+      } else if (character === '>' && depth === 0) {
+        break;
+      }
+    }
+    const attributes = source.slice(match.index + match[0].length, index);
+    opens.push({
+      attributes,
+      rest: source.slice(index + 1),
+      selfClosing: attributes.trimEnd().endsWith('/'),
+      index: match.index,
+    });
+  }
+  return opens;
+}
 
 /**
  * Every `<Field>` whose child is an expression, audited by hand, with the verdict.
@@ -169,12 +251,15 @@ describe('Field group contract', () => {
 
     for (const file of sources) {
       const source = readFileSync(file, 'utf8');
-      for (const match of source.matchAll(FIELD_WITH_CHILD)) {
-        const { attributes = '', child = '' } = match.groups ?? {};
-        if (CLAIMING_CHILDREN.has(child)) continue;
-        if (marksGroup(attributes)) continue;
-        const line = source.slice(0, match.index).split('\n').length;
-        unmarked.push(`${relative(repoRoot, file)}:${String(line)} (<Field> around <${child}>)`);
+      for (const site of fieldSites(source)) {
+        // An expression child is judged by EXPRESSION_CHILD_SITES, not here.
+        if (site.child === undefined) continue;
+        if (CLAIMING_CHILDREN.has(site.child)) continue;
+        if (marksGroup(site.attributes)) continue;
+        const line = source.slice(0, site.index).split('\n').length;
+        unmarked.push(
+          `${relative(repoRoot, file)}:${String(line)} (<Field> around <${site.child}>)`,
+        );
       }
     }
 
@@ -193,14 +278,14 @@ describe('Field group contract', () => {
     // The tag matcher must reach the child both directly and through a
     // `{conditional}` child expression.
     const direct = '<Field label="x">\n  <RadioGroup options={o} />';
-    const directMatch = [...direct.matchAll(FIELD_WITH_CHILD)][0];
-    expect(directMatch?.groups?.child).toBe('RadioGroup');
-    expect(marksGroup(directMatch?.groups?.attributes ?? '')).toBe(false);
+    const directMatch = fieldSites(direct)[0];
+    expect(directMatch?.child).toBe('RadioGroup');
+    expect(marksGroup(directMatch?.attributes ?? '')).toBe(false);
 
     const conditional = '<Field label="x" group={n <= 3}>{control}<RadioGroup';
-    const conditionalMatch = [...conditional.matchAll(FIELD_WITH_CHILD)][0];
-    expect(conditionalMatch?.groups?.child).toBe('RadioGroup');
-    expect(marksGroup(conditionalMatch?.groups?.attributes ?? '')).toBe(true);
+    const conditionalMatch = fieldSites(conditional)[0];
+    expect(conditionalMatch?.child).toBe('RadioGroup');
+    expect(marksGroup(conditionalMatch?.attributes ?? '')).toBe(true);
 
     // Fail-closed control: a child nobody has classified is a violation, not a
     // pass. This is the property the earlier allowlist-of-groups form lacked.
@@ -210,30 +295,55 @@ describe('Field group contract', () => {
   });
 
   it('still reaches every Field site in the repository', () => {
-    // The count is the guard against the matcher SILENTLY breaking. `[^>]*`
-    // cannot cross a `>`, so an attribute value containing one — `group={n > 3}`
-    // — makes that site stop matching, and a scan that reaches nothing reports
-    // nothing and passes green. This floor turns red the moment the matcher
-    // stops seeing sites it reaches today.
-    const reached = sources.flatMap((file) => [
-      ...readFileSync(file, 'utf8').matchAll(FIELD_WITH_CHILD),
-    ]);
-    expect(reached.length).toBeGreaterThanOrEqual(80);
+    // A floor against the matcher silently reaching LESS. It is deliberately not
+    // the only guard: a count with headroom cannot notice one site dropping out,
+    // which is why `leaves no <Field> unjudged` below reconciles the set exactly.
+    const reached = sources.flatMap((file) => fieldSites(readFileSync(file, 'utf8')));
+    expect(reached.filter((site) => site.child !== undefined).length).toBeGreaterThanOrEqual(80);
 
     // And the marked sites specifically, which are what the rule is about.
-    const marked = reached.filter((match) => marksGroup(match.groups?.attributes ?? ''));
+    const marked = reached.filter((site) => marksGroup(site.attributes));
     expect(marked.length).toBeGreaterThanOrEqual(12);
+  });
+
+  it('leaves no <Field> unjudged by BOTH detectors', () => {
+    // The reconciliation that makes "the blind spot is bounded" true. Every
+    // `<Field>` in the repo must be read by the element-child detector, by the
+    // expression-child detector, or be self-closing. A site read by neither is
+    // invisible to the whole gate — not listed, not judged, not counted by the
+    // floors — which is exactly how `CreatePresetForm.tsx`'s
+    // `description={hints.length > 0 ? … }` slipped past a `[^>]*` attribute run.
+    // Both probes are ANCHORED at the child position. Handing the shared regexes
+    // a window of trailing source instead lets them skip forward and match the
+    // NEXT `<Field>` in the file, reporting this one as judged — a false green
+    // this reconciliation caught in its own first draft.
+    const ELEMENT_CHILD = /^\s*(?:\{[^}]*\}\s*)?<[A-Za-z]/;
+    const EXPRESSION_CHILD = /^\s*\{\s*[^<]/;
+    const unjudged: string[] = [];
+    for (const file of sources) {
+      const source = readFileSync(file, 'utf8');
+      for (const open of fieldOpens(source)) {
+        if (open.selfClosing) continue;
+        if (ELEMENT_CHILD.test(open.rest) || EXPRESSION_CHILD.test(open.rest)) continue;
+        unjudged.push(`${relative(repoRoot, file)} :: ${open.attributes.trim().slice(0, 60)}`);
+      }
+    }
+    expect(unjudged).toEqual([]);
+    // The scanner really found the Fields — otherwise an empty sweep passes.
+    expect(
+      sources.flatMap((file) => fieldOpens(readFileSync(file, 'utf8'))).length,
+    ).toBeGreaterThan(80);
   });
 
   it('accounts for every Field whose child the regex cannot read', () => {
     // The blind spot is bounded, not ignored: this is the closed set, and a new
     // expression-child site reddens here until it is audited and listed.
     const found = sources
-      .filter((file) => FIELD_WITH_EXPRESSION_CHILD.test(readFileSync(file, 'utf8')))
+      .filter((file) =>
+        fieldSites(readFileSync(file, 'utf8')).some((site) => site.child === undefined),
+      )
       .map((file) => relative(repoRoot, file))
       .sort();
-    // A `g` regex carries lastIndex across `.test` calls; reset it for the next reader.
-    FIELD_WITH_EXPRESSION_CHILD.lastIndex = 0;
     expect(found).toEqual(Object.keys(EXPRESSION_CHILD_SITES).sort());
     for (const verdict of Object.values(EXPRESSION_CHILD_SITES)) {
       expect(verdict.length).toBeGreaterThan(20);
@@ -260,8 +370,8 @@ describe('Field group contract', () => {
     // `group` rule does not apply to it. Without the negative lookahead the
     // matcher reads it as a `Field` and demands a marker it must never have.
     const fieldGroup = '<FieldGroup heading="Options" atRoot={false}>\n  <ObjectFields';
-    expect([...fieldGroup.matchAll(FIELD_WITH_CHILD)]).toEqual([]);
+    expect(fieldSites(fieldGroup)).toEqual([]);
     const field = '<Field label="Options">\n  <TextInput';
-    expect([...field.matchAll(FIELD_WITH_CHILD)]).toHaveLength(1);
+    expect(fieldSites(field)).toHaveLength(1);
   });
 });

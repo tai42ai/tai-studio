@@ -59,7 +59,7 @@
     "build": "tsc -b tsconfig.build.json && node scripts/copy-assets.mjs",
     "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit -p tsconfig.json",
     "lint": "eslint src scripts",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"scripts/**/*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.mjs\"",
     "test": "vitest run"
   },
   "peerDependencies": {

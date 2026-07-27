@@ -5,7 +5,7 @@
  * keyboard reachability once it outruns its column.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { ApiError, type Run, type RunTrace } from '@tai42/api-client';
@@ -116,6 +116,59 @@ describe('TracingTab — runs table', () => {
 
     expect(await screen.findByTestId('run-row-r2')).toBeInTheDocument();
     expect(listRuns).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }), expect.anything());
+  });
+
+  it('keeps the loaded table when a LOAD-MORE fails, and offers its own retry', async () => {
+    // query-core 5 sets `status: "error"` on ANY fetch error, data present or not.
+    // Reading `isError` for "the initial load failed" therefore threw away a fully
+    // loaded table the moment a second page failed.
+    const user = userEvent.setup();
+    const listRuns = vi
+      .fn()
+      .mockImplementation((params: { page?: number }) =>
+        params.page === 2
+          ? Promise.reject(new ApiError('page two exploded', 500))
+          : Promise.resolve({ items: [run('r1', 't1')], page: 1, nextPage: 2 }),
+      );
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: { listRuns },
+    });
+
+    expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Load more' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Could not load more runs: page two exploded');
+    // The retained page is still on screen — never blanked by the paging failure.
+    expect(screen.getByTestId('run-row-r1')).toBeInTheDocument();
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
+    // The failure gets its own retry by the control, not a whole-table reload.
+    expect(within(alert).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('keeps the loaded table when a BACKGROUND REFETCH fails, and says so above it', async () => {
+    let call = 0;
+    const listRuns = vi.fn().mockImplementation(() => {
+      call += 1;
+      return call === 1
+        ? Promise.resolve({ items: [run('r1', 't1')], page: 1, nextPage: null })
+        : Promise.reject(new ApiError('refresh exploded', 503));
+    });
+    const { queryClient } = renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: { listRuns },
+    });
+
+    expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
+    // The same query key refetched with pages retained — what a window-focus
+    // refetch does at runtime.
+    await act(async () => {
+      await queryClient.refetchQueries();
+    });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Could not refresh runs: refresh exploded');
+    expect(screen.getByTestId('run-row-r1')).toBeInTheDocument();
+    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 
   it('drills into a trace preserving filters when a row is clicked', async () => {

@@ -389,47 +389,90 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
           <Skeleton height={32} />
           <Skeleton height={32} />
         </div>
-      ) : query.isError ? (
+      ) : query.isLoadingError ? (
+        // Only the INITIAL-load failure (no pages retained) blanks the table.
+        // query-core sets `status: 'error'` on any fetch error, data present or
+        // not, so reading `isError` here threw away a fully loaded table whenever a
+        // window-focus refetch or a Load-more failed.
         <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
-      ) : items.length === 0 ? (
-        <EmptyState title="No runs" description="No runs match the current filters." />
       ) : (
-        <Card>
-          <ScrollRegion label="Runs">
-            <Table>
-              <THead>
-                <TR>
-                  <SortableHeader columnKey="createdAt" label="When" search={search} />
-                  <TH>Status</TH>
-                  <TH>Input</TH>
-                  <TH>Output</TH>
-                  <TH>Tags</TH>
-                  <SortableHeader columnKey="cost" label="Cost" search={search} />
-                  <SortableHeader columnKey="latencyMs" label="Latency" search={search} />
-                  <SortableHeader columnKey="totalTokens" label="Tokens" search={search} />
-                  <TH>Model</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {items.map((run) => (
-                  <RunRow key={run.id} run={run} onOpen={openTrace} />
-                ))}
-              </TBody>
-            </Table>
-          </ScrollRegion>
-          {query.hasNextPage ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
+          {query.isError && !query.isFetchNextPageError ? (
+            // A background refetch (window focus, a filter round-trip) failed while
+            // pages are retained. A Load-more failure is also an error with data
+            // present, so it is excluded here and gets its own retry by the control.
             <div
-              style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--tai-space-3)' }}
+              role="alert"
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}
             >
-              <Button
-                onClick={() => void query.fetchNextPage()}
-                disabled={query.isFetchingNextPage}
-              >
-                {query.isFetchingNextPage ? 'Loading…' : 'Load more'}
-              </Button>
+              <span style={{ color: 'var(--tai-color-danger)' }}>
+                Could not refresh runs: {errorMessage(query.error)}
+              </span>
+              <Button onClick={() => void query.refetch()}>Retry</Button>
             </div>
           ) : null}
-        </Card>
+          {items.length === 0 ? (
+            <EmptyState title="No runs" description="No runs match the current filters." />
+          ) : (
+            <Card>
+              <ScrollRegion label="Runs">
+                <Table>
+                  <THead>
+                    <TR>
+                      <SortableHeader columnKey="createdAt" label="When" search={search} />
+                      <TH>Status</TH>
+                      <TH>Input</TH>
+                      <TH>Output</TH>
+                      <TH>Tags</TH>
+                      <SortableHeader columnKey="cost" label="Cost" search={search} />
+                      <SortableHeader columnKey="latencyMs" label="Latency" search={search} />
+                      <SortableHeader columnKey="totalTokens" label="Tokens" search={search} />
+                      <TH>Model</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {items.map((run) => (
+                      <RunRow key={run.id} run={run} onOpen={openTrace} />
+                    ))}
+                  </TBody>
+                </Table>
+              </ScrollRegion>
+              {query.hasNextPage ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginTop: 'var(--tai-space-3)',
+                  }}
+                >
+                  <Button
+                    onClick={() => void query.fetchNextPage()}
+                    disabled={query.isFetchingNextPage}
+                  >
+                    {query.isFetchingNextPage ? 'Loading…' : 'Load more'}
+                  </Button>
+                </div>
+              ) : null}
+              {query.isFetchNextPageError ? (
+                <div
+                  role="alert"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 'var(--tai-space-2)',
+                    marginTop: 'var(--tai-space-2)',
+                  }}
+                >
+                  <span style={{ color: 'var(--tai-color-danger)' }}>
+                    Could not load more runs: {errorMessage(query.error)}
+                  </span>
+                  <Button onClick={() => void query.fetchNextPage()}>Retry</Button>
+                </div>
+              ) : null}
+            </Card>
+          )}
+        </div>
       )}
     </div>
   );

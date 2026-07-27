@@ -14,10 +14,28 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-const stylesheet = readFileSync(
-  resolve(dirname(fileURLToPath(import.meta.url)), 'components.css'),
-  'utf8',
-).replaceAll(/\/\*[\s\S]*?\*\//g, '');
+const here = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * EVERY stylesheet that reaches the browser, not just this package's component
+ * layer. A ring cancelled from another sheet is exactly as invisible, and
+ * `apps/studio/src/styles.css` carries two UNLAYERED blocks that outrank every
+ * design-system layer — reading `components.css` alone left the one file whose
+ * rules beat the ring unconditionally outside the contract.
+ */
+const SHEETS = [
+  resolve(here, 'components.css'),
+  resolve(here, 'tokens.css'),
+  resolve(here, '../../../../apps/studio/src/styles.css'),
+];
+
+/** The component layer alone — what the ring's own declaration is asserted from. */
+const stylesheet = readFileSync(SHEETS[0] ?? '', 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+
+/** All sheets concatenated — what CANCELLATIONS are hunted in. */
+const allSheets = SHEETS.map((path) =>
+  readFileSync(path, 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, ''),
+).join('\n');
 
 interface Rule {
   readonly selector: string;
@@ -29,10 +47,17 @@ interface Rule {
  * cannot cross a brace, so an `@layer`/`@media` wrapper never matches as a rule
  * of its own and its nested rules are returned instead.
  */
-const rules: Rule[] = [...stylesheet.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
-  selector: (match[1] ?? '').trim(),
-  body: match[2] ?? '',
-}));
+function rulesOf(source: string): Rule[] {
+  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
+    selector: (match[1] ?? '').trim(),
+    body: match[2] ?? '',
+  }));
+}
+
+const rules: Rule[] = rulesOf(stylesheet);
+
+/** Every rule the browser sees, across every sheet in `SHEETS`. */
+const allRules: Rule[] = rulesOf(allSheets);
 
 /** A comma group split into its individual selectors, blanks dropped. */
 function selectorsOf(selector: string): string[] {
@@ -160,6 +185,25 @@ function valueTokens(value: string): string[] {
  * the ONLY colour the shared ring is allowed, so any other `outline-color` is
  * treated as a cancellation rather than guessed at.
  */
+/**
+ * Whether a value paints a colour that is NOT the ring's own. `--tai-color-focus-ring`
+ * is the only colour the shared ring is allowed, so anything else — another token,
+ * a hex, a colour keyword, a colour function — is a cancellation rather than a
+ * guess. A value naming no colour at all (`2px solid`, which inherits
+ * `currentColor`) is not treated as one.
+ */
+function namesAnotherColour(value: string): boolean {
+  if (value.includes('var(--tai-color-focus-ring)')) return false;
+  return (
+    /var\(--[\w-]+/.test(value) ||
+    /#[0-9a-f]{3,8}\b/i.test(value) ||
+    /\b(?:rgba?|hsla?|oklch|oklab|lab|lch|color|color-mix|light-dark)\(/i.test(value) ||
+    /\b(?:currentcolor|canvastext|buttontext|highlight|white|black|gray|grey|red|blue|green)\b/i.test(
+      value,
+    )
+  );
+}
+
 function cancelsOutline(body: string): boolean {
   return declarationsOf(body).some(({ property, value }) => {
     const tokens = valueTokens(value);
@@ -172,12 +216,21 @@ function cancelsOutline(body: string): boolean {
     }
     switch (property) {
       case 'outline':
-        return tokens.some(
-          (token) =>
-            token === 'none' ||
-            token === 'hidden' ||
-            token.includes('transparent') ||
-            ZERO_LENGTH.test(token),
+        return (
+          tokens.some(
+            (token) =>
+              token === 'none' ||
+              token === 'hidden' ||
+              token.includes('transparent') ||
+              ZERO_LENGTH.test(token),
+          ) ||
+          // The shorthand carries a COLOUR too, and the docblock above promises
+          // the ground-coloured ring is caught on the shorthand as well as on the
+          // longhand. It was not: `outline: 2px solid var(--tai-color-surface)`
+          // draws a ring in the surface it sits on, i.e. nothing, and returned
+          // false here. Any named colour that is not the ring's own is a
+          // cancellation, exactly as in the `outline-color` case below.
+          namesAnotherColour(value)
         );
       case 'outline-width':
         return tokens.some((token) => ZERO_LENGTH.test(token));
@@ -220,8 +273,26 @@ describe('visible focus', () => {
     expect(notKeyed).toEqual([]);
   });
 
+  it('lets no rule repaint the ring token out of existence', () => {
+    // `cancelsOutline` only reads `outline*` and `all`. `--tai-color-focus-ring`
+    // is the single colour the ring is drawn in, so a component rule redefining
+    // it — `.tai-btn { --tai-color-focus-ring: transparent }` — took the ring off
+    // every bearer at once without ever naming an outline property.
+    //
+    // The token belongs to the THEME blocks in `tokens.css` and nowhere else.
+    const redefiners = allRules
+      .filter((rule) => /--tai-color-focus-ring\s*:/.test(rule.body))
+      .flatMap((rule) => selectorsOf(rule.selector))
+      .filter((selector) => !/^:root(\[data-theme=('|")(light|dark)\2\])?$/.test(selector));
+
+    expect(redefiners).toEqual([]);
+    // The theme blocks really do define it — otherwise this passes vacuously and
+    // the ring would be drawn in an undefined token.
+    expect(allSheets).toMatch(/--tai-color-focus-ring:\s*\S/);
+  });
+
   it('puts every interactive class in the shared ring', () => {
-    // Naming ONE class here would let the other twenty-one be deleted from the
+    // Naming ONE class here would let the other twenty-two be deleted from the
     // rule with every test still green. The list is the design system's own
     // set of keyboard-reachable surfaces; a new one is added here deliberately.
     const RING_BEARERS = [
@@ -269,7 +340,7 @@ describe('visible focus', () => {
     // sibling beside it, and a guard on an ANCESTOR (`.a:not(:focus-visible) .b`)
     // says nothing about `.b`'s own focus state, so reading the guard off the
     // whole string would launder the descendant one level down.
-    const unguarded = rules
+    const unguarded = allRules
       .filter((rule) => cancelsOutline(rule.body))
       .flatMap((rule) => selectorsOf(rule.selector))
       .filter((selector) => !subjectGuardsFocusVisible(subjectCompound(selector)));

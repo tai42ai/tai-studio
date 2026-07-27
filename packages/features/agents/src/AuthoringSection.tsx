@@ -6,6 +6,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+import { ApiError } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -57,6 +58,12 @@ export function AuthoringSection({
     queryKey: authoredPresetsKey,
     queryFn: () => api.listPresets(),
   });
+
+  /** A presets read a scoped caller is simply not allowed to make. Narrow by
+   *  CLASS, never by "it failed": a 500 or a network drop must not read as
+   *  "this caller has no preset scope". */
+  const presetsForbidden =
+    presetsQuery.error instanceof ApiError && presetsQuery.error.status === 403;
 
   const headingStyle = {
     margin: 0,
@@ -135,16 +142,25 @@ export function AuthoringSection({
           onRetry={() => void agentsQuery.refetch()}
         />
       ) : (
-        <AuthoredAgentsList
-          agents={agentsQuery.data.items}
-          // The presets read enriches the registered agents into authored rows; it is
-          // NOT load-bearing, so a scoped caller reaching `/api/agents` but not
-          // `/api/presets` degrades it to ABSENCE (an empty preset list → the list's
-          // own empty state) rather than 403-walling this reachable surface. The
-          // authorable-agents read (specRunnable) stays the wall-worthy failure.
-          presets={presetsQuery.data ?? []}
-          onRunAuthored={onRunAuthored}
-        />
+        <>
+          {/* Only the SCOPED-CALLER 403 degrades to absence: a caller reaching
+              `/api/agents` but not `/api/presets` sees the list's own empty state
+              rather than a 403 wall on a reachable surface. Every other failure —
+              a 500, a network drop, a schema mismatch — is a real failure and says
+              so beside the list, which stays usable. The authorable-agents read
+              (specRunnable) stays the wall-worthy failure. */}
+          {presetsQuery.isError && !presetsForbidden ? (
+            <ErrorState
+              message={errorMessage(presetsQuery.error)}
+              onRetry={() => void presetsQuery.refetch()}
+            />
+          ) : null}
+          <AuthoredAgentsList
+            agents={agentsQuery.data.items}
+            presets={presetsQuery.data ?? []}
+            onRunAuthored={onRunAuthored}
+          />
+        </>
       )}
 
       {composing && canAuthor ? (

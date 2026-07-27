@@ -36,11 +36,39 @@ function ruleBody(selector: string): string {
 
 /**
  * The horizontal strips: `display: flex` rows whose items are caller-sized —
- * labels, buttons, chips, tabs — and which are therefore as wide as their
- * content wants. Each must declare `flex-wrap: wrap` (the sheet's convention) or
- * take the overflow itself with `overflow-x`. Anything else pushes the document.
+ * labels, buttons, chips, tabs, server messages — and which are therefore as wide
+ * as their content wants. Each must declare `flex-wrap: wrap` (the sheet's
+ * convention) or take the overflow itself with `overflow-x`. Anything else pushes
+ * the document.
  */
-const HORIZONTAL_STRIPS = ['.tai-tablist', '.tai-row', '.tai-page-actions', '.tai-dialog-actions'];
+const HORIZONTAL_STRIPS = [
+  '.tai-tablist',
+  '.tai-row',
+  '.tai-page-actions',
+  '.tai-page-header',
+  '.tai-dialog-actions',
+  '.tai-drawer-header',
+  '.tai-error-state-title',
+  '.tai-field-error',
+];
+
+/**
+ * The flex ROWS that are not caller-sized, each with the reason it cannot push
+ * the document. A closed, hand-audited set — the same shape `field-group.test.ts`
+ * uses for its expression-child sites, and for the same reason: a blind spot that
+ * is enumerated is bounded, a blind spot that is implicit is unbounded.
+ *
+ * A new `display: flex` row lands in NEITHER list and reddens the reconciliation
+ * below, which is the whole point: it must be classified, never silently exempt.
+ */
+const NOT_CALLER_SIZED: Readonly<Record<string, string>> = {
+  '.tai-select-trigger': 'width: 100% — it takes its width from the field, not its content',
+  '.tai-select-item': 'lives inside the viewport-capped .tai-select-content popover',
+  '.tai-select-item-indicator': 'a bare 16 px mark, flex: none, no text',
+  '.tai-nav-link': 'sits in a fixed-width sidebar; the rail band gives it overflow-wrap',
+  '.tai-brand': 'the product name, a constant this repo owns',
+  '.tai-topbar': 'justify-content: space-between over two fixed chrome slots',
+};
 
 describe('narrow-viewport contract', () => {
   it.each(HORIZONTAL_STRIPS)('%s wraps or scrolls rather than pushing the document', (selector) => {
@@ -50,19 +78,27 @@ describe('narrow-viewport contract', () => {
     expect([selector, contains]).toEqual([selector, true]);
   });
 
-  it('lists every horizontal strip the sheet declares', () => {
+  it('classifies every horizontal strip the sheet declares, in BOTH directions', () => {
     // The floor against the LIST going stale — the exact way the floating-surface
-    // triple missed `.tai-select-content`. Every rule that sets `display: flex`
-    // without `flex-direction: column` and without a width cap is a strip, and a
-    // new one must be classified here rather than silently exempted.
+    // triple missed `.tai-select-content`. An `arrayContaining` check here asserted
+    // only that the listed names are flex rows; it said nothing about flex rows
+    // that are NOT listed, which is precisely the silent-exemption case. This is a
+    // set EQUALITY, so an unclassified row fails.
     const rowFlex = [...stylesheet.matchAll(/\n\s*(\.[\w-]+)\s*\{([^}]*)\}/g)]
       .filter(([, , body = '']) => /display:\s*flex/.test(body))
       .filter(([, , body = '']) => !/flex-direction:\s*column/.test(body))
       .map(([, selector = '']) => selector);
-    // Every listed strip is really one of them…
-    expect(rowFlex).toEqual(expect.arrayContaining(HORIZONTAL_STRIPS));
+
+    const classified = [...HORIZONTAL_STRIPS, ...Object.keys(NOT_CALLER_SIZED)];
+    expect([...new Set(rowFlex)].sort()).toEqual([...new Set(classified)].sort());
     // …and the sweep really reaches the sheet's flex rows.
     expect(rowFlex.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('gives every exemption a stated reason rather than a bare name', () => {
+    for (const [selector, reason] of Object.entries(NOT_CALLER_SIZED)) {
+      expect([selector, reason.length > 20]).toEqual([selector, true]);
+    }
   });
   it.each([
     ['.tai-dialog', 'width'],

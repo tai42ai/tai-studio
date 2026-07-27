@@ -1,7 +1,9 @@
 /*
  * The design-system COMPONENT + LAYOUT layer: the real classes every Studio
- * surface is built from. It is the only place in the monorepo that may ship CSS
- * — feature packages compile with `tsc` and `sideEffects: false`, so a stylesheet
+ * surface is built from. It is the only place in the monorepo that may ship
+ * COMPONENT CSS — `tokens.css` and `fonts.css` are the design system's other two
+ * published sheets, and `apps/studio/src/styles.css` is the shell's own entry;
+ * feature packages compile with `tsc` and `sideEffects: false`, so a stylesheet
  * inside one would never reach a bundle. Screens therefore apply these classes BY
  * NAME rather than re-deriving geometry inline.
  *
@@ -305,14 +307,26 @@
     color: var(--tai-color-text-muted);
   }
 
+  /* Icon beside a message nobody here writes — a validation string, a schema
+     path, a browser exception. It therefore WRAPS and breaks inside a long token
+     rather than pushing the document sideways at 320 px, and the icon aligns to
+     the first line instead of floating in the middle of a wrapped block. */
   .tai-field-error {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: var(--tai-space-2);
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-sm);
     line-height: 1.5;
     color: var(--tai-color-err-text);
+  }
+
+  /* The mark keeps its size while the message takes the wrapping. */
+  .tai-field-error > svg {
+    flex: none;
   }
 
   .tai-input,
@@ -661,7 +675,9 @@
     /* Tab labels are caller data and a plugin adds its own, so the strip wraps
        rather than pushing the DOCUMENT sideways — the five Settings tabs alone
        need 394 px and there is no horizontal scroll to reach them at 320. Every
-       other horizontal strip in this sheet wraps for the same reason. */
+       strip in this sheet that lays CALLER-SIZED content out in a row wraps for
+       the same reason; `narrow-viewport.test.ts` reconciles that set against the
+       sheet in both directions, so a new one cannot be silently exempted. */
     flex-wrap: wrap;
     gap: var(--tai-space-1);
     border-bottom: 1px solid var(--tai-color-border);
@@ -940,8 +956,9 @@
 
   /* -- Scroll regions ---------------------------------------------------------
      Horizontal overflow scrolls inside its own container. The tab stop, the
-     `role="region"`, and the label are applied by `ScrollRegion` ONLY while the
-     container actually overflows — a table that fits is not a tab stop. */
+     `role="region"`, and the label are applied by `ScrollRegion` while the
+     container overflows, or while it still holds focus — a table that fits and
+     has never been focused is not a tab stop. */
   .tai-scroll-region {
     overflow-x: auto;
     max-width: 100%;
@@ -1018,11 +1035,15 @@
     border-left: 1px solid var(--tai-color-border);
   }
 
+  /* Caller-supplied title beside a close control: it wraps rather than pushing
+     the drawer's own scroller sideways. */
   .tai-drawer-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: var(--tai-space-2);
+    min-width: 0;
   }
 
   .tai-tooltip {
@@ -1203,7 +1224,9 @@
   .tai-error-state-title {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--tai-space-2);
+    min-width: 0;
     color: var(--tai-color-err-text);
     font-weight: 600;
   }
@@ -1222,8 +1245,10 @@
 
   /* -- Prose --------------------------------------------------------------------
      The style for HTML the Studio did not author: a registry README injected
-     into a plugin's detail page. Everything a CommonMark + GFM renderer can emit
-     has a rule here, and the measure is held to a readable line length. */
+     into a plugin's detail page. The elements a CommonMark + GFM renderer emits
+     have rules here, and the measure is held to a readable line length. GFM's
+     strikethrough (`del`) and task-list checkboxes are NOT styled: they inherit,
+     and a task list additionally shows the `ul` disc beside its checkbox. */
   .tai-prose {
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-md);
@@ -1591,23 +1616,34 @@
       padding: var(--tai-space-3) var(--tai-space-1);
     }
 
-    .tai-nav-item,
-    .tai-nav-link {
+    /* SCOPED TO THE RAIL. These three groups only make sense inside the 72 px
+       icon rail the block above builds, so each is a DESCENDANT of
+       `.tai-shell-sidebar`. Unscoped, they reached every `.tai-nav-link` and
+       `.tai-nav-section-header` on the page — including a shell that lays its
+       sidebar out itself and never becomes a rail — and column-stacked its nav
+       labels at 11 px inside a full-width sidebar while hiding every section
+       heading. A heading hidden with `display: none` is also out of the
+       accessibility tree, so an `aria-labelledby` pointing at it names nothing. */
+    .tai-shell-sidebar .tai-nav-item,
+    .tai-shell-sidebar .tai-nav-link {
       flex-direction: column;
       gap: var(--tai-space-1);
       padding: var(--tai-space-2) var(--tai-space-1);
       font-size: var(--tai-text-xs);
       line-height: 1.2;
       text-align: center;
+      /* Real nav labels (`Notifications`, `Observability`) outrun a 64 px content
+         box, so the rail wraps them rather than painting outside itself. */
+      overflow-wrap: anywhere;
     }
 
-    .tai-nav-item[aria-current='page'],
-    .tai-nav-link[aria-current='page'] {
+    .tai-shell-sidebar .tai-nav-item[aria-current='page'],
+    .tai-shell-sidebar .tai-nav-link[aria-current='page'] {
       box-shadow: inset 0 -3px 0 0 var(--tai-color-accent);
     }
 
-    .tai-brand-label,
-    .tai-nav-section-header {
+    .tai-shell-sidebar .tai-brand-label,
+    .tai-shell-sidebar .tai-nav-section-header {
       display: none;
     }
 
@@ -1678,7 +1714,10 @@
     .tai-nav-item,
     .tai-nav-link,
     .tai-choice,
-    .tai-chip {
+    /* The pointer-target minimum is for TARGETS. `.tai-chip-static` is a tag or a
+       "+N more" count, not a control (see its rule above), so inflating it to
+       44 px buys nothing and pushes read-only content around. */
+    .tai-chip:not(.tai-chip-static) {
       min-height: var(--tai-control-height-coarse);
     }
 

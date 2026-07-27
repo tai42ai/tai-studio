@@ -36,8 +36,14 @@ jobs:
         run: pnpm -r typecheck
       - name: Lint
         run: pnpm -r lint
-      - name: Format check
+      # BOTH halves. `pnpm -r` skips the workspace root, and every package's
+      # own glob is source-only, so without the root gate the stylesheets, the
+      # workflows, the changesets and every package.json are format-checked by
+      # nothing in CI.
+      - name: Format check (packages)
         run: pnpm -r format:check
+      - name: Format check (root)
+        run: pnpm format:check
       - name: Test
         run: pnpm -r test --coverage
 

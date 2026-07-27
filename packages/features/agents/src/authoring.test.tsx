@@ -588,6 +588,28 @@ describe('authored-agents list', () => {
     expect(screen.queryByText('No authorable agent installed')).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['a 500', new ApiError('presets exploded', 500)],
+    ['a network drop', new TypeError('Failed to fetch')],
+  ])(
+    'surfaces %s from the presets read instead of degrading it to absence',
+    async (_label, rejection) => {
+      // Only the scoped-caller 403 is absence. Every other class is a real failure and
+      // must SAY so — silently rendering "No authored agents yet" tells the operator the
+      // deployment has no authored agents when the read simply never landed.
+      renderWithProviders(
+        <AgentsPage />,
+        authoredClient({ listPresets: () => Promise.reject(rejection) }),
+      );
+
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent(rejection.message);
+      // The list itself is NOT walled — the agents read succeeded, so it still renders.
+      expect(screen.getByRole('heading', { name: 'Authored agents' })).toBeInTheDocument();
+      expect(screen.queryByText('No authorable agent installed')).not.toBeInTheDocument();
+    },
+  );
+
   it('resolves an authored agent whose base agent tool_name differs from its registration name', async () => {
     // base_tool is the registration name, so the list must map it back by name, not
     // tool_name — otherwise a divergent-name agent's authored rows vanish.
