@@ -118,6 +118,7 @@
   .tai-card-interactive:focus-visible,
   .tai-scroll-region:focus-visible,
   .tai-code-block:focus-visible,
+  .tai-prose a:focus-visible,
   .tai-prose pre:focus-visible,
   .tai-drawer:focus-visible,
   .tai-dialog:focus-visible {
@@ -402,6 +403,10 @@
      publish that measurement. */
   .tai-select-content {
     z-index: var(--tai-z-popover);
+    /* Capped against the VIEWPORT as well as its own content, like every other
+       floating surface: the width is set by the longest option label, which is
+       caller data and can exceed a 320 px screen on its own. */
+    max-width: min(20rem, calc(100vw - 2 * var(--tai-space-4)));
     max-height: min(18rem, var(--radix-select-content-available-height, 60vh));
     overflow-y: auto;
     padding: var(--tai-space-1);
@@ -1145,6 +1150,14 @@
     line-height: 1.25;
   }
 
+  /* A server error is arbitrary text: a URL, a token, a base64 body. Without a
+     break rule an unbroken run pushes the page sideways and the tail of the only
+     message the operator has goes off-screen. */
+  .tai-error-state,
+  .tai-warn-state {
+    overflow-wrap: anywhere;
+  }
+
   .tai-error-state {
     padding: var(--tai-space-4);
     background: var(--tai-color-err-tint);
@@ -1353,6 +1366,14 @@
     align-items: center;
     gap: var(--tai-space-3);
     flex-wrap: wrap;
+  }
+
+  /* A flex item's default `min-width: auto` refuses to shrink below its own
+     content, so server text in a row — an origin, a failure message — pushes the
+     row wider than its container instead of wrapping inside it. */
+  .tai-row > .tai-muted {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .tai-page-header {

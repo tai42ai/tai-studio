@@ -34,6 +34,14 @@ const rules: Rule[] = [...stylesheet.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((mat
   body: match[2] ?? '',
 }));
 
+/** A comma group split into its individual selectors, blanks dropped. */
+function selectorsOf(selector: string): string[] {
+  return selector
+    .split(',')
+    .map((one) => one.trim())
+    .filter((one) => one !== '');
+}
+
 /** The rule declaring the shared ring — the one every focusable class shares. */
 const sharedRing = rules.filter((rule) => /outline:\s*2px solid/.test(rule.body));
 
@@ -51,16 +59,46 @@ describe('visible focus', () => {
   });
 
   it('keys every selector sharing the ring on :focus-visible', () => {
-    const notKeyed = (sharedRing[0]?.selector ?? '')
-      .split(',')
-      .map((selector) => selector.trim())
-      .filter((selector) => selector !== '' && !selector.endsWith(':focus-visible'));
+    const notKeyed = selectorsOf(sharedRing[0]?.selector ?? '').filter(
+      (selector) => !selector.endsWith(':focus-visible'),
+    );
 
     expect(notKeyed).toEqual([]);
   });
 
-  it('gives the Select option a ring, since Radix moves DOM focus onto it', () => {
-    expect(sharedRing[0]?.selector).toContain('.tai-select-item:focus-visible');
+  it('puts every interactive class in the shared ring', () => {
+    // Naming ONE class here would let the other nineteen be deleted from the
+    // rule with every test still green. The list is the design system's own
+    // set of keyboard-reachable surfaces; a new one is added here deliberately.
+    const RING_BEARERS = [
+      '.tai-btn',
+      '.tai-icon-btn',
+      '.tai-link',
+      '.tai-input',
+      '.tai-textarea',
+      '.tai-select-trigger',
+      // Radix moves DOM focus onto the highlighted option, so it needs a ring.
+      '.tai-select-item',
+      '.tai-checkbox',
+      '.tai-radio',
+      '.tai-segment',
+      '.tai-chip',
+      '.tai-tab',
+      '.tai-nav-item',
+      '.tai-nav-link',
+      '.tai-skip-link',
+      '.tai-card-interactive',
+      '.tai-scroll-region',
+      '.tai-code-block',
+      '.tai-prose a',
+      '.tai-prose pre',
+      '.tai-drawer',
+      '.tai-dialog',
+    ];
+    const keyed = new Set(selectorsOf(sharedRing[0]?.selector ?? ''));
+    const missing = RING_BEARERS.filter((name) => !keyed.has(`${name}:focus-visible`));
+
+    expect(missing).toEqual([]);
   });
 
   it('never cancels the outline for a state that can be keyboard focus', () => {
@@ -68,9 +106,17 @@ describe('visible focus', () => {
     // the element is focus-visible. Radix's `data-highlighted` is stamped for
     // pointer hover AND keyboard movement alike, so a bare `[data-highlighted]`
     // cancellation takes the ring off the keyboard case too.
+    //
+    // The guard is checked PER SELECTOR: in a comma group, one guarded member
+    // would otherwise launder every unguarded sibling beside it. And the
+    // cancellation is matched on the longhands and the zero-with-a-unit
+    // spellings too, since `outline-width: 0` removes the ring just as
+    // completely as `outline: none`.
+    const CANCELS_OUTLINE =
+      /outline(-width|-style|-color)?\s*:\s*(none|0(px|em|rem|%)?|transparent)\s*(;|$)/;
     const unguarded = rules
-      .filter((rule) => /outline:\s*(none|0)\b/.test(rule.body))
-      .map((rule) => rule.selector)
+      .filter((rule) => CANCELS_OUTLINE.test(rule.body))
+      .flatMap((rule) => selectorsOf(rule.selector))
       .filter((selector) => !selector.includes(':not(:focus-visible)'));
 
     expect(unguarded).toEqual([]);

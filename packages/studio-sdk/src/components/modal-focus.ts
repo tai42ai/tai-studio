@@ -42,12 +42,15 @@ export function useModalFocusReturn(hasTrigger: boolean): ModalFocusReturnHandle
     onCloseAutoFocus: (event: Event): void => {
       if (hasTrigger) return;
       const opener = openerRef.current;
-      // A row action that deleted its own row is gone by now; focusing a
-      // detached node moves nothing, so leave Radix's behaviour alone instead of
-      // cancelling a restore we cannot complete.
-      if (opener?.isConnected !== true) return;
-      event.preventDefault();
+      if (opener === null) return;
+      // Try FIRST, then decide. The remembered opener may have been removed by
+      // the very action this modal confirmed, or left disabled or hidden by it,
+      // and focusing any of those moves nothing. Cancelling Radix's restore is
+      // only justified once the focus has actually landed — testing
+      // `isConnected` alone would claim the restore for a disabled opener and
+      // strand the reader on `<body>`, which is the failure being fixed.
       opener.focus();
+      if (opener.ownerDocument.activeElement === opener) event.preventDefault();
     },
   };
 }

@@ -25,7 +25,10 @@ export interface ProgressBarProps {
 function clampFraction(value: number, total: number): number {
   if (!(total > 0)) return 0;
   const fraction = value / total;
-  if (fraction < 0) return 0;
+  // Written as `>= 0` rather than `< 0` so that NaN — which compares false to
+  // everything, and would otherwise reach the width and the label as `NaN%` —
+  // falls through to the floor.
+  if (!(fraction >= 0)) return 0;
   if (fraction > 1) return 1;
   return fraction;
 }
@@ -58,7 +61,10 @@ export function ProgressBar({ value = 0, total, message }: ProgressBarProps): Re
         className="tai-progress-track"
         aria-valuemin={0}
         aria-valuemax={determinate ? total : undefined}
-        aria-valuenow={determinate ? value : undefined}
+        // The clamped value, not the raw prop: a bar drawn full while it
+        // announces `aria-valuenow="99"` against `aria-valuemax="10"` tells a
+        // screen-reader user something the screen does not.
+        aria-valuenow={determinate && fraction !== undefined ? fraction * total : undefined}
         aria-label={message ?? 'Progress'}
       >
         {determinate ? (

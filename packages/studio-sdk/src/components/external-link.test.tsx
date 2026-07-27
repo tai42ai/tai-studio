@@ -24,7 +24,7 @@ describe('ExternalLinkButton', () => {
   it('renders a navigable anchor for an https URL', () => {
     render(<ExternalLinkButton url="https://example.com">Open</ExternalLinkButton>);
     const link = screen.getByRole('link', { name: 'Open' });
-    expect(link).toHaveAttribute('href', 'https://example.com');
+    expect(link).toHaveAttribute('href', 'https://example.com/');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveClass('tai-btn', 'tai-btn-secondary');

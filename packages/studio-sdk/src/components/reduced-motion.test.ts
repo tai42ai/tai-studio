@@ -56,7 +56,10 @@ function rules(source: string): Rule[] {
   }));
 }
 
-const keyframeNames = [...tokens.matchAll(/@keyframes\s+([\w-]+)/g)]
+// Harvested from BOTH sheets: a keyframe declared beside the class that uses it
+// is just as real as one in the token file, and would otherwise be invisible here.
+const keyframeNames = [tokens, components]
+  .flatMap((sheet) => [...sheet.matchAll(/@keyframes\s+([\w-]+)/g)])
   .map((match) => match[1])
   .filter((name): name is string => name !== undefined);
 const componentsReduced = reducedMotionBlock(components);
@@ -68,8 +71,13 @@ describe('reduced motion', () => {
   });
 
   it('stops every animation the design system starts', () => {
+    // The name may sit anywhere in the `animation` shorthand — `1s linear
+    // tai-shimmer` is as valid as `tai-shimmer 1s linear` — and may arrive
+    // through `animation-name` instead, so match the whole declaration value.
     const startsOne = (body: string): boolean =>
-      keyframeNames.some((name) => new RegExp(`animation:\\s*${name}\\b`).test(body));
+      keyframeNames.some((name) =>
+        new RegExp(`animation(-name)?\\s*:[^;]*\\b${name}\\b`).test(body),
+      );
 
     const stopped = new Set(
       rules(componentsReduced)

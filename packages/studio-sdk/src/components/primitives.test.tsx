@@ -88,7 +88,7 @@ describe('Button link variant', () => {
       </Button>,
     );
     const link = screen.getByRole('link', { name: 'Docs' });
-    expect(link).toHaveAttribute('href', 'https://example.com');
+    expect(link).toHaveAttribute('href', 'https://example.com/');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer external');
     expect(link).toHaveClass('tai-btn-primary');
@@ -210,5 +210,58 @@ describe('status/loading primitives', () => {
       expect(container.querySelector('.tai-card')).not.toBeNull();
       unmount();
     }
+  });
+});
+
+describe('Button link normalization', () => {
+  // The URL parser deletes ASCII tab/LF/CR before parsing, and for a scheme that
+  // matches the document's, the authority-less spelling is a PATH. Both make the
+  // raw string a different URL from the one the browser resolves, which is why
+  // the check and the anchor must both read the normalized form.
+  it.each([
+    ['/\t/evil.com'],
+    ['/\n/evil.com'],
+    ['/\r/evil.com'],
+    ['//evil.com'],
+    ['/\\evil.com'],
+    ['https:/evil.com'],
+    ['https:evil.com'],
+    ['javascript:alert(1)'],
+    ['JAVASCRIPT:alert(1)'],
+    ['java\tscript:alert(1)'],
+    ['vbscript:x'],
+    ['blob:https://a/b'],
+    ['page.html'],
+  ])('neutralizes %j instead of rendering a live anchor', (href) => {
+    const { container } = render(<Button href={href}>go</Button>);
+    expect(container.querySelector('a')).toBeNull();
+    expect(container.querySelector('[data-neutralized="true"]')).not.toBeNull();
+  });
+
+  it('keeps a neutralized icon-only link nameable', () => {
+    render(
+      <Button href="javascript:alert(1)" aria-label="Open docs" id="docs-link">
+        <svg />
+      </Button>,
+    );
+    const blocked = screen.getByLabelText('Open docs');
+    expect(blocked).toHaveAttribute('id', 'docs-link');
+    expect(blocked).toHaveAttribute('data-neutralized', 'true');
+  });
+
+  it('renders the normalized absolute URL it validated', () => {
+    render(<Button href={'  https://example.com/a\tb  '}>go</Button>);
+    const anchor = screen.getByRole('link', { name: 'go' });
+    expect(anchor).toHaveAttribute('href', 'https://example.com/ab');
+    expect(anchor).toHaveAttribute('rel', 'noopener noreferrer external');
+  });
+
+  it('pins rel on an internal link a caller opens in a new tab', () => {
+    render(
+      <Button href="/tools" target="_blank">
+        go
+      </Button>,
+    );
+    expect(screen.getByRole('link', { name: 'go' })).toHaveAttribute('rel', 'noopener noreferrer');
   });
 });
