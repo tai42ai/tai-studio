@@ -54,16 +54,18 @@
   }
 }
 
-/* Loading skeleton: the raised band sweeps across the LINE-tone ground the
-   block rests at, which is what makes a placeholder read as pending rather than
-   as empty content. Both ends of that gradient are the block's resting tone, so
-   the sweep adds a band rather than fading the block into the page. */
+/* Loading skeleton: a raised band sweeps across the LINE-tone ground the block
+   rests at, which is what makes a placeholder read as pending rather than as
+   empty content. The band is an OVERLAY (`.tai-skeleton::after` in
+   `components.css`) travelling on `transform`, so the block itself never moves
+   and the browser can carry the sweep on the compositor instead of restyling
+   and repainting every skeleton on the page each frame. */
 @keyframes tai-shimmer {
   from {
-    background-position: 200% 0;
+    transform: translateX(-100%);
   }
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 

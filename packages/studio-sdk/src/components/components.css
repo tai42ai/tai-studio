@@ -1131,23 +1131,39 @@
   }
 
   /* -- Feedback surfaces --------------------------------------------------------- */
-  /* The block rests at the LINE tone and sweeps the raised tone across it. Both
-     ends of the gradient are the tone the reduced-motion rule below parks it at,
-     so the moving and the parked skeleton are the same block — one with a band
+  /* The block rests at the LINE tone and sweeps the raised tone across it. That
+     resting tone is also what the reduced-motion rule below leaves behind, so
+     the moving and the parked skeleton are the same block — one with a band
      travelling over it. Basing it on `surface` instead put the whole block a
      step from the page ground (1.05:1 light, 1.07:1 dark — no visible band at
      all, and dimmer than the parked state it was meant to enrich); on the line
      tone the band reads at 1.24:1 light and 1.22:1 dark, and the block itself at
-     1.24:1 / 1.38:1 against the ground it sits on. */
+     1.24:1 / 1.38:1 against the ground it sits on.
+     `overflow: hidden` is what clips the band to the block's rounded corners. */
   .tai-skeleton {
+    position: relative;
+    overflow: hidden;
     border-radius: var(--tai-radius-sm);
+    background: var(--tai-color-border);
+  }
+
+  /* The band rides on an overlay rather than on the block's own
+     `background-position`: a background-position animation restyles and repaints
+     the block on the main thread every frame, for every skeleton on the page,
+     while a transform on an absolutely-positioned overlay is composited off it.
+     Both ends of the gradient are fully transparent, so what shows through at the
+     band's edges is the block's own resting tone — the sweep adds a streak rather
+     than fading the block into the page. */
+  .tai-skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
     background: linear-gradient(
       90deg,
-      var(--tai-color-border) 0%,
+      transparent 0%,
       var(--tai-color-surface-raised) 50%,
-      var(--tai-color-border) 100%
+      transparent 100%
     );
-    background-size: 200% 100%;
     animation: tai-shimmer 1.4s linear infinite;
   }
 
@@ -1758,19 +1774,19 @@
      nothing either way — it is a visual placeholder only, which is why the rule
      below keeps it a visible block rather than relying on it being announced.) */
   @media (prefers-reduced-motion: reduce) {
-    .tai-skeleton,
+    .tai-skeleton::after,
     .tai-spinner,
     .tai-progress-fill-indeterminate {
       animation: none;
     }
 
-    /* The sweep is what made the block read as pending. Parked, the gradient
-       would freeze wherever its band happened to be; the flat line tone is the
-       same tone both ends of that gradient rest at, so the block is exactly the
-       moving skeleton with the band taken away — still visibly THERE, and at the
-       same contrast, without moving. */
-    .tai-skeleton {
-      background: var(--tai-color-border);
+    /* The sweep is what made the block read as pending. Stopping the overlay
+       where it stands would freeze the band across the block, so the overlay
+       goes entirely: what is left is the flat line tone the band rides over, so
+       the block is exactly the moving skeleton with the band taken away — still
+       visibly THERE, and at the same contrast, without moving. */
+    .tai-skeleton::after {
+      display: none;
     }
 
     /* Without the sweep, a short fill parked at one end says nothing, so the

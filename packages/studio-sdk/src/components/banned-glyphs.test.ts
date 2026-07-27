@@ -56,35 +56,38 @@ const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 
 const BANNED_GLYPHS = '▲▼▾↗→✓×';
 
 /**
- * The HTML character references React renders as those same glyphs. An entity is
- * neither of the stated blind spots — it is a LITERAL in the source, and it
- * paints the banned mark — so `<button>&times;</button>` restored the exact
- * defect the four cleared sites had, with no banned code point in the file for
- * either detector to find. Named and numeric forms both; decoded before scanning.
+ * The NAMED references the toolchain actually decodes to a banned glyph.
+ *
+ * It is exactly two. Verified against the transform this repo ships
+ * (`esbuild@0.25.12`, Vite's JSX loader): `&times;` and `&rarr;` decode, while
+ * `&check;` `&checkmark;` `&nearr;` `&srarr;` pass through as literal text and
+ * paint their own spelling, so listing them would redden source that renders
+ * nothing banned. Named references are also case-SENSITIVE, which is why the
+ * match below is not `i`: `&NEARR;` is not a reference at all.
+ *
+ * A reference is neither of the stated blind spots — it is a LITERAL in the
+ * source, and it paints the banned mark — so `<button>&times;</button>` restores
+ * the exact defect the four cleared sites had, with no banned code point in the
+ * file for either detector to find. Both forms are decoded before scanning.
  */
 const GLYPH_ENTITIES: Readonly<Record<string, string>> = {
   '&times;': '×',
-  '&#215;': '×',
-  '&#xd7;': '×',
-  '&check;': '✓',
-  '&checkmark;': '✓',
-  '&#10003;': '✓',
-  '&#x2713;': '✓',
   '&rarr;': '→',
-  '&srarr;': '→',
-  '&#8594;': '→',
-  '&#x2192;': '→',
-  '&nearr;': '↗',
-  '&neArr;': '↗',
-  '&#8599;': '↗',
-  '&#x2197;': '↗',
-  '&#9650;': '▲',
-  '&#x25b2;': '▲',
-  '&#9660;': '▼',
-  '&#x25bc;': '▼',
-  '&#9662;': '▾',
-  '&#x25be;': '▾',
 };
+
+/**
+ * Every NUMERIC character reference, decimal or hexadecimal.
+ *
+ * Numeric references are not enumerable: `&#215;` `&#x00d7;` `&#0000215;` all
+ * paint `×` and all are legal, so a map of exact spellings is a hole with as
+ * many entrances as there are leading zeros. They are PARSED instead — the map
+ * above is left holding only the named references, which genuinely are a finite
+ * list.
+ */
+const NUMERIC_REFERENCE = /&#(x?)([0-9a-f]+);/gi;
+
+/** Whitespace-painting references, so a glyph padded with one is still alone. */
+const SPACE_REFERENCE = /&(?:nbsp|#0*160|#x0*a0);/gi;
 
 /**
  * Rewrites every banned character reference to the glyph it paints, so both
@@ -92,9 +95,13 @@ const GLYPH_ENTITIES: Readonly<Record<string, string>> = {
  * — no detector here reports an offset, only a file and a snippet.
  */
 function decodeGlyphEntities(source: string): string {
-  let out = source;
+  let out = source.replaceAll(NUMERIC_REFERENCE, (whole, hex: string, digits: string) => {
+    const code = Number.parseInt(digits, hex === '' ? 10 : 16);
+    const glyph = String.fromCodePoint(code);
+    return BANNED_GLYPHS.includes(glyph) ? glyph : whole;
+  });
   for (const [entity, glyph] of Object.entries(GLYPH_ENTITIES)) {
-    out = out.replaceAll(new RegExp(entity.replace('&', '&'), 'gi'), glyph);
+    out = out.replaceAll(entity, glyph);
   }
   return out;
 }
@@ -185,8 +192,35 @@ export function stripComments(source: string): string {
   return out;
 }
 
-/** JSX text between two tags that is nothing but banned glyphs and whitespace. */
-const JSX_SOLE_GLYPH = new RegExp(`>(\\s*[${BANNED_GLYPHS}][${BANNED_GLYPHS}\\s]*)<`, 'g');
+/** The text between two tags. What it RENDERS as is decided by the caller. */
+const JSX_TEXT_RUN = />([^<>]*)</g;
+
+/**
+ * A JSX expression container holding nothing but a whitespace string literal.
+ * It renders as a space and nothing else.
+ *
+ * Prettier emits exactly this form for a JSX text run's TRAILING space, so it
+ * appears beside a glyph without any author choosing to write it: a glyph
+ * followed by a space becomes that glyph followed by this container the moment
+ * the file is formatted. A detector requiring the whole run between the tags to
+ * be glyphs-and-whitespace therefore stops seeing the glyph as soon as the
+ * formatter touches the line, with the banned code point still in the file.
+ */
+const SPACE_EXPRESSION = /\{\s*(['"`])(?:\s|\\u0*a0|\\t|\\n)*\1\s*\}/g;
+
+/**
+ * What a JSX text run paints, near enough to judge a lone glyph by: the forms
+ * that render as whitespace collapsed to whitespace.
+ */
+function renderedJsxText(run: string): string {
+  return run.replaceAll(SPACE_EXPRESSION, ' ').replaceAll(SPACE_REFERENCE, ' ');
+}
+
+/** A run that paints at least one banned glyph and nothing else but whitespace. */
+const RENDERS_GLYPHS_ONLY = new RegExp(
+  `^[${BANNED_GLYPHS}\\s]*[${BANNED_GLYPHS}][${BANNED_GLYPHS}\\s]*$`,
+  'u',
+);
 
 /** A single- or double-quoted string, or a substitution-free template. */
 const STRING_LITERAL = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\$]|\\.)*)`/g;
@@ -204,10 +238,13 @@ function lineAt(text: string, offset: number): number {
 
 /** Glyphs standing as an element's whole rendered text. `code` must be comment-free. */
 export function jsxSoleGlyphHits(code: string): { line: number; text: string }[] {
-  return [...code.matchAll(JSX_SOLE_GLYPH)].map((match) => ({
-    line: lineAt(code, match.index),
-    text: (match[1] ?? '').trim(),
-  }));
+  const hits: { line: number; text: string }[] = [];
+  for (const match of code.matchAll(JSX_TEXT_RUN)) {
+    const painted = renderedJsxText(match[1] ?? '');
+    if (!RENDERS_GLYPHS_ONLY.test(painted)) continue;
+    hits.push({ line: lineAt(code, match.index), text: painted.trim() });
+  }
+  return hits;
 }
 
 /** String literals that hold nothing but glyphs. `code` must be comment-free. */
@@ -323,7 +360,10 @@ describe('banned glyphs', () => {
     // An entity is a literal in the source that paints the banned mark, so it is
     // neither stated blind spot — and it evaded both detectors, because the file
     // then carries no banned code point at all.
-    for (const entity of ['&times;', '&#215;', '&#x2713;', '&rarr;', '&NEARR;']) {
+    // The numeric forms are PARSED, not listed: leading zeros are legal in both
+    // spellings and the toolchain decodes them, so an enumeration of exact
+    // spellings has an entrance per zero.
+    for (const entity of ['&times;', '&#215;', '&#00215;', '&#x2713;', '&#x0002713;', '&rarr;']) {
       const markup = `<button type="button">${entity}</button>`;
       expect([entity, jsxSoleGlyphHits(decodeGlyphEntities(markup)).length]).toEqual([entity, 1]);
     }
@@ -331,7 +371,33 @@ describe('banned glyphs', () => {
     expect(
       glyphOnlyLiteralHits(decodeGlyphEntities("const MARK = '&times;';")).map((hit) => hit.text),
     ).toEqual(['×']);
-    // Negative control: an entity that is not a banned glyph stays untouched.
-    expect(decodeGlyphEntities('&amp; &nbsp; &larr;')).toBe('&amp; &nbsp; &larr;');
+    // Negative control: anything the toolchain does NOT decode to a banned glyph
+    // stays untouched, or the gate reddens source that renders nothing banned.
+    // `&neArr;` is U+21D7 (⇗), not the banned U+2197; `&TIMES;` is not a
+    // reference at all (named references are case-sensitive); and `&check;`,
+    // `&checkmark;`, `&nearr;` and `&srarr;` are passed through verbatim by the
+    // JSX transform this repo ships, so each paints its own spelling.
+    const untouched =
+      '&amp; &nbsp; &larr; &#8592; &neArr; &TIMES; &check; &checkmark; &nearr; &srarr;';
+    expect(decodeGlyphEntities(untouched)).toBe(untouched);
+  });
+
+  it('sees a glyph that a whitespace form is standing next to', () => {
+    // The run between the tags is no longer required to be glyphs-and-whitespace:
+    // one adjacent character used to kill the match, and `{' '}` is the form
+    // PRETTIER emits for a trailing JSX space — so formatting a line could hide a
+    // literal banned code point that is still sitting in the file.
+    for (const padded of [
+      '<button type="button">×{\' \'}</button>',
+      '<button type="button">{\' \'}×</button>',
+      '<button type="button">×&nbsp;</button>',
+      '<button type="button">&nbsp;×&nbsp;</button>',
+      '<button type="button">×{" "}</button>',
+    ]) {
+      expect([padded, jsxSoleGlyphHits(decodeGlyphEntities(padded)).length]).toEqual([padded, 1]);
+    }
+    // Negative control: a glyph beside real text is prose, not an icon stand-in.
+    expect(jsxSoleGlyphHits('<span>3 × 4</span>')).toEqual([]);
+    expect(jsxSoleGlyphHits('<span>{count}</span>')).toEqual([]);
   });
 });

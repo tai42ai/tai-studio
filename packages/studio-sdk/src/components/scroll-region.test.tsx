@@ -20,6 +20,13 @@ function codeBlock(container: HTMLElement): HTMLElement {
   return pre;
 }
 
+/** The nth element of `list`, failing loudly rather than typing around a hole. */
+function nth<T>(list: readonly T[], index: number): T {
+  const item = list[index];
+  if (item === undefined) throw new Error(`nothing at index ${String(index)}`);
+  return item;
+}
+
 /** Flips the region's measured overflow and lets its observer see the change. */
 function setOverflowing(region: HTMLElement, overflowing: boolean): void {
   setElementOverflow(region, overflowing);
@@ -74,6 +81,57 @@ describe('ScrollRegion', () => {
     const region = screen.getByRole('region', { name: 'Tool results' });
     expect(region).toHaveClass('tai-scroll-region');
     expect(region).toHaveAttribute('tabindex', '0');
+  });
+
+  it('registers every scrolling box on ONE shared ResizeObserver', () => {
+    // `useOverflowRegion` is per-INSTANCE: a timeline renders two code blocks
+    // per tool call and windows none of them, so an observer per mount grows
+    // with the content. Constructions are the observable difference, so they are
+    // what is pinned — and the count is taken as a DELTA, because the shared
+    // observer is built once on first use and may already exist.
+    const Native = globalThis.ResizeObserver;
+    let constructed = 0;
+    class CountingResizeObserver extends Native {
+      constructor(callback: ResizeObserverCallback) {
+        super(callback);
+        constructed += 1;
+      }
+    }
+    globalThis.ResizeObserver = CountingResizeObserver;
+
+    try {
+      render(
+        <ScrollRegion label="first">
+          <p>wide</p>
+        </ScrollRegion>,
+      );
+      const afterOne = constructed;
+
+      const { container } = render(
+        <>
+          {['second', 'third', 'fourth', 'fifth', 'sixth'].map((label) => (
+            <ScrollRegion key={label} label={label}>
+              <p>wide</p>
+            </ScrollRegion>
+          ))}
+        </>,
+      );
+      expect(constructed - afterOne).toBe(0);
+
+      // Sharing must not be bought by observing less: a resize of one box still
+      // has to reach that box's own measurement.
+      const boxes = [...container.querySelectorAll<HTMLElement>('.tai-scroll-region')];
+      expect(boxes).toHaveLength(5);
+      const third = nth(boxes, 2);
+      setElementOverflow(third, true);
+      act(() => {
+        flushResizeObserversFor(third);
+      });
+      expect(third).toHaveAttribute('role', 'region');
+      expect(boxes[0]).not.toHaveAttribute('role');
+    } finally {
+      globalThis.ResizeObserver = Native;
+    }
   });
 
   it('keeps the tab stop while it holds focus, and releases it on blur', () => {
@@ -467,5 +525,64 @@ describe('useProseScrollRegions', () => {
       flushResizeObservers();
     });
     expect(wrapper).not.toHaveAttribute('role');
+  });
+
+  it('re-measures only the surfaces a resize names, not the whole prose', () => {
+    const { container } = render(<ProseHost html={`${PRE_HTML}${PRE_HTML}`} />);
+    const surfaces = [...container.querySelectorAll<HTMLElement>('pre')];
+    expect(surfaces).toHaveLength(2);
+    const first = nth(surfaces, 0);
+    const second = nth(surfaces, 1);
+
+    // Both surfaces now overflow, but only ONE of them resized. A callback that
+    // re-runs the whole instrumentation pass measures both and names both; an
+    // observer that answers the elements it was handed names only the one that
+    // moved. On a long document that difference is a full subtree re-query per
+    // resize frame.
+    setElementOverflow(first, true);
+    setElementOverflow(second, true);
+    act(() => {
+      flushResizeObserversFor(first);
+    });
+
+    expect(first).toHaveAttribute('role', 'region');
+    expect(second).not.toHaveAttribute('role');
+  });
+
+  it('reads every surface before it writes any, so a pass costs one layout', () => {
+    const { container } = render(<ProseHost html={`${PRE_HTML}${PRE_HTML}${PRE_HTML}`} />);
+    const surfaces = [...container.querySelectorAll<HTMLElement>('pre')];
+    expect(surfaces).toHaveLength(3);
+    for (const surface of surfaces) setElementOverflow(surface, true);
+
+    // `scrollWidth` is the layout-forcing READ and `setAttribute` the WRITE that
+    // invalidates the layout it read. Taken surface by surface, every read after
+    // the first write forces the page to be laid out again — so the order the
+    // hook touches the DOM in IS the cost, and nothing else here would notice it
+    // changing.
+    const order: ('read' | 'write')[] = [];
+    for (const surface of surfaces) {
+      const width = Object.getOwnPropertyDescriptor(surface, 'scrollWidth')?.value as number;
+      Object.defineProperty(surface, 'scrollWidth', {
+        configurable: true,
+        get: () => {
+          order.push('read');
+          return width;
+        },
+      });
+      const write = surface.setAttribute.bind(surface);
+      surface.setAttribute = (name: string, value: string): void => {
+        order.push('write');
+        write(name, value);
+      };
+    }
+
+    act(() => {
+      flushResizeObservers();
+    });
+
+    expect(order.filter((one) => one === 'read')).toHaveLength(3);
+    expect(order.filter((one) => one === 'write').length).toBeGreaterThan(0);
+    expect(order.lastIndexOf('read')).toBeLessThan(order.indexOf('write'));
   });
 });

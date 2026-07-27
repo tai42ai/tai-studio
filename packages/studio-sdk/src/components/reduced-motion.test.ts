@@ -172,13 +172,31 @@ describe('reduced motion', () => {
   });
 
   it('leaves the parked skeleton a visible block rather than a fade-out', () => {
-    // Its resting gradient runs to the page ground at one end, so a skeleton
-    // frozen mid-sweep half-disappears instead of standing in for content.
-    const skeleton = rules(componentsReduced).find(
+    // The band is an overlay over a flat block. Two things keep the parked state
+    // legible, and each is one deletable declaration: the block underneath must
+    // carry a flat tone of its own (a gradient there would half-disappear the
+    // moment the sweep stopped), and the overlay must be REMOVED rather than
+    // stopped, or the band freezes across the middle of the placeholder.
+    const block = rules(components).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton',
     );
-    expect(skeleton?.body).toMatch(/background:\s*var\(--tai-color-[\w-]+\)/);
-    expect(skeleton?.body).not.toContain('gradient');
+    expect(block, 'no .tai-skeleton rule in components.css').toBeDefined();
+    expect(block?.body).toMatch(/background:\s*var\(--tai-color-[\w-]+\)\s*;/);
+    expect(block?.body).not.toContain('gradient');
+
+    const parkedOverlay = rules(componentsReduced).find((rule) =>
+      rule.selectors.includes('.tai-skeleton::after'),
+    );
+    expect(
+      parkedOverlay,
+      'the reduced-motion block never names .tai-skeleton::after',
+    ).toBeDefined();
+    expect(
+      rules(componentsReduced)
+        .filter((rule) => rule.selectors.includes('.tai-skeleton::after'))
+        .map((rule) => rule.body)
+        .join(''),
+    ).toMatch(/display:\s*none/);
   });
 
   it('fills the indeterminate track, so a parked bar is not read as a value', () => {
@@ -197,14 +215,48 @@ describe('reduced motion', () => {
 
   it('keeps the shimmer a sweep rather than a fade, so stopping it is what changes', () => {
     // The keyframe named here was an opacity pulse once: it dimmed the block
-    // without moving the gradient, so the skeleton read as fading rather than
+    // without moving the band, so the skeleton read as fading rather than
     // loading. Every check above is satisfied by that defect — it stops an
     // animation just as well — so the sweep itself has to be asserted, or the
     // original bug can be reintroduced under the same name with this suite green.
     const open = tokens.indexOf('@keyframes tai-shimmer');
     expect(open).toBeGreaterThan(-1);
     const body = blockAt(tokens, tokens.indexOf('{', open));
-    expect(body).toMatch(/background-position\s*:/);
     expect(body).not.toMatch(/opacity\s*:/);
+
+    // A sweep TRAVELS: both stops translate, and to opposite sides, or the band
+    // sits still while claiming to move.
+    const offsets = [...body.matchAll(/transform:\s*translateX\(\s*(-?\d*\.?\d+)%\s*\)/g)].map(
+      (match) => Number(match[1]),
+    );
+    expect(offsets).toHaveLength(2);
+    expect(Math.min(...offsets)).toBeLessThan(0);
+    expect(Math.max(...offsets)).toBeGreaterThan(0);
+  });
+
+  it('moves the band and not the block, and clips it to the block', () => {
+    // `tai-shimmer` translates whatever runs it. Run on `.tai-skeleton` itself
+    // the placeholder slides out of its own layout box — the block leaves the
+    // page instead of a band crossing it — and every assertion above still
+    // passes, because it is still an animation that reduced motion stops. So the
+    // three declarations that make the sweep an OVERLAY are pinned here: the
+    // animation belongs to a pseudo-element, that pseudo-element is taken out of
+    // flow, and the block clips it.
+    const runners = rules(components)
+      .filter((rule) => /animation(-name)?\s*:[^;]*\btai-shimmer\b/.test(rule.body))
+      .flatMap((rule) => rule.selectors);
+    expect(runners.length).toBeGreaterThan(0);
+    expect(runners.filter((selector) => !/::(after|before)$/.test(selector))).toEqual([]);
+
+    const overlay = rules(components).find(
+      (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton::after',
+    );
+    expect(overlay?.body).toMatch(/position:\s*absolute/);
+
+    const block = rules(components).find(
+      (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton',
+    );
+    expect(block?.body).toMatch(/position:\s*relative/);
+    expect(block?.body).toMatch(/overflow:\s*hidden/);
   });
 });

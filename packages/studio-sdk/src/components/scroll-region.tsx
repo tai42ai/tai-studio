@@ -65,6 +65,65 @@ function needsRegion(element: HTMLElement): boolean {
   return overflows(element) || element.ownerDocument.activeElement === element;
 }
 
+/**
+ * ONE `ResizeObserver` for every scrolling box in the document, rather than one
+ * per mount.
+ *
+ * `useOverflowRegion` is per-INSTANCE — a timeline renders two `CodeBlock`s per
+ * tool call and windows none of them — so an observer per mount grows with the
+ * content, and each one is a separate callback the browser schedules and a
+ * separate registration it maintains. A single observer costs one of each
+ * however many boxes are on screen, and the callback still only measures the
+ * boxes whose entries it was handed. (`useProseScrollRegions` keeps its own
+ * observer: there is one of it per rendered document, not one per surface, and
+ * its callback drives DOM writes rather than a React state setter.)
+ *
+ * Created on first use, because the module is imported in environments that have
+ * no `ResizeObserver` at all until a test installs one.
+ */
+type ResizeHandler = () => void;
+
+/**
+ * The handlers waiting on each observed element. A SET, not a single handler:
+ * one element can be both a box and another box's child — a `<pre>` inside a
+ * `ScrollRegion` is exactly that — and both owners must still hear its resize.
+ */
+const resizeHandlers = new WeakMap<Element, Set<ResizeHandler>>();
+let sharedObserver: ResizeObserver | undefined;
+
+function sharedResizeObserver(): ResizeObserver {
+  sharedObserver ??= new ResizeObserver((entries) => {
+    // A box and its children are observed separately, so one frame can deliver
+    // several entries owned by the same handler; measuring once is enough.
+    const fired = new Set<ResizeHandler>();
+    for (const entry of entries) {
+      for (const handler of resizeHandlers.get(entry.target) ?? []) fired.add(handler);
+    }
+    for (const handler of fired) handler();
+  });
+  return sharedObserver;
+}
+
+function holdResizeTarget(target: Element, handler: ResizeHandler): void {
+  let handlers = resizeHandlers.get(target);
+  if (handlers === undefined) {
+    handlers = new Set<ResizeHandler>();
+    resizeHandlers.set(target, handlers);
+  }
+  handlers.add(handler);
+  sharedResizeObserver().observe(target);
+}
+
+/** Stops observing `target` for `handler`, and entirely once nobody wants it. */
+function releaseResizeTarget(target: Element, handler: ResizeHandler): void {
+  const handlers = resizeHandlers.get(target);
+  if (handlers === undefined) return;
+  handlers.delete(handler);
+  if (handlers.size > 0) return;
+  resizeHandlers.delete(target);
+  sharedResizeObserver().unobserve(target);
+}
+
 /** The attribute set a scrolling box wears; every value is absent while it fits. */
 export interface OverflowRegionAttributes {
   readonly tabIndex?: 0;
@@ -80,11 +139,13 @@ export interface OverflowRegionAttributes {
  *
  * The box is measured on mount, whenever it or any child resizes, and whenever
  * its content changes — replaced, appended, or edited in place. A replaced child
- * is a NEW element, so the resize observer is re-pointed at the current children
- * before each measurement. Both observers live for the lifetime of the mount.
- * The only DOM change a measurement can cause is the region ATTRIBUTES this hook
- * returns, and attributes are deliberately left unobserved — that, not an absence
- * of mutation, is what stops the pair from re-triggering each other.
+ * is a NEW element, so the registration is re-pointed at the current children
+ * before each measurement; the resize side of that is a registration on the
+ * shared observer, not an observer of this mount's own. The content observer
+ * lives for the lifetime of the mount. The only DOM change a measurement can
+ * cause is the region ATTRIBUTES this hook returns, and attributes are
+ * deliberately left unobserved — that, not an absence of mutation, is what stops
+ * the pair from re-triggering each other.
  *
  * @param ref - the scrolling element.
  * @param label - its accessible name, applied only while it actually scrolls.
@@ -99,16 +160,19 @@ export function useOverflowRegion(
     const box = ref.current;
     if (box === null) return;
 
-    const resizeObserver = new ResizeObserver(() => {
+    const measure = (): void => {
       setScrollable(needsRegion(box));
-    });
+    };
 
-    // The box gives resize; its children give the overflowing width.
+    // The box gives resize; its children give the overflowing width. The shared
+    // observer is released target by target rather than disconnected, because
+    // every other scrolling box on the page is registered on the same one.
+    let observed: Element[] = [];
     const observeAll = (): void => {
-      resizeObserver.disconnect();
-      resizeObserver.observe(box);
-      for (const child of box.children) resizeObserver.observe(child);
-      setScrollable(needsRegion(box));
+      for (const target of observed) releaseResizeTarget(target, measure);
+      observed = [box, ...box.children];
+      for (const target of observed) holdResizeTarget(target, measure);
+      measure();
     };
 
     // The whole subtree, text included: content is as often EDITED IN PLACE — a
@@ -124,12 +188,13 @@ export function useOverflowRegion(
     // A stop held open only because the box had focus outlives its reason the
     // moment the reader leaves, so re-measure then and let it go.
     const releaseHeldStop = (): void => {
-      setScrollable(needsRegion(box));
+      measure();
     };
     box.addEventListener('blur', releaseHeldStop);
 
     return () => {
-      resizeObserver.disconnect();
+      for (const target of observed) releaseResizeTarget(target, measure);
+      observed = [];
       contentObserver.disconnect();
       box.removeEventListener('blur', releaseHeldStop);
     };
@@ -247,9 +312,19 @@ function labelledProseSurfaces(root: Element): LabelledProseSurface[] {
   return surfaces;
 }
 
+/** An instrumented prose surface, with the name it wears while it scrolls. */
+interface TrackedSurface {
+  readonly surface: HTMLElement;
+  readonly label: string;
+}
+
 /** Applies the same conditional attribute set `ScrollRegion` renders. */
-function applyScrollRegionAttributes(wrapper: HTMLElement, label: string): void {
-  if (needsRegion(wrapper)) {
+function applyScrollRegionAttributes(
+  wrapper: HTMLElement,
+  label: string,
+  scrolling: boolean,
+): void {
+  if (scrolling) {
     wrapper.setAttribute('tabindex', '0');
     wrapper.setAttribute('role', 'region');
     wrapper.setAttribute('aria-label', label);
@@ -258,6 +333,22 @@ function applyScrollRegionAttributes(wrapper: HTMLElement, label: string): void 
   wrapper.removeAttribute('tabindex');
   wrapper.removeAttribute('role');
   wrapper.removeAttribute('aria-label');
+}
+
+/**
+ * Re-applies the region attributes to `tracked`, reading ALL of them before
+ * writing any.
+ *
+ * `needsRegion` reads `scrollWidth`, which forces layout if anything has been
+ * written since the last one — so measuring and writing surface by surface makes
+ * the browser re-lay-out the prose once per surface, every time. Two phases cost
+ * one layout for the whole batch however many surfaces it holds.
+ */
+function refreshRegions(tracked: readonly TrackedSurface[]): void {
+  const scrolling = tracked.map((entry) => needsRegion(entry.surface));
+  for (const [index, entry] of tracked.entries()) {
+    applyScrollRegionAttributes(entry.surface, entry.label, scrolling[index] === true);
+  }
 }
 
 /**
@@ -290,20 +381,26 @@ export function useProseScrollRegions(
     const root = ref.current;
     if (root === null) return;
 
-    // Re-observing an element already under a ResizeObserver re-arms its initial
-    // notification, which would make each pass trigger the next one forever.
-    const observed = new WeakSet<Element>();
+    // Every observed element, mapped to the surface whose width it reports and
+    // that surface's current name. This is what lets a resize re-measure just
+    // the surfaces that moved: an observer callback carries the elements that
+    // resized, and each of them answers here with the region it belongs to.
+    // Membership doubles as the re-observation guard — re-observing an element
+    // already under a ResizeObserver re-arms its initial notification, which
+    // would make each pass trigger the next one forever.
+    const surfaceOf = new WeakMap<Element, TrackedSurface>();
 
     // The box gives resize; its children give the overflowing width. A table that
     // grows wider inside a parent-constrained wrapper resizes nothing else, so
     // watching the wrapper alone would freeze the mount-time measurement.
     const track = (element: HTMLElement, label: string): void => {
       for (const target of [element, ...element.children]) {
-        if (observed.has(target)) continue;
-        observed.add(target);
-        resizeObserver.observe(target);
+        const observed = surfaceOf.has(target);
+        // Rewritten even when already observed: a re-run may have found a new
+        // heading above the surface, and the name has to follow it.
+        surfaceOf.set(target, { surface: element, label });
+        if (!observed) resizeObserver.observe(target);
       }
-      applyScrollRegionAttributes(element, label);
     };
 
     // A pass over the whole subtree. It reads the observers declared below it —
@@ -318,18 +415,36 @@ export function useProseScrollRegions(
       // surfaces in it stay the same elements: wrapping moves a table one level
       // down, into a `div` standing exactly where the table stood, so neither
       // the remaining entries nor the names already computed for them change.
+      const tracked: TrackedSurface[] = [];
       for (const { element, heading } of labelledProseSurfaces(root)) {
-        if (element instanceof HTMLTableElement) {
-          track(ensureScrollWrapper(element), heading ?? tableLabel);
-          continue;
-        }
-        track(element, heading ?? preLabel);
+        const table = element instanceof HTMLTableElement;
+        const surface = table ? ensureScrollWrapper(element) : element;
+        const label = heading ?? (table ? tableLabel : preLabel);
+        track(surface, label);
+        tracked.push({ surface, label });
       }
+      // Wrapping is done for every surface before the first measurement, so the
+      // whole pass costs one layout rather than one per surface.
+      refreshRegions(tracked);
       mutationObserver.takeRecords();
       mutationObserver.observe(root, { childList: true, subtree: true });
     };
 
-    const resizeObserver = new ResizeObserver(instrument);
+    // Only the surfaces that actually resized are re-measured. Re-running the
+    // whole instrumentation pass from here re-queried the entire prose subtree
+    // on every resize frame, and a document with many surfaces spends that cost
+    // once per frame for the whole time a pane is being dragged.
+    const resizeObserver = new ResizeObserver((entries) => {
+      // A surface and its children are observed separately, so one frame can
+      // deliver several entries naming the same region; measuring it once is
+      // enough.
+      const affected = new Map<HTMLElement, TrackedSurface>();
+      for (const entry of entries) {
+        const tracked = surfaceOf.get(entry.target);
+        if (tracked !== undefined) affected.set(tracked.surface, tracked);
+      }
+      refreshRegions([...affected.values()]);
+    });
     const mutationObserver = new MutationObserver(instrument);
 
     // A stop held open only because the region had focus outlives its reason the
@@ -340,7 +455,12 @@ export function useProseScrollRegions(
     const releaseHeldStop = (event: FocusEvent): void => {
       const left = event.target;
       if (!(left instanceof HTMLElement)) return;
-      if (left.getAttribute('role') === 'region' && left.hasAttribute('tabindex')) instrument();
+      if (left.getAttribute('role') !== 'region' || !left.hasAttribute('tabindex')) return;
+      // The stop being released belongs to exactly one region, so re-measure
+      // that one rather than re-walking the prose. A region this hook did not
+      // instrument is not ours to release.
+      const tracked = surfaceOf.get(left);
+      if (tracked !== undefined) refreshRegions([tracked]);
     };
     root.addEventListener('focusout', releaseHeldStop);
 

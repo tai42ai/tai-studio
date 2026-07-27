@@ -83,10 +83,10 @@ layer, the icon set, and the layout primitives every screen builds on.
   it as the exported `EyeIcon` / `EyeOffIcon`. The Unicode glyphs that stood in for marks in `Checkbox`, `TagChips`, and
   `Select` are replaced by real icons.
 - **Removed:** `@keyframes tai-pulse`, which the loading skeleton was its only
-  user of. The skeleton builds a sweep gradient, so it now runs `tai-shimmer`,
-  which animates `background-position`; the opacity pulse never moved that
-  gradient. A plugin animating `tai-pulse` off the published `tokens.css` must
-  declare its own keyframe.
+  user of. The skeleton now runs `tai-shimmer`, which travels a gradient overlay
+  across the block on `transform`; the opacity pulse only dimmed the block and
+  never moved a band across it. A plugin animating `tai-pulse` off the published
+  `tokens.css` must declare its own keyframe.
 - **How both themes are verified.** The primitive suites no longer re-render each
   component a second time "in dark". `vitest.config.ts` sets `css: false`, so no
   stylesheet ever loads in jsdom: those 30 blocks stamped `data-theme` on a
