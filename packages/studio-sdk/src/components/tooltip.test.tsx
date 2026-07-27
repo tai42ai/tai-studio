@@ -1,13 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { Button } from './primitives';
 import { Tooltip } from './tooltip';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Tooltip', () => {
   it('shows tooltip content on focus with role=tooltip', async () => {
@@ -53,20 +49,17 @@ describe('Tooltip', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
-    it('renders its content and keeps the trigger accessible name', async () => {
-      document.documentElement.setAttribute('data-theme', theme);
-      const user = userEvent.setup();
-      render(
-        <Tooltip content="Runs the tool" delayDuration={0}>
-          <Button>Run</Button>
-        </Tooltip>,
-      );
-      await user.tab();
-      expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
-      const tip = await screen.findByRole('tooltip');
-      expect(tip).toHaveTextContent('Runs the tool');
-      expect(document.querySelector('.tai-tooltip')).toHaveTextContent('Runs the tool');
-    });
+  it('renders its content and keeps the trigger accessible name', async () => {
+    const user = userEvent.setup();
+    render(
+      <Tooltip content="Runs the tool" delayDuration={0}>
+        <Button>Run</Button>
+      </Tooltip>,
+    );
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
+    const tip = await screen.findByRole('tooltip');
+    expect(tip).toHaveTextContent('Runs the tool');
+    expect(document.querySelector('.tai-tooltip')).toHaveTextContent('Runs the tool');
   });
 });

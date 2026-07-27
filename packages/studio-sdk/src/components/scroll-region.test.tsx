@@ -28,6 +28,19 @@ function setOverflowing(region: HTMLElement, overflowing: boolean): void {
   });
 }
 
+/**
+ * Makes every instrumented surface in the tree overflow, so each one takes the
+ * name the pass computed for it. Use it when a case has more than one surface.
+ */
+function setEverythingOverflowing(container: HTMLElement): void {
+  for (const surface of container.querySelectorAll<HTMLElement>('.tai-scroll-region, pre')) {
+    setElementOverflow(surface, true);
+  }
+  act(() => {
+    flushResizeObservers();
+  });
+}
+
 describe('ScrollRegion', () => {
   it('is neither a tab stop nor a landmark while its content fits', () => {
     const { container } = render(
@@ -164,7 +177,7 @@ describe('ScrollRegion', () => {
     expect(region.style.maxWidth).toBe('20rem');
   });
 
-  it('renders its content and keeps its name under both themes', () => {
+  it('names an overflowing region and keeps its content inside it', () => {
     const { container } = render(
       <ScrollRegion label="Tool results">
         <p>body</p>
@@ -172,13 +185,9 @@ describe('ScrollRegion', () => {
     );
     setOverflowing(scrollRegion(container), true);
 
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const region = screen.getByRole('region', { name: 'Tool results' });
-      expect(region).toHaveClass('tai-scroll-region');
-      expect(within(region).getByText('body')).toBeInTheDocument();
-    }
-    document.documentElement.removeAttribute('data-theme');
+    const region = screen.getByRole('region', { name: 'Tool results' });
+    expect(region).toHaveClass('tai-scroll-region');
+    expect(within(region).getByText('body')).toBeInTheDocument();
   });
 });
 
@@ -190,6 +199,9 @@ function ProseHost({ html, labels }: { html: string; labels?: ProseScrollLabels 
 
 const TABLE_HTML = '<table><tbody><tr><td>cell</td></tr></tbody></table>';
 const PRE_HTML = '<pre><code>pnpm add @tai42/studio-sdk</code></pre>';
+/** A table whose own cell holds a heading — one that must not name the table. */
+const TABLE_WITH_HEADING_HTML =
+  '<table><tbody><tr><td><h3>Inner</h3>cell</td></tr></tbody></table>';
 
 describe('useProseScrollRegions', () => {
   it('wraps each injected table in a scroll region', () => {
@@ -218,6 +230,105 @@ describe('useProseScrollRegions', () => {
 
     setOverflowing(scrollRegion(container), true);
     expect(screen.getByRole('region', { name: 'Reference' })).toBeInTheDocument();
+  });
+
+  it('takes the LAST heading inside an earlier sibling, not the first', () => {
+    const { container } = render(
+      <ProseHost
+        html={`<section><h2>Reference</h2><p>text</p><h3>Options</h3><p>text</p></section><div>${TABLE_HTML}</div>`}
+      />,
+    );
+
+    setOverflowing(scrollRegion(container), true);
+    // The section the table follows ended in "Options": that is the section it
+    // belongs to, not the "Reference" the section opened with.
+    expect(screen.getByRole('region', { name: 'Options' })).toBeInTheDocument();
+  });
+
+  it('skips a blank heading and names the table after the section above it', () => {
+    const { container } = render(
+      <ProseHost html={`<h2>Options</h2><h3>   </h3><p>text</p>${TABLE_HTML}`} />,
+    );
+
+    setOverflowing(scrollRegion(container), true);
+    expect(screen.getByRole('region', { name: 'Options' })).toBeInTheDocument();
+  });
+
+  it('skips a blank heading that is the last one inside an earlier sibling', () => {
+    const { container } = render(
+      <ProseHost html={`<section><h2>Options</h2><h3>   </h3></section>${TABLE_HTML}`} />,
+    );
+
+    setOverflowing(scrollRegion(container), true);
+    expect(screen.getByRole('region', { name: 'Options' })).toBeInTheDocument();
+  });
+
+  it('never names a table after a heading inside the table itself', () => {
+    const { container } = render(<ProseHost html={`<h2>Options</h2>${TABLE_WITH_HEADING_HTML}`} />);
+
+    setOverflowing(scrollRegion(container), true);
+    // The cell's own heading comes AFTER the table starts, so it names nothing
+    // above it — the region belongs to the section the table sits in.
+    expect(screen.getByRole('region', { name: 'Options' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Inner' })).not.toBeInTheDocument();
+  });
+
+  it('falls back to the label when the only heading is inside the table', () => {
+    const { container } = render(<ProseHost html={TABLE_WITH_HEADING_HTML} />);
+
+    setOverflowing(scrollRegion(container), true);
+    expect(screen.getByRole('region', { name: 'README table' })).toBeInTheDocument();
+  });
+
+  it('lets a heading inside an earlier table name the surface that follows it', () => {
+    const { container } = render(<ProseHost html={`${TABLE_WITH_HEADING_HTML}${PRE_HTML}`} />);
+
+    setEverythingOverflowing(container);
+    expect(screen.getByRole('region', { name: 'Inner' })).toBe(codeBlock(container));
+  });
+
+  it('steps over a heading that ENCLOSES the table', () => {
+    const { container } = render(
+      <ProseHost html={`<h2>Above</h2><h2>Enclosing${TABLE_HTML}</h2>`} />,
+    );
+
+    setOverflowing(scrollRegion(container), true);
+    // A heading the table sits INSIDE is not a section it sits under.
+    expect(screen.getByRole('region', { name: 'Above' })).toBeInTheDocument();
+  });
+
+  it('names each surface after its own heading in a single pass', () => {
+    const { container } = render(
+      <ProseHost html={`<h2>Schema</h2>${TABLE_HTML}<h2>Install</h2>${PRE_HTML}`} />,
+    );
+
+    setEverythingOverflowing(container);
+    expect(screen.getByRole('region', { name: 'Schema' })).toBe(scrollRegion(container));
+    expect(screen.getByRole('region', { name: 'Install' })).toBe(codeBlock(container));
+  });
+
+  it('ignores a heading that precedes the instrumented root but sits outside it', () => {
+    function Sibling() {
+      const ref = useRef<HTMLDivElement>(null);
+      useProseScrollRegions(ref);
+      return (
+        <>
+          <h2>Outside</h2>
+          <div ref={ref} dangerouslySetInnerHTML={{ __html: TABLE_HTML }} />
+        </>
+      );
+    }
+    const { container } = render(<Sibling />);
+
+    setOverflowing(scrollRegion(container), true);
+    expect(screen.getByRole('region', { name: 'README table' })).toBeInTheDocument();
+  });
+
+  it('ignores a heading that only FOLLOWS the code block', () => {
+    const { container } = render(<ProseHost html={`${PRE_HTML}<h2>Later</h2>`} />);
+
+    setOverflowing(codeBlock(container), true);
+    expect(screen.getByRole('region', { name: 'README code block' })).toBeInTheDocument();
   });
 
   it('falls back to the README table label with no preceding heading', () => {

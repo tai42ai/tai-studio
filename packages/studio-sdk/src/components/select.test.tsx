@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Select } from './select';
 
@@ -8,10 +8,6 @@ const OPTIONS = [
   { value: '1', label: 'One' },
   { value: '2', label: 'Two' },
 ];
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Select', () => {
   it('renders a combobox showing the placeholder', () => {
@@ -114,17 +110,14 @@ describe('Select', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('Select under the %s theme', (theme) => {
-  it('renders the trigger and its popup and keeps the accessible name', async () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    const user = userEvent.setup();
-    render(<Select options={OPTIONS} aria-label="Number" placeholder="Pick one" />);
+it('renders the trigger and its popup and keeps the accessible name', async () => {
+  const user = userEvent.setup();
+  render(<Select options={OPTIONS} aria-label="Number" placeholder="Pick one" />);
 
-    const trigger = screen.getByRole('combobox', { name: 'Number' });
-    expect(trigger).toHaveClass('tai-select-trigger');
-    expect(trigger).toHaveTextContent('Pick one');
+  const trigger = screen.getByRole('combobox', { name: 'Number' });
+  expect(trigger).toHaveClass('tai-select-trigger');
+  expect(trigger).toHaveTextContent('Pick one');
 
-    await user.click(trigger);
-    expect(await screen.findByRole('option', { name: 'One' })).toHaveClass('tai-select-item');
-  });
+  await user.click(trigger);
+  expect(await screen.findByRole('option', { name: 'One' })).toHaveClass('tai-select-item');
 });

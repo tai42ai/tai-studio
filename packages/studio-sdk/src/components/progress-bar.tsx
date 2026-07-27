@@ -55,7 +55,13 @@ const labelRowStyle: CSSProperties = { justifyContent: 'space-between' };
  * indeterminate (no `aria-valuenow`, per ARIA).
  */
 export function ProgressBar({ value = 0, total, message }: ProgressBarProps): ReactNode {
-  const determinate = typeof total === 'number' && total > 0;
+  // A determinate bar has to announce a real `aria-valuemax`. `Number.isFinite`
+  // rather than `> 0` alone: `total={Infinity}` passes the positivity test but
+  // announces `aria-valuemax="Infinity"`, which is not a number any assistive
+  // technology can place `aria-valuenow` against, and draws a 0 % fill while
+  // announcing the raw value. An unbounded total is exactly the indeterminate
+  // case, so it renders as one.
+  const determinate = typeof total === 'number' && Number.isFinite(total) && total > 0;
   const fraction = determinate ? clampFraction(value, total) : undefined;
   const percent = fraction === undefined ? undefined : Math.round(fraction * 100);
 

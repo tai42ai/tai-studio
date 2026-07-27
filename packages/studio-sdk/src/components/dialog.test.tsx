@@ -1,14 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { Button } from './primitives';
 import { Dialog } from './dialog';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Dialog', () => {
   it('opens from its trigger and exposes an accessible modal labelled by its title', async () => {
@@ -136,19 +132,16 @@ describe('Dialog', () => {
     expect(overlay?.style.backgroundColor).toBe('');
   });
 
-  describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
-    it('renders its content and keeps its accessible name', () => {
-      document.documentElement.setAttribute('data-theme', theme);
-      render(
-        <Dialog title="Confirm delete" description="This cannot be undone" defaultOpen>
-          <p>body</p>
-        </Dialog>,
-      );
-      const dialog = screen.getByRole('dialog');
-      expect(dialog).toHaveAccessibleName('Confirm delete');
-      expect(dialog).toHaveClass('tai-dialog');
-      expect(screen.getByText('body')).toBeInTheDocument();
-      expect(document.querySelector('.tai-overlay')).not.toBeNull();
-    });
+  it('renders its content and keeps its accessible name', () => {
+    render(
+      <Dialog title="Confirm delete" description="This cannot be undone" defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleName('Confirm delete');
+    expect(dialog).toHaveClass('tai-dialog');
+    expect(screen.getByText('body')).toBeInTheDocument();
+    expect(document.querySelector('.tai-overlay')).not.toBeNull();
   });
 });

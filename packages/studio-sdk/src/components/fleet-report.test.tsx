@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { FleetReportSummary } from '@tai42/api-client';
 
 import { FleetReport } from './fleet-report';
@@ -11,10 +11,6 @@ function statusFor(alert: HTMLElement, label: RegExp): HTMLElement {
   expect(line.querySelector('svg')).not.toBeNull();
   return line;
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('FleetReport', () => {
   it('renders nothing for an absent report', () => {
@@ -171,23 +167,20 @@ describe('FleetReport', () => {
     expect(within(alert).getByText('RedisConnectionError: connection refused')).toBeInTheDocument();
   });
 
-  describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
-    it('keeps the alert, its mark and its per-origin labels', () => {
-      document.documentElement.setAttribute('data-theme', theme);
-      const summary: FleetReportSummary = {
-        status: 'degraded',
-        note: null,
-        failures: [{ origin: 'serve-a', outcome: 'failed', message: null }],
-        error: null,
-      };
-      render(<FleetReport summary={summary} />);
-      const alert = screen.getByRole('alert');
-      // A degraded fleet is a WARNING: panel and headline state one severity.
-      expect(alert).toHaveClass('tai-warn-state');
-      expect(alert).not.toHaveClass('tai-error-state');
-      expect(statusFor(alert, /did not converge/)).toHaveClass('tai-status-warn');
-      expect(statusFor(alert, /^apply failed$/)).toHaveClass('tai-status-err');
-      expect(within(alert).getByText('serve-a')).toHaveClass('tai-mono');
-    });
+  it('keeps the alert, its mark and its per-origin labels', () => {
+    const summary: FleetReportSummary = {
+      status: 'degraded',
+      note: null,
+      failures: [{ origin: 'serve-a', outcome: 'failed', message: null }],
+      error: null,
+    };
+    render(<FleetReport summary={summary} />);
+    const alert = screen.getByRole('alert');
+    // A degraded fleet is a WARNING: panel and headline state one severity.
+    expect(alert).toHaveClass('tai-warn-state');
+    expect(alert).not.toHaveClass('tai-error-state');
+    expect(statusFor(alert, /did not converge/)).toHaveClass('tai-status-warn');
+    expect(statusFor(alert, /^apply failed$/)).toHaveClass('tai-status-err');
+    expect(within(alert).getByText('serve-a')).toHaveClass('tai-mono');
   });
 });

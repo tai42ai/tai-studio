@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { JsonSchema } from '../schema-form/types';
 import { flushResizeObservers, setElementOverflow } from '../testing';
@@ -20,10 +20,6 @@ const schema: JsonSchema = {
   },
   required: ['title', 'score'],
 };
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('StructuredOutput', () => {
   it('renders structured content through the declared output_schema (labels + values)', () => {
@@ -104,18 +100,11 @@ describe('StructuredOutput', () => {
     expect(screen.getByText('raw')).toHaveClass('tai-field-label');
   });
 
-  it('renders its labels and values under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(
-        <StructuredOutput schema={schema} content={{ title: 'hello', score: 5 }} />,
-      );
+  it('puts its labels on the field-label class beside their values', () => {
+    render(<StructuredOutput schema={schema} content={{ title: 'hello', score: 5 }} />);
 
-      expect(screen.getByTestId('structured-output')).toHaveClass('tai-stack');
-      expect(screen.getByText('Report title')).toHaveClass('tai-field-label');
-      expect(screen.getByText('"hello"')).toBeVisible();
-
-      unmount();
-    }
+    expect(screen.getByTestId('structured-output')).toHaveClass('tai-stack');
+    expect(screen.getByText('Report title')).toHaveClass('tai-field-label');
+    expect(screen.getByText('"hello"')).toBeVisible();
   });
 });

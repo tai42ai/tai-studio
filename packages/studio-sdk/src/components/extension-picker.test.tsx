@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Extension } from '@tai42/api-client';
 
@@ -24,10 +24,6 @@ function Controlled({ initial = [] as string[] }: { initial?: string[] }) {
     </>
   );
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('ExtensionPicker', () => {
   it('groups the catalog by kind with a kind badge per group', () => {
@@ -143,17 +139,13 @@ describe('ExtensionPicker', () => {
     expect(qualifier).not.toHaveClass('tai-label');
   });
 
-  it.each(['light', 'dark'] as const)(
-    'renders every option with its accessible name under the %s theme',
-    (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      render(<ExtensionPicker available={CATALOG} value={['markb']} onChange={vi.fn()} />);
+  it('renders every option with its accessible name', () => {
+    render(<ExtensionPicker available={CATALOG} value={['markb']} onChange={vi.fn()} />);
 
-      expect(screen.getByTestId('extension-picker')).toHaveClass('tai-stack');
-      for (const entry of CATALOG) {
-        expect(screen.getByRole('checkbox', { name: entry.name })).toBeInTheDocument();
-      }
-      expect(screen.getByRole('checkbox', { name: 'markb' })).toBeChecked();
-    },
-  );
+    expect(screen.getByTestId('extension-picker')).toHaveClass('tai-stack');
+    for (const entry of CATALOG) {
+      expect(screen.getByRole('checkbox', { name: entry.name })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('checkbox', { name: 'markb' })).toBeChecked();
+  });
 });

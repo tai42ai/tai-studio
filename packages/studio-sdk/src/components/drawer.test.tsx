@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Drawer } from './drawer';
 
@@ -24,10 +24,6 @@ function DrawerHost({ side }: { side?: 'left' | 'right' }) {
     </Drawer>
   );
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Drawer', () => {
   it('renders nothing while closed, and no trigger unless one is supplied', () => {
@@ -152,23 +148,19 @@ describe('Drawer', () => {
     });
   });
 
-  it('renders its header, content and accessible name under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(
-        <Drawer open onOpenChange={vi.fn()} title="Navigation">
-          <a href="/tools">Tools</a>
-        </Drawer>,
-      );
+  it('renders its header, close button and accessible name', () => {
+    render(
+      <Drawer open onOpenChange={vi.fn()} title="Navigation">
+        <a href="/tools">Tools</a>
+      </Drawer>,
+    );
 
-      const drawer = screen.getByRole('dialog');
-      expect(drawer).toHaveAccessibleName('Navigation');
-      expect(drawer.querySelector('.tai-drawer-header')).not.toBeNull();
-      expect(within(drawer).getByRole('heading', { name: 'Navigation' })).toHaveClass(
-        'tai-section-title',
-      );
-      expect(within(drawer).getByRole('button', { name: 'Close' })).toBeInTheDocument();
-      unmount();
-    }
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveAccessibleName('Navigation');
+    expect(drawer.querySelector('.tai-drawer-header')).not.toBeNull();
+    expect(within(drawer).getByRole('heading', { name: 'Navigation' })).toHaveClass(
+      'tai-section-title',
+    );
+    expect(within(drawer).getByRole('button', { name: 'Close' })).toBeInTheDocument();
   });
 });

@@ -1,11 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { ProgressBar } from './progress-bar';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('ProgressBar', () => {
   it('is determinate and advances when a positive total is known', () => {
@@ -105,23 +101,31 @@ describe('the announced value', () => {
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('0');
   });
 
-  it('never announces NaN when the total is not finite', () => {
+  it('treats an unbounded total as indeterminate rather than announcing against it', () => {
     render(<ProgressBar value={5} total={Number.POSITIVE_INFINITY} />);
 
-    const announced = screen.getByRole('progressbar').getAttribute('aria-valuenow');
-    expect(announced).not.toBe('NaN');
-    expect(announced).toBe('5');
+    // `aria-valuemax="Infinity"` is not a bound any assistive technology can
+    // place a value against, and the fill would draw 0 % while announcing 5.
+    const bar = screen.getByRole('progressbar');
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).not.toHaveAttribute('aria-valuemax');
+    expect(bar.querySelector('.tai-progress-fill-indeterminate')).not.toBeNull();
+  });
+
+  it('announces nothing rather than NaN when the total is NaN', () => {
+    render(<ProgressBar value={5} total={Number.NaN} />);
+
+    const bar = screen.getByRole('progressbar');
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).not.toHaveAttribute('aria-valuemax');
   });
 });
 
-describe.each(['light', 'dark'] as const)('ProgressBar under the %s theme', (theme) => {
-  it('renders its track, fill and label unchanged', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(<ProgressBar value={5} total={10} message="Uploading" />);
+it('renders its track, fill and label unchanged', () => {
+  render(<ProgressBar value={5} total={10} message="Uploading" />);
 
-    const bar = screen.getByRole('progressbar', { name: 'Uploading' });
-    expect(bar).toHaveClass('tai-progress-track');
-    expect(bar.firstElementChild).toHaveClass('tai-progress-fill');
-    expect(screen.getByText('50%')).toBeInTheDocument();
-  });
+  const bar = screen.getByRole('progressbar', { name: 'Uploading' });
+  expect(bar).toHaveClass('tai-progress-track');
+  expect(bar.firstElementChild).toHaveClass('tai-progress-fill');
+  expect(screen.getByText('50%')).toBeInTheDocument();
 });

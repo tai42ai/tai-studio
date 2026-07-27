@@ -1,14 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ToolPicker } from './tool-picker';
 
 const TOOLS = ['alpha', 'beta', 'gamma'];
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('ToolPicker', () => {
   it('renders a combobox showing the placeholder when nothing is selected', () => {
@@ -179,32 +175,28 @@ describe('ToolPicker', () => {
     expect(root.getAttribute('style')).toBeNull();
   });
 
-  it.each(['light', 'dark'] as const)(
-    'renders its options and keeps the filter accessible name under the %s theme',
-    async (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      const user = userEvent.setup();
-      render(
-        <ToolPicker
-          toolNames={TOOLS}
-          value={null}
-          onChange={vi.fn()}
-          placeholder="Pick a tool"
-          tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
-        />,
-      );
+  it('renders its options and keeps the filter accessible name', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        placeholder="Pick a tool"
+        tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
+      />,
+    );
 
-      expect(screen.getByRole('combobox', { name: 'Filter tools by tag' })).toBeInTheDocument();
-      expect(screen.getByTestId('tool-picker')).toHaveClass('tai-stack');
+    expect(screen.getByRole('combobox', { name: 'Filter tools by tag' })).toBeInTheDocument();
+    expect(screen.getByTestId('tool-picker')).toHaveClass('tai-stack');
 
-      const toolCombobox = screen
-        .getAllByRole('combobox')
-        .find((el) => el.getAttribute('aria-label') !== 'Filter tools by tag');
-      if (toolCombobox === undefined) throw new Error('tool combobox not found');
-      expect(toolCombobox).toHaveTextContent('Pick a tool');
+    const toolCombobox = screen
+      .getAllByRole('combobox')
+      .find((el) => el.getAttribute('aria-label') !== 'Filter tools by tag');
+    if (toolCombobox === undefined) throw new Error('tool combobox not found');
+    expect(toolCombobox).toHaveTextContent('Pick a tool');
 
-      await user.click(toolCombobox);
-      expect(await screen.findByRole('option', { name: 'alpha' })).toBeInTheDocument();
-    },
-  );
+    await user.click(toolCombobox);
+    expect(await screen.findByRole('option', { name: 'alpha' })).toBeInTheDocument();
+  });
 });

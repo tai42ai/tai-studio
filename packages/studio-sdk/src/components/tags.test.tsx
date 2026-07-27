@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { TagChips, TagsInput } from './tags';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('TagChips', () => {
   it('renders one static chip per tag', () => {
@@ -102,18 +98,15 @@ describe('TagsInput', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('tags under the %s theme', (theme) => {
-  it('renders both exports and keeps every accessible name', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(
-      <>
-        <TagChips tags={['alpha']} />
-        <TagsInput value={['beta']} onChange={vi.fn()} />
-      </>,
-    );
+it('renders both exports and keeps every accessible name', () => {
+  render(
+    <>
+      <TagChips tags={['alpha']} />
+      <TagsInput value={['beta']} onChange={vi.fn()} />
+    </>,
+  );
 
-    expect(screen.getByText('alpha')).toHaveClass('tai-chip');
-    expect(screen.getByLabelText('Add a tag')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove tag beta' })).toBeInTheDocument();
-  });
+  expect(screen.getByText('alpha')).toHaveClass('tai-chip');
+  expect(screen.getByLabelText('Add a tag')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Remove tag beta' })).toBeInTheDocument();
 });

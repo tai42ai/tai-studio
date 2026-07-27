@@ -157,17 +157,44 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
   danger: 'tai-btn tai-btn-danger',
 };
 
+/**
+ * The one prop both forms share. Deliberately NOT on the public surface: it is a
+ * shared base, and declaration emit keeps it visible inside `primitives.d.ts`
+ * where `ButtonProps`/`LinkButtonProps` reference it, so consumers still see
+ * `variant` and can still `extends` either interface.
+ */
 interface ButtonVariantProps {
   readonly variant?: ButtonVariant;
 }
 
 /**
- * An action (no `href`) or a link (`href`). The union keeps anchor attributes
- * off the action form and button attributes off the link form.
+ * The ACTION form of `Button`: no `href`, so it carries button attributes and no
+ * anchor ones.
+ *
+ * This stays an INTERFACE extending `ButtonHTMLAttributes<HTMLButtonElement>`
+ * because it is published plugin API: a plugin may write
+ * `interface MyButton extends ButtonProps {}` (a union cannot be extended —
+ * TS2312) and may hand a `ButtonProps` value to a slot typed as plain
+ * `ButtonHTMLAttributes<HTMLButtonElement>` (a union including anchor attributes
+ * is not assignable — TS2322). The link form is the ADDITIVE `LinkButtonProps`,
+ * and `Button` accepts either.
  */
-export type ButtonProps =
-  | (ButtonVariantProps & ButtonHTMLAttributes<HTMLButtonElement> & { readonly href?: undefined })
-  | (ButtonVariantProps & AnchorHTMLAttributes<HTMLAnchorElement> & { readonly href: string });
+export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HTMLButtonElement> {
+  /**
+   * Never set on the action form — its only job is to discriminate this form
+   * from `LinkButtonProps` so `Button` can narrow on `props.href` without a cast.
+   */
+  readonly href?: undefined;
+}
+
+/**
+ * The LINK form of `Button`: an `href`, so it carries anchor attributes and no
+ * button ones.
+ */
+export interface LinkButtonProps
+  extends ButtonVariantProps, AnchorHTMLAttributes<HTMLAnchorElement> {
+  readonly href: string;
+}
 
 /** The variant class plus the caller's, which sorts last so it can override. */
 export function buttonClass(variant: ButtonVariant, className: string | undefined): string {
@@ -176,7 +203,7 @@ export function buttonClass(variant: ButtonVariant, className: string | undefine
     : `${VARIANT_CLASS[variant]} ${className}`;
 }
 
-export function Button(props: ButtonProps) {
+export function Button(props: ButtonProps | LinkButtonProps) {
   if (props.href === undefined) {
     const { variant = DEFAULT_BUTTON_VARIANT, className, href: _href, ...rest } = props;
     return <button {...rest} className={buttonClass(variant, className)} />;

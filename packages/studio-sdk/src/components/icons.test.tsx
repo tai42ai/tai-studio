@@ -43,7 +43,6 @@ function renderIcon(Component: IconComponent, props: Record<string, unknown> = {
 
 afterEach(() => {
   cleanup();
-  document.documentElement.removeAttribute('data-theme');
 });
 
 /**
@@ -234,24 +233,20 @@ describe('NAV_ICONS', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
-  it('renders every mark unchanged', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    for (const [, Component] of ICONS) {
-      const svg = renderIcon(Component);
-      expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
-      expect(svg.getAttribute('stroke')).toBe('currentColor');
-      expect(svg).toHaveClass('tai-icon');
-    }
-  });
+it('renders every mark unchanged', () => {
+  for (const [, Component] of ICONS) {
+    const svg = renderIcon(Component);
+    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24');
+    expect(svg.getAttribute('stroke')).toBe('currentColor');
+    expect(svg).toHaveClass('tai-icon');
+  }
+});
 
-  it('keeps a caller-supplied accessible name', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    const svg = renderIcon(NAV_ICONS.observability, {
-      'aria-hidden': false,
-      role: 'img',
-      'aria-label': 'Observability',
-    });
-    expect(svg).toHaveAccessibleName('Observability');
+it('keeps a caller-supplied accessible name', () => {
+  const svg = renderIcon(NAV_ICONS.observability, {
+    'aria-hidden': false,
+    role: 'img',
+    'aria-label': 'Observability',
   });
+  expect(svg).toHaveAccessibleName('Observability');
 });

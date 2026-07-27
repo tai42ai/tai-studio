@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { RevealInput } from './reveal-input';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('RevealInput', () => {
   it('masks the value by default (type=password) and exposes a "Show value" toggle', () => {
@@ -102,12 +98,9 @@ describe('RevealInput', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('RevealInput under the %s theme', (theme) => {
-  it('renders the field and toggle and keeps their accessible names', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
+it('renders the field and toggle and keeps their accessible names', () => {
+  render(<RevealInput label="Secret" value="s3cr3t" onChange={vi.fn()} />);
 
-    expect(screen.getByLabelText('Secret')).toHaveClass('tai-input');
-    expect(screen.getByRole('button', { name: 'Show value' })).toHaveClass('tai-icon-btn');
-  });
+  expect(screen.getByLabelText('Secret')).toHaveClass('tai-input');
+  expect(screen.getByRole('button', { name: 'Show value' })).toHaveClass('tai-icon-btn');
 });

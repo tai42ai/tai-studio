@@ -30,7 +30,6 @@ describe('CopyField', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
-    document.documentElement.removeAttribute('data-theme');
   });
 
   it('shows the value and an optional caption', () => {
@@ -142,17 +141,10 @@ describe('CopyField', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('CopyField under the %s theme', (theme) => {
-  afterEach(() => {
-    document.documentElement.removeAttribute('data-theme');
-  });
+it('renders its content and keeps the button accessible name', () => {
+  render(<CopyField value="tai42_key_123" label="API key" caption="Copy it now." />);
 
-  it('renders its content and keeps the button accessible name', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(<CopyField value="tai42_key_123" label="API key" caption="Copy it now." />);
-
-    expect(screen.getByText('API key')).toHaveClass('tai-field-label');
-    expect(screen.getByText('tai42_key_123')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy' })).toHaveClass('tai-btn-secondary');
-  });
+  expect(screen.getByText('API key')).toHaveClass('tai-field-label');
+  expect(screen.getByText('tai42_key_123')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Copy' })).toHaveClass('tai-btn-secondary');
 });

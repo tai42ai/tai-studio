@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { defaultValueForSchema } from './default-value';
 import { SchemaForm, type CompletionProvider } from './SchemaForm';
@@ -39,10 +39,6 @@ function Harness({
 function emitted(): string {
   return screen.getByTestId('value').textContent;
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('SchemaForm — primitives', () => {
   it('edits a string and emits the typed string', async () => {
@@ -908,16 +904,11 @@ describe('SchemaForm — design system', () => {
     expect(preview).toHaveStyle({ maxWidth: '100%' });
   });
 
-  it('renders its fields and keeps their accessible names under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(<Harness schema={nestedSchema} initial={{}} />);
+  it('renders nested fields on the design-system classes with accessible names', () => {
+    render(<Harness schema={nestedSchema} initial={{}} />);
 
-      expect(screen.getByTestId('schema-form')).toHaveClass('tai-stack');
-      expect(screen.getByText('User')).toHaveClass('tai-field-label');
-      expect(screen.getByRole('textbox', { name: 'Full name' })).toBeVisible();
-
-      unmount();
-    }
+    expect(screen.getByTestId('schema-form')).toHaveClass('tai-stack');
+    expect(screen.getByText('User')).toHaveClass('tai-field-label');
+    expect(screen.getByRole('textbox', { name: 'Full name' })).toBeVisible();
   });
 });

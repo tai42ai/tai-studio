@@ -1,6 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ConfirmDialog } from './confirm-dialog';
 
@@ -23,10 +23,6 @@ function renderConfirm(overrides: Partial<Parameters<typeof ConfirmDialog>[0]> =
   );
   return { onConfirm, onClose };
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('ConfirmDialog', () => {
   it('is a modal named by its title, showing the prompt and both actions', () => {
@@ -91,12 +87,9 @@ describe('ConfirmDialog', () => {
     expect(primary).not.toBe(destructive);
   });
 
-  describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
-    it('renders its prompt and keeps its accessible name', () => {
-      document.documentElement.setAttribute('data-theme', theme);
-      renderConfirm();
-      expect(screen.getByRole('dialog')).toHaveAccessibleName('Delete scope');
-      expect(screen.getByText('This removes every binding in the scope.')).toBeInTheDocument();
-    });
+  it('renders its prompt and keeps its accessible name', () => {
+    renderConfirm();
+    expect(screen.getByRole('dialog')).toHaveAccessibleName('Delete scope');
+    expect(screen.getByText('This removes every binding in the scope.')).toBeInTheDocument();
   });
 });

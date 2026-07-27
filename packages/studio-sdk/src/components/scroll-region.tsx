@@ -39,6 +39,13 @@ export interface ProseScrollLabels {
 
 const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6';
 
+/**
+ * Headings AND the surfaces they name, in one selector: a single query returns
+ * both interleaved in document order, which is what lets one walk name every
+ * surface (see `labelledProseSurfaces`).
+ */
+const PROSE_SURFACE_SELECTOR = `${HEADING_SELECTOR}, table, pre`;
+
 const SCROLL_REGION_CLASS = 'tai-scroll-region';
 
 function overflows(element: HTMLElement): boolean {
@@ -171,25 +178,73 @@ function ensureScrollWrapper(table: HTMLTableElement): HTMLElement {
   return wrapper;
 }
 
+/** A heading that can name the surfaces below it, and the text it would give. */
+interface ProseHeading {
+  readonly element: Element;
+  readonly text: string;
+}
+
+/** A scrollable prose surface, with the heading text that names it. */
+interface LabelledProseSurface {
+  readonly element: HTMLElement;
+  readonly heading: string | undefined;
+}
+
 /**
- * The text of the nearest heading PRECEDING `from` in document order, searched
- * outwards through earlier siblings and then up through ancestors, stopping at
- * `root`. Returns `undefined` when the subtree has no heading before the table.
+ * The text of the last heading in `headings` that does not ENCLOSE `surface`.
+ *
+ * A heading wrapping the surface does precede it in document order, but it is
+ * not a section the surface sits UNDER, so it is stepped over in favour of the
+ * heading before it — which is the answer an outward walk from the surface
+ * reaches. In well-formed prose no heading contains a table or a code block, so
+ * this returns the last heading on the first look.
  */
-function precedingHeadingText(from: Element, root: Element): string | undefined {
-  let current: Element | null = from;
-  while (current !== null && current !== root) {
-    let sibling = current.previousElementSibling;
-    while (sibling !== null) {
-      const nested = [...sibling.querySelectorAll(HEADING_SELECTOR)];
-      const nearest = sibling.matches(HEADING_SELECTOR) ? sibling : nested.at(-1);
-      const text = nearest?.textContent.trim() ?? '';
-      if (text !== '') return text;
-      sibling = sibling.previousElementSibling;
-    }
-    current = current.parentElement;
+function namingHeadingText(
+  headings: readonly ProseHeading[],
+  surface: Element,
+): string | undefined {
+  for (let index = headings.length - 1; index >= 0; index -= 1) {
+    const heading = headings[index];
+    if (heading !== undefined && !heading.element.contains(surface)) return heading.text;
   }
   return undefined;
+}
+
+/**
+ * Every scrollable prose surface under `root` — each `<table>` and each `<pre>`
+ * — paired with the text of the nearest heading PRECEDING it, or `undefined`
+ * when no heading does.
+ *
+ * One query returns the headings and the surfaces interleaved in document order,
+ * so a single walk over that list names all of them: the heading a surface
+ * belongs to is the last one seen before reaching it. Naming each surface by
+ * searching backwards from it instead would re-read the same prose once per
+ * surface, at a cost that grows with the product of the two.
+ *
+ * Blank headings never enter the list, so a decorative empty heading names
+ * nothing and the section above it is used instead. A heading INSIDE a surface
+ * (a `<pre>` or a table cell holding one) comes AFTER that surface in document
+ * order and so can never name it, though it does name later surfaces — exactly
+ * as being the last heading before them implies.
+ *
+ * Read in full before the pass wraps anything, and safely so: a name depends
+ * only on what PRECEDES its surface, and `ensureScrollWrapper` puts the wrapper
+ * in the table's own place, moving nothing else and leaving every heading where
+ * it was — so a name stays true whether its table is wrapped yet or not.
+ */
+function labelledProseSurfaces(root: Element): LabelledProseSurface[] {
+  const headings: ProseHeading[] = [];
+  const surfaces: LabelledProseSurface[] = [];
+
+  for (const node of root.querySelectorAll<HTMLElement>(PROSE_SURFACE_SELECTOR)) {
+    if (node.matches(HEADING_SELECTOR)) {
+      const text = node.textContent.trim();
+      if (text !== '') headings.push({ element: node, text });
+      continue;
+    }
+    surfaces.push({ element: node, heading: namingHeadingText(headings, node) });
+  }
+  return surfaces;
 }
 
 /** Applies the same conditional attribute set `ScrollRegion` renders. */
@@ -214,9 +269,9 @@ function applyScrollRegionAttributes(wrapper: HTMLElement, label: string): void 
  * place. Either way the scrolling element carries the same conditional
  * `tabindex`/`role`/`aria-label` as `ScrollRegion`.
  *
- * The name is the nearest preceding heading, so a reader landing on the region
- * hears which section it belongs to; `labels` covers a surface with no heading
- * above it.
+ * The name is the nearest heading preceding the surface — read for all of them
+ * in one document-order pass — so a reader landing on the region hears which
+ * section it belongs to; `labels` covers a surface with no heading above it.
  *
  * Injected HTML is replaced wholesale when its source changes, so the pass is
  * re-run from a `MutationObserver` on the subtree rather than on mount alone.
@@ -242,13 +297,13 @@ export function useProseScrollRegions(
     // The box gives resize; its children give the overflowing width. A table that
     // grows wider inside a parent-constrained wrapper resizes nothing else, so
     // watching the wrapper alone would freeze the mount-time measurement.
-    const track = (element: HTMLElement, fallbackLabel: string): void => {
+    const track = (element: HTMLElement, label: string): void => {
       for (const target of [element, ...element.children]) {
         if (observed.has(target)) continue;
         observed.add(target);
         resizeObserver.observe(target);
       }
-      applyScrollRegionAttributes(element, precedingHeadingText(element, root) ?? fallbackLabel);
+      applyScrollRegionAttributes(element, label);
     };
 
     // A pass over the whole subtree. It reads the observers declared below it —
@@ -258,11 +313,17 @@ export function useProseScrollRegions(
       // Wrapping mutates the subtree; pause the observer so this pass cannot
       // re-trigger itself, and drop the records it generated before resuming.
       mutationObserver.disconnect();
-      for (const table of root.querySelectorAll('table')) {
-        track(ensureScrollWrapper(table), tableLabel);
-      }
-      for (const pre of root.querySelectorAll('pre')) {
-        track(pre, preLabel);
+      // Every name comes from one document-order read of the prose, taken before
+      // the first wrapper goes in. The list is a static snapshot and the
+      // surfaces in it stay the same elements: wrapping moves a table one level
+      // down, into a `div` standing exactly where the table stood, so neither
+      // the remaining entries nor the names already computed for them change.
+      for (const { element, heading } of labelledProseSurfaces(root)) {
+        if (element instanceof HTMLTableElement) {
+          track(ensureScrollWrapper(element), heading ?? tableLabel);
+          continue;
+        }
+        track(element, heading ?? preLabel);
       }
       mutationObserver.takeRecords();
       mutationObserver.observe(root, { childList: true, subtree: true });

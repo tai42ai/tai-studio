@@ -1,13 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { createRef } from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { Page, PageHeader, Stack } from './page-header';
 import { Button } from './primitives';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('PageHeader', () => {
   it('renders exactly one h1 whose accessible name is the title verbatim', () => {
@@ -73,22 +69,16 @@ describe('PageHeader', () => {
     expect(h1).toHaveFocus();
   });
 
-  it('renders its title, eyebrow and description under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(
-        <PageHeader title="Tools" eyebrow="Build" description="Everything the agent can call." />,
-      );
+  it('puts its title, eyebrow and description on their design-system classes', () => {
+    render(
+      <PageHeader title="Tools" eyebrow="Build" description="Everything the agent can call." />,
+    );
 
-      const h1 = screen.getByRole('heading', { level: 1 });
-      expect(h1).toHaveAccessibleName('Tools');
-      expect(h1).toHaveClass('tai-page-title');
-      expect(screen.getByText('Build')).toHaveClass('tai-label');
-      expect(screen.getByText('Everything the agent can call.')).toHaveClass(
-        'tai-page-description',
-      );
-      unmount();
-    }
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).toHaveAccessibleName('Tools');
+    expect(h1).toHaveClass('tai-page-title');
+    expect(screen.getByText('Build')).toHaveClass('tai-label');
+    expect(screen.getByText('Everything the agent can call.')).toHaveClass('tai-page-description');
   });
 });
 

@@ -409,8 +409,15 @@ describe('design-system token usage', () => {
         '--tai-color-bg: var(--tai-dark-color-bg);',
       ]);
       expect(ruleBody(DARK_MEDIA)).toContain(strayInBaseRoot.trim());
-      // …and a read genuinely inside a dark block is not flagged.
-      expect(readsOutsideTheDarkBlocks(TOKENS_CSS, darkRanges).length).toBe(0);
+      // …and the SAME text is NOT flagged once its offset falls inside a block:
+      // one line, two positions, two verdicts. That opposite direction is what
+      // makes the pair discriminate. A range grown to swallow the base `:root`
+      // fails the control above, because the stray's offset would land inside
+      // it; a range that no longer covers its block fails here.
+      const strayText = strayInBaseRoot.trim();
+      expect(readsOutsideTheDarkBlocks(strayText, [{ start: 0, end: strayText.length }])).toEqual(
+        [],
+      );
 
       // …and every dark value authored is actually applied, so none sits dead.
       const applied = new Set(

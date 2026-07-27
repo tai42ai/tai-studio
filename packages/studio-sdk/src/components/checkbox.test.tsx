@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Checkbox } from './checkbox';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Checkbox', () => {
   it('renders an accessible checkbox with its label as the name', () => {
@@ -81,13 +77,10 @@ describe('Checkbox', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('Checkbox under the %s theme', (theme) => {
-  it('renders its content and keeps its accessible name', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(<Checkbox label="Accept terms" />);
+it('renders its content and keeps its accessible name', () => {
+  render(<Checkbox label="Accept terms" />);
 
-    const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
-    expect(checkbox).toHaveClass('tai-checkbox');
-    expect(screen.getByText('Accept terms')).toBeInTheDocument();
-  });
+  const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
+  expect(checkbox).toHaveClass('tai-checkbox');
+  expect(screen.getByText('Accept terms')).toBeInTheDocument();
 });

@@ -341,15 +341,16 @@ export default tseslint.config(
     rules: { 'boundaries/dependencies': 'off' },
   },
   {
-    // The design-system source scanners READ the monorepo's own files from disk
-    // rather than importing an architectural layer, so they need Node core
-    // (`node:fs` and friends) that the layer allowlist deliberately withholds
-    // from library code.
+    // The design-system source and manifest scanners READ the monorepo's own
+    // files from disk rather than importing an architectural layer, so they need
+    // Node core (`node:fs` and friends) that the layer allowlist deliberately
+    // withholds from library code.
     files: [
       'packages/studio-sdk/src/components/token-usage.test.ts',
       'packages/studio-sdk/src/components/narrow-viewport.test.ts',
       'packages/studio-sdk/src/components/focus-ring.test.ts',
       'packages/studio-sdk/src/components/reduced-motion.test.ts',
+      'packages/studio-sdk/src/package-side-effects.test.ts',
     ],
     plugins: { boundaries },
     rules: { 'boundaries/dependencies': 'off' },

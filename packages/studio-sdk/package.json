@@ -25,7 +25,9 @@
   ],
   "type": "module",
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "./dist/index.js",
+    "./src/index.ts"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

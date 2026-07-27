@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 
@@ -28,10 +28,6 @@ function Controlled({
     </>
   );
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('ExtensionComboBuilder', () => {
   it('Add is disabled until the draft has at least one member (no empty combo)', async () => {
@@ -322,19 +318,15 @@ describe('ExtensionComboBuilder', () => {
     expect(note).not.toHaveClass('tai-empty-state');
   });
 
-  it.each(['light', 'dark'] as const)(
-    'renders its combos and keeps every action name under the %s theme',
-    (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      render(<ExtensionComboBuilder available={CATALOG} value={[['marka']]} onChange={vi.fn()} />);
+  it('renders its combos and keeps every action name', () => {
+    render(<ExtensionComboBuilder available={CATALOG} value={[['marka']]} onChange={vi.fn()} />);
 
-      expect(screen.getByTestId('extension-combo-builder')).toHaveClass('tai-stack');
-      const [row] = screen.getAllByRole('listitem');
-      if (row === undefined) throw new Error('no combo row rendered');
-      expect(within(row).getByText('marka')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Edit combo marka' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Remove combo marka' })).toHaveClass('tai-btn');
-      expect(screen.getByRole('button', { name: 'Add combo' })).toBeInTheDocument();
-    },
-  );
+    expect(screen.getByTestId('extension-combo-builder')).toHaveClass('tai-stack');
+    const [row] = screen.getAllByRole('listitem');
+    if (row === undefined) throw new Error('no combo row rendered');
+    expect(within(row).getByText('marka')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit combo marka' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove combo marka' })).toHaveClass('tai-btn');
+    expect(screen.getByRole('button', { name: 'Add combo' })).toBeInTheDocument();
+  });
 });

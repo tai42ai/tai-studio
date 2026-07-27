@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { VersionHistoryPanel, type VersionHistoryEntry } from './version-history-panel';
 
@@ -37,10 +37,6 @@ function taggedPair(tags: string[]): VersionHistoryEntry[] {
     },
   ];
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 /** One version row's cell at `column` (0-based), failing loudly when it is absent. */
 function cellOf(version: number, column: number): HTMLElement {
@@ -312,28 +308,24 @@ describe('VersionHistoryPanel', () => {
     expect(confirm.parentElement).toHaveClass('tai-dialog-actions');
   });
 
-  it.each(['light', 'dark'] as const)(
-    'renders the history and keeps every action name under the %s theme',
-    (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      render(
-        <VersionHistoryPanel
-          versions={taggedPair(['stable'])}
-          onRollback={vi.fn()}
-          onEditTags={() => Promise.resolve()}
-        />,
-      );
+  it('renders the history and keeps every action name', () => {
+    render(
+      <VersionHistoryPanel
+        versions={taggedPair(['stable'])}
+        onRollback={vi.fn()}
+        onEditTags={() => Promise.resolve()}
+      />,
+    );
 
-      expect(screen.getByText('Current')).toHaveClass('tai-status-ok');
-      expect(screen.getByText('Version 2 body')).toHaveClass('tai-section-title');
-      for (const name of [
-        'View version 1',
-        'Compare version 1',
-        'Edit tags for version 1',
-        'Roll back to version 1',
-      ]) {
-        expect(screen.getByRole('button', { name })).toBeInTheDocument();
-      }
-    },
-  );
+    expect(screen.getByText('Current')).toHaveClass('tai-status-ok');
+    expect(screen.getByText('Version 2 body')).toHaveClass('tai-section-title');
+    for (const name of [
+      'View version 1',
+      'Compare version 1',
+      'Edit tags for version 1',
+      'Roll back to version 1',
+    ]) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+  });
 });

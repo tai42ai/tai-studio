@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { CompletionInput } from './completion-input';
 
@@ -22,10 +22,6 @@ function Harness({
     />
   );
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('CompletionInput', () => {
   it('renders completion suggestions for the typed value and fills the field on select', async () => {
@@ -118,17 +114,14 @@ describe('CompletionInput', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('CompletionInput under the %s theme', (theme) => {
-  it('renders the field and its suggestions unchanged', async () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    const user = userEvent.setup();
-    const fetchCompletions = vi.fn(async (value: string) => [`${value}-alpha`]);
-    render(<Harness fetchCompletions={fetchCompletions} />);
+it('renders the field and its suggestions unchanged', async () => {
+  const user = userEvent.setup();
+  const fetchCompletions = vi.fn(async (value: string) => [`${value}-alpha`]);
+  render(<Harness fetchCompletions={fetchCompletions} />);
 
-    const input = screen.getByRole('combobox');
-    expect(input).toHaveClass('tai-input');
+  const input = screen.getByRole('combobox');
+  expect(input).toHaveClass('tai-input');
 
-    await user.type(input, 'x');
-    expect(await screen.findByRole('option', { name: 'x-alpha' })).toHaveClass('tai-select-item');
-  });
+  await user.type(input, 'x');
+  expect(await screen.findByRole('option', { name: 'x-alpha' })).toHaveClass('tai-select-item');
 });

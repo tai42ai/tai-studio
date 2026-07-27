@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './primitives';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Button', () => {
   it('renders an accessible button and fires onClick', async () => {
@@ -59,15 +55,11 @@ describe('Button', () => {
     );
   });
 
-  it('renders its content and keeps its accessible name under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(<Button variant="primary">Run</Button>);
-      const button = screen.getByRole('button', { name: 'Run' });
-      expect(button).toHaveAccessibleName('Run');
-      expect(button).toHaveClass('tai-btn-primary');
-      unmount();
-    }
+  it('keeps its accessible name and wears the primary variant class', () => {
+    render(<Button variant="primary">Run</Button>);
+    const button = screen.getByRole('button', { name: 'Run' });
+    expect(button).toHaveAccessibleName('Run');
+    expect(button).toHaveClass('tai-btn-primary');
   });
 });
 
@@ -198,18 +190,14 @@ describe('status/loading primitives', () => {
     );
   });
 
-  it('Card renders its children under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { container, unmount } = render(
-        <Card>
-          <span>card body</span>
-        </Card>,
-      );
-      expect(screen.getByText('card body')).toBeInTheDocument();
-      expect(container.querySelector('.tai-card')).not.toBeNull();
-      unmount();
-    }
+  it('Card renders its children inside the card class', () => {
+    const { container } = render(
+      <Card>
+        <span>card body</span>
+      </Card>,
+    );
+    expect(screen.getByText('card body')).toBeInTheDocument();
+    expect(container.querySelector('.tai-card')).not.toBeNull();
   });
 });
 

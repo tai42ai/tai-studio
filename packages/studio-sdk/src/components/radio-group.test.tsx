@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Field } from './field';
 import { MoonIcon, MonitorIcon, SunIcon } from './icons';
@@ -16,10 +16,6 @@ const THEME_OPTIONS = [
   { value: 'dark', label: 'Dark', icon: <MoonIcon />, visuallyHiddenLabel: true },
   { value: 'system', label: 'System', icon: <MonitorIcon />, visuallyHiddenLabel: true },
 ];
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('RadioGroup', () => {
   it('renders a radiogroup with a radio per option', () => {
@@ -204,23 +200,19 @@ describe('RadioGroup (segmented)', () => {
   });
 });
 
-describe.each(['light', 'dark'] as const)('RadioGroup under the %s theme', (theme) => {
-  it('renders the list variant and keeps every accessible name', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(<RadioGroup options={OPTIONS} label="Fruit" />);
+it('renders the list variant and keeps every accessible name', () => {
+  render(<RadioGroup options={OPTIONS} label="Fruit" />);
 
-    expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toHaveClass('tai-stack');
-    expect(screen.getByRole('radio', { name: 'Apple' })).toHaveClass('tai-radio');
-    expect(screen.getByRole('radio', { name: 'Banana' })).toBeInTheDocument();
-  });
+  expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toHaveClass('tai-stack');
+  expect(screen.getByRole('radio', { name: 'Apple' })).toHaveClass('tai-radio');
+  expect(screen.getByRole('radio', { name: 'Banana' })).toBeInTheDocument();
+});
 
-  it('renders the segmented variant and keeps every accessible name', () => {
-    document.documentElement.setAttribute('data-theme', theme);
-    render(<RadioGroup options={THEME_OPTIONS} variant="segmented" aria-label="Theme" />);
+it('renders the segmented variant and keeps every accessible name', () => {
+  render(<RadioGroup options={THEME_OPTIONS} variant="segmented" aria-label="Theme" />);
 
-    expect(screen.getByRole('radiogroup', { name: 'Theme' })).toHaveClass('tai-segmented');
-    for (const name of ['Light', 'Dark', 'System']) {
-      expect(screen.getByRole('radio', { name })).toHaveClass('tai-segment');
-    }
-  });
+  expect(screen.getByRole('radiogroup', { name: 'Theme' })).toHaveClass('tai-segmented');
+  for (const name of ['Light', 'Dark', 'System']) {
+    expect(screen.getByRole('radio', { name })).toHaveClass('tai-segment');
+  }
 });

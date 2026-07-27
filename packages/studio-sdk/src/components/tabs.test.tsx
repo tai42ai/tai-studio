@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { Tabs } from './tabs';
 
@@ -8,10 +8,6 @@ const ITEMS = [
   { value: 'one', label: 'One', content: <p>first panel</p> },
   { value: 'two', label: 'Two', content: <p>second panel</p> },
 ];
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('Tabs', () => {
   it('renders a tablist and shows the first panel by default', () => {
@@ -59,15 +55,11 @@ describe('Tabs', () => {
     expect(screen.getByRole('tab', { name: 'Three' })).toBeDisabled();
   });
 
-  it('renders its tabs and panel under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(<Tabs items={ITEMS} />);
-      const tab = screen.getByRole('tab', { name: 'One' });
-      expect(tab).toHaveAccessibleName('One');
-      expect(tab).toHaveClass('tai-tab');
-      expect(screen.getByText('first panel')).toBeInTheDocument();
-      unmount();
-    }
+  it('renders its tabs on the tab class with the first panel showing', () => {
+    render(<Tabs items={ITEMS} />);
+    const tab = screen.getByRole('tab', { name: 'One' });
+    expect(tab).toHaveAccessibleName('One');
+    expect(tab).toHaveClass('tai-tab');
+    expect(screen.getByText('first panel')).toBeInTheDocument();
   });
 });

@@ -1,12 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from './error-boundary';
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 /** A component whose render throws the given value. */
 function Throw({ value }: { readonly value: unknown }): ReactElement {
@@ -89,19 +85,16 @@ describe('ErrorBoundary', () => {
     expect(title.querySelector('svg')).not.toBeNull();
   });
 
-  describe.each(['light', 'dark'] as const)('under the %s theme', (theme) => {
-    it('keeps the alert, its title and the caught message', () => {
-      document.documentElement.setAttribute('data-theme', theme);
-      renderContained(
-        <ErrorBoundary label="acme">
-          <Throw value={new Error('boom')} />
-        </ErrorBoundary>,
-      );
-      const alert = screen.getByRole('alert');
-      expect(alert).toHaveClass('tai-error-state');
-      expect(within(alert).getByText('Something went wrong')).toBeInTheDocument();
-      expect(alert).toHaveTextContent('acme: boom');
-    });
+  it('keeps the alert, its title and the caught message', () => {
+    renderContained(
+      <ErrorBoundary label="acme">
+        <Throw value={new Error('boom')} />
+      </ErrorBoundary>,
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveClass('tai-error-state');
+    expect(within(alert).getByText('Something went wrong')).toBeInTheDocument();
+    expect(alert).toHaveTextContent('acme: boom');
   });
 
   it('reports the caught value to onError', () => {

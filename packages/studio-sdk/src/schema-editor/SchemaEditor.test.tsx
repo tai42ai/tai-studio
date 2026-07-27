@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { flushResizeObservers, setElementOverflow } from '../testing';
 import { SchemaEditor, type SchemaEditorChange } from './SchemaEditor';
@@ -15,10 +15,6 @@ function lastChange(onChange: ReturnType<typeof vi.fn>): SchemaEditorChange {
 function setText(value: string): void {
   fireEvent.change(screen.getByLabelText('Schema JSON'), { target: { value } });
 }
-
-afterEach(() => {
-  document.documentElement.removeAttribute('data-theme');
-});
 
 describe('SchemaEditor', () => {
   it('seeds the textarea from the value dict', () => {
@@ -186,26 +182,21 @@ describe('SchemaEditor', () => {
     expect(screen.getByText('What the tool returns.')).toBeInTheDocument();
   });
 
-  it('renders the editor and its preview under both themes', () => {
-    for (const theme of ['light', 'dark'] as const) {
-      document.documentElement.setAttribute('data-theme', theme);
-      const { unmount } = render(
-        <SchemaEditor
-          value={{
-            type: 'object',
-            title: 'Report',
-            properties: { headline: { type: 'string', title: 'Headline' } },
-          }}
-          onChange={vi.fn()}
-          requireTitle={false}
-        />,
-      );
+  it('renders the mono textarea and previews the schema fields', () => {
+    render(
+      <SchemaEditor
+        value={{
+          type: 'object',
+          title: 'Report',
+          properties: { headline: { type: 'string', title: 'Headline' } },
+        }}
+        onChange={vi.fn()}
+        requireTitle={false}
+      />,
+    );
 
-      expect(screen.getByLabelText('Schema JSON')).toHaveClass('tai-textarea-mono');
-      const preview = screen.getByTestId('schema-editor-preview');
-      expect(within(preview).getByText('Headline')).toBeVisible();
-
-      unmount();
-    }
+    expect(screen.getByLabelText('Schema JSON')).toHaveClass('tai-textarea-mono');
+    const preview = screen.getByTestId('schema-editor-preview');
+    expect(within(preview).getByText('Headline')).toBeVisible();
   });
 });

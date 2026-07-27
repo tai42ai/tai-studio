@@ -15,6 +15,13 @@
  * across the plugin boundary; this package imports nothing internal at runtime
  * (the `ApiClient`/`Interaction` types are type-only imports).
  */
+// The design system, delivered by the BARREL so each host app loads it once and a
+// plugin never ships its own copy. These are bare side-effect imports, so they
+// survive bundling only while this module is itself listed in the package's
+// `sideEffects` (both `./dist/index.js` and `./src/index.ts` — `files` ships src
+// too). Without that entry webpack and Vite treat the barrel as side-effect-free
+// and drop all three, and a published consumer gets zero CSS; `sideEffects` is
+// kept honest against these lines by `package-side-effects.test.ts`.
 import './components/tokens.css';
 import './components/fonts.css';
 import './components/components.css';
@@ -85,7 +92,12 @@ export { comboElementNames, extensionElementName } from './extension-combos';
 
 // -- Design system -----------------------------------------------------------
 export { Button, Card, Skeleton, EmptyState, ErrorState, Spinner } from './components/primitives';
-export type { ButtonProps, ButtonVariant, CardProps } from './components/primitives';
+export type {
+  ButtonProps,
+  LinkButtonProps,
+  ButtonVariant,
+  CardProps,
+} from './components/primitives';
 export { PageHeader, Page, Stack } from './components/page-header';
 export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
 export { ErrorBoundary } from './components/error-boundary';
