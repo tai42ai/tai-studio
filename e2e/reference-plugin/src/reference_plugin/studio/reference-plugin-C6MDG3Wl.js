@@ -1,8 +1,8 @@
 import { jsx as e, jsxs as r } from "react/jsx-runtime";
-import * as b from "react";
+import * as y from "react";
 import { useState as i } from "react";
 import { useApi as R, Card as c, TextInput as S, Checkbox as x, Button as k, Spinner as v, ErrorState as T, JsonTree as _ } from "@tai42/studio-sdk";
-window.__pluginReact = b;
+window.__pluginReact = y;
 const s = "studio_demo_echo";
 function w(t) {
   if (typeof t != "object" || t === null) return !1;
@@ -10,7 +10,7 @@ function w(t) {
   return typeof o.original == "string" && typeof o.echoed == "string" && typeof o.shouted == "boolean";
 }
 function E(t) {
-  const o = R(), [d, m] = i("hello from the reference plugin"), [a, y] = i(!1), [l, h] = i("idle"), [u, g] = i(null), [p, f] = i(null);
+  const o = R(), [d, m] = i("hello from the reference plugin"), [a, b] = i(!1), [l, h] = i("idle"), [u, g] = i(null), [p, f] = i(null);
   return /* @__PURE__ */ e(c, { children: /* @__PURE__ */ r(
     "div",
     {
@@ -32,7 +32,7 @@ function E(t) {
             }
           }
         ),
-        /* @__PURE__ */ e(x, { checked: a, onCheckedChange: y, label: "Shout (upper-case the echo)" }),
+        /* @__PURE__ */ e(x, { checked: a, onCheckedChange: b, label: "Shout (upper-case the echo)" }),
         /* @__PURE__ */ e(
           k,
           {
@@ -55,7 +55,7 @@ function E(t) {
         ),
         l === "running" && /* @__PURE__ */ e(v, {}),
         p !== null && /* @__PURE__ */ e(T, { message: p }),
-        u !== null && /* @__PURE__ */ e("div", { "data-testid": "echo-result", children: /* @__PURE__ */ e(_, { data: u }) })
+        u !== null && /* @__PURE__ */ e("div", { "data-testid": "echo-result", children: /* @__PURE__ */ e(_, { data: u, label: `${s} result` }) })
       ]
     }
   ) });

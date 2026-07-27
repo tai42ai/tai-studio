@@ -50,6 +50,27 @@ describe('MintedKeyDialog', () => {
     expect(screen.getByText(/Expires/)).toBeInTheDocument();
   });
 
+  it('rebuilds the QR only when the claim link changes, not on every re-render', async () => {
+    const user = userEvent.setup();
+    const createClaimLink = vi.fn().mockResolvedValue(CLAIM);
+    const { rerender } = renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
+      client: stubClient(createClaimLink),
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Create claim link (QR)' }));
+    const qr = await screen.findByTestId('claim-link-qr');
+    const svg = qr.querySelector('svg');
+    expect(svg).not.toBeNull();
+
+    // A re-render carrying the SAME claim link: React compares the
+    // `dangerouslySetInnerHTML` prop by IDENTITY, so a fresh `{ __html }` literal
+    // re-encodes the QR and re-writes the container's innerHTML, replacing every
+    // node under it. Held by identity, the encode and the write do not happen.
+    rerender(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('claim-link-qr').querySelector('svg')).toBe(svg);
+  });
+
   it('regenerates an independent link, replacing the previous token', async () => {
     const user = userEvent.setup();
     const second: ClaimLinkCreated = {

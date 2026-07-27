@@ -6,6 +6,21 @@ import { ToolPicker } from './tool-picker';
 
 const TOOLS = ['alpha', 'beta', 'gamma'];
 
+/**
+ * The tag filter's accessible name. It comes from the `Field` that wraps it —
+ * the control carries no `aria-label` of its own, because one would override
+ * that visible label and leave the on-screen text out of the computed name.
+ */
+const FILTER_NAME = 'Filter by tag';
+
+/** The tool listbox: the combobox that is not the tag filter. */
+function toolCombobox(): HTMLElement {
+  const filter = screen.getByRole('combobox', { name: FILTER_NAME });
+  const found = screen.getAllByRole('combobox').find((element) => element !== filter);
+  if (found === undefined) throw new Error('tool combobox not found');
+  return found;
+}
+
 describe('ToolPicker', () => {
   it('renders a combobox showing the placeholder when nothing is selected', () => {
     render(
@@ -84,16 +99,13 @@ describe('ToolPicker', () => {
     );
 
     // Two comboboxes: the tag filter and the tool picker.
-    const filter = screen.getByRole('combobox', { name: 'Filter tools by tag' });
+    const filter = screen.getByRole('combobox', { name: FILTER_NAME });
     await user.click(filter);
     await user.click(await screen.findByRole('option', { name: 'scratch' }));
 
     // Now open the tool picker — only the 'scratch'-tagged tool remains.
-    const toolCombobox = screen
-      .getAllByRole('combobox')
-      .find((el) => el.getAttribute('aria-label') !== 'Filter tools by tag');
-    if (toolCombobox === undefined) throw new Error('tool combobox not found');
-    await user.click(toolCombobox);
+    const tool = toolCombobox();
+    await user.click(tool);
 
     expect(await screen.findByRole('option', { name: 'gamma' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'alpha' })).toBeNull();
@@ -129,11 +141,8 @@ describe('ToolPicker', () => {
       />,
     );
 
-    const toolCombobox = screen
-      .getAllByRole('combobox')
-      .find((el) => el.getAttribute('aria-label') !== 'Filter tools by tag');
-    if (toolCombobox === undefined) throw new Error('tool combobox not found');
-    await user.click(toolCombobox);
+    const tool = toolCombobox();
+    await user.click(tool);
 
     expect(await screen.findByRole('option', { name: 'beta (agent)' })).toBeInTheDocument();
   });
@@ -149,11 +158,8 @@ describe('ToolPicker', () => {
       />,
     );
 
-    const toolCombobox = screen
-      .getAllByRole('combobox')
-      .find((el) => el.getAttribute('aria-label') !== 'Filter tools by tag');
-    if (toolCombobox === undefined) throw new Error('tool combobox not found');
-    await user.click(toolCombobox);
+    const tool = toolCombobox();
+    await user.click(tool);
 
     // Radix renders group labels with role="group"; the tag names label them.
     expect(await screen.findByText('geo')).toBeInTheDocument();
@@ -187,16 +193,62 @@ describe('ToolPicker', () => {
       />,
     );
 
-    expect(screen.getByRole('combobox', { name: 'Filter tools by tag' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: FILTER_NAME })).toBeInTheDocument();
     expect(screen.getByTestId('tool-picker')).toHaveClass('tai-stack');
 
-    const toolCombobox = screen
-      .getAllByRole('combobox')
-      .find((el) => el.getAttribute('aria-label') !== 'Filter tools by tag');
-    if (toolCombobox === undefined) throw new Error('tool combobox not found');
-    expect(toolCombobox).toHaveTextContent('Pick a tool');
+    const tool = toolCombobox();
+    expect(tool).toHaveTextContent('Pick a tool');
 
-    await user.click(toolCombobox);
+    await user.click(tool);
     expect(await screen.findByRole('option', { name: 'alpha' })).toBeInTheDocument();
+  });
+
+  it("names the tag filter from its Field's visible label, with no aria-label over it", () => {
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        tagsByTool={{ alpha: ['geo'], gamma: ['scratch'] }}
+      />,
+    );
+
+    // WCAG 2.5.3: the visible text IS the accessible name here. An `aria-label`
+    // on the trigger outranks the field's `<label for>`, so the on-screen
+    // "Filter by tag" would not appear in the computed name at all.
+    const filter = screen.getByRole('combobox', { name: FILTER_NAME });
+    expect(filter).toHaveAccessibleName(FILTER_NAME);
+    expect(filter).not.toHaveAttribute('aria-label');
+    expect(screen.getByText(FILTER_NAME).tagName).toBe('LABEL');
+  });
+
+  it('names a bare picker from aria-label, and lets a label out-rank it', () => {
+    const { unmount } = render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        aria-label="Base tool"
+        placeholder="Pick a tool"
+      />,
+    );
+
+    // No Field around it, so the caller's name is the only one there is.
+    expect(screen.getByRole('combobox')).toHaveAccessibleName('Base tool');
+    unmount();
+
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        label="Base tool label"
+        aria-label="Base tool"
+        placeholder="Pick a tool"
+      />,
+    );
+
+    // `label` renders a Field, and the field's visible label is the name.
+    expect(screen.getByRole('combobox')).toHaveAccessibleName('Base tool label');
   });
 });

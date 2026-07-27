@@ -209,7 +209,7 @@ function ReloadConfigDialog({
       <p style={{ margin: 0 }}>
         {targets === null
           ? 'Soft-restart every worker in the fleet? '
-          : `Soft-restart ${String(targets.length)} selected worker(s)? `}
+          : `Soft-restart ${String(targets.length)} selected worker${targets.length === 1 ? '' : 's'}? `}
         Each targeted worker re-reads its environment and reloads its manifest registries.
       </p>
     </ConfirmDialog>

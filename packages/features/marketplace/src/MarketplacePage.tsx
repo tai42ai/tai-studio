@@ -68,7 +68,18 @@ function FacetChip({
 /** The text-search box. Holds a local draft so navigation happens only on submit. */
 function SearchBar({ search }: { readonly search: MarketplaceSearch }): ReactNode {
   const navigate = useAppNavigate();
-  const [draft, setDraft] = useState(search.q ?? '');
+  const committed = search.q ?? '';
+  const [draft, setDraft] = useState(committed);
+  const [seed, setSeed] = useState(committed);
+  // Re-seed the draft from the committed query DURING RENDER (React's documented
+  // adjust-state-on-prop-change pattern) rather than by remounting on a `key`: this
+  // box is what commits the query, so a remount keyed on it detaches the focused
+  // input the instant the form submits and drops the keyboard caret on
+  // `document.body` (WCAG 2.4.3).
+  if (seed !== committed) {
+    setSeed(committed);
+    setDraft(committed);
+  }
   return (
     <form
       onSubmit={(event) => {
@@ -237,7 +248,6 @@ function CategoryFacet({ search }: { readonly search: MarketplaceSearch }): Reac
   return (
     <Field label="Category">
       <Select
-        aria-label="Category"
         options={options}
         value={search.category ?? NONE}
         onValueChange={(value) => {
@@ -268,7 +278,6 @@ function SortFacet({ search }: { readonly search: MarketplaceSearch }): ReactNod
   return (
     <Field label="Sort">
       <Select
-        aria-label="Sort results"
         options={options}
         value={displaySort ?? NONE}
         onValueChange={(value) => {
@@ -327,7 +336,7 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-      <SearchBar key={search.q ?? ''} search={search} />
+      <SearchBar search={search} />
 
       <div
         style={{

@@ -76,15 +76,9 @@ const sectionRowStyle: CSSProperties = {
   gap: 'var(--tai-space-2)',
 };
 
-const warningStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-3)',
-  padding: 'var(--tai-space-3)',
-  borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-warning)',
-  background: 'var(--tai-color-surface)',
-  color: 'var(--tai-color-text)',
-  fontSize: 'var(--tai-text-sm)',
-};
+// `.tai-warn-state` carries the panel itself — padding, tint, border, type — so the
+// only thing left here is the gap to whatever follows the warning.
+const warningStyle: CSSProperties = { margin: '0 0 var(--tai-space-3)' };
 
 const noteStyle: CSSProperties = {
   margin: '0 0 var(--tai-space-3)',
@@ -182,7 +176,7 @@ function ExportCard({ sections }: { readonly sections: readonly Section[] }): Re
       </div>
 
       {secretChecked ? (
-        <p role="alert" style={warningStyle}>
+        <p role="alert" className="tai-warn-state" style={warningStyle}>
           This backup file will contain secrets/tokens — store it like a secret.
         </p>
       ) : null}
@@ -279,7 +273,7 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
 
       {minted.length > 0 ? (
         <div style={mintedStyle}>
-          <p style={warningStyle}>
+          <p className="tai-warn-state" style={warningStyle}>
             New API keys were minted during restore — copy them now, they cannot be retrieved again.
           </p>
           {minted.map((key) => (

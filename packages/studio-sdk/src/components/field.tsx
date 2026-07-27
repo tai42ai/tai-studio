@@ -54,6 +54,8 @@ export interface FieldProps {
   readonly error?: string;
   readonly children: ReactNode;
   readonly style?: CSSProperties;
+  /** APPENDED to `tai-field` rather than replacing it, so the field keeps its paint. */
+  readonly className?: string;
   /**
    * Set when the wrapped control is a GROUP rather than one labelable element —
    * a `RadioGroup`, a set of checkboxes, any `role="radiogroup"`/`role="group"`
@@ -91,7 +93,15 @@ export interface FieldProps {
   readonly group?: boolean;
 }
 
-export function Field({ label, description, error, children, style, group = false }: FieldProps) {
+export function Field({
+  label,
+  description,
+  error,
+  children,
+  style,
+  className,
+  group = false,
+}: FieldProps) {
   const controlId = useId();
   const labelId = `${controlId}-label`;
   const descriptionId = `${controlId}-desc`;
@@ -114,7 +124,10 @@ export function Field({ label, description, error, children, style, group = fals
 
   return (
     <FieldContext.Provider value={value}>
-      <div className="tai-field" style={style}>
+      <div
+        className={className === undefined ? 'tai-field' : `tai-field ${className}`}
+        style={style}
+      >
         {group ? (
           <span id={labelId} className="tai-field-label">
             {label}

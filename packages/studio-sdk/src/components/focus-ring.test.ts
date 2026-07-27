@@ -7,34 +7,46 @@
  * in review too — one `outline: none` at equal specificity, further down the
  * sheet, silently took the ring off every Select option — so the cancellation is
  * what this file watches.
+ *
+ * WHO bears the ring is DERIVED from two sources and reconciled against the rule
+ * in both directions: the sheet's own `cursor: pointer` controls, and the
+ * keyboard tab stops read out of the JSX by `tab-stops.ts`. A list of class names
+ * checked one way — every name is in the rule — closes only the harmless
+ * direction: it cannot see a new focusable element the sheet has never heard of,
+ * and a tab stop with no ring passed the whole suite. Residue on either side is
+ * an exemption carrying its reason, reconciled so an entry naming a class that
+ * has gone reddens too.
  */
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import {
+  type Rule,
+  appliesAtEveryWidth,
+  declarationsOf,
+  everywhere,
+  readRules,
+  selectorsOf,
+  sheetText,
+  stylesheetsWithin,
+} from './test-css-reader';
+import { productSourcesWithin, tabStopsIn } from './test-tab-stops';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
 
-/** Where a stylesheet that reaches a browser can live. `dist` is build output. */
-const SHEET_ROOTS = ['packages', 'apps'];
-const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
-
-/** Every `.css` file below `directory`, recursively. */
-function stylesheetsWithin(directory: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (!SKIP_DIRECTORIES.has(entry.name)) {
-        found.push(...stylesheetsWithin(join(directory, entry.name)));
-      }
-    } else if (entry.name.endsWith('.css')) {
-      found.push(join(directory, entry.name));
-    }
-  }
-  return found;
-}
+/**
+ * Where a stylesheet that reaches a browser can live.
+ *
+ * `e2e/` is one of them: the reference plugin ships a scoped sheet the host
+ * injects as a `<link>` into the running Studio, so a rule in it lands in the
+ * same cascade as the design system's own and can cancel a ring exactly as the
+ * app shell can.
+ */
+const SHEET_ROOTS = ['packages', 'apps', 'e2e'];
 
 /**
  * EVERY stylesheet that reaches the browser, not just this package's component
@@ -42,45 +54,9 @@ function stylesheetsWithin(directory: string): string[] {
  * is exactly as invisible, and `apps/studio/src/styles.css` carries UNLAYERED
  * blocks that outrank every design-system layer — reading `components.css` alone
  * left the one file whose rules beat the ring unconditionally outside the
- * contract, and a fourth sheet added beside these would fall out the same way.
+ * contract, and a further sheet added beside these would fall out the same way.
  */
 const SHEETS = SHEET_ROOTS.flatMap((root) => stylesheetsWithin(resolve(repoRoot, root))).sort();
-
-/**
- * `source` with every brace inside a quoted value replaced by a space.
- *
- * Everything below parses by counting braces, and a brace is legal inside a CSS
- * string: one `content: '}'` truncates the rule it sits in and desynchronises
- * every brace count after it, so a cancellation later in the sheet is read at
- * the wrong depth — or not read at all. Only the braces are neutralised, at the
- * same offsets: the quotes themselves stay, because `[data-theme='dark']` is a
- * selector this file matches as written.
- */
-function neutraliseQuotedBraces(source: string): string {
-  let out = '';
-  let quote: string | undefined;
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index] ?? '';
-    if (quote !== undefined) {
-      if (character === '\\') {
-        out += source.slice(index, index + 2);
-        index += 1;
-        continue;
-      }
-      if (character === quote) quote = undefined;
-      out += character === '{' || character === '}' ? ' ' : character;
-      continue;
-    }
-    if (character === '"' || character === "'") quote = character;
-    out += character;
-  }
-  return out;
-}
-
-/** Stylesheet text as this file parses it: no comments, no brace inside a string. */
-function sheetText(source: string): string {
-  return neutraliseQuotedBraces(source.replaceAll(/\/\*[\s\S]*?\*\//g, ''));
-}
 
 /** The path of a discovered sheet, or a loud failure if it has moved. */
 function sheetPath(suffix: string): string {
@@ -95,110 +71,10 @@ const stylesheet = sheetText(readFileSync(sheetPath('/components.css'), 'utf8'))
 /** All sheets concatenated — what CANCELLATIONS are hunted in. */
 const allSheets = SHEETS.map((path) => sheetText(readFileSync(path, 'utf8'))).join('\n');
 
-interface Rule {
-  readonly selector: string;
-  readonly body: string;
-  /** The at-rule preludes this rule is nested inside, outermost first. */
-  readonly context: string[];
-}
-
-/**
- * The at-rule preludes enclosing `offset`, outermost first.
- *
- * The scraper below matches a selector and a body wherever they appear and, on
- * its own, never asks which at-rule encloses them. That is not a nuance: wrapping
- * this sheet's entire shared `:focus-visible` block in
- * `@media (min-width: 2000px)` leaves every rule PRESENT to a context-free
- * scraper while no real screen ever applies it — the whole contract switched off
- * with the gate green. Blocks that are not at-rules are pushed as `''` so the
- * stack stays balanced and a rule nested two levels deep is still reached.
- */
-function contextAt(source: string, offset: number): string[] {
-  const stack: string[] = [];
-  let prelude = '';
-  for (let index = 0; index < offset; index++) {
-    const character = source[index];
-    if (character === '{') {
-      const head = prelude.trim();
-      prelude = '';
-      stack.push(head.startsWith('@') ? head : '');
-    } else if (character === '}') {
-      stack.pop();
-      prelude = '';
-    } else {
-      prelude += character ?? '';
-    }
-  }
-  return stack.filter((head) => head !== '');
-}
-
-/**
- * A media query keyed on viewport WIDTH — a rule that does not apply everywhere.
- *
- * Every spelling CSS accepts, because a rule is banded whichever way the band is
- * written. Matching only `(max-width:`/`(min-width:` — which this did first —
- * left MEDIA QUERIES LEVEL 4 RANGE SYNTAX (`@media (width <= 639px)`,
- * `@media (400px < width)`) unrecognised, so a shared ring block banded away
- * above every real screen still read as applying at every width and this file
- * stayed green with no ring on any device.
- */
-const WIDTH_CONDITIONED =
-  /\(\s*(?:(?:max|min)-width\s*:|width\s*[<>=]|[\d.]+(?:px|r?em|ch|ex|vw|vh|vmin|vmax)\s*[<>=])/;
-
-/** Whether a rule at this context applies at EVERY viewport width. */
-function appliesAtEveryWidth(context: readonly string[]): boolean {
-  return !context.some((at) => WIDTH_CONDITIONED.test(at));
-}
-
-/**
- * Every innermost declaration block in the sheet that applies at EVERY viewport
- * width, with its selector. `[^{}]` cannot cross a brace, so an `@layer`/`@media`
- * wrapper never matches as a rule of its own and its nested rules are returned
- * instead.
- *
- * A rule confined to a width band is DROPPED rather than returned: this file
- * asserts a contract that holds on every screen, so a ring that only exists
- * above 2000 px is exactly as absent as no ring at all, and counting it would
- * let the whole block be banded away with the suite green.
- */
-function rulesOf(source: string): Rule[] {
-  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
-    selector: (match[1] ?? '').trim(),
-    body: match[2] ?? '',
-    context: contextAt(source, match.index),
-  }));
-}
-
-/**
- * The rules that apply at EVERY viewport width.
- *
- * This is the right universe for a PRESENCE assertion — "the shared ring exists",
- * "something is flattened" — because a rule that only applies above 2000 px is
- * exactly as absent as no rule at all.
- *
- * It is the WRONG universe for an OFFENCE hunt, and the filter used to sit in the
- * reader itself, which silently applied it to both: a banded `outline: none` on a
- * ring bearer, or a banded hover lift, became invisible. A rule that only applies
- * below 640 px is not absent — it is present on every phone, which is the band
- * this sheet spends seventeen rules restyling. Offence scans therefore read the
- * UNFILTERED set and this filter is applied per assertion.
- */
-function everywhere<T extends { readonly context: readonly string[] }>(rules: T[]): T[] {
-  return rules.filter((rule) => appliesAtEveryWidth(rule.context));
-}
-
-const rules: Rule[] = rulesOf(stylesheet);
+const rules: Rule[] = readRules(stylesheet);
 
 /** Every rule the browser sees, across every sheet in `SHEETS`. */
-const allRules: Rule[] = rulesOf(allSheets);
-
-/** A comma group split into its individual selectors, blanks dropped. */
-function selectorsOf(selector: string): string[] {
-  return selector
-    .split(',')
-    .map((one) => one.trim())
-    .filter((one) => one !== '');
-}
+const allRules: Rule[] = readRules(allSheets);
 
 /**
  * The SUBJECT of a selector — its last compound, the element the declarations
@@ -257,32 +133,6 @@ function subjectGuardsFocusVisible(compound: string): boolean {
     else if (char === ')') depth -= 1;
   }
   return false;
-}
-
-/** One `prop: value` declaration, lowercased so spelling case cannot hide it. */
-interface Declaration {
-  readonly property: string;
-  readonly value: string;
-}
-
-function declarationsOf(body: string): Declaration[] {
-  return body
-    .split(';')
-    .map((one) => one.trim())
-    .filter((one) => one !== '')
-    .flatMap((one) => {
-      const colon = one.indexOf(':');
-      if (colon === -1) return [];
-      return [
-        {
-          property: one.slice(0, colon).trim().toLowerCase(),
-          value: one
-            .slice(colon + 1)
-            .trim()
-            .toLowerCase(),
-        },
-      ];
-    });
 }
 
 /**
@@ -385,6 +235,84 @@ function cancelsOutline(body: string): boolean {
 /** The rule declaring the shared ring — the one every focusable class shares. */
 const sharedRing = everywhere(rules).filter((rule) => /outline:\s*2px solid/.test(rule.body));
 
+/** The classes the ring rule keys, with the `:focus-visible` they are keyed on removed. */
+const RING_BEARERS = new Set(
+  selectorsOf(sharedRing[0]?.selector ?? '').map((selector) =>
+    selector.replace(/:focus-visible$/, ''),
+  ),
+);
+
+/** Every single-class selector the sheet declares a rule for. */
+const bareClasses = new Set(
+  rules.flatMap((rule) => rule.selectors).filter((selector) => /^\.tai-[\w-]+$/.test(selector)),
+);
+
+/**
+ * The classes the sheet itself presents as controls: `cursor: pointer` at rest.
+ * A control is keyboard-operable by definition, so the affordance is evidence
+ * the sheet carries about its own surfaces — read out of it rather than listed.
+ */
+const POINTER_CONTROLS = [...bareClasses]
+  .filter((name) =>
+    everywhere(rules).some(
+      (rule) => rule.selectors.includes(name) && /(?:^|;)\s*cursor\s*:\s*pointer/.test(rule.body),
+    ),
+  )
+  .sort();
+
+/**
+ * Every keyboard tab stop the product renders, read out of the JSX.
+ *
+ * `e2e/` is scanned with the rest: the reference plugin is the worked example a
+ * plugin author copies, and a tab stop it renders is as real as one the shell
+ * renders.
+ */
+const TAB_STOPS = tabStopsIn(
+  SHEET_ROOTS.flatMap((root) => productSourcesWithin(resolve(repoRoot, root))),
+);
+
+/** Everything the source shows is keyboard-reachable, from either direction. */
+const DERIVED_BEARERS = new Set([
+  ...TAB_STOPS.flatMap((stop) => stop.classes),
+  ...POINTER_CONTROLS,
+]);
+
+/**
+ * Ring members the scans cannot reach, each with the reason they are out of
+ * range rather than out of the contract. Reconciled against the rule below, so
+ * an entry naming a selector the sheet has dropped reddens.
+ */
+const RING_BEYOND_THE_SCAN: Readonly<Record<string, string>> = {
+  '.tai-link':
+    'published surface with no call site in this repository: the design-system inline link, worn by whatever anchor a host or a plugin writes',
+  '.tai-nav-item':
+    'published surface with no call site: the design-system nav row, which this shell renders under its own `.tai-nav-link` instead',
+  '.tai-brand':
+    'published surface with no call site: the shell brand lockup, a link home in whichever frame a host composes for itself',
+  '.tai-nav-link':
+    'handed to the shell own `AppLink`, which renders the `<a href>`; the class crosses a component boundary the tag scan does not follow',
+  '.tai-prose a':
+    'an anchor inside authored prose, which carries no class of its own: the ring is keyed on the descendant rather than on anything the JSX writes',
+  '.tai-prose pre':
+    'a preformatted block inside authored prose, made a named scroll region at runtime rather than by an attribute any JSX tag writes',
+  '.tai-drawer':
+    'a Radix `Dialog.Content`: the library moves focus onto the panel when it opens, and the attribute that does it is inside the dependency',
+  '.tai-dialog':
+    'the modal panel, likewise a Radix `Dialog.Content`, focused by the library rather than by a `tabIndex` written in this repository',
+  '.tai-tabpanel':
+    'a Radix `Tabs.Content`, on which the library hard-codes `tabIndex: 0`, so a panel is a tab stop whether or not it holds one',
+};
+
+/**
+ * Surfaces the source shows are reachable that the ring deliberately skips, with
+ * the reason. Reconciled both ways: an entry naming a class nothing reaches, or
+ * one that has since joined the ring, reddens.
+ */
+const REACHABLE_WITHOUT_THE_RING: Readonly<Record<string, string>> = {
+  '.tai-choice':
+    'a `<label>` and not a tab stop: the checkbox or radio it labels is what takes focus, and that box is in the shared ring already',
+};
+
 describe('visible focus', () => {
   it('reads BOTH directions of a width band, and filters only for presence', () => {
     // The two-way control. A rule confined ABOVE every real screen is absent for a
@@ -392,7 +320,7 @@ describe('visible focus', () => {
     // phone and must still be caught by an OFFENCE hunt. A reader that filtered
     // for both — which is what closing the first hole did — traded a fail-open in
     // one direction for a fail-open in the other.
-    const sample = rulesOf(
+    const sample = readRules(
       '.a { color: red } @media (min-width: 2000px) { .b { color: red } } @media (max-width: 639px) { .c { color: red } }',
     );
     expect(sample).toHaveLength(3);
@@ -427,8 +355,8 @@ describe('visible focus', () => {
     // at it: a cancellation written after one is invisible, and every brace count
     // from there on is off by one. The sheets are neutralised on read; this is
     // the control that the neutralising works and changes nothing else.
-    const parsed = rulesOf(
-      sheetText(".a::after { content: '}'; outline: none } .b:focus-visible { outline: 2px }"),
+    const parsed = readRules(
+      ".a::after { content: '}'; outline: none } .b:focus-visible { outline: 2px }",
     );
     expect(parsed.map((rule) => rule.selector)).toEqual(['.a::after', '.b:focus-visible']);
     expect(parsed.filter((rule) => cancelsOutline(rule.body)).map((rule) => rule.selector)).toEqual(
@@ -445,7 +373,8 @@ describe('visible focus', () => {
     expect(names).toContain('packages/studio-sdk/src/components/components.css');
     expect(names).toContain('packages/studio-sdk/src/components/tokens.css');
     expect(names).toContain('apps/studio/src/styles.css');
-    expect(names.length).toBeGreaterThanOrEqual(4);
+    expect(names).toContain('e2e/reference-plugin/studio-src/styles.css');
+    expect(names.length).toBeGreaterThanOrEqual(5);
   });
 
   it('parses the stylesheet (a scan that found nothing would pass vacuously)', () => {
@@ -486,43 +415,75 @@ describe('visible focus', () => {
     expect(allSheets).toMatch(/--tai-color-focus-ring:\s*\S/);
   });
 
-  it('puts every interactive class in the shared ring', () => {
-    // Naming ONE class here would let the other twenty-two be deleted from the
-    // rule with every test still green. The list is the design system's own
-    // set of keyboard-reachable surfaces; a new one is added here deliberately.
-    const RING_BEARERS = [
-      '.tai-btn',
-      '.tai-icon-btn',
-      '.tai-link',
-      '.tai-input',
-      '.tai-textarea',
-      '.tai-select-trigger',
-      // Radix moves DOM focus onto the highlighted option, so it needs a ring.
-      '.tai-select-item',
-      '.tai-checkbox',
-      '.tai-radio',
-      '.tai-segment',
-      '.tai-chip',
-      '.tai-tab',
-      '.tai-nav-item',
-      '.tai-nav-link',
-      '.tai-brand',
-      '.tai-skip-link',
-      '.tai-card-interactive',
-      '.tai-scroll-region',
-      '.tai-code-block',
-      '.tai-prose a',
-      '.tai-prose pre',
-      '.tai-drawer',
-      // Radix gives every TabsContent `tabIndex: 0`, so a panel is a tab stop
-      // whether or not it contains one.
-      '.tai-tabpanel',
-      '.tai-dialog',
-    ];
-    const keyed = new Set(selectorsOf(sharedRing[0]?.selector ?? ''));
-    const missing = RING_BEARERS.filter((name) => !keyed.has(`${name}:focus-visible`));
+  describe('who bears the ring', () => {
+    it('gives every tab stop the product renders a class that bears the ring', () => {
+      // The direction a list of names cannot cover. A `<div className=
+      // "tai-log-pane" tabIndex={0}>` is a keyboard tab stop the sheet has never
+      // heard of, and no assertion built from the sheet alone can know it exists.
+      const unringed = TAB_STOPS.filter(
+        (stop) =>
+          !stop.classes.some((name) => RING_BEARERS.has(name)) &&
+          !stop.classes.every((name) => name in REACHABLE_WITHOUT_THE_RING),
+      ).map(
+        (stop) => `${relative(repoRoot, stop.file)} <${stop.element}> ${stop.classes.join(' ')}`,
+      );
 
-    expect(missing).toEqual([]);
+      expect(unringed).toEqual([]);
+    });
+
+    it('gives every class the sheet presents as a control the ring, or says why not', () => {
+      const missing = POINTER_CONTROLS.filter(
+        (name) => !RING_BEARERS.has(name) && !(name in REACHABLE_WITHOUT_THE_RING),
+      );
+
+      expect(missing).toEqual([]);
+    });
+
+    it('carries no ring member the source cannot account for', () => {
+      // The other direction, and the one that reddens when a bearer is DELETED
+      // from the rule: every selector in the ring is either derived from the
+      // source or named below with its reason, and the two sides are compared as
+      // SETS, so neither can drift past the other in silence.
+      const unaccounted = [...RING_BEARERS]
+        .filter((name) => !DERIVED_BEARERS.has(name) && !(name in RING_BEYOND_THE_SCAN))
+        .sort();
+
+      expect(unaccounted).toEqual([]);
+    });
+
+    it('leaves no exemption naming a class the sheet or the source has dropped', () => {
+      // Both maps are reconciled against what they exempt. An entry for a class
+      // that no longer exists is fiction, and fiction is how a list goes stale.
+      expect(Object.keys(RING_BEYOND_THE_SCAN).filter((name) => !RING_BEARERS.has(name))).toEqual(
+        [],
+      );
+      expect(
+        Object.keys(REACHABLE_WITHOUT_THE_RING).filter(
+          (name) => !DERIVED_BEARERS.has(name) || RING_BEARERS.has(name),
+        ),
+      ).toEqual([]);
+
+      const reasons = [
+        ...Object.values(RING_BEYOND_THE_SCAN),
+        ...Object.values(REACHABLE_WITHOUT_THE_RING),
+      ];
+      // Distinct, so a reason copied from a sibling cannot stand in for one, and
+      // long enough that a name-shaped placeholder fails rather than passing.
+      expect(new Set(reasons).size).toBe(reasons.length);
+      for (const reason of reasons) expect([reason, reason.length > 60]).toEqual([reason, true]);
+    });
+
+    it('derives real sets on both sides (either found empty would pass vacuously)', () => {
+      expect(RING_BEARERS.size).toBeGreaterThanOrEqual(20);
+      expect(POINTER_CONTROLS.length).toBeGreaterThanOrEqual(9);
+      expect(TAB_STOPS.length).toBeGreaterThanOrEqual(12);
+      // The floor that keeps the JSX side from collapsing to "native elements
+      // only": the scrolling regions are tab stops solely because a hook spreads
+      // a `tabIndex` onto them, which is the resolution the log-pane case needs.
+      expect(TAB_STOPS.filter((stop) => stop.element === 'pre').length).toBeGreaterThanOrEqual(1);
+      expect([...DERIVED_BEARERS]).toContain('.tai-scroll-region');
+      expect([...DERIVED_BEARERS]).toContain('.tai-textarea');
+    });
   });
 
   it('never cancels the outline for a state that can be keyboard focus', () => {

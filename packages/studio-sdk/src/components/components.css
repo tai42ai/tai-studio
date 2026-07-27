@@ -1296,8 +1296,8 @@
     margin-top: var(--tai-space-5);
   }
 
-  /* A side-anchored, full-height modal panel — the shell's navigation drawer
-     below 640 px. Radix Dialog supplies the trap, the scroll lock, Esc, the
+  /* A side-anchored, full-height modal panel, published for a host to mount and
+     drive itself. Radix Dialog supplies the trap, the scroll lock, Esc, the
      inert background, and focus return. */
   .tai-drawer {
     position: fixed;
@@ -1853,7 +1853,7 @@
   /* -- Shell -----------------------------------------------------------------------
      The application frame: a fixed-width sidebar beside a scrolling main
      column at >=1024, a 72 px labelled icon rail from 640, and a sticky top bar
-     with a drawer below 640.
+     below 640.
 
      The bar's height is named once. Three unlinked rules have to agree on it —
      the bar's own box, the scroll padding that stops it covering an element

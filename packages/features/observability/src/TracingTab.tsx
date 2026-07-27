@@ -125,6 +125,18 @@ function FilterBar({
 }): ReactNode {
   const navigate = useAppNavigate();
   const [draft, setDraft] = useState<FilterDraft>(() => draftFromSearch(search));
+  const seed = JSON.stringify(draftFromSearch(search));
+  const [seededFrom, setSeededFrom] = useState(seed);
+  // Re-seed the draft from the URL's filter set DURING RENDER (React's documented
+  // adjust-state-on-prop-change pattern) rather than by remounting on a `key`: this
+  // bar is what writes the filter set, so a remount keyed on it detaches the focused
+  // control the instant Apply commits and drops the keyboard caret on
+  // `document.body` (WCAG 2.4.3). Render-phase re-seeding still tracks a URL change
+  // that arrives without a remount, such as browser back/forward.
+  if (seededFrom !== seed) {
+    setSeededFrom(seed);
+    setDraft(draftFromSearch(search));
+  }
 
   const set = (patch: Partial<FilterDraft>): void => {
     setDraft((prev) => ({ ...prev, ...patch }));
@@ -369,14 +381,7 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-      {/* Re-seed the filter draft whenever the URL's filter set changes without a
-          remount (e.g. browser back/forward) by keying the bar on the serialized
-          draft — matching the data-derived remount used elsewhere in Studio. */}
-      <FilterBar
-        key={JSON.stringify(draftFromSearch(search))}
-        search={search}
-        disabled={query.isPending}
-      />
+      <FilterBar search={search} disabled={query.isPending} />
 
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Button onClick={onExport}>Export CSV</Button>

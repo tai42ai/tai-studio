@@ -16,68 +16,31 @@
  * read for OFFENCES; the remedies are unioned across the sheets, so it does not
  * matter which sheet holds the one that covers it.
  */
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import {
+  appliesAtEveryWidth,
+  everywhere,
+  readRules,
+  sheetText,
+  stylesheetsWithin,
+} from './test-css-reader';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
 
-/** Where a stylesheet that reaches a browser can live. `dist` is build output. */
-const SHEET_ROOTS = ['packages', 'apps'];
-const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
-
 /**
- * `source` with every brace inside a quoted value replaced by a space.
+ * Where a stylesheet that reaches a browser can live.
  *
- * Everything below parses by counting braces, and a brace is legal inside a CSS
- * string: one `content: '}'` desynchronises the walk from there to the end of
- * the file, so every block after it is read at the wrong depth and the at-rule
- * context each rule reports is wrong. Only the braces are neutralised, at the
- * same offsets — the quotes themselves stay, because a selector like
- * `[data-theme='dark']` is read as written elsewhere.
+ * `e2e/` is one of them: the reference plugin ships a scoped sheet the host
+ * injects as a `<link>` into the running Studio, so a keyframe or a raw duration
+ * written there animates on the page exactly as one in the app shell does.
  */
-function neutraliseQuotedBraces(source: string): string {
-  let out = '';
-  let quote: string | undefined;
-  for (let index = 0; index < source.length; index += 1) {
-    const character = source[index] ?? '';
-    if (quote !== undefined) {
-      if (character === '\\') {
-        out += source.slice(index, index + 2);
-        index += 1;
-        continue;
-      }
-      if (character === quote) quote = undefined;
-      out += character === '{' || character === '}' ? ' ' : character;
-      continue;
-    }
-    if (character === '"' || character === "'") quote = character;
-    out += character;
-  }
-  return out;
-}
-
-/** Stylesheet text as this file parses it: no comments, no brace inside a string. */
-function sheetText(source: string): string {
-  return neutraliseQuotedBraces(source.replaceAll(/\/\*[\s\S]*?\*\//g, ''));
-}
-
-/** Every `.css` file below `directory`, recursively. */
-function stylesheetsWithin(directory: string): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (!SKIP_DIRECTORIES.has(entry.name))
-        found.push(...stylesheetsWithin(join(directory, entry.name)));
-    } else if (entry.name.endsWith('.css')) {
-      found.push(join(directory, entry.name));
-    }
-  }
-  return found;
-}
+const SHEET_ROOTS = ['packages', 'apps', 'e2e'];
 
 /** The text of the block opened at `openIndex`, matched by brace depth. */
 function blockAt(source: string, openIndex: number): string {
@@ -93,42 +56,12 @@ function blockAt(source: string, openIndex: number): string {
 }
 
 /**
- * The body of the `prefers-reduced-motion: reduce` query, or `''` when the sheet
- * declares none.
- *
- * The query itself must reach every screen. Nested inside a width band it still
- * parses, still contains every declaration this file asserts, and flattens
- * nothing outside that band — so its own context is checked here rather than
- * left to the per-rule filter, which cannot see a wrapper outside the block it
- * is handed. An ABSENT block is not an error: most sheets start no motion, and
- * the assertions below union the remedies across every sheet.
- */
-function reducedMotionBlock(source: string): string {
-  const open = source.indexOf('@media (prefers-reduced-motion: reduce)');
-  if (open === -1) return '';
-  const context = contextAt(source, open);
-  if (!appliesAtEveryWidth(context))
-    throw new Error(`the reduced-motion query is confined to ${context.join(' > ')}`);
-  return blockAt(source, source.indexOf('{', open));
-}
-
-interface Rule {
-  readonly selectors: string[];
-  readonly body: string;
-  /** The at-rule preludes this rule is nested inside, outermost first. */
-  readonly context: string[];
-}
-
-/**
  * The at-rule preludes enclosing `offset`, outermost first.
  *
- * The scraper below matches a selector and a body wherever they appear and, on
- * its own, never asks which at-rule encloses them. That is not a nuance: wrapping
- * this sheet's entire reduce block in
- * `@media (min-width: 2000px)` leaves every rule PRESENT to a context-free
- * scraper while no real screen ever applies it — the whole contract switched off
- * with the gate green. Blocks that are not at-rules are pushed as `''` so the
- * stack stays balanced and a rule nested two levels deep is still reached.
+ * The reduce block's own context is read here rather than left to the per-rule
+ * reader, which is handed a block and cannot see the wrapper outside it: nested
+ * inside a width band the query still parses, still holds every declaration this
+ * file asserts, and flattens nothing outside that band.
  */
 function contextAt(source: string, offset: number): string[] {
   const stack: string[] = [];
@@ -150,53 +83,20 @@ function contextAt(source: string, offset: number): string[] {
 }
 
 /**
- * A media query keyed on viewport WIDTH — a rule that does not apply everywhere.
+ * The body of the `prefers-reduced-motion: reduce` query, or `''` when the sheet
+ * declares none.
  *
- * Every spelling CSS accepts, because a rule is banded whichever way the band is
- * written. Matching only `(max-width:`/`(min-width:` — which this did first —
- * left MEDIA QUERIES LEVEL 4 RANGE SYNTAX (`@media (width <= 639px)`,
- * `@media (400px < width)`) unrecognised, so a rule confined to one band was
- * read as applying at every width: the whole reduce block could be banded away
- * above every real screen with this file green.
+ * The query itself must reach every screen, so its own context is checked here.
+ * An ABSENT block is not an error: most sheets start no motion, and the
+ * assertions below union the remedies across every sheet.
  */
-const WIDTH_CONDITIONED =
-  /\(\s*(?:(?:max|min)-width\s*:|width\s*[<>=]|[\d.]+(?:px|r?em|ch|ex|vw|vh|vmin|vmax)\s*[<>=])/;
-
-/** Whether a rule at this context applies at EVERY viewport width. */
-function appliesAtEveryWidth(context: readonly string[]): boolean {
-  return !context.some((at) => WIDTH_CONDITIONED.test(at));
-}
-
-/**
- * Every innermost declaration block in `source` that applies at EVERY viewport
- * width, with its selectors split out. A rule confined to a width band is
- * DROPPED: a reduce block that only exists above 2000 px flattens nothing on any
- * real screen, so counting it would let the guard be banded away silently.
- */
-function rules(source: string): Rule[] {
-  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
-    selectors: (match[1] ?? '').split(',').map((one) => one.trim()),
-    body: match[2] ?? '',
-    context: contextAt(source, match.index),
-  }));
-}
-
-/**
- * The rules that apply at EVERY viewport width.
- *
- * This is the right universe for a PRESENCE assertion — "a remedy exists",
- * "something is flattened" — because a rule that only applies above 2000 px is
- * exactly as absent as no rule at all.
- *
- * It is the WRONG universe for an OFFENCE hunt, and the filter used to sit in the
- * reader itself, which silently applied it to both: a banded `outline: none` on a
- * ring bearer, or a banded hover lift, became invisible. A rule that only applies
- * below 640 px is not absent — it is present on every phone, which is the band
- * this sheet spends seventeen rules restyling. Offence scans therefore read the
- * UNFILTERED set and this filter is applied per assertion.
- */
-function everywhere<T extends { readonly context: readonly string[] }>(rules: T[]): T[] {
-  return rules.filter((rule) => appliesAtEveryWidth(rule.context));
+function reducedMotionBlock(source: string): string {
+  const open = source.indexOf('@media (prefers-reduced-motion: reduce)');
+  if (open === -1) return '';
+  const context = contextAt(source, open);
+  if (!appliesAtEveryWidth(context))
+    throw new Error(`the reduced-motion query is confined to ${context.join(' > ')}`);
+  return blockAt(source, source.indexOf('{', open));
 }
 
 interface Sheet {
@@ -303,7 +203,7 @@ describe('reduced motion', () => {
     // phone and must still be caught by an OFFENCE hunt. A reader that filtered
     // for both — which is what closing the first hole did — traded a fail-open in
     // one direction for a fail-open in the other.
-    const sample = rules(
+    const sample = readRules(
       '.a { color: red } @media (min-width: 2000px) { .b { color: red } } @media (max-width: 639px) { .c { color: red } }',
     );
     expect(sample).toHaveLength(3);
@@ -342,7 +242,7 @@ describe('reduced motion', () => {
     const sample = sheetText(
       ".a::after { content: '}' } @media (min-width: 2000px) { .b { color: red } }",
     );
-    const parsed = rules(sample);
+    const parsed = readRules(sample);
     expect(parsed.map((rule) => rule.selectors.join())).toEqual(['.a::after', '.b']);
     expect(everywhere(parsed).map((rule) => rule.selectors.join())).toEqual(['.a::after']);
     // The quotes themselves survive, because selectors are read as written.
@@ -356,7 +256,8 @@ describe('reduced motion', () => {
     expect(names).toContain('packages/studio-sdk/src/components/tokens.css');
     expect(names).toContain('packages/studio-sdk/src/components/components.css');
     expect(names).toContain('apps/studio/src/styles.css');
-    expect(names.length).toBeGreaterThanOrEqual(4);
+    expect(names).toContain('e2e/reference-plugin/studio-src/styles.css');
+    expect(names.length).toBeGreaterThanOrEqual(5);
     const empty = SHEETS.filter((sheet) => sheet.source.trim() === '');
     expect(empty.map((sheet) => sheet.name)).toEqual([]);
   });
@@ -382,13 +283,13 @@ describe('reduced motion', () => {
     // this gate green — the token file declares three of the four keyframes, so
     // it is exactly where such a rule would land.
     const stopped = new Set(
-      SHEETS.flatMap((sheet) => everywhere(rules(sheet.reduced)))
+      SHEETS.flatMap((sheet) => everywhere(readRules(sheet.reduced)))
         .filter((rule) => /animation:\s*none/.test(rule.body))
         .flatMap((rule) => rule.selectors),
     );
 
     const running = SHEETS.flatMap((sheet) =>
-      rules(sheet.source)
+      readRules(sheet.source)
         .filter((rule) => startsOne(rule.body))
         .flatMap((rule) => rule.selectors)
         .filter((selector) => !stopped.has(selector))
@@ -437,7 +338,7 @@ describe('reduced motion', () => {
     // itself.
     const flattened = new Map<string, Set<string>>();
     for (const sheet of SHEETS) {
-      for (const rule of everywhere(rules(sheet.reduced))) {
+      for (const rule of everywhere(readRules(sheet.reduced))) {
         for (const selector of rule.selectors) {
           const already = flattened.get(selector) ?? new Set<string>();
           for (const property of transformProperties(rule.body).resting) already.add(property);
@@ -450,7 +351,7 @@ describe('reduced motion', () => {
     const lifting: string[] = [];
     const unflattened: string[] = [];
     for (const sheet of SHEETS) {
-      for (const rule of rules(sheet.source)) {
+      for (const rule of readRules(sheet.source)) {
         const { moving } = transformProperties(rule.body);
         if (moving.length === 0) continue;
         for (const selector of rule.selectors.filter(isStateConditioned)) {
@@ -535,14 +436,14 @@ describe('reduced motion', () => {
     // carry a flat tone of its own (a gradient there would half-disappear the
     // moment the sweep stopped), and the overlay must be REMOVED rather than
     // stopped, or the band freezes across the middle of the placeholder.
-    const block = rules(components.source).find(
+    const block = readRules(components.source).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton',
     );
     expect(block, 'no .tai-skeleton rule in components.css').toBeDefined();
     expect(block?.body).toMatch(/background:\s*var\(--tai-color-[\w-]+\)\s*;/);
     expect(block?.body).not.toContain('gradient');
 
-    const parkedOverlay = rules(components.reduced).find((rule) =>
+    const parkedOverlay = readRules(components.reduced).find((rule) =>
       rule.selectors.includes('.tai-skeleton::after'),
     );
     expect(
@@ -550,7 +451,7 @@ describe('reduced motion', () => {
       'the reduced-motion block never names .tai-skeleton::after',
     ).toBeDefined();
     expect(
-      rules(components.reduced)
+      readRules(components.reduced)
         .filter((rule) => rule.selectors.includes('.tai-skeleton::after'))
         .map((rule) => rule.body)
         .join(''),
@@ -563,7 +464,7 @@ describe('reduced motion', () => {
     // from a determinate reading, which is the "reads as a state it is not"
     // failure this contract exists to prevent. Stopping the animation without
     // widening the fill is therefore a REGRESSION, not a partial fix.
-    const fill = rules(components.reduced).find(
+    const fill = readRules(components.reduced).find(
       (rule) =>
         rule.selectors.length === 1 && rule.selectors[0] === '.tai-progress-fill-indeterminate',
     );
@@ -600,18 +501,18 @@ describe('reduced motion', () => {
     // three declarations that make the sweep an OVERLAY are pinned here: the
     // animation belongs to a pseudo-element, that pseudo-element is taken out of
     // flow, and the block clips it.
-    const runners = rules(components.source)
+    const runners = readRules(components.source)
       .filter((rule) => /animation(-name)?\s*:[^;]*\btai-shimmer\b/.test(rule.body))
       .flatMap((rule) => rule.selectors);
     expect(runners.length).toBeGreaterThan(0);
     expect(runners.filter((selector) => !/::(after|before)$/.test(selector))).toEqual([]);
 
-    const overlay = rules(components.source).find(
+    const overlay = readRules(components.source).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton::after',
     );
     expect(overlay?.body).toMatch(/position:\s*absolute/);
 
-    const block = rules(components.source).find(
+    const block = readRules(components.source).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton',
     );
     expect(block?.body).toMatch(/position:\s*relative/);

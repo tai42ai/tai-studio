@@ -2,12 +2,13 @@
  * `PageHeader`, `Page`, `Stack` — the screen scaffolding every feature was
  * hand-rolling as a flex column plus an ad-hoc heading block.
  *
- * `PageHeader` owns a DOM contract the end-to-end suites assert: exactly one
+ * `PageHeader` owns a DOM contract `page-header.test.tsx` asserts: exactly one
  * `<h1>` whose accessible name is the title VERBATIM. The nav-section eyebrow a
  * screen shows above its title is therefore a SIBLING of the `<h1>`, never a
  * child — nesting it would fold it into the computed name and break every
  * heading assertion. The `<h1>` is also permanently focusable
- * (`tabIndex={-1}`) so a route change can move focus to the new screen's title.
+ * (`tabIndex={-1}`), which is what makes it addressable as a focus target
+ * through {@link PageHeaderProps.titleRef} or `id`.
  */
 import type { CSSProperties, ReactElement, ReactNode, Ref } from 'react';
 
@@ -26,12 +27,17 @@ export interface PageHeaderProps {
   readonly eyebrow?: string;
   readonly description?: string;
   readonly actions?: ReactNode;
+  /**
+   * A consumer ref for the `<h1>`. Published so a caller that wants to move
+   * focus to the new screen's title — after a route change, say — has the
+   * element without querying for it; the heading is focusable for that reason.
+   */
   readonly titleRef?: Ref<HTMLHeadingElement>;
   /**
    * An id for the `<h1>`, not for the `<header>` root. The heading is the element
    * a caller has a reason to address — an `aria-labelledby` pointing at it names
-   * the region from the screen's own title — and it is also the focus target a
-   * route change moves to.
+   * the region from the screen's own title — and it is the other way to reach it
+   * as a focus target.
    */
   readonly id?: string;
 }

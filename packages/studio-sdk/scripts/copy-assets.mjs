@@ -10,9 +10,9 @@
 //                  whose dist/ copy is absent or stale would publish CSS that does
 //                  not match its source; one absent from the exports map cannot be
 //                  imported by subpath.
-//   dist/ -> src/  a stylesheet that was RENAMED or DELETED leaves its old dist/
-//                  copy behind, and `files: ["dist"]` publishes it — together with
-//                  an exports subpath that still resolves to it. So a dist/ copy
+//   dist/ -> src/  a file that was RENAMED or DELETED in src/ leaves its old dist/
+//                  output behind, and `files: ["dist"]` publishes it — together with
+//                  an exports subpath that still resolves to it. So any dist/ file
 //                  with no live source, and a `*.css` exports subpath with no live
 //                  source behind it, are errors too.
 // Every one of these fails the build loudly.
@@ -24,14 +24,17 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const srcDir = resolve(root, 'src');
 const distDir = resolve(root, 'dist');
 
-/** Every file under `dir` whose name ends with one of `extensions`, recursively. */
+/**
+ * Every file under `dir`, recursively: those whose name ends with one of
+ * `extensions`, or all of them when `extensions` is omitted.
+ */
 function filesWithin(dir, extensions) {
   const found = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       found.push(...filesWithin(full, extensions));
-    } else if (extensions.some((ext) => entry.name.endsWith(ext))) {
+    } else if (extensions === undefined || extensions.some((ext) => entry.name.endsWith(ext))) {
       found.push(full);
     }
   }
@@ -48,29 +51,157 @@ if (stylesheets.length === 0) {
   throw new Error(`No stylesheet found under ${srcDir}; the design system ships at least one.`);
 }
 
+/**
+ * `source` with every comment — and, for a module, every template literal —
+ * blanked to spaces, newlines kept so line and column stay put. Only a statement
+ * delivers a stylesheet, so the scans below run over this rather than over the
+ * raw text: the words of an import inside a comment or a backtick string are
+ * prose, and a scan that counts them waves through the sheet it exists to catch.
+ *
+ * Quoted strings are copied through, because an import carries its specifier in
+ * one, but a quote never runs past the end of its own line — so a lone quote
+ * inside a regular expression can swallow at most that line. A stylesheet has
+ * block comments only: there a `//` belongs to a URL and a backtick is an
+ * ordinary character.
+ */
+function executableText(source, dialect) {
+  const isModule = dialect === 'module';
+  let out = '';
+  let mode = 'code';
+  let index = 0;
+  while (index < source.length) {
+    const character = source[index];
+    const pair = source.slice(index, index + 2);
+    if (mode === 'code') {
+      if (pair === '/*') {
+        mode = 'block';
+        out += '  ';
+        index += 2;
+        continue;
+      }
+      if (isModule && pair === '//') {
+        mode = 'line';
+        out += '  ';
+        index += 2;
+        continue;
+      }
+      if (isModule && character === '`') {
+        mode = 'template';
+        out += ' ';
+        index += 1;
+        continue;
+      }
+      if (character === "'" || character === '"') mode = character;
+      out += character;
+      index += 1;
+      continue;
+    }
+    if (mode === 'block') {
+      if (pair === '*/') {
+        mode = 'code';
+        out += '  ';
+        index += 2;
+        continue;
+      }
+      out += character === '\n' ? '\n' : ' ';
+      index += 1;
+      continue;
+    }
+    if (mode === 'line') {
+      if (character === '\n') mode = 'code';
+      out += character === '\n' ? '\n' : ' ';
+      index += 1;
+      continue;
+    }
+    if (mode === 'template') {
+      if (character === '\\') {
+        // An escaped backtick closes nothing, so the pair is consumed together.
+        out += ` ${source[index + 1] === '\n' ? '\n' : ' '}`;
+        index += 2;
+        continue;
+      }
+      if (character === '`') mode = 'code';
+      out += character === '\n' ? '\n' : ' ';
+      index += 1;
+      continue;
+    }
+    // Inside a quoted string, `mode` is the quote that opened it.
+    if (character === '\\') {
+      out += source.slice(index, index + 2);
+      index += 2;
+      continue;
+    }
+    if (character === mode || character === '\n') mode = 'code';
+    out += character;
+    index += 1;
+  }
+  return out;
+}
+
+/**
+ * A `tsconfig` exclude glob as a matcher for a package-root-relative POSIX path.
+ * A pattern naming a directory covers everything beneath it, as `tsc` reads it.
+ */
+function excludeMatcher(pattern) {
+  let expression = '';
+  let index = 0;
+  while (index < pattern.length) {
+    const character = pattern[index];
+    if (character === '*') {
+      if (pattern[index + 1] === '*') {
+        const slashed = pattern[index + 2] === '/';
+        expression += slashed ? '(?:.*/)?' : '.*';
+        index += slashed ? 3 : 2;
+        continue;
+      }
+      expression += '[^/]*';
+      index += 1;
+      continue;
+    }
+    expression += character === '?' ? '[^/]' : character.replace(/[^\w-]/, '\\$&');
+    index += 1;
+  }
+  return new RegExp(`^${expression}(?:/.*)?$`);
+}
+
 // A bare CSS import in either quote form — `import './x.css'` and
 // `import "./x.css"` are the same import to a bundler, so both count here and in
 // the sibling `sideEffects` gate (package-side-effects.test.ts). ANCHORED to the
-// start of a line, as that gate is: only a statement delivers a stylesheet, so
-// the same text inside a comment (`// import './x.css';`, or a docblock line,
-// which opens with `*`) must not be mistaken for one.
+// start of a line, as that gate is, and read from comment-free text.
 const MODULE_CSS_IMPORT = /^\s*import\s+['"]([^'"]+\.css)['"]/gm;
 // A stylesheet's own `@import`, in every form CSS allows it: either quote, with
 // or without the `url()` wrapper — and, for the same reason, anchored too.
 const STYLESHEET_IMPORT = /^\s*@import\s+(?:url\(\s*)?['"]([^'"]+)['"]/gm;
 
-// Test and test-support modules, which `tsconfig.build.json` keeps out of the
-// build and `files` keeps out of the tarball. An import that exists only there
-// reaches no consumer, so it cannot be what keeps a stylesheet alive.
-const UNPUBLISHED_MODULE = /(?:\.test|\.spec)\.tsx?$|(?:^|\/)test-[^/]*\.tsx?$/;
+// What counts as test and test-support scaffolding is `tsconfig.build.json`'s
+// `exclude`, read rather than restated so the two cannot disagree: a module the
+// composite build never emits reaches no consumer, so an import that exists only
+// there cannot be what keeps a stylesheet alive.
+const buildConfigPath = resolve(root, 'tsconfig.build.json');
+const buildConfig = JSON.parse(executableText(readFileSync(buildConfigPath, 'utf8'), 'module'));
+const excludedFromBuild = Array.isArray(buildConfig.exclude) ? buildConfig.exclude : [];
+if (excludedFromBuild.length === 0) {
+  throw new Error(
+    `${posixRelative(root, buildConfigPath)} declares no "exclude", so this gate cannot tell a published module from test scaffolding, ` +
+      `and an import that ships to nobody would count as keeping a stylesheet alive.`,
+  );
+}
+const unpublishedModule = excludedFromBuild.map(excludeMatcher);
+
+// Every module the build emits, source-relative; the rest is scaffolding.
+const publishedModules = filesWithin(srcDir, ['.ts', '.tsx'])
+  .map((module) => posixRelative(srcDir, module))
+  .filter((sourceRelative) =>
+    unpublishedModule.every((matcher) => !matcher.test(`src/${sourceRelative}`)),
+  );
 
 // The specifiers every PUBLISHED TypeScript module side-effect-imports, so an
 // unreferenced stylesheet is caught here rather than by its absence from a
 // running page.
 const importedSpecifiers = new Set();
-for (const module of filesWithin(srcDir, ['.ts', '.tsx'])) {
-  if (UNPUBLISHED_MODULE.test(posixRelative(srcDir, module))) continue;
-  const source = readFileSync(module, 'utf8');
+for (const sourceRelative of publishedModules) {
+  const module = resolve(srcDir, sourceRelative);
+  const source = executableText(readFileSync(module, 'utf8'), 'module');
   for (const match of source.matchAll(MODULE_CSS_IMPORT)) {
     importedSpecifiers.add(posixRelative(srcDir, resolve(dirname(module), match[1])));
   }
@@ -82,7 +213,8 @@ for (const module of filesWithin(srcDir, ['.ts', '.tsx'])) {
 // resolves to a path no source stylesheet occupies and so simply does not match.
 const importedByStylesheet = new Set();
 for (const stylesheet of stylesheets) {
-  for (const match of readFileSync(stylesheet, 'utf8').matchAll(STYLESHEET_IMPORT)) {
+  const source = executableText(readFileSync(stylesheet, 'utf8'), 'stylesheet');
+  for (const match of source.matchAll(STYLESHEET_IMPORT)) {
     const target = resolve(dirname(stylesheet), match[1]);
     // A sheet importing itself carries nothing; it must still be reached from a
     // module or it is dead.
@@ -126,22 +258,34 @@ if (stale.length > 0) {
   );
 }
 
-// The reverse: nothing may sit in dist/ that no source stylesheet puts there. A
-// rename or a deletion in src/ leaves the old copy untouched — this script only
+// The reverse: nothing may sit in dist/ that no source puts there. A rename or a
+// deletion in src/ leaves the old build output untouched — this script only
 // writes, and `tsc -b` cleans nothing — and `files: ["dist"]` would publish it.
+// This script copies the stylesheets; everything else in dist/ is what `tsc -b`
+// emits for a published module, so both are held against the sources behind them
+// and a leftover .js or .d.ts is as much an error as a leftover stylesheet.
 const liveSourceRelative = new Set(
   stylesheets.map((stylesheet) => posixRelative(srcDir, stylesheet)),
 );
 
+const EMITTED_SUFFIXES = ['.js', '.js.map', '.d.ts', '.d.ts.map'];
+const expectedInDist = new Set(liveSourceRelative);
+for (const sourceRelative of publishedModules) {
+  // A declaration source is input only; the build emits nothing for it.
+  if (sourceRelative.endsWith('.d.ts')) continue;
+  const base = sourceRelative.replace(/\.tsx?$/, '');
+  for (const suffix of EMITTED_SUFFIXES) expectedInDist.add(base + suffix);
+}
+
 const orphaned = existsSync(distDir)
-  ? filesWithin(distDir, ['.css'])
-      .map((copied) => posixRelative(distDir, copied))
-      .filter((distRelative) => !liveSourceRelative.has(distRelative))
+  ? filesWithin(distDir)
+      .map((emitted) => posixRelative(distDir, emitted))
+      .filter((distRelative) => !expectedInDist.has(distRelative))
   : [];
 
 if (orphaned.length > 0) {
   throw new Error(
-    `Stylesheet(s) in dist/ with no source under src/, left by an earlier build of a since-renamed or deleted file and published by files: ["dist"]: ${orphaned.join(', ')}. ` +
+    `File(s) in dist/ with no source under src/, left by an earlier build of a since-renamed or deleted file and published by files: ["dist"]: ${orphaned.join(', ')}. ` +
       `Delete dist/ and rebuild.`,
   );
 }

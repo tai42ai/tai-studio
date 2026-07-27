@@ -5,8 +5,8 @@
  * PRESENTATIONAL: the caller fetches the tool names (GET /api/tools) and owns the
  * selected value; this component fetches nothing.
  *
- * Two optional extensions, both inert unless supplied (every existing call site
- * passes neither):
+ * Three optional extensions, each inert unless supplied; the preset create flow
+ * passes all three and the multi-tool picker the first two:
  *  - `excludeNames` removes names from the options (e.g. a preset cannot be
  *    another preset's base, so the preset create flow excludes existing preset
  *    names). The server stays the authority — a slipped-through name is rejected
@@ -36,6 +36,13 @@ export interface ToolPickerProps {
   readonly placeholder?: string;
   readonly idPrefix?: string;
   readonly label?: string;
+  /**
+   * Accessible name for the tool listbox when `label` renders none and no
+   * enclosing `Field` names it. `label` wins where both are given: it names the
+   * control from visible text, and the `Select` drops a caller name it would
+   * otherwise override.
+   */
+  readonly 'aria-label'?: string;
   /** Names removed from the options (the server remains the authority). */
   readonly excludeNames?: readonly string[];
   /** Per-tool native tags; when present, options are grouped and a tag filter shows. */
@@ -97,6 +104,7 @@ export function ToolPicker({
   placeholder = 'Select a tool…',
   idPrefix = 'tool-picker',
   label,
+  'aria-label': ariaLabel,
   excludeNames,
   tagsByTool,
   agentToolNames,
@@ -126,6 +134,7 @@ export function ToolPicker({
         value={value ?? ''}
         onValueChange={onChange}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         disabled={disabled}
       />
     ) : (
@@ -140,6 +149,7 @@ export function ToolPicker({
         value={value ?? ''}
         onValueChange={onChange}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         disabled={disabled}
       />
     );
@@ -155,7 +165,6 @@ export function ToolPicker({
             ]}
             value={tagFilter}
             onValueChange={setTagFilter}
-            aria-label="Filter tools by tag"
             disabled={disabled}
           />
         </Field>

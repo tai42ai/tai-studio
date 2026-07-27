@@ -35,6 +35,8 @@
     }
   },
   "files": [
+    "LICENSE",
+    "NOTICE",
     "dist",
     "src",
     "!src/**/*.test.ts",
@@ -44,7 +46,7 @@
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit -p tsconfig.json",
-    "lint": "eslint src",
+    "lint": "eslint src --max-warnings 0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "test": "vitest run"
   }

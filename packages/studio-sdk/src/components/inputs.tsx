@@ -7,8 +7,12 @@
  * The wiring is composed with the caller's own attributes rather than spread
  * before them, because a plain spread let one caller prop silently delete part of
  * it — see {@link wireToField}.
+ *
+ * A consumer `ref` is FORWARDED to the native control by that same spread, so a
+ * caller that has to focus or measure its own input is not pushed out of the
+ * design system to get at the element.
  */
-import type { AriaAttributes, InputHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type { AriaAttributes, InputHTMLAttributes, Ref, TextareaHTMLAttributes } from 'react';
 
 import { controlClassName, INPUT_CLASS, TEXTAREA_CLASS } from './control-styles';
 import { useFieldControl, type FieldControlProps } from './field';
@@ -45,7 +49,13 @@ function wireToField(
   };
 }
 
-export type TextInputProps = InputHTMLAttributes<HTMLInputElement>;
+/** A consumer ref for the native control; the prop spread forwards it. */
+interface ControlRefProps<T> {
+  readonly ref?: Ref<T>;
+}
+
+export type TextInputProps = InputHTMLAttributes<HTMLInputElement> &
+  ControlRefProps<HTMLInputElement>;
 
 export function TextInput({ className, type = 'text', ...props }: TextInputProps) {
   const field = useFieldControl();
@@ -59,7 +69,8 @@ export function TextInput({ className, type = 'text', ...props }: TextInputProps
   );
 }
 
-export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
+export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> &
+  ControlRefProps<HTMLTextAreaElement>;
 
 export function Textarea({ className, rows = 4, ...props }: TextareaProps) {
   const field = useFieldControl();
@@ -73,7 +84,8 @@ export function Textarea({ className, rows = 4, ...props }: TextareaProps) {
   );
 }
 
-export type NumberInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
+export type NumberInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> &
+  ControlRefProps<HTMLInputElement>;
 
 export function NumberInput({ className, ...props }: NumberInputProps) {
   const field = useFieldControl();

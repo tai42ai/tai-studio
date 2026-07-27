@@ -124,8 +124,16 @@ const CONTROL_SELECTOR = [
 
 export function decorBorderedControls(container: HTMLElement): string[] {
   return [...container.querySelectorAll<HTMLElement>(CONTROL_SELECTOR)]
-    .filter((node) =>
-      /(^|;)\s*border:[^;]*var\(--tai-color-border\)/.test(node.getAttribute('style') ?? ''),
-    )
+    .filter((node) => controlBoundary(node).includes('var(--tai-color-border)'))
     .map((node) => `${node.tagName.toLowerCase()}: ${node.textContent}`);
+}
+
+/**
+ * The boundary a control actually draws. `borderColor` comes FIRST: it is what a
+ * `border-color` declaration and the `border` shorthand both resolve to, so a
+ * control naming the decorative token either way is seen. Matching the raw
+ * `style` attribute against `border:` alone let every longhand through.
+ */
+export function controlBoundary(node: HTMLElement): string {
+  return node.style.borderColor || node.style.border;
 }

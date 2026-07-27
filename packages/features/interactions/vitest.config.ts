@@ -5,7 +5,12 @@ import { defineConfig } from 'vitest/config';
  * Vitest config: a jsdom DOM environment + React Testing Library, so this
  * package's components and hooks are exercised as real rendered DOM. CSS
  * side-effect imports are ignored (`css: false`). Coverage is opt-in via
- * `--coverage` (v8); when enabled the thresholds fail the run on a regression.
+ * `--coverage` (v8).
+ *
+ * Each threshold sits about two points under what the suite actually achieves,
+ * not at a round number well below it. That headroom absorbs one newly uncovered
+ * branch without breaking the build; losing a component's tests drops coverage
+ * past the gate and fails the run.
  */
 export default defineConfig({
   plugins: [react()],
@@ -25,10 +30,10 @@ export default defineConfig({
       ],
       reporter: ['text'],
       thresholds: {
-        statements: 90,
-        branches: 85,
-        functions: 90,
-        lines: 90,
+        statements: 95,
+        branches: 93,
+        functions: 94,
+        lines: 95,
       },
     },
   },

@@ -15,6 +15,7 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ReactElement, ReactNode } from 'react';
 
+import { assertSlotElement } from '../element-slot';
 import { useModalFocusReturn } from './modal-focus';
 
 export interface DialogProps {
@@ -25,8 +26,10 @@ export interface DialogProps {
    * A trigger element; when omitted, control the dialog via `open`/`onOpenChange`.
    *
    * It is a single ELEMENT, not any node: Radix clones its props onto it, so a
-   * string throws and a fragment silently renders openers that carry neither the
-   * `aria-haspopup`/`aria-expanded`/`aria-controls` wiring nor a click handler.
+   * string throws. The type admits a FRAGMENT — `<></>` is a `ReactElement` —
+   * which would render openers carrying neither the
+   * `aria-haspopup`/`aria-expanded`/`aria-controls` wiring nor a click handler,
+   * so {@link assertSlotElement} rejects that one at runtime.
    */
   readonly trigger?: ReactElement;
   readonly open?: boolean;
@@ -44,6 +47,7 @@ export function Dialog({
   onOpenChange,
 }: DialogProps) {
   const focusReturn = useModalFocusReturn(trigger !== undefined);
+  if (trigger !== undefined) assertSlotElement(trigger, 'Dialog `trigger`');
   return (
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger !== undefined ? <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger> : null}

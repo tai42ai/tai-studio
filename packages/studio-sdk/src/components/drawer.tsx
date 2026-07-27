@@ -1,6 +1,8 @@
 /**
- * `Drawer` — a side-anchored, full-height modal panel (the shell's navigation
- * surface below 640 px). It is the same Radix Dialog machinery `Dialog` uses, so
+ * `Drawer` — a side-anchored, full-height modal panel, published for a screen
+ * that wants a modal it can anchor to an edge rather than centre. Nothing in
+ * Studio renders one today; it is SDK surface a plugin can reach for. It is the
+ * same Radix Dialog machinery `Dialog` uses, so
  * the focus trap, the scroll lock, Escape and overlay dismissal, the inert
  * background, and focus return to the opener all come from the primitive; only
  * the anchoring differs, and that lives entirely in `.tai-drawer`.
@@ -19,6 +21,7 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ReactElement, ReactNode } from 'react';
 
+import { assertSlotElement } from '../element-slot';
 import { CloseIcon } from './icons';
 import { useModalFocusReturn } from './modal-focus';
 
@@ -31,8 +34,10 @@ export interface DrawerProps {
    * The opener. Radix labels it and returns focus to it when the drawer closes.
    *
    * It is a single ELEMENT, not any node: Radix clones its props onto it, so a
-   * string throws and a fragment silently renders openers that carry neither the
-   * `aria-haspopup`/`aria-expanded`/`aria-controls` wiring nor a click handler.
+   * string throws. The type admits a FRAGMENT — `<></>` is a `ReactElement` —
+   * which would render openers carrying neither the
+   * `aria-haspopup`/`aria-expanded`/`aria-controls` wiring nor a click handler,
+   * so {@link assertSlotElement} rejects that one at runtime.
    */
   readonly trigger?: ReactElement;
   readonly open?: boolean;
@@ -50,6 +55,7 @@ export function Drawer({
   onOpenChange,
 }: DrawerProps) {
   const focusReturn = useModalFocusReturn(trigger !== undefined);
+  if (trigger !== undefined) assertSlotElement(trigger, 'Drawer `trigger`');
   return (
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger === undefined ? null : <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger>}

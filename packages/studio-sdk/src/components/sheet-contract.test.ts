@@ -28,7 +28,11 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { type Rule, readRules, withoutComments } from './test-css-reader';
+import { productSourcesWithin, tabStopsIn } from './test-tab-stops';
+
 const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, '../../../..');
 const stylesheet = readFileSync(resolve(here, 'components.css'), 'utf8');
 /**
  * The token sheet, so a value written as `var(--tai-…)` resolves to a length.
@@ -36,76 +40,9 @@ const stylesheet = readFileSync(resolve(here, 'components.css'), 'utf8');
  * comment, and a reader anchored to the declaration before it would find none of
  * them and silently resolve nothing.
  */
-const tokenSheet = readFileSync(resolve(here, 'tokens.css'), 'utf8').replaceAll(
-  /\/\*[\s\S]*?\*\//g,
-  ' ',
-);
+const tokenSheet = withoutComments(readFileSync(resolve(here, 'tokens.css'), 'utf8'));
 
-interface Rule {
-  /** The rule's selector list, split and trimmed. */
-  readonly selectors: string[];
-  /** The declaration block, without its braces. */
-  readonly body: string;
-  /** The at-rule preludes this rule is nested inside, outermost first. */
-  readonly context: string[];
-}
-
-/**
- * Every rule block in the sheet, with the at-rule context it sits inside.
- *
- * Comments are stripped FIRST: this sheet introduces its rules with prose
- * docblocks, and a comma or a brace inside one would be read as structure.
- * A `;` at prelude level ends a STATEMENT at-rule (`@layer a, b;`) and resets
- * the prelude, so the rule after one is still seen.
- */
-function rules(source: string): Rule[] {
-  const found: Rule[] = [];
-  const context: string[] = [];
-  const text = source.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
-  let prelude = '';
-  let index = 0;
-
-  while (index < text.length) {
-    const character = text[index] ?? '';
-    if (character === ';' && prelude.trim().startsWith('@')) {
-      prelude = '';
-      index += 1;
-      continue;
-    }
-    if (character === '{') {
-      const head = prelude.trim();
-      prelude = '';
-      index += 1;
-      if (head.startsWith('@')) {
-        context.push(head);
-        continue;
-      }
-      const end = text.indexOf('}', index);
-      const close = end === -1 ? text.length : end;
-      found.push({
-        selectors: head
-          .split(',')
-          .map((selector) => selector.trim())
-          .filter((selector) => selector !== ''),
-        body: text.slice(index, close),
-        context: [...context],
-      });
-      index = close + 1;
-      continue;
-    }
-    if (character === '}') {
-      context.pop();
-      prelude = '';
-      index += 1;
-      continue;
-    }
-    prelude += character;
-    index += 1;
-  }
-  return found;
-}
-
-const sheet = rules(stylesheet);
+const sheet = readRules(stylesheet);
 
 /** Every rule block naming `selector` exactly, base rules and bands alike. */
 function blocksFor(selector: string): Rule[] {
@@ -230,15 +167,54 @@ function isRowFlex(className: string): boolean {
 /** The one shared focus rule; `focus-ring.test.ts` proves there is exactly one. */
 const ringRule = sheet.find((rule) => /outline:\s*2px solid/.test(rule.body));
 
+/** The classes the shared ring keys, with the state they are keyed on removed. */
+const RING_BEARERS = new Set(
+  (ringRule?.selectors ?? []).map((selector) => selector.replace(/:focus-visible$/, '')),
+);
+
+/** Every class the sheet presents as a control: `cursor: pointer` at rest. */
+const POINTER_CONTROLS = bareClasses()
+  .filter((className) =>
+    blocksFor(className).some((rule) => /(?:^|;)\s*cursor\s*:\s*pointer/.test(rule.body)),
+  )
+  .sort();
+
+/** Every class a keyboard tab stop in this repository's JSX wears. */
+const TAB_STOP_CLASSES = new Set(
+  tabStopsIn(
+    ['packages', 'apps', 'e2e'].flatMap((root) => productSourcesWithin(resolve(repoRoot, root))),
+  ).flatMap((stop) => stop.classes),
+);
+
+/**
+ * Every value `className` is given for `border` or one of its colour-bearing
+ * longhands, in sheet order. The shorthand alone misses `border-color` and the
+ * per-side spellings, and a boundary drawn in the wrong tier is drawn in the
+ * wrong tier whichever property paints it.
+ */
+function declaredBorders(className: string): string[] {
+  return [
+    'border',
+    'border-color',
+    'border-top',
+    'border-right',
+    'border-bottom',
+    'border-left',
+  ].flatMap((property) => declaredValues(className, property));
+}
+
 describe('component sheet contract', () => {
   it('reads the sheet as rules, statement at-rules included', () => {
     // Positive controls on the reader. Without them every assertion below could
     // pass vacuously on a parse that found nothing.
     expect(
-      rules('@layer a { .x { color: red } @media (max-width: 639px) { .x, .y { color: blue } } }'),
+      readRules(
+        '@layer a { .x { color: red } @media (max-width: 639px) { .x, .y { color: blue } } }',
+      ),
     ).toEqual([
-      { selectors: ['.x'], body: ' color: red ', context: ['@layer a'] },
+      { selector: '.x', selectors: ['.x'], body: ' color: red ', context: ['@layer a'] },
       {
+        selector: '.x, .y',
         selectors: ['.x', '.y'],
         body: ' color: blue ',
         context: ['@layer a', '@media (max-width: 639px)'],
@@ -246,7 +222,9 @@ describe('component sheet contract', () => {
     ]);
     // A STATEMENT at-rule ends at its semicolon. Without the reset, `@layer a, b;`
     // swallows the rule after it into one at-rule prelude and the rule vanishes.
-    expect(rules('@layer a, b; .x { color: red }').map((rule) => rule.selectors)).toEqual([['.x']]);
+    expect(readRules('@layer a, b; .x { color: red }').map((rule) => rule.selectors)).toEqual([
+      ['.x'],
+    ]);
     // …and a compound reader that can see past a `:not()` argument list.
     expect(compounds('.a:not(.b > .c) > .d')).toEqual(['.a:not(.b > .c)', '.d']);
     expect(
@@ -458,26 +436,116 @@ describe('component sheet contract', () => {
      */
     const DECORATIVE = ['var(--tai-color-border)', 'var(--tai-color-border-strong)'];
 
-    it('draws every identifying boundary from the contrast-safe tier', () => {
-      // A busy indicator and a progress bar are non-text UI components whose
-      // OUTLINE is the whole of what identifies them, so both are held to 3:1
-      // (WCAG 1.4.11). Derived statically from the token hex values, the
-      // decorative tier gives the spinner 1.47:1 light / 1.88:1 dark on the page
-      // ground; the control tier gives 4.21:1 / 3.65:1.
-      for (const className of ['.tai-spinner', '.tai-progress-track']) {
-        const borders = declaredValues(className, 'border');
-        expect([className, borders.length]).not.toEqual([className, 0]);
-        for (const border of borders) {
+    /**
+     * Non-text indicators whose OUTLINE is the whole of what identifies them.
+     * They answer no pointer and take no focus, so no derivation from the source
+     * reaches them; each says what it draws and is reconciled against the sheet
+     * below.
+     */
+    const NON_TEXT_INDICATORS: Readonly<Record<string, string>> = {
+      '.tai-spinner':
+        'a busy indicator drawn as a ring and nothing else: the boundary IS the component, at 1.47:1 light and 1.88:1 dark from the decorative tier',
+      '.tai-progress-track':
+        'the unfilled length of a progress bar, whose boundary is what shows how far the fill has to go against the page ground',
+    };
+
+    /**
+     * Surfaces whose boundary is DECORATION rather than identification, with the
+     * reason. A panel is identified by its ground, its scrim or its shadow; the
+     * hairline around it carries no meaning of its own, and WCAG 1.4.11 asks
+     * about what identifies a component.
+     */
+    const DECORATIVE_BOUNDARY: Readonly<Record<string, string>> = {
+      '.tai-card':
+        'a grouping surface identified by its raised ground: the hairline separates it from the page rather than saying what it is',
+      '.tai-code-block':
+        'a preformatted block identified by its terminal ground and mono face, with the hairline only closing the box around them',
+      '.tai-dialog':
+        'a modal panel identified by the scrim behind it and the elevation shadow under it, both of which outrank a one-pixel edge',
+      '.tai-drawer':
+        'the navigation panel, identified the same way as the modal it shares a Radix root with; its single edge only meets the page',
+    };
+
+    /**
+     * The classes whose boundary IDENTIFIES them: every interactive surface the
+     * sheet and the source agree on, plus the non-text indicators, minus the
+     * ones whose boundary is decoration. Derived rather than listed — naming two
+     * classes here left the three commonest form controls outside the assertion
+     * their own test is named for, and swapping their boundary to the decorative
+     * tier changed nothing anywhere in the suite.
+     */
+    const IDENTIFYING_BOUNDARIES = [
+      ...new Set([
+        ...RING_BEARERS,
+        ...POINTER_CONTROLS,
+        ...TAB_STOP_CLASSES,
+        ...Object.keys(NON_TEXT_INDICATORS),
+      ]),
+    ]
+      .filter((className) => BARE_CLASS.test(className))
+      .filter((className) => declaredBorders(className).length > 0)
+      .filter((className) => !(className in DECORATIVE_BOUNDARY))
+      .sort();
+
+    it('derives a real subject set (one that found nothing would pass vacuously)', () => {
+      expect(IDENTIFYING_BOUNDARIES.length).toBeGreaterThanOrEqual(10);
+      for (const className of ['.tai-input', '.tai-textarea', '.tai-select-trigger']) {
+        expect([className, IDENTIFYING_BOUNDARIES.includes(className)]).toEqual([className, true]);
+      }
+    });
+
+    it.each(IDENTIFYING_BOUNDARIES)(
+      '%s draws its boundary above the decorative tier',
+      (className) => {
+        // Derived statically from the token hex values, the decorative tier gives
+        // 1.47:1 light / 1.88:1 dark on the page ground; the control tier gives
+        // 4.21:1 / 3.65:1, which clears the 3:1 that WCAG 1.4.11 asks of a non-text
+        // boundary.
+        for (const border of declaredBorders(className)) {
           for (const tier of DECORATIVE) {
             expect([className, border, border.includes(tier)]).toEqual([className, border, false]);
           }
+        }
+      },
+    );
+
+    it.each(Object.keys(NON_TEXT_INDICATORS))(
+      '%s draws its ring in the control tier',
+      (className) => {
+        // For an indicator the boundary is not merely above the decorative tier:
+        // it is the only thing drawn, so it is held to the tier the controls use.
+        const borders = declaredBorders(className);
+        expect([className, borders.length]).not.toEqual([className, 0]);
+        for (const border of borders) {
           expect([className, border, border.includes('var(--tai-color-control-border)')]).toEqual([
             className,
             border,
             true,
           ]);
         }
+      },
+    );
+
+    it('leaves neither list describing a boundary the sheet no longer draws', () => {
+      const derived = new Set([...RING_BEARERS, ...POINTER_CONTROLS, ...TAB_STOP_CLASSES]);
+      for (const [className, reason] of Object.entries(DECORATIVE_BOUNDARY)) {
+        // Live in both senses: still a surface the derivation reaches, and still
+        // drawing a boundary. An entry for either half gone is fiction.
+        expect([className, derived.has(className)]).toEqual([className, true]);
+        expect([className, declaredBorders(className).length > 0]).toEqual([className, true]);
+        expect([className, reason.length > 60]).toEqual([className, true]);
       }
+      for (const [className, reason] of Object.entries(NON_TEXT_INDICATORS)) {
+        // …and an indicator that has become interactive is covered by the
+        // derivation instead, so its entry here would be a duplicate.
+        expect([className, derived.has(className)]).toEqual([className, false]);
+        expect([className, reason.length > 60]).toEqual([className, true]);
+      }
+      const reasons = [
+        ...Object.values(DECORATIVE_BOUNDARY),
+        ...Object.values(NON_TEXT_INDICATORS),
+      ];
+      expect(new Set(reasons).size).toBe(reasons.length);
     });
 
     it('selects with a real pair rather than the near-background tint', () => {

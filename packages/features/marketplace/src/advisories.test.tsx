@@ -53,6 +53,12 @@ describe('advisoriesForListing', () => {
 describe('WarningBlock', () => {
   it('renders a role=alert container', () => {
     render(<WarningBlock>heads up</WarningBlock>);
-    expect(screen.getByRole('alert')).toHaveTextContent('heads up');
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('heads up');
+    // The block is the design system's published warn surface, not a local formula:
+    // hand-rolled copies drifted to three background recipes and two paddings.
+    // (jsdom evaluates no CSS — what is pinned is which surface owns the styling.)
+    expect(alert).toHaveClass('tai-warn-state');
+    expect(alert.getAttribute('style')).toBeNull();
   });
 });

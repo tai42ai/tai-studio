@@ -107,6 +107,11 @@ describe('BackgroundRuns — active run detail', () => {
 
     const lost = await screen.findByTestId('tool-run-lost');
     expect(lost).toHaveTextContent(/server restarted while this run was executing/i);
+    // The panel is the design system's published warn surface, not a local formula:
+    // hand-rolled copies drifted to three background recipes and two paddings.
+    // (jsdom evaluates no CSS — what is pinned is which surface owns the styling.)
+    expect(lost).toHaveClass('tai-warn-state');
+    expect(lost.getAttribute('style')).toBeNull();
   });
 
   it('selects a recent run and shows its detail on click', async () => {

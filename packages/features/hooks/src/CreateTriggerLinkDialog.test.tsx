@@ -84,6 +84,29 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     expect(screen.queryByLabelText('Topic')).not.toBeInTheDocument();
   });
 
+  it('rebuilds the QR only when the link changes, not on every re-render', async () => {
+    const user = userEvent.setup();
+    const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
+    const { rerender } = renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
+      client: baseClient(createTriggerLink),
+    });
+
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: 'Create link' }));
+
+    const qr = await screen.findByTestId('trigger-link-qr');
+    const svg = qr.querySelector('svg');
+    expect(svg).not.toBeNull();
+
+    // A re-render carrying the SAME link: React compares the
+    // `dangerouslySetInnerHTML` prop by IDENTITY, so a fresh `{ __html }` literal
+    // re-encodes the QR and re-writes the container's innerHTML, replacing every
+    // node under it. Held by identity, the encode and the write do not happen.
+    rerender(<CreateTriggerLinkDialog onClose={vi.fn()} />);
+
+    expect(screen.getByTestId('trigger-link-qr').querySelector('svg')).toBe(svg);
+  });
+
   it('disables submit while the mint is IN FLIGHT, so a double click cannot mint twice', async () => {
     const user = userEvent.setup();
     const createTriggerLink = vi.fn().mockReturnValue(new Promise(() => undefined));

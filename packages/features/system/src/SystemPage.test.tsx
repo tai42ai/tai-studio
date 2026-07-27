@@ -356,6 +356,29 @@ describe('SystemPage', () => {
     });
   });
 
+  it('counts the targeted workers in real English, singular and plural', async () => {
+    // `worker(s)` is not a plural: a confirm that asks to restart "1 selected
+    // worker(s)" reads as machine output at the one moment the operator is being
+    // asked to accept a fleet-wide restart.
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1', 'w2')),
+      reloadFleetConfig: vi.fn().mockResolvedValue(converged()),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select w1' }));
+    await userEvent.click(await findEnabledReload('Reload config (1 selected)'));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Soft-restart 1 selected worker?');
+    expect(dialog.textContent).not.toContain('worker(s)');
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Select w2' }));
+    await userEvent.click(await findEnabledReload('Reload config (2 selected)'));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Soft-restart 2 selected workers?');
+  });
+
   it('does not reload until the confirm dialog is confirmed', async () => {
     const reloadFleetConfig = vi.fn().mockResolvedValue(converged());
     const client = stubClient({

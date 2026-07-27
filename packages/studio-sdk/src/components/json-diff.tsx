@@ -109,12 +109,28 @@ const KIND_ROW_CLASS = {
   changed: 'tai-diff-changed',
 } as const;
 
-/** Render one side's value: a `JsonTree` for objects/arrays, escaped text for scalars. */
-function DiffValue({ value }: { readonly value: unknown }): ReactNode {
+/**
+ * Render one side's value: a `JsonTree` for objects/arrays, escaped text for
+ * scalars. The tree is a scroll region once it overflows, so it is named from
+ * the row's path and its side — a table of rows all announcing "JSON" tells a
+ * reader which pane they are in for none of them.
+ */
+function DiffValue({
+  value,
+  label,
+}: {
+  readonly value: unknown;
+  readonly label: string;
+}): ReactNode {
   if (Array.isArray(value) || isRecord(value)) {
-    return <JsonTree data={value} defaultExpanded={false} />;
+    return <JsonTree data={value} defaultExpanded={false} label={label} />;
   }
   return <code className="tai-code">{JSON.stringify(value)}</code>;
+}
+
+/** The row's path as it reads on screen; the root diff has no path of its own. */
+function pathLabel(path: string): string {
+  return path === '' ? '(root)' : path;
 }
 
 const emptyCell = <span className="tai-muted">—</span>;
@@ -149,13 +165,25 @@ export function JsonDiff({ before, after }: JsonDiffProps): ReactNode {
             data-testid={`diff-row-${row.path}`}
           >
             <TD className="tai-table-id" style={{ wordBreak: 'break-all' }}>
-              {row.path === '' ? '(root)' : row.path}
+              {pathLabel(row.path)}
             </TD>
             <TD>
               <Badge variant={KIND_VARIANT[row.kind]}>{row.kind}</Badge>
             </TD>
-            <TD>{row.kind === 'added' ? emptyCell : <DiffValue value={row.before} />}</TD>
-            <TD>{row.kind === 'removed' ? emptyCell : <DiffValue value={row.after} />}</TD>
+            <TD>
+              {row.kind === 'added' ? (
+                emptyCell
+              ) : (
+                <DiffValue value={row.before} label={`${pathLabel(row.path)} before`} />
+              )}
+            </TD>
+            <TD>
+              {row.kind === 'removed' ? (
+                emptyCell
+              ) : (
+                <DiffValue value={row.after} label={`${pathLabel(row.path)} after`} />
+              )}
+            </TD>
           </TR>
         ))}
       </TBody>

@@ -11,20 +11,25 @@
 import * as RadixTooltip from '@radix-ui/react-tooltip';
 import type { ReactElement, ReactNode } from 'react';
 
+import { assertSlotElement } from '../element-slot';
+
 export interface TooltipProps {
   readonly content: ReactNode;
   /**
    * The element the bubble describes and hangs off.
    *
    * It is a single ELEMENT, not any node: Radix clones its props onto it, so a
-   * string throws and a fragment silently renders children that carry none of
-   * the hover/focus wiring or the `aria-describedby` back to the bubble.
+   * string throws. The type admits a FRAGMENT — `<></>` is a `ReactElement` —
+   * which would render children carrying none of the hover/focus wiring nor the
+   * `aria-describedby` back to the bubble, so {@link assertSlotElement} rejects
+   * that one at runtime.
    */
   readonly children: ReactElement;
   readonly delayDuration?: number;
 }
 
 export function Tooltip({ content, children, delayDuration = 200 }: TooltipProps) {
+  assertSlotElement(children, 'Tooltip `children`');
   return (
     <RadixTooltip.Provider delayDuration={delayDuration}>
       <RadixTooltip.Root>

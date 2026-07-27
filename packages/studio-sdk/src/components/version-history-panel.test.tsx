@@ -1,8 +1,9 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { VersionHistoryPanel, type VersionHistoryEntry } from './version-history-panel';
+import { flushResizeObservers, setElementOverflow } from '../testing';
 
 const VERSIONS: VersionHistoryEntry[] = [
   {
@@ -341,5 +342,28 @@ describe('VersionHistoryPanel', () => {
     ]) {
       expect(screen.getByRole('button', { name })).toBeInTheDocument();
     }
+  });
+  it('names the body pane after the version it is showing', async () => {
+    // The pane is a scroll region once it overflows. Left unnamed it announces
+    // as "JSON", which is what every other pane in Studio would answer to — the
+    // heading above it already says which version this one is.
+    const user = userEvent.setup();
+    const { container } = render(<VersionHistoryPanel versions={VERSIONS} onRollback={vi.fn()} />);
+
+    const overflowPane = (): void => {
+      const panes = container.querySelectorAll<HTMLElement>('.tai-code-block');
+      for (const pane of panes) setElementOverflow(pane, true);
+      act(() => {
+        flushResizeObservers();
+      });
+    };
+
+    overflowPane();
+    expect(screen.getByRole('region', { name: 'Version 2 body' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'View version 1' }));
+    overflowPane();
+    expect(screen.getByRole('region', { name: 'Version 1 body' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'JSON' })).toBeNull();
   });
 });

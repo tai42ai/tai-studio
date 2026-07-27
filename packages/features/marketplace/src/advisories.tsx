@@ -4,7 +4,7 @@
  * warning tokens), and the filter that selects the advisories that currently
  * apply to a listing ref (non-withdrawn, matching `listing`).
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { MarketplaceAdvisory } from '@tai42/api-client';
 
 /** Map an advisory severity to a Badge variant; unknown severities read neutral. */
@@ -24,21 +24,15 @@ export function advisoriesForListing(
   );
 }
 
-const warningBlockStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-3)',
-  padding: 'var(--tai-space-4)',
-  borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-warning)',
-  color: 'var(--tai-color-warning)',
-  background: 'color-mix(in srgb, var(--tai-color-warning) 18%, transparent)',
-};
-
-/** A loud `role="alert"` warning container styled with the warning tokens. */
+/**
+ * A loud `role="alert"` warning container. `.tai-warn-state` is the design system's
+ * published warn surface — one padding, one tint, one border — so the advisory block
+ * carries the same weight as every other degraded state instead of a formula of its
+ * own. Its body sits at the text tone; the caller's headline carries the warn hue.
+ */
 export function WarningBlock({ children }: { readonly children: ReactNode }): ReactNode {
   return (
-    <div role="alert" style={warningBlockStyle}>
+    <div role="alert" className="tai-warn-state tai-stack tai-stack-3">
       {children}
     </div>
   );

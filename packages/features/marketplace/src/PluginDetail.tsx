@@ -436,7 +436,7 @@ export function PluginDetail({
         />
       ) : matching.length > 0 ? (
         <WarningBlock>
-          <strong>Security advisories</strong>
+          <strong className="tai-status-warn">Security advisories</strong>
           {matching.map((advisory) => (
             <div
               key={advisory.id}

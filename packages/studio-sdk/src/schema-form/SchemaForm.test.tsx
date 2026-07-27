@@ -321,6 +321,38 @@ describe('SchemaForm — completion provider', () => {
     });
     // No suggestions surface from a failed fetch.
     expect(screen.queryByRole('option')).not.toBeInTheDocument();
+
+    // And the human is told, not just the console: the reason the suggestions
+    // vanished reaches the surface as a hint under the field. It is a
+    // DEGRADATION, not a rejected value, so it wears the hint style and the
+    // warning mark rather than the field-error one.
+    const notice = await screen.findByText(/Suggestions are unavailable: completions boom/);
+    expect(notice).toHaveClass('tai-field-hint');
+    expect(notice.querySelector('svg')).toHaveClass('tai-icon');
+    expect(screen.getByRole('combobox', { name: 'Name' })).toBeInTheDocument();
+    consoleError.mockRestore();
+  });
+
+  it('drops the completion failure notice as soon as the human types again', async () => {
+    const user = userEvent.setup();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    let fail = true;
+    const completionProvider = vi.fn(() =>
+      fail ? Promise.reject(new Error('completions boom')) : Promise.resolve(['ok']),
+    );
+    render(<Harness schema={nameSchema} initial={{}} completionProvider={completionProvider} />);
+
+    const input = screen.getByRole('combobox', { name: 'Name' });
+    await user.type(input, 'a');
+    await screen.findByText(/Suggestions are unavailable/);
+
+    // The next keystroke starts a fresh fetch, so the previous failure has
+    // stopped being true about the suggestions on screen.
+    fail = false;
+    await user.type(input, 'b');
+    await waitFor(() => {
+      expect(screen.queryByText(/Suggestions are unavailable/)).not.toBeInTheDocument();
+    });
     consoleError.mockRestore();
   });
 
@@ -703,7 +735,10 @@ describe('SchemaForm — safety', () => {
     };
     render(<Harness schema={schema} initial={{}} />);
     expect(screen.getByText('Unsupported')).toBeInTheDocument();
-    expect(screen.getByText(/unsupported field: anything/)).toBeInTheDocument();
+    // The heading and the state are already on screen — the Field prints one and
+    // the Badge the other. The hint carries the REASON and nothing else.
+    expect(screen.getByText('schema declares no renderable type')).toBeInTheDocument();
+    expect(screen.queryByText(/unsupported field/)).toBeNull();
   });
 
   it('renders schema-supplied title/description as escaped text, never as HTML', () => {
@@ -855,7 +890,7 @@ describe('SchemaForm — design system', () => {
     const badge = screen.getByText('Unsupported');
     expect(badge).toHaveAttribute('data-variant', 'warning');
     expect(badge.querySelector('svg')).toHaveClass('tai-icon');
-    expect(screen.getByText(/unsupported field: anything/)).toHaveClass('tai-field-hint');
+    expect(screen.getByText('schema declares no renderable type')).toHaveClass('tai-field-hint');
   });
 
   it('renders the media drop zone, its hint and the paste fallback on DS classes', () => {

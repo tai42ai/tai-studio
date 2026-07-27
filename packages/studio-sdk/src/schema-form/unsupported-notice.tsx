@@ -2,6 +2,11 @@
  * The notice rendered for a schema node the form cannot turn into an input: a
  * warning badge — a mark beside its label, so the meaning never rests on the
  * tint alone — followed by the reason, shown inside a labelled field.
+ *
+ * The three parts each say ONE thing once. The `Field` prints the heading, the
+ * `Badge` prints the state, and the hint prints the REASON alone — repeating
+ * either of the first two there would name the field twice and the state twice,
+ * in a developer-log register on a surface a user reads.
  */
 import type { ReactNode } from 'react';
 
@@ -27,7 +32,7 @@ export function UnsupportedNotice({
           <AlertTriangleIcon />
           Unsupported
         </Badge>
-        <span className="tai-field-hint">{`unsupported field: ${heading} (${reason})`}</span>
+        <span className="tai-field-hint">{reason}</span>
       </div>
     </Field>
   );

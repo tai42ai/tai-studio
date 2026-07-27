@@ -14,8 +14,33 @@
  * (The client-timeout "still executing server-side" state uses a 120s timeout —
  * covered by the shell's unit suite, not this live e2e.)
  */
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { test, expect } from '@playwright/test';
 import { seedCredential, findInteractionId, answerInteraction } from './helpers';
+
+const RUN_PANEL = fileURLToPath(
+  new URL('../../packages/features/tools/src/RunPanel.tsx', import.meta.url),
+);
+
+/**
+ * The positive control for the `tool-run-timeout` absence assertion below.
+ *
+ * That assertion is a `toHaveCount(0)`, which a testid NOTHING renders satisfies
+ * just as well as a state that correctly stayed away — rename the id in
+ * `RunPanel.tsx` and the check goes on passing while covering nothing. The live
+ * state itself cannot be driven from here: it needs the 120 s client timeout in
+ * `run.ts` to expire, a compile-time constant with no env knob, and the suites
+ * run serially against one skeleton. So the control joins the name instead:
+ * the id the spec names must be the id the panel paints.
+ */
+test('the timeout testid the absence check names is the one the panel renders', () => {
+  const source = readFileSync(RUN_PANEL, 'utf8');
+  expect([...source.matchAll(/data-testid="tool-run-timeout"/g)]).toHaveLength(1);
+  // Negative control: the reader answers on the file's real contents, not on any
+  // string it is handed.
+  expect([...source.matchAll(/data-testid="tool-run-never-rendered"/g)]).toHaveLength(0);
+});
 
 test('an interactive tool blocks; answering completes the run and the result lands on the panel', async ({
   page,

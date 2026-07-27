@@ -473,7 +473,7 @@ function AddRouteRow({
       {usePattern ? (
         <Field label="Pattern (regex)" style={{ flex: 1 }}>
           <TextInput
-            aria-label={`Pattern for route added to ${scopeId}`}
+            aria-label={`Pattern (regex) for route added to ${scopeId}`}
             value={pattern}
             autoComplete="off"
             disabled={disabled}

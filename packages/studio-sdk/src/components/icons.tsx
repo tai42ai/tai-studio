@@ -25,8 +25,11 @@
  * overridable through the prop spread, and the older explicit three-prop form
  * (`aria-hidden={false} role="img" aria-label="…"`) keeps working unchanged.
  *
- * {@link NAV_ICONS} is the canonical route-token → icon mapping so the shell
- * never re-derives which mark belongs to which Studio route.
+ * {@link NAV_ICONS} is PUBLISHED SURFACE: the canonical route-token → icon
+ * mapping, exported so a navigation surface renders the agreed mark for a route
+ * instead of choosing one. Studio's own shell renders its nav as text and reads
+ * none of it; the map is exhaustive over {@link RouteToken} regardless, so a new
+ * route fails the build here until it has a mark.
  */
 import type { ReactElement, SVGProps } from 'react';
 

@@ -52,18 +52,11 @@ function StatusChip({ status }: { readonly status: ToolRunRecord['status'] }): R
 /** The `lost` explanation — a distinct, honest state (not a generic error). */
 function LostNotice(): ReactNode {
   return (
-    <div
-      role="alert"
-      data-testid="tool-run-lost"
-      style={{
-        padding: 'var(--tai-space-4)',
-        border: '1px solid var(--tai-color-warning)',
-        borderRadius: 'var(--tai-radius-md)',
-        color: 'var(--tai-color-text)',
-        background: 'color-mix(in srgb, var(--tai-color-warning) 10%, var(--tai-color-surface))',
-      }}
-    >
-      <strong style={{ color: 'var(--tai-color-warning)' }}>Run lost</strong>
+    // `.tai-warn-state` is the design system's published warn surface: the state
+    // degraded rather than failed, so it takes that panel rather than a formula of
+    // its own.
+    <div role="alert" data-testid="tool-run-lost" className="tai-warn-state">
+      <strong className="tai-status-warn">Run lost</strong>
       <p style={{ margin: 'var(--tai-space-2) 0 0' }}>
         The server restarted while this run was executing; the result is unrecoverable.
       </p>

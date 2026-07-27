@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { createRef } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { Table, TBody, TD, TH, THead, TR } from './table';
@@ -140,5 +141,38 @@ describe('Table primitives', () => {
     expect(screen.getByRole('columnheader', { name: 'Name' })).not.toHaveAttribute('data-numeric');
     expect(screen.getByRole('cell', { name: '1204' })).toHaveAttribute('data-numeric', 'true');
     expect(screen.getByRole('cell', { name: 'echo' })).not.toHaveAttribute('data-numeric');
+  });
+
+  it('forwards a consumer ref to each native element it wraps', () => {
+    // A ref a wrapper accepts and drops is worse than one it refuses: React 19
+    // warns about neither, so a consumer's measurement silently reads null.
+    const table = createRef<HTMLTableElement>();
+    const head = createRef<HTMLTableSectionElement>();
+    const body = createRef<HTMLTableSectionElement>();
+    const row = createRef<HTMLTableRowElement>();
+    const header = createRef<HTMLTableCellElement>();
+    const cell = createRef<HTMLTableCellElement>();
+
+    render(
+      <Table ref={table}>
+        <THead ref={head}>
+          <TR>
+            <TH ref={header}>Name</TH>
+          </TR>
+        </THead>
+        <TBody ref={body}>
+          <TR ref={row}>
+            <TD ref={cell}>echo</TD>
+          </TR>
+        </TBody>
+      </Table>,
+    );
+
+    expect(table.current?.tagName).toBe('TABLE');
+    expect(head.current?.tagName).toBe('THEAD');
+    expect(body.current?.tagName).toBe('TBODY');
+    expect(row.current?.tagName).toBe('TR');
+    expect(header.current?.tagName).toBe('TH');
+    expect(cell.current?.tagName).toBe('TD');
   });
 });

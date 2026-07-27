@@ -13,7 +13,6 @@
  * scroller: a deeply indented value makes it a named keyboard target, a shallow
  * one leaves it an ordinary block.
  */
-import { useRef } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 
 import { useOverflowRegion } from './scroll-region';
@@ -118,8 +117,9 @@ function JsonNode({ name, value, defaultExpanded }: NodeProps): ReactElement {
 }
 
 export function JsonTree({ data, defaultExpanded = true, label }: JsonTreeProps) {
-  const paneRef = useRef<HTMLDivElement>(null);
-  const region = useOverflowRegion(paneRef, label ?? DEFAULT_LABEL);
+  // No consumer ref: the measurement's own callback ref is the only thing that
+  // needs the pane, and this component publishes no `ref` prop.
+  const region = useOverflowRegion(undefined, label ?? DEFAULT_LABEL);
 
   return (
     <div className="tai-code-block" {...region}>

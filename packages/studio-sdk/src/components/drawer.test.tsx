@@ -4,9 +4,11 @@ import { useState } from 'react';
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Dialog } from './dialog';
 import type { DialogProps } from './dialog';
 import { Drawer } from './drawer';
 import type { DrawerProps } from './drawer';
+import { Tooltip } from './tooltip';
 import type { TooltipProps } from './tooltip';
 
 /**
@@ -198,6 +200,52 @@ describe('Drawer', () => {
       stringIsNotATooltipChild,
     ]).toEqual([false, false, false]);
     expect(elementIsADrawerTrigger).toBe(true);
+  });
+
+  it('raises on a FRAGMENT in any of the three slots, which the type admits', () => {
+    // `<></>` IS a `ReactElement`, so the narrowing above lets it through. React
+    // then drops every prop the slot clones onto it, and the opener renders
+    // carrying no wiring and no handler — the exact silent failure the type
+    // reads as if it prevented.
+    const fragmentTrigger = (
+      <>
+        <button type="button">Menu</button>
+      </>
+    );
+
+    expect(() =>
+      render(
+        <Drawer title="Navigation" trigger={fragmentTrigger}>
+          <a href="/tools">Tools</a>
+        </Drawer>,
+      ),
+    ).toThrow(/Drawer `trigger` takes a single element, not a fragment/);
+
+    expect(() => render(<Dialog title="Settings" trigger={fragmentTrigger} />)).toThrow(
+      /Dialog `trigger` takes a single element, not a fragment/,
+    );
+
+    expect(() => render(<Tooltip content="Hint">{fragmentTrigger}</Tooltip>)).toThrow(
+      /Tooltip `children` takes a single element, not a fragment/,
+    );
+  });
+
+  it('accepts a plain element in each slot, so the guard rejects fragments only', () => {
+    const trigger = (
+      <button type="button" aria-label="Open navigation">
+        Menu
+      </button>
+    );
+
+    expect(() =>
+      render(
+        <Drawer title="Navigation" trigger={trigger}>
+          <a href="/tools">Tools</a>
+        </Drawer>,
+      ),
+    ).not.toThrow();
+    expect(() => render(<Dialog title="Settings" trigger={trigger} />)).not.toThrow();
+    expect(() => render(<Tooltip content="Hint">{trigger}</Tooltip>)).not.toThrow();
   });
 
   it('opens uncontrolled from its own trigger, as Dialog does', async () => {

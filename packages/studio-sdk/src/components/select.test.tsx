@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { Field } from './field';
 import { Select, type SelectProps } from './select';
 
 const OPTIONS = [
@@ -130,5 +131,31 @@ describe('Select', () => {
 
     await user.click(trigger);
     expect(await screen.findByRole('option', { name: 'One' })).toHaveClass('tai-select-item');
+  });
+
+  it("takes an enclosing Field's visible label over a caller aria-label", () => {
+    render(
+      <Field label="Sort">
+        <Select options={OPTIONS} aria-label="Sort results" />
+      </Field>,
+    );
+
+    // `aria-label` outranks a `<label for>`, so emitting both would drop the
+    // visible "Sort" out of the computed name entirely (WCAG 2.5.3).
+    const trigger = screen.getByRole('combobox');
+    expect(trigger).toHaveAccessibleName('Sort');
+    expect(trigger).not.toHaveAttribute('aria-label');
+  });
+
+  it('keeps a caller aria-label inside a GROUP Field, which names no control', () => {
+    render(
+      <Field label="Sort" group>
+        <Select options={OPTIONS} aria-label="Sort results" />
+      </Field>,
+    );
+
+    // A group Field publishes no control id and renders a `<span>`, not a
+    // `<label>`: nothing else names the trigger, so the caller's name stands.
+    expect(screen.getByRole('combobox')).toHaveAccessibleName('Sort results');
   });
 });

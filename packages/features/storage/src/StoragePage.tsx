@@ -360,6 +360,16 @@ function FilterInput({
   readonly onCommit: (value: string) => void;
 }): ReactNode {
   const [draft, setDraft] = useState(initial);
+  const [seed, setSeed] = useState(initial);
+  // Re-seed the draft from the committed filter DURING RENDER (React's documented
+  // adjust-state-on-prop-change pattern) rather than by remounting on a `key`: this
+  // input is what commits the filter, so a remount keyed on the committed value
+  // detaches the focused element the instant Enter fires and drops the keyboard
+  // caret on `document.body` (WCAG 2.4.3).
+  if (seed !== initial) {
+    setSeed(initial);
+    setDraft(initial);
+  }
   return (
     <Field label="Filter">
       <TextInput
@@ -479,7 +489,7 @@ function ResourceBrowser({ filter }: { filter: string }): ReactNode {
             flexWrap: 'wrap',
           }}
         >
-          <FilterInput key={filter} initial={filter} onCommit={commitFilter} />
+          <FilterInput initial={filter} onCommit={commitFilter} />
           <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
             <Button
               onClick={() => {

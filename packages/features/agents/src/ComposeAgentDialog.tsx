@@ -374,7 +374,6 @@ export function ComposeAgentDialog({
               setResponseFormat({ schema: null, valid: true });
             }}
             placeholder="Select a base agent…"
-            aria-label="Base agent"
           />
         </Field>
 
@@ -459,13 +458,24 @@ export function ComposeAgentDialog({
                     onRetry={retryReads}
                   />
                 ) : (
-                  <SubAgentComposer
-                    toolNames={toolsQuery.data ?? []}
-                    tagsByTool={tagsByTool}
-                    presetRecords={usablePresets}
-                    value={subagents}
-                    onChange={setSubagents}
-                  />
+                  <>
+                    {/* A tags failure must not take down sub-agent tool picking: the
+                        composer's pickers keep their flat mode and the failure is
+                        stated rather than silently ungrouping the list. */}
+                    {tagsQuery.isError ? (
+                      <ErrorState
+                        message={errorMessage(tagsQuery.error)}
+                        onRetry={() => void tagsQuery.refetch()}
+                      />
+                    ) : null}
+                    <SubAgentComposer
+                      toolNames={toolsQuery.data ?? []}
+                      tagsByTool={tagsByTool}
+                      presetRecords={usablePresets}
+                      value={subagents}
+                      onChange={setSubagents}
+                    />
+                  </>
                 )}
               </Field>
             ) : null}

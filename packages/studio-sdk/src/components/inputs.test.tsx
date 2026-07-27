@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createRef } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { Field } from './field';
@@ -47,6 +48,28 @@ describe('NumberInput', () => {
     await user.type(input, '42');
     expect(input).toHaveValue(42);
     expect(input).toHaveClass('tai-input');
+  });
+});
+
+describe('control refs', () => {
+  it('forwards a consumer ref to the native control each wrapper renders', () => {
+    // A ref a wrapper accepts and drops is worse than one it refuses: React 19
+    // warns about neither, so the consumer's focus call silently does nothing.
+    const text = createRef<HTMLInputElement>();
+    const area = createRef<HTMLTextAreaElement>();
+    const number = createRef<HTMLInputElement>();
+
+    render(
+      <>
+        <TextInput ref={text} aria-label="Name" />
+        <Textarea ref={area} aria-label="Notes" />
+        <NumberInput ref={number} aria-label="Count" />
+      </>,
+    );
+
+    expect(text.current).toBe(screen.getByRole('textbox', { name: 'Name' }));
+    expect(area.current).toBe(screen.getByRole('textbox', { name: 'Notes' }));
+    expect(number.current).toBe(screen.getByRole('spinbutton', { name: 'Count' }));
   });
 });
 

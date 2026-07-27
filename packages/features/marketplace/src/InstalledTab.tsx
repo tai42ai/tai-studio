@@ -48,7 +48,7 @@ function AdvisoriesBanner({
 }): ReactNode {
   return (
     <WarningBlock>
-      <strong>
+      <strong className="tai-status-warn">
         {advisories.length} security{' '}
         {advisories.length === 1 ? 'advisory affects' : 'advisories affect'} installed plugins
       </strong>

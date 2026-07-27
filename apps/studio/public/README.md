@@ -9,11 +9,13 @@ the site.
 
 ## Brand marks
 
-`tai42-logo-icon.png` (155x155) is the tab favicon, wired from `index.html`;
-`apple-touch-icon.png` (180x180) is its iOS home-screen counterpart.
-`tai42-logo-icon-dark.png` is the same mark redrawn for dark surfaces, for the
-shell to select: the gradient runs to near-black at one end, so the light mark is
-not legible against a dark ground.
+`tai42-logo-icon.png` (155x155) is the tab favicon and `tai42-logo-icon-dark.png`
+(155x155) is the same mark redrawn for a dark tab strip — the light mark's
+gradient runs to near-black at one end, so it is not legible against a dark
+ground. Both are wired from `index.html`, the dark one behind
+`media="(prefers-color-scheme: dark)"` so the browser selects it and the
+unqualified light link stays the fallback. `apple-touch-icon.png` (180x180) is
+the iOS home-screen counterpart.
 
 ## Font licences
 

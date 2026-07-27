@@ -33,12 +33,14 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { withoutComments } from './test-css-reader';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../..');
 const stylesheet = readFileSync(resolve(here, 'components.css'), 'utf8');
 
 /** The sheet with its prose docblocks removed, so a class NAMED in a comment is not a rule. */
-const sheetRules = stylesheet.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
+const sheetRules = withoutComments(stylesheet);
 
 /** Every class the sheet declares a rule for. */
 const declared = new Set(
@@ -54,10 +56,10 @@ const SKIPPED_DIRECTORIES = new Set([
 ]);
 
 /**
- * Product source under `packages/` and `apps/`: the files that can put a class
- * on an element. Test files, test harnesses and the SDK's own `testing` entry
- * are OUT — a class named only by a test has no user-visible call site, which is
- * precisely what the backward direction is asking about.
+ * Product source: the files that can put a class on an element. Test files, test
+ * harnesses and the SDK's own `testing` entry are OUT — a class named only by a
+ * test has no user-visible call site, which is precisely what the backward
+ * direction is asking about.
  */
 function sourceFiles(root: string): string[] {
   const found: string[] = [];
@@ -80,7 +82,16 @@ function sourceFiles(root: string): string[] {
   return found;
 }
 
-const files = [join(repoRoot, 'packages'), join(repoRoot, 'apps')].flatMap(sourceFiles);
+/**
+ * Where that source lives. The reference plugin is in: it is the repo's one real
+ * plugin and the worked example of the published component API, so a class it
+ * misspells is the exact failure a plugin author would copy. The rest of `e2e/`
+ * is the Playwright harness and its specs, which are tests and stay out by the
+ * same rule that keeps every other test out.
+ */
+const SCAN_ROOTS = ['packages', 'apps', join('e2e', 'reference-plugin')];
+
+const files = SCAN_ROOTS.map((root) => join(repoRoot, root)).flatMap(sourceFiles);
 
 /**
  * Every `tai-*` token a file writes, keyed to the files that write it.
@@ -168,7 +179,7 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the sticky sidebar of that frame, which the compact band turns into the 72 px labelled icon rail',
   'tai-shell-main': 'the scrolling main column of that frame, the one that owns the page min-width',
   'tai-topbar':
-    'the sticky bar that frame shows below 640 px in place of the sidebar, beside the navigation drawer',
+    'the sticky bar that frame shows below 640 px in place of the sidebar, published so a host builds the same narrow chrome',
   'tai-split': 'the master/detail pair, two fluid panes above 1024 px and exactly one below it',
   'tai-split-list':
     'the list pane of that pair, the one a `data-pane` switch hides on a narrow screen',

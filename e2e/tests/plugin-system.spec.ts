@@ -47,6 +47,37 @@ test('post-login the reference plugin is discovered, its page and tool panel ren
   await expect(page.getByTestId('reference-demo-page')).toBeVisible();
 });
 
+test('the reference plugin names its result pane after the tool, never the SDK default', async ({
+  page,
+}) => {
+  // This plugin is what an author copies. `JsonTree` without a `label` takes the
+  // SDK's "JSON" fallback, so a copied panel puts a region called "JSON" on a
+  // screen that may already have one — two landmarks a keyboard user cannot tell
+  // apart. The name exists ONLY while the pane overflows, so this drives it into
+  // that state rather than asserting an attribute that is absent by design.
+  await loginViaUi(page);
+  await page.waitForFunction(() => '__pluginReact' in window);
+  await page.getByRole('link', { name: /Open tool studio_demo_echo/ }).click();
+  await expect(page.getByTestId('reference-echo-panel')).toBeVisible();
+
+  await page.getByTestId('echo-message').fill('x'.repeat(400));
+  await page.getByTestId('echo-run').click();
+  await expect(page.getByTestId('echo-result')).toBeVisible();
+
+  // Cap the pane, then let the SDK's ResizeObserver re-measure it. A narrow
+  // VIEWPORT does not reach this state: the ancestor chain above the panel takes
+  // its width from content, so the 400-character value widens the document to
+  // ~3000 px instead of scrolling the pane. Capping the pane is what puts
+  // `scrollWidth > clientWidth` on the element `useOverflowRegion` watches, which
+  // is the condition the whole naming contract hangs off.
+  await page.getByTestId('echo-result').evaluate((node: HTMLElement) => {
+    node.style.maxWidth = '240px';
+  });
+
+  await expect(page.getByRole('region', { name: 'studio_demo_echo result' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'JSON', exact: true })).toHaveCount(0);
+});
+
 test('the reference plugin contributes a sidebar nav entry and a host-injected scoped stylesheet', async ({
   page,
 }) => {

@@ -7,11 +7,12 @@
  * confirms with their invalidations and verbatim server errors.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, type RenderResult } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
-import type { ReactElement, ReactNode } from 'react';
+import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
+import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { StoragePage } from './StoragePage';
@@ -30,7 +31,7 @@ afterEach(() => {
 function renderPage(
   ui: ReactElement,
   { client, navigate = vi.fn() }: { client: ApiClient; navigate?: () => void },
-): void {
+): RenderResult {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
@@ -43,12 +44,49 @@ function renderPage(
       </ApiProvider>
     </QueryClientProvider>
   );
-  render(ui, { wrapper });
+  // The stack is a `wrapper`, not part of the rendered element: RTL's `rerender`
+  // replaces only the element, so a wrapper keeps the providers (and the query
+  // cache) alive across a re-render with new props.
+  return render(ui, { wrapper });
 }
 
 /** A stub client from a partial method set; an unstubbed call throws, flagging it. */
 function stubClient(overrides: Partial<ApiClient>): ApiClient {
   return overrides as ApiClient;
+}
+
+/**
+ * The page under a LIVE url: `navigate` writes the committed search back into the
+ * `search` prop, the way the shell's router does. A `vi.fn()` navigate cannot see a
+ * commit-time remount at all, because the committed value never reaches the page —
+ * so the focus contract below is only observable through this harness.
+ */
+function LiveUrlStoragePage({ client }: { readonly client: ApiClient }): ReactElement {
+  const [search, setSearch] = useState<RouteSearch<'storage'>>({});
+  const queryClient = useMemo(
+    () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    [],
+  );
+  const value = useMemo(
+    () => ({
+      navigate: (_token: RouteToken, next?: RouteSearch<'storage'>) => {
+        setSearch(next ?? {});
+      },
+      resolvePath: () => '/x',
+    }),
+    [],
+  );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ApiProvider value={client}>
+        <ThemeProvider>
+          <NavigationProvider value={value as NavigationContextValue}>
+            <StoragePage search={search} />
+          </NavigationProvider>
+        </ThemeProvider>
+      </ApiProvider>
+    </QueryClientProvider>
+  );
 }
 
 const presentInfo = { present: true as const, provider: 'FsStorage', module: 'plugin.storage' };
@@ -402,5 +440,46 @@ describe('StoragePage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Delete directory' }));
 
     expect(await within(dialog).findByText(message)).toBeInTheDocument();
+  });
+
+  it('keeps the keyboard caret in the filter input when Enter commits (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
+    });
+    render(<LiveUrlStoragePage client={client} />);
+
+    await screen.findByTestId('storage-table');
+    // The node identity taken BEFORE the commit is the whole point: a remount keyed
+    // on the committed filter renders an input that looks identical and holds the
+    // same value, while the one the operator was typing into is detached.
+    const input = screen.getByLabelText('Filter');
+    await user.type(input, 'a.tx{Enter}');
+
+    // The commit landed: the URL narrowed the table.
+    await waitFor(() => {
+      expect(within(screen.getByTestId('storage-table')).queryByText('zulu.log')).toBeNull();
+    });
+    expect(input.isConnected).toBe(true);
+    expect(document.activeElement).toBe(input);
+    expect(input).toHaveValue('a.tx');
+  });
+
+  it('re-seeds the filter draft when the url changes underneath it', async () => {
+    // The other half of the contract the remount `key` used to carry: a filter
+    // arriving WITHOUT a local edit (browser back/forward) still overwrites the
+    // draft, so the box never states a filter the table is not showing.
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
+    });
+    const { rerender } = renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByTestId('storage-table');
+    expect(screen.getByLabelText('Filter')).toHaveValue('');
+
+    rerender(<StoragePage search={{ filter: 'zulu' }} />);
+    expect(screen.getByLabelText('Filter')).toHaveValue('zulu');
   });
 });

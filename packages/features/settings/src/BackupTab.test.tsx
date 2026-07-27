@@ -64,7 +64,16 @@ describe('BackupTab', () => {
     expect(screen.queryByText(/store it like a secret/i)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('checkbox', { name: 'env' }));
-    expect(await screen.findByText(/store it like a secret/i)).toBeInTheDocument();
+    const warning = await screen.findByText(/store it like a secret/i);
+    expect(warning).toBeInTheDocument();
+    // The panel is the design system's published warn surface, not a local formula:
+    // hand-rolled copies drifted to three background recipes and two paddings. Only
+    // the gap to what follows stays local. (jsdom evaluates no CSS — what is pinned
+    // is which surface owns the styling.)
+    expect(warning).toHaveClass('tai-warn-state');
+    expect(warning.style.padding).toBe('');
+    expect(warning.style.background).toBe('');
+    expect(warning.style.border).toBe('');
   });
 
   it('exports the chosen sections and triggers a download', async () => {

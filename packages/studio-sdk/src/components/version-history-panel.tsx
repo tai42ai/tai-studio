@@ -318,7 +318,10 @@ export function VersionHistoryPanel({
         <section className="tai-stack tai-stack-2">
           <h3 className="tai-section-title">Version {selectedEntry.version} body</h3>
           <Card>
-            <JsonTree data={selectedEntry.body} />
+            <JsonTree
+              data={selectedEntry.body}
+              label={`Version ${String(selectedEntry.version)} body`}
+            />
           </Card>
         </section>
       ) : null}

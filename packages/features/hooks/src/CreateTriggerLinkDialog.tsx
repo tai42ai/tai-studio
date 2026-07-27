@@ -12,7 +12,7 @@
  * invalid ttl / name, a taken name, a 403, the in-memory 501, or any other status)
  * surfaces LOUDLY inline — never swallowed.
  */
-import { useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renderSVG } from 'uqr';
 import {
@@ -119,6 +119,11 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
   const executionKeyMissing = executionKey === '';
   const unsatisfiable = fireGateUnsatisfiable(keysQuery);
   const url = link !== null ? composeTriggerUrl(api.baseUrl, link.trigger_path) : null;
+  // The prop object, not its string, is what React compares: a fresh literal makes
+  // every re-render of this dialog re-run `renderSVG` and re-write the QR's
+  // `innerHTML`, rebuilding the whole subtree. Held by identity, the encode and the
+  // write happen only when the link itself changes.
+  const qr = useMemo(() => (url === null ? null : { __html: renderSVG(url) }), [url]);
 
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
@@ -164,14 +169,14 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
         if (!next) onClose();
       }}
     >
-      {url !== null && link !== null ? (
+      {url !== null && link !== null && qr !== null ? (
         <div style={sectionStyle}>
           <div
             role="img"
             aria-label="Trigger link QR code"
             data-testid="trigger-link-qr"
             style={qrWrapperStyle}
-            dangerouslySetInnerHTML={{ __html: renderSVG(url) }}
+            dangerouslySetInnerHTML={qr}
           />
           <CopyField
             value={url}

@@ -20,7 +20,7 @@
     "build": "tsc --noEmit && node scripts/build.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src bridge scripts",
+    "lint": "eslint src bridge scripts --max-warnings 0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"bridge/**/*.ts\" \"scripts/**/*.mjs\"",
     "test": "vitest run"
   },

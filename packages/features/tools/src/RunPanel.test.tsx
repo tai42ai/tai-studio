@@ -289,6 +289,11 @@ describe('AutoFormRunPanel — client timeout', () => {
     expect(timeout).toHaveTextContent(/still executing on the server/i);
     // Distinct from the generic failure surface.
     expect(screen.queryByText('Something went wrong')).toBeNull();
+    // The panel is the design system's published warn surface, not a local formula:
+    // hand-rolled copies drifted to three background recipes and two paddings.
+    // (jsdom evaluates no CSS — what is pinned is which surface owns the styling.)
+    expect(timeout).toHaveClass('tai-warn-state');
+    expect(timeout.getAttribute('style')).toBeNull();
   });
 });
 

@@ -68,18 +68,11 @@ const TOOL_RUNS_ROUTE = '/api/tool-runs';
  * `do-not-retry` warning so the operator can tell a live run from a safe retry. */
 function TimeoutNotice(): ReactNode {
   return (
-    <div
-      role="alert"
-      data-testid="tool-run-timeout"
-      style={{
-        padding: 'var(--tai-space-4)',
-        border: '1px solid var(--tai-color-warning)',
-        borderRadius: 'var(--tai-radius-md)',
-        color: 'var(--tai-color-text)',
-        background: 'color-mix(in srgb, var(--tai-color-warning) 10%, var(--tai-color-surface))',
-      }}
-    >
-      <strong style={{ color: 'var(--tai-color-warning)' }}>Run still executing server-side</strong>
+    // `.tai-warn-state` is the design system's published warn surface: the state
+    // degraded rather than failed, so it takes that panel rather than a formula of
+    // its own.
+    <div role="alert" data-testid="tool-run-timeout" className="tai-warn-state">
+      <strong className="tai-status-warn">Run still executing server-side</strong>
       <p style={{ margin: 'var(--tai-space-2) 0 0', whiteSpace: 'pre-wrap' }}>
         This run is still executing on the server; a synchronous run&apos;s result cannot be
         retrieved once the client disconnects. For a long or interactive tool, use{' '}

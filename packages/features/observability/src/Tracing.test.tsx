@@ -10,8 +10,10 @@ import userEvent from '@testing-library/user-event';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { ApiError, type Run, type RunTrace } from '@tai42/api-client';
 
+import type { ReactElement } from 'react';
+
 import { ObservabilityPage } from './ObservabilityPage';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { renderWithLiveUrl, renderWithProviders, type StubApiClient } from './test-utils';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -227,6 +229,57 @@ describe('TracingTab — runs table', () => {
     await user.click(screen.getByRole('button', { name: 'Apply filters' }));
 
     expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', minCost: 5 });
+  });
+
+  it('keeps the keyboard caret on the filter bar when Apply commits (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    renderWithLiveUrl<'observability'>((search) => <ObservabilityPage search={search} />, {
+      client,
+      initialSearch: { tab: 'tracing' },
+    });
+
+    await screen.findByTestId('run-row-r1');
+    // Node identities taken BEFORE the commit are the whole point: a bar remounted
+    // on the filter set it just wrote renders controls that look identical and hold
+    // the same values, while the ones the operator was driving are detached.
+    const minCost = screen.getByLabelText('Min cost');
+    const apply = screen.getByRole('button', { name: 'Apply filters' });
+    await user.type(minCost, '5');
+    await user.click(apply);
+
+    // The commit landed: the URL's filter set reached the runs query.
+    await waitFor(() => {
+      expect(client.listRuns).toHaveBeenCalledWith(
+        expect.objectContaining({ minCost: 5 }),
+        expect.anything(),
+      );
+    });
+    expect(apply.isConnected).toBe(true);
+    expect(document.activeElement).toBe(apply);
+    expect(minCost.isConnected).toBe(true);
+    expect(minCost).toHaveValue(5);
+  });
+
+  it('re-seeds the filter draft when the url changes underneath it', async () => {
+    // The other half of the contract the remount `key` used to carry: a filter set
+    // arriving WITHOUT a local edit (browser back/forward) still overwrites the
+    // draft, so the bar never states a filter the table is not showing.
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    function Rerenderable({ minCost }: { readonly minCost?: number }): ReactElement {
+      return <ObservabilityPage search={{ tab: 'tracing', minCost }} />;
+    }
+    const { rerender } = renderWithProviders(<Rerenderable />, { client });
+
+    await screen.findByTestId('run-row-r1');
+    expect(screen.getByLabelText('Min cost')).toHaveValue(null);
+
+    rerender(<Rerenderable minCost={7} />);
+    expect(screen.getByLabelText('Min cost')).toHaveValue(7);
   });
 
   it('exports the runs as CSV with the active filters', async () => {

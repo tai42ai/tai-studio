@@ -10,7 +10,7 @@
  * token is NEVER logged, stored, or persisted; regenerating mints an independent
  * one-time link. Failures surface loudly inline.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { renderSVG } from 'uqr';
 import {
@@ -78,6 +78,14 @@ export function MintedKeyDialog({
   // is never sent to the server on the request that fetches `/login` and never
   // leaves this rendered value.
   const claimUrl = link !== null ? window.location.origin + link.claim_path : null;
+  // The prop object, not its string, is what React compares: a fresh literal makes
+  // every re-render of this dialog re-run `renderSVG` and re-write the QR's
+  // `innerHTML`, rebuilding the whole subtree. Held by identity, the encode and the
+  // write happen only when the claim link itself changes.
+  const qr = useMemo(
+    () => (claimUrl === null ? null : { __html: renderSVG(claimUrl) }),
+    [claimUrl],
+  );
 
   return (
     <Dialog
@@ -96,14 +104,14 @@ export function MintedKeyDialog({
       <div style={claimSectionStyle}>
         {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
 
-        {claimUrl !== null && link !== null ? (
+        {claimUrl !== null && link !== null && qr !== null ? (
           <>
             <div
               role="img"
               aria-label="Claim link QR code"
               data-testid="claim-link-qr"
               style={qrWrapperStyle}
-              dangerouslySetInnerHTML={{ __html: renderSVG(claimUrl) }}
+              dangerouslySetInnerHTML={qr}
             />
             <CopyField
               value={claimUrl}

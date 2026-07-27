@@ -30,7 +30,12 @@ export interface CheckboxProps {
   readonly onCheckedChange?: (checked: boolean) => void;
   readonly disabled?: boolean;
   readonly label?: string;
-  /** Accessible name for a checkbox with no visible `label` (e.g. a table cell). */
+  /**
+   * Accessible name for a checkbox with no visible `label` (e.g. a table cell).
+   * An enclosing `Field` wins where both are given — it names the box from
+   * visible text, and `aria-label` would override that native label and leave
+   * the visible text out of the accessible name (WCAG 2.5.3).
+   */
   readonly 'aria-label'?: string;
   readonly name?: string;
   readonly value?: string;
@@ -54,7 +59,10 @@ export function Checkbox({
     <RadixCheckbox.Root
       id={id}
       className="tai-checkbox"
-      aria-label={ariaLabel}
+      // The caller's name is the FALLBACK. A box named by an inline `label` or
+      // by an enclosing `Field` is named from visible text, and `aria-label`
+      // outranks a native `<label for>` — emitting both would discard that text.
+      aria-label={field.id === undefined && label === undefined ? ariaLabel : undefined}
       aria-describedby={field['aria-describedby']}
       aria-invalid={field['aria-invalid']}
       checked={checked}

@@ -117,6 +117,11 @@ const hiddenFromReadersStyle: CSSProperties = { display: 'contents' };
  * it can never become a live navigation target. Shared by `Button`'s link form
  * and by `ExternalLinkButton`, which applies the stricter http(s)-only policy.
  *
+ * Its surface is DELIBERATELY narrow. It takes the paint, the id and the name,
+ * and nothing else the caller wrote on the anchor: the props a live link needs
+ * are the props a dead one must not have, so they are refused here rather than
+ * spread onto the span.
+ *
  * It stays ROLE-LESS on purpose — it is not a link and must not be announced as
  * one. That is also why the caller's name arrives as visually-hidden TEXT rather
  * than `aria-label`: ARIA prohibits both naming attributes on the `generic` role
@@ -256,7 +261,10 @@ interface ButtonVariantProps {
  * ("incorrectly extends"), which is a narrowing of a surface that is additive
  * only. The discriminant `Button` narrows on lives on `ButtonActionProps`.
  */
-export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HTMLButtonElement> {}
+export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HTMLButtonElement> {
+  /** A consumer ref for the `<button>`; the prop spread forwards it. */
+  readonly ref?: Ref<HTMLButtonElement>;
+}
 
 /**
  * The action form as `Button` ACCEPTS it: `ButtonProps` plus the absent-`href`
@@ -280,6 +288,13 @@ interface ButtonActionProps extends ButtonProps {
  * `rel="noopener noreferrer external"`, whatever the caller passed. On the
  * in-app branch `target` is the caller's and `rel` is pinned only when they ask
  * for `_blank`.
+ *
+ * It declares NO `ref`, and that is a REFUSAL rather than an omission: a blocked
+ * href renders a {@link NeutralizedLink} span and no anchor at all, so a
+ * `Ref<HTMLAnchorElement>` would be filled on two of the three renderings and
+ * left null on the third — a ref that silently does nothing for exactly the
+ * input the check exists to catch. A caller that needs the element wraps the
+ * button.
  */
 export interface LinkButtonProps
   extends ButtonVariantProps, AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -302,6 +317,11 @@ export function Button(props: ButtonActionProps | LinkButtonProps) {
   const link = resolveHref(href);
 
   if (link.kind === 'blocked') {
+    // Only the four props that survive the neutralization cross: the paint, the
+    // id an external IDREF may point at, and the caller's name (as text). Every
+    // other anchor prop is REFUSED rather than forwarded — `target`/`rel`
+    // describe a navigation that is not happening, and a handler spread onto the
+    // span would make the dead link live again, which is the whole defect.
     return (
       <NeutralizedLink className={classes} style={style} id={rest.id} label={rest['aria-label']}>
         {children}

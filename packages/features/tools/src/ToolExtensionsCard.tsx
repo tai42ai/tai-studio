@@ -19,7 +19,9 @@
  * off the preset list, never by string-matching a server error. That preset read is
  * best-effort: a scoped tools-caller that cannot reach `/api/presets` (or any presets
  * error) has no preset info, so the card falls through to the manifest editor path
- * rather than walling — only the tool's own extensions read is load-bearing.
+ * rather than walling — only the tool's own extensions read is load-bearing. The
+ * failure is still STATED, with a retry: without preset info a preset tool looks
+ * like a manifest tool, so the editor on offer is one the manifest route rejects.
  *
  * Every 400/409 the server raises on save renders VERBATIM in the dialog (no 4xx
  * special-casing); server-supplied strings render as escaped text through the DS
@@ -153,7 +155,8 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
   // The presets read only tags preset tools; wait for it while it is genuinely
   // loading (its result flips the editor to a hint), but a FAILED presets read is
   // NOT walled — a scoped tools-caller that cannot reach `/api/presets` (or any
-  // presets error) falls through to the manifest path with a working card below.
+  // presets error) falls through to the manifest path with a working card below,
+  // under the loud notice the card renders for that failure.
   if (extensionsQuery.isPending || presetsQuery.isPending) {
     return (
       <div style={stackStyle}>
@@ -197,6 +200,18 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           </Button>
         ) : null}
       </div>
+
+      {/* The presets read is not load-bearing, so its failure does not wall the card
+          — but it must not pass silently either: with no preset info a PRESET tool is
+          indistinguishable from a manifest tool, so the card offers an editor whose
+          save the manifest route will reject. State the failure and offer the retry
+          that restores the distinction. */}
+      {presetsQuery.isError ? (
+        <ErrorState
+          message={`Preset tools cannot be identified: ${errorMessage(presetsQuery.error)}`}
+          onRetry={() => void presetsQuery.refetch()}
+        />
+      ) : null}
 
       {save.isSuccess ? (
         <>

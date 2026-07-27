@@ -613,6 +613,14 @@ describe('ComposeAgentDialog', () => {
     expect(alerts.map((node) => node.textContent).join('\n')).toContain('tags down');
     expect(await screen.findByRole('combobox', { name: 'Add a tool' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Compose agent' })).toBeEnabled();
+
+    // EVERY tag-grouped picking surface states it, not just the first one: a Field
+    // that hands its picker the (empty) tag map without stating the failure drops
+    // silently to flat mode, which reads as "this deployment has no tags".
+    for (const groupName of ['Tools', 'Sub-agents']) {
+      const group = screen.getByRole('group', { name: groupName });
+      expect(within(group).getByRole('alert')).toHaveTextContent('tags down');
+    }
   });
 });
 

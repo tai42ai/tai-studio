@@ -106,7 +106,6 @@ export function CreateRoleDialog({
         </Field>
         <Field label="Base tier">
           <Select
-            aria-label="Base tier"
             options={BASE_TIERS.map((tier) => ({ value: tier.value, label: tier.label }))}
             value={baseTier}
             onValueChange={setBaseTier}

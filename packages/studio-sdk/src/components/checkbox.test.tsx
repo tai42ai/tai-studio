@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Checkbox } from './checkbox';
+import { Field } from './field';
 
 describe('Checkbox', () => {
   it('renders an accessible checkbox with its label as the name', () => {
@@ -101,5 +102,24 @@ describe('Checkbox', () => {
     const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
     expect(checkbox).toHaveClass('tai-checkbox');
     expect(screen.getByText('Accept terms')).toBeInTheDocument();
+  });
+
+  it('takes a visible label over a caller aria-label, inline or from a Field', () => {
+    // `aria-label` outranks a `<label for>`, so a box that emitted both would
+    // drop its own visible text out of the computed name (WCAG 2.5.3).
+    const inline = render(<Checkbox label="Accept terms" aria-label="Terms" />);
+    const box = screen.getByRole('checkbox');
+    expect(box).toHaveAccessibleName('Accept terms');
+    expect(box).not.toHaveAttribute('aria-label');
+    inline.unmount();
+
+    render(
+      <Field label="Accept terms">
+        <Checkbox aria-label="Terms" />
+      </Field>,
+    );
+    const fielded = screen.getByRole('checkbox');
+    expect(fielded).toHaveAccessibleName('Accept terms');
+    expect(fielded).not.toHaveAttribute('aria-label');
   });
 });

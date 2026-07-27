@@ -41,16 +41,26 @@ describe('login page — control boundaries', () => {
 
     await screen.findByRole('link', { name: /Continue with SSO/ });
 
-    const decorBordered = [
+    const controls = [
       ...document.body.querySelectorAll<HTMLElement>(
         'button, a[href], input, select, textarea, [role="button"], [role="link"]',
       ),
-    ]
-      .filter((node) =>
-        /(^|;)\s*border:[^;]*var\(--tai-color-border\)/.test(node.getAttribute('style') ?? ''),
-      )
-      .map((node) => `${node.tagName.toLowerCase()}: ${node.textContent}`);
+    ];
+    const name = (node: HTMLElement): string =>
+      `${node.tagName.toLowerCase()}: ${node.textContent}`;
+    // Read the longhand FIRST: `borderColor` is what a `border-color` declaration
+    // and the `border` shorthand both resolve to, so a control that names the
+    // decorative token either way is caught.
+    const boundary = (node: HTMLElement): string => node.style.borderColor || node.style.border;
 
-    expect(decorBordered).toEqual([]);
+    expect(
+      controls.filter((node) => boundary(node).includes('var(--tai-color-border)')).map(name),
+    ).toEqual([]);
+
+    // The positive half: a control with NO boundary at all would satisfy the
+    // negative assertion trivially, so the styled anchor must actually be drawn —
+    // and drawn with the contrast-safe token.
+    const sso = screen.getByRole('link', { name: /Continue with SSO/ });
+    expect(boundary(sso)).toContain('var(--tai-color-control-border)');
   });
 });

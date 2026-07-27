@@ -390,6 +390,40 @@ describe('Button link normalization', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it('a blocked link drops the navigation props too, not just the handler', () => {
+    // `target`/`rel` describe a navigation that is not happening. Spreading the
+    // rest of the anchor props onto the span would ship them on an element with
+    // no href, which reads as a link the browser merely failed to open.
+    render(
+      <Button href="javascript:alert(1)" target="_blank" rel="opener" title="Open it">
+        go
+      </Button>,
+    );
+
+    const blocked = screen.getByText(/go/).closest('[data-neutralized="true"]');
+    expect(blocked).not.toBeNull();
+    expect(blocked).not.toHaveAttribute('target');
+    expect(blocked).not.toHaveAttribute('rel');
+    // The `title` the span DOES carry is the blocked reason, never the caller's.
+    expect(blocked).toHaveAttribute(
+      'title',
+      'This link was blocked because it is neither an in-app reference nor an http(s) URL.',
+    );
+  });
+
+  it('the action form of Button forwards a consumer ref to its own button', () => {
+    // The LINK form declares none: its blocked branch renders a span and no
+    // anchor, so a `Ref<HTMLAnchorElement>` would be filled on two renderings
+    // of three and silently null on the one the safety check produces.
+    const ref = createRef<HTMLButtonElement>();
+    render(
+      <Button type="button" ref={ref}>
+        go
+      </Button>,
+    );
+    expect(ref.current).toBe(screen.getByRole('button', { name: 'go' }));
+  });
+
   it.each([['#top'], ['#/agents'], ['?tab=logs'], ['?/x'], ['#//evil.example'], ['./a'], ['../a']])(
     'renders the in-app reference form %j as a live anchor',
     (href) => {

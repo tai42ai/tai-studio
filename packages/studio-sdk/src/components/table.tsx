@@ -7,11 +7,18 @@
  *
  * A numeric column opts in with `numeric`, which stamps `data-numeric="true"` —
  * the hook the stylesheet right-aligns on tabular figures so digits line up.
+ *
+ * Each wrapper FORWARDS a consumer `ref` to the native element it renders — the
+ * attribute spread carries it, the same way it carries every other native prop —
+ * so a caller that has to measure or scroll a cell is not forced back to a raw
+ * `<td>` and out of the system.
  */
-import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react';
+import type { HTMLAttributes, Ref, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 
 export interface TableProps extends HTMLAttributes<HTMLTableElement> {
   readonly children?: ReactNode;
+  /** A consumer ref for the `<table>` itself. */
+  readonly ref?: Ref<HTMLTableElement>;
 }
 
 export function Table({ children, className, ...props }: TableProps) {
@@ -25,6 +32,8 @@ export function Table({ children, className, ...props }: TableProps) {
 /** `<thead>` and `<tbody>` take the same surface: the native one. */
 export interface TableSectionProps extends HTMLAttributes<HTMLTableSectionElement> {
   readonly children?: ReactNode;
+  /** A consumer ref for the section element itself. */
+  readonly ref?: Ref<HTMLTableSectionElement>;
 }
 
 export function THead({ children, ...props }: TableSectionProps) {
@@ -37,6 +46,8 @@ export function TBody({ children, ...props }: TableSectionProps) {
 
 export interface TableRowProps extends HTMLAttributes<HTMLTableRowElement> {
   readonly children?: ReactNode;
+  /** A consumer ref for the `<tr>` itself. */
+  readonly ref?: Ref<HTMLTableRowElement>;
 }
 
 export function TR({ children, ...props }: TableRowProps) {
@@ -56,6 +67,8 @@ export interface NumericColumnProps {
  */
 export interface THProps extends ThHTMLAttributes<HTMLTableCellElement>, NumericColumnProps {
   readonly children?: ReactNode;
+  /** A consumer ref for the `<th>` itself. */
+  readonly ref?: Ref<HTMLTableCellElement>;
 }
 
 export function TH({ children, numeric = false, scope = 'col', ...props }: THProps) {
@@ -68,6 +81,8 @@ export function TH({ children, numeric = false, scope = 'col', ...props }: THPro
 
 export interface TDProps extends TdHTMLAttributes<HTMLTableCellElement>, NumericColumnProps {
   readonly children?: ReactNode;
+  /** A consumer ref for the `<td>` itself. */
+  readonly ref?: Ref<HTMLTableCellElement>;
 }
 
 export function TD({ children, numeric = false, ...props }: TDProps) {

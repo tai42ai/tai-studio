@@ -427,7 +427,7 @@ describe('ScopesMapper add-route row', () => {
     const s1 = zoneEl('zone-scope-s1');
     await user.type(within(s1).getByLabelText('Add route to s1'), '/x');
     await user.click(within(s1).getByRole('checkbox', { name: 'Dynamic pattern' }));
-    await user.type(within(s1).getByLabelText('Pattern for route added to s1'), '^/x/.*$');
+    await user.type(within(s1).getByLabelText('Pattern (regex) for route added to s1'), '^/x/.*$');
     await user.click(within(s1).getByRole('button', { name: 'Add route' }));
 
     await waitFor(() => {
@@ -437,6 +437,37 @@ describe('ScopesMapper add-route row', () => {
         pattern: '^/x/.*$',
       });
     });
+  });
+
+  it('names every disambiguated control with the words its own label shows (WCAG 2.5.3)', async () => {
+    // A `Field`'s `<label for>` is what the operator READS; an `aria-label` on the
+    // child REPLACES it as the accessible name. Where a scope-disambiguated name is
+    // needed, that name must still carry the visible label's words, or speech input
+    // ("Pattern") reaches nothing. Derived over the rendered zone rather than a list
+    // of call sites, so a control added later is judged by the same rule.
+    const user = userEvent.setup();
+    renderMapper({});
+    await screen.findByText('/a');
+
+    const s1 = zoneEl('zone-scope-s1');
+    await user.click(within(s1).getByRole('checkbox', { name: 'Dynamic pattern' }));
+
+    const pairs = [...s1.querySelectorAll<HTMLElement>('[aria-label][id]')]
+      .map((node) => ({
+        node,
+        visible: s1.querySelector<HTMLLabelElement>(`label[for="${node.id}"]`)?.textContent,
+        name: node.getAttribute('aria-label') ?? '',
+      }))
+      .filter(
+        (pair): pair is { node: HTMLElement; visible: string; name: string } =>
+          typeof pair.visible === 'string',
+      );
+
+    // The gate is only as good as what it looks at: an empty list would pass.
+    expect(pairs.map((pair) => pair.visible).sort()).toEqual(['Add route', 'Pattern (regex)']);
+    expect(
+      pairs.filter((pair) => !pair.name.includes(pair.visible)).map((pair) => pair.name),
+    ).toEqual([]);
   });
 
   it('surfaces a 4xx from the assignment VERBATIM in the error strip', async () => {

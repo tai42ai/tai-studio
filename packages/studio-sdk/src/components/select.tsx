@@ -35,7 +35,12 @@ interface SelectSharedProps {
   readonly placeholder?: string;
   readonly disabled?: boolean;
   readonly name?: string;
-  /** Accessible name for the trigger when it is not wired to an enclosing `Field`. */
+  /**
+   * Accessible name for the trigger when it is not wired to an enclosing
+   * `Field`. A `Field` wins where both are given — it names the trigger from
+   * visible text, and `aria-label` would override that native label and leave
+   * the visible text out of the accessible name (WCAG 2.5.3).
+   */
   readonly 'aria-label'?: string;
 }
 
@@ -109,7 +114,10 @@ export function Select(props: SelectArgs) {
       <RadixSelect.Trigger
         id={field.id}
         className={SELECT_TRIGGER_CLASS}
-        aria-label={ariaLabel}
+        // A trigger claiming the field's id is named by that field's `<label
+        // for>`, and `aria-label` outranks a native label — emitting both would
+        // discard the visible text the field renders.
+        aria-label={field.id === undefined ? ariaLabel : undefined}
         aria-describedby={field['aria-describedby']}
         aria-invalid={field['aria-invalid']}
       >

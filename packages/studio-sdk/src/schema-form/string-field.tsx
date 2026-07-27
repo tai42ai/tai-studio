@@ -5,11 +5,13 @@
  * provider, the input is backed by argument autocomplete.
  */
 import type { ReactNode } from 'react';
-import { useCallback, useContext } from 'react';
+import { useCallback, useContext, useState } from 'react';
 
 import { CompletionInput } from '../components/completion-input';
 import { Field } from '../components/field';
+import { AlertTriangleIcon } from '../components/icons';
 import { TextInput } from '../components/inputs';
+import { errorMessage } from '../errors';
 import type { MediaUpload } from './classify';
 import { CompletionProviderContext } from './context';
 import { MediaField } from './media-field';
@@ -104,22 +106,43 @@ function CompletionField({
     [provider, argName],
   );
   // A completion fetch is a best-effort enhancement, not a fatal error — but it
-  // must never be swallowed silently. Surface the failure with the field's path
-  // for context. Memoised for the same effect-deps reason as `fetchCompletions`.
+  // must never be swallowed. The failure goes to the human as a hint under the
+  // input AND to the console with the field's path, because the two audiences
+  // need different things: the reason the suggestions are gone, and which field
+  // and which throw produced it.
+  const [failure, setFailure] = useState<string | null>(null);
+  // Memoised for the same effect-deps reason as `fetchCompletions`.
   const onError = useCallback(
     (error: unknown) => {
       console.error(`SchemaForm: completion fetch failed for field "${argName}"`, error);
+      setFailure(errorMessage(error));
     },
     [argName],
   );
 
   return (
-    <CompletionInput
-      value={value}
-      onChange={onChange}
-      fetchCompletions={fetchCompletions}
-      onError={onError}
-    />
+    <>
+      <CompletionInput
+        value={value}
+        // Every edit starts a fresh fetch, so the previous one's failure stops
+        // being true here; a new one re-reports through `onError`.
+        onChange={(next) => {
+          setFailure(null);
+          onChange(next);
+        }}
+        fetchCompletions={fetchCompletions}
+        onError={onError}
+      />
+      {/* A degradation, not a rejected value: the field still accepts what is
+          typed, only the suggestions are gone. So it wears the warning mark and
+          the hint style, never the error one. */}
+      {failure === null ? null : (
+        <p role="status" className="tai-field-hint" style={{ margin: 0 }}>
+          <AlertTriangleIcon />
+          {`Suggestions are unavailable: ${failure}`}
+        </p>
+      )}
+    </>
   );
 }
 

@@ -30,7 +30,7 @@
     "build:reference-plugin": "node scripts/build-reference-plugin.mjs",
     "fixtures:refresh": "node scripts/fixtures-refresh.mjs",
     "typecheck": "tsc --noEmit && tsc --noEmit -p reference-plugin/studio-src/tsconfig.json",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check \"**/*.{ts,tsx}\""
   }
 }

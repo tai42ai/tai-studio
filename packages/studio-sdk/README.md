@@ -28,7 +28,15 @@ pnpm add @tai42/studio-sdk
 - `@tai42/studio-sdk/fonts.css` — the self-hosted Inter Variable and Geist Mono
   Variable faces, loaded once per host app.
 - `@tai42/studio-sdk/components.css` — the component, layout, responsive, and
-  prose classes the design system is drawn with.
+  prose classes the design system is drawn with. It is **not class-only**: in the
+  `tai-components` layer it also styles bare `h1`–`h6` (colour, size, weight,
+  `letter-spacing`), `::selection`, Chromium's `input:-webkit-autofill`, and —
+  below 640 px, so the mobile top bar cannot cover a jump target — `html`'s
+  `scroll-padding-top` plus `scroll-margin-top` on `:target` and `#main-content`.
+  It also declares one private custom property, `--shell-topbar-height`, on
+  `:root`. All of it sits in `tai-components`, which outranks a host preflight in
+  `base` — so a host that wants its OWN heading or selection rules to win has to
+  place them after this sheet, not in `base`.
 
 A host that bundles the SDK gets all three through the barrel's side-effect
 imports. A host that consumes the SDK as an external module (the Studio shell
@@ -280,8 +288,11 @@ is something the sheet can supply for you:
    `scroll-padding-top`, and gives `:target` and `#main-content` a matching
    `scroll-margin-top` — so the main region wants `id="main-content"`.
 6. **A nav surface below 640 px.** The sidebar is hidden there and the sheet
-   styles the bar, not what opens from it. The host wires that up (`Drawer` is
-   available for it).
+   styles the bar, not what opens from it. Below 640 px a host that renders
+   `.tai-topbar` and nothing else has NO reachable navigation — the sheet cannot
+   supply one. The SDK exports `Drawer` (with the `.tai-drawer` rules already in
+   this sheet) as the intended vehicle, but nothing in the SDK mounts it: the
+   host renders it and drives its `open` state itself.
 7. **Nav icons carry no margin of their own.** `.tai-nav-item` is a flex row and
    already sets the icon-to-label gap from the spacing scale; a margin beside the
    icon is additive and sets that row apart from every other one.

@@ -74,6 +74,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { type Rule, readRules } from './test-css-reader';
+
 const here = dirname(fileURLToPath(import.meta.url));
 const stylesheet = readFileSync(resolve(here, 'components.css'), 'utf8');
 /**
@@ -84,91 +86,7 @@ const stylesheet = readFileSync(resolve(here, 'components.css'), 'utf8');
  */
 const tokenSheet = readFileSync(resolve(here, 'tokens.css'), 'utf8');
 
-interface Rule {
-  /** The rule's selector list, split and trimmed. */
-  readonly selectors: string[];
-  /** The declaration block, without its braces. */
-  readonly body: string;
-  /** The at-rule preludes this rule is nested inside, outermost first. */
-  readonly context: string[];
-}
-
-/**
- * Every rule block in the sheet, WITH the at-rule context it sits inside.
- *
- * The reader this replaces was a single un-anchored `.exec` per selector:
- * `new RegExp('\\n\\s*\\' + selector + '\\s*\\{([^}]*)\\}')` — no `g` flag, one
- * match, the FIRST occurrence in the file. `components.css` declares its base
- * rules first and its `@media` bands afterwards, so every later override of a
- * gated selector was invisible and the whole contract was asserted against the
- * base rule alone: appending
- * `@media (max-width: 639px) { .tai-tablist { flex-wrap: nowrap } }` restored
- * the exact defect this file is named after with all thirteen assertions green.
- *
- * A real walk is used rather than a cleverer regex because the two facts that
- * matter — which rules share a selector, and which at-rule each sits in — are
- * both structural. Nesting is tracked to any depth, so a band inside a
- * `@supports` inside a `@layer` is still reached.
- *
- * A STATEMENT at-rule ends at a semicolon rather than at a block, and the walk
- * has to reset the prelude there: without it `@layer a, b;` and the rule after it
- * read as ONE at-rule prelude, the rule is never emitted, and every assertion
- * about it passes on a rule the reader silently lost.
- */
-function rules(source: string): Rule[] {
-  const found: Rule[] = [];
-  const context: string[] = [];
-  // Comments are removed FIRST: this sheet's rules are introduced by prose
-  // docblocks, and a comma inside one would otherwise be read as a selector
-  // separator — which silently emptied the classified set rather than failing.
-  const text = source.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
-  let prelude = '';
-  let index = 0;
-
-  while (index < text.length) {
-    const character = text[index] ?? '';
-    if (character === ';' && prelude.trim().startsWith('@')) {
-      prelude = '';
-      index += 1;
-      continue;
-    }
-    if (character === '{') {
-      const head = prelude.trim();
-      prelude = '';
-      index += 1;
-      if (head.startsWith('@')) {
-        context.push(head);
-        continue;
-      }
-      // A declaration block: read to its matching close. `components.css`
-      // declares no nested rules inside a rule, and a `{` inside a declaration
-      // value is not legal CSS, so the first `}` closes it.
-      const end = text.indexOf('}', index);
-      const close = end === -1 ? text.length : end;
-      found.push({
-        selectors: head
-          .split(',')
-          .map((selector) => selector.trim())
-          .filter((selector) => selector !== ''),
-        body: text.slice(index, close),
-        context: [...context],
-      });
-      index = close + 1;
-      continue;
-    }
-    if (character === '}') {
-      context.pop();
-      prelude = '';
-      index += 1;
-      continue;
-    }
-    prelude += character;
-    index += 1;
-  }
-  return found;
-}
-
-const sheet = rules(stylesheet);
+const sheet = readRules(stylesheet);
 
 /**
  * Every rule block whose SUBJECT is `selector` — the exact selector, and every
@@ -580,7 +498,7 @@ describe('narrow-viewport contract', () => {
   it('reads the sheet as rules, with their at-rule context', () => {
     // Positive controls on the reader itself. Without them every assertion below
     // would pass vacuously on a parse that found nothing.
-    const parsed = rules(
+    const parsed = readRules(
       '@layer a { .x { color: red } @media (max-width: 639px) { .x, .y { color: blue } } }',
     );
     expect(parsed.map((rule) => [rule.selectors, rule.context])).toEqual([
@@ -594,7 +512,9 @@ describe('narrow-viewport contract', () => {
     // reads `@layer a, b;` and the rule after it as one at-rule prelude and
     // loses that rule entirely — every assertion about it then passes on
     // nothing.
-    expect(rules('@layer a, b; .x { color: red }').map((rule) => rule.selectors)).toEqual([['.x']]);
+    expect(readRules('@layer a, b; .x { color: red }').map((rule) => rule.selectors)).toEqual([
+      ['.x'],
+    ]);
     // …and the sheet itself really parsed.
     expect(sheet.length).toBeGreaterThan(150);
     expect(sheet.some((rule) => rule.context.some((at) => at.startsWith('@media')))).toBe(true);
@@ -651,7 +571,7 @@ describe('narrow-viewport contract', () => {
     // reader after it read only the LAST, so a band that reaches 320 px hid the
     // base rule instead — which is how `.tai-segment`'s mutated 28 px floor
     // stayed green. `declaredValues` keeps both, in sheet order.
-    const banded = rules(
+    const banded = readRules(
       '.x { flex-wrap: wrap } @media (max-width: 639px) { .x { flex-wrap: nowrap } }',
     );
     const values = banded

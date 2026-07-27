@@ -92,10 +92,9 @@ function NavItem({ token }: { token: FeatureToken }): ReactNode {
  * fixed, `aria-hidden` box before the title (the accessible name is the title),
  * with the color inherited from the link.
  *
- * The box brings no margin of its own: `.tai-nav-link` is a flex row and already
- * sets the icon-to-label gap from the spacing scale, so a `marginRight` beside it
- * is ADDITIVE and set this one row 16 px apart while every other nav row in the
- * design system sits at 8 px.
+ * The box brings no margin of its own: `.tai-nav-link` is a flex row and owns the
+ * icon-to-label gap from the spacing scale, so this row sits at the same 8 px as
+ * every other nav row. Any margin here would be ADDITIVE to that gap.
  */
 function PluginNavItem({ entry }: { entry: RegisteredNavEntry }): ReactNode {
   const { pathname } = useLocation();

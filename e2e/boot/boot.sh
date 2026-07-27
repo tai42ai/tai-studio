@@ -3,10 +3,12 @@
 # End-to-end boot recipe. Brings up everything the Playwright suites drive:
 #
 #   1. a throwaway loopback Redis (docker compose)
-#   2. the reference Studio plugin, installed into the tai42-skeleton env
-#   3. the built Studio SPA
+#   2. the built Studio SPA and the reference plugin's front-end bundle
+#   3. the reference Studio plugin, installed into the tai42-skeleton env
 #   4. a tai42-skeleton with ACCESS CONTROL ON, a seeded test-only API key, the
 #      two-tier route mappings, and studio_dist_path pointing at the SPA dist
+#
+# Steps 2 and 3 are in that order on purpose — see the note at step 2.
 #
 # It runs the skeleton in the FOREGROUND so Playwright's `webServer` can own its
 # lifecycle (it polls the skeleton URL, then kills this process on teardown).
@@ -96,7 +98,26 @@ fi
 log "applying connector-framework schema to the 'tai' database"
 pg_exec < "${CONNECTOR_DDL}" >/dev/null
 
-# --- 2. Reference plugin into the skeleton env ------------------------------
+# --- 2. Build the SPA and the reference-plugin bundle ------------------------
+# BEFORE step 3. `uv pip install` COPIES the plugin package into the venv, bundle
+# and all, and the skeleton serves that copy — so a bundle built after the install
+# reaches site-packages only on the NEXT boot, and the suites judge the previous
+# run's `studio-src`. Neither the SPA build nor the bundle build touches the venv,
+# so both belong here.
+if [[ "${SKIP_SPA_BUILD:-0}" == "1" && -f "${STUDIO_DIST}/index.html" ]]; then
+  log "reusing existing SPA dist (SKIP_SPA_BUILD=1)"
+else
+  log "building the Studio SPA + reference plugin bundle"
+  # `@tai42/studio-app...` — the trailing `...` selects the app AND every workspace
+  # package it depends on, in topological order. The app resolves each of those
+  # through its `dist/` (`exports` points there), so filtering to the app alone
+  # rebuilds the SPA around whatever `dist/` happens to be on disk: a source change
+  # anywhere outside `apps/studio` would be invisible to the suites under a green
+  # exit code, which is the same staleness this step exists to prevent.
+  ( cd "${STUDIO_REPO}" && pnpm --filter '@tai42/studio-app...' run build && pnpm --filter @tai42/e2e run build:reference-plugin )
+fi
+
+# --- 3. Reference plugin into the skeleton env ------------------------------
 SKELETON_PY="${SKELETON_DIR}/.venv/bin/python"
 if [[ ! -x "${SKELETON_PY}" ]]; then
   log "ERROR: skeleton venv not found at ${SKELETON_PY} (set SKELETON_DIR)"
@@ -141,20 +162,6 @@ fi
 if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
   log "applying tai42-accounts-postgres schema (python -m tai42_accounts_postgres.db apply)"
   "${SKELETON_PY}" -m tai42_accounts_postgres.db apply >&2
-fi
-
-# --- 3. Build the SPA -------------------------------------------------------
-if [[ "${SKIP_SPA_BUILD:-0}" == "1" && -f "${STUDIO_DIST}/index.html" ]]; then
-  log "reusing existing SPA dist (SKIP_SPA_BUILD=1)"
-else
-  log "building the Studio SPA + reference plugin bundle"
-  # `@tai42/studio-app...` — the trailing `...` selects the app AND every workspace
-  # package it depends on, in topological order. The app resolves each of those
-  # through its `dist/` (`exports` points there), so filtering to the app alone
-  # rebuilt the SPA around whatever `dist/` happened to be on disk: a source change
-  # anywhere outside `apps/studio` was invisible to the suites under a green exit
-  # code, which is the same staleness this step exists to prevent.
-  ( cd "${STUDIO_REPO}" && pnpm --filter '@tai42/studio-app...' run build && pnpm --filter @tai42/e2e run build:reference-plugin )
 fi
 
 # --- 4. Seed the test API key (Redis), policy + route mappings (Postgres) ----

@@ -1,7 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { JsonDiff, diffJson } from './json-diff';
+import { flushResizeObservers, setElementOverflow } from '../testing';
 
 describe('diffJson — pure structural diff', () => {
   it('emits added / removed / changed rows over object keys', () => {
@@ -149,5 +150,24 @@ describe('JsonDiff — rendered table', () => {
     render(<JsonDiff before={{ 'a.b': 1, a: { b: 10 } }} after={{ 'a.b': 2, a: { b: 20 } }} />);
     // Two changed rows share the textual path `a.b`; each is keyed uniquely so both render.
     expect(screen.getAllByTestId('diff-row-a.b')).toHaveLength(2);
+  });
+  it('names each JsonTree pane from its row path and its side', () => {
+    // The panes are scroll regions the moment they overflow, and a table of
+    // them all answering to "JSON" is a landmark list a reader cannot choose
+    // from. Each one takes the row it belongs to and the column it sits in.
+    const { container } = render(
+      <JsonDiff before={{ tags: ['a'] }} after={{ tags: ['a', 'b'] }} />,
+    );
+
+    for (const pane of container.querySelectorAll<HTMLElement>('.tai-code-block')) {
+      setElementOverflow(pane, true);
+    }
+    act(() => {
+      flushResizeObservers();
+    });
+
+    expect(screen.getByRole('region', { name: 'tags before' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'tags after' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'JSON' })).toBeNull();
   });
 });

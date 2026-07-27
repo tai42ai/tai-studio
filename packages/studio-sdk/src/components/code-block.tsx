@@ -10,8 +10,6 @@
  * scroller: a long line makes it a named keyboard target, a short one leaves it
  * an ordinary block.
  */
-import { useRef } from 'react';
-
 import { useOverflowRegion } from './scroll-region';
 
 export interface CodeBlockProps {
@@ -24,8 +22,9 @@ export interface CodeBlockProps {
 const DEFAULT_LABEL = 'Code';
 
 export function CodeBlock({ code, language }: CodeBlockProps) {
-  const preRef = useRef<HTMLPreElement>(null);
-  const region = useOverflowRegion(preRef, language ?? DEFAULT_LABEL);
+  // No consumer ref: the measurement's own callback ref is the only thing that
+  // needs the `<pre>`, and this component publishes no `ref` prop.
+  const region = useOverflowRegion(undefined, language ?? DEFAULT_LABEL);
 
   return (
     <div className="tai-stack tai-stack-2">

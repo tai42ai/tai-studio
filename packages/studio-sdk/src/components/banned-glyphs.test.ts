@@ -1,13 +1,23 @@
 /**
  * The banned-glyph rule, enforced by a repository-wide SOURCE SCAN.
  *
- * Unicode glyphs used as icons are banned — `▲ ▼ ▾ ↗ → ✓ ×` — because the icon
- * set in `icons.tsx` is the only sanctioned source of iconography: a glyph
- * inherits the text font rather than the 24-grid/1.6-stroke system, and no font
- * stack draws these consistently. The ban is scoped to GLYPH-AS-ICON usage: a
- * glyph carried as an element's SOLE content. The same characters inside real
- * prose — the "Update available → v2.0.0" badge, a "Author combos →" link label
- * — are legitimate and are deliberately NOT matches.
+ * Unicode glyphs used as icons are banned — `▲ ▼ ▾ ↗ ✓ ×` and the four arrows
+ * `← → ↑ ↓` — because the icon set in `icons.tsx` is the only sanctioned source
+ * of iconography: a glyph inherits the text font rather than the 24-grid/1.6-stroke
+ * system, and no font stack draws these consistently.
+ *
+ * The set is enforced at TWO strengths, because the repository holds the two
+ * halves of it to two different rules:
+ *
+ * - The MARK-SHAPED glyphs are banned as glyph-as-icon: carried as an element's
+ *   SOLE content. Beside real text they are prose — `3 × 4` is a dimension, not
+ *   an icon — and are deliberately not matches.
+ * - The DIRECTIONAL glyphs are banned in rendered text WHEREVER they appear,
+ *   prose included. Direction is iconography whatever sits beside it, and this
+ *   repository renders none: every prose arrow it once carried has been rewritten
+ *   in words, and seven components each assert their own absence from
+ *   `document.body.textContent` — which is the per-component pattern a
+ *   repository-wide scan exists to replace.
  *
  * Until this file existed the rule had NO enforcement at all: `icons.tsx` and
  * `index.ts` both stated it repo-wide, but the only checks were a handful of
@@ -86,12 +96,13 @@ const BANNED_GLYPHS = '▲▼▾↗→✓×↑↓←';
 /**
  * The NAMED references the toolchain actually decodes to a banned glyph.
  *
- * It is exactly two. Verified against the transform this repo ships
- * (`esbuild@0.25.12`, Vite's JSX loader): `&times;` and `&rarr;` decode, while
- * `&check;` `&checkmark;` `&nearr;` `&srarr;` pass through as literal text and
- * paint their own spelling, so listing them would redden source that renders
- * nothing banned. Named references are also case-SENSITIVE, which is why the
- * match below is not `i`: `&NEARR;` is not a reference at all.
+ * It is exactly five, measured against both transforms this repo ships
+ * (`esbuild@0.25.12`, Vite's JSX loader, and `tsc@5.9.3`): `&times;` `&rarr;`
+ * `&larr;` `&uarr;` `&darr;` decode, while `&check;` `&checkmark;` `&nearr;`
+ * `&srarr;` pass through as literal text and paint their own spelling, so
+ * listing them would redden source that renders nothing banned. Named references
+ * are also case-SENSITIVE, which is why the match below is not `i`: `&NEARR;` is
+ * not a reference at all.
  *
  * A reference is neither of the stated blind spots — it is a LITERAL in the
  * source, and it paints the banned mark — so `<button>&times;</button>` restores
@@ -436,6 +447,39 @@ export function glyphOnlyLiteralHits(code: string): { line: number; text: string
 }
 
 /**
+ * The DIRECTIONAL half of the banned set.
+ *
+ * Held to the stricter rule: an arrow says "this way" whether it stands alone or
+ * sits inside a sentence, so the sole-content test that fits a mark-shaped glyph
+ * lets exactly the usage this half is banned for through.
+ */
+const DIRECTIONAL_GLYPHS = '←→↑↓';
+const PAINTS_A_DIRECTION = new RegExp(`[${DIRECTIONAL_GLYPHS}]`, 'u');
+
+/**
+ * Every directional mark a source paints: in a JSX text run, or in a string
+ * literal that carries one. `code` must be comment-free — the prose in this
+ * repository's docblocks is full of arrows, and they render nothing.
+ */
+export function directionalGlyphHits(code: string): { line: number; text: string }[] {
+  const hits: { line: number; text: string }[] = [];
+  for (const match of code.matchAll(JSX_TEXT_RUN)) {
+    const painted = renderedJsxText(match[1] ?? '');
+    if (!PAINTS_A_DIRECTION.test(painted)) continue;
+    hits.push({ line: lineAt(code, match.index), text: painted.trim() });
+  }
+  for (const match of code.matchAll(STRING_LITERAL)) {
+    const written = match[1] ?? match[2] ?? match[3];
+    if (written === undefined) continue;
+    const raw = match[3] !== undefined && RAW_TAG.test(code.slice(0, match.index));
+    const body = raw ? written : decodeStringEscapes(written);
+    if (!PAINTS_A_DIRECTION.test(body)) continue;
+    hits.push({ line: lineAt(code, match.index), text: body });
+  }
+  return hits;
+}
+
+/**
  * Every HTML comment replaced by spaces, at the SAME offsets and line count.
  *
  * A served document's comments render nothing, and this repository's bridge pages
@@ -493,6 +537,18 @@ function violationsIn(file: string): string[] {
   return hits.map(({ line, text }) => `${where}:${String(line)} ${JSON.stringify(text)}`);
 }
 
+/** The directional rule over one file's text, as `path:line text` strings. */
+function directionalViolationsIn(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
+  const code = file.endsWith('.html')
+    ? decodeGlyphEntities(stripHtmlComments(source))
+    : decodeGlyphEntities(stripComments(source));
+  const where = relative(repoRoot, file);
+  return directionalGlyphHits(code).map(
+    ({ line, text }) => `${where}:${String(line)} ${JSON.stringify(text)}`,
+  );
+}
+
 describe('banned glyphs', () => {
   it('scans the repository (a scan that found nothing would pass vacuously)', () => {
     expect(sources.length).toBeGreaterThan(250);
@@ -530,6 +586,50 @@ describe('banned glyphs', () => {
 
   it('finds no glyph standing as an element or a literal on its own', () => {
     expect(sources.flatMap(violationsIn)).toEqual([]);
+  });
+
+  it('paints no directional mark anywhere it renders, prose included', () => {
+    expect(sources.flatMap(directionalViolationsIn)).toEqual([]);
+  });
+
+  it('reads a directional mark beside text, which the sole-content rule lets pass', () => {
+    // The two rules, side by side on the same source. The arrow-bearing prose
+    // below is the spelling this repository removed from its badge and its link
+    // label; the sole-content detector answers `[]` for both, which is why the
+    // directional rule exists rather than being folded into it.
+    const badge = '<Badge variant="warning">Update available → v{row.latest}</Badge>';
+    expect(jsxSoleGlyphHits(badge)).toEqual([]);
+    expect(directionalGlyphHits(badge).map((hit) => hit.text)).toEqual([
+      'Update available → v{row.latest}',
+    ]);
+
+    const affordance = '<AppLink to="tools">\n          Author combos →\n        </AppLink>';
+    expect(jsxSoleGlyphHits(affordance)).toEqual([]);
+    expect(directionalGlyphHits(affordance).map((hit) => hit.text)).toEqual(['Author combos →']);
+
+    // The literal route, and the escape spelling of it: both paint the arrow.
+    expect(directionalGlyphHits(`const label = 'scope → url';`).map((hit) => hit.text)).toEqual([
+      'scope → url',
+    ]);
+    expect(
+      directionalGlyphHits(String.raw`const label = 'scope \u2192 url';`).map((hit) => hit.text),
+    ).toEqual(['scope → url']);
+    // …and the character-reference spelling, decoded before the scan as everywhere else.
+    expect(
+      directionalGlyphHits(decodeGlyphEntities('<p>Update available &rarr; v2</p>')).map(
+        (hit) => hit.text,
+      ),
+    ).toEqual(['Update available → v2']);
+
+    // Every directional mark is in the set, or one of the four drops out silently.
+    for (const glyph of DIRECTIONAL_GLYPHS) {
+      expect([glyph, directionalGlyphHits(`<p>go ${glyph} there</p>`).length]).toEqual([glyph, 1]);
+    }
+
+    // Negative controls: a mark-shaped glyph beside text is prose, and a
+    // directional mark in a COMMENT renders nothing at all.
+    expect(directionalGlyphHits('<span>3 × 4</span>')).toEqual([]);
+    expect(directionalGlyphHits(stripComments('// a → b\nconst x = 1;'))).toEqual([]);
   });
 
   it('detects each shape a glyph-as-icon has actually shipped in', () => {
@@ -574,14 +674,14 @@ describe('banned glyphs', () => {
   it('leaves a glyph inside real prose alone', () => {
     // Negative controls. A detector that flagged these would make the rule
     // unenforceable and would be silenced rather than obeyed.
-    const badge = '<Badge variant="warning">Update available → v{row.latest}</Badge>';
+    const badge = '<Badge variant="warning">3 × 4 grid</Badge>';
     expect(jsxSoleGlyphHits(badge)).toEqual([]);
     expect(glyphOnlyLiteralHits(badge)).toEqual([]);
 
-    const affordance = '<AppLink to="tools">\n          Author combos →\n        </AppLink>';
+    const affordance = '<AppLink to="tools">\n          Author combos ✓\n        </AppLink>';
     expect(jsxSoleGlyphHits(affordance)).toEqual([]);
 
-    const sentence = `const label = 'scope → url';`;
+    const sentence = `const label = 'scope × url';`;
     expect(glyphOnlyLiteralHits(sentence)).toEqual([]);
 
     // An ESCAPED backslash paints a backslash, not the escape that follows it:

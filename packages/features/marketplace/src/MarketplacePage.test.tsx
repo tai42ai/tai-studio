@@ -5,6 +5,7 @@
  * load-more with the computed has-next, the tab switch, and the drill-in that
  * replaces the browse chrome with the detail view.
  */
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -17,7 +18,7 @@ import type {
 } from '@tai42/api-client';
 
 import { MarketplacePage } from './MarketplacePage';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { renderWithLiveUrl, renderWithProviders, type StubApiClient } from './test-utils';
 
 function row(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRow {
   return {
@@ -226,7 +227,7 @@ describe('MarketplacePage — category and sort', () => {
       client: browseReads(pageOf([row()])),
     });
     await screen.findByText('A box of tools.');
-    await user.click(screen.getByRole('combobox', { name: 'Sort results' }));
+    await user.click(screen.getByRole('combobox', { name: 'Sort' }));
     expect(screen.queryByRole('option', { name: 'Relevance' })).toBeNull();
     await user.click(await screen.findByRole('option', { name: 'Most downloads' }));
     expect(withoutQuery.navigate).toHaveBeenCalledWith('marketplace', { sort: 'downloads' });
@@ -236,7 +237,7 @@ describe('MarketplacePage — category and sort', () => {
       client: browseReads(pageOf([row()])),
     });
     await screen.findByText('A box of tools.');
-    await user.click(screen.getByRole('combobox', { name: 'Sort results' }));
+    await user.click(screen.getByRole('combobox', { name: 'Sort' }));
     expect(await screen.findByRole('option', { name: 'Relevance' })).toBeInTheDocument();
   });
 });
@@ -254,6 +255,49 @@ describe('MarketplacePage — text search', () => {
 
     await user.click(screen.getByRole('button', { name: 'Search' }));
     expect(navigate).toHaveBeenCalledWith('marketplace', { q: 'uuid' });
+  });
+
+  it('keeps the keyboard caret in the search box when submit commits (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const searchMarketplace = vi.fn(() => Promise.resolve(pageOf([row()])));
+    renderWithLiveUrl<'marketplace'>((search) => <MarketplacePage search={search} />, {
+      client: { ...browseReads(pageOf([row()])), searchMarketplace },
+      initialSearch: {},
+    });
+    await screen.findByText('A box of tools.');
+
+    // The node identity taken BEFORE the commit is the whole point: a box remounted
+    // on the query it just wrote renders an input that looks identical and holds the
+    // same value, while the one the operator was typing into is detached.
+    const input = screen.getByLabelText('Search');
+    await user.type(input, 'uuid{Enter}');
+
+    // The commit landed: the query reached the search read.
+    await waitFor(() => {
+      expect(searchMarketplace).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'uuid' }),
+        expect.anything(),
+      );
+    });
+    expect(input.isConnected).toBe(true);
+    expect(document.activeElement).toBe(input);
+    expect(input).toHaveValue('uuid');
+  });
+
+  it('re-seeds the search draft when the url changes underneath it', async () => {
+    // The other half of the contract the remount `key` used to carry: a query
+    // arriving WITHOUT a local edit (browser back/forward) still overwrites the
+    // draft, so the box never states a query the results are not for.
+    const client = browseReads(pageOf([row()]));
+    function Rerenderable({ q }: { readonly q?: string }): ReactElement {
+      return <MarketplacePage search={{ q }} />;
+    }
+    const { rerender } = renderWithProviders(<Rerenderable />, { client });
+    await screen.findByText('A box of tools.');
+    expect(screen.getByLabelText('Search')).toHaveValue('');
+
+    rerender(<Rerenderable q="uuid" />);
+    expect(screen.getByLabelText('Search')).toHaveValue('uuid');
   });
 });
 

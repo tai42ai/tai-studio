@@ -128,7 +128,10 @@ function EchoPanel(_props: ToolPanelProps): React.ReactElement {
         {error !== null && <ErrorState message={error} />}
         {result !== null && (
           <div data-testid="echo-result">
-            <JsonTree data={result} />
+            {/* `label` names the pane while it overflows. Left unset every JsonTree
+                on a screen is announced as "JSON", so a keyboard user tabbing
+                between panes cannot tell them apart — name it after what it holds. */}
+            <JsonTree data={result} label={`${DEMO_TOOL} result`} />
           </div>
         )}
       </div>

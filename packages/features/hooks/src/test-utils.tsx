@@ -11,7 +11,7 @@
  * `getMe`. With no projection the context stays `loading` and the gated section
  * stays hidden (fail closed) — the shape the pre-existing tests expect.
  */
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ApiProvider,
@@ -63,21 +63,26 @@ export function renderWithProviders(
       ? ({ ...client, getMe: () => Promise.resolve(projection) } as ApiClient)
       : (client as ApiClient);
 
-  const result = render(
+  // The stack is a `wrapper`, not part of the rendered element: RTL's `rerender`
+  // replaces only the element, so a wrapper keeps the providers (and the unit's own
+  // state) alive across a re-render with new props.
+  const wrapper = ({ children }: { readonly children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ApiProvider value={apiClient}>
           <CapabilityProvider>
             <ThemeProvider>
               <NavigationProvider value={{ navigate, resolvePath: () => '/x' }}>
-                {ui}
+                {children}
               </NavigationProvider>
             </ThemeProvider>
           </CapabilityProvider>
         </ApiProvider>
       </AuthProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+
+  const result = render(ui, { wrapper });
 
   return { ...result, navigate, queryClient };
 }

@@ -280,22 +280,31 @@ describe('ToolExtensionsCard', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('is not a registered tool');
   });
 
-  it('falls through to the manifest editor (no wall) when the presets read fails/uncovered', async () => {
+  it('states a failed presets read while still falling through to the manifest editor', async () => {
     // A scoped tools-caller reaching /api/tools but not /api/presets gets a 403 on the
-    // presets read; that read only tags preset tools, so the card treats it as "no
-    // preset info" and keeps the manifest editor working rather than walling the card.
+    // presets read; that read only tags preset tools, so the card keeps the manifest
+    // editor working rather than walling. It does NOT pass silently: with no preset
+    // info a preset tool is indistinguishable from a manifest tool, so the card would
+    // otherwise offer an editor whose save the manifest route rejects.
+    const listPresets = vi.fn().mockRejectedValue(new ApiError('forbidden', 403));
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {
-      client: baseClient({
-        listPresets: vi.fn().mockRejectedValue(new ApiError('forbidden', 403)),
-      }),
+      client: baseClient({ listPresets }),
     });
 
-    // The editor path renders — current combos plus the Edit button — with no ErrorState
-    // and no presets hint.
+    // The editor path renders — current combos plus the Edit button — and no hint.
     expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
     expect(screen.getByText('marka')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
+
+    // …under a LOUD notice carrying the server's own message verbatim, with a retry.
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Preset tools cannot be identified');
+    expect(alert).toHaveTextContent('forbidden');
+    listPresets.mockResolvedValueOnce([]);
+    await userEvent.click(within(alert).getByRole('button', { name: /retry/i }));
+    await waitFor(() => {
+      expect(listPresets).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('renders the flat apply-result success line after a single-process save', async () => {

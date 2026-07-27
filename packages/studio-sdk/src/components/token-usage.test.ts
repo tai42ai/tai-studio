@@ -38,6 +38,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { withoutComments } from './test-css-reader';
 import { TOKEN_NAMES } from './tokens';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -109,20 +110,15 @@ function captured(match: RegExpMatchArray): string {
  * that explains the theme mechanism cannot define one either.
  */
 function definedTokens(): ReadonlySet<string> {
-  return new Set([...TOKENS_CSS.matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)].map(captured));
+  return new Set([...TOKENS_CSS.matchAll(/(?<=^|[;{])\s*(--tai-[\w-]+)\s*:/gm)].map(captured));
 }
 
 /** `sheet: --token` for every custom property under the DS namespace a sheet declares. */
 function tokensDeclaredIn(stylesheet: string): string[] {
   const source = withoutComments(readFileSync(stylesheet, 'utf8'));
-  return [...source.matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)].map(
+  return [...source.matchAll(/(?<=^|[;{])\s*(--tai-[\w-]+)\s*:/gm)].map(
     (match) => `${relative(repoRoot, stylesheet)}: ${captured(match)}`,
   );
-}
-
-/** `source` with its block comments removed, so prose can never read as code. */
-function withoutComments(source: string): string {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
 }
 
 /**
@@ -301,7 +297,7 @@ function ruleBody(pattern: RegExp): string {
 
 /** `token: value` for every custom property a block declares, in order. */
 function declarationsIn(body: string): readonly (readonly [string, string])[] {
-  return [...body.matchAll(/^\s*(--tai-[\w-]+)\s*:\s*([^;]+);/gm)].map(
+  return [...body.matchAll(/(?<=^|[;{])\s*(--tai-[\w-]+)\s*:\s*([^;]+);/gm)].map(
     (match) => [captured(match), (match[2] ?? '').trim()] as const,
   );
 }
@@ -458,7 +454,7 @@ describe('design-system token usage', () => {
     // `--tai-dark-*` half of each pair is the theme mechanism's own storage, not
     // API — the assertions below are what hold it to that.
     const declared = new Set(
-      [...TOKENS_CSS.matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)]
+      [...TOKENS_CSS.matchAll(/(?<=^|[;{])\s*(--tai-[\w-]+)\s*:/gm)]
         .map(captured)
         .filter((token) => !token.startsWith('--tai-dark-')),
     );
