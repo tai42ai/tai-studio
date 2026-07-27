@@ -36,23 +36,31 @@ describe('RadioGroup', () => {
     expect(screen.getByRole('radio', { name: 'Banana' })).toBeChecked();
   });
 
-  it('takes the enclosing Field label as its accessible group name', () => {
+  it('sits inside the group container the enclosing Field names', () => {
     const { container } = render(
       <Field label="Fruit" group>
         <RadioGroup options={OPTIONS} />
       </Field>,
     );
-    expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toBeInTheDocument();
+    // The Field renders the named group; this component does NOT self-name from
+    // the field's label. Naming by construction is the point: the previous shape
+    // published a label id for the group control to read, and ten live sites
+    // never read it. A radiogroup with no `label` of its own is therefore
+    // unnamed, and its NAME lives on the container it sits in.
+    const named = screen.getByRole('group', { name: 'Fruit' });
+    expect(named).toContainElement(screen.getByRole('radiogroup'));
+    expect(screen.getByRole('radiogroup')).not.toHaveAccessibleName();
 
-    // A group Field's label carries no `for`. `<label for>` names a LABELABLE
-    // element, and a radiogroup is not one: the group never claims the Field's
-    // control id, so the attribute would point at an id no element in the
-    // document carries. The name comes from `aria-labelledby` instead — which is
-    // why the label keeps its `id`.
-    const label = container.querySelector('label.tai-field-label');
-    expect(label).not.toHaveAttribute('for');
+    // A group Field renders NO `<label>` at all. `<label for>` names a LABELABLE
+    // element, and a group is not one: pointed at a group the attribute either
+    // dangles at an id no element carries or names an element the browser
+    // refuses to label. A `<label>` associated with nothing is a semantics lie,
+    // so the group-mode label is a `<span>` that keeps its `id` and the
+    // container points `aria-labelledby` at it.
+    expect(container.querySelector('label.tai-field-label')).toBeNull();
+    const label = container.querySelector('span.tai-field-label');
     expect(label?.id).not.toBe('');
-    expect(screen.getByRole('radiogroup')).toHaveAttribute('aria-labelledby', label?.id);
+    expect(named).toHaveAttribute('aria-labelledby', label?.id);
   });
 
   it('leaves a non-group Field pointing its label at the control it wraps', () => {
@@ -135,13 +143,18 @@ describe('RadioGroup', () => {
     expect(screen.getByRole('radiogroup', { name: 'Fruit choice' })).toBeInTheDocument();
   });
 
-  it('prefers the enclosing Field label over its own label prop', () => {
+  it('keeps its own label prop as the inner name, under the Field-named group', () => {
     render(
       <Field label="Fruit" group>
-        <RadioGroup options={OPTIONS} label="Ignored" />
+        <RadioGroup options={OPTIONS} label="Variety" />
       </Field>,
     );
-    expect(screen.getByRole('radiogroup', { name: 'Fruit' })).toBeInTheDocument();
+    // Two names, at two levels, each true: the Field's group carries the field
+    // label, the radiogroup carries the one the caller gave it. The old shape
+    // had the inner group silently steal the outer name, so a caller could not
+    // say anything more specific than the field label.
+    expect(screen.getByRole('group', { name: 'Fruit' })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Variety' })).toBeInTheDocument();
   });
 });
 

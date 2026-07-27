@@ -13,7 +13,6 @@ import { AlertTriangleIcon } from './icons';
 
 interface FieldContextValue {
   readonly controlId: string;
-  readonly labelId: string;
   readonly describedBy: string | undefined;
   readonly invalid: boolean;
 }
@@ -40,17 +39,6 @@ export function useFieldControl(): FieldControlProps {
   };
 }
 
-/**
- * Read the enclosing Field's label element id, or `undefined` when standalone.
- * A control whose root is not a labelable element (e.g. a `role="radiogroup"`
- * div, which `<label htmlFor>` cannot name) points its `aria-labelledby` at this
- * id to take the field label as its accessible name.
- */
-export function useFieldLabelId(): string | undefined {
-  const ctx = useContext(FieldContext);
-  return ctx === null ? undefined : ctx.labelId;
-}
-
 export interface FieldProps {
   readonly label: string;
   readonly description?: string;
@@ -60,12 +48,22 @@ export interface FieldProps {
   /**
    * Set when the wrapped control is a GROUP rather than one labelable element —
    * a `RadioGroup`, a set of checkboxes, any `role="radiogroup"`/`role="group"`
-   * panel. `<label for>` can only name a labelable element, so a group Field
-   * renders its label WITHOUT `htmlFor`: pointed at a group, the attribute
+   * panel.
+   *
+   * `<label for>` can only name a labelable element: pointed at a group it
    * either dangles at an id no element carries or names an element the browser
-   * refuses to label, and it is inert either way. A group takes the label as its
-   * accessible name through {@link useFieldLabelId} instead, which is why the
-   * label keeps its `id` in both shapes.
+   * refuses to label, and it is inert either way. So a group Field renders the
+   * group CONTAINER itself — `role="group"` carrying `aria-labelledby` and
+   * `aria-describedby` — and the label becomes a `<span>`, because a `<label>`
+   * associated with nothing is a semantics lie.
+   *
+   * Naming therefore happens BY CONSTRUCTION rather than by the call site
+   * remembering to read a hook: the previous shape published the label id and
+   * left every group control to point at it, and ten live sites did not. The
+   * cost is one extra container announcement where the child has a group role of
+   * its own; that is accepted deliberately, because the two failure directions
+   * are asymmetric — a redundant container is audible, an unnamed group is
+   * silent.
    */
   readonly group?: boolean;
 }
@@ -83,18 +81,37 @@ export function Field({ label, description, error, children, style, group = fals
 
   const value: FieldContextValue = {
     controlId,
-    labelId,
     describedBy,
     invalid: error !== undefined,
   };
 
+  // A group publishes NO control wiring: there is no single element to carry the
+  // id, and a control that spread `controlId` inside a group would take the
+  // group's own name and description for itself.
   return (
-    <FieldContext.Provider value={value}>
+    <FieldContext.Provider value={group ? null : value}>
       <div className="tai-field" style={style}>
-        <label id={labelId} htmlFor={group ? undefined : controlId} className="tai-field-label">
-          {label}
-        </label>
-        {children}
+        {group ? (
+          <span id={labelId} className="tai-field-label">
+            {label}
+          </span>
+        ) : (
+          <label id={labelId} htmlFor={controlId} className="tai-field-label">
+            {label}
+          </label>
+        )}
+        {group ? (
+          <div
+            role="group"
+            aria-labelledby={labelId}
+            aria-describedby={describedBy}
+            className="tai-field-group"
+          >
+            {children}
+          </div>
+        ) : (
+          children
+        )}
         {description !== undefined ? (
           <p id={descriptionId} className="tai-field-hint" style={{ margin: 0 }}>
             {description}

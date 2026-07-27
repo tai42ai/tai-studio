@@ -80,25 +80,27 @@ layer, the icon set, and the layout primitives every screen builds on.
 - **Icons:** a hand-authored inline-SVG set (24-unit grid, 1.6 stroke,
   `currentColor`, `aria-hidden` by default) plus the `NAV_ICONS` route-token
   map. It is the single source of iconography, so `RevealInput`'s eye marks join
-  it as the exported `EyeIcon` / `EyeOffIcon`. The Unicode glyphs that stood in for marks in `Checkbox`, `TagChips`, and
-  `Select` are replaced by real icons.
+  it as the exported `EyeIcon` / `EyeOffIcon`, and the reorder arrows in
+  `ApplyExtensions` join it as `ArrowUpIcon` / `ArrowDownIcon`. The Unicode
+  glyphs that stood in for marks in `Checkbox`, `TagChips`, and `Select` are
+  replaced by real icons, and the repository-wide scan that enforces the ban now
+  covers `↑ ↓ ←` alongside `▲ ▼ ▾ ↗ → ✓ ×`.
 - **Removed:** `@keyframes tai-pulse`, which the loading skeleton was its only
   user of. The skeleton now runs `tai-shimmer`, which travels a gradient overlay
   across the block on `transform`; the opacity pulse only dimmed the block and
   never moved a band across it. A plugin animating `tai-pulse` off the published
-  `tokens.css` must declare its own keyframe.
-- **How both themes are verified.** The primitive suites no longer re-render each
-  component a second time "in dark". `vitest.config.ts` sets `css: false`, so no
-  stylesheet ever loads in jsdom: those 30 blocks stamped `data-theme` on a
-  document with no rules attached to it and then asserted the same markup as the
-  light run — they could not fail for a theme reason, and a real dark render is
-  not reachable under `css: false` at all. Every assertion they made is kept in
-  the single remaining run; only the duplicate render went. What actually holds
-  the two themes together is static and repo-wide: `token-usage.test.ts` proves
-  every theme-varying token has both halves, that the two dark blocks carry the
-  same set and no values of their own, and that no dark value is read by any
-  other route — plus the rendered screenshot sweep in PLAN_5. Recorded here so
-  PLAN_1/2/3 build on a stated position rather than an unstated gap.
+  `tokens.css` must declare its own keyframe. `.tai-skeleton` now also owns a
+  `::after` pseudo-element and carries `position: relative` + `overflow: hidden`,
+  so it establishes a stacking and overflow context: a consumer styling the class
+  inherits those, and its own `::after` would be overridden.
+- **How both themes are verified.** `vitest.config.ts` sets `css: false`, so no
+  stylesheet ever loads in jsdom and a rendered dark-mode assertion is not
+  reachable in these suites at all. What holds the two themes together is
+  static and repo-wide: `token-usage.test.ts` proves every theme-varying token
+  has both halves, that the two dark blocks carry the same set and no values of
+  their own, and that no dark value is read by any other route — plus the
+  rendered screenshot sweep in PLAN_5. Recorded here so PLAN_1/2/3 build on a
+  stated position rather than an unstated gap.
 - **Testing helpers** (`@tai42/studio-sdk/testing`): `installJsdomStubs` now
   installs a WORKING `ResizeObserver`, and `flushResizeObservers` +
   `setElementOverflow` let a suite drive a component that measures its own

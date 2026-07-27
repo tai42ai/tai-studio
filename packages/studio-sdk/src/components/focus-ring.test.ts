@@ -43,15 +43,61 @@ interface Rule {
 }
 
 /**
- * Every innermost declaration block in the sheet, with its selector. `[^{}]`
- * cannot cross a brace, so an `@layer`/`@media` wrapper never matches as a rule
- * of its own and its nested rules are returned instead.
+ * The at-rule preludes enclosing `offset`, outermost first.
+ *
+ * The scraper below matches a selector and a body wherever they appear and, on
+ * its own, never asks which at-rule encloses them. That is not a nuance: wrapping
+ * this sheet's entire shared `:focus-visible` block in
+ * `@media (min-width: 2000px)` leaves every rule PRESENT to a context-free
+ * scraper while no real screen ever applies it — the whole contract switched off
+ * with the gate green. Blocks that are not at-rules are pushed as `''` so the
+ * stack stays balanced and a rule nested two levels deep is still reached.
+ */
+function contextAt(source: string, offset: number): string[] {
+  const stack: string[] = [];
+  let prelude = '';
+  for (let index = 0; index < offset; index++) {
+    const character = source[index];
+    if (character === '{') {
+      const head = prelude.trim();
+      prelude = '';
+      stack.push(head.startsWith('@') ? head : '');
+    } else if (character === '}') {
+      stack.pop();
+      prelude = '';
+    } else {
+      prelude += character ?? '';
+    }
+  }
+  return stack.filter((head) => head !== '');
+}
+
+/** A media query keyed on viewport WIDTH — a rule that does not apply everywhere. */
+const WIDTH_CONDITIONED = /\(\s*(?:max|min)-width\s*:/;
+
+/** Whether a rule at this context applies at EVERY viewport width. */
+function appliesAtEveryWidth(context: readonly string[]): boolean {
+  return !context.some((at) => WIDTH_CONDITIONED.test(at));
+}
+
+/**
+ * Every innermost declaration block in the sheet that applies at EVERY viewport
+ * width, with its selector. `[^{}]` cannot cross a brace, so an `@layer`/`@media`
+ * wrapper never matches as a rule of its own and its nested rules are returned
+ * instead.
+ *
+ * A rule confined to a width band is DROPPED rather than returned: this file
+ * asserts a contract that holds on every screen, so a ring that only exists
+ * above 2000 px is exactly as absent as no ring at all, and counting it would
+ * let the whole block be banded away with the suite green.
  */
 function rulesOf(source: string): Rule[] {
-  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
-    selector: (match[1] ?? '').trim(),
-    body: match[2] ?? '',
-  }));
+  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+    .filter((match) => appliesAtEveryWidth(contextAt(source, match.index)))
+    .map((match) => ({
+      selector: (match[1] ?? '').trim(),
+      body: match[2] ?? '',
+    }));
 }
 
 const rules: Rule[] = rulesOf(stylesheet);

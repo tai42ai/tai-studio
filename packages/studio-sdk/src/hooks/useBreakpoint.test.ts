@@ -14,14 +14,68 @@ const BAND_EDGES = [639, 1023, 1279];
 
 const here = dirname(fileURLToPath(import.meta.url));
 const hookSource = readFileSync(resolve(here, 'useBreakpoint.ts'), 'utf8');
-const stylesheet = readFileSync(resolve(here, '../components/components.css'), 'utf8');
 
-/** Every `max-width` bound the text declares, deduplicated and ordered. */
-function maxWidthBounds(source: string, prefix: string): number[] {
-  const found = [...source.matchAll(new RegExp(`${prefix}\\(max-width:\\s*(\\d+)px\\)`, 'g'))].map(
-    (match) => Number(match[1]),
-  );
-  return [...new Set(found)].sort((a, b) => a - b);
+/**
+ * EVERY stylesheet this package publishes, plus the app sheet that imports them.
+ *
+ * The scan root used to be the single hard-coded `components.css`, so a band
+ * declared in `tokens.css`, in `fonts.css` or in the app's own `styles.css` was
+ * invisible to all three assertions even spelled honestly — a surface could
+ * restyle at a width the hook cannot tell a feature about, with the gate green.
+ */
+const SHEET_PATHS = [
+  '../components/components.css',
+  '../components/tokens.css',
+  '../components/fonts.css',
+  '../../../../apps/studio/src/styles.css',
+];
+const sheets = SHEET_PATHS.map((path) => ({
+  path,
+  text: readFileSync(resolve(here, path), 'utf8'),
+}));
+const stylesheet = sheets[0]?.text ?? '';
+
+/** px per `em`/`rem`, at the root font size these sheets are written against. */
+const ROOT_FONT_PX = 16;
+
+/**
+ * Every band edge `source` declares, normalised to the MAX-WIDTH px value it
+ * implies — however it is spelled.
+ *
+ * The gate this replaces recognised exactly one spelling,
+ * `(max-width: <integer>px)`. A fourth band written `@media (width <= 767px)`
+ * (MQ-4 range syntax), `@media (max-width: 47.9375em)` (= 767 px),
+ * `@media (max-width: 1023.98px)`, `@media not all and (min-width: 768px)` or a
+ * plain `@media (min-width: 900px)` therefore passed all three assertions, and
+ * the gate had no `min-width` concept at all. An edge is an edge in whatever
+ * unit and whatever comparison direction it is written; a `min-width: N` band
+ * declares the edge at `N - 1`, which is the max-width value it partners.
+ */
+function declaredBandEdges(source: string): number[] {
+  const edges: number[] = [];
+  const px = (value: string | undefined, unit: string | undefined): number =>
+    Number(value) * (unit === 'px' ? 1 : ROOT_FONT_PX);
+
+  for (const [, feature, value, unit] of source.matchAll(
+    /\(\s*(max|min)-width\s*:\s*([\d.]+)(px|r?em)\s*\)/g,
+  )) {
+    const bound = px(value, unit);
+    edges.push(feature === 'max' ? bound : bound - 1);
+  }
+  for (const [, operator, value, unit] of source.matchAll(
+    /\(\s*width\s*(<=|<|>=|>)\s*([\d.]+)(px|r?em)\s*\)/g,
+  )) {
+    const bound = px(value, unit);
+    edges.push(operator === '<=' || operator === '>' ? bound : bound - 1);
+  }
+  // The mirrored range spelling, `(768px <= width)`.
+  for (const [, value, unit, operator] of source.matchAll(
+    /\(\s*([\d.]+)(px|r?em)\s*(<=|<|>=|>)\s*width\s*\)/g,
+  )) {
+    const bound = px(value, unit);
+    edges.push(operator === '<=' || operator === '<' ? bound - 1 : bound);
+  }
+  return [...new Set(edges)].sort((a, b) => a - b);
 }
 
 /**
@@ -185,22 +239,54 @@ describe('band edges stay in lockstep with the stylesheet', () => {
   // other, so drifting either side alone left every suite green.
 
   it('finds the queries it means to compare', () => {
-    // A floor against a silently empty scan on either side — a moved file or a
-    // reworded query would otherwise make both sets empty and equal.
-    expect(maxWidthBounds(hookSource, '').length).toBe(BAND_EDGES.length);
+    // A floor against a silently empty scan on any side — a moved file or a
+    // reworded query would otherwise make every set empty and equal.
+    expect(declaredBandEdges(hookSource).length).toBe(BAND_EDGES.length);
     expect([...stylesheet.matchAll(/@media\s*\(/g)].length).toBeGreaterThanOrEqual(5);
+    // …and every sheet named above really was read.
+    for (const sheet of sheets) {
+      expect([sheet.path, sheet.text.trim() === '']).toEqual([sheet.path, false]);
+    }
+    expect(sheets).toHaveLength(SHEET_PATHS.length);
   });
 
   it('declares the same three edges in the hook and in components.css', () => {
-    expect(maxWidthBounds(hookSource, '')).toEqual(BAND_EDGES);
-    expect(maxWidthBounds(stylesheet, '@media\\s*')).toEqual(BAND_EDGES);
+    expect(declaredBandEdges(hookSource)).toEqual(BAND_EDGES);
+    expect(declaredBandEdges(stylesheet)).toEqual(BAND_EDGES);
   });
 
-  it('lets the stylesheet declare no OTHER max-width band edge', () => {
-    // Every `max-width` media query in the sheet — not only those inside the
-    // "Responsive bands" section — must be one of the three the hook reports, or
-    // a surface restyles at a width the hook cannot tell a feature about.
-    const all = maxWidthBounds(stylesheet, '');
-    expect(all).toEqual(BAND_EDGES);
+  it('lets NO published stylesheet declare any other band edge, in any spelling', () => {
+    // Every width-conditioned media query in every sheet that reaches the browser
+    // — not only those inside `components.css`'s "Responsive bands" section, and
+    // not only those spelled `(max-width: <integer>px)` — must be one of the three
+    // the hook reports, or a surface restyles at a width the hook cannot tell a
+    // feature about.
+    for (const sheet of sheets) {
+      const edges = declaredBandEdges(sheet.text);
+      const allowed = edges.every((edge) => BAND_EDGES.includes(edge));
+      expect([sheet.path, edges, allowed]).toEqual([sheet.path, edges, true]);
+    }
+    expect(declaredBandEdges(sheets.map((sheet) => sheet.text).join('\n'))).toEqual(BAND_EDGES);
+  });
+
+  it('reads a band edge in every spelling a stylesheet can use', () => {
+    // Positive controls on the parser itself. Without them a `declaredBandEdges`
+    // that matched nothing would leave every assertion above green.
+    expect(declaredBandEdges('@media (max-width: 639px) {}')).toEqual([639]);
+    // A FRACTIONAL bound is not the integer edge beside it: a 1023.5 px viewport
+    // matches `max-width: 1023.98px` and not `max-width: 1023px`, so the hook
+    // would report the wrong band. It is reported as itself and fails the
+    // reconciliation, rather than being rounded onto a real edge.
+    expect(declaredBandEdges('@media (max-width: 1023.98px) {}')).toEqual([1023.98]);
+    expect(declaredBandEdges('@media (max-width: 47.9375em) {}')).toEqual([767]);
+    expect(declaredBandEdges('@media (width <= 767px) {}')).toEqual([767]);
+    expect(declaredBandEdges('@media (width < 768px) {}')).toEqual([767]);
+    expect(declaredBandEdges('@media (min-width: 768px) {}')).toEqual([767]);
+    expect(declaredBandEdges('@media not all and (min-width: 768px) {}')).toEqual([767]);
+    expect(declaredBandEdges('@media (768px <= width) {}')).toEqual([767]);
+    expect(declaredBandEdges('@media (width >= 900px) {}')).toEqual([899]);
+    // …and a query with no width condition declares no edge.
+    expect(declaredBandEdges('@media (prefers-reduced-motion: reduce) {}')).toEqual([]);
+    expect(declaredBandEdges('@media (pointer: coarse) {}')).toEqual([]);
   });
 });

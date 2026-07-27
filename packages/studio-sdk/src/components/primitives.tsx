@@ -77,8 +77,16 @@ export function isSafeHttpUrl(url: string): boolean {
  * lookahead rejects a protocol-relative `//host` (and its `/\` spelling), which
  * inherits the page scheme and so resolves to a cross-origin target rather than
  * an in-app one. Tested against the NORMALIZED reference — see `normalizeHref`.
+ *
+ * The lookahead belongs to the `/` branch ALONE. Applied to `#` and `?` as well
+ * it rejected `#/agents` — a hash route, the most common client-routed reference
+ * form there is, and one of the five spellings this module's own docblock says
+ * "stays in-app" — sending it to the neutralized span reserved for
+ * `javascript:`. Neither `#//evil.example` nor `?//evil.example` can be
+ * cross-origin: both resolve against the current document, so the lookahead
+ * bought nothing on those two branches and cost a whole routing style.
  */
-const RELATIVE_HREF = /^(?:[/?#](?![/\\])|\.{1,2}\/)/;
+const RELATIVE_HREF = /^(?:\/(?![/\\])|[?#]|\.{1,2}\/)/;
 
 /** The text a neutralized href carries in place of a navigation. */
 const BLOCKED_HREF_TITLE = 'This link was blocked because it is not an http(s) URL.';

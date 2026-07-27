@@ -911,4 +911,19 @@ describe('SchemaForm — design system', () => {
     expect(screen.getByText('User')).toHaveClass('tai-field-label');
     expect(screen.getByRole('textbox', { name: 'Full name' })).toBeVisible();
   });
+
+  it('names the nested group and its controls sit inside it', () => {
+    // Before this, every nested object/array/union in every schema form rendered
+    // a heading, a description and an error with ZERO association: the container
+    // carried no role, no `aria-labelledby` and no `aria-describedby`, and the
+    // heading was a `<span>` rather than a heading element — so a screen-reader
+    // user entering a nested object heard the controls with no indication of
+    // which group they belonged to.
+    render(<Harness schema={nestedSchema} initial={{}} />);
+
+    const group = screen.getByRole('group', { name: 'User' });
+    expect(group).toContainElement(screen.getByRole('textbox', { name: 'Full name' }));
+    // …and the heading is the element the name comes FROM, not a stray label.
+    expect(screen.getByText('User').id).toBe(group.getAttribute('aria-labelledby'));
+  });
 });

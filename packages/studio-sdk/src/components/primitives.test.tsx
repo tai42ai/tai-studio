@@ -275,4 +275,48 @@ describe('Button link normalization', () => {
     );
     expect(screen.getByRole('link', { name: 'go' })).toHaveAttribute('rel', 'noopener noreferrer');
   });
+
+  it("a caller cannot drop the external branch's rel or retarget it", () => {
+    // REVERSE TABNABBING. `rel`/`target` are settable on the published surface
+    // (`LinkButtonProps extends AnchorHTMLAttributes`), and the hardening is
+    // carried entirely by JSX property ORDER: `{...rest}` is spread FIRST and
+    // these two are written after it. Move the spread below them and this exact
+    // call renders a cross-origin `_blank` with a live `window.opener` on the
+    // operator's authenticated tab — with nothing else in the suite reddening.
+    render(
+      <Button href="https://evil.example" rel="opener" target="_self">
+        go
+      </Button>,
+    );
+    const link = screen.getByRole('link', { name: 'go' });
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer external');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it("a blocked link does not forward the caller's click handler", async () => {
+    // The blocked branch passes only `id` and `aria-label` to the neutralized
+    // span — deliberately, and pinned here because forwarding `rest` instead
+    // would fire the caller's handler on a reference the UI simultaneously
+    // claims was blocked.
+    const user = userEvent.setup();
+    const onClick = vi.fn();
+    render(
+      <Button href="javascript:alert(1)" onClick={onClick}>
+        go
+      </Button>,
+    );
+    await user.click(screen.getByText(/go/));
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it.each([['#top'], ['#/agents'], ['?tab=logs'], ['./a'], ['../a']])(
+    'renders the in-app reference form %j as a live anchor',
+    (href) => {
+      // The five spellings this module's docblock says "stay in-app". Three of
+      // them had no coverage at all and two were neutralized as unsafe URLs —
+      // `#/agents` is a hash route, the commonest client-routed form there is.
+      render(<Button href={href}>go</Button>);
+      expect(screen.getByRole('link', { name: 'go' })).toHaveAttribute('href', href);
+    },
+  );
 });

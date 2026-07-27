@@ -93,7 +93,7 @@ export function Select({
       </RadixSelect.Trigger>
       <RadixSelect.Portal>
         <RadixSelect.Content className="tai-select-content" position="popper" sideOffset={4}>
-          <RadixSelect.Viewport>
+          <RadixSelect.Viewport className="tai-select-viewport">
             {groups !== undefined
               ? groups.map((group) => (
                   <RadixSelect.Group key={group.label}>

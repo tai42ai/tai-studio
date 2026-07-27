@@ -239,6 +239,29 @@ function marksGroup(attributes: string): boolean {
   return /(^|\s)group(\s*=|\s|$|\/)/.test(attributeNames(attributes));
 }
 
+/**
+ * The marker in a spelling whose answer is STATIC: the bare flag, or an explicit
+ * `group={true}`.
+ *
+ * {@link marksGroup} blanks every `{…}` body before it looks (so a prose value
+ * carrying the word "group" cannot pose as the marker), which means `group` and
+ * `group={false}` are indistinguishable to it. At an ELEMENT child that is a
+ * hole, not a nuance: the child is written in the source, so whether the Field is
+ * a group is decided at authoring time, and `group={false}` would exempt the site
+ * from the whole rule while `field.tsx` goes on emitting `htmlFor={controlId}` at
+ * an id no element carries — the exact dangling IDREF this gate exists to
+ * prevent. An EXPRESSION child is the only place a runtime condition is ever
+ * needed, and {@link marksGroup} still serves that reconciliation.
+ *
+ * The `{true}` form is read from the attributes with only STRING bodies blanked,
+ * because the brace body is precisely what has to be inspected here.
+ */
+function marksGroupStatically(attributes: string): boolean {
+  if (/(^|\s)group(\s|$|\/)/.test(attributeNames(attributes))) return true;
+  const withoutStrings = attributes.replace(/"[^"]*"/g, '""').replace(/'[^']*'/g, "''");
+  return /(^|\s)group\s*=\s*\{\s*true\s*\}/.test(withoutStrings);
+}
+
 describe('Field group contract', () => {
   it('scans the repository (a scan that found nothing would pass vacuously)', () => {
     expect(sources.length).toBeGreaterThan(100);
@@ -255,7 +278,7 @@ describe('Field group contract', () => {
         // An expression child is judged by EXPRESSION_CHILD_SITES, not here.
         if (site.child === undefined) continue;
         if (CLAIMING_CHILDREN.has(site.child)) continue;
-        if (marksGroup(site.attributes)) continue;
+        if (marksGroupStatically(site.attributes)) continue;
         const line = source.slice(0, site.index).split('\n').length;
         unmarked.push(
           `${relative(repoRoot, file)}:${String(line)} (<Field> around <${site.child}>)`,

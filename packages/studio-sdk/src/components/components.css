@@ -10,7 +10,7 @@
  * Everything resolves from `tokens.css`; there are no literal colors, radii, or
  * shadows below. Each interactive class defines rest / hover / active / disabled,
  * and focus is one shared rule: a 2 px outline at 2 px offset, never a
- * box-shadow, so it survives an `overflow: hidden` ancestor.
+ * box-shadow, because an outline follows `border-radius` and takes no part in layout.
  *
  * Breakpoints, desktop-first with real mobile: <640 phone, 640-1023 compact,
  * 1024-1279 medium, >=1280 full.
@@ -58,9 +58,13 @@
     font-weight: 600;
   }
 
+  /* A real selection pair, not the near-background accent TINT: the tint is the
+     fill behind a selected nav item, and over body copy it measured 1.13:1
+     (light) / 1.11:1 (dark) against the unselected background — dragging over
+     prose gave essentially no feedback about what had been selected. */
   ::selection {
-    background: var(--tai-color-accent-tint);
-    color: var(--tai-color-text);
+    background: var(--tai-color-accent);
+    color: var(--tai-color-on-accent);
   }
 
   /* Chromium paints its own opaque autofill background, which reads as a light
@@ -100,8 +104,15 @@
   }
 
   /* -- Shared focus ---------------------------------------------------------
-     An outline (not a box-shadow) at a 2 px offset, so the ring sits ON the
-     ground and is never clipped by a scrolling or rounded ancestor. */
+     An outline (not a box-shadow) at a 2 px offset: an outline follows the
+     element's `border-radius` and takes no part in layout, so the ring never
+     shifts what it surrounds.
+
+     It is NOT immune to clipping. An outline is painted in the element's own box
+     and is cut by an ancestor's overflow box exactly as a box-shadow is — the
+     claim that used to stand here is why nobody checked the Select viewport,
+     where every option's ring was clipped to two horizontal bars. A scrolling
+     ancestor has to leave the ring room (see `.tai-select-viewport`). */
   .tai-btn:focus-visible,
   .tai-icon-btn:focus-visible,
   .tai-link:focus-visible,
@@ -158,8 +169,15 @@
     font-weight: 500;
     line-height: 1;
     text-decoration: none;
-    white-space: nowrap;
     cursor: pointer;
+    /* A flex item's default `min-width: auto` refuses to shrink below its own
+       content, so caller text — a server label, a tag, an operator's own
+       string — pushes the document instead of breaking inside the control.
+       Measured at 320 px: without this the rule pushes a document scrollbar.
+       `flex-wrap: wrap` does NOT substitute; it is a measured no-op here,
+       because the overflow is the control's own text, not its item order. */
+    min-width: 0;
+    overflow-wrap: anywhere;
     transition:
       background-color var(--tai-motion-fast) ease,
       border-color var(--tai-motion-fast) ease,
@@ -292,6 +310,18 @@
     gap: var(--tai-space-2);
   }
 
+  /* The container a group Field renders around its children so the group has a
+     `role` to carry its own name and description. It reproduces `.tai-field`'s
+     own formatting context exactly, so wrapping is layout-neutral: without it
+     the children would become flex items of the wrapper's default `block`
+     layout and lose the field's gap. */
+  .tai-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-2);
+    min-width: 0;
+  }
+
   .tai-field-label {
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-sm);
@@ -386,10 +416,16 @@
 
   /* Hover excludes the invalid state rather than sitting above it: `:not()`
      carries its argument's specificity, so an unscoped hover rule would outrank
-     the attribute rule below and drop the error border on pointer-over. */
-  .tai-input:not([aria-invalid='true']):hover:not(:disabled),
-  .tai-textarea:not([aria-invalid='true']):hover:not(:disabled),
-  .tai-select-trigger:not([aria-invalid='true']):hover:not(:disabled) {
+     the attribute rule below and drop the error border on pointer-over.
+
+     It excludes the FOCUSED state for the same arithmetic and the opposite
+     reason. That `:not()` escalation put hover at (0,4,0) against
+     `:focus-visible`'s (0,2,0), so resting the pointer on the field the user is
+     typing in reverted the accent partner-border — the indicator declared
+     above as "the focus indicator's partner" — to the plain text colour. */
+  .tai-input:not([aria-invalid='true']):hover:not(:disabled):not(:focus-visible),
+  .tai-textarea:not([aria-invalid='true']):hover:not(:disabled):not(:focus-visible),
+  .tai-select-trigger:not([aria-invalid='true']):hover:not(:disabled):not(:focus-visible) {
     border-color: var(--tai-color-text);
   }
 
@@ -431,11 +467,21 @@
     max-width: min(20rem, calc(100vw - 2 * var(--tai-space-4)));
     max-height: min(18rem, var(--radix-select-content-available-height, 60vh));
     overflow-y: auto;
-    padding: var(--tai-space-1);
     background: var(--tai-color-surface-raised);
     border: 1px solid var(--tai-color-border);
     border-radius: var(--tai-radius-md);
     box-shadow: var(--tai-shadow-overlay);
+  }
+
+  /* The padding lives on the OVERFLOW box, not on its parent. Radix inline-styles
+     the viewport `overflow: hidden auto`, and the shared focus rule paints
+     `outline: 2px solid …; outline-offset: 2px` — 4 px outside the option's
+     border box. With the padding one level up, the viewport clipped the left and
+     right segments of every option's ring and the top or bottom segment of the
+     first and last, so a keyboard user saw two horizontal bars instead of a
+     ring. */
+  .tai-select-viewport {
+    padding: var(--tai-space-1);
   }
 
   .tai-select-item {
@@ -573,6 +619,14 @@
     line-height: 1.4;
     color: var(--tai-color-text);
     cursor: pointer;
+    /* A flex item's default `min-width: auto` refuses to shrink below its own
+       content, so caller text — a server label, a tag, an operator's own
+       string — pushes the document instead of breaking inside the control.
+       Measured at 320 px: without this the rule pushes a document scrollbar.
+       `flex-wrap: wrap` does NOT substitute; it is a measured no-op here,
+       because the overflow is the control's own text, not its item order. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   /* -- Segmented control -----------------------------------------------------
@@ -581,6 +635,7 @@
      horizontal trio cannot fit in 72 px. */
   .tai-segmented {
     display: inline-flex;
+    flex-wrap: wrap;
     gap: var(--tai-space-1);
     padding: var(--tai-space-1);
     background: var(--tai-color-surface);
@@ -732,6 +787,14 @@
     align-items: center;
     gap: var(--tai-space-2);
     box-sizing: border-box;
+    /* A flex item's default `min-width: auto` refuses to shrink below its own
+       content, so caller text — a server label, a tag, an operator's own
+       string — pushes the document instead of breaking inside the control.
+       Measured at 320 px: without this the rule pushes a document scrollbar.
+       `flex-wrap: wrap` does NOT substitute; it is a measured no-op here,
+       because the overflow is the control's own text, not its item order. */
+    min-width: 0;
+    overflow-wrap: anywhere;
     min-height: var(--tai-control-height);
     padding: var(--tai-space-2) var(--tai-space-3);
     border-radius: var(--tai-radius-md);
@@ -798,6 +861,14 @@
     font-size: var(--tai-text-sm);
     line-height: 1;
     cursor: pointer;
+    /* A flex item's default `min-width: auto` refuses to shrink below its own
+       content, so caller text — a server label, a tag, an operator's own
+       string — pushes the document instead of breaking inside the control.
+       Measured at 320 px: without this the rule pushes a document scrollbar.
+       `flex-wrap: wrap` does NOT substitute; it is a measured no-op here,
+       because the overflow is the control's own text, not its item order. */
+    min-width: 0;
+    overflow-wrap: anywhere;
     transition:
       background-color var(--tai-motion-fast) ease,
       border-color var(--tai-motion-fast) ease,
@@ -849,7 +920,14 @@
     font-size: var(--tai-text-xs);
     font-weight: 500;
     line-height: 1.4;
-    white-space: nowrap;
+    /* A flex item's default `min-width: auto` refuses to shrink below its own
+       content, so caller text — a server label, a tag, an operator's own
+       string — pushes the document instead of breaking inside the control.
+       Measured at 320 px: without this the rule pushes a document scrollbar.
+       `flex-wrap: wrap` does NOT substitute; it is a measured no-op here,
+       because the overflow is the control's own text, not its item order. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .tai-badge-neutral {
@@ -891,11 +969,23 @@
      Status is always an icon plus a label; the color only reinforces it. */
   .tai-status {
     display: inline-flex;
-    align-items: center;
+    /* `flex-start`, not `center`: once the label wraps, a centred mark floats
+       between the two lines instead of sitting on the first one — the exact
+       reason `.tai-field-error` gives for its own `flex-start`. Measured at
+       320/360/375/390 px: icon offset 11 px -> 0, height unchanged. */
+    align-items: flex-start;
     gap: var(--tai-space-2);
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-md);
     line-height: 1.4;
+    /* A flex item's default `min-width: auto` refuses to shrink below its own
+       content, so caller text — a server label, a tag, an operator's own
+       string — pushes the document instead of breaking inside the control.
+       Measured at 320 px: without this the rule pushes a document scrollbar.
+       `flex-wrap: wrap` does NOT substitute; it is a measured no-op here,
+       because the overflow is the control's own text, not its item order. */
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .tai-status-ok {

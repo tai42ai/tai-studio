@@ -288,6 +288,22 @@ export const ArrowLeftIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** Move the item one place earlier in an ordered list. */
+export const ArrowUpIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M12 20V4.5" />
+    <path d="M5 11 12 4l7 7" />
+  </Icon>
+);
+
+/** Move the item one place later in an ordered list. */
+export const ArrowDownIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M12 4v15.5" />
+    <path d="M5 13 12 20l7-7" />
+  </Icon>
+);
+
 /** Expand / collapse affordance. */
 export const ChevronDownIcon: IconComponent = (props) => (
   <Icon {...props}>

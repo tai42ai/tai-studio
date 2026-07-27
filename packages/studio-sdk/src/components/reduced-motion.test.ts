@@ -36,10 +36,21 @@ function blockAt(source: string, openIndex: number): string {
   throw new Error('unterminated block');
 }
 
-/** The body of the `prefers-reduced-motion: reduce` query, or a loud failure. */
+/**
+ * The body of the `prefers-reduced-motion: reduce` query, or a loud failure.
+ *
+ * The query itself must reach every screen. Nested inside a width band it still
+ * parses, still contains every declaration this file asserts, and flattens
+ * nothing outside that band — so its own context is checked here rather than
+ * left to the per-rule filter, which cannot see a wrapper outside the block it
+ * is handed.
+ */
 function reducedMotionBlock(source: string): string {
   const open = source.indexOf('@media (prefers-reduced-motion: reduce)');
   if (open === -1) throw new Error('no prefers-reduced-motion query in the stylesheet');
+  const context = contextAt(source, open);
+  if (!appliesAtEveryWidth(context))
+    throw new Error(`the reduced-motion query is confined to ${context.join(' > ')}`);
   return blockAt(source, source.indexOf('{', open));
 }
 
@@ -48,12 +59,57 @@ interface Rule {
   readonly body: string;
 }
 
-/** Every innermost declaration block in `source`, with its selectors split out. */
+/**
+ * The at-rule preludes enclosing `offset`, outermost first.
+ *
+ * The scraper below matches a selector and a body wherever they appear and, on
+ * its own, never asks which at-rule encloses them. That is not a nuance: wrapping
+ * this sheet's entire reduce block in
+ * `@media (min-width: 2000px)` leaves every rule PRESENT to a context-free
+ * scraper while no real screen ever applies it — the whole contract switched off
+ * with the gate green. Blocks that are not at-rules are pushed as `''` so the
+ * stack stays balanced and a rule nested two levels deep is still reached.
+ */
+function contextAt(source: string, offset: number): string[] {
+  const stack: string[] = [];
+  let prelude = '';
+  for (let index = 0; index < offset; index++) {
+    const character = source[index];
+    if (character === '{') {
+      const head = prelude.trim();
+      prelude = '';
+      stack.push(head.startsWith('@') ? head : '');
+    } else if (character === '}') {
+      stack.pop();
+      prelude = '';
+    } else {
+      prelude += character ?? '';
+    }
+  }
+  return stack.filter((head) => head !== '');
+}
+
+/** A media query keyed on viewport WIDTH — a rule that does not apply everywhere. */
+const WIDTH_CONDITIONED = /\(\s*(?:max|min)-width\s*:/;
+
+/** Whether a rule at this context applies at EVERY viewport width. */
+function appliesAtEveryWidth(context: readonly string[]): boolean {
+  return !context.some((at) => WIDTH_CONDITIONED.test(at));
+}
+
+/**
+ * Every innermost declaration block in `source` that applies at EVERY viewport
+ * width, with its selectors split out. A rule confined to a width band is
+ * DROPPED: a reduce block that only exists above 2000 px flattens nothing on any
+ * real screen, so counting it would let the guard be banded away silently.
+ */
 function rules(source: string): Rule[] {
-  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)].map((match) => ({
-    selectors: (match[1] ?? '').split(',').map((one) => one.trim()),
-    body: match[2] ?? '',
-  }));
+  return [...source.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+    .filter((match) => appliesAtEveryWidth(contextAt(source, match.index)))
+    .map((match) => ({
+      selectors: (match[1] ?? '').split(',').map((one) => one.trim()),
+      body: match[2] ?? '',
+    }));
 }
 
 // Harvested from BOTH sheets: a keyframe declared beside the class that uses it

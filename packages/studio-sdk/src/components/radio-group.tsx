@@ -18,7 +18,7 @@ import * as RadixRadioGroup from '@radix-ui/react-radio-group';
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 
-import { useFieldControl, useFieldLabelId } from './field';
+import { useFieldControl } from './field';
 
 export interface RadioOption {
   readonly value: string;
@@ -74,12 +74,12 @@ export function RadioGroup({
   variant = 'list',
 }: RadioGroupProps) {
   const field = useFieldControl();
-  const fieldLabelId = useFieldLabelId();
   const baseId = useId();
   const ownLabelId = `${baseId}-label`;
-  // An enclosing Field names the group first; a `label` this component renders
-  // is the standalone fallback. Neither means the group is named by `aria-label`.
-  const labelledBy = fieldLabelId ?? (label === undefined ? undefined : ownLabelId);
+  // `label` is the STANDALONE fallback name. Inside a group `Field`, the Field
+  // renders the named `role="group"` container itself, so this component neither
+  // knows nor needs the field's label id — the group is named by construction.
+  const labelledBy = label === undefined ? undefined : ownLabelId;
 
   const rootClassName =
     variant === 'segmented'

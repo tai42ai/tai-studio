@@ -25,6 +25,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Extension, PresetExtensionElement, PresetRecord } from '@tai42/api-client';
 
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   Badge,
   Button,
   Card,
@@ -152,14 +154,14 @@ function ComboRow({
             disabled={disabled || index === 0}
             onClick={onMoveUp}
           >
-            ↑
+            <ArrowUpIcon />
           </Button>
           <Button
             aria-label={`Move combo ${String(index + 1)} down`}
             disabled={disabled || index === total - 1}
             onClick={onMoveDown}
           >
-            ↓
+            <ArrowDownIcon />
           </Button>
           <Button
             variant="danger"

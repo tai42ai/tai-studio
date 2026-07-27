@@ -126,11 +126,18 @@ describe('RolesTab', () => {
     });
     await selectRole(user, 'editor');
 
-    // Grantable groups get a radiogroup named by the tag.
-    expect(screen.getByRole('radiogroup', { name: 'tools' })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'config' })).toBeInTheDocument();
+    // Grantable groups get a group named by the tag, holding the level selector.
+    // The NAME is on the container the `Field` renders, not on the radiogroup:
+    // a group Field names its group by construction rather than publishing a
+    // label id for the control inside it to remember to read.
+    expect(
+      within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('group', { name: 'config' })).getByRole('radiogroup'),
+    ).toBeInTheDocument();
     // The purely-fenced group has NO grant control.
-    expect(screen.queryByRole('radiogroup', { name: 'marketplace' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'marketplace' })).not.toBeInTheDocument();
     // ...and is surfaced under the admin-only section instead.
     expect(screen.getByText('Admin-only feature groups')).toBeInTheDocument();
   });
@@ -142,9 +149,9 @@ describe('RolesTab', () => {
     });
     await selectRole(user, 'editor');
 
-    const tools = screen.getByRole('radiogroup', { name: 'tools' });
+    const tools = within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup');
     expect(within(tools).getByRole('radio', { name: 'write' })).toBeChecked();
-    const config = screen.getByRole('radiogroup', { name: 'config' });
+    const config = within(screen.getByRole('group', { name: 'config' })).getByRole('radiogroup');
     expect(within(config).getByRole('radio', { name: 'none' })).toBeChecked();
   });
 
@@ -156,7 +163,7 @@ describe('RolesTab', () => {
     });
     await selectRole(user, 'editor');
 
-    const tools = screen.getByRole('radiogroup', { name: 'tools' });
+    const tools = within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup');
     await user.click(within(tools).getByRole('radio', { name: 'read' }));
     await user.click(screen.getByRole('button', { name: 'Save grants' }));
 
@@ -172,7 +179,7 @@ describe('RolesTab', () => {
     });
     await selectRole(user, 'admin');
 
-    const tools = screen.getByRole('radiogroup', { name: 'tools' });
+    const tools = within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup');
     expect(within(tools).getByRole('radio', { name: 'write' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Save grants' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Delete role/ })).not.toBeInTheDocument();
@@ -243,7 +250,9 @@ describe('RolesTab', () => {
     });
     await selectRole(user, 'editor');
     expect(
-      within(screen.getByRole('radiogroup', { name: 'tools' })).getByRole('radio', {
+      within(
+        within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup'),
+      ).getByRole('radio', {
         name: 'write',
       }),
     ).toBeChecked();
@@ -262,7 +271,7 @@ describe('RolesTab', () => {
 
     // The editor now reflects the rolled-back grants — NOT the pre-rollback draft.
     await waitFor(() => {
-      const tools = screen.getByRole('radiogroup', { name: 'tools' });
+      const tools = within(screen.getByRole('group', { name: 'tools' })).getByRole('radiogroup');
       expect(within(tools).getByRole('radio', { name: 'read' })).toBeChecked();
     });
     // ...and it is not dirty (the baseline moved with it), so Save is disabled — the

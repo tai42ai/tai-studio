@@ -33,6 +33,10 @@
  * String bodies survive that pass untouched, which is what the literal detector
  * needs.
  *
+ * Both detectors judge what the source PAINTS, not how it is spelled: HTML
+ * character references and JavaScript string escapes are decoded first, so
+ * `&#215;`, `&times;` and `{'\u{00d7}'}` are all read as the `×` they ship.
+ *
  * KNOWN BLIND SPOT, stated rather than papered over: a glyph assembled at
  * runtime (`String.fromCodePoint(0x2715)`, a concatenation, a glyph arriving
  * from the server) has no literal to find and is invisible here. So is a glyph
@@ -53,7 +57,7 @@ const SCAN_ROOTS = ['packages', 'apps'];
 const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
 
 /** The banned set, verbatim from the mission's iconography rule. */
-const BANNED_GLYPHS = '▲▼▾↗→✓×';
+const BANNED_GLYPHS = '▲▼▾↗→✓×↑↓←';
 
 /**
  * The NAMED references the toolchain actually decodes to a banned glyph.
@@ -73,6 +77,9 @@ const BANNED_GLYPHS = '▲▼▾↗→✓×';
 const GLYPH_ENTITIES: Readonly<Record<string, string>> = {
   '&times;': '×',
   '&rarr;': '→',
+  '&larr;': '←',
+  '&uarr;': '↑',
+  '&darr;': '↓',
 };
 
 /**
@@ -84,10 +91,41 @@ const GLYPH_ENTITIES: Readonly<Record<string, string>> = {
  * above is left holding only the named references, which genuinely are a finite
  * list.
  */
-const NUMERIC_REFERENCE = /&#(x?)([0-9a-f]+);/gi;
+const NUMERIC_REFERENCE = /&#(?:x([0-9a-fA-F]+)|([0-9]+));/g;
 
-/** Whitespace-painting references, so a glyph padded with one is still alone. */
-const SPACE_REFERENCE = /&(?:nbsp|#0*160|#x0*a0);/gi;
+/**
+ * The character a numeric reference paints, or `undefined` when it names none.
+ *
+ * Guarded, because the argument is hostile source: `&#x110000;` is outside
+ * Unicode and `&#xd800;` is a lone surrogate, and an unguarded
+ * `String.fromCodePoint` throws `RangeError` on both — which would kill the
+ * suite with a stack trace instead of reporting a finding.
+ */
+function referencedCharacter(
+  hex: string | undefined,
+  decimal: string | undefined,
+): string | undefined {
+  const code = Number.parseInt(hex ?? decimal ?? '', hex === undefined ? 10 : 16);
+  if (!Number.isSafeInteger(code) || code < 0 || code > 0x10ffff) return undefined;
+  if (code >= 0xd800 && code <= 0xdfff) return undefined;
+  return String.fromCodePoint(code);
+}
+
+/**
+ * The NAMED references that paint whitespace. MEASURED against both transforms
+ * this repo ships, not assumed: `&nbsp;` `&ensp;` `&emsp;` `&thinsp;` are the
+ * only ones esbuild@0.25.12 AND tsc@5.9.3 decode. `&NonBreakingSpace;`
+ * `&ThinSpace;` `&ZeroWidthSpace;` `&Tab;` `&NewLine;` `&hairsp;` `&numsp;`
+ * `&puncsp;` `&emsp13;` `&emsp14;` and every other long-form alias pass through
+ * both transforms as their own literal text — so they paint themselves, are not
+ * padding, and listing them would redden source that renders nothing banned.
+ */
+const SPACE_REFERENCE_NAMES: Readonly<Record<string, string>> = {
+  '&nbsp;': '\u00a0',
+  '&ensp;': '\u2002',
+  '&emsp;': '\u2003',
+  '&thinsp;': '\u2009',
+};
 
 /**
  * Rewrites every banned character reference to the glyph it paints, so both
@@ -95,11 +133,13 @@ const SPACE_REFERENCE = /&(?:nbsp|#0*160|#x0*a0);/gi;
  * — no detector here reports an offset, only a file and a snippet.
  */
 function decodeGlyphEntities(source: string): string {
-  let out = source.replaceAll(NUMERIC_REFERENCE, (whole, hex: string, digits: string) => {
-    const code = Number.parseInt(digits, hex === '' ? 10 : 16);
-    const glyph = String.fromCodePoint(code);
-    return BANNED_GLYPHS.includes(glyph) ? glyph : whole;
-  });
+  let out = source.replaceAll(
+    NUMERIC_REFERENCE,
+    (whole: string, hex: string | undefined, decimal: string | undefined) => {
+      const glyph = referencedCharacter(hex, decimal);
+      return glyph !== undefined && BANNED_GLYPHS.includes(glyph) ? glyph : whole;
+    },
+  );
   for (const [entity, glyph] of Object.entries(GLYPH_ENTITIES)) {
     out = out.replaceAll(entity, glyph);
   }
@@ -196,29 +236,124 @@ export function stripComments(source: string): string {
 const JSX_TEXT_RUN = />([^<>]*)</g;
 
 /**
- * A JSX expression container holding nothing but a whitespace string literal.
- * It renders as a space and nothing else.
+ * A JSX expression container holding nothing but one string literal, and the
+ * literal's body — whatever it spells.
  *
- * Prettier emits exactly this form for a JSX text run's TRAILING space, so it
- * appears beside a glyph without any author choosing to write it: a glyph
- * followed by a space becomes that glyph followed by this container the moment
- * the file is formatted. A detector requiring the whole run between the tags to
- * be glyphs-and-whitespace therefore stops seeing the glyph as soon as the
- * formatter touches the line, with the banned code point still in the file.
+ * Two different holes close on the same rule, which is why this is one regex
+ * rather than a list of accepted spellings:
+ *
+ * - A container holding a WHITESPACE literal renders as a space and nothing
+ *   else. Prettier emits exactly this form for a JSX text run's TRAILING space,
+ *   so it appears beside a glyph without any author choosing to write it: a
+ *   glyph followed by a space becomes that glyph followed by this container the
+ *   moment the file is formatted. A detector requiring the whole run between the
+ *   tags to be glyphs-and-whitespace therefore stops seeing the glyph as soon as
+ *   the formatter touches the line, with the banned code point still in the file.
+ * - A container holding a literal that ESCAPES the glyph — `{'\u{00d7}'}` —
+ *   renders exactly the character the ban is written about. Escapes are resolved
+ *   by the JavaScript lexer at compile time, so this is the same shipped
+ *   character as a bare `×`, not the runtime-assembly blind spot the module
+ *   docblock declares.
+ *
+ * The body is handed to {@link decodeStringEscapes}, so both cases fall out of
+ * "paint the literal and judge what it paints" rather than out of an
+ * enumeration of forms — the failure mode that put a hole in each of this gate's
+ * previous two revisions.
  */
-const SPACE_EXPRESSION = /\{\s*(['"`])(?:\s|\\u0*a0|\\t|\\n)*\1\s*\}/g;
+const LITERAL_EXPRESSION =
+  /\{\s*(?:'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\$]|\\.)*)`)\s*\}/g;
+
+/**
+ * A JavaScript string escape: `\u{1f600}`, `\u00d7`, `\xd7`, or any single
+ * character. Anything else in a literal body is its own text.
+ */
+const STRING_ESCAPE = /\\(?:u\{([0-9a-fA-F]{1,6})\}|u([0-9a-fA-F]{4})|x([0-9a-fA-F]{2})|([\s\S]))/g;
+
+/** The control characters an escape names; every other escape paints itself. */
+const CONTROL_ESCAPES: Readonly<Record<string, string>> = {
+  n: '\n',
+  t: '\t',
+  r: '\r',
+  b: '\b',
+  f: '\f',
+  v: '\v',
+  '0': '\0',
+};
+
+/**
+ * What a string literal's SOURCE body paints once the lexer has read it.
+ *
+ * A code point above U+10FFFF cannot be written as `\u{…}` at all — such a file
+ * does not parse — but this reader is handed hostile source, so the value is
+ * range-checked rather than trusted: an unguarded `String.fromCodePoint` would
+ * throw `RangeError` and kill the suite instead of reporting a finding. Lone
+ * surrogates are NOT rejected here (unlike an HTML numeric reference, `\ud800`
+ * is a legal JavaScript string), so a surrogate pair spelled as two escapes
+ * still reassembles into the character it paints.
+ */
+function decodeStringEscapes(body: string): string {
+  return body.replaceAll(
+    STRING_ESCAPE,
+    (
+      whole: string,
+      braced: string | undefined,
+      fourHex: string | undefined,
+      twoHex: string | undefined,
+      single: string | undefined,
+    ) => {
+      const hex = braced ?? fourHex ?? twoHex;
+      if (hex !== undefined) {
+        const code = Number.parseInt(hex, 16);
+        if (!Number.isSafeInteger(code) || code > 0x10ffff) return whole;
+        return String.fromCodePoint(code);
+      }
+      // A backslash before a newline is a line continuation: it paints nothing.
+      if (single === '\n') return '';
+      return CONTROL_ESCAPES[single ?? ''] ?? single ?? '';
+    },
+  );
+}
+
+/**
+ * An expression container that paints NOTHING: one holding only a JSX comment,
+ * and — because {@link stripComments} runs first on a real scan and blanks the
+ * comment body — one left holding only whitespace.
+ */
+const COMMENT_EXPRESSION = /\{\s*\/\*[\s\S]*?\*\/\s*\}/g;
+const EMPTY_EXPRESSION = /\{\s*\}/g;
 
 /**
  * What a JSX text run paints, near enough to judge a lone glyph by: the forms
  * that render as whitespace collapsed to whitespace.
  */
 function renderedJsxText(run: string): string {
-  return run.replaceAll(SPACE_EXPRESSION, ' ').replaceAll(SPACE_REFERENCE, ' ');
+  let out = run
+    .replaceAll(COMMENT_EXPRESSION, '')
+    .replaceAll(EMPTY_EXPRESSION, '')
+    .replaceAll(
+      LITERAL_EXPRESSION,
+      (
+        _whole: string,
+        single: string | undefined,
+        double: string | undefined,
+        template: string | undefined,
+      ) => decodeStringEscapes(single ?? double ?? template ?? ''),
+    );
+  out = out.replaceAll(
+    NUMERIC_REFERENCE,
+    (whole: string, hex: string | undefined, decimal: string | undefined) =>
+      referencedCharacter(hex, decimal) ?? whole,
+  );
+  for (const [reference, character] of Object.entries(SPACE_REFERENCE_NAMES)) {
+    out = out.replaceAll(reference, character);
+  }
+  return out;
 }
 
 /** A run that paints at least one banned glyph and nothing else but whitespace. */
+const RENDERED_SPACE = '\\s\\u200b';
 const RENDERS_GLYPHS_ONLY = new RegExp(
-  `^[${BANNED_GLYPHS}\\s]*[${BANNED_GLYPHS}][${BANNED_GLYPHS}\\s]*$`,
+  `^[${BANNED_GLYPHS}${RENDERED_SPACE}]*[${BANNED_GLYPHS}][${BANNED_GLYPHS}${RENDERED_SPACE}]*$`,
   'u',
 );
 
@@ -251,8 +386,13 @@ export function jsxSoleGlyphHits(code: string): { line: number; text: string }[]
 export function glyphOnlyLiteralHits(code: string): { line: number; text: string }[] {
   const hits: { line: number; text: string }[] = [];
   for (const match of code.matchAll(STRING_LITERAL)) {
-    const body = match[1] ?? match[2] ?? match[3];
-    if (body === undefined || body === '' || !GLYPH_ONLY.test(body)) continue;
+    const source = match[1] ?? match[2] ?? match[3];
+    if (source === undefined) continue;
+    // The body is decoded before it is judged: `'\u{00d7}'`, `'\xd7'` and a
+    // bare `×` are the same shipped character, resolved by the lexer at compile
+    // time, so reading the raw source text would let an escape spell the ban away.
+    const body = decodeStringEscapes(source);
+    if (body === '' || !GLYPH_ONLY.test(body)) continue;
     hits.push({ line: lineAt(code, match.index), text: body });
   }
   return hits;
@@ -308,6 +448,22 @@ describe('banned glyphs', () => {
     const viaBinding = "const MARK = '×';\nexport const Chip = () => <span>{MARK}</span>;";
     expect(glyphOnlyLiteralHits(viaBinding).map((hit) => hit.text)).toEqual(['×']);
 
+    // The ESCAPE route. A JavaScript escape is resolved by the lexer, so each of
+    // these ships the identical character as the bare mark above; a detector
+    // reading the raw source text sees only backslashes and hex digits.
+    for (const spelling of [String.raw`\u00d7`, String.raw`\u{00d7}`, String.raw`\xd7`]) {
+      const escaped = `<Button type="button" aria-label="Remove">{'${spelling}'}</Button>`;
+      expect([spelling, jsxSoleGlyphHits(escaped).map((hit) => hit.text)]).toEqual([
+        spelling,
+        ['×'],
+      ]);
+      const parked = `const MARK = '${spelling}';`;
+      expect([spelling, glyphOnlyLiteralHits(parked).map((hit) => hit.text)]).toEqual([
+        spelling,
+        ['×'],
+      ]);
+    }
+
     // Every banned character is actually in the set.
     for (const glyph of BANNED_GLYPHS) {
       expect([glyph, jsxSoleGlyphHits(`<i>${glyph}</i>`).length]).toEqual([glyph, 1]);
@@ -326,6 +482,13 @@ describe('banned glyphs', () => {
 
     const sentence = `const label = 'scope → url';`;
     expect(glyphOnlyLiteralHits(sentence)).toEqual([]);
+
+    // An ESCAPED backslash paints a backslash, not the escape that follows it:
+    // `'\\u00d7'` renders the six characters `\u00d7`. A decoder that scanned for
+    // the text rather than reading the escape would redden this.
+    const literalBackslash = String.raw`const path = '\\u00d7';`;
+    expect(glyphOnlyLiteralHits(literalBackslash)).toEqual([]);
+    expect(jsxSoleGlyphHits(String.raw`<code>{'\u00d7 per row'}</code>`)).toEqual([]);
 
     // An icon component named after a glyph is not a glyph.
     expect(jsxSoleGlyphHits('<span>{active ? <SortAscIcon /> : <SortDescIcon />}</span>')).toEqual(
@@ -363,7 +526,19 @@ describe('banned glyphs', () => {
     // The numeric forms are PARSED, not listed: leading zeros are legal in both
     // spellings and the toolchain decodes them, so an enumeration of exact
     // spellings has an entrance per zero.
-    for (const entity of ['&times;', '&#215;', '&#00215;', '&#x2713;', '&#x0002713;', '&rarr;']) {
+    for (const entity of [
+      '&times;',
+      '&#215;',
+      '&#00215;',
+      '&#x2713;',
+      '&#x0002713;',
+      '&rarr;',
+      '&larr;',
+      '&uarr;',
+      '&darr;',
+      '&#8593;',
+      '&#8595;',
+    ]) {
       const markup = `<button type="button">${entity}</button>`;
       expect([entity, jsxSoleGlyphHits(decodeGlyphEntities(markup)).length]).toEqual([entity, 1]);
     }
@@ -378,7 +553,7 @@ describe('banned glyphs', () => {
     // `&checkmark;`, `&nearr;` and `&srarr;` are passed through verbatim by the
     // JSX transform this repo ships, so each paints its own spelling.
     const untouched =
-      '&amp; &nbsp; &larr; &#8592; &neArr; &TIMES; &check; &checkmark; &nearr; &srarr;';
+      '&amp; &nbsp; &LeftArrow; &leftarrow; &neArr; &TIMES; &check; &checkmark; &nearr; &srarr;';
     expect(decodeGlyphEntities(untouched)).toBe(untouched);
   });
 

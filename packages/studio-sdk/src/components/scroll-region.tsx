@@ -16,7 +16,7 @@
  * `dangerouslySetInnerHTML` (rendered README/markdown), which cannot be wrapped
  * in a component and are therefore instrumented imperatively.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 
 export interface ScrollRegionProps {
@@ -377,7 +377,14 @@ export function useProseScrollRegions(
   const tableLabel = labels?.table ?? DEFAULT_PROSE_LABELS.table;
   const preLabel = labels?.pre ?? DEFAULT_PROSE_LABELS.pre;
 
-  useEffect(() => {
+  // `useLayoutEffect`, not `useEffect`: this hook RESTRUCTURES the DOM, and a
+  // passive effect runs after paint. `.tai-prose table` is `width: 100%` with no
+  // overflow of its own — the scroller exists only on the wrapper this builds —
+  // so a passive first pass paints one frame at 320/360 px with the table
+  // overflowing the document, then jolts sideways. Measured from a layout-effect
+  // probe: AT FIRST PAINT wrappers=0, table parent `.tai-prose`. There is no SSR
+  // path in this SPA for the layout phase to break.
+  useLayoutEffect(() => {
     const root = ref.current;
     if (root === null) return;
 
