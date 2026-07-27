@@ -6,22 +6,78 @@
  * 250 ms, and the preference is not honoured. jsdom loads no CSS and matches no
  * media query, so the check is source-level — a rendered assertion would see
  * neither the animation nor the guard.
+ *
+ * EVERY stylesheet the repository publishes or serves is read, DISCOVERED rather
+ * than listed. Reading `tokens.css` and `components.css` alone left the shell's
+ * own `apps/studio/src/styles.css` — a sheet in this changeset, loaded on every
+ * page, and unlayered so it outranks the design system — able to declare a
+ * keyframe, a raw-duration transition or a hover lift that no assertion here
+ * could see. A sheet that carries no reduced-motion block of its own is still
+ * read for OFFENCES; the remedies are unioned across the sheets, so it does not
+ * matter which sheet holds the one that covers it.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, '../../../..');
 
-/** A stylesheet with its comments removed, so a brace inside prose cannot parse. */
-function sheet(name: string): string {
-  return readFileSync(resolve(here, name), 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+/** Where a stylesheet that reaches a browser can live. `dist` is build output. */
+const SHEET_ROOTS = ['packages', 'apps'];
+const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
+
+/**
+ * `source` with every brace inside a quoted value replaced by a space.
+ *
+ * Everything below parses by counting braces, and a brace is legal inside a CSS
+ * string: one `content: '}'` desynchronises the walk from there to the end of
+ * the file, so every block after it is read at the wrong depth and the at-rule
+ * context each rule reports is wrong. Only the braces are neutralised, at the
+ * same offsets — the quotes themselves stay, because a selector like
+ * `[data-theme='dark']` is read as written elsewhere.
+ */
+function neutraliseQuotedBraces(source: string): string {
+  let out = '';
+  let quote: string | undefined;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index] ?? '';
+    if (quote !== undefined) {
+      if (character === '\\') {
+        out += source.slice(index, index + 2);
+        index += 1;
+        continue;
+      }
+      if (character === quote) quote = undefined;
+      out += character === '{' || character === '}' ? ' ' : character;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    out += character;
+  }
+  return out;
 }
 
-const tokens = sheet('tokens.css');
-const components = sheet('components.css');
+/** Stylesheet text as this file parses it: no comments, no brace inside a string. */
+function sheetText(source: string): string {
+  return neutraliseQuotedBraces(source.replaceAll(/\/\*[\s\S]*?\*\//g, ''));
+}
+
+/** Every `.css` file below `directory`, recursively. */
+function stylesheetsWithin(directory: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRECTORIES.has(entry.name))
+        found.push(...stylesheetsWithin(join(directory, entry.name)));
+    } else if (entry.name.endsWith('.css')) {
+      found.push(join(directory, entry.name));
+    }
+  }
+  return found;
+}
 
 /** The text of the block opened at `openIndex`, matched by brace depth. */
 function blockAt(source: string, openIndex: number): string {
@@ -37,17 +93,19 @@ function blockAt(source: string, openIndex: number): string {
 }
 
 /**
- * The body of the `prefers-reduced-motion: reduce` query, or a loud failure.
+ * The body of the `prefers-reduced-motion: reduce` query, or `''` when the sheet
+ * declares none.
  *
  * The query itself must reach every screen. Nested inside a width band it still
  * parses, still contains every declaration this file asserts, and flattens
  * nothing outside that band — so its own context is checked here rather than
  * left to the per-rule filter, which cannot see a wrapper outside the block it
- * is handed.
+ * is handed. An ABSENT block is not an error: most sheets start no motion, and
+ * the assertions below union the remedies across every sheet.
  */
 function reducedMotionBlock(source: string): string {
   const open = source.indexOf('@media (prefers-reduced-motion: reduce)');
-  if (open === -1) throw new Error('no prefers-reduced-motion query in the stylesheet');
+  if (open === -1) return '';
   const context = contextAt(source, open);
   if (!appliesAtEveryWidth(context))
     throw new Error(`the reduced-motion query is confined to ${context.join(' > ')}`);
@@ -91,8 +149,18 @@ function contextAt(source: string, offset: number): string[] {
   return stack.filter((head) => head !== '');
 }
 
-/** A media query keyed on viewport WIDTH — a rule that does not apply everywhere. */
-const WIDTH_CONDITIONED = /\(\s*(?:max|min)-width\s*:/;
+/**
+ * A media query keyed on viewport WIDTH — a rule that does not apply everywhere.
+ *
+ * Every spelling CSS accepts, because a rule is banded whichever way the band is
+ * written. Matching only `(max-width:`/`(min-width:` — which this did first —
+ * left MEDIA QUERIES LEVEL 4 RANGE SYNTAX (`@media (width <= 639px)`,
+ * `@media (400px < width)`) unrecognised, so a rule confined to one band was
+ * read as applying at every width: the whole reduce block could be banded away
+ * above every real screen with this file green.
+ */
+const WIDTH_CONDITIONED =
+  /\(\s*(?:(?:max|min)-width\s*:|width\s*[<>=]|[\d.]+(?:px|r?em|ch|ex|vw|vh|vmin|vmax)\s*[<>=])/;
 
 /** Whether a rule at this context applies at EVERY viewport width. */
 function appliesAtEveryWidth(context: readonly string[]): boolean {
@@ -131,19 +199,102 @@ function everywhere<T extends { readonly context: readonly string[] }>(rules: T[
   return rules.filter((rule) => appliesAtEveryWidth(rule.context));
 }
 
-// Harvested from BOTH sheets: a keyframe declared beside the class that uses it
+interface Sheet {
+  /** The path relative to the repository root, for a legible failure. */
+  readonly name: string;
+  readonly source: string;
+  /** This sheet's own reduced-motion block, or `''` when it declares none. */
+  readonly reduced: string;
+}
+
+/** Every stylesheet the repository publishes or serves, paired with its reduce block. */
+const SHEETS: readonly Sheet[] = SHEET_ROOTS.flatMap((root) =>
+  stylesheetsWithin(resolve(repoRoot, root)),
+)
+  .sort()
+  .map((path) => {
+    const source = sheetText(readFileSync(path, 'utf8'));
+    return { name: relative(repoRoot, path), source, reduced: reducedMotionBlock(source) };
+  });
+
+/** The sheet at a repo-relative path, or a loud failure if it has moved. */
+function sheetNamed(name: string): Sheet {
+  const found = SHEETS.find((sheet) => sheet.name === name);
+  if (found === undefined) throw new Error(`no ${name} among the scanned stylesheets`);
+  return found;
+}
+
+const tokens = sheetNamed('packages/studio-sdk/src/components/tokens.css');
+const components = sheetNamed('packages/studio-sdk/src/components/components.css');
+
+// Harvested from EVERY sheet: a keyframe declared beside the class that uses it
 // is just as real as one in the token file, and would otherwise be invisible here.
-const keyframeNames = [tokens, components]
-  .flatMap((sheet) => [...sheet.matchAll(/@keyframes\s+([\w-]+)/g)])
+const keyframeNames = SHEETS.flatMap((sheet) => [
+  ...sheet.source.matchAll(/@keyframes\s+([\w-]+)/g),
+])
   .map((match) => match[1])
   .filter((name): name is string => name !== undefined);
-const componentsReduced = reducedMotionBlock(components);
-const tokensReduced = reducedMotionBlock(tokens);
-/** Every sheet, paired with its own reduced-motion block. */
-const SHEETS = [
-  ['tokens.css', tokens, tokensReduced],
-  ['components.css', components, componentsReduced],
-] as const;
+
+/**
+ * A transform-family declaration: the `transform` shorthand and the independent
+ * `translate` / `scale` / `rotate` longhands.
+ *
+ * All four are read because they are four different ways to move the same
+ * element, and they do not cancel each other: `transform: none` does NOT reset a
+ * `translate:` longhand, so a lift written as `translate: 0 -2px` was both
+ * invisible to a `transform:`-only reader and unaffected by the flattening rule
+ * that reader was checking for. The leading `[^\w-]` keeps `text-transform` out.
+ */
+const TRANSFORM_DECLARATION = /(?:^|[^\w-])(transform|translate|scale|rotate)\s*:\s*([^;}]+)/g;
+
+/** Whether a transform function's arguments leave the element where it was. */
+function isIdentity(fn: string, args: string): boolean {
+  const numbers = (args.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+  // `scale` rests at 1 and everything else — translate, rotate, skew — rests at 0.
+  return fn.startsWith('scale')
+    ? numbers.every((number) => number === 1)
+    : numbers.every((number) => number === 0);
+}
+
+/** Whether a transform-family declaration takes the element off its rest position. */
+function movesElement(property: string, value: string): boolean {
+  const text = value.trim();
+  if (text === 'none') return false;
+  // A token-valued transform is opaque to a source scan, so it is treated as
+  // motion rather than guessed at: the alternative fails open on one `var()`.
+  if (text.includes('var(')) return true;
+  if (property !== 'transform') return !isIdentity(property, text);
+  return [...text.matchAll(/([a-zA-Z]+)\(([^()]*)\)/g)].some(
+    ([, fn, args]) => !isIdentity(fn ?? '', args ?? ''),
+  );
+}
+
+/** The transform-family properties a body MOVES on, and those it leaves at rest. */
+function transformProperties(body: string): { moving: string[]; resting: string[] } {
+  const moving: string[] = [];
+  const resting: string[] = [];
+  for (const [, property, value] of body.matchAll(TRANSFORM_DECLARATION)) {
+    (movesElement(property ?? '', value ?? '') ? moving : resting).push(property ?? '');
+  }
+  return { moving, resting };
+}
+
+/**
+ * Whether a selector only matches while the element is in some STATE.
+ *
+ * This is what decides that a movement is MOTION the viewer watches happen,
+ * rather than a static layout offset: `.tai-dialog`'s `translate(-50%, -50%)` is
+ * where the dialog sits, while anything keyed on a state is a transition into
+ * it. The question is asked of the SELECTOR's shape rather than of a list of
+ * pseudo-classes — the list read `:hover`, `:focus-within` and `:active` only,
+ * so a lift on `:focus-visible`, on `[data-highlighted]` or on
+ * `[data-state='open']`, all of which this design system's Radix parts stamp,
+ * was never required to be flattened. A pseudo-ELEMENT is not a state, so it is
+ * removed first.
+ */
+function isStateConditioned(selector: string): boolean {
+  return /:[\w-]|\[/.test(selector.replaceAll(/::[\w-]+(?:\([^()]*\))?/g, ''));
+}
 
 describe('reduced motion', () => {
   it('reads BOTH directions of a width band, and filters only for presence', () => {
@@ -157,11 +308,63 @@ describe('reduced motion', () => {
     );
     expect(sample).toHaveLength(3);
     expect(everywhere(sample)).toHaveLength(1);
+
+    // Every spelling of a band, including the range syntax an integer-px pattern
+    // never saw. A band it cannot read is a band it reports as applying to every
+    // screen, which is a fail-open in the presence direction.
+    for (const query of [
+      '@media (max-width: 639px)',
+      '@media (min-width: 640px)',
+      '@media (width <= 639px)',
+      '@media (width < 640px)',
+      '@media (width >= 40rem)',
+      '@media (640px <= width)',
+      '@media screen and (max-width: 47.9375em)',
+    ]) {
+      expect([query, appliesAtEveryWidth([query])]).toEqual([query, false]);
+    }
+    for (const query of [
+      '@media (prefers-reduced-motion: reduce)',
+      '@media (pointer: coarse)',
+      '@layer tai-components',
+      '@supports (height: 100dvh)',
+    ]) {
+      expect([query, appliesAtEveryWidth([query])]).toEqual([query, true]);
+    }
   });
+
+  it('parses a brace inside a quoted value without losing the walk', () => {
+    // A brace is legal inside a CSS string. Left in, it desynchronises every
+    // brace count from that point on, so each following rule reports the wrong
+    // at-rule context — and a banded offence reads as applying everywhere, or an
+    // unbanded remedy reads as banded away. The sheets are neutralised on read;
+    // this is the control that the neutralising works and changes nothing else.
+    const sample = sheetText(
+      ".a::after { content: '}' } @media (min-width: 2000px) { .b { color: red } }",
+    );
+    const parsed = rules(sample);
+    expect(parsed.map((rule) => rule.selectors.join())).toEqual(['.a::after', '.b']);
+    expect(everywhere(parsed).map((rule) => rule.selectors.join())).toEqual(['.a::after']);
+    // The quotes themselves survive, because selectors are read as written.
+    expect(sheetText(".x[data-state='open'] { color: red }")).toContain("[data-state='open']");
+  });
+
+  it('reads every stylesheet the repository serves, not only the design system', () => {
+    // The floor on the widening. A sheet outside this list can declare a
+    // keyframe, a raw duration or a hover lift that no assertion here can see.
+    const names = SHEETS.map((sheet) => sheet.name);
+    expect(names).toContain('packages/studio-sdk/src/components/tokens.css');
+    expect(names).toContain('packages/studio-sdk/src/components/components.css');
+    expect(names).toContain('apps/studio/src/styles.css');
+    expect(names.length).toBeGreaterThanOrEqual(4);
+    const empty = SHEETS.filter((sheet) => sheet.source.trim() === '');
+    expect(empty.map((sheet) => sheet.name)).toEqual([]);
+  });
+
   it('finds the keyframes and the guard (a scan that found nothing would pass)', () => {
     expect(keyframeNames.length).toBeGreaterThan(0);
-    expect(componentsReduced.length).toBeGreaterThan(0);
-    expect(tokensReduced.length).toBeGreaterThan(0);
+    expect(components.reduced.length).toBeGreaterThan(0);
+    expect(tokens.reduced.length).toBeGreaterThan(0);
   });
 
   it('stops every animation the design system starts', () => {
@@ -173,23 +376,23 @@ describe('reduced motion', () => {
         new RegExp(`animation(-name)?\\s*:[^;]*\\b${name}\\b`).test(body),
       );
 
-    // BOTH sheets, on both sides. The keyframe names are already harvested from
-    // both, so reading only `components.css` for the animations that USE them
-    // left a rule inside `@layer tai-tokens` free to run under `reduce` with
+    // EVERY sheet, on both sides. The keyframe names are already harvested from
+    // all of them, so reading only `components.css` for the animations that USE
+    // them left a rule inside `@layer tai-tokens` free to run under `reduce` with
     // this gate green — the token file declares three of the four keyframes, so
     // it is exactly where such a rule would land.
     const stopped = new Set(
-      SHEETS.flatMap(([, , reduced]) => everywhere(rules(reduced)))
+      SHEETS.flatMap((sheet) => everywhere(rules(sheet.reduced)))
         .filter((rule) => /animation:\s*none/.test(rule.body))
         .flatMap((rule) => rule.selectors),
     );
 
-    const running = SHEETS.flatMap(([name, source]) =>
-      rules(source)
+    const running = SHEETS.flatMap((sheet) =>
+      rules(sheet.source)
         .filter((rule) => startsOne(rule.body))
         .flatMap((rule) => rule.selectors)
         .filter((selector) => !stopped.has(selector))
-        .map((selector) => `${name}: ${selector}`),
+        .map((selector) => `${sheet.name}: ${selector}`),
     );
 
     expect(running).toEqual([]);
@@ -203,11 +406,15 @@ describe('reduced motion', () => {
     // The reduced block itself is cut out first: `transition: none` is the fix,
     // not a violation.
     const RAW_DURATION = /\b\d+(?:\.\d+)?m?s\b/;
-    const raw = SHEETS.flatMap(([name, source, reduced]) =>
-      [...source.replace(reduced, '').matchAll(/transition(?:-duration)?\s*:\s*([^;}]+)/g)]
+    const raw = SHEETS.flatMap((sheet) =>
+      [
+        ...(sheet.reduced === '' ? sheet.source : sheet.source.replace(sheet.reduced, '')).matchAll(
+          /transition(?:-duration)?\s*:\s*([^;}]+)/g,
+        ),
+      ]
         .map((match) => match[1] ?? '')
         .filter((value) => RAW_DURATION.test(value))
-        .map((value) => `${name}: ${value.replaceAll(/\s+/g, ' ').trim()}`),
+        .map((value) => `${sheet.name}: ${value.replaceAll(/\s+/g, ' ').trim()}`),
     );
     expect(raw).toEqual([]);
 
@@ -218,34 +425,99 @@ describe('reduced motion', () => {
     expect(RAW_DURATION.test(' background-color var(--tai-motion-fast) ease')).toBe(false);
   });
 
-  it('pins every hover lift flat, so nothing moves under the pointer', () => {
+  it('pins every state-driven movement flat, so nothing moves under the pointer', () => {
     // Guard the guard: `transform: none` is one deletable rule, and losing it
     // leaves the buttons and cards lifting for a reader who asked for stillness.
-    // The check is COVERAGE — every selector that MOVES must be named in the
-    // reduced block. A translate the viewer sees HAPPEN is one declared on an
-    // interaction state and travelling a nonzero distance: `.tai-dialog`'s
-    // `translate(-50%, -50%)` is layout rather than motion, and `.tai-btn:active`'s
-    // `translateY(0)` is the rest position itself.
-    const flattened = new Set(
-      everywhere(rules(componentsReduced))
-        .filter((rule) => /transform:\s*none/.test(rule.body))
-        .flatMap((rule) => rule.selectors),
-    );
+    // The check is COVERAGE — every selector that MOVES in a state must be named
+    // in a reduced block, and named on the SAME property, because the four
+    // transform-family properties do not reset one another. A movement the viewer
+    // sees HAPPEN is one declared on a state-conditioned selector and travelling
+    // a nonzero distance: `.tai-dialog`'s `translate(-50%, -50%)` is layout rather
+    // than motion, and `.tai-btn:active`'s `translateY(0)` is the rest position
+    // itself.
+    const flattened = new Map<string, Set<string>>();
+    for (const sheet of SHEETS) {
+      for (const rule of everywhere(rules(sheet.reduced))) {
+        for (const selector of rule.selectors) {
+          const already = flattened.get(selector) ?? new Set<string>();
+          for (const property of transformProperties(rule.body).resting) already.add(property);
+          flattened.set(selector, already);
+        }
+      }
+    }
     expect(flattened.size).toBeGreaterThan(0);
 
-    const moves = (body: string): boolean => {
-      const declaration = /transform:\s*(translate[^;]*)/.exec(body);
-      if (declaration === null) return false;
-      return (declaration[1]?.match(/-?\d*\.?\d+/g) ?? []).some((number) => Number(number) !== 0);
-    };
-    const lifting = rules(components)
-      .filter((rule) => moves(rule.body))
-      .flatMap((rule) => rule.selectors)
-      .filter((selector) => /:hover|:focus-within|:active/.test(selector));
+    const lifting: string[] = [];
+    const unflattened: string[] = [];
+    for (const sheet of SHEETS) {
+      for (const rule of rules(sheet.source)) {
+        const { moving } = transformProperties(rule.body);
+        if (moving.length === 0) continue;
+        for (const selector of rule.selectors.filter(isStateConditioned)) {
+          lifting.push(`${sheet.name}: ${selector}`);
+          const flat = flattened.get(selector) ?? new Set<string>();
+          for (const property of moving.filter((one) => !flat.has(one))) {
+            unflattened.push(`${sheet.name}: ${selector} still sets ${property}`);
+          }
+        }
+      }
+    }
     // The selection is the whole gate; one that matched nothing would pass.
     expect(lifting.length).toBeGreaterThan(1);
+    expect(unflattened).toEqual([]);
+  });
 
-    expect(lifting.filter((selector) => !flattened.has(selector))).toEqual([]);
+  it('reads a movement in every spelling, and a rest position as rest', () => {
+    // Positive controls on the decoder. It reads the transform FUNCTIONS rather
+    // than the first one that happens to be a `translate(`, and it reads the
+    // independent longhands, because each of them moves the element on its own.
+    for (const [property, value] of [
+      ['transform', 'translateY(-2px)'],
+      ['transform', 'scale(1.05)'],
+      ['transform', 'rotate(3deg)'],
+      ['transform', 'translateY(0) scale(1.05)'],
+      ['transform', 'translateY(var(--tai-space-1))'],
+      ['translate', '0 -2px'],
+      ['scale', '1.05'],
+      ['rotate', '3deg'],
+    ] as const) {
+      expect([property, value, movesElement(property, value)]).toEqual([property, value, true]);
+    }
+    for (const [property, value] of [
+      ['transform', 'none'],
+      ['transform', 'translateY(0)'],
+      ['transform', 'scale(1)'],
+      ['translate', 'none'],
+      ['translate', '0 0'],
+      ['scale', '1'],
+      ['rotate', '0deg'],
+    ] as const) {
+      expect([property, value, movesElement(property, value)]).toEqual([property, value, false]);
+    }
+    // …and the property reader must not mistake `text-transform` for a transform.
+    expect(transformProperties('text-transform: uppercase;').moving).toEqual([]);
+    expect(transformProperties('transform: translateY(-2px); scale: 1.05;').moving).toEqual([
+      'transform',
+      'scale',
+    ]);
+
+    // A state is any condition the element enters, not the three pseudo-classes
+    // somebody remembered: every one of these is stamped by a Radix part in this
+    // design system, and a lift on one used to be exempt from the whole rule.
+    for (const selector of [
+      '.tai-btn:hover',
+      '.tai-card-interactive:focus-within',
+      '.tai-btn:active',
+      '.tai-select-item:focus-visible',
+      '.tai-select-item[data-highlighted]',
+      ".tai-drawer[data-state='open']",
+      '.tai-chip:not(:disabled)',
+    ]) {
+      expect([selector, isStateConditioned(selector)]).toEqual([selector, true]);
+    }
+    for (const selector of ['.tai-dialog', '.tai-skeleton::after', 'from', 'to', '100%']) {
+      expect([selector, isStateConditioned(selector)]).toEqual([selector, false]);
+    }
   });
 
   it('zeroes the published duration tokens, which plugins animate against', () => {
@@ -253,9 +525,8 @@ describe('reduced motion', () => {
     // it writes `transition: … var(--tai-motion-fast)` and cannot read the media
     // query itself, so leaving them at their resting values leaves plugin CSS
     // moving on a page that is meant to be still.
-    const reduced = reducedMotionBlock(tokens);
-    expect(reduced).toMatch(/--tai-motion-fast:\s*0ms/);
-    expect(reduced).toMatch(/--tai-motion-base:\s*0ms/);
+    expect(tokens.reduced).toMatch(/--tai-motion-fast:\s*0ms/);
+    expect(tokens.reduced).toMatch(/--tai-motion-base:\s*0ms/);
   });
 
   it('leaves the parked skeleton a visible block rather than a fade-out', () => {
@@ -264,14 +535,14 @@ describe('reduced motion', () => {
     // carry a flat tone of its own (a gradient there would half-disappear the
     // moment the sweep stopped), and the overlay must be REMOVED rather than
     // stopped, or the band freezes across the middle of the placeholder.
-    const block = rules(components).find(
+    const block = rules(components.source).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton',
     );
     expect(block, 'no .tai-skeleton rule in components.css').toBeDefined();
     expect(block?.body).toMatch(/background:\s*var\(--tai-color-[\w-]+\)\s*;/);
     expect(block?.body).not.toContain('gradient');
 
-    const parkedOverlay = rules(componentsReduced).find((rule) =>
+    const parkedOverlay = rules(components.reduced).find((rule) =>
       rule.selectors.includes('.tai-skeleton::after'),
     );
     expect(
@@ -279,7 +550,7 @@ describe('reduced motion', () => {
       'the reduced-motion block never names .tai-skeleton::after',
     ).toBeDefined();
     expect(
-      rules(componentsReduced)
+      rules(components.reduced)
         .filter((rule) => rule.selectors.includes('.tai-skeleton::after'))
         .map((rule) => rule.body)
         .join(''),
@@ -292,7 +563,7 @@ describe('reduced motion', () => {
     // from a determinate reading, which is the "reads as a state it is not"
     // failure this contract exists to prevent. Stopping the animation without
     // widening the fill is therefore a REGRESSION, not a partial fix.
-    const fill = rules(componentsReduced).find(
+    const fill = rules(components.reduced).find(
       (rule) =>
         rule.selectors.length === 1 && rule.selectors[0] === '.tai-progress-fill-indeterminate',
     );
@@ -306,9 +577,9 @@ describe('reduced motion', () => {
     // loading. Every check above is satisfied by that defect — it stops an
     // animation just as well — so the sweep itself has to be asserted, or the
     // original bug can be reintroduced under the same name with this suite green.
-    const open = tokens.indexOf('@keyframes tai-shimmer');
+    const open = tokens.source.indexOf('@keyframes tai-shimmer');
     expect(open).toBeGreaterThan(-1);
-    const body = blockAt(tokens, tokens.indexOf('{', open));
+    const body = blockAt(tokens.source, tokens.source.indexOf('{', open));
     expect(body).not.toMatch(/opacity\s*:/);
 
     // A sweep TRAVELS: both stops translate, and to opposite sides, or the band
@@ -329,18 +600,18 @@ describe('reduced motion', () => {
     // three declarations that make the sweep an OVERLAY are pinned here: the
     // animation belongs to a pseudo-element, that pseudo-element is taken out of
     // flow, and the block clips it.
-    const runners = rules(components)
+    const runners = rules(components.source)
       .filter((rule) => /animation(-name)?\s*:[^;]*\btai-shimmer\b/.test(rule.body))
       .flatMap((rule) => rule.selectors);
     expect(runners.length).toBeGreaterThan(0);
     expect(runners.filter((selector) => !/::(after|before)$/.test(selector))).toEqual([]);
 
-    const overlay = rules(components).find(
+    const overlay = rules(components.source).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton::after',
     );
     expect(overlay?.body).toMatch(/position:\s*absolute/);
 
-    const block = rules(components).find(
+    const block = rules(components.source).find(
       (rule) => rule.selectors.length === 1 && rule.selectors[0] === '.tai-skeleton',
     );
     expect(block?.body).toMatch(/position:\s*relative/);

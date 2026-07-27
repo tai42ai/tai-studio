@@ -8,9 +8,23 @@
  * NAME rather than re-deriving geometry inline.
  *
  * Everything resolves from `tokens.css`; there are no literal colors, radii, or
- * shadows below. Each interactive class defines rest / hover / active / disabled,
- * and focus is one shared rule: a 2 px outline at 2 px offset, never a
- * box-shadow, because an outline follows `border-radius` and takes no part in layout.
+ * shadows below.
+ *
+ * THE FIVE-STATE CONTRACT, enforced off this sheet by `sheet-contract.test.ts`.
+ * A class that presents itself as a control — it declares `cursor: pointer` at
+ * rest — carries every one of:
+ *   rest           its own rule;
+ *   hover          a rule that fires while THAT class is hovered — the response
+ *                  may land on a child, which is what a label does for its box;
+ *   active         a press rendering, required of a control whose hover MOVES it
+ *                  and of no other: `.tai-btn` lifts, so it has to come back
+ *                  down, and nothing else in this sheet moves under the pointer;
+ *   unavailable    a `:disabled` / `[aria-disabled]` / `[data-disabled]` rule;
+ *   focus-visible  membership of the one shared ring rule below.
+ * The gate carries the exemptions by name with a reason each, so the next
+ * omission is a failure rather than a silent gap. Focus is a 2 px outline at a
+ * 2 px offset, never a box-shadow, because an outline follows `border-radius`
+ * and takes no part in layout.
  *
  * Breakpoints, desktop-first with real mobile: <640 phone, 640-1023 compact,
  * 1024-1279 medium, >=1280 full.
@@ -20,7 +34,13 @@
      Headings are black and tight in every context; the host preflight resets
      their size and weight, and this layer sorts after it. Sizes follow the
      scale so an unclassed heading is still on-system; a component class or an
-     explicit style overrides them. */
+     explicit style overrides them.
+
+     No `font-feature-settings`. None of the thirteen `.woff2` faces this design
+     system ships carries a character-variant or stylistic-set feature at all —
+     the Inter latin subset's whole feature list is `calt ccmp dnom frac locl
+     numr pnum tnum` — so naming one selects nothing and only reads as a spec
+     that is being met. The gate holds the sheet to that. */
   h1,
   h2,
   h3,
@@ -31,7 +51,6 @@
     font-family: var(--tai-font-sans);
     font-weight: 700;
     letter-spacing: -0.03em;
-    font-feature-settings: 'cv01', 'cv02';
   }
 
   h1 {
@@ -59,9 +78,16 @@
   }
 
   /* A real selection pair, not the near-background accent TINT: the tint is the
-     fill behind a selected nav item, and over body copy it measured 1.13:1
-     (light) / 1.11:1 (dark) against the unselected background — dragging over
-     prose gave essentially no feedback about what had been selected. */
+     fill behind a selected nav item, and over body copy it is 1.13:1 (light) /
+     1.11:1 (dark) against the unselected background — dragging over prose gives
+     essentially no feedback about what had been selected.
+
+     Both halves of the pair are declared, so the selected run's own contrast is
+     `on-accent` over `accent` and nothing else: derived from the token hex
+     values, 4.99:1 in light (#ffffff on #dc143c) and 5.36:1 in dark (#0c0e12 on
+     #ed4c67). Both clear the 4.5:1 body-text floor, and the accent ground is the
+     same 4.99:1 / 5.36:1 away from the page ground, so the selection is visible
+     as well as legible. */
   ::selection {
     background: var(--tai-color-accent);
     color: var(--tai-color-on-accent);
@@ -127,6 +153,11 @@
   .tai-tab:focus-visible,
   .tai-nav-item:focus-visible,
   .tai-nav-link:focus-visible,
+  /* The brand lockup is a link home in every shell that renders it — it declares
+     link affordances (`text-decoration: none` over the heading ink) and sits in
+     the sidebar's tab order ahead of the nav, so it needs the ring like any
+     other chrome link. */
+  .tai-brand:focus-visible,
   .tai-skip-link:focus-visible,
   .tai-card-interactive:focus-visible,
   .tai-scroll-region:focus-visible,
@@ -151,9 +182,16 @@
   }
 
   /* -- Buttons --------------------------------------------------------------
-     One 36 px geometry for every control; the label sits on `line-height: 1`
-     inside it. Hover lifts 2 px; a coarse pointer trades the lift for a 44 px
-     target (the pointer-target rule wins on touch). */
+     One 36 px geometry for every control; the 36 px is a FLOOR and the label
+     sits on a line box inside it. Hover lifts 2 px; a coarse pointer trades the
+     lift for a 44 px target (the pointer-target rule wins on touch).
+
+     The line box is 1.25, not 1. A caller's label may WRAP here — that is the
+     whole point of the `overflow-wrap` below — and a unitless line-height of 1
+     makes a line box SHORTER than the font's own content area, so consecutive
+     wrapped lines overlap. At 1.25 a single-line label still costs
+     13.5 x 1.25 + 16 padding + 2 border = 34.9 px, under the 36 px floor, so
+     nothing about the resting control moves. */
   .tai-btn {
     display: inline-flex;
     align-items: center;
@@ -167,7 +205,7 @@
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-md);
     font-weight: 500;
-    line-height: 1;
+    line-height: 1.25;
     text-decoration: none;
     cursor: pointer;
     /* A flex item's default `min-width: auto` refuses to shrink below its own
@@ -303,23 +341,44 @@
     vertical-align: -0.15em;
   }
 
-  /* -- Fields, inputs, selects ---------------------------------------------- */
-  .tai-field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--tai-space-2);
+  /* A mark inside a control keeps its size while the TEXT beside it takes the
+     shrinking. Every row flex below declares a `min-width`, which is what tells
+     the layout it may shrink past its own content; the text has
+     `overflow-wrap: anywhere` to survive that, an svg has nothing, so it is
+     squashed instead — measured at 320 px, a 16 px mark inside `.tai-status`
+     came out 11.34 px wide. `.tai-icon` already carries `flex: none`, so what
+     this reaches is the svg a CONSUMER brings. The group is reconciled against
+     the sheet's row-flex-with-a-min-width rules in both directions by
+     `sheet-contract.test.ts`, so a new one cannot be silently left out. */
+  .tai-badge > svg,
+  .tai-btn > svg,
+  .tai-chip > svg,
+  .tai-choice > svg,
+  .tai-drawer-header > svg,
+  .tai-error-state-title > svg,
+  .tai-field-error > svg,
+  .tai-nav-item > svg,
+  .tai-nav-link > svg,
+  .tai-segment > svg,
+  .tai-select-trigger > svg,
+  .tai-status > svg {
+    flex: none;
   }
 
-  /* The container a group Field renders around its children so the group has a
-     `role` to carry its own name and description. It reproduces `.tai-field`'s
-     own formatting context exactly, so wrapping is layout-neutral: without it
-     the children would become flex items of the wrapper's default `block`
-     layout and lose the field's gap. */
+  /* -- Fields, inputs, selects ----------------------------------------------
+     `.tai-field-group` is the container a group Field renders around its
+     children so the group has a `role` to carry its own name and description. It
+     has to reproduce `.tai-field`'s formatting context exactly or wrapping would
+     not be layout-neutral — the children would become items of the wrapper's
+     default `block` layout and lose the field's gap — so it is the SAME rule
+     rather than a copy that can drift. A copy carrying its own `min-width: 0`
+     was a measured no-op: the automatic minimum size applies on the MAIN axis,
+     and in a column flex container that is the block axis. */
+  .tai-field,
   .tai-field-group {
     display: flex;
     flex-direction: column;
     gap: var(--tai-space-2);
-    min-width: 0;
   }
 
   .tai-field-label {
@@ -354,11 +413,6 @@
     color: var(--tai-color-err-text);
   }
 
-  /* The mark keeps its size while the message takes the wrapping. */
-  .tai-field-error > svg {
-    flex: none;
-  }
-
   .tai-input,
   .tai-textarea,
   .tai-select-trigger {
@@ -386,7 +440,10 @@
     /* The 8 × 16 control padding a button wears, so a field and the button
        beside it start their text on the same inset. */
     padding: var(--tai-space-2) var(--tai-space-4);
-    line-height: 1;
+    /* The button's line box, for the same reason: the trigger's chosen value is
+       caller data and breaks anywhere, and a line box shorter than the font's
+       content area overlaps the line under it. */
+    line-height: 1.25;
   }
 
   /* The trigger lays out a label beside its chevron; a text input has no
@@ -449,10 +506,18 @@
   }
 
   /* An invalid field is announced by its message and icon; the border is a
-     supporting cue, never the only one. */
-  .tai-input[aria-invalid='true'],
-  .tai-textarea[aria-invalid='true'],
-  .tai-select-trigger[aria-invalid='true'] {
+     supporting cue, never the only one.
+
+     DISABLED WINS over invalid, and the exclusion is written rather than left to
+     source order: a control the operator cannot act on has to READ as one, and
+     the message and icon carry the invalidity either way. That is the same
+     ordering `.tai-checkbox:disabled` takes over its own checked ground, for the
+     same reason. Without the `:not()` these two rules are both (0,2,0) and the
+     later one simply wins, which put an error boundary on a field nobody can
+     correct. */
+  .tai-input[aria-invalid='true']:not(:disabled),
+  .tai-textarea[aria-invalid='true']:not(:disabled),
+  .tai-select-trigger[aria-invalid='true']:not(:disabled) {
     border-color: var(--tai-color-err-text);
   }
 
@@ -491,14 +556,20 @@
      first and last, so a keyboard user saw two horizontal bars instead of a
      ring. */
   .tai-select-viewport {
-    padding: var(--tai-space-1);
+    /* 8 px against a 4 px ring reach (a 2 px outline at a 2 px offset), so the
+       gap is the ring PLUS a spacing step rather than exactly the ring. At 4 px
+       the two numbers are equal and every one of them — the outline width, the
+       offset, a scrollbar the viewport grows when the list is long — clips the
+       ring the moment it moves by a pixel, with no gate able to see it. The gate
+       reads both numbers off this sheet and holds the padding above the reach. */
+    padding: var(--tai-space-2);
     /* Radix moves the keyboard highlight with `scrollIntoView({block:'nearest'})`,
        which aligns to the PADDING box — so from the eighth option on, the scroll
-       consumes exactly the 4 px the padding above reserves and every step loses
-       its leading ring edge. `scroll-padding` keeps that gap on the scroll port
-       too. Measured over a 52-step keyboard walk: 36 steps clipped without it,
-       0 with it. */
-    scroll-padding: var(--tai-space-1);
+       consumes exactly what the padding above reserves and every step loses its
+       leading ring edge. `scroll-padding` keeps that gap on the scroll port too.
+       Measured over a 52-step keyboard walk: 36 steps clipped without it, 0 with
+       it. It matches the padding, so the two cannot drift apart. */
+    scroll-padding: var(--tai-space-2);
   }
 
   .tai-select-item {
@@ -604,6 +675,32 @@
     border-color: var(--tai-color-accent);
   }
 
+  /* HOVER. The box strengthens its boundary to the text ink — the same move
+     `.tai-input` makes, and the reason both are legible over the raised ground
+     they sit on (17.7:1 light, 13.9:1 dark). A `.tai-choice` label is the box's
+     larger hit target, so hovering the label is hovering the control and moves
+     the box with it; the label's own ink is already the strongest body ink there
+     is, so there is nothing above it for the label itself to move to. */
+  .tai-checkbox:hover:not(:disabled),
+  .tai-radio:hover:not(:disabled),
+  .tai-choice:hover > .tai-checkbox:not(:disabled),
+  .tai-choice:hover > .tai-radio:not(:disabled) {
+    border-color: var(--tai-color-text);
+  }
+
+  /* A checked box keeps its accent GROUND and moves to the hover member of the
+     ramp instead. `:not()` carries its argument's specificity, so the rule above
+     sits at (0,3,0) / (0,4,0) and would otherwise repaint the checked boundary
+     the plain text colour while the fill stayed accent; these selectors match
+     its arithmetic and come after it. */
+  .tai-checkbox[data-state='checked']:hover:not(:disabled),
+  .tai-checkbox[data-state='indeterminate']:hover:not(:disabled),
+  .tai-choice:hover > .tai-checkbox[data-state='checked']:not(:disabled),
+  .tai-choice:hover > .tai-checkbox[data-state='indeterminate']:not(:disabled) {
+    background: var(--tai-color-accent-hover);
+    border-color: var(--tai-color-accent-hover);
+  }
+
   .tai-radio-indicator {
     display: block;
     width: 0.5rem;
@@ -690,7 +787,7 @@
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-sm);
     font-weight: 500;
-    line-height: 1;
+    line-height: 1.25;
     cursor: pointer;
     transition:
       background-color var(--tai-motion-fast) ease,
@@ -776,7 +873,7 @@
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-md);
     font-weight: 500;
-    line-height: 1;
+    line-height: 1.25;
     color: var(--tai-color-text-muted);
     cursor: pointer;
     transition:
@@ -836,9 +933,18 @@
       color var(--tai-motion-fast) ease;
   }
 
+  /* A nav item lives in CHROME, not on the page ground, and chrome is painted
+     from `--tai-color-surface` — `.tai-shell-sidebar` below is, and so is any
+     host sidebar that follows it. Stepping the hover to that same tone therefore
+     resolved to 1.000:1 against the ground the item was sitting on: hovering a
+     nav item changed nothing at all. The line tone is the one near-ground token
+     that is distinct from every ground this sheet paints, derived statically
+     from the token hex values: against `surface` 1.41:1 light / 1.78:1 dark,
+     against `bg` 1.47:1 / 1.88:1, against `surface-raised` 1.47:1 / 1.66:1. The
+     item's own ink stays well clear of it (12.0:1 light, 8.4:1 dark). */
   .tai-nav-item:hover,
   .tai-nav-link:hover {
-    background: var(--tai-color-surface);
+    background: var(--tai-color-border-strong);
   }
 
   .tai-nav-item[aria-current='page'],
@@ -872,7 +978,13 @@
     top: var(--tai-space-2);
   }
 
-  /* -- Chips ------------------------------------------------------------------ */
+  /* -- Chips ------------------------------------------------------------------
+     `.tai-chip` publishes a CONTROL: a pointer, a hover, a pressed ground, a
+     disabled rendering and a 44 px coarse target, for a consumer's filter or
+     toggle chip. Every chip this repo renders is a TAG and opts out of all of it
+     with `.tai-chip-static`, so the interactive half is reachable only from
+     outside — which is a published-surface affordance, not dead code, and
+     `class-contract.test.ts` records it as one by name. */
   .tai-chip {
     display: inline-flex;
     align-items: center;
@@ -886,7 +998,7 @@
     color: var(--tai-color-text);
     font-family: var(--tai-font-sans);
     font-size: var(--tai-text-sm);
-    line-height: 1;
+    line-height: 1.25;
     cursor: pointer;
     /* A flex item's default `min-width: auto` refuses to shrink below its own
        content, so caller text — a server label, a tag, an operator's own
@@ -999,7 +1111,12 @@
     /* `flex-start`, not `center`: once the label wraps, a centred mark floats
        between the two lines instead of sitting on the first one — the exact
        reason `.tai-field-error` gives for its own `flex-start`. Measured at
-       320/360/375/390 px: icon offset 11 px -> 0, height unchanged. */
+       320/360/375/390 px: icon offset 11 px -> 0, box height unchanged.
+       It moves the SINGLE-line case too, by design and not only as a side
+       effect: a 13.5 px label on a 1.4 line box is an 18.9 px line, so a 16 px
+       mark centred in it sat 1.45 px below the line's top edge and now sits on
+       it. That is the alignment the wrapped case needs, and one line of text is
+       the wrapped case with one line. */
     align-items: flex-start;
     gap: var(--tai-space-2);
     font-family: var(--tai-font-sans);
@@ -1104,7 +1221,15 @@
     border-bottom: 1px solid var(--tai-color-border);
   }
 
-  .tai-table tbody tr:hover {
+  /* The row hover is a LOCATOR; a diff row's tint is MEANING, and meaning keeps
+     the ground — the same call `.tai-segment[data-state='checked']:hover` makes
+     for the one cue an icon-only option has. Written as an exclusion because the
+     arithmetic goes the other way on its own: `.tai-table tbody tr:hover` is
+     (0,1,2) and `.tai-diff-added` is (0,1,0), so every hovered diff row lost its
+     colour to the accent tint. `:not()` carries its argument's specificity, so
+     naming the three here is also what lifts this rule clear of them. The gate
+     reconciles this list against the sheet's own semantic row grounds. */
+  .tai-table tbody tr:not(.tai-diff-added):not(.tai-diff-removed):not(.tai-diff-changed):hover {
     background: var(--tai-color-accent-tint);
   }
 
@@ -1213,6 +1338,12 @@
 
   .tai-tooltip {
     z-index: var(--tai-z-tooltip);
+    /* The cap is on the BORDER box, or it is not a cap at all: with the default
+       `content-box` the 12 px side padding and the 1 px boundary sit outside it,
+       so at 320 px the 288 px cap painted a 314 px tip and pushed the document
+       — for any consumer whose host has no preflight to set `box-sizing`
+       globally. Every other capped surface in this sheet already says so. */
+    box-sizing: border-box;
     max-width: min(20rem, calc(100vw - 2 * var(--tai-space-4)));
     padding: var(--tai-space-2) var(--tai-space-3);
     background: var(--tai-color-surface-raised);
@@ -1235,9 +1366,14 @@
     color: var(--tai-color-text);
   }
 
-  .tai-code-block {
+  /* ONE code surface, under two names. `.tai-prose pre` is the same block for
+     markdown this Studio did not author, so it is the same rule: a copy of these
+     declarations beside it had already drifted — a `tab-size` of 8 against 2
+     rendered the identical listing at four times the indent, and without
+     `box-sizing` the padding and boundary sat outside the block's own width. */
+  .tai-code-block,
+  .tai-prose pre {
     box-sizing: border-box;
-    margin: 0;
     padding: var(--tai-space-4);
     overflow-x: auto;
     background: var(--tai-color-code-bg);
@@ -1249,6 +1385,15 @@
     color: var(--tai-color-text);
     white-space: pre;
     tab-size: 2;
+  }
+
+  /* The margin is the ONE declaration the two names do not share. A standalone
+     block is placed by whatever stack it sits in, so it brings none of its own;
+     a `<pre>` in prose is placed by `.tai-prose > * + *`, and a descendant
+     selector outranks that rule, so zeroing it here would delete the prose
+     rhythm above every code listing a README carries. */
+  .tai-code-block {
+    margin: 0;
   }
 
   /* A code surface holding a message rather than a listing: it WRAPS instead of
@@ -1332,12 +1477,21 @@
     animation: tai-shimmer 1.4s linear infinite;
   }
 
+  /* A busy indicator is a non-text UI component: its RING is the whole of what
+     identifies it, so the ring is held to 3:1 (WCAG 1.4.11) and cannot sit in
+     the decorative line tier. Derived statically from the token hex values, the
+     decorative `border-strong` gave 1.47:1 light / 1.88:1 dark on the page
+     ground and 1.47:1 / 1.66:1 on a raised one; the contrast-safe control tier
+     gives 4.21:1 / 3.65:1 on the page ground, 4.21:1 / 3.23:1 raised, 4.03:1 /
+     3.45:1 on `surface` and 3.82:1 / 3.51:1 on the code ground. The leading arc
+     is the accent, at 4.99:1 / 5.36:1 — the same argument `.tai-progress-track`
+     makes for its own boundary. */
   .tai-spinner {
     display: inline-block;
     box-sizing: border-box;
     width: 16px;
     height: 16px;
-    border: 2px solid var(--tai-color-border-strong);
+    border: 2px solid var(--tai-color-control-border);
     border-top-color: var(--tai-color-accent);
     border-radius: var(--tai-radius-full);
     animation: tai-spin 0.7s linear infinite;
@@ -1510,17 +1664,6 @@
     font-size: var(--tai-text-code);
   }
 
-  .tai-prose pre {
-    padding: var(--tai-space-4);
-    overflow-x: auto;
-    background: var(--tai-color-code-bg);
-    border: 1px solid var(--tai-color-border);
-    border-radius: var(--tai-radius-md);
-    font-family: var(--tai-font-mono);
-    font-size: var(--tai-text-code);
-    line-height: 1.75;
-  }
-
   .tai-prose pre code {
     padding: 0;
     background: none;
@@ -1627,6 +1770,28 @@
     font-weight: 700;
     line-height: 1.2;
     color: var(--tai-color-heading);
+    /* A flex item of `.tai-page-header`, holding a caller's own string — a
+       plugin's page name, a server id. Measured at 320-640 px, a 54-character
+       unbroken title took the document to a scroll width of 734 px; the pair
+       lets the title shrink inside the header and break inside the word. */
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* The rest of the caller-supplied prose: a plugin's card or section heading, a
+     dialog's own title, an empty state's headline, a page's description. None of
+     it is a string this repo owns, so an unbroken run breaks inside the word
+     rather than overflowing its block and pushing the document — the same rule
+     `.tai-error-state` states for arbitrary server text. `break-word` and not
+     `anywhere`: these are blocks, so what they need is a break when the word
+     does not fit the line, and `anywhere` would additionally collapse their
+     min-content, which only a flex item such as `.tai-page-title` needs. */
+  .tai-card-title,
+  .tai-dialog-title,
+  .tai-empty-state-title,
+  .tai-page-description,
+  .tai-section-title {
+    overflow-wrap: break-word;
   }
 
   .tai-page-description {
@@ -1687,8 +1852,20 @@
 
   /* -- Shell -----------------------------------------------------------------------
      The application frame: a fixed-width sidebar beside a scrolling main
-     column at >=1024, a 72 px labelled icon rail from 640, and a 56 px sticky
-     top bar with a drawer below 640. */
+     column at >=1024, a 72 px labelled icon rail from 640, and a sticky top bar
+     with a drawer below 640.
+
+     The bar's height is named once. Three unlinked rules have to agree on it —
+     the bar's own box, the scroll padding that stops it covering an element
+     scrolled to by a focus move, and the scroll margin that stops it covering an
+     anchor jump — and as three bare literals a change to one of them left the
+     other two behind with every gate green. It is NOT a `--tai-*` token: the
+     published contract is `tokens.css`, and this is private to this sheet, so it
+     carries a namespace of its own exactly as that file's own gate requires. */
+  :root {
+    --shell-topbar-height: 56px;
+  }
+
   .tai-shell {
     display: grid;
     grid-template-columns: 232px minmax(0, 1fr);
@@ -1701,7 +1878,15 @@
     display: flex;
     flex-direction: column;
     gap: var(--tai-space-2);
+    /* A full-viewport sticky column in a TOUCH band, where `vh` is the LARGE
+       viewport: on a phone with a retracting browser chrome the sidebar is taller
+       than the screen by the height of that chrome, and its last nav item sits
+       under it until the user scrolls. `dvh` is the live value. The pair is the
+       fallback, not a preference — `dvh` arrived after this package's floor
+       (Chrome 108, Firefox 101), and a browser below it drops the second
+       declaration and keeps the first. */
     height: 100vh;
+    height: 100dvh;
     position: sticky;
     top: 0;
     overflow-y: auto;
@@ -1746,7 +1931,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--tai-space-2);
-    height: 56px;
+    height: var(--shell-topbar-height);
     padding: 0 var(--tai-space-3);
     background: var(--tai-color-surface);
     border-bottom: 1px solid var(--tai-color-border);
@@ -1793,7 +1978,6 @@
     }
 
     .tai-shell-sidebar {
-      align-items: stretch;
       padding: var(--tai-space-3) var(--tai-space-1);
     }
 
@@ -1803,8 +1987,11 @@
        `.tai-nav-section-header` on the page — including a shell that lays its
        sidebar out itself and never becomes a rail — and column-stacked its nav
        labels at 11 px inside a full-width sidebar while hiding every section
-       heading. A heading hidden with `display: none` is also out of the
-       accessibility tree, so an `aria-labelledby` pointing at it names nothing. */
+       heading, which is the visible regression the scope prevents. The heading
+       still NAMES its list either way: `aria-labelledby` computes its text from
+       the target's subtree whether or not that target is rendered, so a
+       `display: none` header is a name without a visible label rather than no
+       name — a reason to keep the scope, not the reason. */
     .tai-shell-sidebar .tai-nav-item,
     .tai-shell-sidebar .tai-nav-link {
       flex-direction: column;
@@ -1813,9 +2000,6 @@
       font-size: var(--tai-text-xs);
       line-height: 1.2;
       text-align: center;
-      /* Real nav labels (`Notifications`, `Observability`) outrun a 64 px content
-         box, so the rail wraps them rather than painting outside itself. */
-      overflow-wrap: anywhere;
     }
 
     .tai-shell-sidebar .tai-nav-item[aria-current='page'],
@@ -1876,7 +2060,7 @@
      covers focus scrolling, margin covers anchor jumps. */
   @media (max-width: 639px) {
     html {
-      scroll-padding-top: 56px;
+      scroll-padding-top: var(--shell-topbar-height);
     }
 
     /* Scoped to the jump targets: the margin and the scrollport's padding are
@@ -1884,7 +2068,7 @@
        control twice the bar's height down the page. */
     :target,
     #main-content {
-      scroll-margin-top: 56px;
+      scroll-margin-top: var(--shell-topbar-height);
     }
   }
 

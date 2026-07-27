@@ -351,6 +351,8 @@ export default tseslint.config(
       'packages/studio-sdk/src/components/focus-ring.test.ts',
       'packages/studio-sdk/src/components/reduced-motion.test.ts',
       'packages/studio-sdk/src/components/field-group.test.ts',
+      'packages/studio-sdk/src/components/sheet-contract.test.ts',
+      'packages/studio-sdk/src/components/class-contract.test.ts',
       'packages/studio-sdk/src/components/banned-glyphs.test.ts',
       'packages/studio-sdk/src/hooks/useBreakpoint.test.ts',
       'packages/studio-sdk/src/package-side-effects.test.ts',

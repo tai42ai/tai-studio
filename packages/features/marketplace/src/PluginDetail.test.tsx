@@ -20,6 +20,7 @@ import type {
 } from '@tai42/api-client';
 
 import { PluginDetail } from './PluginDetail';
+import { marketplaceInstalledKey } from './keys';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 function detailFixture(overrides: Partial<MarketplacePluginDetail> = {}): MarketplacePluginDetail {
@@ -538,5 +539,46 @@ describe('PluginDetail — panes that scroll are keyboard targets', () => {
     expect(tablePane).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('region', { name: 'Example' })).toBe(pre);
     expect(pre).toHaveAttribute('tabindex', '0');
+  });
+
+  it('keeps the README instrumented, and the reader inside it, across a re-render', async () => {
+    const client = reads(
+      detailFixture({
+        readme_md: '<h3>Options</h3><table><tbody><tr><td>--flag</td></tr></tbody></table>',
+        latest: null,
+        versions: [],
+      }),
+      [],
+    );
+    const { container, queryClient } = renderWithProviders(
+      <PluginDetail refValue="tai42/toolbox" onBack={noop} />,
+      { client },
+    );
+
+    await screen.findByText('Toolbox');
+    const prose = container.querySelector<HTMLElement>('.tai-prose');
+    if (prose === null) throw new Error('the rendered README is not marked as prose');
+    const readmeTable = within(prose).getByRole('table');
+    const tablePane = paneOf(readmeTable);
+
+    setOverflowing(tablePane);
+    const region = screen.getByRole('region', { name: 'Options' });
+    act(() => {
+      region.focus();
+    });
+    expect(region).toHaveFocus();
+
+    // A background read settling re-renders this card, and the README is written
+    // into it as raw HTML: written again it would replace every node under the
+    // prose, taking the instrumented regions with it and dropping the reader
+    // standing in one onto the document body.
+    act(() => {
+      queryClient.setQueryData(marketplaceInstalledKey, [installedRow()]);
+    });
+    expect(await screen.findByText('Installed v1.2.0')).toBeInTheDocument();
+
+    expect(within(prose).getByRole('table')).toBe(readmeTable);
+    expect(screen.getByRole('region', { name: 'Options' })).toBe(region);
+    expect(region).toHaveFocus();
   });
 });

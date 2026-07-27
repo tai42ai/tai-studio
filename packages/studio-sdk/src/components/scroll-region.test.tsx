@@ -1,5 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
-import { useRef, useState } from 'react';
+import { createRef, useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { ScrollRegion, useProseScrollRegions } from './scroll-region';
@@ -134,6 +134,150 @@ describe('ScrollRegion', () => {
     }
   });
 
+  it('watches every scrolling box for content changes on ONE shared MutationObserver', async () => {
+    // The content side of the measurement is per-INSTANCE for the same reason
+    // the resize side is, and a `MutationObserver` per mount is a second
+    // callback the browser schedules and a second registration it maintains for
+    // every code block on screen. Constructions are the observable difference,
+    // and the count is a DELTA because the shared observer is built once on
+    // first use and may already exist.
+    const Native = globalThis.MutationObserver;
+    let constructed = 0;
+    class CountingMutationObserver extends Native {
+      constructor(callback: MutationCallback) {
+        super(callback);
+        constructed += 1;
+      }
+    }
+    globalThis.MutationObserver = CountingMutationObserver;
+
+    try {
+      render(
+        <ScrollRegion label="first">
+          <p>wide</p>
+        </ScrollRegion>,
+      );
+      const afterOne = constructed;
+
+      const { container } = render(
+        <>
+          {['second', 'third', 'fourth', 'fifth', 'sixth'].map((label) => (
+            <ScrollRegion key={label} label={label}>
+              <p>wide</p>
+            </ScrollRegion>
+          ))}
+        </>,
+      );
+      expect(constructed - afterOne).toBe(0);
+
+      // Sharing must not be bought by watching less: a content change inside one
+      // box still has to reach that box's own measurement, and only that one.
+      const boxes = [...container.querySelectorAll<HTMLElement>('.tai-scroll-region')];
+      expect(boxes).toHaveLength(5);
+      const third = nth(boxes, 2);
+      setElementOverflow(third, true);
+      const paragraph = third.querySelector('p');
+      if (paragraph === null) throw new Error('no <p> in the third box');
+      act(() => {
+        paragraph.textContent = 'much wider than the box';
+      });
+
+      await waitFor(() => {
+        expect(third).toHaveAttribute('role', 'region');
+      });
+      expect(nth(boxes, 0)).not.toHaveAttribute('role');
+    } finally {
+      globalThis.MutationObserver = Native;
+    }
+  });
+
+  it('re-registers nothing, and measures once, for an edit in place', async () => {
+    function Host({ text }: { text: string }) {
+      return (
+        <ScrollRegion label="Tool results">
+          <p>{text}</p>
+        </ScrollRegion>
+      );
+    }
+    const { container, rerender } = render(<Host text="short" />);
+    const region = scrollRegion(container);
+
+    // `scrollWidth` is the layout-forcing read, and re-observing an element the
+    // shared observer already holds re-arms its initial notification — one more
+    // forced read, per target, for a box whose children did not change at all.
+    // The read count is what that costs, so the read count is what is pinned.
+    let reads = 0;
+    Object.defineProperty(region, 'clientWidth', { configurable: true, value: 100 });
+    Object.defineProperty(region, 'scrollWidth', {
+      configurable: true,
+      get: () => {
+        reads += 1;
+        return 400;
+      },
+    });
+
+    rerender(<Host text="a much longer line than the box can hold" />);
+    await act(async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 0);
+      });
+    });
+
+    expect(region).toHaveAttribute('role', 'region');
+    expect(reads).toBe(1);
+  });
+
+  it('forwards a consumer ref to the scrolling element', () => {
+    const ref = createRef<HTMLDivElement>();
+    const { container } = render(
+      <ScrollRegion label="Tool results" ref={ref}>
+        <p>wide</p>
+      </ScrollRegion>,
+    );
+
+    expect(ref.current).toBe(scrollRegion(container));
+    // The consumer ref rides along with the measurement rather than replacing
+    // it: the element it points at is still the one that becomes the region.
+    setOverflowing(scrollRegion(container), true);
+    expect(screen.getByRole('region', { name: 'Tool results' })).toBe(ref.current);
+  });
+
+  it('forwards a consumer CALLBACK ref, and releases whichever way it answers', () => {
+    const attached: (HTMLElement | null)[] = [];
+    const plain = render(
+      <ScrollRegion
+        label="Tool results"
+        ref={(node) => {
+          attached.push(node);
+        }}
+      >
+        <p>wide</p>
+      </ScrollRegion>,
+    );
+    const plainRegion = scrollRegion(plain.container);
+    expect(attached).toEqual([plainRegion]);
+    plain.unmount();
+    expect(attached).toEqual([plainRegion, null]);
+
+    // A callback ref that answers with its own cleanup gets that cleanup called
+    // instead of a second call with `null`, exactly as React does for a ref it
+    // owns itself.
+    let cleaned = 0;
+    const cleaning = render(
+      <ScrollRegion
+        label="Tool results"
+        ref={() => () => {
+          cleaned += 1;
+        }}
+      >
+        <p>wide</p>
+      </ScrollRegion>,
+    );
+    expect(cleaned).toBe(0);
+    cleaning.unmount();
+    expect(cleaned).toBe(1);
+  });
+
   it('keeps the tab stop while it holds focus, and releases it on blur', () => {
     const { container } = render(
       <ScrollRegion label="Tool results">
@@ -250,8 +394,7 @@ describe('ScrollRegion', () => {
 });
 
 function ProseHost({ html, labels }: { html: string; labels?: ProseScrollLabels }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useProseScrollRegions(ref, labels);
+  const ref = useProseScrollRegions(labels);
   return <div ref={ref} data-testid="prose" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
@@ -367,8 +510,7 @@ describe('useProseScrollRegions', () => {
 
   it('ignores a heading that precedes the instrumented root but sits outside it', () => {
     function Sibling() {
-      const ref = useRef<HTMLDivElement>(null);
-      useProseScrollRegions(ref);
+      const ref = useProseScrollRegions();
       return (
         <>
           <h2>Outside</h2>
@@ -457,13 +599,104 @@ describe('useProseScrollRegions', () => {
     await waitFor(() => {
       expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(2);
     });
-    for (const wrapper of container.querySelectorAll<HTMLElement>('.tai-scroll-region')) {
-      setElementOverflow(wrapper, true);
-    }
+    setEverythingOverflowing(container);
+    expect(screen.getByRole('region', { name: 'Limits (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Limits (2)' })).toBeInTheDocument();
+  });
+
+  it('numbers the regions a single heading would otherwise name identically', () => {
+    const { container } = render(<ProseHost html={`<h2>Options</h2>${TABLE_HTML}${TABLE_HTML}`} />);
+
+    setEverythingOverflowing(container);
+    // Two landmarks answering to "Options" are two a reader cannot choose
+    // between, which is the whole use of the region list they appear in.
+    const regions = screen.getAllByRole('region');
+    expect(regions).toHaveLength(2);
+    expect(regions.map((region) => region.getAttribute('aria-label'))).toEqual([
+      'Options (1)',
+      'Options (2)',
+    ]);
+  });
+
+  it('numbers a shared FALLBACK name, and leaves a name only one surface claims', () => {
+    const { container } = render(<ProseHost html={`${PRE_HTML}${PRE_HTML}<h2>Install</h2>`} />);
+
+    setEverythingOverflowing(container);
+    expect(screen.getByRole('region', { name: 'README code block (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'README code block (2)' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'README code block' })).not.toBeInTheDocument();
+  });
+
+  it('mints no region past the cap, and still wraps every table', () => {
+    // `MAX_PROSE_REGIONS`: publisher-authored prose is unbounded, and every
+    // region is an entry in the landmark list a reader navigates by.
+    const { container } = render(<ProseHost html={TABLE_HTML.repeat(205)} />);
+
+    // The wrapper is the scroller a `width: 100%` prose table has no other way
+    // of getting, so it goes on whether the table is named or not.
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(205);
+
+    setEverythingOverflowing(container);
+    expect(screen.getAllByRole('region')).toHaveLength(200);
+  });
+
+  it('strips the region from a surface an insertion pushed past the cap', async () => {
+    const { container } = render(<ProseHost html={TABLE_HTML.repeat(200)} />);
+    setEverythingOverflowing(container);
+    const wrappers = [...container.querySelectorAll<HTMLElement>('.tai-scroll-region')];
+    expect(wrappers).toHaveLength(200);
+    const last = nth(wrappers, 199);
+    expect(last).toHaveAttribute('role', 'region');
+
+    // The prose grew at the front, so the surface that was the last named one is
+    // now past the cap: it keeps its wrapper and loses its landmark.
     act(() => {
-      flushResizeObservers();
+      screen.getByTestId('prose').insertAdjacentHTML('afterbegin', TABLE_HTML);
     });
-    expect(screen.getAllByRole('region', { name: 'Limits' })).toHaveLength(2);
+
+    await waitFor(() => {
+      expect(last).not.toHaveAttribute('role');
+    });
+    expect(last).not.toHaveAttribute('tabindex');
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(201);
+  });
+
+  it('drops the observer registrations a re-instrumentation replaced', async () => {
+    const observed = new Set<Element>();
+    const Native = globalThis.ResizeObserver;
+    class TrackingResizeObserver extends Native {
+      override observe(target: Element): void {
+        observed.add(target);
+        super.observe(target);
+      }
+      override unobserve(target: Element): void {
+        observed.delete(target);
+        super.unobserve(target);
+      }
+      override disconnect(): void {
+        observed.clear();
+        super.disconnect();
+      }
+    }
+    globalThis.ResizeObserver = TrackingResizeObserver;
+
+    try {
+      const { container, rerender } = render(<ProseHost html={`<h2>Options</h2>${TABLE_HTML}`} />);
+      const stale = scrollRegion(container);
+
+      rerender(<ProseHost html={`<h2>Limits</h2>${TABLE_HTML}`} />);
+      await waitFor(() => {
+        expect(scrollRegion(container)).not.toBe(stale);
+      });
+
+      // Every element the replaced pass had registered is detached now, and a
+      // registration on a detached element is one the browser keeps maintaining
+      // for a surface nobody can see.
+      expect([...observed].filter((target) => !container.contains(target))).toEqual([]);
+      expect(observed.size).toBeGreaterThan(0);
+    } finally {
+      globalThis.ResizeObserver = Native;
+    }
   });
 
   it('instruments an overflowing code block in place, with no wrapper', () => {
@@ -505,14 +738,74 @@ describe('useProseScrollRegions', () => {
     expect(screen.getByRole('region', { name: 'Options' })).toBe(wrapper);
   });
 
-  it('does nothing when the ref is unattached', () => {
+  it('does nothing when the ref is never attached', () => {
     function Detached() {
-      const ref = useRef<HTMLDivElement>(null);
-      useProseScrollRegions(ref);
+      useProseScrollRegions();
       return <div data-testid="empty" />;
     }
     const { container } = render(<Detached />);
     expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(0);
+  });
+
+  it('instruments a root that mounts later than the hook', () => {
+    function LateProse() {
+      const ref = useProseScrollRegions();
+      const [loaded, setLoaded] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setLoaded(true);
+            }}
+          >
+            load
+          </button>
+          {loaded ? (
+            <div ref={ref} dangerouslySetInnerHTML={{ __html: `<h2>Options</h2>${TABLE_HTML}` }} />
+          ) : null}
+        </>
+      );
+    }
+    const { container } = render(<LateProse />);
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(0);
+
+    // A README that arrives with a later render is the ordinary case — the pane
+    // is gated on a query. Nothing re-runs on its own, so the instrumentation
+    // has to be attached to the ELEMENT rather than taken from a ref that was
+    // empty the one time it was read.
+    act(() => {
+      screen.getByRole('button', { name: 'load' }).click();
+    });
+
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(1);
+    setOverflowing(scrollRegion(container), true);
+    expect(screen.getByRole('region', { name: 'Options' })).toBeInTheDocument();
+  });
+
+  it('follows a root that is swapped for another element', () => {
+    function SwappedProse({ section }: { section: string }) {
+      const ref = useProseScrollRegions();
+      return (
+        <div
+          key={section}
+          ref={ref}
+          dangerouslySetInnerHTML={{ __html: `<h2>${section}</h2>${TABLE_HTML}` }}
+        />
+      );
+    }
+    const { container, rerender } = render(<SwappedProse section="First" />);
+    const first = scrollRegion(container);
+
+    // A keyed remount replaces the element wholesale; the instrumentation has to
+    // go with it rather than stay on the detached one.
+    rerender(<SwappedProse section="Second" />);
+
+    const second = scrollRegion(container);
+    expect(second).not.toBe(first);
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(1);
+    setOverflowing(second, true);
+    expect(screen.getByRole('region', { name: 'Second' })).toBe(second);
   });
 
   it('stops observing once the host unmounts', () => {

@@ -109,6 +109,11 @@ interface Rule {
  * matter — which rules share a selector, and which at-rule each sits in — are
  * both structural. Nesting is tracked to any depth, so a band inside a
  * `@supports` inside a `@layer` is still reached.
+ *
+ * A STATEMENT at-rule ends at a semicolon rather than at a block, and the walk
+ * has to reset the prelude there: without it `@layer a, b;` and the rule after it
+ * read as ONE at-rule prelude, the rule is never emitted, and every assertion
+ * about it passes on a rule the reader silently lost.
  */
 function rules(source: string): Rule[] {
   const found: Rule[] = [];
@@ -122,6 +127,11 @@ function rules(source: string): Rule[] {
 
   while (index < text.length) {
     const character = text[index] ?? '';
+    if (character === ';' && prelude.trim().startsWith('@')) {
+      prelude = '';
+      index += 1;
+      continue;
+    }
     if (character === '{') {
       const head = prelude.trim();
       prelude = '';
@@ -160,30 +170,128 @@ function rules(source: string): Rule[] {
 
 const sheet = rules(stylesheet);
 
-/** Every rule block that names `selector` on its own, base rules and bands alike. */
+/**
+ * Every rule block whose SUBJECT is `selector` — the exact selector, and every
+ * variant of the same element: `.tai-btn:hover`, `.tai-btn:not(:disabled)`,
+ * `.tai-btn[aria-disabled='true']`.
+ *
+ * Keying on the exact string alone left a hole a live sibling rule walks
+ * through. `.tai-btn:not(:disabled) { min-width: 200px }` is a different string,
+ * so a reader that compares strings never sees it and the floor assertion below
+ * passes while every enabled button holds itself at 200 px. Only `:`, `[` and
+ * `.` continue the SAME element — a `-` continues the name (`.tai-btn-primary`
+ * is a different class, and its own rules are its own business), and a
+ * combinator starts a different element (`.tai-table .tai-btn` is asked about
+ * separately, by name).
+ */
 function blocksFor(selector: string): Rule[] {
-  return sheet.filter((rule) => rule.selectors.includes(selector));
+  return sheet.filter((rule) =>
+    rule.selectors.some(
+      (candidate) =>
+        candidate === selector ||
+        (candidate.startsWith(selector) && /^[:[.]/.test(candidate.slice(selector.length))),
+    ),
+  );
 }
 
 /** The narrowest supported viewport. Every question below is asked AT this width. */
 const NARROW_PX = 320;
 
 /**
- * Whether a rule in this at-rule context applies at {@link NARROW_PX}.
+ * Whether one `@media` feature holds at {@link NARROW_PX}, or `undefined` when
+ * it says nothing about width.
+ *
+ * BOTH spellings, because a stylesheet may write either and the two mean the
+ * same thing: the `max-width:` / `min-width:` colon form, and the range form
+ * (`width <= 639px`, `639px >= width`, `320px <= width <= 640px`). Reading only
+ * the colon form left range syntax UNPARSED and therefore silently treated as
+ * applying — a band written that way could re-declare anything this file gates
+ * and never be seen. A width condition this function cannot read RAISES rather
+ * than defaulting either way: an unreadable condition is a hole in the gate, not
+ * a pass.
+ */
+function widthHoldsAtNarrow(feature: string): boolean | undefined {
+  const inner = feature.trim();
+  if (!/\bwidth\b/.test(inner)) return undefined;
+  const length = String.raw`([\d.]+)(px|r?em)`;
+  const px = (value: string, unit: string): number => Number(value) * (unit === 'px' ? 1 : 16);
+  const compare = (left: number, operator: string, right: number): boolean =>
+    operator === '<='
+      ? left <= right
+      : operator === '<'
+        ? left < right
+        : operator === '>='
+          ? left >= right
+          : left > right;
+
+  const colon = new RegExp(String.raw`^(min|max)-width\s*:\s*${length}$`).exec(inner);
+  if (colon !== null) {
+    const bound = px(colon[2] ?? '', colon[3] ?? '');
+    return colon[1] === 'min' ? NARROW_PX >= bound : NARROW_PX <= bound;
+  }
+  const leading = new RegExp(String.raw`^width\s*(<=|<|>=|>)\s*${length}$`).exec(inner);
+  if (leading !== null) {
+    return compare(NARROW_PX, leading[1] ?? '', px(leading[2] ?? '', leading[3] ?? ''));
+  }
+  const trailing = new RegExp(String.raw`^${length}\s*(<=|<|>=|>)\s*width$`).exec(inner);
+  if (trailing !== null) {
+    return compare(px(trailing[1] ?? '', trailing[2] ?? ''), trailing[3] ?? '', NARROW_PX);
+  }
+  const both = new RegExp(String.raw`^${length}\s*(<=|<)\s*width\s*(<=|<)\s*${length}$`).exec(
+    inner,
+  );
+  if (both !== null) {
+    return (
+      compare(px(both[1] ?? '', both[2] ?? ''), both[3] ?? '', NARROW_PX) &&
+      compare(NARROW_PX, both[4] ?? '', px(both[5] ?? '', both[6] ?? ''))
+    );
+  }
+  throw new Error(`unreadable width condition in a media query: (${inner})`);
+}
+
+/** The parenthesised feature groups of an at-rule prelude. */
+function features(prelude: string): string[] {
+  return (prelude.match(/\([^()]*\)/g) ?? []).map((group) => group.slice(1, -1));
+}
+
+/**
+ * Whether a rule in this at-rule context can apply at {@link NARROW_PX}.
  *
  * A band keyed above 320 px is not part of the 320 px contract, and a band keyed
  * below it does not reach it either. Non-width conditions (`pointer: coarse`,
- * `prefers-reduced-motion`) can all hold at 320 px, so they never exclude.
+ * `prefers-reduced-motion`) CAN hold at 320 px, so they never exclude — which is
+ * the right reading for "every value must clear the bar" and the wrong one for
+ * "the declaration exists at all". {@link isUnconditional} is the second reading.
  */
 function appliesAtNarrow(context: readonly string[]): boolean {
   for (const at of context) {
     if (!at.startsWith('@media')) continue;
-    for (const [, feature, value, unit] of at.matchAll(
-      /\(\s*(max|min)-width\s*:\s*([\d.]+)(px|r?em)\s*\)/g,
-    )) {
-      const bound = Number(value) * (unit === 'px' ? 1 : 16);
-      if (feature === 'min' && bound > NARROW_PX) return false;
-      if (feature === 'max' && bound < NARROW_PX) return false;
+    for (const feature of features(at)) {
+      if (widthHoldsAtNarrow(feature) === false) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Whether a rule in this at-rule context applies at {@link NARROW_PX} in EVERY
+ * state a 320 px screen can be in.
+ *
+ * A width band that holds at 320 px holds for every 320 px screen. A
+ * `pointer: coarse` band does not: a fine-pointer 320 px screen — a desktop
+ * window dragged narrow, which is the case the contract was written for — never
+ * matches it. Reading a coarse band as unconditional is what let the whole item
+ * contract be satisfied by a pair declared ONLY there: the `min-width` and the
+ * `overflow-wrap` a caller-sized control needs would exist for a phone and for
+ * nothing else, with all thirty-six assertions here green.
+ */
+function isUnconditional(context: readonly string[]): boolean {
+  for (const at of context) {
+    if (!at.startsWith('@media')) continue;
+    for (const feature of features(at)) {
+      const width = widthHoldsAtNarrow(feature);
+      if (width === undefined) return false;
+      if (!width) return false;
     }
   }
   return true;
@@ -221,6 +329,31 @@ function declaredValues(selector: string, property: string): string[] {
   const values: string[] = [];
   for (const rule of blocksFor(selector)) {
     if (!appliesAtNarrow(rule.context)) continue;
+    for (const match of rule.body.matchAll(pattern)) {
+      const value = match[1]?.trim();
+      if (value !== undefined) values.push(value);
+    }
+  }
+  return values;
+}
+
+/**
+ * The values `selector` is given for `property` in every state a 320 px screen
+ * can be in — the subset of {@link declaredValues} that no NON-WIDTH media
+ * condition gates.
+ *
+ * This is the reader for the question "is the declaration there at all". The
+ * other one answers "does every value that can reach this width clear the bar",
+ * and the two are not interchangeable: a `min-width` that exists only inside
+ * `@media (pointer: coarse)` satisfies the second and fails the first, and a
+ * fine-pointer 320 px screen is exactly the case that would then push the
+ * document with the gate green.
+ */
+function unconditionalValues(selector: string, property: string): string[] {
+  const pattern = new RegExp(String.raw`(?:^|;)\s*${property}\s*:\s*([^;}]+)`, 'g');
+  const values: string[] = [];
+  for (const rule of blocksFor(selector)) {
+    if (!isUnconditional(rule.context)) continue;
     for (const match of rule.body.matchAll(pattern)) {
       const value = match[1]?.trim();
       if (value !== undefined) values.push(value);
@@ -283,8 +416,18 @@ const COARSE_TARGET_PX = lengthPx('var(--tai-control-height-coarse)');
 function isRowFlex(selector: string): boolean {
   const displays = declaredValues(selector, 'display');
   if (!displays.some((display) => display === 'flex' || display === 'inline-flex')) return false;
-  const directions = declaredValues(selector, 'flex-direction');
-  return directions.length === 0 || directions.some((direction) => direction !== 'column');
+  // `flex-direction` starts at `row`, so the question is whether any state
+  // leaves it there. A rule that pins `column` for a VARIANT of the element
+  // (`.tai-segmented[data-orientation='vertical']`) says nothing about the
+  // element's own default state, and one that pins it in a band a 320 px screen
+  // may not be in says nothing about that screen. Only a rule on the bare
+  // selector, in no band this width can escape, makes it a column here.
+  return !blocksFor(selector).some(
+    (rule) =>
+      rule.selectors.includes(selector) &&
+      isUnconditional(rule.context) &&
+      /(?:^|;)\s*flex-direction\s*:\s*column/.test(rule.body),
+  );
 }
 
 /**
@@ -373,8 +516,16 @@ const CALLER_SIZED_ITEMS = [
 const NOT_CALLER_SIZED: Readonly<Record<string, string>> = {
   '.tai-select-item': 'lives inside the viewport-capped .tai-select-content popover',
   '.tai-select-item-indicator': 'a bare 16 px mark, flex: none, no text',
-  '.tai-brand': 'the product name, a constant this repo owns',
-  '.tai-topbar': 'justify-content: space-between over two fixed chrome slots',
+  // The two rows nothing in this repo renders. Their reasons are about what the
+  // rule DECLARES and what the published class is for, not about a live layout
+  // that could be observed here — there is none to observe, and a reason phrased
+  // as an observation of markup that does not exist is a claim nobody can check.
+  // `class-contract.test.ts` holds both to a stated published-surface reason as
+  // well, in both directions, so neither can quietly acquire or lose a call site.
+  '.tai-brand':
+    'published shell chrome with no call site here: the lockup holds a host own product name and a 24 px mark, both constants of whoever composes the frame',
+  '.tai-topbar':
+    'published shell chrome with no call site here: the rule declares justify-content: space-between over two fixed slots and a fixed height, so it lays out chrome rather than content',
   '.tai-icon-btn':
     'a fixed square: width and height are both var(--tai-control-height), and its only content is a 16 px icon',
   '.tai-checkbox':
@@ -439,9 +590,58 @@ describe('narrow-viewport contract', () => {
         ['@layer a', '@media (max-width: 639px)'],
       ],
     ]);
+    // A STATEMENT at-rule ends at its semicolon. Without the reset the walk
+    // reads `@layer a, b;` and the rule after it as one at-rule prelude and
+    // loses that rule entirely — every assertion about it then passes on
+    // nothing.
+    expect(rules('@layer a, b; .x { color: red }').map((rule) => rule.selectors)).toEqual([['.x']]);
     // …and the sheet itself really parsed.
     expect(sheet.length).toBeGreaterThan(150);
     expect(sheet.some((rule) => rule.context.some((at) => at.startsWith('@media')))).toBe(true);
+  });
+
+  it('reads a width band in BOTH spellings, and refuses one it cannot read', () => {
+    // Range syntax is the half that was unparsed, and therefore silently treated
+    // as applying: a band written `@media (width <= 639px)` could re-declare
+    // anything this file gates and never be seen.
+    expect(widthHoldsAtNarrow('max-width: 639px')).toBe(true);
+    expect(widthHoldsAtNarrow('min-width: 640px')).toBe(false);
+    expect(widthHoldsAtNarrow('min-width: 20rem')).toBe(true);
+    expect(widthHoldsAtNarrow('width <= 639px')).toBe(true);
+    expect(widthHoldsAtNarrow('width < 320px')).toBe(false);
+    expect(widthHoldsAtNarrow('width >= 640px')).toBe(false);
+    expect(widthHoldsAtNarrow('640px <= width')).toBe(false);
+    expect(widthHoldsAtNarrow('320px <= width <= 640px')).toBe(true);
+    expect(widthHoldsAtNarrow('640px < width < 1024px')).toBe(false);
+    // A condition about something else says nothing about width…
+    expect(widthHoldsAtNarrow('pointer: coarse')).toBeUndefined();
+    // …but a width condition this reader cannot parse RAISES. Defaulting either
+    // way is what turned an unread band into a silent pass.
+    expect(() => widthHoldsAtNarrow('width: calc(40em - 1px)')).toThrow(/unreadable width/);
+  });
+
+  it('separates "reaches this width" from "holds for every screen at it"', () => {
+    // The two readers, and the difference that matters. `@media (pointer: coarse)`
+    // reaches 320 px, so `.tai-segment`'s floor is declared twice there; only one
+    // of the two holds for a FINE-pointer 320 px screen.
+    expect(appliesAtNarrow(['@media (pointer: coarse)'])).toBe(true);
+    expect(isUnconditional(['@media (pointer: coarse)'])).toBe(false);
+    expect(isUnconditional(['@media (max-width: 639px)'])).toBe(true);
+    expect(isUnconditional(['@media (min-width: 640px)'])).toBe(false);
+    expect(declaredValues('.tai-segment', 'min-width')).toHaveLength(2);
+    expect(unconditionalValues('.tai-segment', 'min-width')).toEqual(['28px']);
+  });
+
+  it('reads a variant rule of the same element, not only the exact selector', () => {
+    // `.tai-btn:not(:disabled) { min-width: 200px }` is a different string, and a
+    // reader that compares strings never sees it — so the floor assertion below
+    // would pass while every enabled button held itself at 200 px.
+    const variants = blocksFor('.tai-btn').flatMap((rule) => rule.selectors);
+    expect(variants).toContain('.tai-btn:disabled');
+    // …and a DIFFERENT class whose name merely starts the same is not pulled in.
+    expect(variants).not.toContain('.tai-btn-primary');
+    // …nor is the same class under an ancestor, which is asked about by name.
+    expect(variants).not.toContain('.tai-table .tai-btn');
   });
 
   it('sees a band as well as the base rule, and keeps BOTH', () => {
@@ -471,11 +671,17 @@ describe('narrow-viewport contract', () => {
     // that a `@media (pointer: coarse)` band later set back to `wrap` would
     // satisfy a winner-reading while a FINE-pointer 320 px screen still pushed —
     // the same shadowing that hid `.tai-segment`'s base floor from this gate.
+    // The remedy has to EXIST for every 320 px screen, not only for a coarse
+    // one, so its presence is read unconditionally while its values are read
+    // across every reachable state.
     const wraps = declaredValues(selector, 'flex-wrap');
     const scrolls = declaredValues(selector, 'overflow-x');
-    const alwaysWraps = wraps.length > 0 && wraps.every((value) => value === 'wrap');
+    const alwaysWraps =
+      unconditionalValues(selector, 'flex-wrap').length > 0 &&
+      wraps.every((value) => value === 'wrap');
     const alwaysScrolls =
-      scrolls.length > 0 && scrolls.every((value) => /^(auto|scroll)$/.test(value));
+      unconditionalValues(selector, 'overflow-x').length > 0 &&
+      scrolls.every((value) => /^(auto|scroll)$/.test(value));
     expect([selector, alwaysWraps || alwaysScrolls]).toEqual([selector, true]);
   });
 
@@ -498,8 +704,18 @@ describe('narrow-viewport contract', () => {
     // could hold the control at a width a 320 px screen cannot pay for. EVERY
     // declaration that reaches this width has to clear it, not just the winner:
     // see `declaredValues`.
+    //
+    // PRESENCE is read unconditionally and VALUES across every reachable state.
+    // `@media (pointer: coarse)` carries no width condition, so it reaches
+    // 320 px — but a FINE-pointer 320 px screen, a desktop window dragged
+    // narrow, never matches it. Reading presence off the same list would let the
+    // whole pair live in that band and satisfy this assertion for a screen that
+    // never sees it.
     const floors = declaredValues(selector, 'min-width');
-    expect([selector, floors.length]).not.toEqual([selector, 0]);
+    expect([selector, unconditionalValues(selector, 'min-width').length]).not.toEqual([
+      selector,
+      0,
+    ]);
     for (const floor of floors) {
       const size = lengthPx(floor);
       expect([selector, floor, size !== undefined && size <= (COARSE_TARGET_PX ?? 0)]).toEqual([
@@ -509,7 +725,10 @@ describe('narrow-viewport contract', () => {
       ]);
     }
     const wraps = declaredValues(selector, 'overflow-wrap');
-    expect([selector, wraps.length]).not.toEqual([selector, 0]);
+    expect([selector, unconditionalValues(selector, 'overflow-wrap').length]).not.toEqual([
+      selector,
+      0,
+    ]);
     expect([selector, [...new Set(wraps)]]).toEqual([selector, ['anywhere']]);
     // …and nothing may pin the text back together afterwards.
     expect([selector, declaredValues(selector, 'white-space')]).toEqual([selector, []]);
@@ -525,6 +744,8 @@ describe('narrow-viewport contract', () => {
       scoped,
       ['normal'],
     ]);
+    // …and it holds for a fine-pointer 320 px screen as well as a coarse one.
+    expect([scoped, unconditionalValues(scoped, 'overflow-wrap').length]).not.toEqual([scoped, 0]);
     // The floor half, asserted as the EFFECT rather than as a spelling. What the
     // control needs back inside a table is a minimum that is not `0` — the
     // eight that carry `min-width: 0` get it from the group's `auto`, and
@@ -654,7 +875,7 @@ describe('narrow-viewport contract', () => {
     // the viewport cap uncaps it in that state, and a winner-reading would only
     // notice if the band happened to be last.
     const declarations = declaredValues(selector, property);
-    expect([selector, declarations.length]).not.toEqual([selector, 0]);
+    expect([selector, unconditionalValues(selector, property).length]).not.toEqual([selector, 0]);
     for (const declaration of declarations) {
       expect([
         selector,

@@ -11,6 +11,14 @@
  */
 import type { CSSProperties, ReactElement, ReactNode, Ref } from 'react';
 
+/** The wrapper props both layout primitives share, ref included. */
+interface LayoutElementProps {
+  readonly className?: string;
+  readonly style?: CSSProperties;
+  /** A consumer ref for the wrapper element itself. */
+  readonly ref?: Ref<HTMLDivElement>;
+}
+
 export interface PageHeaderProps {
   /** The screen's title. It is the `<h1>`'s accessible name, VERBATIM. */
   readonly title: string;
@@ -44,27 +52,27 @@ export function PageHeader({
   );
 }
 
-export interface PageLayoutProps {
+export interface PageLayoutProps extends LayoutElementProps {
   readonly children: ReactNode;
-  readonly className?: string;
-  readonly style?: CSSProperties;
 }
 
 /** The screen wrapper: the max-width, the gutters, and the vertical rhythm. */
-export function Page({ children, className, style }: PageLayoutProps): ReactElement {
+export function Page({ children, className, style, ref }: PageLayoutProps): ReactElement {
   return (
-    <div className={className === undefined ? 'tai-page' : `tai-page ${className}`} style={style}>
+    <div
+      className={className === undefined ? 'tai-page' : `tai-page ${className}`}
+      style={style}
+      ref={ref}
+    >
       {children}
     </div>
   );
 }
 
-export interface StackProps {
+export interface StackProps extends LayoutElementProps {
   readonly children: ReactNode;
   /** The gap step; 4 is the default and needs no modifier class. */
   readonly gap?: 2 | 3 | 4 | 6;
-  readonly className?: string;
-  readonly style?: CSSProperties;
 }
 
 /** The modifier class per non-default gap step; gap 4 is `.tai-stack`'s own gap. */
@@ -75,12 +83,12 @@ const STACK_GAP_CLASS: Record<2 | 3 | 6, string> = {
 };
 
 /** A vertical flex column on the spacing scale. */
-export function Stack({ children, gap = 4, className, style }: StackProps): ReactElement {
+export function Stack({ children, gap = 4, className, style, ref }: StackProps): ReactElement {
   const classes = ['tai-stack'];
   if (gap !== 4) classes.push(STACK_GAP_CLASS[gap]);
   if (className !== undefined) classes.push(className);
   return (
-    <div className={classes.join(' ')} style={style}>
+    <div className={classes.join(' ')} style={style} ref={ref}>
       {children}
     </div>
   );

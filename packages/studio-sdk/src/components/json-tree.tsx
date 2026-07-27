@@ -122,7 +122,7 @@ export function JsonTree({ data, defaultExpanded = true, label }: JsonTreeProps)
   const region = useOverflowRegion(paneRef, label ?? DEFAULT_LABEL);
 
   return (
-    <div ref={paneRef} className="tai-code-block" {...region}>
+    <div className="tai-code-block" {...region}>
       <JsonNode value={data} defaultExpanded={defaultExpanded} />
     </div>
   );

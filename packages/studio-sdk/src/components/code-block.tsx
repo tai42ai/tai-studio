@@ -30,7 +30,7 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
   return (
     <div className="tai-stack tai-stack-2">
       {language !== undefined ? <span className="tai-label">{language}</span> : null}
-      <pre ref={preRef} className="tai-code-block" {...region}>
+      <pre className="tai-code-block" {...region}>
         <code>{code}</code>
       </pre>
     </div>

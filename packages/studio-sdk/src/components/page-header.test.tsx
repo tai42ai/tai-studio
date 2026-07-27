@@ -106,6 +106,17 @@ describe('Page', () => {
     expect(page).toHaveClass('tai-page', 'narrow');
     expect(page.style.maxWidth).toBe('40rem');
   });
+
+  it('forwards a consumer ref to the wrapper', () => {
+    const ref = createRef<HTMLDivElement>();
+    const { container } = render(
+      <Page ref={ref}>
+        <p>body</p>
+      </Page>,
+    );
+
+    expect(ref.current).toBe(container.firstElementChild);
+  });
 });
 
 describe('Stack', () => {
@@ -140,5 +151,16 @@ describe('Stack', () => {
     const stack = container.firstElementChild as HTMLElement;
     expect(stack.className).toBe('tai-stack pad');
     expect(stack.style.paddingBlock).toBe('1rem');
+  });
+
+  it('forwards a consumer ref to the column', () => {
+    const ref = createRef<HTMLDivElement>();
+    const { container } = render(
+      <Stack ref={ref}>
+        <p>body</p>
+      </Stack>,
+    );
+
+    expect(ref.current).toBe(container.firstElementChild);
   });
 });

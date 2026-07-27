@@ -6,7 +6,7 @@
  * installed and advisory queries never blank it — their failures surface as loud
  * inline strips in their own sections.
  */
-import { useRef, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -90,12 +90,20 @@ function VersionStatusBadge({ status }: { readonly status: string }): ReactNode 
 /** The listing header + readme + metadata. */
 function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): ReactNode {
   const title = listingTitle(detail.display_name, detail.name);
-  const readmeRef = useRef<HTMLDivElement>(null);
   // A rendered README carries the two surfaces that outrun their column — wide
   // tables and code blocks — and React never rendered them, so they cannot be
   // wrapped in a `ScrollRegion`. This instruments them in place instead, so each
   // one that actually scrolls becomes a named keyboard target.
-  useProseScrollRegions(readmeRef);
+  const readmeRef = useProseScrollRegions();
+  // The prop object, not its string, is what React compares: a fresh literal
+  // makes every re-render of this card re-write the README's `innerHTML`,
+  // destroying the instrumented regions and dropping a reader standing in one
+  // onto the document body. Held by identity, the write happens only when the
+  // README itself changes.
+  const readme = useMemo(
+    () => (detail.readme_md === null ? null : { __html: detail.readme_md }),
+    [detail.readme_md],
+  );
   return (
     <Card>
       <div style={{ display: 'flex', gap: 'var(--tai-space-4)', alignItems: 'flex-start' }}>
@@ -149,16 +157,16 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
           ) : null}
         </div>
       </div>
-      {detail.readme_md !== null ? (
+      {readme === null ? null : (
         // readme_md is server-sanitized trusted HTML (sanitized at ingest); the
         // client is not the sanitization boundary and renders it as-is.
         <div
           ref={readmeRef}
           className="tai-prose"
           style={{ marginTop: 'var(--tai-space-4)' }}
-          dangerouslySetInnerHTML={{ __html: detail.readme_md }}
+          dangerouslySetInnerHTML={readme}
         />
-      ) : null}
+      )}
     </Card>
   );
 }

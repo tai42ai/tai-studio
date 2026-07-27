@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { act, render } from '@testing-library/react';
@@ -13,30 +13,86 @@ import type { BreakpointState } from './useBreakpoint';
 const BAND_EDGES = [639, 1023, 1279];
 
 const here = dirname(fileURLToPath(import.meta.url));
-const hookSource = readFileSync(resolve(here, 'useBreakpoint.ts'), 'utf8');
+const repoRoot = resolve(here, '../../../..');
 
 /**
- * EVERY stylesheet this package publishes, plus the app sheet that imports them.
+ * A source with its BLOCK comments removed, and — for TypeScript — its line
+ * comments too.
+ *
+ * Everything below reads media queries out of raw text, and a query written in
+ * prose is not a query: the hook's own docblock names the boundaries it keeps in
+ * lockstep, and a sheet's section comment names the band it introduces. Read as
+ * code, a comment could satisfy the reconciliation on its own — or, once edited,
+ * fail it while every declaration in the file was correct.
+ */
+function withoutComments(source: string, kind: 'css' | 'ts'): string {
+  const blocks = source.replaceAll(/\/\*[\s\S]*?\*\//g, ' ');
+  return kind === 'ts' ? blocks.replaceAll(/\/\/[^\n]*/g, ' ') : blocks;
+}
+
+const hookSource = withoutComments(readFileSync(resolve(here, 'useBreakpoint.ts'), 'utf8'), 'ts');
+
+/** Where a stylesheet that reaches a browser can live. `dist` is build output. */
+const SHEET_ROOTS = ['packages', 'apps'];
+const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
+
+/** Every `.css` file below `directory`, recursively. */
+function stylesheetsWithin(directory: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRECTORIES.has(entry.name)) {
+        found.push(...stylesheetsWithin(join(directory, entry.name)));
+      }
+    } else if (entry.name.endsWith('.css')) {
+      found.push(join(directory, entry.name));
+    }
+  }
+  return found;
+}
+
+/**
+ * EVERY stylesheet this repository publishes or serves, DISCOVERED rather than
+ * listed.
  *
  * The scan root used to be the single hard-coded `components.css`, so a band
  * declared in `tokens.css`, in `fonts.css` or in the app's own `styles.css` was
  * invisible to all three assertions even spelled honestly — a surface could
  * restyle at a width the hook cannot tell a feature about, with the gate green.
+ * A hand-written list closes that only for the sheets that existed when it was
+ * written, so the sheets are found instead.
  */
-const SHEET_PATHS = [
-  '../components/components.css',
-  '../components/tokens.css',
-  '../components/fonts.css',
-  '../../../../apps/studio/src/styles.css',
-];
-const sheets = SHEET_PATHS.map((path) => ({
-  path,
-  text: readFileSync(resolve(here, path), 'utf8'),
-}));
-const stylesheet = sheets[0]?.text ?? '';
+const sheets = SHEET_ROOTS.flatMap((root) => stylesheetsWithin(resolve(repoRoot, root)))
+  .sort()
+  .map((path) => ({
+    path: relative(repoRoot, path),
+    text: withoutComments(readFileSync(path, 'utf8'), 'css'),
+  }));
+
+/** The component layer — the sheet the hook's docblock names as its counterpart. */
+const stylesheet =
+  sheets.find((sheet) => sheet.path.endsWith('/components/components.css'))?.text ?? '';
 
 /** px per `em`/`rem`, at the root font size these sheets are written against. */
 const ROOT_FONT_PX = 16;
+
+/** A media feature — one parenthesised group — that constrains the WIDTH. */
+const WIDTH_FEATURE = /\(([^()]*\bwidth\b[^()]*)\)/g;
+
+/** The MAX-WIDTH px value a `width <operator> bound` comparison declares. */
+function edgeOf(operator: string, bound: number): number {
+  // `width <= N` and `width > N` both put the boundary AT N: one is the band
+  // that ends there, the other the band that starts one pixel later.
+  return operator === '<=' || operator === '>' ? bound : bound - 1;
+}
+
+/** `<` ⇄ `>`: the same comparison read from the other side of the operator. */
+const MIRRORED: Readonly<Record<string, string>> = {
+  '<': '>',
+  '<=': '>=',
+  '>': '<',
+  '>=': '<=',
+};
 
 /**
  * Every band edge `source` declares, normalised to the MAX-WIDTH px value it
@@ -50,30 +106,36 @@ const ROOT_FONT_PX = 16;
  * the gate had no `min-width` concept at all. An edge is an edge in whatever
  * unit and whatever comparison direction it is written; a `min-width: N` band
  * declares the edge at `N - 1`, which is the max-width value it partners.
+ *
+ * The comparisons are read from INSIDE each width feature rather than by
+ * matching a whole `(…)` group per spelling, so the DOUBLE-ENDED interval
+ * `(400px <= width <= 700px)` — legal MQ-4, and two band edges at once — is
+ * decoded as both of its ends instead of matching no pattern at all and
+ * declaring no edge. A mirrored comparison is flipped rather than given rules of
+ * its own: `(768px < width)` is `width > 768px`, and reading it as anything else
+ * put its edge one pixel off.
  */
 function declaredBandEdges(source: string): number[] {
   const edges: number[] = [];
   const px = (value: string | undefined, unit: string | undefined): number =>
     Number(value) * (unit === 'px' ? 1 : ROOT_FONT_PX);
 
-  for (const [, feature, value, unit] of source.matchAll(
-    /\(\s*(max|min)-width\s*:\s*([\d.]+)(px|r?em)\s*\)/g,
-  )) {
-    const bound = px(value, unit);
-    edges.push(feature === 'max' ? bound : bound - 1);
-  }
-  for (const [, operator, value, unit] of source.matchAll(
-    /\(\s*width\s*(<=|<|>=|>)\s*([\d.]+)(px|r?em)\s*\)/g,
-  )) {
-    const bound = px(value, unit);
-    edges.push(operator === '<=' || operator === '>' ? bound : bound - 1);
-  }
-  // The mirrored range spelling, `(768px <= width)`.
-  for (const [, value, unit, operator] of source.matchAll(
-    /\(\s*([\d.]+)(px|r?em)\s*(<=|<|>=|>)\s*width\s*\)/g,
-  )) {
-    const bound = px(value, unit);
-    edges.push(operator === '<=' || operator === '<' ? bound - 1 : bound);
+  for (const [, feature = ''] of source.matchAll(WIDTH_FEATURE)) {
+    for (const [, bound, value, unit] of feature.matchAll(
+      /\b(max|min)-width\s*:\s*([\d.]+)(px|r?em)/g,
+    )) {
+      edges.push(edgeOf(bound === 'max' ? '<=' : '>=', px(value, unit)));
+    }
+    for (const [, operator = '', value, unit] of feature.matchAll(
+      /\bwidth\s*(<=|<|>=|>)\s*([\d.]+)(px|r?em)/g,
+    )) {
+      edges.push(edgeOf(operator, px(value, unit)));
+    }
+    for (const [, value, unit, operator = ''] of feature.matchAll(
+      /([\d.]+)(px|r?em)\s*(<=|<|>=|>)\s*width\b/g,
+    )) {
+      edges.push(edgeOf(MIRRORED[operator] ?? operator, px(value, unit)));
+    }
   }
   return [...new Set(edges)].sort((a, b) => a - b);
 }
@@ -243,11 +305,16 @@ describe('band edges stay in lockstep with the stylesheet', () => {
     // reworded query would otherwise make every set empty and equal.
     expect(declaredBandEdges(hookSource).length).toBe(BAND_EDGES.length);
     expect([...stylesheet.matchAll(/@media\s*\(/g)].length).toBeGreaterThanOrEqual(5);
-    // …and every sheet named above really was read.
+    // …and every sheet discovered really was read.
     for (const sheet of sheets) {
       expect([sheet.path, sheet.text.trim() === '']).toEqual([sheet.path, false]);
     }
-    expect(sheets).toHaveLength(SHEET_PATHS.length);
+    // The discovery reaches beyond this package: a band in the shell's own sheet
+    // restyles a surface the hook cannot tell a feature about.
+    const paths = sheets.map((sheet) => sheet.path);
+    expect(paths).toContain('packages/studio-sdk/src/components/components.css');
+    expect(paths).toContain('apps/studio/src/styles.css');
+    expect(sheets.length).toBeGreaterThanOrEqual(4);
   });
 
   it('declares the same three edges in the hook and in components.css', () => {
@@ -285,8 +352,22 @@ describe('band edges stay in lockstep with the stylesheet', () => {
     expect(declaredBandEdges('@media not all and (min-width: 768px) {}')).toEqual([767]);
     expect(declaredBandEdges('@media (768px <= width) {}')).toEqual([767]);
     expect(declaredBandEdges('@media (width >= 900px) {}')).toEqual([899]);
+    // A mirrored STRICT comparison is the same statement read backwards:
+    // `768px < width` is `width > 768px`, whose band starts at 769 and so
+    // partners the max-width edge at 768 — not at 767.
+    expect(declaredBandEdges('@media (768px < width) {}')).toEqual([768]);
+    // The DOUBLE-ENDED interval declares TWO edges, and matched no
+    // whole-group pattern at all: `(400px <= width <= 700px)` used to declare
+    // none, so a band written that way was exempt from the reconciliation.
+    expect(declaredBandEdges('@media (400px <= width <= 700px) {}')).toEqual([399, 700]);
+    expect(declaredBandEdges('@media (40rem < width < 64rem) {}')).toEqual([640, 1023]);
     // …and a query with no width condition declares no edge.
     expect(declaredBandEdges('@media (prefers-reduced-motion: reduce) {}')).toEqual([]);
     expect(declaredBandEdges('@media (pointer: coarse) {}')).toEqual([]);
+    // A band named in PROSE is not a band: comments are blanked before any of
+    // the assertions above read a file, in the sheets and in the hook alike.
+    expect(withoutComments('/* @media (max-width: 900px) */\n.a {}', 'css')).not.toContain('900');
+    expect(withoutComments('// the 900px band\nconst a = 1;', 'ts')).not.toContain('900');
+    expect(withoutComments('/* a */ @media (max-width: 639px) {}', 'css')).toContain('639');
   });
 });

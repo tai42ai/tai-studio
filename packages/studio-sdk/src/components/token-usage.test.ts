@@ -2,22 +2,32 @@
  * Static gates over the whole monorepo's use of the design-system token contract.
  *
  * 1. Every `var(--tai-*)` written anywhere under `packages/`, `apps/` or `e2e/` names a token
- *    the design system actually defines. An undefined token resolves to nothing, which
- *    is invisible in review and silently ships an unstyled control — five of them were
- *    live before this contract existed.
+ *    `tokens.css` — the one sheet that declares the contract — actually defines. An
+ *    undefined token resolves to nothing, which is invisible in review and silently ships
+ *    an unstyled control — five of them were live before this contract existed. The
+ *    resolver reads that ONE sheet, and a second gate holds every other sheet to declaring
+ *    none: a definition unioned in from the app shell, or from the checked-in e2e build
+ *    artifact, would resolve an SDK component's token from outside the SDK and keep this
+ *    gate green while the published package shipped a token nothing defines.
  * 2. `--tai-color-decor` never lands on a `color:` declaration. It is the NON-TEXT tier
  *    (dividers, watermarks, decorative SVG fill/stroke) and sits below the text contrast
  *    floor, so as text it is a WCAG failure by construction.
  * 3. `TOKEN_NAMES` — the published plugin styling API — and the declarations in
  *    `tokens.css` are the same set, in both directions, once the `--tai-dark-*` storage
- *    half of each themed pair is set aside (it is mechanism, not API).
+ *    half of each themed pair is set aside (it is mechanism, not API). The VALUES behind
+ *    those names are pinned too: a token that keeps its name and changes its value ships
+ *    a different design system under an unchanged API, and nothing else here notices.
  * 4. THE THEME MECHANISM. The light value is the token and the dark value sits beside it
  *    under a `--tai-dark-` name; two blocks put the dark half into service — one keyed on
  *    `prefers-color-scheme`, one on a `data-theme="dark"` pin. The gates below hold that
  *    shape: every theme-varying token has both halves, the two blocks carry the SAME token
  *    set and no values of their own, no dark value is read from anywhere else, none sits
  *    dead, and `light-dark()` — which would fold each pair onto one line at the cost of a
- *    Chrome 123 / Firefox 120 / Safari 17.5 floor — is banned outright.
+ *    Chrome 123 / Firefox 120 / Safari 17.5 floor — is banned outright. Which blocks may
+ *    carry a value is decided by ENUMERATING THE SHEET rather than by naming the two dark
+ *    blocks: `:root[data-theme='light']` is a real block in this file that no named
+ *    pattern reached, so a colour restated there was checked by nothing while the
+ *    identical edit one block lower went red.
  *
  * The scan is source-level on purpose: it sees the JSX inline styles and the stylesheets
  * alike, and it needs no build.
@@ -88,15 +98,26 @@ function captured(match: RegExpMatchArray): string {
   return group;
 }
 
-/** The token names the design system declares, read from its stylesheets. */
+/**
+ * The token names the design system declares, read from `tokens.css` ALONE.
+ *
+ * Unioning every discovered sheet — which this did first — makes any sheet in the
+ * repository a definition site: an SDK component referencing a token declared only in the
+ * app shell's own sheet, or only in the checked-in e2e build artifact, resolved and the
+ * gate stayed green, while the published package shipped a `var()` nothing defines. The
+ * declarations are read from the COMMENT-STRIPPED text, so a token named in the prose
+ * that explains the theme mechanism cannot define one either.
+ */
 function definedTokens(): ReadonlySet<string> {
-  const defined = new Set<string>();
-  for (const stylesheet of stylesheets) {
-    for (const match of readFileSync(stylesheet, 'utf8').matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)) {
-      defined.add(captured(match));
-    }
-  }
-  return defined;
+  return new Set([...TOKENS_CSS.matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)].map(captured));
+}
+
+/** `sheet: --token` for every custom property under the DS namespace a sheet declares. */
+function tokensDeclaredIn(stylesheet: string): string[] {
+  const source = withoutComments(readFileSync(stylesheet, 'utf8'));
+  return [...source.matchAll(/^\s*(--tai-[\w-]+)\s*:/gm)].map(
+    (match) => `${relative(repoRoot, stylesheet)}: ${captured(match)}`,
+  );
 }
 
 /** `source` with its block comments removed, so prose can never read as code. */
@@ -161,6 +182,89 @@ function darkCounterpart(token: string): string {
   return token.replace(/^--tai-/, '--tai-dark-');
 }
 
+/**
+ * The at-rule preludes enclosing `offset` in `tokens.css`, outermost first.
+ *
+ * A block's ROLE is decided by where it sits as much as by its selector: the same
+ * `:root { --tai-motion-fast: … }` is the authoring block at the top level and the
+ * reduced-motion override inside its query. Blocks that are not at-rules are pushed as
+ * `''` so the stack stays balanced and a rule nested two levels deep is still reached.
+ */
+function contextAt(offset: number): string[] {
+  const stack: string[] = [];
+  let prelude = '';
+  for (let index = 0; index < offset; index++) {
+    const character = TOKENS_CSS[index];
+    if (character === '{') {
+      const head = prelude.trim();
+      prelude = '';
+      stack.push(head.startsWith('@') ? head : '');
+    } else if (character === '}') {
+      stack.pop();
+      prelude = '';
+    } else {
+      prelude += character ?? '';
+    }
+  }
+  return stack.filter((head) => head !== '');
+}
+
+/** What a block in `tokens.css` is allowed to do with a custom property. */
+type BlockRole =
+  /** The base `:root`: the one block where a value is written. */
+  | 'authoring'
+  /** A block that puts the dark half into service: it may only RE-POINT. */
+  | 'dark'
+  /** The reduced-motion override: it may only ZERO a duration. */
+  | 'reduced-motion'
+  /** Anything else. It may carry no custom property at all. */
+  | 'other';
+
+interface TokenBlock {
+  readonly selector: string;
+  readonly role: BlockRole;
+  readonly body: string;
+}
+
+function roleOf(selector: string, context: readonly string[]): BlockRole {
+  const queries = context.filter((at) => at.startsWith('@media'));
+  const under = (feature: RegExp): boolean => queries.some((at) => feature.test(at));
+  if (under(/prefers-reduced-motion:\s*reduce/) && selector === ':root') return 'reduced-motion';
+  if (under(/prefers-color-scheme:\s*dark/) && selector === ":root:not([data-theme='light'])") {
+    return 'dark';
+  }
+  if (queries.length > 0) return 'other';
+  if (selector === ":root[data-theme='dark']") return 'dark';
+  if (selector === ':root') return 'authoring';
+  return 'other';
+}
+
+/**
+ * Every innermost block in `tokens.css` that declares a custom property, DISCOVERED
+ * from the sheet and classified by its selector and its enclosing at-rules.
+ *
+ * Naming the blocks instead — `BASE_ROOT`, `DARK_MEDIA`, `DARK_PINNED` — checks only the
+ * blocks somebody thought to name, and a sheet grows blocks: `:root[data-theme='light']`
+ * is live in this file and was reached by none of them, so a literal colour restated
+ * there was judged by nothing while the identical edit one block lower went red. Reading
+ * the sheet makes an unrecognised block a failure rather than an omission.
+ */
+function customPropertyBlocks(): TokenBlock[] {
+  return [...TOKENS_CSS.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+    .map((match) => {
+      const selector = (match[1] ?? '').trim();
+      return {
+        selector,
+        body: match[2] ?? '',
+        role: roleOf(selector, contextAt(match.index)),
+      };
+    })
+    .filter((block) => declarationsIn(block.body).length > 0);
+}
+
+/** A duration that has been zeroed, in either spelling. */
+const ZERO_DURATION = /^0m?s$/;
+
 /** The media query that applies the dark half to a root not pinned to light. */
 const DARK_MEDIA =
   /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{\s*:root:not\(\[data-theme='light'\]\)\s*\{/;
@@ -202,6 +306,34 @@ function declarationsIn(body: string): readonly (readonly [string, string])[] {
   );
 }
 
+/** px per `rem`, at the root font size these sheets are written against. */
+const ROOT_FONT_PX = 16;
+
+/** `--token: value` for every custom property the base `:root` authors, in order. */
+function authoredValues(): string[] {
+  return declarationsIn(ruleBody(BASE_ROOT)).map(
+    ([token, value]) => `${token}: ${value.replaceAll(/\s+/g, ' ').trim()}`,
+  );
+}
+
+/**
+ * Every token authored in `rem` whose comment states the px it renders at, as
+ * `[token, declared rem, documented px]`.
+ *
+ * The type and spacing scales carry their rendered px beside them, and that comment is
+ * what a reader designs against. Read as documentation it is a second statement of the
+ * same value, so the two are reconciled below rather than left to drift into a comment
+ * describing a size the sheet stopped declaring. Read from the sheet WITH its comments,
+ * for obvious reasons.
+ */
+function remTokensWithDocumentedPx(): [string, number, number][] {
+  return [
+    ...readFileSync(tokenStylesheet, 'utf8').matchAll(
+      /(--tai-[\w-]+):\s*([\d.]+)rem;\s*\/\*\s*([\d.]+)px/g,
+    ),
+  ].map(([, token, rem, px]) => [token ?? '', Number(rem), Number(px)]);
+}
+
 /** Every reference to the decor token, in a stylesheet or a JSX inline style. */
 const DECOR_REFERENCE = /var\(\s*--tai-color-decor/g;
 
@@ -219,12 +351,31 @@ function governingProperty(source: string, valueIndex: number): string | undefin
 }
 
 /**
+ * A border property that paints ONE edge — a rule or a divider — rather than the
+ * closed boundary that says "this is a control".
+ *
+ * Physical (`border-left`) and logical (`border-inline-start`) spellings alike, with or
+ * without the `-color`/`-width`/`-style` sub-property. `border` and `border-color` are
+ * NOT here: they paint all four edges at once.
+ */
+const SINGLE_EDGE_BORDER =
+  /^border-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?(?:-(?:color|width|style))?$/;
+
+/**
  * `--tai-color-decor` is the NON-TEXT tier — it sits below the text contrast
  * floor, so as text or as a focus indicator it is a WCAG failure by
  * construction. The gate is a WHITELIST of the declarations it may appear on, so
  * a property nobody thought of (`caret-color`, `-webkit-text-fill-color`,
  * `text-decoration-color`) fails rather than slipping through an enumeration of
  * the forbidden ones.
+ *
+ * The tier has a SECOND clause — a decorative token is never a component's identifying
+ * boundary — and allowing `border` and every `border-*` outright enforced none of it:
+ * `border: 1px solid var(--tai-color-decor)` on an input draws that input's whole
+ * outline below 3:1, which is the contrast failure the contrast-safe
+ * `--tai-color-control-border` exists to prevent. So the allowance is narrowed to the
+ * edge-painting spellings — a divider, a gutter rule, the JSON tree's indent guide —
+ * and the four-edge shorthands are refused.
  */
 function decorIsAllowedOn(property: string): boolean {
   // JSX writes `borderLeft`; CSS writes `border-left`. One spelling to test.
@@ -232,8 +383,7 @@ function decorIsAllowedOn(property: string): boolean {
   return (
     kebab === 'background' ||
     kebab.startsWith('background-') ||
-    kebab === 'border' ||
-    kebab.startsWith('border-') ||
+    SINGLE_EDGE_BORDER.test(kebab) ||
     kebab === 'column-rule' ||
     kebab.startsWith('column-rule-') ||
     kebab === 'box-shadow' ||
@@ -270,6 +420,20 @@ describe('design-system token usage', () => {
   it('scans the whole monorepo (a scan that found nothing would pass vacuously)', () => {
     expect(files.length).toBeGreaterThan(100);
     expect(definedTokens().size).toBeGreaterThan(50);
+  });
+
+  it('declares the contract in ONE sheet, so nothing defines a token beside it', () => {
+    // The other half of reading `tokens.css` alone. A `--tai-*` declared in another
+    // sheet is a second definition site: it is not in `TOKEN_NAMES`, no plugin can
+    // discover it, and it resolves only for the hosts that happen to load that sheet.
+    // A variable genuinely private to one component belongs under its own namespace,
+    // not under the published one.
+    const elsewhere = stylesheets
+      .filter((stylesheet) => stylesheet !== tokenStylesheet)
+      .flatMap(tokensDeclaredIn);
+    expect(elsewhere).toEqual([]);
+    // The reader really finds declarations — otherwise the sweep above is vacuous.
+    expect(tokensDeclaredIn(tokenStylesheet).length).toBeGreaterThan(100);
   });
 
   it('resolves every referenced var(--tai-*) to a defined token', () => {
@@ -351,20 +515,29 @@ describe('design-system token usage', () => {
       }
     });
 
-    it('writes every colour exactly once', () => {
+    it('writes every colour exactly once, in the one block that authors values', () => {
       // A raw value belongs in the base `:root` block and nowhere else. The two
       // blocks that apply the dark half only re-point a token at its
       // `--tai-dark-*` neighbour, so no light/dark pair is ever restated where
-      // the two halves could drift apart.
-      for (const [name, pattern] of [
-        ['the dark media query', DARK_MEDIA],
-        ['the pinned-dark block', DARK_PINNED],
-      ] as const) {
-        const restated = declarationsIn(ruleBody(pattern))
-          .filter(([token, value]) => value !== `var(${darkCounterpart(token)})`)
-          .map(([token, value]) => `${token}: ${value}`);
-        expect([name, restated]).toEqual([name, []]);
+      // the two halves could drift apart; the reduced-motion block only zeroes a
+      // duration. Every OTHER block in the sheet may carry no custom property at
+      // all — which is what puts `:root[data-theme='light']` under the rule.
+      const blocks = customPropertyBlocks();
+      // The three roles above, and nothing has silently stopped parsing.
+      expect(blocks.length).toBeGreaterThanOrEqual(4);
+      expect(blocks.filter((block) => block.role === 'authoring')).toHaveLength(1);
+      expect(blocks.filter((block) => block.role === 'dark')).toHaveLength(2);
+
+      const restated: string[] = [];
+      for (const block of blocks) {
+        if (block.role === 'authoring') continue;
+        for (const [token, value] of declarationsIn(block.body)) {
+          if (block.role === 'dark' && value === `var(${darkCounterpart(token)})`) continue;
+          if (block.role === 'reduced-motion' && ZERO_DURATION.test(value)) continue;
+          restated.push(`${block.selector}: ${token}: ${value}`);
+        }
       }
+      expect(restated).toEqual([]);
     });
 
     it('applies the dark half identically however the theme is chosen', () => {
@@ -468,13 +641,202 @@ describe('design-system token usage', () => {
         true,
       );
 
-      // The floor these sheets DO set is declared rather than left implicit.
+      // The floor these sheets DO set is declared rather than left implicit, and it is
+      // pinned as the WHOLE list. `arrayContaining` only asks that the pinned entries are
+      // present, so a looser one beside them — `chrome >= 60`, `safari >= 12` — lowers
+      // the real floor to the loosest query in the list while every named entry still
+      // matches. What ships is the union, so the union is what is asserted.
       const declared = JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8')) as {
         browserslist?: readonly string[];
       };
-      expect(declared.browserslist).toEqual(
-        expect.arrayContaining(['chrome >= 99', 'firefox >= 97', 'safari >= 15.4']),
-      );
+      expect(declared.browserslist).toEqual([
+        'chrome >= 99',
+        'edge >= 99',
+        'firefox >= 97',
+        'safari >= 15.4',
+        'ios_saf >= 15.4',
+      ]);
+    });
+  });
+
+  describe('the values behind the names', () => {
+    // `TOKEN_NAMES` and the gate above pin the token LIST. A token that keeps its
+    // name and changes its VALUE ships a different design system under the same
+    // API — `--tai-text-xl` reading 1rem rather than 1.4375rem collapses the page
+    // title onto body text with every name present, every reference resolving and
+    // nothing red anywhere in the repository.
+
+    it('reads the authoring block (a pin over an empty list would pass vacuously)', () => {
+      expect(authoredValues().length).toBeGreaterThan(100);
+      expect(remTokensWithDocumentedPx().length).toBeGreaterThan(10);
+    });
+
+    it('pins the VALUE behind every token, not merely its name', () => {
+      // The list below IS the design system's declared values, in BOTH directions:
+      // a kept name given a new value and a token declared with a value nobody
+      // recorded fail here alike.
+      expect(authoredValues()).toMatchInlineSnapshot(`
+        [
+          "--tai-color-bg: #ffffff",
+          "--tai-dark-color-bg: #0c0e12",
+          "--tai-color-surface: #f9fafb",
+          "--tai-dark-color-surface: #12151b",
+          "--tai-color-surface-raised: #ffffff",
+          "--tai-dark-color-surface-raised: #171c24",
+          "--tai-color-surface-disabled: var(--tai-color-surface)",
+          "--tai-color-code-bg: #f3f4f6",
+          "--tai-dark-color-code-bg: #10131a",
+          "--tai-color-border: #e5e7eb",
+          "--tai-dark-color-border: #262c36",
+          "--tai-color-border-strong: #d1d5db",
+          "--tai-dark-color-border-strong: #39414e",
+          "--tai-color-control-border: #767c85",
+          "--tai-dark-color-control-border: #646c79",
+          "--tai-color-border-disabled: var(--tai-color-border)",
+          "--tai-color-text: #111827",
+          "--tai-dark-color-text: #e6e8ec",
+          "--tai-color-heading: #000000",
+          "--tai-dark-color-heading: #ffffff",
+          "--tai-color-text-muted: rgba(17, 24, 39, 0.62)",
+          "--tai-dark-color-text-muted: rgba(230, 232, 236, 0.64)",
+          "--tai-color-text-disabled: rgba(17, 24, 39, 0.38)",
+          "--tai-dark-color-text-disabled: rgba(230, 232, 236, 0.36)",
+          "--tai-color-placeholder: var(--tai-color-text-muted)",
+          "--tai-color-decor: rgba(17, 24, 39, 0.44)",
+          "--tai-dark-color-decor: rgba(230, 232, 236, 0.42)",
+          "--tai-color-accent: #dc143c",
+          "--tai-dark-color-accent: #ed4c67",
+          "--tai-color-accent-hover: #800020",
+          "--tai-dark-color-accent-hover: #f4718a",
+          "--tai-color-accent-on-tint: #be123c",
+          "--tai-dark-color-accent-on-tint: #f4718a",
+          "--tai-color-on-accent: #ffffff",
+          "--tai-dark-color-on-accent: #0c0e12",
+          "--tai-color-accent-tint: rgba(220, 20, 60, 0.08)",
+          "--tai-dark-color-accent-tint: rgba(237, 76, 103, 0.12)",
+          "--tai-color-ok-text: #047857",
+          "--tai-dark-color-ok-text: #34d399",
+          "--tai-color-err-text: #b91c1c",
+          "--tai-dark-color-err-text: #f87171",
+          "--tai-color-warn-text: #92400e",
+          "--tai-dark-color-warn-text: #fbbf24",
+          "--tai-color-ok-fill: #10b981",
+          "--tai-dark-color-ok-fill: #34d399",
+          "--tai-color-err-fill: #ef4444",
+          "--tai-dark-color-err-fill: #f87171",
+          "--tai-color-warn-fill: #d97706",
+          "--tai-dark-color-warn-fill: #fbbf24",
+          "--tai-color-ok-tint: rgba(16, 185, 129, 0.1)",
+          "--tai-dark-color-ok-tint: rgba(52, 211, 153, 0.12)",
+          "--tai-color-err-tint: rgba(239, 68, 68, 0.1)",
+          "--tai-dark-color-err-tint: rgba(248, 113, 113, 0.12)",
+          "--tai-color-warn-tint: rgba(217, 119, 6, 0.1)",
+          "--tai-dark-color-warn-tint: rgba(251, 191, 36, 0.12)",
+          "--tai-color-on-fill: #0c0e12",
+          "--tai-color-focus-ring: var(--tai-color-accent)",
+          "--tai-color-scrim: rgba(0, 0, 0, 0.45)",
+          "--tai-dark-color-scrim: rgba(0, 0, 0, 0.6)",
+          "--tai-color-prose-link: #dc143c",
+          "--tai-dark-color-prose-link: #f4718a",
+          "--tai-color-prose-link-hover: #800020",
+          "--tai-dark-color-prose-link-hover: #ed4c67",
+          "--tai-color-syntax-key: var(--tai-color-text-muted)",
+          "--tai-color-syntax-string: var(--tai-color-ok-text)",
+          "--tai-color-syntax-number: var(--tai-color-accent)",
+          "--tai-color-syntax-bool: var(--tai-color-warn-text)",
+          "--tai-color-primary: var(--tai-color-accent)",
+          "--tai-color-primary-text: var(--tai-color-on-accent)",
+          "--tai-color-danger: var(--tai-color-err-text)",
+          "--tai-color-danger-text: #ffffff",
+          "--tai-dark-color-danger-text: #0c0e12",
+          "--tai-color-danger-hover: #7f1d1d",
+          "--tai-dark-color-danger-hover: #fca5a5",
+          "--tai-color-danger-surface: var(--tai-color-err-tint)",
+          "--tai-color-success: var(--tai-color-ok-text)",
+          "--tai-color-warning: var(--tai-color-warn-text)",
+          "--tai-space-1: 0.25rem",
+          "--tai-space-2: 0.5rem",
+          "--tai-space-3: 0.75rem",
+          "--tai-space-4: 1rem",
+          "--tai-space-5: 1.25rem",
+          "--tai-space-6: 1.5rem",
+          "--tai-space-8: 2rem",
+          "--tai-radius-sm: 4px",
+          "--tai-radius-code: 6px",
+          "--tai-radius-md: 8px",
+          "--tai-radius-tile: 10px",
+          "--tai-radius-lg: 12px",
+          "--tai-radius-overlay: 14px",
+          "--tai-radius-full: 999px",
+          "--tai-font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+          "--tai-font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace",
+          "--tai-text-display: 1.625rem",
+          "--tai-text-xl: 1.4375rem",
+          "--tai-text-section: 1.0625rem",
+          "--tai-text-lg: 0.9375rem",
+          "--tai-text-md: 0.84375rem",
+          "--tai-text-sm: 0.78125rem",
+          "--tai-text-code: 0.75rem",
+          "--tai-text-xs: 0.6875rem",
+          "--tai-control-height: 36px",
+          "--tai-control-height-coarse: 44px",
+          "--tai-motion-fast: 150ms",
+          "--tai-motion-base: 250ms",
+          "--tai-shadow-lift-color: rgb(0 0 0 / 0.08)",
+          "--tai-dark-shadow-lift-color: rgb(0 0 0 / 0.45)",
+          "--tai-shadow-overlay-color: rgb(0 0 0 / 0.16)",
+          "--tai-dark-shadow-overlay-color: rgb(0 0 0 / 0.6)",
+          "--tai-shadow-lift: 0 12px 32px var(--tai-shadow-lift-color)",
+          "--tai-shadow-overlay: 0 24px 48px var(--tai-shadow-overlay-color)",
+          "--tai-shadow-sm: var(--tai-shadow-lift)",
+          "--tai-shadow-md: var(--tai-shadow-overlay)",
+          "--tai-z-sticky: 10",
+          "--tai-z-dropdown: 20",
+          "--tai-z-overlay: 30",
+          "--tai-z-dialog: 40",
+          "--tai-z-popover: 45",
+          "--tai-z-tooltip: 50",
+        ]
+      `);
+    });
+
+    it('renders each rem token at the px its own comment documents', () => {
+      // The comment beside a type or spacing token is what a reader designs
+      // against, so it is a second statement of the same value. Reconciling them
+      // catches the half-edit — a value moved with the note left behind — that a
+      // pin on either one alone reads as correct.
+      const inconsistent = remTokensWithDocumentedPx()
+        .filter(([, rem, px]) => rem * ROOT_FONT_PX !== px)
+        .map(
+          ([token, rem, px]) =>
+            `${token}: ${String(rem)}rem is ${String(rem * ROOT_FONT_PX)}px, ` +
+            `documented as ${String(px)}px`,
+        );
+      expect(inconsistent).toEqual([]);
+    });
+
+    it('keeps the type scale ordered, so a size never outranks the one above it', () => {
+      // The scale is a ladder: `xs` is the floor and `display` the top. A value
+      // that steps out of order still renders, still resolves, and quietly puts a
+      // label above a heading.
+      const SCALE = [
+        '--tai-text-xs',
+        '--tai-text-code',
+        '--tai-text-sm',
+        '--tai-text-md',
+        '--tai-text-lg',
+        '--tai-text-section',
+        '--tai-text-xl',
+        '--tai-text-display',
+      ];
+      const sizes = new Map(remTokensWithDocumentedPx().map(([token, rem]) => [token, rem]));
+      const ladder = SCALE.map((token) => {
+        const rem = sizes.get(token);
+        if (rem === undefined) throw new Error(`${token} is not authored in rem in tokens.css`);
+        return rem;
+      });
+      expect(ladder).toEqual([...ladder].sort((a, b) => a - b));
+      expect(new Set(ladder).size).toBe(ladder.length);
     });
   });
 
@@ -495,9 +857,15 @@ describe('design-system token usage', () => {
         "{ background: '#fff', color: 'var(--tai-color-decor)' }",
         "{ caretColor: 'var(--tai-color-decor)' }",
         "{ WebkitTextFillColor: 'var(--tai-color-decor)' }",
-        // Allowed: the non-text tier — lines, grounds, decorative SVG.
+        // Forbidden: a four-edge border is the boundary that identifies a control,
+        // and this tier sits below the 3:1 a boundary needs.
+        'border: 1px solid var(--tai-color-decor);',
         'border-color: var(--tai-color-decor);',
+        "{ border: '1px solid var(--tai-color-decor)' }",
+        // Allowed: the non-text tier — single-edge rules, grounds, decorative SVG.
         'border-left: 1px solid var(--tai-color-decor);',
+        'border-bottom-color: var(--tai-color-decor);',
+        'border-inline-start: 1px solid var(--tai-color-decor);',
         'background: linear-gradient(90deg, var(--tai-color-decor), transparent);',
         'fill: var(--tai-color-decor);',
         'stroke: var(--tai-color-decor);',
@@ -516,6 +884,9 @@ describe('design-system token usage', () => {
         'color',
         'caretColor',
         'WebkitTextFillColor',
+        'border',
+        'border-color',
+        'border',
       ]);
     });
 

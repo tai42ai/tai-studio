@@ -37,6 +37,32 @@ describe('Table primitives', () => {
     expect(bodyCells[1]).toHaveTextContent('builtin');
   });
 
+  it('associates every header cell with what it heads, column by default', () => {
+    render(
+      <Table>
+        <THead>
+          <TR>
+            <TH>Name</TH>
+            <TH numeric>Calls</TH>
+          </TR>
+        </THead>
+        <TBody>
+          <TR>
+            <TH scope="row">echo</TH>
+            <TD numeric>1204</TD>
+          </TR>
+        </TBody>
+      </Table>,
+    );
+
+    // Without a scope nothing ties a header to the cells under it, and a screen
+    // reader announcing a data cell has no header to name it with.
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toHaveAttribute('scope', 'col');
+    expect(screen.getByRole('columnheader', { name: 'Calls' })).toHaveAttribute('scope', 'col');
+    // The leading cell of a body row heads the row, and says so.
+    expect(screen.getByRole('rowheader', { name: 'echo' })).toHaveAttribute('scope', 'row');
+  });
+
   it('marks a numeric column on both the header and the cell', () => {
     render(
       <Table className="tai-mono">

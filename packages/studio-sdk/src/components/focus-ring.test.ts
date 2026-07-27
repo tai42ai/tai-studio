@@ -8,34 +8,92 @@
  * sheet, silently took the ring off every Select option — so the cancellation is
  * what this file watches.
  */
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 const here = dirname(fileURLToPath(import.meta.url));
+const repoRoot = resolve(here, '../../../..');
+
+/** Where a stylesheet that reaches a browser can live. `dist` is build output. */
+const SHEET_ROOTS = ['packages', 'apps'];
+const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
+
+/** Every `.css` file below `directory`, recursively. */
+function stylesheetsWithin(directory: string): string[] {
+  const found: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRECTORIES.has(entry.name)) {
+        found.push(...stylesheetsWithin(join(directory, entry.name)));
+      }
+    } else if (entry.name.endsWith('.css')) {
+      found.push(join(directory, entry.name));
+    }
+  }
+  return found;
+}
 
 /**
  * EVERY stylesheet that reaches the browser, not just this package's component
- * layer. A ring cancelled from another sheet is exactly as invisible, and
- * `apps/studio/src/styles.css` carries two UNLAYERED blocks that outrank every
- * design-system layer — reading `components.css` alone left the one file whose
- * rules beat the ring unconditionally outside the contract.
+ * layer, and DISCOVERED rather than listed. A ring cancelled from another sheet
+ * is exactly as invisible, and `apps/studio/src/styles.css` carries UNLAYERED
+ * blocks that outrank every design-system layer — reading `components.css` alone
+ * left the one file whose rules beat the ring unconditionally outside the
+ * contract, and a fourth sheet added beside these would fall out the same way.
  */
-const SHEETS = [
-  resolve(here, 'components.css'),
-  resolve(here, 'tokens.css'),
-  resolve(here, '../../../../apps/studio/src/styles.css'),
-];
+const SHEETS = SHEET_ROOTS.flatMap((root) => stylesheetsWithin(resolve(repoRoot, root))).sort();
+
+/**
+ * `source` with every brace inside a quoted value replaced by a space.
+ *
+ * Everything below parses by counting braces, and a brace is legal inside a CSS
+ * string: one `content: '}'` truncates the rule it sits in and desynchronises
+ * every brace count after it, so a cancellation later in the sheet is read at
+ * the wrong depth — or not read at all. Only the braces are neutralised, at the
+ * same offsets: the quotes themselves stay, because `[data-theme='dark']` is a
+ * selector this file matches as written.
+ */
+function neutraliseQuotedBraces(source: string): string {
+  let out = '';
+  let quote: string | undefined;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index] ?? '';
+    if (quote !== undefined) {
+      if (character === '\\') {
+        out += source.slice(index, index + 2);
+        index += 1;
+        continue;
+      }
+      if (character === quote) quote = undefined;
+      out += character === '{' || character === '}' ? ' ' : character;
+      continue;
+    }
+    if (character === '"' || character === "'") quote = character;
+    out += character;
+  }
+  return out;
+}
+
+/** Stylesheet text as this file parses it: no comments, no brace inside a string. */
+function sheetText(source: string): string {
+  return neutraliseQuotedBraces(source.replaceAll(/\/\*[\s\S]*?\*\//g, ''));
+}
+
+/** The path of a discovered sheet, or a loud failure if it has moved. */
+function sheetPath(suffix: string): string {
+  const found = SHEETS.find((path) => path.endsWith(suffix));
+  if (found === undefined) throw new Error(`no ${suffix} among the scanned stylesheets`);
+  return found;
+}
 
 /** The component layer alone — what the ring's own declaration is asserted from. */
-const stylesheet = readFileSync(SHEETS[0] ?? '', 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+const stylesheet = sheetText(readFileSync(sheetPath('/components.css'), 'utf8'));
 
 /** All sheets concatenated — what CANCELLATIONS are hunted in. */
-const allSheets = SHEETS.map((path) =>
-  readFileSync(path, 'utf8').replaceAll(/\/\*[\s\S]*?\*\//g, ''),
-).join('\n');
+const allSheets = SHEETS.map((path) => sheetText(readFileSync(path, 'utf8'))).join('\n');
 
 interface Rule {
   readonly selector: string;
@@ -74,8 +132,18 @@ function contextAt(source: string, offset: number): string[] {
   return stack.filter((head) => head !== '');
 }
 
-/** A media query keyed on viewport WIDTH — a rule that does not apply everywhere. */
-const WIDTH_CONDITIONED = /\(\s*(?:max|min)-width\s*:/;
+/**
+ * A media query keyed on viewport WIDTH — a rule that does not apply everywhere.
+ *
+ * Every spelling CSS accepts, because a rule is banded whichever way the band is
+ * written. Matching only `(max-width:`/`(min-width:` — which this did first —
+ * left MEDIA QUERIES LEVEL 4 RANGE SYNTAX (`@media (width <= 639px)`,
+ * `@media (400px < width)`) unrecognised, so a shared ring block banded away
+ * above every real screen still read as applying at every width and this file
+ * stayed green with no ring on any device.
+ */
+const WIDTH_CONDITIONED =
+  /\(\s*(?:(?:max|min)-width\s*:|width\s*[<>=]|[\d.]+(?:px|r?em|ch|ex|vw|vh|vmin|vmax)\s*[<>=])/;
 
 /** Whether a rule at this context applies at EVERY viewport width. */
 function appliesAtEveryWidth(context: readonly string[]): boolean {
@@ -329,7 +397,57 @@ describe('visible focus', () => {
     );
     expect(sample).toHaveLength(3);
     expect(everywhere(sample)).toHaveLength(1);
+
+    // Every spelling of a band, including the range syntax an integer-px pattern
+    // never saw. A band this reader cannot see is a band it reports as reaching
+    // every screen, which is exactly how a ring gets banded away in silence.
+    for (const query of [
+      '@media (max-width: 639px)',
+      '@media (min-width: 640px)',
+      '@media (width <= 639px)',
+      '@media (width < 640px)',
+      '@media (width >= 40rem)',
+      '@media (640px <= width)',
+      '@media screen and (max-width: 47.9375em)',
+    ]) {
+      expect([query, appliesAtEveryWidth([query])]).toEqual([query, false]);
+    }
+    for (const query of [
+      '@media (prefers-reduced-motion: reduce)',
+      '@media (pointer: coarse)',
+      '@layer tai-components',
+      '@supports (height: 100dvh)',
+    ]) {
+      expect([query, appliesAtEveryWidth([query])]).toEqual([query, true]);
+    }
   });
+
+  it('parses a brace inside a quoted value without losing the walk', () => {
+    // A brace is legal inside a CSS string, and the rule it sits in is truncated
+    // at it: a cancellation written after one is invisible, and every brace count
+    // from there on is off by one. The sheets are neutralised on read; this is
+    // the control that the neutralising works and changes nothing else.
+    const parsed = rulesOf(
+      sheetText(".a::after { content: '}'; outline: none } .b:focus-visible { outline: 2px }"),
+    );
+    expect(parsed.map((rule) => rule.selector)).toEqual(['.a::after', '.b:focus-visible']);
+    expect(parsed.filter((rule) => cancelsOutline(rule.body)).map((rule) => rule.selector)).toEqual(
+      ['.a::after'],
+    );
+    // The quotes themselves survive, because selectors are read as written.
+    expect(sheetText(".x[data-theme='dark'] { color: red }")).toContain("[data-theme='dark']");
+  });
+
+  it('reads every stylesheet the repository serves, not only the design system', () => {
+    // The floor on the discovery. A sheet outside this list can cancel the ring
+    // from a rule no assertion here would ever read.
+    const names = SHEETS.map((path) => relative(repoRoot, path));
+    expect(names).toContain('packages/studio-sdk/src/components/components.css');
+    expect(names).toContain('packages/studio-sdk/src/components/tokens.css');
+    expect(names).toContain('apps/studio/src/styles.css');
+    expect(names.length).toBeGreaterThanOrEqual(4);
+  });
+
   it('parses the stylesheet (a scan that found nothing would pass vacuously)', () => {
     expect(rules.length).toBeGreaterThan(100);
     expect(sharedRing).toHaveLength(1);
@@ -388,6 +506,7 @@ describe('visible focus', () => {
       '.tai-tab',
       '.tai-nav-item',
       '.tai-nav-link',
+      '.tai-brand',
       '.tai-skip-link',
       '.tai-card-interactive',
       '.tai-scroll-region',

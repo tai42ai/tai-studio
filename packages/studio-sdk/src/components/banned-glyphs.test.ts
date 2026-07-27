@@ -27,11 +27,17 @@
  *   the indirection hole a JSX-only scan would leave: a glyph parked in a
  *   `const` and rendered elsewhere is still caught at its literal.
  *
- * Comments are blanked before either detector runs (see {@link stripComments}),
- * so the arrows that fill this repository's prose docblocks cannot trip it —
- * `<a> → <b>` in a comment is exactly the shape the JSX detector looks for.
- * String bodies survive that pass untouched, which is what the literal detector
- * needs.
+ * Comments are blanked before either detector runs (see {@link stripComments} and
+ * {@link stripHtmlComments}), so the arrows that fill this repository's prose
+ * docblocks cannot trip it — `<a> → <b>` in a comment is exactly the shape the JSX
+ * detector looks for. String bodies survive that pass untouched, which is what the
+ * literal detector needs.
+ *
+ * The sweep covers every rendered file kind, not only React: the shell's
+ * `index.html`, the OAuth bridge and callback documents, and the plain-JavaScript
+ * relays beside them are markup a browser paints, and each was outside the scan
+ * entirely. A `.html` document is read as MARKUP by the text-run detector, and its
+ * inline `<script>` bodies — and only those — by the JavaScript ones.
  *
  * Both detectors judge what the source PAINTS, not how it is spelled: HTML
  * character references and JavaScript string escapes are decoded first, so
@@ -52,9 +58,27 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 
-/** Where rendered source can live. `dist` and `node_modules` are build output. */
-const SCAN_ROOTS = ['packages', 'apps'];
+/**
+ * Where rendered source can live. `dist` and `node_modules` are build output.
+ *
+ * `e2e/` is in the sweep for the reference plugin: it is the repo's one real plugin,
+ * the worked example of the published component API, and it is SERVED to a browser —
+ * so a glyph-as-icon in it is the exact thing a plugin author would copy. Leaving it
+ * out made "repository-wide" a claim about two thirds of the repository.
+ */
+const SCAN_ROOTS = ['packages', 'apps', 'e2e'];
 const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
+
+/**
+ * The file kinds a glyph can be painted from.
+ *
+ * The scan read `.ts`/`.tsx` only, which left every non-React surface the Studio
+ * serves outside it: `apps/studio/index.html`, the two OAuth bridge documents and
+ * their `public/` copies, and the plain-JavaScript relays beside them. Each of those
+ * is markup a browser renders, and `<button>&times;</button>` in one ships the same
+ * glyph-as-icon the four cleared React sites did.
+ */
+const SCANNED_EXTENSIONS = /\.(?:tsx?|m?js|cjs|html)$/;
 
 /** The banned set, verbatim from the mission's iconography rule. */
 const BANNED_GLYPHS = '▲▼▾↗→✓×↑↓←';
@@ -160,7 +184,7 @@ function sourcesWithin(directory: string): string[] {
       found.push(...sourcesWithin(full));
       continue;
     }
-    if (/\.tsx?$/.test(entry) && !isTestSource(entry)) found.push(full);
+    if (SCANNED_EXTENSIONS.test(entry) && !isTestSource(entry)) found.push(full);
   }
   return found;
 }
@@ -386,6 +410,9 @@ export function jsxSoleGlyphHits(code: string): { line: number; text: string }[]
   return hits;
 }
 
+/** A template literal tagged `String.raw`, whose body is painted rather than decoded. */
+const RAW_TAG = /String\.raw\s*$/;
+
 /** String literals that hold nothing but glyphs. `code` must be comment-free. */
 export function glyphOnlyLiteralHits(code: string): { line: number; text: string }[] {
   const hits: { line: number; text: string }[] = [];
@@ -395,22 +422,75 @@ export function glyphOnlyLiteralHits(code: string): { line: number; text: string
     // The body is decoded before it is judged: `'\u{00d7}'`, `'\xd7'` and a
     // bare `×` are the same shipped character, resolved by the lexer at compile
     // time, so reading the raw source text would let an escape spell the ban away.
-    const body = decodeStringEscapes(source);
+    //
+    // `String.raw` is the one tag that inverts that: it paints a body's escapes
+    // instead of resolving them, so ``String.raw`×` `` renders the six ASCII
+    // characters `×` and nothing banned. Decoding it anyway reported a
+    // violation in source that ships no glyph at all.
+    const raw = match[3] !== undefined && RAW_TAG.test(code.slice(0, match.index));
+    const body = raw ? source : decodeStringEscapes(source);
     if (body === '' || !GLYPH_ONLY.test(body)) continue;
     hits.push({ line: lineAt(code, match.index), text: body });
   }
   return hits;
 }
 
-/** Both detectors over one file's text, as `path:line glyph` strings. */
-function violationsIn(file: string): string[] {
+/**
+ * Every HTML comment replaced by spaces, at the SAME offsets and line count.
+ *
+ * A served document's comments render nothing, and this repository's bridge pages
+ * carry long prose comments — read as markup, an arrow between two tag names in one
+ * is exactly the shape the text-run detector looks for.
+ */
+export function stripHtmlComments(source: string): string {
+  return source.replaceAll(/<!--[\s\S]*?-->/g, (comment) => comment.replaceAll(/[^\n]/g, ' '));
+}
+
+/**
+ * A served HTML document with everything OUTSIDE its inline `<script>` bodies
+ * blanked, at the same offsets.
+ *
+ * The markup and the script inside it are two different languages, and only one of
+ * them has string literals: run over the markup, a literal detector would read every
+ * quoted ATTRIBUTE as a string. Splitting them lets each detector see the language it
+ * was written for, with the line numbers still those of the file.
+ */
+function inlineScriptsOnly(markup: string): string {
+  const blank = (text: string): string => text.replaceAll(/[^\n]/g, ' ');
+  let out = '';
+  let index = 0;
+  for (const match of markup.matchAll(/(<script\b[^>]*>)([\s\S]*?)(<\/script\s*>)/gi)) {
+    const [whole, open = '', body = ''] = match;
+    out += blank(markup.slice(index, match.index)) + blank(open) + body;
+    index = match.index + whole.length;
+    out += blank(whole.slice(open.length + body.length));
+  }
+  return out + blank(markup.slice(index));
+}
+
+/** Both detectors over a JavaScript or TypeScript source. */
+export function scriptHits(source: string): { line: number; text: string }[] {
   // Entities are decoded AFTER comments are blanked, so an arrow spelled `&rarr;`
   // in a docblock cannot trip the JSX detector the way a literal `→` would not.
-  const code = decodeGlyphEntities(stripComments(readFileSync(file, 'utf8')));
+  const code = decodeGlyphEntities(stripComments(source));
+  return [...jsxSoleGlyphHits(code), ...glyphOnlyLiteralHits(code)];
+}
+
+/** Both detectors over a served HTML document: its markup, and its inline scripts. */
+export function markupHits(source: string): { line: number; text: string }[] {
+  const markup = stripHtmlComments(source);
+  return [
+    ...jsxSoleGlyphHits(decodeGlyphEntities(markup)),
+    ...glyphOnlyLiteralHits(decodeGlyphEntities(stripComments(inlineScriptsOnly(markup)))),
+  ];
+}
+
+/** Both detectors over one file's text, as `path:line glyph` strings. */
+function violationsIn(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
+  const hits = file.endsWith('.html') ? markupHits(source) : scriptHits(source);
   const where = relative(repoRoot, file);
-  return [...jsxSoleGlyphHits(code), ...glyphOnlyLiteralHits(code)].map(
-    ({ line, text }) => `${where}:${String(line)} ${JSON.stringify(text)}`,
-  );
+  return hits.map(({ line, text }) => `${where}:${String(line)} ${JSON.stringify(text)}`);
 }
 
 describe('banned glyphs', () => {
@@ -420,6 +500,23 @@ describe('banned glyphs', () => {
     // read nothing would also report zero violations.
     const empty = sources.filter((file) => readFileSync(file, 'utf8').trim() === '');
     expect(empty).toEqual([]);
+
+    // The surfaces that are NOT React are in the sweep by name. A count floor
+    // cannot notice seventeen files dropping out of three hundred, so an
+    // extension quietly removed from the pattern — or a root removed from the
+    // list — would take every served document back out of the scan silently.
+    const scanned = new Set(sources.map((file) => relative(repoRoot, file)));
+    for (const surface of [
+      'apps/studio/index.html',
+      'apps/studio/bridge/oauth-bridge.html',
+      'apps/studio/public/oauth-bridge.html',
+      'apps/studio/public/oauth-bridge.js',
+      'apps/studio/public/oauth-callback.html',
+      'apps/studio/public/oauth-callback.js',
+      'e2e/reference-plugin/studio-src/index.tsx',
+    ]) {
+      expect([surface, scanned.has(surface)]).toEqual([surface, true]);
+    }
   });
 
   it('still reaches the glyph characters it is looking for', () => {
@@ -498,6 +595,44 @@ describe('banned glyphs', () => {
     expect(jsxSoleGlyphHits('<span>{active ? <SortAscIcon /> : <SortDescIcon />}</span>')).toEqual(
       [],
     );
+
+    // A `String.raw` body PAINTS its escapes rather than resolving them, so
+    // ``String.raw`×` `` renders six ASCII characters and nothing banned.
+    // Decoding it anyway reddened source that ships no glyph at all.
+    expect(glyphOnlyLiteralHits('const spelling = String.raw`\\u00d7`;')).toEqual([]);
+    expect(glyphOnlyLiteralHits('const spelling = String.raw`\\u{00d7}`;')).toEqual([]);
+    // …and the tag does not launder a glyph that is really there.
+    expect(glyphOnlyLiteralHits('const mark = String.raw`×`;').map((hit) => hit.text)).toEqual([
+      '×',
+    ]);
+    // An untagged template still decodes, or the escape route reopens.
+    expect(glyphOnlyLiteralHits('const mark = `\\u00d7`;').map((hit) => hit.text)).toEqual(['×']);
+  });
+
+  it('reads a served HTML document as markup, and its inline script as script', () => {
+    // The four HTML surfaces and their JavaScript relays were outside the scan
+    // entirely: a glyph-as-icon in one ships exactly as it does from a React tree.
+    const markup = '<!doctype html>\n<body>\n  <button type="button">×</button>\n</body>';
+    expect(markupHits(markup)).toEqual([{ line: 3, text: '×' }]);
+    expect(markupHits('<body>\n  <button type="button">&times;</button>\n</body>')).toEqual([
+      { line: 2, text: '×' },
+    ]);
+
+    // An HTML comment renders nothing, and this repo's bridge pages carry long
+    // prose ones — an arrow between two tag names in a comment is the exact shape
+    // the text-run detector looks for.
+    expect(markupHits('<body>\n  <!-- maps <a> → <b> -->\n  <p>ok</p>\n</body>')).toEqual([]);
+    expect(stripHtmlComments('<!-- a\nb -->\nx').split('\n')).toHaveLength(3);
+
+    // A quoted ATTRIBUTE is not a string literal: read as one, every label in
+    // every document would be judged by the literal detector.
+    expect(markupHits('<body>\n  <button aria-label="×">Close</button>\n</body>')).toEqual([]);
+    // …while a glyph parked in an INLINE script is caught by the literal detector.
+    expect(
+      markupHits("<body>\n  <script>\n    var MARK = '×';\n  </script>\n</body>").map(
+        (hit) => hit.line,
+      ),
+    ).toEqual([3]);
   });
 
   it('reads comments as comments, in both directions', () => {

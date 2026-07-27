@@ -48,13 +48,20 @@ interface NumericColumnProps {
   readonly numeric?: boolean;
 }
 
+/**
+ * A header cell. `scope` defaults to `col` because that is what a `<th>` in the
+ * header row IS, and without it nothing associates the cell with the column
+ * below it: a screen reader announcing a data cell has no header to name it.
+ * A row header — the leading cell of a body row — passes `scope="row"`.
+ */
 export function TH({
   children,
   numeric = false,
+  scope = 'col',
   ...props
 }: ThHTMLAttributes<HTMLTableCellElement> & NumericColumnProps & { children?: ReactNode }) {
   return (
-    <th {...props} data-numeric={numeric ? 'true' : undefined}>
+    <th {...props} scope={scope} data-numeric={numeric ? 'true' : undefined}>
       {children}
     </th>
   );

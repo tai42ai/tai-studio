@@ -41,9 +41,88 @@ import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 
-/** Where a `<Field>` can be written. `dist` and `node_modules` are build output. */
-const SCAN_ROOTS = ['packages', 'apps'];
+/**
+ * Where a `<Field>` can be written. `dist` and `node_modules` are build output.
+ *
+ * `e2e/` is in the sweep for the reference plugin: it is the repo's one real plugin and
+ * the worked example of the published component API, so a dangling `for` attribute it
+ * ships is the exact defect a plugin author would copy. Leaving it out made this file's
+ * "across the repo" a claim about two thirds of it.
+ */
+const SCAN_ROOTS = ['packages', 'apps', 'e2e'];
 const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
+
+/**
+ * A source with every comment replaced by spaces, at the SAME offsets so a line
+ * number still points at the line it came from.
+ *
+ * The scan reads what the file RENDERS, and a comment renders nothing. Both
+ * directions were open without this: a `<Field>` written in a docblock to explain the
+ * rule reddened the build — it has already bitten two fixes — while ten commented-out
+ * call sites propped up the count floors that guard the production scan, so a real site
+ * could drop out unnoticed. String bodies are left as written: the attribute readers
+ * blank the values they need blanked, and an apostrophe inside a comment is what would
+ * otherwise open a phantom string that swallows the code after it.
+ */
+function withoutComments(source: string): string {
+  let out = '';
+  let index = 0;
+  let state: 'code' | 'line' | 'block' | "'" | '"' | '`' = 'code';
+  while (index < source.length) {
+    const character = source.charAt(index);
+    const next = source.charAt(index + 1);
+    if (state === 'code') {
+      if (character === '/' && (next === '/' || next === '*')) {
+        state = next === '/' ? 'line' : 'block';
+        out += '  ';
+        index += 2;
+        continue;
+      }
+      if (character === "'" || character === '"' || character === '`') state = character;
+      out += character;
+      index += 1;
+      continue;
+    }
+    if (state === 'line') {
+      if (character === '\n') state = 'code';
+      out += character === '\n' ? character : ' ';
+      index += 1;
+      continue;
+    }
+    if (state === 'block') {
+      if (character === '*' && next === '/') {
+        state = 'code';
+        out += '  ';
+        index += 2;
+        continue;
+      }
+      out += character === '\n' ? character : ' ';
+      index += 1;
+      continue;
+    }
+    // Inside a string: an escape consumes the next character, so a `\'` never
+    // closes it; the matching quote does.
+    if (character === '\\') {
+      out += source.slice(index, index + 2);
+      index += 2;
+      continue;
+    }
+    if (character === state) state = 'code';
+    out += character;
+    index += 1;
+  }
+  return out;
+}
+
+/** A file's text as the scan reads it: the code, with the prose blanked out. */
+function codeOf(file: string): string {
+  return withoutComments(readFileSync(file, 'utf8'));
+}
+
+/** The 1-based line `offset` falls on. */
+function lineAt(source: string, offset: number): number {
+  return source.slice(0, offset).split('\n').length;
+}
 
 function sourcesWithin(directory: string): string[] {
   const found: string[] = [];
@@ -93,9 +172,11 @@ interface FieldSite {
  * — judged by nothing, absent from the audited expression list, uncounted by the
  * floors. `child` is `undefined` exactly when the first child is an expression.
  *
- * The scanner tracks brace depth, quote state and comments, so the `>` it stops
- * at is the real one. `<FieldGroup …>` is excluded by the lookahead on the start
- * pattern: it is a different component and publishes no control id.
+ * The scanner tracks brace depth and quote state, so the `>` it stops at is the
+ * real one; comments are blanked before it runs (see {@link withoutComments}), so
+ * an apostrophe in prose cannot open a phantom string that swallows the tag.
+ * `<FieldGroup …>` is excluded by the lookahead on the start pattern: it is a
+ * different component and publishes no control id.
  */
 function fieldSites(source: string): FieldSite[] {
   const sites: FieldSite[] = [];
@@ -124,18 +205,6 @@ function fieldOpens(source: string): FieldOpen[] {
       if (quote !== undefined) {
         if (character === '\\') index += 1;
         else if (character === quote) quote = undefined;
-        continue;
-      }
-      // Comments first. An apostrophe inside one (`the field's control id`)
-      // otherwise opens a phantom string that swallows the tag's own `>`.
-      if (character === '/' && source[index + 1] === '/') {
-        const end = source.indexOf('\n', index);
-        index = end === -1 ? source.length : end;
-        continue;
-      }
-      if (character === '/' && source[index + 1] === '*') {
-        const end = source.indexOf('*/', index + 2);
-        index = end === -1 ? source.length : end + 1;
         continue;
       }
       if (character === '"' || character === "'" || character === '`') {
@@ -265,7 +334,7 @@ function marksGroupStatically(attributes: string): boolean {
 describe('Field group contract', () => {
   it('scans the repository (a scan that found nothing would pass vacuously)', () => {
     expect(sources.length).toBeGreaterThan(100);
-    const fieldSites = sources.filter((file) => readFileSync(file, 'utf8').includes('<Field'));
+    const fieldSites = sources.filter((file) => codeOf(file).includes('<Field'));
     expect(fieldSites.length).toBeGreaterThan(10);
   });
 
@@ -273,7 +342,7 @@ describe('Field group contract', () => {
     const unmarked: string[] = [];
 
     for (const file of sources) {
-      const source = readFileSync(file, 'utf8');
+      const source = codeOf(file);
       for (const site of fieldSites(source)) {
         // An expression child is judged by EXPRESSION_CHILD_SITES, not here.
         if (site.child === undefined) continue;
@@ -321,7 +390,7 @@ describe('Field group contract', () => {
     // A floor against the matcher silently reaching LESS. It is deliberately not
     // the only guard: a count with headroom cannot notice one site dropping out,
     // which is why `leaves no <Field> unjudged` below reconciles the set exactly.
-    const reached = sources.flatMap((file) => fieldSites(readFileSync(file, 'utf8')));
+    const reached = sources.flatMap((file) => fieldSites(codeOf(file)));
     expect(reached.filter((site) => site.child !== undefined).length).toBeGreaterThanOrEqual(80);
 
     // And the marked sites specifically, which are what the rule is about.
@@ -344,32 +413,43 @@ describe('Field group contract', () => {
     const EXPRESSION_CHILD = /^\s*\{\s*[^<]/;
     const unjudged: string[] = [];
     for (const file of sources) {
-      const source = readFileSync(file, 'utf8');
+      const source = codeOf(file);
       for (const open of fieldOpens(source)) {
         if (open.selfClosing) continue;
         if (ELEMENT_CHILD.test(open.rest) || EXPRESSION_CHILD.test(open.rest)) continue;
-        unjudged.push(`${relative(repoRoot, file)} :: ${open.attributes.trim().slice(0, 60)}`);
+        // Named by LINE and by the text that follows the tag. An attribute run is
+        // often empty at exactly the site that fails, so reporting it alone said
+        // `field.tsx :: ` and left the reader to find the tag by hand.
+        unjudged.push(
+          `${relative(repoRoot, file)}:${String(lineAt(source, open.index))} ` +
+            `<Field${open.attributes.trim()}> then ${JSON.stringify(open.rest.slice(0, 60))}`,
+        );
       }
     }
     expect(unjudged).toEqual([]);
     // The scanner really found the Fields — otherwise an empty sweep passes.
-    expect(
-      sources.flatMap((file) => fieldOpens(readFileSync(file, 'utf8'))).length,
-    ).toBeGreaterThan(80);
+    expect(sources.flatMap((file) => fieldOpens(codeOf(file))).length).toBeGreaterThan(80);
   });
 
   it('accounts for every Field whose child the regex cannot read', () => {
     // The blind spot is bounded, not ignored: this is the closed set, and a new
     // expression-child site reddens here until it is audited and listed.
     const found = sources
-      .filter((file) =>
-        fieldSites(readFileSync(file, 'utf8')).some((site) => site.child === undefined),
-      )
+      .filter((file) => fieldSites(codeOf(file)).some((site) => site.child === undefined))
       .map((file) => relative(repoRoot, file))
       .sort();
     expect(found).toEqual(Object.keys(EXPRESSION_CHILD_SITES).sort());
-    for (const verdict of Object.values(EXPRESSION_CHILD_SITES)) {
-      expect(verdict.length).toBeGreaterThan(20);
+    // Each verdict is reconciled against the file it judges: it must name at least
+    // one element that file really renders. A length floor asserted nothing — the
+    // verdicts run 75 to 99 characters, so `> 20` was dead the day it was written,
+    // and a placeholder ("audited", "n/a") or a verdict pasted from another site
+    // would have satisfied it while describing branches nobody read.
+    for (const [path, verdict] of Object.entries(EXPRESSION_CHILD_SITES)) {
+      const source = codeOf(resolve(repoRoot, path));
+      const rendered = [...verdict.matchAll(/\b[A-Z][A-Za-z]+\b/g)]
+        .map((match) => match[0])
+        .filter((name) => new RegExp(`<${name}[\\s/>]`).test(source));
+      expect([path, rendered.length > 0]).toEqual([path, true]);
     }
   });
 
