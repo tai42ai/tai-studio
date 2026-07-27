@@ -230,6 +230,7 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
             label="Expiry"
             description="Pick when the link stops working. There is no default — choose one."
             error={submitted && expiryChoice === undefined ? 'Choose an expiry.' : undefined}
+            group
           >
             <RadioGroup
               options={EXPIRY_OPTIONS}

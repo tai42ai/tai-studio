@@ -219,7 +219,11 @@ export function SelectAnswer({ interaction, onSubmit, disabled }: AnswerRenderer
 
   return (
     <div style={answerStackStyle}>
-      <Field label="Choose an option">{control}</Field>
+      {/* A RadioGroup is a group, so the Field label carries no `for`; a Select
+          renders a labelable trigger, so there it still does. */}
+      <Field label="Choose an option" group={options.length <= RADIO_MAX_OPTIONS}>
+        {control}
+      </Field>
       <div>
         <Button
           type="button"
