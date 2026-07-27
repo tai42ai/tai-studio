@@ -658,6 +658,11 @@
   /* -- Tabs ------------------------------------------------------------------ */
   .tai-tablist {
     display: flex;
+    /* Tab labels are caller data and a plugin adds its own, so the strip wraps
+       rather than pushing the DOCUMENT sideways — the five Settings tabs alone
+       need 394 px and there is no horizontal scroll to reach them at 320. Every
+       other horizontal strip in this sheet wraps for the same reason. */
+    flex-wrap: wrap;
     gap: var(--tai-space-1);
     border-bottom: 1px solid var(--tai-color-border);
   }
@@ -976,6 +981,9 @@
 
   .tai-dialog-actions {
     display: flex;
+    /* `flex-end` sends any overflow LEFT, where LTR scrolling never reaches, and
+       the confirm label is caller data. Wrapping keeps every action on screen. */
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: var(--tai-space-2);
     margin-top: var(--tai-space-5);
