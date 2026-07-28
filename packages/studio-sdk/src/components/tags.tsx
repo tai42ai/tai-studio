@@ -42,6 +42,11 @@ export interface TagsInputProps {
   readonly value: readonly string[];
   readonly onChange: (next: string[]) => void;
   readonly disabled?: boolean;
+  /**
+   * The draft input's accessible name when no enclosing `Field` supplies one.
+   * Forwarded to the input as a native attribute — see the docblock below.
+   */
+  readonly 'aria-label'?: string;
 }
 
 /**
@@ -49,15 +54,22 @@ export interface TagsInputProps {
  * next list on every add/remove. A blank or duplicate entry is ignored (never a
  * silent duplicate chip). Enter or comma commits the draft chip.
  *
- * The draft input takes its NAME from the enclosing `Field`: it renders the SDK's
- * `TextInput`, which spreads `useFieldControl()` and so claims the Field's control
- * id. An `aria-label` of its own would replace that name, leaving a control whose
- * visible label reads "Tags" and whose accessible name does not contain it (WCAG
- * 2.5.3, Label in Name) — a voice-control user could not address the field they
- * can see. So the editor is always wrapped in a `Field`, and what it adds is said
- * by the placeholder instead.
+ * The draft input is a NATIVE-ATTRIBUTE PASS-THROUGH (the family `inputs.tsx`
+ * documents): inside a `Field` it renders the SDK's `TextInput`, which spreads
+ * `useFieldControl()` and so claims the Field's control id, taking the Field's
+ * visible label as its name; mounted OUTSIDE a `Field` it is named by a caller
+ * `aria-label`, which the editor forwards to that same input. Without one a bare
+ * editor is unnamed — the published component owns the naming route rather than
+ * assuming a `Field` is always present. When a `Field` DOES name it, a caller
+ * `aria-label` still has to CONTAIN that visible label (WCAG 2.5.3, Label in
+ * Name); `components/field-group.test.ts` enforces that at every call site.
  */
-export function TagsInput({ value, onChange, disabled }: TagsInputProps): ReactNode {
+export function TagsInput({
+  value,
+  onChange,
+  disabled,
+  'aria-label': ariaLabel,
+}: TagsInputProps): ReactNode {
   const [draft, setDraft] = useState('');
 
   const add = (): void => {
@@ -92,6 +104,7 @@ export function TagsInput({ value, onChange, disabled }: TagsInputProps): ReactN
               }
             }}
             placeholder="Add a tag…"
+            aria-label={ariaLabel}
             disabled={disabled}
           />
         </div>

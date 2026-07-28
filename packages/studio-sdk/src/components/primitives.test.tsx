@@ -155,8 +155,9 @@ describe('ErrorState', () => {
   it('speaks with one voice: the headline is the surface, not a caller choice', () => {
     // The mark, the ground and `role="alert"` all say the system failed, so a
     // caller-supplied headline could only ever contradict three things it does not
-    // reach. A server's considered NO takes `.tai-warn-state` with `role="status"`
-    // instead, which is what every such surface in the repo already does.
+    // reach. A server's considered NO takes a warn surface instead — the warn
+    // ground `.tai-warn-state`, or `role="status"` with a warn `Badge` as
+    // `verdict.tsx` does — rather than this fixed error headline.
     render(<ErrorState message="Your role cannot delete scopes." />);
     const alert = screen.getByRole('alert');
     expect(alert).toHaveTextContent('Something went wrong');

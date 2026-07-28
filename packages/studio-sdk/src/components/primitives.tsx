@@ -436,8 +436,11 @@ export function EmptyState({ title, description, action, className, style }: Emp
  * "no" — is an answer rather than a malfunction, and swapping this headline alone
  * would leave the mark, the ground and the live-region politeness all still
  * announcing a system failure. Such a surface takes the design system's warn
- * ground (`.tai-warn-state`) with `role="status"` instead; `verdict.tsx`,
- * `advisories.tsx` and `fleet-report.tsx` are the worked examples.
+ * ground instead — `.tai-warn-state` for a warning block (`advisories.tsx`,
+ * `fleet-report.tsx`, `RunPanel.tsx`), or `role="status"` with a warn `Badge` for
+ * a verdict that only lands after the reader acts (`verdict.tsx`). The live-region
+ * politeness — `role="alert"` for a warning that interrupts, `role="status"` for
+ * one the reader came to find — is the surface's to choose, not this headline's.
  */
 const ERROR_TITLE = 'Something went wrong';
 

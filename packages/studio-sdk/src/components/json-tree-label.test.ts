@@ -32,8 +32,15 @@
  * KNOWN BLIND SPOT, stated rather than papered over: the scan reads the attribute
  * NAMES written on the tag. A `label` whose value is an expression that can
  * evaluate to `undefined` (`label={row.title}`) satisfies it and would fall back
- * at runtime; deciding that needs a real parse and a type. The floors below at
- * least keep the sites it DOES reach from silently dropping out.
+ * at runtime; deciding that needs a real parse and a type.
+ *
+ * What keeps a real site from silently dropping OUT of the scan is not the count
+ * floors below — those carry headroom and only guard against the scan matching
+ * nothing at all — it is that the reader fails OPEN. A confused comment/string
+ * state machine leaves string bodies verbatim and only ever SUPPRESSES comment
+ * stripping, so a mis-read produces MORE `<JsonTree` hits, never fewer: a code
+ * site cannot vanish without a comment reappearing as a phantom one, which reddens
+ * `reads comments as comments` rather than passing quietly.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';

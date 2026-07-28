@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { createRef, useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ScrollRegion, useProseScrollRegions } from './scroll-region';
 import type { ProseScrollLabels } from './scroll-region';
@@ -570,9 +570,56 @@ describe('shared observer hygiene', () => {
       disconnects.restore();
     }
   });
+
+  it('takes its focus-release listener back off the box when it unmounts', () => {
+    // The per-instance hook adds a `blur` listener to release the tab stop the
+    // moment the reader leaves; its teardown must remove it. A box unmounted with
+    // the listener still on it is a detached element holding a handler that
+    // re-measures a component that no longer exists — invisible to every other
+    // assertion here, which watch the shared OBSERVER registrations, not this
+    // listener. Deleting `box.removeEventListener('blur', …)` left it green.
+    const { container, unmount } = render(
+      <ScrollRegion label="Tool results">
+        <p>wide</p>
+      </ScrollRegion>,
+    );
+    const box = scrollRegion(container);
+    const removed = vi.spyOn(box, 'removeEventListener');
+    unmount();
+    expect(removed).toHaveBeenCalledWith('blur', expect.any(Function));
+  });
 });
 
 describe('useProseScrollRegions', () => {
+  it('disconnects its own content observer when the prose host unmounts', () => {
+    // The prose hook builds its OWN `MutationObserver` — the shared one the
+    // per-instance boxes use is module-level and outlives every mount — so its
+    // teardown is the only thing that stops it. Rendering a bare prose host and
+    // nothing else, the only `MutationObserver.disconnect()` on unmount is this
+    // one; dropping it leaves a detached prose subtree re-instrumented forever.
+    const disconnects = trackContentDisconnects();
+    try {
+      const { unmount } = render(<ProseHost html={TABLE_HTML} />);
+      const before = disconnects.count();
+      unmount();
+      expect(disconnects.count()).toBeGreaterThan(before);
+    } finally {
+      disconnects.restore();
+    }
+  });
+
+  it('takes its focus-release listener off the root when the prose host unmounts', () => {
+    // One `focusout` listener on the ref root releases a stop the whole prose
+    // subtree shares; its teardown must remove it, or a detached root keeps a
+    // handler firing for regions that no longer exist. No rendered assertion here
+    // catches it, so deleting `root.removeEventListener('focusout', …)` was green.
+    const { getByTestId, unmount } = render(<ProseHost html={TABLE_HTML} />);
+    const root = getByTestId('prose');
+    const removed = vi.spyOn(root, 'removeEventListener');
+    unmount();
+    expect(removed).toHaveBeenCalledWith('focusout', expect.any(Function));
+  });
+
   it('never re-observes a prose surface it is already watching', async () => {
     // Re-observing an element already under a `ResizeObserver` RE-ARMS its
     // initial notification, and the notification re-runs the measurement — so a

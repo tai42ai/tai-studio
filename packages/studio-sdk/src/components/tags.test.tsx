@@ -177,4 +177,17 @@ describe('TagsInput', () => {
     expect(screen.getByText('Release tags').tagName).toBe('LABEL');
     expect(screen.getByText('Release tags')).toHaveAttribute('for', input.id);
   });
+
+  it('takes a caller aria-label as its name when mounted outside a Field', () => {
+    // Published surface: a plugin author who mounts the editor without a `Field`
+    // must still be able to name it. The label forwards to the draft input as a
+    // native attribute (the pass-through family in `inputs.tsx`), so a bare editor
+    // is nameable rather than nameless. Deleting the forward leaves it unnamed.
+    render(<TagsInput value={[]} onChange={vi.fn()} aria-label="Release tags" />);
+    const input = screen.getByLabelText('Release tags');
+    expect(input).toHaveAttribute('placeholder', 'Add a tag…');
+    // …and inside a Field with no aria-label, the Field still names it (the prop
+    // is optional and its absence changes nothing about the wrapped case).
+    expect(input.tagName).toBe('INPUT');
+  });
 });

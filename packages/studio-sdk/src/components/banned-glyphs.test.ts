@@ -466,13 +466,17 @@ export function glyphOnlyLiteralHits(code: string): { line: number; text: string
 }
 
 /**
- * The DIRECTIONAL half of the banned set.
+ * The DIRECTIONAL half of the banned set: every ARROW among {@link BANNED_GLYPHS}.
  *
  * Held to the stricter rule: an arrow says "this way" whether it stands alone or
  * sits inside a sentence, so the sole-content test that fits a mark-shaped glyph
- * lets exactly the usage this half is banned for through.
+ * lets exactly the usage this half is banned for through. Which banned glyphs are
+ * arrows is NOT a judgement kept in step by hand: it is every glyph in the Unicode
+ * Arrows block (U+2190–U+21FF), reconciled against `BANNED_GLYPHS` below, so an
+ * arrow added to the ban but left out of the strict rule reddens rather than
+ * surviving as prose the way `↗` did.
  */
-const DIRECTIONAL_GLYPHS = '←→↑↓';
+const DIRECTIONAL_GLYPHS = '←→↑↓↗';
 const PAINTS_A_DIRECTION = new RegExp(`[${DIRECTIONAL_GLYPHS}]`, 'u');
 
 /**
@@ -640,7 +644,7 @@ describe('banned glyphs', () => {
       ),
     ).toEqual(['Update available → v2']);
 
-    // Every directional mark is in the set, or one of the four drops out silently.
+    // Every directional mark is in the set, or one of them drops out silently.
     for (const glyph of DIRECTIONAL_GLYPHS) {
       expect([glyph, directionalGlyphHits(`<p>go ${glyph} there</p>`).length]).toEqual([glyph, 1]);
     }
@@ -649,6 +653,28 @@ describe('banned glyphs', () => {
     // directional mark in a COMMENT renders nothing at all.
     expect(directionalGlyphHits('<span>3 × 4</span>')).toEqual([]);
     expect(directionalGlyphHits(stripComments('// a → b\nconst x = 1;'))).toEqual([]);
+  });
+
+  it('holds every arrow in the banned set to the stricter directional rule', () => {
+    // DERIVED, not hand-kept: every glyph BANNED_GLYPHS bans that lives in the
+    // Unicode Arrows block must also be directional, because an arrow reads as
+    // "this way" beside text and the sole-content rule alone lets it through. `↗`
+    // was banned as sole content but missing here, so `<p>go ↗ there</p>` survived
+    // while `→` in the same place was caught.
+    const arrowsInBan: string[] = [];
+    for (const glyph of BANNED_GLYPHS) {
+      const code = glyph.codePointAt(0) ?? 0;
+      if (code >= 0x2190 && code <= 0x21ff) arrowsInBan.push(glyph);
+    }
+    expect(arrowsInBan.length).toBeGreaterThanOrEqual(5);
+    expect(arrowsInBan.filter((glyph) => !DIRECTIONAL_GLYPHS.includes(glyph))).toEqual([]);
+    // …and the directional set claims no glyph the ban does not: it is a subset,
+    // so the stricter rule can never reach a glyph the sole-content rule allows.
+    const extra: string[] = [];
+    for (const glyph of DIRECTIONAL_GLYPHS) {
+      if (!BANNED_GLYPHS.includes(glyph)) extra.push(glyph);
+    }
+    expect(extra).toEqual([]);
   });
 
   it('detects each shape a glyph-as-icon has actually shipped in', () => {
