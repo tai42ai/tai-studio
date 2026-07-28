@@ -46,10 +46,12 @@ command (`tai42` is an alias), the Prometheus metric namespace (`tai_tool_*`),
 
 ```bash
 pnpm install
+pnpm -r build            # cross-package imports resolve through built dist/, so this is first
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r format:check
-pnpm -r test
+pnpm format:check        # root: the workflows, changesets, package.json files and markdown
+pnpm -r test --coverage  # bare `pnpm -r test` evaluates none of the coverage thresholds
 ```
 
 Node 22+ and pnpm at the version pinned in `package.json`'s `packageManager`

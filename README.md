@@ -36,9 +36,12 @@ Requires **Node 22+** and **pnpm 11** — see the `packageManager` field in
 
 ```bash
 pnpm install
+pnpm -r build            # cross-package imports resolve through built dist/, so this is first
 pnpm -r typecheck
 pnpm -r lint
-pnpm -r test
+pnpm -r format:check
+pnpm format:check        # root: the workflows, changesets, package.json files and markdown
+pnpm -r test --coverage  # bare `pnpm -r test` evaluates none of the coverage thresholds
 pnpm --filter @tai42/studio-app dev   # start the Vite dev server
 ```
 
