@@ -82,7 +82,8 @@ layer, the icon set, and a new set of layout primitives a screen can build on.
   `scroll-padding` on the overflow box itself, so an option's focus ring is not
   clipped at the edges or lost as the list scrolls.
 - **Additive component API:** `PageHeader`, `Page`, `Stack`, `Drawer`,
-  `ScrollRegion`, the `useProseScrollRegions` hook, and the `useBreakpoint` hook.
+  `ScrollRegion`, the `useOverflowRegion` and `useProseScrollRegions` hooks, and
+  the `useBreakpoint` hook.
   `Button` gains a `ghost` variant and a link form — given an `href` it renders an
   anchor: a relative reference stays in-app, an absolute http(s) URL opens in a
   new tab, and any other scheme is neutralized into plain text.
@@ -120,7 +121,7 @@ layer, the icon set, and a new set of layout primitives a screen can build on.
   `ApplyExtensions` join it as `ArrowUpIcon` / `ArrowDownIcon`. The Unicode
   glyphs that stood in for marks in `Checkbox`, `TagChips`, and `Select` are
   replaced by real icons, and the repository-wide scan that enforces the ban now
-  covers `↑ ↓ ←` alongside `▲ ▼ ▾ ↗ → ✓ ×`.
+  covers `↑ ↓ ←` alongside `▲ ▼ ▾ ▸ ↗ → ✓ ×`.
 - **Removed:** `@keyframes tai-pulse`, which the loading skeleton was its only
   user of. The skeleton now runs `tai-shimmer`, which travels a gradient overlay
   across the block on `transform`; the opacity pulse only dimmed the block and

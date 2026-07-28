@@ -38,6 +38,8 @@ const featureHooksTestFile = `${repoRoot}/packages/features/hooks/src/__boundary
 const sdkFile = `${repoRoot}/packages/studio-sdk/src/components/__boundary_fixture__.ts`;
 const sdkTestFile = `${repoRoot}/packages/studio-sdk/src/components/__boundary_fixture__.test.ts`;
 const appTestFile = `${repoRoot}/apps/studio/src/app/__boundary_fixture__.test.ts`;
+const apiClientFile = `${repoRoot}/packages/api-client/src/__boundary_fixture__.ts`;
+const apiClientTestFile = `${repoRoot}/packages/api-client/src/__boundary_fixture__.test.ts`;
 
 /** Builds an ESLint instance wired with only the boundary config under test. */
 function makeLinter(rule: Linter.RuleEntry) {
@@ -140,6 +142,7 @@ describe('Node core in the read-from-disk gate tests', () => {
   it.each([
     ['the SDK', sdkTestFile],
     ['the shell app', appTestFile],
+    ['the API client', apiClientTestFile],
   ])('permits Node core in a %s test', async (_layer, filePath) => {
     const errors = await boundaryErrorsAt(
       filePath,
@@ -165,6 +168,17 @@ describe('Node core in the read-from-disk gate tests', () => {
   it('withholds Node core from SDK production source', async () => {
     // The grant rides on the test override; production library code never gets it.
     const errors = await boundaryErrorsAt(sdkFile, "import 'node:fs';\n", strictRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('node:fs');
+  });
+
+  it('withholds Node core from api-client production source', async () => {
+    // api-client is a published BROWSER library, so a `node:` import in its
+    // production source breaks every consumer at bundle time. Its grant rides on
+    // the same test override; production source never gets it. This is the layer
+    // whose earlier UNCONDITIONAL core grant was withdrawn — the assertion that
+    // reddens if that grant is re-added.
+    const errors = await boundaryErrorsAt(apiClientFile, "import 'node:fs';\n", strictRule);
     expect(errors).toHaveLength(1);
     expect(errors[0]?.message).toContain('node:fs');
   });
