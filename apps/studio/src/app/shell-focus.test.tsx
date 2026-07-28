@@ -136,4 +136,41 @@ describe('the shell route-change focus manager', () => {
 
     expect(toolsHeading()).not.toHaveFocus();
   });
+
+  it('keeps the last-focused pathname ref in sync across a multi-step GO, so a later cross-path PUSH still focuses the destination <h1>', async () => {
+    // A GO is the browser history's MULTI-step traversal (history menu / long-press
+    // back / delta ≥2); memory history's go(delta) fires the same action. It must
+    // resync lastFocusPathname to the landed pathname — otherwise the ref goes stale
+    // and the next real cross-pathname PUSH is mis-judged as same-path and never
+    // arms the focus move (a keyboard/SR user stranded on the nav link).
+    useShellHandlers();
+    const shell = renderStudio({ initialPath: '/observability', sessionKey: 'k-focus-go' });
+    await waitFor(() => expect(dashboardHeading()).toBeInTheDocument());
+
+    // Cross-path PUSH to /tools (ref → /tools), then a same-path search-only PUSH
+    // (ref stays /tools). History: [/observability, /tools, /tools?tags=ghost].
+    await pushTo(shell, '/tools');
+    await waitFor(() => expect(toolsHeading()).toHaveFocus());
+    await act(async () => {
+      await shell.studio.router.navigate({ to: '/tools', search: { tags: ['ghost'] } });
+    });
+    await settleFrames();
+
+    // A multi-step GO(-2) lands back on /observability — a DIFFERENT pathname than
+    // the ref (/tools). The GO must never move focus AND must resync the ref.
+    await act(async () => {
+      shell.studio.router.history.go(-2);
+    });
+    await waitFor(() => {
+      expect(shell.studio.router.state.location.pathname).toBe('/observability');
+    });
+    await settleFrames();
+    expect(dashboardHeading()).not.toHaveFocus();
+
+    // Now a genuine cross-path PUSH /observability → /tools. With the ref left stale
+    // at /tools by a GO-uncovered shell, this reads as same-path and skips focus;
+    // with the ref resynced it correctly focuses the Tools <h1>.
+    await pushTo(shell, '/tools');
+    await waitFor(() => expect(toolsHeading()).toHaveFocus());
+  });
 });

@@ -407,21 +407,27 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
   // arm it — the pathname-keyed consumer below never runs for a same-path change,
   // so a flag set here would STRAND until the next real pathname change (a Back
   // included) wrongly consumed it and yanked focus. The last-focused pathname is
-  // tracked in a ref, compared and updated in this same callback. As a second
-  // guard, BACK/FORWARD/REPLACE explicitly DISARM any pending flag: history
-  // traversal and replace-navigation never move focus, and never leave a flag
-  // behind for a later pathname change to consume.
+  // tracked in a ref, compared and updated in this same callback.
+  //
+  // As a second guard, EVERY non-PUSH action explicitly DISARMS any pending flag
+  // AND resyncs the ref to the landed pathname. That covers BACK/FORWARD/REPLACE
+  // and, critically, GO — the browser history's multi-step traversal (history
+  // menu / long-press back / a delta ≥2), which `notify()` fires with `location`
+  // already set to the destination. Enumerating a subset would let GO fall through
+  // both branches, leaving `lastFocusPathname` stale so the next cross-path PUSH
+  // could mis-judge same-vs-cross and skip (or re-strand) the focus move. History
+  // traversal and replace-navigation never move focus, and never leave a flag or a
+  // stale ref behind.
   const router = useRouter();
   const pendingFocus = useRef(false);
   const lastFocusPathname = useRef(router.history.location.pathname);
   useEffect(() => {
     return router.history.subscribe(({ action, location }) => {
-      if (action.type === 'BACK' || action.type === 'FORWARD' || action.type === 'REPLACE') {
+      if (action.type !== 'PUSH') {
         pendingFocus.current = false;
         lastFocusPathname.current = location.pathname;
         return;
       }
-      if (action.type !== 'PUSH') return;
       const changedPathname = location.pathname !== lastFocusPathname.current;
       lastFocusPathname.current = location.pathname;
       // A same-pathname PUSH leaves focus to the feature screen; only a
