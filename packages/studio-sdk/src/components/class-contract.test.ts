@@ -155,12 +155,6 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the solid error fill, published so a chart legend or a status swatch draws `--tai-color-err-fill` with the `on-fill` ink instead of inventing its own pair',
   'tai-badge-solid-warn':
     'the solid warning fill, published so a chart legend or a status swatch draws `--tai-color-warn-fill` with the `on-fill` ink instead of inventing its own pair',
-  'tai-brand':
-    'the shell brand lockup, a link home; part of the shell family a host frame is composed from, and in the shared focus ring',
-  'tai-brand-mark':
-    'the 24 px tile inside that lockup, a separate element because it keeps its size while the wordmark beside it is hidden',
-  'tai-brand-label':
-    'the wordmark beside that tile, a separate element because the 72 px icon rail hides it and keeps the tile',
   'tai-card-title':
     'the card-scale heading, sibling of the rendered `.tai-section-title`; a card body is authored by whoever composes the card',
   'tai-grid-cards':
@@ -173,13 +167,6 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the design system inline link, and a member of the shared focus ring; prose this Studio does not author carries links of its own',
   'tai-nav-item':
     'the design system name for a nav row; this shell renders the identical rule under its own `.tai-nav-link`, and both are declared together',
-  'tai-shell':
-    'the application frame grid — a fixed sidebar beside a scrolling main column — published so a host builds the same frame',
-  'tai-shell-sidebar':
-    'the sticky sidebar of that frame, which the compact band turns into the 72 px labelled icon rail',
-  'tai-shell-main': 'the scrolling main column of that frame, the one that owns the page min-width',
-  'tai-topbar':
-    'the sticky bar that frame shows below 640 px in place of the sidebar, published so a host builds the same narrow chrome',
   'tai-split': 'the master/detail pair, two fluid panes above 1024 px and exactly one below it',
   'tai-split-list':
     'the list pane of that pair, the one a `data-pane` switch hides on a narrow screen',
