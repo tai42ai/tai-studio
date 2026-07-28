@@ -190,10 +190,17 @@ const AUTHED_PAGES = [
     name: 'system-kinds',
     path: '/system',
     wait: 'text=accounts-postgres',
-    // Scroll the "Plugin kinds" card into view so the shot frames the kinds table
-    // rather than the health card at the top of the page.
+    // Scroll the "Plugin kinds" card to the top of the viewport so the shot frames
+    // the full kinds table rather than the health card at the top of the page. A
+    // forced `scrollIntoView({ block: 'start' })` is used over `scrollIntoViewIfNeeded`
+    // because the card heading already sits within the 900px viewport, so the
+    // conditional scroll would no-op and leave most of the table below the fold.
     action: async (page) => {
-      await page.locator('h2:has-text("Plugin kinds")').scrollIntoViewIfNeeded({ timeout: 8000 });
+      await page
+        .locator('h2:has-text("Plugin kinds")')
+        .evaluate((el) => {
+          el.scrollIntoView({ block: 'start' });
+        });
     },
   },
   {
@@ -276,7 +283,7 @@ const AUTHED_PAGES = [
       await page.getByRole('button', { name: 'Create claim link (QR)' }).click();
       await page
         .locator('[data-testid="claim-link-qr"]')
-        .waitFor({ state: 'visible', timeout: 8000 });
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
     },
   },
   {
@@ -307,7 +314,7 @@ const AUTHED_PAGES = [
       await dialog.getByRole('button', { name: 'Create link' }).click();
       await page
         .locator('[data-testid="trigger-link-qr"]')
-        .waitFor({ state: 'visible', timeout: 8000 });
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
     },
   },
   {
@@ -415,7 +422,10 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
-  const browser = await chromium.launch();
+  // `--font-render-hinting=none` pins glyph rasterization to unhinted sub-pixel
+  // geometry, so text renders identically regardless of the host's font-hinting
+  // config and a regenerated shot diffs only where the UI actually changed.
+  const browser = await chromium.launch({ args: ['--font-render-hinting=none'] });
 
   for (const theme of THEMES) {
     console.log(`theme: ${theme}`);
