@@ -666,7 +666,7 @@ export function PolicySection({
                 style={{
                   margin: 'var(--tai-space-1) 0 0',
                   fontSize: 'var(--tai-text-sm)',
-                  color: 'var(--tai-color-danger)',
+                  color: 'var(--tai-color-err-text)',
                 }}
               >
                 {sampleError}

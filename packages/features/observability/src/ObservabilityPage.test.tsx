@@ -32,6 +32,23 @@ function metricsFixture(): DashboardMetrics {
   };
 }
 
+describe('ObservabilityPage — page header', () => {
+  it('renders the "Dashboard" h1 verbatim with the "Observability" eyebrow as a sibling', () => {
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi.fn().mockResolvedValue(metricsFixture()),
+    };
+    renderWithProviders(<ObservabilityPage search={{}} />, { client });
+
+    // The e2e-pinned title: exactly one <h1>, its accessible name the title VERBATIM.
+    const heading = screen.getByRole('heading', { level: 1, name: 'Dashboard' });
+    expect(heading).toBeInTheDocument();
+    // The eyebrow is the nav-section label, a SEPARATE element — never folded into
+    // the h1's accessible name.
+    expect(heading).toHaveTextContent('Dashboard');
+    expect(screen.getByText('Observability')).toBeInTheDocument();
+  });
+});
+
 describe('ObservabilityPage — dashboard tab', () => {
   it('defaults to the dashboard tab and queries metrics with the URL window', async () => {
     const getObservabilityMetrics = vi.fn().mockResolvedValue(metricsFixture());

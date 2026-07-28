@@ -50,6 +50,22 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('renders the PageHeader with the Administration eyebrow separate from the Settings h1', () => {
+    const client = stubClient({
+      getConfigMode: vi
+        .fn()
+        .mockReturnValue(new Promise<{ config_mode: string; read_only: boolean }>(() => undefined)),
+    });
+    renderWithProviders(<SettingsPage search={{}} />, { client, projection: fullProjection() });
+
+    // The h1 keeps its verbatim title, and the nav-section eyebrow is a SEPARATE
+    // element above it — never folded into the heading's accessible name.
+    const heading = screen.getByRole('heading', { level: 1, name: 'Settings' });
+    const eyebrow = screen.getByText('Administration');
+    expect(eyebrow).not.toBe(heading);
+    expect(heading).not.toContainElement(eyebrow);
+  });
+
   it('renders the mode badge and the four tabs', async () => {
     const client = stubClient({
       getConfigMode: vi.fn().mockResolvedValue({ config_mode: 'env-file', read_only: false }),

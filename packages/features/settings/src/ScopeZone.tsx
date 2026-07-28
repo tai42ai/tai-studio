@@ -107,7 +107,7 @@ export function ScopeZone({
 
   const style: CSSProperties = {
     ...zoneStyle,
-    borderColor: isOver ? 'var(--tai-color-primary)' : 'var(--tai-color-border)',
+    borderColor: isOver ? 'var(--tai-color-accent)' : 'var(--tai-color-border)',
     background: isOver ? 'var(--tai-color-surface-raised)' : 'transparent',
   };
 

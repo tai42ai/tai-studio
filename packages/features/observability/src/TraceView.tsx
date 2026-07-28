@@ -67,9 +67,9 @@ function spanDurationMs(span: RunSpan): number | null {
 function levelColor(level: string | null): string {
   switch ((level ?? '').toUpperCase()) {
     case 'ERROR':
-      return 'var(--tai-color-danger)';
+      return 'var(--tai-color-err-text)';
     case 'WARNING':
-      return 'var(--tai-color-warning)';
+      return 'var(--tai-color-warn-text)';
     case 'DEBUG':
       return 'var(--tai-color-text-muted)';
     default:
@@ -78,7 +78,8 @@ function levelColor(level: string | null): string {
 }
 
 const disclosureStyle: CSSProperties = {
-  font: 'var(--tai-text-sm) var(--tai-font-sans)',
+  fontFamily: 'var(--tai-font-sans)',
+  fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text-muted)',
   cursor: 'pointer',
   marginTop: 'var(--tai-space-1)',
@@ -117,7 +118,10 @@ function SpanRow({ span, depth }: FlatSpan): ReactNode {
           </span>
         ) : null}
         {span.model !== null ? (
-          <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
+          <span
+            className="tai-mono"
+            style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
+          >
             {span.model}
           </span>
         ) : null}
@@ -204,9 +208,7 @@ function Loaded({
         <div>
           <div style={{ display: 'flex', gap: 'var(--tai-space-2)', flexWrap: 'wrap' }}>
             {trace.tags.map((tag) => (
-              <Badge key={tag} variant="primary">
-                {tag}
-              </Badge>
+              <Badge key={tag}>{tag}</Badge>
             ))}
           </div>
           <p

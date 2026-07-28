@@ -13,8 +13,14 @@
  * pending → a loud running state; success → the typed `ResultViewer`; a timeout →
  * a DISTINCT "still executing server-side" notice; any other failure → the
  * generic loud `ErrorState`.
+ *
+ * The detail order is description → form → actions → result: the auto-form leads
+ * with the schema's description, then the `SchemaForm` (SDK form chrome —
+ * `Field`/`TextInput`/`Textarea`/`Select`/`Button`), then the run doors, then the
+ * typed result. All spacing comes from the SDK stack/row classes, not inline
+ * style objects.
  */
-import { useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -39,18 +45,6 @@ import { toolRunsListKey } from './backgroundRunsCommon';
 import { ResultViewer } from './ResultViewer';
 import { RunTimeoutError, runToolWithTimeout } from './run';
 import { BackgroundRuns } from './BackgroundRuns';
-
-const stackStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-
-const readOnlyNoteStyle: CSSProperties = {
-  margin: 0,
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-};
 
 /**
  * The two run doors, each a CONCRETE route so the projection can method-gate it. The
@@ -165,19 +159,26 @@ export function AutoFormRunPanel({
   const timedOut = run.isError && run.error instanceof RunTimeoutError;
 
   return (
-    <div style={stackStyle}>
+    <div className="tai-stack">
       {description !== undefined && description !== null && description.length > 0 ? (
-        <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>{description}</p>
+        <p className="tai-muted" style={{ margin: 0 }}>
+          {description}
+        </p>
       ) : null}
 
-      <form onSubmit={onSubmit} style={stackStyle}>
+      <form onSubmit={onSubmit} className="tai-stack">
         <SchemaForm schema={schema} value={value} onChange={setValue} errors={errors} />
         {noRunDoor ? (
-          <p role="note" data-testid="run-read-only-note" style={readOnlyNoteStyle}>
+          <p
+            role="note"
+            data-testid="run-read-only-note"
+            className="tai-muted"
+            style={{ margin: 0 }}
+          >
             Running this tool is outside your access — it is shown read-only.
           </p>
         ) : (
-          <div style={{ display: 'flex', gap: 'var(--tai-space-3)', flexWrap: 'wrap' }}>
+          <div className="tai-row">
             {ready && !canRunSync ? null : (
               <Button type="submit" variant="primary" disabled={!canRunSync || run.isPending}>
                 {run.isPending ? <Spinner label="Running" /> : null}
@@ -202,10 +203,7 @@ export function AutoFormRunPanel({
       {background.isError ? <ErrorState message={errorMessage(background.error)} /> : null}
 
       {run.isPending ? (
-        <div
-          role="status"
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}
-        >
+        <div role="status" className="tai-row">
           <Spinner label="Running" />
           <span>Running — the tool is executing on the server.</span>
         </div>
@@ -218,8 +216,8 @@ export function AutoFormRunPanel({
       ) : null}
 
       {run.isSuccess ? (
-        <section style={stackStyle}>
-          <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Result</h3>
+        <section className="tai-stack">
+          <h3 className="tai-card-title">Result</h3>
           <ResultViewer result={run.data} />
         </section>
       ) : null}
@@ -238,7 +236,7 @@ export function RunPanel({ toolName }: { readonly toolName: string }): ReactNode
 
   if (query.isPending) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
+      <div className="tai-stack tai-stack-3">
         <Skeleton height={24} width="40%" />
         <Skeleton height={120} />
       </div>

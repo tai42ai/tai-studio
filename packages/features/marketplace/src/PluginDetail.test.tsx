@@ -461,6 +461,29 @@ describe('PluginDetail — update and uninstall flows', () => {
   });
 });
 
+describe('PluginDetail — install snippet', () => {
+  function mockClipboard() {
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    return writeText;
+  }
+
+  it('shows a copy control for the install package that flips to Copied once', async () => {
+    const user = userEvent.setup();
+    const writeText = mockClipboard();
+    const client = reads(detailFixture({ package: 'tai42-toolbox' }), []);
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await screen.findByText('Toolbox');
+    await user.click(screen.getByRole('button', { name: 'Copy' }));
+
+    // The copy-flip spec, straight from the SDK CopyField: the package is written
+    // and the button's visible face flips to "Copied".
+    expect(writeText).toHaveBeenCalledWith('tai42-toolbox');
+    expect(await screen.findByText('Copied')).toBeVisible();
+  });
+});
+
 /** The `<table>` whose header row carries `columnHeader`, failing loudly if absent. */
 function tableUnder(columnHeader: string): HTMLElement {
   const table = screen.getByRole('columnheader', { name: columnHeader }).closest('table');

@@ -41,6 +41,30 @@ function labelInNameFailures(container: HTMLElement): string[] {
     .map((node) => `${node.getAttribute('aria-label') ?? ''} !~ ${node.textContent.trim()}`);
 }
 
+describe('AgentsPage header', () => {
+  it('renders the PageHeader: a "Capabilities" eyebrow above the level-1 "Agents" title', async () => {
+    renderWithProviders(<AgentsPage />, stubClient({ listAgents: listOf(agent()) }));
+
+    // The h1 keeps its verbatim title and level (Playwright/DOM contract).
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Agents' });
+    expect(heading).toBeInTheDocument();
+    // The nav-section eyebrow is a SIBLING label, never folded into the h1's name.
+    expect(screen.getByText('Capabilities')).toBeInTheDocument();
+    expect(heading).not.toHaveTextContent('Capabilities');
+  });
+
+  it('titles the run view on the agent name under the Capabilities eyebrow', async () => {
+    const client = stubClient({ listAgents: listOf(agent({ name: 'writer' })) });
+    renderWithProviders(<AgentsPage />, client);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Run' }));
+
+    // The run view's h1 is the agent name (verbatim), still under the section eyebrow.
+    expect(await screen.findByRole('heading', { level: 1, name: 'writer' })).toBeInTheDocument();
+    expect(screen.getByText('Capabilities')).toBeInTheDocument();
+  });
+});
+
 describe('AgentsPage list', () => {
   it('lists registered agents with a link to the run tool', async () => {
     const client = stubClient({

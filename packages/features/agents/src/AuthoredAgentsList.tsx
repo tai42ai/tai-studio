@@ -20,7 +20,6 @@ import {
 } from '@tai42/studio-sdk';
 
 import type { AuthoredRunTarget } from './authoring-types';
-import { monoStyle, rowStyle } from './authoring-styles';
 
 /**
  * The authored agents: DEFAULT-list presets whose `base_tool` is an agent's run
@@ -85,12 +84,12 @@ export function AuthoredAgentsList({
           <TBody>
             {authored.map(({ preset, baseAgent }) => (
               <TR key={preset.name} data-testid="authored-agent-row" data-agent={preset.name}>
-                <TD style={monoStyle}>{preset.name}</TD>
+                <TD className="tai-mono">{preset.name}</TD>
                 <TD>{preset.description}</TD>
-                <TD style={monoStyle}>{baseAgent.name}</TD>
+                <TD className="tai-mono">{baseAgent.name}</TD>
                 <TD>{preset.active_version}</TD>
                 <TD>
-                  <div style={{ ...rowStyle, flexWrap: 'wrap' }}>
+                  <div className="tai-row">
                     <Button
                       variant="primary"
                       aria-label={`Run authored agent ${preset.name}`}

@@ -53,15 +53,7 @@ function AdvisoriesBanner({
         {advisories.length === 1 ? 'advisory affects' : 'advisories affect'} installed plugins
       </strong>
       {advisories.map((advisory) => (
-        <div
-          key={advisory.id}
-          style={{
-            display: 'flex',
-            gap: 'var(--tai-space-2)',
-            alignItems: 'baseline',
-            flexWrap: 'wrap',
-          }}
-        >
+        <div key={advisory.id} className="tai-row">
           <Badge variant={severityVariant(advisory.severity)}>{advisory.severity}</Badge>
           <AppLink to="marketplace" search={mergeSearch(search, { plugin: advisory.listing })}>
             {advisory.listing}
@@ -86,7 +78,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
 
   if (installedQuery.isPending) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      <div className="tai-stack tai-stack-2">
         <Skeleton height={32} />
         <Skeleton height={32} />
         <Skeleton height={32} />
@@ -121,7 +113,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
       : [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+    <div className="tai-stack">
       {advisoriesQuery.isError ? (
         <ErrorState
           message={errorMessage(advisoriesQuery.error)}
@@ -148,7 +140,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
                 <TR key={row.ref}>
                   <TD>
                     <AppLink to="marketplace" search={mergeSearch(search, { plugin: row.ref })}>
-                      {row.ref}
+                      <span className="tai-mono">{row.ref}</span>
                     </AppLink>
                   </TD>
                   <TD>{row.version}</TD>

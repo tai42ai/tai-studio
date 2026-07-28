@@ -29,12 +29,13 @@ export function monogramInitials(title: string): string {
   return initials.join('');
 }
 
+/** The shared tile box: a fixed square with the tile corner, for both faces. */
 function boxStyle(size: number): CSSProperties {
   return {
     width: size,
     height: size,
     flex: '0 0 auto',
-    borderRadius: 'var(--tai-radius-md)',
+    borderRadius: 'var(--tai-radius-tile)',
     objectFit: 'cover',
   };
 }
@@ -56,6 +57,11 @@ export function ListingIcon({
   if (iconUrl !== null && isSafeHttpUrl(iconUrl)) {
     return <img src={iconUrl} alt="" width={size} height={size} style={boxStyle(size)} />;
   }
+  // A branded monogram tile: the accent tint ground and its on-tint ink — the
+  // same pair every accent surface paints with — so the fallback reads as part
+  // of the system rather than a grey placeholder. The `font:` shorthand is
+  // avoided on purpose (it resets the line-height a text token carries); family,
+  // size and weight sit on their own longhands.
   return (
     <span
       aria-hidden="true"
@@ -64,9 +70,10 @@ export function ListingIcon({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'var(--tai-color-surface)',
-        color: 'var(--tai-color-text-muted)',
-        font: 'var(--tai-text-md) var(--tai-font-sans)',
+        background: 'var(--tai-color-accent-tint)',
+        color: 'var(--tai-color-accent-on-tint)',
+        fontFamily: 'var(--tai-font-sans)',
+        fontSize: 'var(--tai-text-md)',
         fontWeight: 600,
       }}
     >

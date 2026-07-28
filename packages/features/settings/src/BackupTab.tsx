@@ -22,6 +22,7 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
+  AlertTriangleIcon,
   Badge,
   Button,
   Card,
@@ -86,20 +87,32 @@ const noteStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
 };
 
-const failureBannerStyle: CSSProperties = {
+// A destructive-action surface: a restore overwrites live config, so it wears the
+// design system's danger ground — danger-surface tint, err-text ink, and the
+// alert-triangle mark carrying the severity alongside the colour (never colour
+// alone). Shared by the top-of-import danger-zone note and the failure banner.
+const dangerPanelStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 'var(--tai-space-2)',
   margin: '0 0 var(--tai-space-3)',
   padding: 'var(--tai-space-3)',
   borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-danger)',
-  background: 'var(--tai-color-surface)',
-  color: 'var(--tai-color-danger)',
+  border: '1px solid var(--tai-color-err-text)',
+  background: 'var(--tai-color-danger-surface)',
+  color: 'var(--tai-color-err-text)',
+  fontSize: 'var(--tai-text-sm)',
+};
+
+const failureBannerStyle: CSSProperties = {
+  ...dangerPanelStyle,
   fontWeight: 600,
 };
 
 const errorListStyle: CSSProperties = {
   margin: 0,
   paddingLeft: 'var(--tai-space-4)',
-  color: 'var(--tai-color-danger)',
+  color: 'var(--tai-color-err-text)',
   fontSize: 'var(--tai-text-sm)',
 };
 
@@ -220,7 +233,8 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
     <div>
       {report.ok ? null : (
         <p role="alert" style={failureBannerStyle}>
-          Import failed — one or more sections reported errors. See the report below.
+          <AlertTriangleIcon />
+          <span>Import failed — one or more sections reported errors. See the report below.</span>
         </p>
       )}
       <ScrollRegion label="Import report">
@@ -228,9 +242,9 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
           <THead>
             <TR>
               <TH>Section</TH>
-              <TH>Created</TH>
-              <TH>Updated</TH>
-              <TH>Skipped</TH>
+              <TH numeric>Created</TH>
+              <TH numeric>Updated</TH>
+              <TH numeric>Skipped</TH>
               <TH>Errors</TH>
             </TR>
           </THead>
@@ -243,10 +257,10 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
                   data-testid={`report-row-${name}`}
                   style={hasErrors ? { background: 'var(--tai-color-danger-surface)' } : undefined}
                 >
-                  <TD>{name}</TD>
-                  <TD>{section.created}</TD>
-                  <TD>{section.updated}</TD>
-                  <TD>{section.skipped}</TD>
+                  <TD className="tai-mono">{name}</TD>
+                  <TD numeric>{section.created}</TD>
+                  <TD numeric>{section.updated}</TD>
+                  <TD numeric>{section.skipped}</TD>
                   <TD>
                     {hasErrors ? (
                       <ul style={errorListStyle}>
@@ -360,6 +374,16 @@ function ImportCard({ readOnly }: { readonly readOnly: boolean }): ReactNode {
         </p>
       ) : (
         <>
+          {/* A restore is destructive — it overwrites live deployment config — so the
+              whole import surface is fronted by the danger ground: the alert mark plus
+              err-text on the danger tint, and the restore action itself is a danger button. */}
+          <p style={dangerPanelStyle}>
+            <AlertTriangleIcon />
+            <span>
+              Restoring a backup overwrites this deployment&rsquo;s configuration for the selected
+              sections and cannot be undone.
+            </span>
+          </p>
           <input
             ref={fileInputRef}
             type="file"
@@ -401,7 +425,7 @@ function ImportCard({ readOnly }: { readonly readOnly: boolean }): ReactNode {
               {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
               <Button
                 type="button"
-                variant="primary"
+                variant="danger"
                 disabled={selected.size === 0 || mutation.isPending}
                 onClick={() => {
                   mutation.mutate({ document: document_, sections: [...selected] });

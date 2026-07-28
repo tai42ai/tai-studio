@@ -91,6 +91,18 @@ function browseReads(
   };
 }
 
+describe('MarketplacePage — page header', () => {
+  it('renders the Administration eyebrow above the verbatim Marketplace h1', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, { client: browseReads(pageOf([row()])) });
+    // The h1 keeps its exact title (DOM contract); the nav-section label is a
+    // separate element above it, never folded into the heading's accessible name.
+    const h1 = screen.getByRole('heading', { level: 1, name: 'Marketplace' });
+    expect(h1).toBeInTheDocument();
+    expect(screen.getByText('Administration')).toBeInTheDocument();
+    await screen.findByText('A box of tools.');
+  });
+});
+
 describe('MarketplacePage — browse tri-state', () => {
   it('shows no cards while the search is pending', () => {
     const client: StubApiClient = {

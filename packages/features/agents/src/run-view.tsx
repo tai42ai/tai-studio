@@ -9,7 +9,7 @@
  * cancel, matching the contract. Errors surface loudly; nothing is swallowed.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import type { ParsedAgentEvent } from '@tai42/api-client';
 import {
@@ -19,7 +19,9 @@ import {
   Card,
   ErrorState,
   JsonTree,
+  PageHeader,
   SchemaForm,
+  Stack,
   defaultValueForSchema,
   useApi,
   validateAgainstSchema,
@@ -148,33 +150,6 @@ export function useAuthoredAgentRun(agentName: string): AgentRun {
 
 // -- shared run view ---------------------------------------------------------
 
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-const headingStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-xl) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
-const cardBodyStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-const bakedListStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-const rowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-3)',
-};
-const spacerStyle: CSSProperties = { marginLeft: 'auto' };
-
 const STATUS_LABEL: Record<RunStatus, string> = {
   idle: 'Ready',
   running: 'Running…',
@@ -222,68 +197,57 @@ export function StreamRunView({
   };
 
   return (
-    <section style={pageStyle} aria-labelledby="agent-run-heading">
-      <div style={rowStyle}>
+    <Stack>
+      <div className="tai-row">
         <Button type="button" variant="secondary" onClick={onBack} aria-label={backLabel}>
           <ArrowLeftIcon />
           Back
         </Button>
-        <h1 id="agent-run-heading" style={headingStyle}>
-          {title}
-        </h1>
-        <div style={spacerStyle} />
-        <Badge
-          variant={
-            run.status === 'error' ? 'danger' : run.status === 'done' ? 'success' : 'neutral'
-          }
-        >
-          {STATUS_LABEL[run.status]}
-        </Badge>
       </div>
+      <PageHeader
+        eyebrow="Capabilities"
+        title={title}
+        actions={
+          <Badge
+            variant={
+              run.status === 'error' ? 'danger' : run.status === 'done' ? 'success' : 'neutral'
+            }
+          >
+            {STATUS_LABEL[run.status]}
+          </Badge>
+        }
+      />
 
       <Card>
-        <div style={cardBodyStyle}>
+        <div className="tai-stack-2">
           {bakedFields && bakedFields.length > 0 ? (
             <div
-              style={bakedListStyle}
+              className="tai-stack-2"
               role="group"
               aria-labelledby="run-baked-heading"
               data-testid="run-baked-fields"
             >
-              <span
-                id="run-baked-heading"
-                style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}
-              >
+              <span id="run-baked-heading" className="tai-muted">
                 Baked fields (fixed at authoring; not editable here)
               </span>
               {bakedFields.map((field) => (
                 <div key={field.key} data-testid="run-baked-field" data-field={field.key}>
-                  <span style={{ font: 'var(--tai-text-sm) var(--tai-font-mono)' }}>
-                    {field.key}
-                  </span>
+                  <span className="tai-mono">{field.key}</span>
                   <JsonTree data={field.value} defaultExpanded={false} label={field.key} />
                 </div>
               ))}
             </div>
           ) : null}
           <SchemaForm schema={schema} value={value} onChange={setValue} errors={errors} />
-          <div style={rowStyle}>
+          <div className="tai-row">
             {canRun ? (
               <Button type="button" variant="primary" disabled={run.running} onClick={submit}>
                 Run
               </Button>
             ) : (
-              <p
-                role="note"
-                data-testid="run-read-only-note"
-                style={{
-                  margin: 0,
-                  color: 'var(--tai-color-text-muted)',
-                  fontSize: 'var(--tai-text-sm)',
-                }}
-              >
+              <span role="note" data-testid="run-read-only-note" className="tai-muted">
                 Running this agent is outside your access — it is shown read-only.
-              </p>
+              </span>
             )}
             {run.running ? (
               <Button
@@ -304,6 +268,6 @@ export function StreamRunView({
           solely as a timeline `error` row, so the message is never doubled. */}
       {run.error !== null ? <ErrorState message={run.error} /> : null}
       <Timeline events={run.events} />
-    </section>
+    </Stack>
   );
 }

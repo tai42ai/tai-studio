@@ -60,6 +60,33 @@ describe('AreaChart', () => {
     const polyline = screen.getByRole('img').querySelector('polyline');
     expect(polyline).toHaveAttribute('points', '300,4');
   });
+
+  it('draws token gridlines behind the series', () => {
+    const points: AreaPoint[] = [
+      { label: 'Mon', value: 3 },
+      { label: 'Tue', value: 7 },
+    ];
+    render(<AreaChart points={points} ariaLabel="Runs" formatValue={String} />);
+
+    const lines = [...screen.getByRole('img').querySelectorAll('line')];
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) {
+      expect(line).toHaveAttribute('stroke', 'var(--tai-color-border)');
+    }
+  });
+
+  it('emphasises the latest sample with a larger endpoint marker', () => {
+    const points: AreaPoint[] = [
+      { label: 'Mon', value: 3 },
+      { label: 'Tue', value: 7 },
+    ];
+    render(<AreaChart points={points} ariaLabel="Runs" formatValue={String} />);
+
+    const circles = [...screen.getByRole('img').querySelectorAll('circle')];
+    expect(circles).toHaveLength(2);
+    expect(circles[0]).toHaveAttribute('r', '2.5');
+    expect(circles[circles.length - 1]).toHaveAttribute('r', '4');
+  });
 });
 
 describe('BarList', () => {

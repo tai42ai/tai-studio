@@ -17,7 +17,6 @@ import {
 } from '@tai42/studio-sdk';
 
 import type { InlinePresetSpec } from './authoring-types';
-import { monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
 
 /**
  * The `presets` field editor: a picker over the NON-conflicted stored presets that
@@ -63,17 +62,17 @@ export function PresetSpecEditor({
   });
 
   return (
-    <div style={smallStackStyle} data-testid={idPrefix}>
+    <div className="tai-stack-2" data-testid={idPrefix}>
       {value.length > 0 ? (
-        <div style={smallStackStyle}>
+        <div className="tai-stack-2">
           {value.map((entry) => (
             <span
               key={entry.name}
               className="tai-chip tai-chip-static"
               data-testid={`${idPrefix}-entry`}
             >
-              <span style={monoStyle}>{entry.name}</span>
-              <span style={{ color: 'var(--tai-color-text-muted)' }}>over {entry.base_tool}</span>
+              <span className="tai-mono">{entry.name}</span>
+              <span className="tai-muted">over {entry.base_tool}</span>
               <Button
                 type="button"
                 aria-label={`Remove preset ${entry.name}`}
@@ -88,7 +87,7 @@ export function PresetSpecEditor({
           ))}
         </div>
       ) : null}
-      <div style={rowStyle}>
+      <div className="tai-row">
         <Select
           options={options}
           value={pick}

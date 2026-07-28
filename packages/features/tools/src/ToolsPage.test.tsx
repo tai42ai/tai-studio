@@ -2,9 +2,12 @@
  * Behavioural tests for the tools page: the master list (data / empty /
  * loud error), selecting a tool sets the `tool` search param via the shell
  * navigate spy, a selected tool mounts the run panel driven by its fetched
- * schema, and the tag filter row groups + filters the list, persisting the
- * selection through the `?tags=` search param.
+ * schema, the tag filter row groups + filters the list (persisting the selection
+ * through the `?tags=` search param) and collapses its overflow into a static
+ * "+N more", and the responsive master/detail behaviour — single-pane Back control
+ * and focus management on selection change.
  */
+import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,9 +24,62 @@ import {
 
 afterEach(() => {
   __resetContributions();
+  vi.unstubAllGlobals();
 });
 
 const emptyTags = { listToolTags: vi.fn().mockResolvedValue([]) };
+
+/** A client that can drive a full detail pane (schema + extensions + presets). */
+function detailClient(names: readonly string[] = ['echo']): StubApiClient {
+  return {
+    listTools: vi.fn().mockResolvedValue([...names]),
+    ...emptyTags,
+    getToolSchema: vi.fn().mockResolvedValue({
+      input: { type: 'object', properties: {}, required: [] },
+      output: null,
+      description: null,
+    }),
+    getToolExtensions: vi.fn().mockResolvedValue({ combos: [], available: [] }),
+    listPresets: vi.fn().mockResolvedValue([]),
+  };
+}
+
+interface ToolsSearch {
+  readonly tool?: string;
+  readonly tags?: string[];
+}
+
+/**
+ * Render `ToolsPage` inside a stateful harness whose navigate spy updates the
+ * search param it receives — exactly how the shell router drives it. This is what
+ * lets a click (or Back) actually change the selection so the focus effect fires.
+ */
+function renderToolsHarness(client: StubApiClient, initial: ToolsSearch = {}) {
+  let setSearch: ((next: ToolsSearch) => void) | undefined;
+  function Harness(): ReactNode {
+    const [search, setSearchState] = useState<ToolsSearch>(initial);
+    setSearch = setSearchState;
+    return <ToolsPage search={search} />;
+  }
+  const navigate = vi.fn((_token: string, next?: ToolsSearch) => {
+    setSearch?.({ tool: next?.tool, tags: next?.tags });
+  });
+  return renderWithProviders(<Harness />, { client, navigate });
+}
+
+/** Force `useBreakpoint` into the single-pane band (below 1024, not phone). */
+function stubSinglePane(): void {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query !== '(max-width: 639px)',
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
+}
 
 describe('ToolsPage — master list', () => {
   it('renders the tool names', async () => {
@@ -35,6 +91,17 @@ describe('ToolsPage — master list', () => {
 
     expect(await screen.findByText('echo')).toBeInTheDocument();
     expect(screen.getByText('search')).toBeInTheDocument();
+  });
+
+  it('renders the page header with the Capabilities eyebrow and the Tools h1', async () => {
+    const client: StubApiClient = { listTools: vi.fn().mockResolvedValue(['echo']), ...emptyTags };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    // The h1's accessible name is the title VERBATIM; the eyebrow is a sibling, not
+    // folded into the heading name.
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Tools' });
+    expect(heading).toBeInTheDocument();
+    expect(screen.getByText('Capabilities')).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no tools', async () => {
@@ -64,18 +131,9 @@ describe('ToolsPage — master list', () => {
   });
 
   it('marks the selected tool link as the current page', async () => {
-    const client: StubApiClient = {
-      listTools: vi.fn().mockResolvedValue(['echo', 'search']),
-      ...emptyTags,
-      getToolSchema: vi.fn().mockResolvedValue({
-        input: { type: 'object', properties: {}, required: [] },
-        output: null,
-        description: null,
-      }),
-      getToolExtensions: vi.fn().mockResolvedValue({ combos: [], available: [] }),
-      listPresets: vi.fn().mockResolvedValue([]),
-    };
-    renderWithProviders(<ToolsPage search={{ tool: 'echo' }} />, { client });
+    renderWithProviders(<ToolsPage search={{ tool: 'echo' }} />, {
+      client: detailClient(['echo', 'search']),
+    });
 
     const active = await screen.findByRole('link', { name: 'Open tool echo' });
     expect(active).toHaveAttribute('aria-current', 'page');
@@ -87,18 +145,9 @@ describe('ToolsPage — master list', () => {
 
 describe('ToolsPage — selected tool', () => {
   it('mounts the run panel for the selected tool', async () => {
-    const client: StubApiClient = {
-      listTools: vi.fn().mockResolvedValue(['echo']),
-      ...emptyTags,
-      getToolSchema: vi.fn().mockResolvedValue({
-        input: { type: 'object', properties: {}, required: [] },
-        output: null,
-        description: null,
-      }),
-      getToolExtensions: vi.fn().mockResolvedValue({ combos: [], available: [] }),
-      listPresets: vi.fn().mockResolvedValue([]),
-    };
-    renderWithProviders(<ToolsPage search={{ tool: 'echo' }} />, { client });
+    renderWithProviders(<ToolsPage search={{ tool: 'echo' }} />, {
+      client: detailClient(['echo']),
+    });
 
     // The auto-form (no contributed panel) renders for the selected tool.
     expect(await screen.findByTestId('schema-form')).toBeInTheDocument();
@@ -110,6 +159,58 @@ describe('ToolsPage — selected tool', () => {
     renderWithProviders(<ToolsPage search={{}} />, { client });
 
     expect(await screen.findByText('No tool selected')).toBeInTheDocument();
+  });
+});
+
+describe('ToolsPage — responsive master/detail', () => {
+  it('moves focus to the detail heading when a tool is selected (client-side change)', async () => {
+    const user = userEvent.setup();
+    renderToolsHarness(detailClient(['echo']));
+
+    await user.click(await screen.findByRole('link', { name: 'Open tool echo' }));
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'echo' });
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
+  });
+
+  it('does NOT steal focus on an initial deep-link mount (focus follows changes only)', async () => {
+    renderToolsHarness(detailClient(['echo']), { tool: 'echo' });
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'echo' });
+    // The heading exists and is focusable, but a page opened straight at `?tool=echo`
+    // must not yank focus onto it on load.
+    expect(heading).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
+  it('shows a Back control single-pane that clears the selection and returns focus to the row', async () => {
+    const user = userEvent.setup();
+    stubSinglePane();
+    renderToolsHarness(detailClient(['echo']), { tool: 'echo' });
+
+    // Single-pane with a selection → the detail pane shows a Back control.
+    const back = await screen.findByRole('button', { name: 'Back' });
+    await user.click(back);
+
+    // The selection clears (the no-selection state returns) and the Back control is gone.
+    expect(await screen.findByText('No tool selected')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+    // Focus returns to the originating list row.
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Open tool echo' })).toHaveFocus();
+    });
+  });
+
+  it('shows no Back control above 1024 (both panes visible)', async () => {
+    // Default jsdom has no matchMedia → the `full` band → not single-pane.
+    renderWithProviders(<ToolsPage search={{ tool: 'echo' }} />, {
+      client: detailClient(['echo']),
+    });
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'echo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
   });
 });
 
@@ -226,6 +327,41 @@ describe('ToolsPage — tag filtering', () => {
     expect(await screen.findByText('No tools match')).toBeInTheDocument();
     const staleChip = screen.getByRole('button', { name: 'nope (0)' });
     expect(staleChip).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+describe('ToolsPage — tag chip overflow', () => {
+  const manyNames = Array.from({ length: 10 }, (_, i) => `tool${String(i)}`);
+  const manyTags: ToolTagEntry[] = manyNames.map((name, i) => ({ name, tags: [`t${String(i)}`] }));
+  function manyTagsClient(): StubApiClient {
+    return {
+      listTools: vi.fn().mockResolvedValue(manyNames),
+      listToolTags: vi.fn().mockResolvedValue(manyTags),
+    };
+  }
+
+  it('collapses the overflow into a STATIC "+N more" count, not an expander', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, { client: manyTagsClient() });
+
+    // Ten distinct unselected tags, eight shown → two collapse.
+    expect(await screen.findByRole('button', { name: 't0 (1)' })).toBeInTheDocument();
+    const more = screen.getByText('+2 more');
+    expect(more).toHaveClass('tai-chip-static');
+    // It is a count, never a control.
+    expect(screen.queryByRole('button', { name: '+2 more' })).toBeNull();
+    // The collapsed tags are not rendered as chips.
+    expect(screen.queryByRole('button', { name: 't8 (1)' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 't9 (1)' })).toBeNull();
+  });
+
+  it('always keeps a SELECTED tag visible even when it would otherwise overflow', async () => {
+    renderWithProviders(<ToolsPage search={{ tags: ['t9'] }} />, { client: manyTagsClient() });
+
+    // t9 would fall into the overflow, but a selected chip stays visible so it is
+    // still toggleable; only one unselected tag is then left to collapse.
+    const selected = await screen.findByRole('button', { name: 't9 (1)' });
+    expect(selected).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('+1 more')).toHaveClass('tai-chip-static');
   });
 });
 

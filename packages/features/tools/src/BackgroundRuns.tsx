@@ -10,8 +10,13 @@
  * `ResultViewer` the sync path uses (oversized handling included). A `lost` run
  * (the server restarted mid-run) renders its own explanation — the result is
  * unrecoverable.
+ *
+ * The recent-runs list is a quiet, borderless `.tai-nav-item` list: a status chip
+ * (label + colour, plus a live spinner while running), the run id in mono, and the
+ * start time. The selected row carries `aria-pressed` and the accent tint so the
+ * detail above it and the row it came from read as one selection.
  */
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, type Query } from '@tanstack/react-query';
 import {
   Badge,
@@ -32,12 +37,6 @@ import {
   toolRunKey,
   toolRunsListKey,
 } from './backgroundRunsCommon';
-
-const stackStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-3)',
-};
 
 /** One status chip; the running state pairs the chip with a live spinner. */
 function StatusChip({ status }: { readonly status: ToolRunRecord['status'] }): ReactNode {
@@ -87,19 +86,14 @@ function RunDetail({ runId }: { readonly runId: string }): ReactNode {
 
   const record = query.data;
   return (
-    <section style={stackStyle} data-testid="tool-run-detail">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
+    <section className="tai-stack tai-stack-3" data-testid="tool-run-detail">
+      <div className="tai-row">
         <StatusChip status={record.status} />
-        <code style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
-          {record.run_id}
-        </code>
+        <code className="tai-mono tai-muted">{record.run_id}</code>
       </div>
 
       {record.status === 'running' ? (
-        <div
-          role="status"
-          style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}
-        >
+        <div role="status" className="tai-row">
           <Spinner label="Polling" />
           <span>Running in the background — polling for the result.</span>
         </div>
@@ -142,11 +136,11 @@ export function BackgroundRuns({
   });
 
   return (
-    <section style={{ ...stackStyle, gap: 'var(--tai-space-4)' }} data-testid="background-runs">
+    <section className="tai-stack" data-testid="background-runs">
       {selectedRunId !== undefined ? <RunDetail runId={selectedRunId} /> : null}
 
-      <div style={stackStyle}>
-        <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Recent background runs</h3>
+      <div className="tai-stack tai-stack-3">
+        <h3 className="tai-card-title">Recent background runs</h3>
         {recent.isPending ? (
           <Skeleton height={60} />
         ) : recent.isError ? (
@@ -157,57 +151,42 @@ export function BackgroundRuns({
             description="Run this tool in the background to see its runs here."
           />
         ) : (
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-              ...stackStyle,
-              gap: 'var(--tai-space-2)',
-            }}
-          >
-            {recent.data.map((run) => (
-              <li key={run.run_id}>
+          <div className="tai-stack tai-stack-2">
+            {recent.data.map((run) => {
+              const selected = run.run_id === selectedRunId;
+              return (
                 <button
+                  key={run.run_id}
                   type="button"
                   onClick={() => {
                     setSelectedRunId(run.run_id);
                   }}
-                  aria-pressed={run.run_id === selectedRunId}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--tai-space-3)',
-                    width: '100%',
-                    padding: 'var(--tai-space-2) var(--tai-space-3)',
-                    // An unselected row has a transparent ground, so this edge is
-                    // the control's ONLY boundary: contrast-safe token, not decor.
-                    border: '1px solid var(--tai-color-control-border)',
-                    borderRadius: 'var(--tai-radius-sm)',
-                    background:
-                      run.run_id === selectedRunId
-                        ? 'var(--tai-color-surface-raised)'
-                        : 'transparent',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    color: 'var(--tai-color-text)',
-                  }}
+                  aria-pressed={selected}
+                  // `.tai-nav-item` is borderless (no decorative-border boundary) and
+                  // paints its own hover. It keys its selected tint on
+                  // `aria-current="page"`, which is a nav-route affordance this
+                  // in-panel toggle is not; the selected row therefore carries the
+                  // accent tint via canonical tokens (never a literal). See the return
+                  // note: there is no SDK persistent-pressed list-row primitive.
+                  className="tai-nav-item"
+                  style={
+                    selected
+                      ? {
+                          background: 'var(--tai-color-accent-tint)',
+                          color: 'var(--tai-color-accent-on-tint)',
+                        }
+                      : undefined
+                  }
                 >
                   <StatusChip status={run.status} />
-                  <code style={{ fontSize: 'var(--tai-text-sm)' }}>{run.run_id}</code>
-                  <span
-                    style={{
-                      marginLeft: 'auto',
-                      color: 'var(--tai-color-text-muted)',
-                      fontSize: 'var(--tai-text-sm)',
-                    }}
-                  >
+                  <code className="tai-mono">{run.run_id}</code>
+                  <span className="tai-muted" style={{ marginLeft: 'auto' }}>
                     {run.started_at}
                   </span>
                 </button>
-              </li>
-            ))}
-          </ul>
+              );
+            })}
+          </div>
         )}
       </div>
     </section>

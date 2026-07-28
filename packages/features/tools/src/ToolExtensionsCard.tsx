@@ -28,7 +28,7 @@
  * components. A zod mismatch or a rejected extensions load surfaces as a loud
  * `ErrorState`.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { summarizeFleetFanout, type PresetExtensionElement } from '@tai42/api-client';
 import {
@@ -50,42 +50,14 @@ import {
 
 import { toolExtensionsKey, toolPresetsKey, toolsListKey } from './keys';
 
-const stackStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-
-const comboListStyle: CSSProperties = {
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-
-const comboRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  flexWrap: 'wrap',
-  gap: 'var(--tai-space-2)',
-};
-
-const headingStyle: CSSProperties = {
-  margin: 0,
-  fontSize: 'var(--tai-text-md)',
-  color: 'var(--tai-color-text)',
-};
-
 /** A single authored combo, shown as an ordered row of extension-name badges. */
 function ComboBadges({ combo }: { readonly combo: readonly string[] }): ReactNode {
   return (
-    <span style={comboRowStyle}>
+    <span className="tai-row">
       {combo.map((name, position) => (
-        <span key={`${name}-${String(position)}`} style={comboRowStyle}>
+        <span key={`${name}-${String(position)}`} className="tai-row">
           {position > 0 ? (
-            <span aria-hidden style={{ color: 'var(--tai-color-text-muted)' }}>
+            <span aria-hidden className="tai-muted">
               +
             </span>
           ) : null}
@@ -159,7 +131,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
   // under the loud notice the card renders for that failure.
   if (extensionsQuery.isPending || presetsQuery.isPending) {
     return (
-      <div style={stackStyle}>
+      <div className="tai-stack">
         <Skeleton height={20} width="40%" />
         <Skeleton height={48} />
       </div>
@@ -176,7 +148,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
   const { combos, available } = extensionsQuery.data;
 
   return (
-    <section style={stackStyle} aria-labelledby="tool-extensions-heading">
+    <section className="tai-stack" aria-labelledby="tool-extensions-heading">
       <div
         style={{
           display: 'flex',
@@ -186,7 +158,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           flexWrap: 'wrap',
         }}
       >
-        <h3 id="tool-extensions-heading" style={headingStyle}>
+        <h3 id="tool-extensions-heading" className="tai-card-title">
           Extension combos
         </h3>
         {!isPresetTool ? (
@@ -215,7 +187,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
 
       {save.isSuccess ? (
         <>
-          <p role="status" style={{ margin: 0, color: 'var(--tai-color-success)' }}>
+          <p role="status" className="tai-status-ok" style={{ margin: 0 }}>
             Extensions applied.
           </p>
           {/* The save persists then broadcasts a reload to the fleet; the shared
@@ -226,7 +198,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
       ) : null}
 
       {isPresetTool ? (
-        <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
+        <p className="tai-muted" style={{ margin: 0 }}>
           <Badge variant="success">preset</Badge> Preset tools carry their combos on the preset —{' '}
           {/* The link names itself from its own visible text (WCAG 2.5.3, Label in
               Name): an `aria-label` naming the tool and the destination said none of
@@ -242,16 +214,16 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           description={`${tool} carries no extension combos. Add one to compose a branch tool.`}
         />
       ) : (
-        <ul style={comboListStyle}>
+        <div className="tai-stack tai-stack-2">
           {combos.map((combo, index) => (
             // The index IS the identity: combos are an ordered list with no stable id
             // of their own, read-only here (the dialog owns editing). The row shows the
             // element names; any author config is edited in the dialog.
-            <li key={index} style={comboRowStyle}>
+            <div key={index} className="tai-row">
               <ComboBadges combo={comboElementNames(combo)} />
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       <Dialog
@@ -263,7 +235,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           setOpen(next);
         }}
       >
-        <div style={stackStyle}>
+        <div className="tai-stack">
           <ExtensionComboBuilder
             available={available}
             value={draft}
@@ -281,13 +253,13 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
 
           {confirmingClear ? (
-            <p role="alert" style={{ margin: 0, color: 'var(--tai-color-danger)' }}>
+            <p role="alert" className="tai-status-err" style={{ margin: 0 }}>
               Saving an empty list clears every combo and drops all of {tool}&apos;s branch tools.
               Confirm to proceed.
             </p>
           ) : null}
 
-          <div style={{ display: 'flex', gap: 'var(--tai-space-2)', flexWrap: 'wrap' }}>
+          <div className="tai-row">
             <Button type="button" variant="primary" disabled={save.isPending} onClick={onSave}>
               {save.isPending ? <Spinner label="Saving extensions" /> : null}
               {confirmingClear ? 'Confirm clear' : 'Save'}

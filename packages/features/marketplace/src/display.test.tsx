@@ -58,4 +58,19 @@ describe('ListingIcon', () => {
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText('T')).toBeInTheDocument();
   });
+
+  it('renders the monogram on a branded tile: tile radius, token colours, no font shorthand', () => {
+    render(<ListingIcon iconUrl={null} title="Toolbox Pro" />);
+    const tile = screen.getByText('TP');
+    const styleAttr = tile.getAttribute('style') ?? '';
+    // The tile corner, not the generic md radius.
+    expect(tile.style.borderRadius).toBe('var(--tai-radius-tile)');
+    // Branded ground + ink from tokens (never a literal colour).
+    expect(tile.style.background).toBe('var(--tai-color-accent-tint)');
+    expect(tile.style.color).toBe('var(--tai-color-accent-on-tint)');
+    // The banned `font:` shorthand resets the line-height a text token carries;
+    // family/size/weight sit on their own longhands instead.
+    expect(styleAttr).not.toMatch(/(?:^|;)\s*font\s*:/);
+    expect(tile.style.fontFamily).toBe('var(--tai-font-sans)');
+  });
 });

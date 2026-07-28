@@ -10,7 +10,7 @@
  * dedicated state, rendered by each tab.
  */
 import type { ReactNode } from 'react';
-import { Tabs, useAppNavigate, type PageProps } from '@tai42/studio-sdk';
+import { PageHeader, Tabs, useAppNavigate, type PageProps } from '@tai42/studio-sdk';
 
 import { activeTab, mergeSearch, type TabId } from './filters';
 import { StatsTab } from './StatsTab';
@@ -21,13 +21,8 @@ export function ObservabilityPage({ search }: PageProps<'observability'>): React
   const current = activeTab(search);
 
   return (
-    <div
-      data-testid="observability-page"
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}
-    >
-      <header>
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Dashboard</h1>
-      </header>
+    <div data-testid="observability-page" className="tai-stack tai-stack-6">
+      <PageHeader eyebrow="Observability" title="Dashboard" />
 
       <Tabs
         value={current}

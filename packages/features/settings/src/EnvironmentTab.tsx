@@ -98,7 +98,7 @@ const noticeStyle: CSSProperties = {
 
 const validationStyle: CSSProperties = {
   margin: 'var(--tai-space-3) 0 0',
-  color: 'var(--tai-color-danger)',
+  color: 'var(--tai-color-err-text)',
   fontSize: 'var(--tai-text-sm)',
 };
 

@@ -99,8 +99,8 @@ describe('TraceView', () => {
     expect(await screen.findByText('root-span')).toBeInTheDocument();
     const child = screen.getByText('child-span');
     expect(child).toBeInTheDocument();
-    // The ERROR span name is colored with the danger token; the DEFAULT one is not.
-    expect(child).toHaveStyle({ color: 'var(--tai-color-danger)' });
+    // The ERROR span name is colored with the canonical error token; the DEFAULT one is not.
+    expect(child).toHaveStyle({ color: 'var(--tai-color-err-text)' });
     expect(screen.getByText('root-span')).toHaveStyle({ color: 'var(--tai-color-text)' });
     expect(screen.getByText('boom')).toBeInTheDocument();
 

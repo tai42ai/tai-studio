@@ -162,6 +162,29 @@ describe('BackupTab', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Import failed');
   });
 
+  it('fronts the import surface with a danger-zone note and a danger restore button', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub() });
+
+    // A restore overwrites live config, so the import surface wears the danger ground:
+    // the note is up front, before any file is chosen.
+    expect(await screen.findByText(/overwrites this deployment/i)).toBeInTheDocument();
+
+    await uploadBackup(user);
+    // The restore action itself is a danger button, not the neutral primary it was.
+    const restore = await screen.findByRole('button', { name: 'Import selected' });
+    expect(restore).toHaveClass('tai-btn-danger');
+  });
+
+  it('hides the danger zone in read-only mode', async () => {
+    renderWithProviders(<BackupTab readOnly />, { client: baseStub() });
+
+    // The read-only note replaces the import controls, so no destructive surface renders.
+    expect(await screen.findByText(/read-only for this deployment/i)).toBeInTheDocument();
+    expect(screen.queryByText(/overwrites this deployment/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Import selected' })).not.toBeInTheDocument();
+  });
+
   it('surfaces malformed JSON loudly and does not import', async () => {
     const user = userEvent.setup();
     const importBackup = vi.fn();

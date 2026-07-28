@@ -249,11 +249,6 @@ const routeRowStyle: CSSProperties = {
   color: 'var(--tai-color-text-muted)',
 };
 
-const monoStyle: CSSProperties = {
-  fontFamily: 'var(--tai-font-mono)',
-  fontSize: 'var(--tai-text-sm)',
-};
-
 const noteStyle: CSSProperties = {
   margin: 0,
   fontSize: 'var(--tai-text-sm)',
@@ -299,7 +294,7 @@ function RouteDetail({ routes }: { readonly routes: readonly AuthRoute[] }): Rea
     <ul style={routeListStyle}>
       {routes.map((route) => (
         <li key={`${route.methods.join(',')} ${route.path}`} style={routeRowStyle}>
-          <span style={monoStyle}>
+          <span className="tai-mono">
             {route.methods.join(', ')} {route.path}
           </span>
           {actionBadge(route.action)}

@@ -340,8 +340,8 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
               <TBody>
                 {keys.map((payload) => (
                   <TR key={payload.user_id}>
-                    <TD>{payload.user_id}</TD>
-                    <TD>{ownerOf(payload) ?? '—'}</TD>
+                    <TD className="tai-mono">{payload.user_id}</TD>
+                    <TD className="tai-mono">{ownerOf(payload) ?? '—'}</TD>
                     <TD>{payload.description}</TD>
                     <TD>
                       <div style={badgeRowStyle}>

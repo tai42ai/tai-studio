@@ -53,5 +53,5 @@ export const dialogActionsStyle: CSSProperties = {
 export const conditionWarningStyle: CSSProperties = {
   margin: 'var(--tai-space-3) 0 0',
   fontSize: 'var(--tai-text-sm)',
-  color: 'var(--tai-color-warning)',
+  color: 'var(--tai-color-warn-text)',
 };

@@ -6,27 +6,42 @@
  * `EmptyState`, error → a loud `ErrorState` that is always visible (no
  * special-casing of 401).
  *
+ * LAYOUT is a design-system master/detail split (`.tai-split` + `.tai-split-list` +
+ * `.tai-split-detail`). Below 1024 (`useBreakpoint().isSinglePane`) exactly one
+ * pane shows, driven by `data-pane`: the list until a tool is chosen, then the
+ * detail with a Back control (an arrow-left icon and the word "Back") that clears
+ * the selection. Selecting a tool moves focus to the detail heading; Back returns
+ * focus to the list row it came from. A deep-link that arrives WITH a selection
+ * does not steal focus on load — focus only follows a client-side change.
+ *
  * The list is additionally grouped and filterable by NATIVE TOOL TAGS
- * (`api.listToolTags`): a toggle row selects tags (OR semantics; an "Untagged"
- * chip selects tools carrying no tag), and the filtered tools are grouped under
- * per-tag headers (untagged last, a multi-tag tool under each of its tags). The
- * selection persists in the `?tags=` search param, so a filtered view is linkable.
- * A tags-query failure never takes down browsing: the flat list survives and the
- * tag row shows a loud `ErrorState` strip instead of grouping.
+ * (`api.listToolTags`): a toggle row of `.tai-chip` filters selects tags (OR
+ * semantics; an "Untagged" chip selects tools carrying no tag), and the filtered
+ * tools are grouped under per-tag headers (untagged last, a multi-tag tool under
+ * each of its tags). The selection persists in the `?tags=` search param, so a
+ * filtered view is linkable. When the vocabulary is large the chip row collapses
+ * its overflow into a STATIC "+N more" count (never an expander) — every tag still
+ * appears as a group header below, and every selected chip stays visible so it
+ * remains toggleable. A tags-query failure never takes down browsing: the flat
+ * list survives and the tag row shows a loud `ErrorState` strip instead of grouping.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   AppLink,
-  Badge,
+  ArrowLeftIcon,
+  Button,
   Card,
   EmptyState,
   ErrorState,
+  PageHeader,
   Skeleton,
+  Stack,
   errorMessage,
   isFullProjection,
   useApi,
   useAppNavigate,
+  useBreakpoint,
   useCapabilities,
   type CapabilityState,
   type PageProps,
@@ -41,20 +56,14 @@ import { toolTagsKey, toolsListKey } from './keys';
 const UNTAGGED_TOKEN = '__untagged__';
 const UNTAGGED_LABEL = 'Untagged';
 
-function toolItemStyle(isActive: boolean): CSSProperties {
-  return {
-    display: 'block',
-    padding: 'var(--tai-space-2) var(--tai-space-3)',
-    borderRadius: 'var(--tai-radius-md)',
-    font: 'var(--tai-text-md) var(--tai-font-sans)',
-    color: isActive ? 'var(--tai-color-primary-text)' : 'var(--tai-color-text)',
-    background: isActive ? 'var(--tai-color-primary)' : 'transparent',
-    textDecoration: 'none',
-    wordBreak: 'break-all',
-  };
-}
+/** How many tag chips the filter row shows before collapsing the rest into "+N more".
+ * Selected chips are always shown (they stay toggleable), so this caps the UNSELECTED
+ * chips on show; every tag still appears as a group header below. */
+const MAX_VISIBLE_TAG_CHIPS = 8;
 
-/** One tool row: a link that sets `?tool=` while preserving the active `?tags=`. */
+/** One tool row: a borderless nav-item link that sets `?tool=` while preserving the
+ * active `?tags=`. Selected → accent tint + inset rail via `.tai-nav-item` +
+ * `aria-current="page"`. The tool name is a machine identifier, so it renders mono. */
 function ToolItem({
   name,
   selected,
@@ -65,20 +74,17 @@ function ToolItem({
   readonly preserveTags: readonly string[];
 }): ReactNode {
   return (
-    <li>
-      <AppLink
-        to="tools"
-        search={{ tool: name, tags: preserveTags.length > 0 ? [...preserveTags] : undefined }}
-        aria-label={`Open tool ${name}`}
-        aria-current={selected ? 'page' : undefined}
-      >
-        <span style={toolItemStyle(selected)}>{name}</span>
-      </AppLink>
-    </li>
+    <AppLink
+      to="tools"
+      search={{ tool: name, tags: preserveTags.length > 0 ? [...preserveTags] : undefined }}
+      aria-label={`Open tool ${name}`}
+      aria-current={selected ? 'page' : undefined}
+      className="tai-nav-item tai-mono"
+    >
+      {name}
+    </AppLink>
   );
 }
-
-const plainListStyle: CSSProperties = { listStyle: 'none', margin: 0, padding: 0 };
 
 /**
  * The tools visible to the caller. A scoped session sees only the tools its
@@ -104,11 +110,11 @@ function FlatToolList({
   readonly preserveTags: readonly string[];
 }): ReactNode {
   return (
-    <ul style={plainListStyle}>
+    <div className="tai-stack tai-stack-2">
       {names.map((name) => (
         <ToolItem key={name} name={name} selected={name === selected} preserveTags={preserveTags} />
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -125,29 +131,13 @@ function TagGroup({
   readonly preserveTags: readonly string[];
 }): ReactNode {
   return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-      <h3
-        style={{
-          margin: 0,
-          fontSize: 'var(--tai-text-sm)',
-          color: 'var(--tai-color-text-muted)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        {label}
-        <span style={{ marginLeft: 'var(--tai-space-2)', fontWeight: 400 }}>{names.length}</span>
+    <section className="tai-stack tai-stack-2">
+      <h3 className="tai-label">
+        {label} <span className="tai-muted">{names.length}</span>
       </h3>
-      <ul style={plainListStyle}>
-        {names.map((name) => (
-          <ToolItem
-            key={name}
-            name={name}
-            selected={name === selected}
-            preserveTags={preserveTags}
-          />
-        ))}
-      </ul>
+      {names.map((name) => (
+        <ToolItem key={name} name={name} selected={name === selected} preserveTags={preserveTags} />
+      ))}
     </section>
   );
 }
@@ -158,7 +148,9 @@ interface TagVocabularyEntry {
   readonly count: number;
 }
 
-/** A togglable tag chip; `aria-pressed` reflects whether the tag filters the list. */
+/** A togglable tag chip; `aria-pressed` reflects whether the tag filters the list.
+ * `.tai-chip` paints the pressed tint on `aria-pressed="true"`, so selection needs
+ * no colour of its own. */
 function TagChip({
   entry,
   active,
@@ -171,22 +163,59 @@ function TagChip({
   return (
     <button
       type="button"
+      className="tai-chip"
       aria-pressed={active}
       aria-label={`${entry.label} (${String(entry.count)})`}
       onClick={onToggle}
-      style={{
-        border: 'none',
-        background: 'transparent',
-        padding: 0,
-        cursor: 'pointer',
-        borderRadius: 'var(--tai-radius-sm)',
-      }}
     >
-      <Badge variant={active ? 'primary' : 'neutral'}>
-        {entry.label}
-        <span style={{ fontWeight: 400 }}>{entry.count}</span>
-      </Badge>
+      <span>{entry.label}</span>
+      <span>{entry.count}</span>
     </button>
+  );
+}
+
+/** The filter row: every selected chip plus as many unselected chips as fit under the
+ * cap, with the remainder collapsed into a STATIC "+N more" count (not an expander —
+ * every collapsed tag still appears as a group header below). */
+function TagFilterRow({
+  vocabulary,
+  selectedSet,
+  onToggle,
+}: {
+  readonly vocabulary: readonly TagVocabularyEntry[];
+  readonly selectedSet: ReadonlySet<string>;
+  readonly onToggle: (token: string) => void;
+}): ReactNode {
+  const visible: TagVocabularyEntry[] = [];
+  let hidden = 0;
+  let unselectedShown = 0;
+  for (const entry of vocabulary) {
+    if (selectedSet.has(entry.token)) {
+      visible.push(entry);
+    } else if (unselectedShown < MAX_VISIBLE_TAG_CHIPS) {
+      visible.push(entry);
+      unselectedShown += 1;
+    } else {
+      hidden += 1;
+    }
+  }
+
+  return (
+    <div role="group" aria-label="Filter tools by tag" className="tai-row">
+      {visible.map((entry) => (
+        <TagChip
+          key={entry.token}
+          entry={entry}
+          active={selectedSet.has(entry.token)}
+          onToggle={() => {
+            onToggle(entry.token);
+          }}
+        />
+      ))}
+      {hidden > 0 ? (
+        <span className="tai-chip tai-chip-static">{`+${String(hidden)} more`}</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -205,7 +234,7 @@ function ToolList({
 
   if (toolsQuery.isPending) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      <div className="tai-stack tai-stack-2">
         <Skeleton height={32} />
         <Skeleton height={32} />
         <Skeleton height={32} />
@@ -234,7 +263,7 @@ function ToolList({
   // surface the failure loudly on the tag row (never a silent empty tag view).
   if (tagsQuery.isError) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+      <div className="tai-stack">
         <ErrorState
           message={errorMessage(tagsQuery.error)}
           onRetry={() => void tagsQuery.refetch()}
@@ -324,23 +353,8 @@ function ToolList({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-      <div
-        role="group"
-        aria-label="Filter tools by tag"
-        style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-2)' }}
-      >
-        {vocabulary.map((entry) => (
-          <TagChip
-            key={entry.token}
-            entry={entry}
-            active={selectedSet.has(entry.token)}
-            onToggle={() => {
-              toggle(entry.token);
-            }}
-          />
-        ))}
-      </div>
+    <div className="tai-stack">
+      <TagFilterRow vocabulary={vocabulary} selectedSet={selectedSet} onToggle={toggle} />
 
       {groups.length === 0 ? (
         <EmptyState
@@ -348,7 +362,7 @@ function ToolList({
           description="No tool carries any of the selected tags."
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+        <div className="tai-stack">
           {groups.map((group) => (
             <TagGroup
               key={group.token}
@@ -368,6 +382,29 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
   const selected = search.tool;
   const selectedTags = search.tags ?? [];
   const { state } = useCapabilities();
+  const navigate = useAppNavigate();
+  const { isSinglePane } = useBreakpoint();
+
+  const listRef = useRef<HTMLDivElement>(null);
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null);
+  // Seed the previous selection on MOUNT so an initial `?tool=` deep-link never steals
+  // focus (focus moves only on a client-side selection change, never on load).
+  const prevSelected = useRef<string | undefined>(selected);
+
+  useEffect(() => {
+    if (selected === prevSelected.current) return;
+    const previous = prevSelected.current;
+    prevSelected.current = selected;
+    if (selected !== undefined) {
+      // Moved INTO a selection → focus the detail heading (present when the tool is
+      // available; a scoped-unavailable selection has no heading to take focus).
+      detailHeadingRef.current?.focus();
+    } else if (previous !== undefined) {
+      // Cleared (Back) → return focus to the list row it came from, matched inside the
+      // list pane by the link's own accessible name.
+      listRef.current?.querySelector<HTMLElement>(`[aria-label="Open tool ${previous}"]`)?.focus();
+    }
+  }, [selected]);
 
   // Projection ⊆ gate: a scoped caller who deep-links `?tool=<tool outside its
   // projection>` must NOT get the run panel + extensions editor for a tool the
@@ -380,28 +417,40 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
     isFullProjection(state.projection) ||
     state.projection.tools.includes(selected);
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <header>
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Tools</h1>
-      </header>
+  // Below 1024 exactly one pane shows: the detail (with a Back control) once a tool is
+  // chosen, otherwise the list. Above 1024 both panes show and `data-pane` is inert.
+  const pane = isSinglePane && selected !== undefined ? 'detail' : 'list';
+  const showBack = isSinglePane && selected !== undefined;
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(16rem, 22rem) 1fr',
-          gap: 'var(--tai-space-6)',
-          alignItems: 'start',
-        }}
-      >
-        <Card>
-          <h2 style={{ margin: '0 0 var(--tai-space-4)', fontSize: 'var(--tai-text-lg)' }}>
-            All tools
-          </h2>
-          <ToolList selected={selected} selectedTags={selectedTags} />
+  const clearSelection = (): void => {
+    navigate('tools', {
+      tool: undefined,
+      tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
+    });
+  };
+
+  return (
+    <Stack gap={6}>
+      <PageHeader eyebrow="Capabilities" title="Tools" />
+
+      <div className="tai-split" data-pane={pane}>
+        <Card className="tai-split-list" ref={listRef}>
+          <Stack>
+            <h2 className="tai-card-title">All tools</h2>
+            <ToolList selected={selected} selectedTags={selectedTags} />
+          </Stack>
         </Card>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
+        <Stack gap={6} className="tai-split-detail">
+          {showBack ? (
+            <div>
+              <Button variant="ghost" onClick={clearSelection}>
+                <ArrowLeftIcon />
+                Back
+              </Button>
+            </div>
+          ) : null}
+
           {selected === undefined ? (
             <Card>
               <EmptyState
@@ -419,24 +468,20 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
           ) : (
             <>
               <Card>
-                <h2
-                  style={{
-                    margin: '0 0 var(--tai-space-4)',
-                    fontSize: 'var(--tai-text-lg)',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  {selected}
-                </h2>
-                <RunPanel key={selected} toolName={selected} />
+                <Stack>
+                  <h2 className="tai-section-title tai-mono" tabIndex={-1} ref={detailHeadingRef}>
+                    {selected}
+                  </h2>
+                  <RunPanel key={selected} toolName={selected} />
+                </Stack>
               </Card>
               <Card>
                 <ToolExtensionsCard key={selected} tool={selected} />
               </Card>
             </>
           )}
-        </div>
+        </Stack>
       </div>
-    </div>
+    </Stack>
   );
 }

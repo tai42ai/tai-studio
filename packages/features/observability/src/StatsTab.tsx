@@ -5,7 +5,7 @@
  * the current filter set in the URL. A 501 from the reader renders the dedicated
  * read-not-supported state; every other failure is a loud, visible error.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardMetrics } from '@tai42/api-client';
 import {
@@ -47,30 +47,13 @@ const GRANULARITIES: readonly { readonly value: Granularity; readonly label: str
   { value: 'week', label: 'Weekly' },
 ];
 
-const tileGridStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(11rem, 1fr))',
-  gap: 'var(--tai-space-4)',
-};
-
 function Tile({ label, value }: { readonly label: string; readonly value: string }): ReactNode {
   return (
     <Card>
-      <p
-        style={{ margin: 0, color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}
-      >
-        {label}
-      </p>
-      <p
-        style={{
-          margin: 'var(--tai-space-1) 0 0',
-          fontSize: 'var(--tai-text-lg)',
-          fontWeight: 600,
-          color: 'var(--tai-color-text)',
-        }}
-      >
-        {value}
-      </p>
+      <div className="tai-stack tai-stack-2">
+        <span className="tai-label">{label}</span>
+        <span className="tai-kpi">{value}</span>
+      </div>
     </Card>
   );
 }
@@ -100,8 +83,8 @@ function Populated({ metrics }: { readonly metrics: DashboardMetrics }): ReactNo
   const bars = modelBars(metrics);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <div style={tileGridStyle}>
+    <div className="tai-stack tai-stack-6">
+      <div className="tai-grid-cards">
         <Tile label="Total runs" value={formatTokenCount(s.totalRuns)} />
         <Tile label="Total cost" value={formatCost(s.totalCost)} />
         <Tile label="Avg latency" value={formatLatencyMs(s.averageLatencyMs)} />
@@ -114,56 +97,55 @@ function Populated({ metrics }: { readonly metrics: DashboardMetrics }): ReactNo
       </div>
 
       <Card>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--tai-space-3)',
-            marginBottom: 'var(--tai-space-4)',
-            flexWrap: 'wrap',
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>Trend</h2>
-          <div
-            role="group"
-            aria-label="Trend metric"
-            style={{ display: 'flex', gap: 'var(--tai-space-1)' }}
-          >
-            {TREND_METRICS.map((m) => (
-              <Button
-                key={m.key}
-                variant={m.key === metric ? 'primary' : 'secondary'}
-                aria-pressed={m.key === metric}
-                onClick={() => {
-                  setMetric(m.key);
-                }}
-              >
-                {m.label}
-              </Button>
-            ))}
+        <div className="tai-stack">
+          <div className="tai-row">
+            <h2 className="tai-card-title">Trend</h2>
+            <div
+              role="group"
+              aria-label="Trend metric"
+              className="tai-row"
+              style={{ marginLeft: 'auto' }}
+            >
+              {TREND_METRICS.map((m) => (
+                <Button
+                  key={m.key}
+                  variant={m.key === metric ? 'primary' : 'secondary'}
+                  aria-pressed={m.key === metric}
+                  onClick={() => {
+                    setMetric(m.key);
+                  }}
+                >
+                  {m.label}
+                </Button>
+              ))}
+            </div>
           </div>
+          {points.length === 0 ? (
+            <EmptyState
+              title="No time-series data"
+              description="No runs fall in this time range."
+            />
+          ) : (
+            <AreaChart
+              points={points}
+              ariaLabel={`${
+                TREND_METRICS.find((m) => m.key === metric)?.label ?? metric
+              } over time`}
+              formatValue={(value) => formatMetricValue(metric, value)}
+            />
+          )}
         </div>
-        {points.length === 0 ? (
-          <EmptyState title="No time-series data" description="No runs fall in this time range." />
-        ) : (
-          <AreaChart
-            points={points}
-            ariaLabel={`${TREND_METRICS.find((m) => m.key === metric)?.label ?? metric} over time`}
-            formatValue={(value) => formatMetricValue(metric, value)}
-          />
-        )}
       </Card>
 
       <Card>
-        <h2 style={{ margin: '0 0 var(--tai-space-4)', fontSize: 'var(--tai-text-lg)' }}>
-          By model
-        </h2>
-        {bars.length === 0 ? (
-          <EmptyState title="No per-model breakdown" />
-        ) : (
-          <BarList items={bars} ariaLabel="Cost by model" />
-        )}
+        <div className="tai-stack">
+          <h2 className="tai-card-title">By model</h2>
+          {bars.length === 0 ? (
+            <EmptyState title="No per-model breakdown" />
+          ) : (
+            <BarList items={bars} ariaLabel="Cost by model" />
+          )}
+        </div>
       </Card>
     </div>
   );
@@ -184,16 +166,8 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 'var(--tai-space-3)',
-          flexWrap: 'wrap',
-        }}
-      >
+    <div className="tai-stack tai-stack-6">
+      <div className="tai-row">
         <div style={{ width: '10rem' }}>
           <Select
             aria-label="Granularity"
@@ -205,6 +179,7 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
           />
         </div>
         <Button
+          style={{ marginLeft: 'auto' }}
           onClick={() => {
             navigate('observability', mergeSearch(search, { tab: 'tracing', trace: undefined }));
           }}
@@ -214,7 +189,7 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
       </div>
 
       {query.isPending ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+        <div className="tai-stack">
           <Skeleton height={96} />
           <Skeleton height={160} />
         </div>

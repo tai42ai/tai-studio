@@ -20,7 +20,6 @@ import {
 
 import { agentsListKey, authoredPresetsKey, specRunnableAgentsKey } from './keys';
 import type { AuthoredRunTarget } from './authoring-types';
-import { rowStyle, stackStyle } from './authoring-styles';
 import { AuthoredAgentsList } from './AuthoredAgentsList';
 import { ComposeAgentDialog } from './ComposeAgentDialog';
 
@@ -28,6 +27,9 @@ import { ComposeAgentDialog } from './ComposeAgentDialog';
  * control gates on the projection reaching it with POST (projection ⊆ gate).
  * Versioning/rollback for a preset live on the presets page, not here. */
 const PRESETS_WRITE_ROUTE = '/api/presets';
+
+/** Push a following flex item to the far edge of its `.tai-row`. */
+const spacerStyle = { marginLeft: 'auto' };
 
 /**
  * The authoring surface, GATED on an authorable agent existing. With none, it
@@ -65,16 +67,10 @@ export function AuthoringSection({
   const presetsForbidden =
     presetsQuery.error instanceof ApiError && presetsQuery.error.status === 403;
 
-  const headingStyle = {
-    margin: 0,
-    fontSize: 'var(--tai-text-lg)',
-    color: 'var(--tai-color-text)',
-  };
-
   if (specRunnableQuery.isPending) {
     return (
-      <section style={stackStyle} aria-labelledby="authoring-heading">
-        <h2 id="authoring-heading" style={headingStyle}>
+      <section className="tai-stack" aria-labelledby="authoring-heading">
+        <h2 id="authoring-heading" className="tai-section-title">
           Authored agents
         </h2>
         <Skeleton height={80} />
@@ -84,8 +80,8 @@ export function AuthoringSection({
 
   if (specRunnableQuery.isError) {
     return (
-      <section style={stackStyle} aria-labelledby="authoring-heading">
-        <h2 id="authoring-heading" style={headingStyle}>
+      <section className="tai-stack" aria-labelledby="authoring-heading">
+        <h2 id="authoring-heading" className="tai-section-title">
           Authored agents
         </h2>
         <ErrorState
@@ -101,8 +97,8 @@ export function AuthoringSection({
   // Capability gate: no authorable agent installed → a dedicated empty-state.
   if (authorable.length === 0) {
     return (
-      <section style={stackStyle} aria-labelledby="authoring-heading">
-        <h2 id="authoring-heading" style={headingStyle}>
+      <section className="tai-stack" aria-labelledby="authoring-heading">
+        <h2 id="authoring-heading" className="tai-section-title">
           Authored agents
         </h2>
         <Card>
@@ -116,12 +112,12 @@ export function AuthoringSection({
   }
 
   return (
-    <section style={stackStyle} aria-labelledby="authoring-heading">
-      <div style={rowStyle}>
-        <h2 id="authoring-heading" style={headingStyle}>
+    <section className="tai-stack" aria-labelledby="authoring-heading">
+      <div className="tai-row">
+        <h2 id="authoring-heading" className="tai-section-title">
           Authored agents
         </h2>
-        <div style={{ marginLeft: 'auto' }} />
+        <div style={spacerStyle} />
         {canAuthor ? (
           <Button
             variant="primary"

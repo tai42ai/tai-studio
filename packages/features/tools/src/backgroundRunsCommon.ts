@@ -21,9 +21,17 @@ export function toolRunKey(runId: string): readonly ['tool-run', string] {
   return ['tool-run', runId];
 }
 
-/** The `Badge` variant that colours each status chip. */
+/**
+ * The `Badge` variant that colours each status chip.
+ *
+ * `running` is a NEUTRAL (pending) chip, NEVER the accent: crimson is the accent
+ * and never a status, and a live run reads as pending — its label plus the live
+ * spinner beside it carry the "running" meaning, never colour alone. The terminal
+ * states keep their semantic tints (ok / err / warn), each always paired with a
+ * word label.
+ */
 export const STATUS_VARIANT: Record<ToolRunStatus, string> = {
-  running: 'primary',
+  running: 'neutral',
   succeeded: 'success',
   failed: 'danger',
   lost: 'warning',

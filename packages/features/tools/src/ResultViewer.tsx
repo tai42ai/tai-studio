@@ -17,12 +17,15 @@
  * TRUNCATED with a download action that streams the FULL result as a Blob, so a
  * huge result never floods the DOM yet is never silently lost.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Button, CodeBlock, EmptyState, JsonTree } from '@tai42/studio-sdk';
 import { schemas } from '@tai42/api-client';
 
 /** Serialized-length threshold above which a result is truncated + downloadable. */
 export const RESULT_MAX_CHARS = 50_000;
+
+/** A tool image/audio result stays within its column rather than overflowing it. */
+const mediaStyle = { maxWidth: '100%' } as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -50,21 +53,6 @@ function triggerDownload(content: string, filename: string, mime: string): void 
     URL.revokeObjectURL(url);
   }, 0);
 }
-
-const noticeStyle: CSSProperties = {
-  margin: 0,
-  color: 'var(--tai-color-text-muted)',
-  font: 'var(--tai-text-sm) var(--tai-font-sans)',
-};
-
-const primitiveStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-md) var(--tai-font-mono)',
-  color: 'var(--tai-color-text)',
-  wordBreak: 'break-all',
-};
-
-const mediaStyle: CSSProperties = { maxWidth: '100%' };
 
 export function ResultViewer({ result }: { result: unknown }): ReactNode {
   if (result === undefined) {
@@ -102,8 +90,8 @@ export function ResultViewer({ result }: { result: unknown }): ReactNode {
     const filename = isString ? 'tool-result.txt' : 'tool-result.json';
     const mime = isString ? 'text/plain' : 'application/json';
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-        <p role="status" style={noticeStyle}>
+      <div className="tai-stack tai-stack-3">
+        <p role="status" className="tai-muted" style={{ margin: 0 }}>
           {`Result is large (${full.length.toLocaleString()} characters) and is shown truncated below. Download the full result to see everything.`}
         </p>
         <CodeBlock
@@ -130,6 +118,10 @@ export function ResultViewer({ result }: { result: unknown }): ReactNode {
   if (isRecord(result) || Array.isArray(result)) {
     return <JsonTree data={result} label="Tool result" />;
   }
-  // Other primitives (number, boolean, null, bigint) — readable escaped text.
-  return <p style={primitiveStyle}>{full}</p>;
+  // Other primitives (number, boolean, null, bigint) — readable escaped mono text.
+  return (
+    <p className="tai-mono" style={{ margin: 0, overflowWrap: 'anywhere' }}>
+      {full}
+    </p>
+  );
 }

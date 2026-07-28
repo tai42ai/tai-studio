@@ -153,7 +153,7 @@ export function CreateKeyDialog({
           onConditionTestFailedChange={setConditionTestFailed}
         />
         {formError !== null ? (
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-danger)' }}>
+          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
             {formError}
           </p>
         ) : null}

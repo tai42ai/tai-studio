@@ -45,7 +45,6 @@ import {
   SCHEMA_FORM_EXTRA_FIELDS,
   schemaProps,
 } from './authoring-schema';
-import { smallStackStyle, stackStyle } from './authoring-styles';
 import { MultiToolPicker } from './MultiToolPicker';
 import { PresetSpecEditor } from './PresetSpecEditor';
 import { SubAgentComposer } from './SubAgentComposer';
@@ -331,7 +330,7 @@ export function ComposeAgentDialog({
         if (!next) onClose();
       }}
     >
-      <form onSubmit={onSubmit} style={stackStyle}>
+      <form onSubmit={onSubmit} className="tai-stack">
         <Field label="Name" error={submitted && nameMissing ? 'A name is required.' : undefined}>
           <TextInput
             value={name}
@@ -378,7 +377,7 @@ export function ComposeAgentDialog({
         </Field>
 
         {baseAgent !== null ? (
-          <div style={stackStyle} data-testid="compose-spec-fields">
+          <div className="tai-stack" data-testid="compose-spec-fields">
             {hasField(baseSchema, 'system_prompt') ? (
               <Field label="System prompt">
                 <Textarea
@@ -503,24 +502,18 @@ export function ComposeAgentDialog({
                 (that would share one id across every box); it is a labelled group. */}
             {fallbackNames.length > 0 ? (
               <div
-                style={smallStackStyle}
+                className="tai-stack-2"
                 role="group"
                 aria-labelledby="compose-fallback-heading"
                 aria-describedby="compose-fallback-desc"
               >
-                <span
-                  id="compose-fallback-heading"
-                  style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text)' }}
-                >
+                <span id="compose-fallback-heading" className="tai-label">
                   Fix additional inputs
                 </span>
-                <span
-                  id="compose-fallback-desc"
-                  style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
-                >
+                <span id="compose-fallback-desc" className="tai-muted">
                   Checked fields are baked into the agent and cannot be set at run time.
                 </span>
-                <div style={smallStackStyle} data-testid="compose-fallback-fields">
+                <div className="tai-stack-2" data-testid="compose-fallback-fields">
                   {fallbackNames.map((field) => {
                     const description = schemaProps(baseSchema)[field]?.description;
                     return (
@@ -551,7 +544,7 @@ export function ComposeAgentDialog({
 
         {create.isError ? <ErrorState message={errorMessage(create.error)} /> : null}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
+        <div className="tai-dialog-actions">
           <Button type="button" onClick={onClose}>
             Cancel
           </Button>

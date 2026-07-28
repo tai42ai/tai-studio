@@ -6,7 +6,9 @@ import { Button, Card, Field, TextInput, Textarea } from '@tai42/studio-sdk';
 import type { InlineSubAgentSpec } from './authoring-types';
 import { MultiToolPicker } from './MultiToolPicker';
 import { PresetSpecEditor } from './PresetSpecEditor';
-import { rowStyle, smallStackStyle } from './authoring-styles';
+
+/** Push a following flex item to the far edge of its `.tai-row`. */
+const spacerStyle = { marginLeft: 'auto' };
 
 /** One inline sub-agent editor card (name + prompt + tools + presets). */
 export function SubAgentCard({
@@ -31,10 +33,10 @@ export function SubAgentCard({
   const idPrefix = `subagent-${String(index)}`;
   return (
     <Card>
-      <div style={smallStackStyle} data-testid={idPrefix}>
-        <div style={rowStyle}>
+      <div className="tai-stack-2" data-testid={idPrefix}>
+        <div className="tai-row">
           <strong>Sub-agent {index + 1}</strong>
-          <div style={{ marginLeft: 'auto' }} />
+          <div style={spacerStyle} />
           <Button
             type="button"
             variant="danger"

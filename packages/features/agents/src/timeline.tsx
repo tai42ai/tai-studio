@@ -244,36 +244,13 @@ export function buildTimeline(events: ParsedAgentEvent[]): TimelineFold {
 
 // -- styles ------------------------------------------------------------------
 
-const listStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-3)',
-};
-const rowStackStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-const labelRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-};
-const mutedStyle: CSSProperties = {
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-};
+// The ONE surviving layout-only style: message/reasoning text preserves its
+// newlines and breaks long unbroken runs. No colour/font/token — the colour and
+// face come from the inherited body text and the surrounding classes.
 const messageStyle: CSSProperties = {
   margin: 0,
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
-  color: 'var(--tai-color-text)',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-};
-const usageRowStyle: CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--tai-space-2)',
 };
 
 // -- per-item renderers ------------------------------------------------------
@@ -285,9 +262,11 @@ function ReasoningRow({
 }): ReactNode {
   return (
     <Card>
-      <details data-testid="timeline-reasoning">
-        <summary style={{ cursor: 'pointer', ...mutedStyle }}>Reasoning</summary>
-        <p style={{ ...messageStyle, marginTop: 'var(--tai-space-2)' }}>{item.text}</p>
+      <details data-testid="timeline-reasoning" className="tai-stack tai-stack-2">
+        <summary style={{ cursor: 'pointer' }}>
+          <span className="tai-muted">Reasoning</span>
+        </summary>
+        <p style={messageStyle}>{item.text}</p>
       </details>
     </Card>
   );
@@ -296,16 +275,16 @@ function ReasoningRow({
 function ToolRow({ item }: { readonly item: Extract<TimelineItem, { kind: 'tool' }> }): ReactNode {
   return (
     <Card>
-      <div style={rowStackStyle} data-testid="timeline-tool" data-call-id={item.callId}>
-        <div style={labelRowStyle}>
+      <div className="tai-stack-2" data-testid="timeline-tool" data-call-id={item.callId}>
+        <div className="tai-row">
           <Badge variant={item.isError ? 'danger' : 'primary'}>Tool</Badge>
-          <span style={{ font: 'var(--tai-text-md) var(--tai-font-mono)' }}>{item.tool}</span>
+          <span className="tai-mono">{item.tool}</span>
         </div>
         <CodeBlock code={pretty(item.args)} language="args" />
         {item.hasResult ? (
           <CodeBlock code={pretty(item.result)} language={item.isError ? 'error' : 'result'} />
         ) : (
-          <span style={mutedStyle} data-testid="timeline-tool-pending">
+          <span className="tai-muted" data-testid="timeline-tool-pending">
             Running…
           </span>
         )}
@@ -339,7 +318,7 @@ function UsageRow({
   if (item.outputTokens !== null) chips.push(`out ${String(item.outputTokens)}`);
   if (item.totalTokens !== null) chips.push(`total ${String(item.totalTokens)}`);
   return (
-    <div style={usageRowStyle} data-testid="timeline-usage">
+    <div className="tai-row" data-testid="timeline-usage">
       {chips.map((chip) => (
         <Badge key={chip} variant="neutral">
           {chip}
@@ -356,8 +335,8 @@ function StructuredRow({
 }): ReactNode {
   return (
     <Card>
-      <div style={rowStackStyle} data-testid="timeline-structured">
-        <span style={mutedStyle}>Structured output</span>
+      <div className="tai-stack-2" data-testid="timeline-structured">
+        <span className="tai-muted">Structured output</span>
         <CodeBlock code={pretty(item.data)} language="json" />
       </div>
     </Card>
@@ -371,12 +350,12 @@ function InterruptRow({
 }): ReactNode {
   return (
     <Card>
-      <div style={rowStackStyle} data-testid="timeline-interrupt">
-        <div style={labelRowStyle}>
+      <div className="tai-stack-2" data-testid="timeline-interrupt">
+        <div className="tai-row">
           <Badge variant="warning">Waiting on you</Badge>
           {item.reason !== null ? <span>{item.reason}</span> : null}
         </div>
-        <span style={mutedStyle}>
+        <span className="tai-muted">
           The agent is asking a question. Answer it in the{' '}
           <AppLink to="interactions" aria-label="Open the interactions inbox">
             interactions inbox
@@ -410,10 +389,10 @@ function UnknownRow({
 }): ReactNode {
   return (
     <Card>
-      <div style={rowStackStyle} data-testid="timeline-unknown" data-event-type={item.type}>
-        <div style={labelRowStyle}>
+      <div className="tai-stack-2" data-testid="timeline-unknown" data-event-type={item.type}>
+        <div className="tai-row">
           <Badge variant="neutral">Unknown event</Badge>
-          <span style={mutedStyle}>{item.type}</span>
+          <span className="tai-mono">{item.type}</span>
         </div>
         <CodeBlock code={pretty(item.raw)} language="json" />
       </div>
@@ -446,7 +425,7 @@ function TimelineRow({ item }: { readonly item: TimelineItem }): ReactNode {
 export function Timeline({ events }: { readonly events: ParsedAgentEvent[] }): ReactNode {
   const { items } = buildTimeline(events);
   return (
-    <div style={listStyle} data-testid="agent-timeline">
+    <div className="tai-stack tai-stack-3" data-testid="agent-timeline">
       {items.map((item) => (
         <TimelineRow key={item.id} item={item} />
       ))}

@@ -265,10 +265,12 @@ function SortableHeader({
   columnKey,
   label,
   search,
+  numeric = false,
 }: {
   readonly columnKey: SortKey;
   readonly label: string;
   readonly search: ObservabilitySearch;
+  readonly numeric?: boolean;
 }): ReactNode {
   const navigate = useAppNavigate();
   const active = search.sort === columnKey;
@@ -278,7 +280,10 @@ function SortableHeader({
     navigate('observability', mergeSearch(search, { sort: columnKey, dir: nextDir }));
   };
   return (
-    <TH aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+    <TH
+      numeric={numeric}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
       <button
         type="button"
         onClick={onClick}
@@ -337,10 +342,12 @@ function RunRow({
           ))}
         </div>
       </TD>
-      <TD>{formatCost(run.cost)}</TD>
-      <TD>{formatLatencyMs(run.latencyMs)}</TD>
-      <TD>{formatTokenCount(run.totalTokens)}</TD>
-      <TD>{run.model ?? '—'}</TD>
+      <TD numeric>{formatCost(run.cost)}</TD>
+      <TD numeric>{formatLatencyMs(run.latencyMs)}</TD>
+      <TD numeric>{formatTokenCount(run.totalTokens)}</TD>
+      <TD>
+        <span className="tai-mono">{run.model ?? '—'}</span>
+      </TD>
     </TR>
   );
 }
@@ -410,7 +417,7 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
               role="alert"
               style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}
             >
-              <span style={{ color: 'var(--tai-color-danger)' }}>
+              <span style={{ color: 'var(--tai-color-err-text)' }}>
                 Could not refresh runs: {errorMessage(query.error)}
               </span>
               <Button onClick={() => void query.refetch()}>Retry</Button>
@@ -429,9 +436,19 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
                       <TH>Input</TH>
                       <TH>Output</TH>
                       <TH>Tags</TH>
-                      <SortableHeader columnKey="cost" label="Cost" search={search} />
-                      <SortableHeader columnKey="latencyMs" label="Latency" search={search} />
-                      <SortableHeader columnKey="totalTokens" label="Tokens" search={search} />
+                      <SortableHeader columnKey="cost" label="Cost" search={search} numeric />
+                      <SortableHeader
+                        columnKey="latencyMs"
+                        label="Latency"
+                        search={search}
+                        numeric
+                      />
+                      <SortableHeader
+                        columnKey="totalTokens"
+                        label="Tokens"
+                        search={search}
+                        numeric
+                      />
                       <TH>Model</TH>
                     </TR>
                   </THead>
@@ -469,7 +486,7 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
                     marginTop: 'var(--tai-space-2)',
                   }}
                 >
-                  <span style={{ color: 'var(--tai-color-danger)' }}>
+                  <span style={{ color: 'var(--tai-color-err-text)' }}>
                     Could not load more runs: {errorMessage(query.error)}
                   </span>
                   <Button onClick={() => void query.fetchNextPage()}>Retry</Button>

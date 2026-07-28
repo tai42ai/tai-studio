@@ -6,7 +6,6 @@ import { Button } from '@tai42/studio-sdk';
 
 import type { InlineSubAgentSpec } from './authoring-types';
 import { SubAgentCard } from './SubAgentCard';
-import { smallStackStyle } from './authoring-styles';
 
 export function SubAgentComposer({
   toolNames,
@@ -24,7 +23,7 @@ export function SubAgentComposer({
   readonly disabled?: boolean;
 }): ReactNode {
   return (
-    <div style={smallStackStyle} data-testid="subagent-composer">
+    <div className="tai-stack-2" data-testid="subagent-composer">
       {value.map((spec, index) => (
         <SubAgentCard
           // Position-keyed: entries are only appended/removed as whole cards.

@@ -41,14 +41,17 @@
  * mounts.
  */
 import { useQuery } from '@tanstack/react-query';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import {
   Badge,
   Card,
   ErrorBoundary,
   ErrorState,
+  Page,
+  PageHeader,
   Skeleton,
+  Stack,
   Tabs,
   coversAnyRoute,
   errorMessage,
@@ -66,35 +69,6 @@ import { ApiKeysTab } from './ApiKeysTab';
 import { BackupTab } from './BackupTab';
 import { RolesTab } from './RolesTab';
 import { configModeKey } from './keys';
-
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-
-const pageHeadingStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-xl) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
-
-const sectionHeadingStyle: CSSProperties = {
-  margin: '0 0 var(--tai-space-3)',
-  fontSize: 'var(--tai-text-lg)',
-  color: 'var(--tai-color-text)',
-};
-
-const modeRowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-3)',
-};
-
-const modeLabelStyle: CSSProperties = {
-  fontSize: 'var(--tai-text-sm)',
-  color: 'var(--tai-color-text-muted)',
-};
 
 /**
  * The read routes the core tabs load, matched by prefix to decide tab VISIBILITY.
@@ -145,12 +119,12 @@ function settingsTabCovered(
 /** The loading placeholder: a skeleton stand-in for the mode card. */
 function SettingsLoading(): ReactNode {
   return (
-    <div style={pageStyle} data-testid="settings-loading">
+    <div className="tai-stack" data-testid="settings-loading">
       <Card>
-        <Skeleton width="20%" height={18} />
-        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+        <Stack gap={3}>
+          <Skeleton width="20%" height={18} />
           <Skeleton width="35%" />
-        </div>
+        </Stack>
       </Card>
     </div>
   );
@@ -261,12 +235,14 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
       <>
         {mode !== null ? (
           <Card>
-            <h2 style={sectionHeadingStyle}>Configuration</h2>
-            <div style={modeRowStyle}>
-              <span style={modeLabelStyle}>Mode</span>
-              <Badge variant="primary">{mode.config_mode}</Badge>
-              {readOnly ? <Badge variant="warning">Read-only</Badge> : null}
-            </div>
+            <Stack gap={3}>
+              <h2 className="tai-card-title">Configuration</h2>
+              <div className="tai-row">
+                <span className="tai-muted">Mode</span>
+                <Badge variant="primary">{mode.config_mode}</Badge>
+                {readOnly ? <Badge variant="warning">Read-only</Badge> : null}
+              </div>
+            </Stack>
           </Card>
         ) : null}
         <Tabs items={tabs} defaultValue={tabs[0]?.value} />
@@ -275,11 +251,11 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
   }
 
   return (
-    <section style={pageStyle} aria-labelledby="settings-heading">
-      <h1 id="settings-heading" style={pageHeadingStyle}>
-        Settings
-      </h1>
-      {body}
-    </section>
+    <Page>
+      <Stack>
+        <PageHeader eyebrow="Administration" title="Settings" id="settings-heading" />
+        {body}
+      </Stack>
+    </Page>
   );
 }

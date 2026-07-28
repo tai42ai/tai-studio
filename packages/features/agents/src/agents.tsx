@@ -14,7 +14,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import type { AgentSummary } from '@tai42/api-client';
 import {
@@ -23,7 +23,9 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  PageHeader,
   Skeleton,
+  Stack,
   isFullProjection,
   useApi,
   useCapabilities,
@@ -34,42 +36,8 @@ import { AuthoringSection, AuthoredRunView, type AuthoredRunTarget } from './aut
 import { agentsListKey } from './keys';
 import { StreamRunView, useAgentRun } from './run-view';
 
-// -- styles ------------------------------------------------------------------
-
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-const headingStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-xl) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
-const listStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-const cardBodyStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-2)',
-};
-const rowStyle: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-3)',
-};
-const mutedStyle: CSSProperties = {
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-};
-const nameStyle: CSSProperties = {
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
-const spacerStyle: CSSProperties = { marginLeft: 'auto' };
+/** Push a following flex item to the far edge of its `.tai-row`. */
+const spacerStyle = { marginLeft: 'auto' };
 
 // -- list --------------------------------------------------------------------
 
@@ -94,7 +62,7 @@ function AgentsList({ onRun }: { readonly onRun: (agent: AgentSummary) => void }
 
   if (query.isPending) {
     return (
-      <div style={listStyle} data-testid="agents-loading">
+      <div className="tai-stack" data-testid="agents-loading">
         {[0, 1, 2].map((row) => (
           <Card key={row}>
             <Skeleton width="40%" height={18} />
@@ -121,12 +89,12 @@ function AgentsList({ onRun }: { readonly onRun: (agent: AgentSummary) => void }
   }
 
   return (
-    <div style={listStyle}>
+    <div className="tai-stack">
       {items.map((agent) => (
         <Card key={agent.name}>
-          <div style={cardBodyStyle} data-testid="agent-row" data-agent={agent.name}>
-            <div style={rowStyle}>
-              <span style={nameStyle}>{agent.name}</span>
+          <div className="tai-stack-2" data-testid="agent-row" data-agent={agent.name}>
+            <div className="tai-row">
+              <span className="tai-mono">{agent.name}</span>
               <div style={spacerStyle} />
               <Button
                 type="button"
@@ -138,7 +106,7 @@ function AgentsList({ onRun }: { readonly onRun: (agent: AgentSummary) => void }
                 Run
               </Button>
             </div>
-            {agent.description ? <span style={mutedStyle}>{agent.description}</span> : null}
+            {agent.description ? <span className="tai-muted">{agent.description}</span> : null}
             <AppLink
               to="tools"
               // The run tool is registered under the agent's REGISTRATION name (which
@@ -214,12 +182,10 @@ export function AgentsPage(): ReactNode {
   }
 
   return (
-    <section style={pageStyle} aria-labelledby="agents-heading">
-      <h1 id="agents-heading" style={headingStyle}>
-        Agents
-      </h1>
+    <Stack gap={6}>
+      <PageHeader eyebrow="Capabilities" title="Agents" />
       <AuthoringSection onRunAuthored={setAuthoredRun} />
       <AgentsList onRun={setSelected} />
-    </section>
+    </Stack>
   );
 }

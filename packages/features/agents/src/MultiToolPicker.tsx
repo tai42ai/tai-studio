@@ -2,8 +2,6 @@ import type { ReactNode } from 'react';
 
 import { Button, CloseIcon, ToolPicker } from '@tai42/studio-sdk';
 
-import { monoStyle, rowStyle, smallStackStyle } from './authoring-styles';
-
 /**
  * A multi-select over tool names, built by REUSING the shared single-select
  * `ToolPicker` as an "add" control plus a removable chip list — so `tool_names`
@@ -28,12 +26,12 @@ export function MultiToolPicker({
   readonly addLabel?: string;
 }): ReactNode {
   return (
-    <div style={smallStackStyle} data-testid={idPrefix}>
+    <div className="tai-stack-2" data-testid={idPrefix}>
       {value.length > 0 ? (
-        <div style={{ ...rowStyle, flexWrap: 'wrap' }}>
+        <div className="tai-row">
           {value.map((name) => (
             <span key={name} className="tai-chip tai-chip-static">
-              <span style={monoStyle}>{name}</span>
+              <span className="tai-mono">{name}</span>
               <Button
                 type="button"
                 aria-label={`Remove tool ${name}`}

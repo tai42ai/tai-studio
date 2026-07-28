@@ -50,6 +50,9 @@ export function AreaChart({ points, ariaLabel, formatValue }: AreaChartProps): R
   )}`;
 
   const last = points[points.length - 1];
+  const lastIndex = points.length - 1;
+  // Evenly spaced horizontal gridlines behind the series (top, quartiles, base).
+  const gridYs = [0, 0.25, 0.5, 0.75, 1].map((f) => PAD + innerH * f);
 
   return (
     <figure style={{ margin: 0 }}>
@@ -60,11 +63,23 @@ export function AreaChart({ points, ariaLabel, formatValue }: AreaChartProps): R
         preserveAspectRatio="none"
         style={{ width: '100%', height: 160, display: 'block', overflow: 'visible' }}
       >
-        <polygon points={area} fill="var(--tai-color-primary)" fillOpacity={0.14} />
+        {gridYs.map((gy, i) => (
+          <line
+            key={`grid-${String(i)}`}
+            x1={PAD}
+            x2={VIEW_W - PAD}
+            y1={gy}
+            y2={gy}
+            stroke="var(--tai-color-border)"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+        <polygon points={area} fill="var(--tai-color-accent)" fillOpacity={0.14} />
         <polyline
           points={line}
           fill="none"
-          stroke="var(--tai-color-primary)"
+          stroke="var(--tai-color-accent)"
           strokeWidth={2}
           strokeLinejoin="round"
           strokeLinecap="round"
@@ -75,8 +90,9 @@ export function AreaChart({ points, ariaLabel, formatValue }: AreaChartProps): R
             key={`${p.label}-${String(i)}`}
             cx={x(i)}
             cy={y(p.value)}
-            r={2.5}
-            fill="var(--tai-color-primary)"
+            // Endpoint emphasis: the latest sample reads larger than the trail.
+            r={i === lastIndex ? 4 : 2.5}
+            fill="var(--tai-color-accent)"
             vectorEffect="non-scaling-stroke"
           >
             <title>{`${p.label}: ${formatValue(p.value)}`}</title>
@@ -110,7 +126,8 @@ const rowStyle: CSSProperties = {
 };
 
 const labelStyle: CSSProperties = {
-  font: 'var(--tai-text-sm) var(--tai-font-sans)',
+  fontFamily: 'var(--tai-font-sans)',
+  fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text)',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -126,7 +143,9 @@ const trackStyle: CSSProperties = {
 };
 
 const captionStyle: CSSProperties = {
-  font: 'var(--tai-text-sm) var(--tai-font-mono)',
+  fontFamily: 'var(--tai-font-mono)',
+  fontSize: 'var(--tai-text-sm)',
+  fontVariantNumeric: 'tabular-nums',
   color: 'var(--tai-color-text-muted)',
   whiteSpace: 'nowrap',
 };
@@ -149,7 +168,7 @@ export function BarList({ items, ariaLabel }: BarListProps): ReactNode {
                   position: 'absolute',
                   inset: 0,
                   width: `${String(pct)}%`,
-                  background: 'var(--tai-color-primary)',
+                  background: 'var(--tai-color-accent)',
                   borderRadius: 'var(--tai-radius-sm)',
                 }}
               />

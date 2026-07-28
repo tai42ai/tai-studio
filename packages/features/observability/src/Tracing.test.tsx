@@ -178,6 +178,25 @@ describe('TracingTab — runs table', () => {
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 
+  it('right-aligns the numeric columns and renders the model id in mono', async () => {
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+
+    const row = await screen.findByTestId('run-row-r1');
+    // Cost / Latency / Tokens opt into the SDK numeric affordance (tabular, right-
+    // aligned) via data-numeric; the text columns do not.
+    const numericCells = row.querySelectorAll('td[data-numeric="true"]');
+    expect(numericCells).toHaveLength(3);
+    // The machine model id renders in the mono type ramp.
+    expect(within(row).getByText('gpt-4o')).toHaveClass('tai-mono');
+
+    // The numeric column headers carry the same alignment hook.
+    const header = screen.getByRole('button', { name: /Cost/ }).closest('th');
+    expect(header).toHaveAttribute('data-numeric', 'true');
+  });
+
   it('drills into a trace preserving filters when a row is clicked', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {

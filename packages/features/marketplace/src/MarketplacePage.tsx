@@ -6,7 +6,7 @@
  * the item-level rows grouped back under their listing. Every filter lives in the
  * URL; the page number does not (the infinite query owns it).
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
   AppLink,
@@ -16,8 +16,10 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  PageHeader,
   Select,
   Skeleton,
+  Stack,
   Tabs,
   TextInput,
   errorMessage,
@@ -36,14 +38,13 @@ import { PluginDetail } from './PluginDetail';
 /** The Select sentinel for the cleared / default option (empty item values are invalid). */
 const NONE = '__none__';
 
-const chipRowStyle: CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 'var(--tai-space-2)',
-  alignItems: 'center',
-};
-
-/** A togglable facet chip; `aria-pressed` reflects whether it filters the results. */
+/**
+ * A togglable facet chip. `.tai-chip` publishes the control's whole rendering —
+ * the resting pill, the hover, the pressed accent ground — keyed off
+ * `aria-pressed`, which is also what tells assistive tech the filter is on. The
+ * chip carries its label as its own text (not a nested Badge), so its accessible
+ * name is the facet value and a voice-control user names the control they see.
+ */
 function FacetChip({
   label,
   active,
@@ -54,13 +55,8 @@ function FacetChip({
   readonly onToggle: () => void;
 }): ReactNode {
   return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onToggle}
-      style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer' }}
-    >
-      <Badge variant={active ? 'primary' : 'neutral'}>{label}</Badge>
+    <button type="button" className="tai-chip" aria-pressed={active} onClick={onToggle}>
+      {label}
     </button>
   );
 }
@@ -86,7 +82,7 @@ function SearchBar({ search }: { readonly search: MarketplaceSearch }): ReactNod
         event.preventDefault();
         navigate('marketplace', mergeSearch(search, { q: draft.trim() || undefined }));
       }}
-      style={{ display: 'flex', gap: 'var(--tai-space-2)', alignItems: 'flex-end' }}
+      className="tai-row"
     >
       <Field label="Search" style={{ flex: '1 1 auto' }}>
         <TextInput
@@ -136,7 +132,7 @@ function groupRows(rows: readonly MarketplaceSearchRow[]): PluginGroup[] {
   return groups;
 }
 
-/** One listing card: header, badges, downloads, description, matching item rows. */
+/** One listing card: name, reference, description, badges, downloads, item rows. */
 function PluginCard({
   group,
   search,
@@ -146,68 +142,38 @@ function PluginCard({
 }): ReactNode {
   const { row } = group;
   const title = listingTitle(row.display_name, row.name);
+  const detailSearch = mergeSearch(search, { plugin: group.ref });
   return (
-    <Card>
+    <Card interactive>
       <div style={{ display: 'flex', gap: 'var(--tai-space-3)', alignItems: 'flex-start' }}>
         <ListingIcon iconUrl={row.icon_url} title={title} />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--tai-space-2)',
-            minWidth: 0,
-            flex: '1 1 auto',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 'var(--tai-space-2)',
-              alignItems: 'center',
-            }}
-          >
-            <AppLink to="marketplace" search={mergeSearch(search, { plugin: group.ref })}>
-              <strong>{title}</strong>
-            </AppLink>
-            <code style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
-              {group.ref}
-            </code>
+        <div className="tai-stack tai-stack-2" style={{ minWidth: 0, flex: '1 1 auto' }}>
+          {/* Content order: the name, the machine reference in mono, the human
+              description, the tier/price badges, then the download count. */}
+          <AppLink to="marketplace" search={detailSearch}>
+            <strong>{title}</strong>
+          </AppLink>
+          <code className="tai-mono tai-muted">{group.ref}</code>
+          <p style={{ margin: 0 }}>{row.description}</p>
+          <div className="tai-row">
             <Badge>{row.trust_tier}</Badge>
             <Badge>{row.pricing}</Badge>
-            <span style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
-              {row.downloads} downloads
-            </span>
           </div>
-          <p style={{ margin: 0 }}>{row.description}</p>
+          <span className="tai-muted">{row.downloads} downloads</span>
           <ul
-            style={{
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--tai-space-1)',
-            }}
+            className="tai-stack tai-stack-2"
+            style={{ listStyle: 'none', margin: 0, padding: 0 }}
           >
             {group.items.map((item) => (
-              <li
-                key={`${item.kind}/${item.name}`}
-                style={{
-                  display: 'flex',
-                  gap: 'var(--tai-space-2)',
-                  alignItems: 'baseline',
-                  flexWrap: 'wrap',
-                }}
-              >
+              <li key={`${item.kind}/${item.name}`} className="tai-row">
                 <Badge>{item.kind}</Badge>
                 <strong>{item.name}</strong>
-                <span style={{ color: 'var(--tai-color-text-muted)' }}>{item.description}</span>
+                <span className="tai-muted">{item.description}</span>
               </li>
             ))}
           </ul>
           <div>
-            <AppLink to="marketplace" search={mergeSearch(search, { plugin: group.ref })}>
+            <AppLink to="marketplace" search={detailSearch}>
               View
             </AppLink>
           </div>
@@ -335,23 +301,16 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
   const groups = groupRows(rows);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+    <Stack>
       <SearchBar search={search} />
 
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--tai-space-4)',
-          alignItems: 'flex-end',
-        }}
-      >
+      <div className="tai-row">
         <SortFacet search={search} />
         <CategoryFacet search={search} />
       </div>
 
       {kindVocab.length > 0 ? (
-        <div role="group" aria-label="Filter by kind" style={chipRowStyle}>
+        <div role="group" aria-label="Filter by kind" className="tai-row">
           {kindVocab.map((kind) => (
             <FacetChip
               key={kind}
@@ -366,7 +325,7 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
       ) : null}
 
       {tagVocab.length > 0 ? (
-        <div role="group" aria-label="Filter by tag" style={chipRowStyle}>
+        <div role="group" aria-label="Filter by tag" className="tai-row">
           {tagVocab.map((tag) => (
             <FacetChip
               key={tag}
@@ -381,7 +340,7 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
       ) : null}
 
       {query.isPending ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+        <div className="tai-stack tai-stack-2">
           <Skeleton height={32} />
           <Skeleton height={32} />
           <Skeleton height={32} />
@@ -393,20 +352,13 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
         // failed Load-more near the Load-more control.
         <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
+        <div className="tai-stack tai-stack-3">
           {query.isError && !query.isFetchNextPageError ? (
             // A background refetch (e.g. window-focus) failed while pages are
             // retained. A Load-more failure is also an error with data present,
             // so it is excluded here and handled by its own inline retry below.
-            <div
-              role="alert"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--tai-space-2)',
-              }}
-            >
-              <span style={{ color: 'var(--tai-color-danger)' }}>
+            <div role="alert" className="tai-row">
+              <span className="tai-status tai-status-err">
                 Could not refresh results: {errorMessage(query.error)}
               </span>
               <Button onClick={() => void query.refetch()}>Retry</Button>
@@ -425,14 +377,10 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
               {query.isFetchNextPageError ? (
                 <div
                   role="alert"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 'var(--tai-space-2)',
-                  }}
+                  className="tai-stack tai-stack-2"
+                  style={{ alignItems: 'center' }}
                 >
-                  <span style={{ color: 'var(--tai-color-danger)' }}>
+                  <span className="tai-status tai-status-err">
                     Could not load more: {errorMessage(query.error)}
                   </span>
                   <Button
@@ -456,7 +404,7 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
           )}
         </div>
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -477,10 +425,8 @@ export function MarketplacePage({ search }: PageProps<'marketplace'>): ReactNode
   const tab = activeTab(search);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <header>
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Marketplace</h1>
-      </header>
+    <Stack gap={6}>
+      <PageHeader eyebrow="Administration" title="Marketplace" />
 
       <Tabs
         value={tab}
@@ -495,6 +441,6 @@ export function MarketplacePage({ search }: PageProps<'marketplace'>): ReactNode
           { value: 'installed', label: 'Installed', content: <InstalledTab search={search} /> },
         ]}
       />
-    </div>
+    </Stack>
   );
 }

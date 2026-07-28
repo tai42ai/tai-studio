@@ -11,6 +11,7 @@ import {
   Button,
   ErrorState,
   Skeleton,
+  Stack,
   errorMessage,
   useApi,
   useCanWrite,
@@ -21,7 +22,6 @@ import { StreamRunView, useAuthoredAgentRun } from './run-view';
 import { authoredPresetKey } from './keys';
 import type { AuthoredRunTarget } from './authoring-types';
 import { ALL_SPEC_FIELDS, schemaProps } from './authoring-schema';
-import { stackStyle } from './authoring-styles';
 
 /**
  * The run input schema: the base agent's `ToolInput` with BOTH the baked (fixed)
@@ -69,15 +69,15 @@ export function AuthoredRunView({
 
   if (detailQuery.isPending) {
     return (
-      <section style={stackStyle}>
+      <Stack>
         <Skeleton height={40} />
         <Skeleton height={120} />
-      </section>
+      </Stack>
     );
   }
   if (detailQuery.isError) {
     return (
-      <section style={stackStyle}>
+      <Stack>
         <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to agents">
           <ArrowLeftIcon />
           Back
@@ -86,7 +86,7 @@ export function AuthoredRunView({
           message={errorMessage(detailQuery.error)}
           onRetry={() => void detailQuery.refetch()}
         />
-      </section>
+      </Stack>
     );
   }
 

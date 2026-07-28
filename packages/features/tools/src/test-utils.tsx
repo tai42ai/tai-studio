@@ -32,12 +32,18 @@ const SESSION_KEY = 'tai-studio.apiKey';
 
 export function renderWithProviders(
   ui: ReactElement,
-  { client, projection }: { client: StubApiClient; projection?: MeProjection },
+  {
+    client,
+    projection,
+    navigate: providedNavigate,
+  }: { client: StubApiClient; projection?: MeProjection; navigate?: Mock },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const navigate = vi.fn();
+  // A test that drives selection through the URL supplies its own navigate spy (one
+  // that updates the search param it renders with); otherwise a bare spy records calls.
+  const navigate = providedNavigate ?? vi.fn();
   // A projection drives the capability context to `ready`: seed a session key so
   // `AuthProvider` is authenticated and `CapabilityProvider` fetches `getMe`. With
   // no projection the context stays `loading` and the page renders unfiltered — the

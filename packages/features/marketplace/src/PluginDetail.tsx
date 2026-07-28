@@ -13,12 +13,15 @@ import {
   Badge,
   Button,
   Card,
+  CheckCircleIcon,
   ConfirmDialog,
+  CopyField,
   EmptyState,
   ErrorState,
   ExternalLinkButton,
   ScrollRegion,
   Skeleton,
+  Stack,
   TBody,
   TD,
   TH,
@@ -52,16 +55,6 @@ interface ActionResult {
   readonly notes: readonly string[];
   readonly advisories: MarketplaceInstallResult['advisories'];
 }
-
-const sectionStyle = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-} as const;
-const cardHeadingStyle = {
-  margin: '0 0 var(--tai-space-3)',
-  fontSize: 'var(--tai-text-lg)',
-} as const;
 
 /**
  * Map a version's lifecycle status to a badge tier: published is a success,
@@ -115,45 +108,23 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
     <Card>
       <div style={{ display: 'flex', gap: 'var(--tai-space-4)', alignItems: 'flex-start' }}>
         <ListingIcon iconUrl={detail.icon_url} title={title} size={56} />
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--tai-space-2)',
-            minWidth: 0,
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: 'var(--tai-text-xl)', wordBreak: 'break-word' }}>
+        <div className="tai-stack tai-stack-2" style={{ minWidth: 0 }}>
+          <h2 className="tai-card-title" style={{ wordBreak: 'break-word' }}>
             {title}
           </h2>
-          <code style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
-            {detail.package}
-          </code>
+          <code className="tai-mono tai-muted">{detail.package}</code>
           <p style={{ margin: 0 }}>{detail.description}</p>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 'var(--tai-space-2)',
-              alignItems: 'center',
-            }}
-          >
+          <div className="tai-row">
             <Badge>{detail.trust_tier}</Badge>
             <Badge>{detail.pricing}</Badge>
-            <span style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
-              {detail.downloads} downloads
-            </span>
+            <span className="tai-muted">{detail.downloads} downloads</span>
             {detail.license !== null ? (
-              <span
-                style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}
-              >
-                License: {detail.license}
-              </span>
+              <span className="tai-muted">License: {detail.license}</span>
             ) : null}
           </div>
           <TagChips tags={[...detail.categories, ...detail.tags]} />
           {detail.homepage_url !== null || detail.repository_url !== null ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-2)' }}>
+            <div className="tai-row">
               {detail.homepage_url !== null ? (
                 <ExternalLinkButton url={detail.homepage_url}>Homepage</ExternalLinkButton>
               ) : null}
@@ -183,7 +154,9 @@ function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): Re
   const items = detail.latest?.items ?? [];
   return (
     <Card>
-      <h2 style={cardHeadingStyle}>Contained items</h2>
+      <h2 className="tai-card-title" style={{ marginBottom: 'var(--tai-space-3)' }}>
+        Contained items
+      </h2>
       {items.length === 0 ? (
         <EmptyState title="No items" description="This plugin has no published items yet." />
       ) : (
@@ -226,7 +199,9 @@ function VersionsCard({
 }): ReactNode {
   return (
     <Card>
-      <h2 style={cardHeadingStyle}>Versions</h2>
+      <h2 className="tai-card-title" style={{ marginBottom: 'var(--tai-space-3)' }}>
+        Versions
+      </h2>
       {versions.length === 0 ? (
         <EmptyState title="No versions" description="This plugin has no versions yet." />
       ) : (
@@ -333,34 +308,34 @@ export function PluginDetail({
 
   if (slash < 0) {
     return (
-      <div style={sectionStyle}>
+      <Stack>
         <BackButton onBack={onBack} />
         <ErrorState
           message={`Malformed plugin reference "${refValue}" (expected "namespace/name").`}
         />
-      </div>
+      </Stack>
     );
   }
 
   if (detailQuery.isPending) {
     return (
-      <div style={sectionStyle}>
+      <Stack>
         <BackButton onBack={onBack} />
         <Skeleton height={48} />
         <Skeleton height={120} />
         <Skeleton height={120} />
-      </div>
+      </Stack>
     );
   }
   if (detailQuery.isError) {
     return (
-      <div style={sectionStyle}>
+      <Stack>
         <BackButton onBack={onBack} />
         <ErrorState
           message={errorMessage(detailQuery.error)}
           onRetry={() => void detailQuery.refetch()}
         />
-      </div>
+      </Stack>
     );
   }
 
@@ -377,10 +352,10 @@ export function PluginDetail({
   };
 
   return (
-    <div style={sectionStyle}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
+    <Stack>
+      <div className="tai-row">
         <BackButton onBack={onBack} />
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)', wordBreak: 'break-word' }}>
+        <h1 className="tai-page-title" style={{ wordBreak: 'break-word' }}>
           {refValue}
         </h1>
       </div>
@@ -395,47 +370,39 @@ export function PluginDetail({
         }}
       />
 
+      <Card>
+        <CopyField label="Package" value={detail.package} idPrefix="install-package" />
+      </Card>
+
       {result !== null ? (
-        <div
-          role="status"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--tai-space-2)',
-            padding: 'var(--tai-space-4)',
-            borderRadius: 'var(--tai-radius-md)',
-            border: '1px solid var(--tai-color-success)',
-            // The published success ground, in both themes — the same token
-            // every other ok surface paints with. A local mix of the success
-            // TEXT tone would be a second, off-hue green beside them.
-            background: 'var(--tai-color-ok-tint)',
-          }}
-        >
-          <strong>
-            {result.verb} {result.ref}
-            {result.version !== null ? ` ${result.version}` : ''}
-          </strong>
-          {result.notes.length > 0 ? (
-            <ul style={{ margin: 0, paddingLeft: 'var(--tai-space-4)' }}>
-              {result.notes.map((note, index) => (
-                <li key={index}>{note}</li>
-              ))}
-            </ul>
-          ) : null}
-          {result.advisories.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
-              {result.advisories.map((advisory) => (
-                <div
-                  key={advisory.id}
-                  style={{ display: 'flex', gap: 'var(--tai-space-2)', alignItems: 'center' }}
-                >
-                  <Badge variant={severityVariant(advisory.severity)}>{advisory.severity}</Badge>
-                  <span>{advisory.summary}</span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <Card>
+          <div role="status" className="tai-stack tai-stack-2">
+            <span className="tai-status tai-status-ok">
+              <CheckCircleIcon />
+              <strong>
+                {result.verb} {result.ref}
+                {result.version !== null ? ` ${result.version}` : ''}
+              </strong>
+            </span>
+            {result.notes.length > 0 ? (
+              <ul style={{ margin: 0, paddingLeft: 'var(--tai-space-4)' }}>
+                {result.notes.map((note, index) => (
+                  <li key={index}>{note}</li>
+                ))}
+              </ul>
+            ) : null}
+            {result.advisories.length > 0 ? (
+              <div className="tai-stack tai-stack-2">
+                {result.advisories.map((advisory) => (
+                  <div key={advisory.id} className="tai-row">
+                    <Badge variant={severityVariant(advisory.severity)}>{advisory.severity}</Badge>
+                    <span>{advisory.summary}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </Card>
       ) : null}
 
       {advisoriesQuery.isError ? (
@@ -447,20 +414,10 @@ export function PluginDetail({
         <WarningBlock>
           <strong className="tai-status-warn">Security advisories</strong>
           {matching.map((advisory) => (
-            <div
-              key={advisory.id}
-              style={{
-                display: 'flex',
-                gap: 'var(--tai-space-2)',
-                alignItems: 'baseline',
-                flexWrap: 'wrap',
-              }}
-            >
+            <div key={advisory.id} className="tai-row">
               <Badge variant={severityVariant(advisory.severity)}>{advisory.severity}</Badge>
               <span>{advisory.summary}</span>
-              <span style={{ fontSize: 'var(--tai-text-sm)' }}>
-                Affects {advisory.affected_versions}
-              </span>
+              <span className="tai-muted">Affects {advisory.affected_versions}</span>
             </div>
           ))}
         </WarningBlock>
@@ -525,7 +482,7 @@ export function PluginDetail({
           </p>
         </ConfirmDialog>
       ) : null}
-    </div>
+    </Stack>
   );
 }
 
@@ -576,14 +533,7 @@ function ActionsCard({
 
   return (
     <Card>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--tai-space-3)',
-          alignItems: 'center',
-        }}
-      >
+      <div className="tai-row">
         {installed === undefined ? (
           <Button
             variant="primary"

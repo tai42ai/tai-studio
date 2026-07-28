@@ -57,6 +57,19 @@ describe('BackgroundRuns — recent list', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('boom: list failed');
   });
+
+  it('renders the running chip as a NEUTRAL (pending) badge, never the crimson accent', async () => {
+    // Crimson is the accent and never a status: a live run reads as pending (label +
+    // spinner), so its chip must not take the accent (`primary`) variant.
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'running' })]),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" />, { client });
+
+    const badge = await screen.findByText('Running');
+    expect(badge).toHaveAttribute('data-variant', 'neutral');
+    expect(badge).not.toHaveAttribute('data-variant', 'primary');
+  });
   it('draws every run row with the contrast-safe border, never the decorative one', async () => {
     // `tokens.css`: the decorative border sits below 3:1 and may never be a
     // control's only boundary. Derived over the whole rendered panel.
