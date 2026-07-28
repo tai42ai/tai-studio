@@ -104,16 +104,18 @@ export function boundariesDependenciesRule(includeTestExternals) {
       module: [...internal, ...runtime, ...(includeTestExternals ? test : [])],
     },
   });
-  // Node core (`node:fs` and friends) in the SDK and the shell app is a TEST-ONLY
-  // capability. The design-system source and manifest scanners READ the
-  // monorepo's own files from disk rather than importing an architectural layer,
-  // so their tests need it; production library code must not reach it, and does
-  // not get it. Scoped by LAYER and by the test override, so a new scanner test
-  // is covered the moment it is written — the alternative, an exemption naming
-  // each scanner file, both goes stale and switches the whole allowlist off for
-  // the files it names.
+  // Node core (`node:fs` and friends) in the SDK, the shell app and the API client
+  // is a TEST-ONLY capability. The design-system source and manifest scanners READ
+  // the monorepo's own files from disk rather than importing an architectural
+  // layer, so their tests need it, and the API client's fixture tests read fixture
+  // trees the same way; production library code must not reach it, and does not
+  // get it — the API client ships to browsers, where a `node:` import breaks every
+  // consumer at bundle time. Scoped by LAYER and by the test override, so a new
+  // scanner test is covered the moment it is written — the alternative, an
+  // exemption naming each scanner file, both goes stale and switches the whole
+  // allowlist off for the files it names.
   const coreInTests = includeTestExternals
-    ? [{ from: { type: ['sdk', 'app'] }, allow: { to: { origin: 'core' } } }]
+    ? [{ from: { type: ['sdk', 'app', 'api-client'] }, allow: { to: { origin: 'core' } } }]
     : [];
   return [
     'error',
@@ -148,12 +150,13 @@ export function boundariesDependenciesRule(includeTestExternals) {
           from: { type: 'sdk' },
           allow: external(SDK_INTERNAL, SDK_EXTERNAL, SDK_TEST_EXTERNAL),
         },
-        // The API client imports nothing internal; only its externals and Node core.
+        // The API client imports nothing internal; only its externals. Node core
+        // it gets in TESTS alone, through `coreInTests` below — a `node:` import in
+        // its production source would break every browser consumer at bundle time.
         {
           from: { type: 'api-client' },
           allow: external(API_CLIENT_INTERNAL, API_CLIENT_EXTERNAL, API_CLIENT_TEST_EXTERNAL),
         },
-        { from: { type: 'api-client' }, allow: { to: { origin: 'core' } } },
         ...coreInTests,
       ],
     },

@@ -41,6 +41,11 @@
     "src",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
+    "!src/**/*.spec.ts",
+    "!src/**/*.spec.tsx",
+    "!src/test-setup.ts",
+    "!src/**/test-utils.ts",
+    "!src/**/test-utils.tsx",
     "!src/**/__snapshots__"
   ],
   "scripts": {
