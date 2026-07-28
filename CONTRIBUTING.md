@@ -33,10 +33,10 @@ distribution.
 | --------------------------------------------------- | -------------- |
 | Distribution — PyPI, `pip install`, dependency pins | `tai42-<name>` |
 | Import package                                      | `tai42_<name>` |
-| GitHub repository and sibling checkout directory    | `tai-<name>`   |
+| GitHub repository                                   | `tai-<name>`   |
 
-So a dependency is declared as `tai42-<name>` but resolved from `../tai-<name>`
-during local development, and both spellings are correct in their own context.
+So a dependency is declared as `tai42-<name>` while its repository is named
+`tai-<name>`, and both spellings are correct in their own context.
 
 Some surfaces are deliberately neither, and must not be renamed: the `tai` CLI
 command (`tai42` is an alias), the Prometheus metric namespace (`tai_tool_*`),
@@ -46,11 +46,14 @@ command (`tai42` is an alias), the Prometheus metric namespace (`tai_tool_*`),
 
 ```bash
 pnpm install
+pnpm -r build          # build first: each package resolves the others through their built declarations
 pnpm -r typecheck
 pnpm -r lint
 pnpm -r format:check
-pnpm -r test
+pnpm -r test --coverage
 ```
+
+`pnpm --filter @tai42/studio-app dev` starts the Vite dev server.
 
 Node 22+ and pnpm at the version pinned in `package.json`'s `packageManager`
 field (currently 11.x) are assumed already installed; this repo never
