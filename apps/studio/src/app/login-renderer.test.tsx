@@ -33,6 +33,36 @@ function capturingTools(): { handler: ReturnType<typeof http.get>; header: () =>
   return { handler, header: () => seen };
 }
 
+const EMPTY_METRICS = {
+  summary: {
+    totalRuns: 0,
+    totalCost: 0,
+    totalTokens: 0,
+    averageLatencyMs: 0,
+    avgCostPerRun: 0,
+    avgTokensPerRun: 0,
+    timeToFirstTokenMs: null,
+  },
+  timeSeries: [],
+  byModel: [],
+  granularity: 'day',
+};
+
+/** A `GET /api/observability/metrics` handler that records the auth header — the
+ * Dashboard is the default post-login landing, so its metrics read is the first
+ * authenticated data request when no explicit returnTo was given. */
+function capturingMetrics(): {
+  handler: ReturnType<typeof http.get>;
+  header: () => string | null;
+} {
+  let seen: string | null = null;
+  const handler = http.get('*/api/observability/metrics', ({ request }) => {
+    seen = request.headers.get('x-api-key');
+    return HttpResponse.json({ data: EMPTY_METRICS });
+  });
+  return { handler, header: () => seen };
+}
+
 function methods(payload: unknown): ReturnType<typeof http.get> {
   return http.get('*/api/login/methods', () => HttpResponse.json({ data: payload }));
 }
@@ -228,8 +258,10 @@ describe('login renderer', () => {
     await user.type(await screen.findByLabelText('Password'), 'pw');
     await user.click(screen.getByRole('button', { name: 'Accept invite' }));
 
+    // No redirect was requested, so the login default returnTo is `/`, and the
+    // landing route replace-navigates the full projection to the Dashboard.
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/tools');
+      expect(studio.router.state.location.pathname).toBe('/observability');
     });
     expect(body).toEqual({ password: 'pw', invite_token: 'tok1' });
   });
@@ -525,7 +557,7 @@ describe('claim login leg (#claim=<token>)', () => {
   });
 
   it('exchanges the fragment token exactly once under StrictMode, signs in, lands on returnTo, and strips the hash', async () => {
-    const tools = capturingTools();
+    const metrics = capturingMetrics();
     let calls = 0;
     let body: unknown;
     server.use(
@@ -535,7 +567,7 @@ describe('claim login leg (#claim=<token>)', () => {
         return HttpResponse.json({ data: { token: 'tai-sess-claim', user_id: 'u-claim' } });
       }),
       okPlugins,
-      tools.handler,
+      metrics.handler,
       okToolTags,
     );
     window.location.hash = '#claim=clm-abc';
@@ -545,14 +577,17 @@ describe('claim login leg (#claim=<token>)', () => {
     // 1 exactly.
     const { studio } = renderStudio({ initialPath: '/login', strictMode: true });
 
+    // No redirect was requested, so returnTo is `/` and the landing route lands
+    // the full projection on the Dashboard.
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/tools');
+      expect(studio.router.state.location.pathname).toBe('/observability');
     });
     expect(calls).toBe(1);
     expect(body).toEqual({ token: 'clm-abc' });
-    // The minted session token rides the normal key pipeline (x-api-key).
+    // The minted session token rides the normal key pipeline (x-api-key) on the
+    // Dashboard's metrics read — the first authenticated data request.
     await waitFor(() => {
-      expect(tools.header()).toBe('tai-sess-claim');
+      expect(metrics.header()).toBe('tai-sess-claim');
     });
     // The single-use token is gone from the address bar.
     expect(window.location.hash).toBe('');
@@ -613,7 +648,7 @@ describe('claim login leg (#claim=<token>)', () => {
     const { studio } = renderStudio({ initialPath: '/login' });
 
     await waitFor(() => {
-      expect(studio.router.state.location.pathname).toBe('/tools');
+      expect(studio.router.state.location.pathname).toBe('/observability');
     });
     // Never in a URL query (search), and stripped from the fragment.
     expect(JSON.stringify(studio.router.state.location.search)).not.toContain(TOKEN);

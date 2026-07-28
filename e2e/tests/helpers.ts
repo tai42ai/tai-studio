@@ -37,7 +37,9 @@ export async function loginViaUi(page: Page, key: string = API_KEY): Promise<voi
   // this tab stay authenticated.
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await page.waitForURL('**/tools');
+  // No explicit returnTo, so the login default is `/` and the landing route lands
+  // the full-access session on the Dashboard.
+  await page.waitForURL('**/observability');
 }
 
 /** Escape a value for literal use inside a `RegExp`. */

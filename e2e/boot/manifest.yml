@@ -90,6 +90,14 @@ routers_modules:
   # drive — never mounts. Reads the access-control policy/route stores boot.sh
   # already configures, so `/me` needs no extra config here.
   - tai42_skeleton.routers.api_keys
+  # The observability rollups (`/api/observability/*`). The `/` landing route
+  # resolves a full projection to the Dashboard, so `loginViaUi` — which requests
+  # no explicit returnTo — lands on `/observability`, whose Stats tab GETs
+  # `/api/observability/metrics` on mount; without this router that fetch 404s and
+  # the Dashboard renders a spurious error card right after every sign-in. Reads
+  # the monitoring backend boot.sh already configures, so it needs no extra config
+  # here. Listed before `plugins` — the SPA catch-all stays LAST.
+  - tai42_skeleton.routers.observability
   - tai42_skeleton.routers.plugins
 
 # --- Tool extensions --------------------------------------------------------

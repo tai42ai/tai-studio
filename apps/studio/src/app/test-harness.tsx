@@ -49,11 +49,34 @@ export const FULL_PROJECTION: MeProjection = {
  * screen" default, and a full projection is today's unfiltered nav; tests that
  * exercise either surface override them with `server.use(...)`.
  */
+/**
+ * A minimal-but-valid dashboard-metrics payload. Since the default landing route
+ * (a bare returnTo) now resolves to the Dashboard, an authenticated render at `/`
+ * navigates to `/observability`, whose Stats tab reads
+ * `GET /api/observability/metrics` on mount; the strict `onUnhandledRequest`
+ * guard would fail without a default answer here.
+ */
+const DASHBOARD_METRICS = {
+  summary: {
+    totalRuns: 0,
+    totalCost: 0,
+    totalTokens: 0,
+    averageLatencyMs: 0,
+    avgCostPerRun: 0,
+    avgTokensPerRun: 0,
+    timeToFirstTokenMs: null,
+  },
+  timeSeries: [],
+  byModel: [],
+  granularity: 'day',
+};
+
 const defaultHandlers = [
   http.get('*/api/login/methods', () =>
     HttpResponse.json({ data: { methods: [], bootstrap: false } }),
   ),
   http.get('*/api/auth/me', () => HttpResponse.json({ data: FULL_PROJECTION })),
+  http.get('*/api/observability/metrics', () => HttpResponse.json({ data: DASHBOARD_METRICS })),
 ];
 
 /** The msw server; tests register per-case handlers with `server.use(...)`. */
@@ -67,9 +90,11 @@ export function installServer(): void {
   afterEach(() => {
     cleanup();
     server.resetHandlers();
-    // jsdom provides sessionStorage; localStorage is intentionally never used by
-    // the shell/SDK, and is not present in this runtime, so it is not cleared.
+    // Clear both web-storage areas between tests: sessionStorage holds a
+    // "remembered" credential, and localStorage now holds the persisted theme
+    // preference, so neither may leak into the next test.
     globalThis.sessionStorage.clear();
+    globalThis.localStorage.clear();
   });
   afterAll(() => {
     server.close();

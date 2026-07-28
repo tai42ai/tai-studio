@@ -20,13 +20,22 @@ const BUNDLE_GLOB = '**/api/plugins/reference_plugin/studio/*.js';
 test('post-login the reference plugin is discovered, its page and tool panel render', async ({
   page,
 }) => {
-  await loginViaUi(page); // lands on /tools; the shell starts the plugin load pass
+  await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
 
   // Wait for the plugin BUNDLE to finish importing — it sets `window.__pluginReact`
   // at module-eval, which is the same point it registers its page + tool panel. Core
   // routes never block on the load pass, so we synchronise on it explicitly
   // before driving a contributed panel.
   await page.waitForFunction(() => '__pluginReact' in window);
+
+  // The tool list lives on the Tools page; the landing route lands on the Dashboard,
+  // so reach Tools by a CLIENT-SIDE nav (an AppLink click, no reload) to keep the
+  // just-registered panel in module state.
+  await page
+    .getByRole('navigation', { name: 'Primary' })
+    .getByRole('link', { name: 'Tools' })
+    .click();
+  await page.waitForURL('**/tools');
 
   // Select the tool by CLIENT-SIDE navigation (an AppLink search-param change, no
   // reload) so the just-registered panel is in module state. The registered TOOL
@@ -57,6 +66,13 @@ test('the reference plugin names its result pane after the tool, never the SDK d
   // that state rather than asserting an attribute that is absent by design.
   await loginViaUi(page);
   await page.waitForFunction(() => '__pluginReact' in window);
+  // The tool list is on the Tools page; the landing route lands on the Dashboard,
+  // so reach Tools by a CLIENT-SIDE nav (no reload) before selecting the tool.
+  await page
+    .getByRole('navigation', { name: 'Primary' })
+    .getByRole('link', { name: 'Tools' })
+    .click();
+  await page.waitForURL('**/tools');
   await page.getByRole('link', { name: /Open tool studio_demo_echo/ }).click();
   await expect(page.getByTestId('reference-echo-panel')).toBeVisible();
 
@@ -81,7 +97,7 @@ test('the reference plugin names its result pane after the tool, never the SDK d
 test('the reference plugin contributes a sidebar nav entry and a host-injected scoped stylesheet', async ({
   page,
 }) => {
-  await loginViaUi(page); // lands on /tools; the shell starts the plugin load pass
+  await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
   // The nav entry is committed at the same module-eval point that sets __pluginReact.
   await page.waitForFunction(() => '__pluginReact' in window);
 
@@ -114,7 +130,7 @@ test('the reference plugin contributes a sidebar nav entry and a host-injected s
 test('the reference plugin contributes a Settings tab that mounts after the core tabs', async ({
   page,
 }) => {
-  await loginViaUi(page); // lands on /tools; the shell starts the plugin load pass
+  await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
   // The settings tab is committed at the same module-eval point that sets __pluginReact.
   await page.waitForFunction(() => '__pluginReact' in window);
 

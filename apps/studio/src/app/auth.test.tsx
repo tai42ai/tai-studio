@@ -40,7 +40,7 @@ describe('auth flow', () => {
     expect(studio.router.state.location.search).toEqual({ redirect: '/tools' });
   });
 
-  it('paste-key success lands on the returnTo (default /tools)', async () => {
+  it('paste-key success lands on the captured returnTo', async () => {
     server.use(okPlugins, okTools, okToolTags);
     const { studio } = renderStudio({ initialPath: '/tools' });
 

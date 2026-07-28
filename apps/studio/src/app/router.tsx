@@ -37,9 +37,9 @@ import { SchedulingPage } from '@tai42/feature-scheduling';
 import { ObservabilityPage } from '@tai42/feature-observability';
 import { MarketplacePage } from '@tai42/feature-marketplace';
 
-import { PATH } from './routes';
 import { ShellLayout } from './shell-layout';
 import { LoginPage } from './login-page';
+import { LandingRoute } from './landing-route';
 import { PluginPage } from './plugin-page';
 import { RouteErrorComponent } from './error-boundary';
 import type { PluginLoader } from './plugin-loader';
@@ -52,17 +52,17 @@ import type { PluginLoader } from './plugin-loader';
  * `/<tab>/evil.com` would otherwise normalize into a protocol-relative `//host`
  * cross-origin open redirect. Anything ambiguous — protocol-relative `//host`, an
  * absolute URL with a scheme/host, or a value not rooted at `/` — falls back to
- * the default landing route.
+ * the root `/`, where the capability-gated landing route picks the destination.
  */
 export function safeInternalPath(raw: string | undefined): string {
-  if (raw === undefined) return PATH.tools;
+  if (raw === undefined) return '/';
   // Reject backslashes (browsers fold `\` to `/`) and C0 control chars + DEL
   // (browsers strip tab/newline/CR from URLs), either of which can turn a
   // `/…`-looking value into a protocol-relative `//host` cross-origin redirect.
   // eslint-disable-next-line no-control-regex -- rejecting control chars is the point.
-  if (/[\\\x00-\x1f\x7f]/.test(raw)) return PATH.tools;
+  if (/[\\\x00-\x1f\x7f]/.test(raw)) return '/';
   // Root-relative only, and never protocol-relative (`//host`).
-  if (!raw.startsWith('/') || raw.startsWith('//')) return PATH.tools;
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/';
   return raw;
 }
 
@@ -208,10 +208,10 @@ export function buildRouter(options: BuildRouterOptions) {
   const indexRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/',
-    beforeLoad: () => {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- redirect() is thrown by design.
-      throw redirect({ to: '/tools' });
-    },
+    // No fixed redirect: capabilities are unknowable until the projection loads,
+    // so the landing route renders inside the shell and navigates to the first
+    // covered feature entry once it resolves.
+    component: (): ReactNode => <LandingRoute />,
   });
 
   const toolsRoute = createRoute({
