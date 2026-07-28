@@ -24,7 +24,7 @@ catalog:
   react-dom: ^19.2.7
   typescript: ^5.7.3
   uqr: ^0.1.3
-  vite: ^6.0.7
+  vite: ^6.4.3
   vitest: ^3.2.6
 
 allowBuilds:
@@ -38,5 +38,11 @@ onlyBuiltDependencies:
   - msw
 
 overrides:
-  brace-expansion@1: '>=1.1.16 <2.0.0'
-  brace-expansion@2: '>=2.1.2 <3.0.0'
+  # Pin the 5.x brace-expansion line to the DoS-patched >=5.0.8 (minimatch@10, via
+  # typescript-eslint, pulls it). The older 1.x/2.x lines reached through
+  # eslint-plugin-jsx-a11y's minimatch@3 and the coverage tooling's minimatch@9 have
+  # no patched release and cannot move to 5.x without breaking jsx-a11y's
+  # default-export minimatch import — a dev-only, non-exploitable residual.
+  'brace-expansion@5': '>=5.0.8'
+  # postcss source-map path traversal, patched at 8.5.18.
+  postcss: '>=8.5.18'
