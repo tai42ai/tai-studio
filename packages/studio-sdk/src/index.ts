@@ -63,7 +63,7 @@ export {
 } from './hooks/useCapabilities';
 export type { CapabilityState, CapabilityContextValue } from './hooks/useCapabilities';
 export { ThemeProvider, useTheme } from './hooks/useTheme';
-export type { Theme, ThemeState } from './hooks/useTheme';
+export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
 export { useBreakpoint } from './hooks/useBreakpoint';
 export type { Breakpoint, BreakpointState } from './hooks/useBreakpoint';
 export { useInteractionsStream } from './hooks/useSse';
