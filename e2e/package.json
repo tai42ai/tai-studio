@@ -16,6 +16,7 @@
   },
   "type": "module",
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.49.1",
     "@types/node": "catalog:",
     "@vitejs/plugin-react": "catalog:",
