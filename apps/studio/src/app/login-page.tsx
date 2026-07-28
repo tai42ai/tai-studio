@@ -10,7 +10,8 @@
  * `login`).
  *
  * On authentication the screen navigates to `returnTo` — the location the
- * operator originally requested (the returnTo pin) — defaulting to `/tools`. The
+ * operator originally requested (the returnTo pin) — defaulting to `/`, where the
+ * capability-gated landing route resolves the actual destination. The
  * navigate runs from an effect keyed on `isAuthenticated`, not inline in a
  * submit handler, so the router's injected auth context has already flipped to
  * authenticated before the guarded destination re-evaluates its `beforeLoad`.
@@ -32,6 +33,7 @@ import {
   TextInput,
   useApi,
   useAuth,
+  useTheme,
 } from '@tai42/studio-sdk';
 import {
   ApiLoginFailedError,
@@ -54,24 +56,6 @@ const SIGN_OUT_NOTICE = 'Signed out on this device; the server session may still
 
 type MethodsState =
   { status: 'loading' } | { status: 'ready'; data: LoginMethods } | { status: 'failed' };
-
-/** A button-method anchor styled like a secondary `Button` (full-page navigation
- * — the OIDC flow leaves the SPA, so a router `<Link>` would be wrong). */
-const buttonLinkStyle: CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 'var(--tai-space-2)',
-  padding: 'var(--tai-space-2) var(--tai-space-4)',
-  borderRadius: 'var(--tai-radius-md)',
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  background: 'var(--tai-color-surface-raised)',
-  color: 'var(--tai-color-text)',
-  // The same contrast-safe boundary a secondary `Button` draws — this anchor is a
-  // control, and a decorative border would be its only, sub-3:1 edge.
-  border: '1px solid var(--tai-color-control-border)',
-  textDecoration: 'none',
-  cursor: 'pointer',
-};
 
 const sectionStyle: CSSProperties = { marginTop: 'var(--tai-space-5)' };
 const errorStyle: CSSProperties = {
@@ -127,8 +111,13 @@ export function LoginPage({
   inviteToken?: string;
 }): ReactNode {
   const { login, isAuthenticated } = useAuth();
+  const { theme } = useTheme();
   const api = useApi();
   const navigate = useNavigate();
+  // The brand mark, matched to the active theme: the light mark's gradient runs to
+  // near-black and is illegible on the dark card ground, so dark theme takes the
+  // dark variant.
+  const brandMark = theme === 'dark' ? '/tai42-logo-icon-dark.png' : '/tai42-logo-icon.png';
   const [key, setKey] = useState('');
   const [remember, setRemember] = useState(false);
   // Mirror the live `remember` state into a ref every render. The SSO exchange
@@ -310,9 +299,14 @@ export function LoginPage({
       }}
     >
       <Card style={{ width: 'min(28rem, 100%)' }}>
-        <h1 style={{ marginTop: 0, font: 'var(--tai-text-lg) var(--tai-font-sans)' }}>
-          Sign in to the Studio
-        </h1>
+        <img
+          src={brandMark}
+          alt=""
+          width={40}
+          height={40}
+          style={{ display: 'block', borderRadius: 'var(--tai-radius-tile)' }}
+        />
+        <h1 style={{ margin: 'var(--tai-space-4) 0 0' }}>Sign in to the Studio</h1>
 
         {methods.status === 'ready' && methods.data.bootstrap ? (
           <p
@@ -452,7 +446,10 @@ function MethodView({
     if (!isSafeApiPath(method.href)) return <InvalidMethod id={method.id} />;
     return (
       <div style={sectionStyle}>
-        <a href={method.href} style={buttonLinkStyle}>
+        {/* A full-page navigation — the OIDC flow leaves the SPA — so the Button
+            link variant renders a plain same-origin anchor for this `/api/` path,
+            not a router link. */}
+        <Button href={method.href} variant="secondary">
           {method.icon !== undefined ? (
             <img
               src={`data:image/svg+xml;utf8,${encodeURIComponent(method.icon)}`}
@@ -463,7 +460,7 @@ function MethodView({
             />
           ) : null}
           {method.label}
-        </a>
+        </Button>
       </div>
     );
   }
@@ -477,14 +474,7 @@ function MethodView({
         onSubmit();
       }}
     >
-      <h2
-        style={{
-          font: 'var(--tai-text-md) var(--tai-font-sans)',
-          margin: '0 0 var(--tai-space-3)',
-        }}
-      >
-        {method.title}
-      </h2>
+      <h2 style={{ margin: '0 0 var(--tai-space-3)' }}>{method.title}</h2>
       {method.fields.map((field) => (
         <div key={field.name} style={{ marginTop: 'var(--tai-space-3)' }}>
           <Field label={field.label}>

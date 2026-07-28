@@ -12,7 +12,7 @@ import { installServer, renderStudio, server } from './test-harness';
 
 installServer();
 
-/** The one shape that renders `buttonLinkStyle`: a `button` method. */
+/** The one shape that renders as a secondary `Button` link: a `button` method. */
 function buttonMethod(): ReturnType<typeof http.get> {
   return http.get('*/api/login/methods', () =>
     HttpResponse.json({
@@ -58,9 +58,10 @@ describe('login page — control boundaries', () => {
     ).toEqual([]);
 
     // The positive half: a control with NO boundary at all would satisfy the
-    // negative assertion trivially, so the styled anchor must actually be drawn —
-    // and drawn with the contrast-safe token.
+    // negative assertion trivially, so the button method must actually be drawn as
+    // the design system's secondary control — whose contrast-safe border the SDK's
+    // own token gate guarantees — rather than a bespoke inline boundary here.
     const sso = screen.getByRole('link', { name: /Continue with SSO/ });
-    expect(boundary(sso)).toContain('var(--tai-color-control-border)');
+    expect(sso.className).toContain('tai-btn-secondary');
   });
 });
