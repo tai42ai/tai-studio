@@ -29,7 +29,7 @@
  * pass via its route loader). The pass is itself gated on the projection: a scoped
  * session that cannot reach the registry route skips it (absence, not error).
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, Outlet, useLocation, useRouter, useRouterState } from '@tanstack/react-router';
 import { useStore } from 'zustand';
 import {
@@ -163,9 +163,13 @@ function PluginNavItem({ entry }: { entry: RegisteredNavEntry }): ReactNode {
 }
 
 /** The DOM id of a section's header, so its item list can be `aria-labelledby` it
- * (the list is named by the visible header, not a duplicated `aria-label`). */
-function sectionHeaderId(label: string): string {
-  return `nav-section-${label.toLowerCase()}`;
+ * (the list is named by the visible header, not a duplicated `aria-label`). The
+ * `prefix` is per-`NavBody`-instance (a `useId()`): the sidebar and the mobile
+ * drawer render the SAME sections, and when both are live (drawer open at the
+ * phone band) a document-global `nav-section-<label>` id would be duplicated —
+ * a WCAG 2.1 SC 4.1.1 / axe `duplicate-id-aria` failure. */
+function sectionHeaderId(prefix: string, label: string): string {
+  return `${prefix}nav-section-${label.toLowerCase()}`;
 }
 
 /**
@@ -176,6 +180,9 @@ function sectionHeaderId(label: string): string {
  * the Dashboard row hides the same way.
  */
 function NavSections({ projection }: { projection: MeProjection }): ReactNode {
+  // Unique per NavBody instance, so the sidebar's and the drawer's copies of the
+  // same sections never share a header id when both are mounted (drawer open).
+  const idPrefix = useId();
   return (
     <div style={navGroupsStyle}>
       {tokenCovered(projection, DASHBOARD_TOKEN) ? (
@@ -186,7 +193,7 @@ function NavSections({ projection }: { projection: MeProjection }): ReactNode {
       {NAV_SECTIONS.map((section) => {
         const tokens = section.tokens.filter((token) => tokenCovered(projection, token));
         if (tokens.length === 0) return null;
-        const headerId = sectionHeaderId(section.label);
+        const headerId = sectionHeaderId(idPrefix, section.label);
         return (
           <div key={section.label}>
             <div id={headerId} className="tai-nav-section-header">
@@ -328,6 +335,15 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
   const { band, isPhone } = useBreakpoint();
   const integrityEnforced = useMemo(() => importMapIntegrityEnforced(), []);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // The drawer is a phone-only affordance: its opener (the top-bar hamburger) is
+  // hidden at >=640. A drawer left open across a widen would be an orphaned modal
+  // and a second VISIBLE "Primary" landmark beside the re-shown sidebar, so close
+  // it the moment the band leaves phone. (`setDrawerOpen(false)` while already
+  // closed is a no-op React bails out of, so this is inert off the phone band.)
+  useEffect(() => {
+    if (!isPhone) setDrawerOpen(false);
+  }, [isPhone]);
 
   // Plugin nav entries are read only once the load pass has committed them; the
   // status subscription re-renders this section when the pass completes. Core nav
