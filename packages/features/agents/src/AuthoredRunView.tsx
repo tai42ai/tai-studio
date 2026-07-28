@@ -78,7 +78,7 @@ export function AuthoredRunView({
   if (detailQuery.isError) {
     return (
       <Stack>
-        <Button type="button" variant="secondary" onClick={onBack} aria-label="Back to agents">
+        <Button type="button" variant="ghost" onClick={onBack} aria-label="Back to agents">
           <ArrowLeftIcon />
           Back
         </Button>

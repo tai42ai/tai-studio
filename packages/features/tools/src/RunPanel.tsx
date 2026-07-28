@@ -17,8 +17,8 @@
  * The detail order is description → form → actions → result: the auto-form leads
  * with the schema's description, then the `SchemaForm` (SDK form chrome —
  * `Field`/`TextInput`/`Textarea`/`Select`/`Button`), then the run doors, then the
- * typed result. All spacing comes from the SDK stack/row classes, not inline
- * style objects.
+ * typed result. Layout spacing between elements comes from the SDK stack/row
+ * classes; per-element margin/whitespace resets remain inline.
  */
 import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

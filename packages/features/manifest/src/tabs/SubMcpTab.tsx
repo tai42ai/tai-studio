@@ -260,7 +260,11 @@ function CreateSubMcpForm(): ReactNode {
         {toolsError !== undefined ? (
           <p
             role="alert"
-            style={{ margin: 0, fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-danger)' }}
+            style={{
+              margin: 0,
+              fontSize: 'var(--tai-text-sm)',
+              color: 'var(--tai-color-err-text)',
+            }}
           >
             {toolsError}
           </p>

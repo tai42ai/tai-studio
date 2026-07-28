@@ -5,12 +5,35 @@
  * detail view, upload/delete/render/clear-cache mutations, the loud invalid-JSON
  * field error, and the XSS pin that rendered output is ESCAPED text.
  */
+import { useState, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { TemplatesPage } from './TemplatesPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';
+
+interface TemplatesSearch {
+  readonly template?: string;
+}
+
+/**
+ * Render `TemplatesPage` inside a stateful harness whose navigate spy updates the
+ * search param it receives — exactly how the shell router drives it — so a click
+ * (or Back) actually changes the selection and fires the focus effect.
+ */
+function renderTemplatesHarness(client: StubApiClient, initial: TemplatesSearch = {}) {
+  let setSearch: ((next: TemplatesSearch) => void) | undefined;
+  function Harness(): ReactNode {
+    const [search, setSearchState] = useState<TemplatesSearch>(initial);
+    setSearch = setSearchState;
+    return <TemplatesPage search={search} />;
+  }
+  const navigate = vi.fn((_token: string, next?: TemplatesSearch) => {
+    setSearch?.({ template: next?.template });
+  });
+  return renderWithProviders(<Harness />, { client, navigate });
+}
 
 describe('TemplatesPage — master list', () => {
   it('renders the template names', async () => {
@@ -249,5 +272,53 @@ describe('TemplatesPage — single-pane (compact band)', () => {
 
     const back = await screen.findByRole('link', { name: 'Back' });
     expect(back).toBeInTheDocument();
+  });
+
+  it('moves focus to the detail heading when a template is selected (client-side change)', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
+    };
+    renderTemplatesHarness(client);
+
+    await user.click(await screen.findByRole('link', { name: 'Open template prompts/a.md' }));
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'prompts/a.md' });
+    await waitFor(() => {
+      expect(heading).toHaveFocus();
+    });
+  });
+
+  it('does NOT steal focus on an initial deep-link mount (focus follows changes only)', async () => {
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
+    };
+    renderTemplatesHarness(client, { template: 'prompts/a.md' });
+
+    const heading = await screen.findByRole('heading', { level: 2, name: 'prompts/a.md' });
+    // A page opened straight at `?template=…` must not yank focus onto the heading.
+    expect(heading).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
+  it('returns focus to the originating row on Back', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
+    };
+    renderTemplatesHarness(client, { template: 'prompts/a.md' });
+
+    const back = await screen.findByRole('link', { name: 'Back' });
+    await user.click(back);
+
+    // The selection clears (the no-selection state returns).
+    expect(await screen.findByText('No template selected')).toBeInTheDocument();
+    // Focus returns to the originating list row.
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Open template prompts/a.md' })).toHaveFocus();
+    });
   });
 });

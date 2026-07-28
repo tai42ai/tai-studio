@@ -372,7 +372,7 @@ function WorkersCard(): ReactNode {
           role="status"
           style={{
             margin: '0 0 var(--tai-space-4)',
-            color: 'var(--tai-color-success)',
+            color: 'var(--tai-color-ok-text)',
           }}
         >
           Reload converged across the fleet.

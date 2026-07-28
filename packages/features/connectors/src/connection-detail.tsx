@@ -197,7 +197,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
         </AppLink>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-        <h1 className="tai-section-title" style={{ margin: 0 }}>
+        <h1 className="tai-page-title" style={{ margin: 0 }}>
           {connection.alias}
         </h1>
         <Badge variant={HEALTH_VARIANT[connection.auth_health_state]}>

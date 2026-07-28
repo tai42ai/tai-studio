@@ -263,7 +263,7 @@ export function TraceView({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
       <div>
-        <Button onClick={onBack}>
+        <Button variant="ghost" onClick={onBack}>
           <ArrowLeftIcon />
           Back to runs
         </Button>

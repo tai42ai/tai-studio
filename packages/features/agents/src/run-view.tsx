@@ -199,7 +199,7 @@ export function StreamRunView({
   return (
     <Stack>
       <div className="tai-row">
-        <Button type="button" variant="secondary" onClick={onBack} aria-label={backLabel}>
+        <Button type="button" variant="ghost" onClick={onBack} aria-label={backLabel}>
           <ArrowLeftIcon />
           Back
         </Button>

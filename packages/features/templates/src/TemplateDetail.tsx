@@ -5,7 +5,7 @@
  * and navigates back to the un-selected templates view so the removed template's
  * stale detail is never shown.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -23,7 +23,16 @@ import {
 import { RenderPreview } from './RenderPreview';
 import { templateDetailKey, templatesListKey } from './keys';
 
-export function TemplateDetail({ templateId }: { templateId: string }): ReactNode {
+export function TemplateDetail({
+  templateId,
+  headingRef,
+}: {
+  templateId: string;
+  // Focus target for the page's master/detail focus management: the parent moves
+  // focus here on a client-side selection (WCAG 2.4.3). Optional so the detail stays
+  // usable standalone.
+  headingRef?: Ref<HTMLHeadingElement>;
+}): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const navigate = useAppNavigate();
@@ -55,7 +64,11 @@ export function TemplateDetail({ templateId }: { templateId: string }): ReactNod
           marginBottom: 'var(--tai-space-4)',
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)', wordBreak: 'break-all' }}>
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          style={{ margin: 0, fontSize: 'var(--tai-text-lg)', wordBreak: 'break-all' }}
+        >
           {templateId}
         </h2>
         <Dialog

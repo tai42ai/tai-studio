@@ -1,6 +1,6 @@
 /**
  * Scheduling page. Lists the backend's schedules (`listSchedules`) in a table —
- * Name, Tool, Schedule, Status — with an add dialog, a per-row delete-with-confirm
+ * Name, Schedule, Status, Tool — with an add dialog, a per-row delete-with-confirm
  * flow, and a refresh action. The server clock (`getServerDateTime`) is shown so
  * operators can reason about cron timing.
  *

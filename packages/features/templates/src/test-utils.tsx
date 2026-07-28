@@ -23,12 +23,14 @@ export interface RenderWithProvidersResult extends RenderResult {
 
 export function renderWithProviders(
   ui: ReactElement,
-  { client }: { client: StubApiClient },
+  { client, navigate: navigateOverride }: { client: StubApiClient; navigate?: Mock },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const navigate = vi.fn();
+  // A stateful harness can pass its own navigate spy (one that updates the search it
+  // feeds back in) so a client-side selection change actually fires the focus effect.
+  const navigate = navigateOverride ?? vi.fn();
   // The stub only implements the methods exercised by a given test; the cast
   // asserts the shape the SDK context expects.
   const apiClient = client as ApiClient;

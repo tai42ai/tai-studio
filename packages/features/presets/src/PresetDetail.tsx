@@ -15,7 +15,7 @@
  * `fixed_kwargs` can carry credentials: it is rendered on this authed surface but
  * NEVER logged or toasted.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -217,7 +217,16 @@ function RenamePresetDialog({
   );
 }
 
-export function PresetDetail({ name }: { readonly name: string }): ReactNode {
+export function PresetDetail({
+  name,
+  headingRef,
+}: {
+  readonly name: string;
+  // Focus target for the page's master/detail focus management: the parent moves
+  // focus here on a client-side selection (WCAG 2.4.3). Optional so the detail stays
+  // usable standalone.
+  readonly headingRef?: Ref<HTMLHeadingElement>;
+}): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
   const query = useQuery({
@@ -262,6 +271,8 @@ export function PresetDetail({ name }: { readonly name: string }): ReactNode {
             }}
           >
             <h2
+              ref={headingRef}
+              tabIndex={-1}
               style={{
                 margin: 0,
                 fontSize: 'var(--tai-text-lg)',

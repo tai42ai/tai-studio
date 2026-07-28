@@ -155,7 +155,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
           gap: 'var(--tai-space-2)',
         }}
       >
-        <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>All presets</h2>
+        <h2 className="tai-card-title">All presets</h2>
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
           <Button type="button" onClick={() => void query.refetch()} disabled={query.isFetching}>
             {query.isFetching ? <Spinner label="Refreshing" /> : null}

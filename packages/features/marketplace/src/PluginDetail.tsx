@@ -489,7 +489,7 @@ export function PluginDetail({
 function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
   return (
     <div>
-      <Button onClick={onBack}>
+      <Button variant="ghost" onClick={onBack}>
         <ArrowLeftIcon />
         Back to marketplace
       </Button>

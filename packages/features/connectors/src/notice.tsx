@@ -17,14 +17,14 @@ interface NoticePalette {
 
 const PALETTE: Record<OAuthNotice['kind'], NoticePalette> = {
   success: {
-    border: 'var(--tai-color-success)',
-    fg: 'var(--tai-color-success)',
+    border: 'var(--tai-color-ok-text)',
+    fg: 'var(--tai-color-ok-text)',
     role: 'status',
     title: 'Connected',
   },
   failed: {
-    border: 'var(--tai-color-danger)',
-    fg: 'var(--tai-color-danger)',
+    border: 'var(--tai-color-err-text)',
+    fg: 'var(--tai-color-err-text)',
     role: 'alert',
     title: 'Sign-in failed',
   },
@@ -35,8 +35,8 @@ const PALETTE: Record<OAuthNotice['kind'], NoticePalette> = {
     title: 'Sign-in cancelled',
   },
   error: {
-    border: 'var(--tai-color-danger)',
-    fg: 'var(--tai-color-danger)',
+    border: 'var(--tai-color-err-text)',
+    fg: 'var(--tai-color-err-text)',
     role: 'alert',
     title: 'Something went wrong',
   },
