@@ -207,12 +207,10 @@ for (const width of LADDER) {
       const region = page.locator('.tai-scroll-region').filter({ has: page.locator('table') });
       await expect(region.locator('table')).toBeVisible();
 
-      // Whatever the region has to scroll internally, the document does not.
-      const regionOverflow = await region.first().evaluate((el) => el.scrollWidth - el.clientWidth);
-      expect(
-        regionOverflow,
-        'the scroll region did not contain its own overflow',
-      ).toBeGreaterThanOrEqual(0);
+      // Containment proof: the keys table lives inside the region (asserted above)
+      // and the document does not scroll sideways (asserted below) — so the region,
+      // not the page, absorbs any overflow. If the region stopped containing it, the
+      // dense table would push the document wide and this assertion would fail.
       expect(
         await horizontalOverflow(page),
         `the API keys table pushed the document sideways at ${String(width)} px`,
