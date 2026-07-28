@@ -196,11 +196,9 @@ const AUTHED_PAGES = [
     // because the card heading already sits within the 900px viewport, so the
     // conditional scroll would no-op and leave most of the table below the fold.
     action: async (page) => {
-      await page
-        .locator('h2:has-text("Plugin kinds")')
-        .evaluate((el) => {
-          el.scrollIntoView({ block: 'start' });
-        });
+      await page.locator('h2:has-text("Plugin kinds")').evaluate((el) => {
+        el.scrollIntoView({ block: 'start' });
+      });
     },
   },
   {
