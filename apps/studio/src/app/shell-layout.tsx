@@ -401,12 +401,32 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
   // a closing drawer has returned focus to its opener, so a drawer nav-click lands
   // on the heading, not the hamburger. (Escape / overlay / close leave this alone
   // and let Radix return focus to the hamburger.)
+  //
+  // Only a PUSH that CHANGES the pathname arms the focus move. A same-pathname
+  // search-only PUSH (a feature screen setting its own `?tool=`/`?tags=`) must NOT
+  // arm it — the pathname-keyed consumer below never runs for a same-path change,
+  // so a flag set here would STRAND until the next real pathname change (a Back
+  // included) wrongly consumed it and yanked focus. The last-focused pathname is
+  // tracked in a ref, compared and updated in this same callback. As a second
+  // guard, BACK/FORWARD/REPLACE explicitly DISARM any pending flag: history
+  // traversal and replace-navigation never move focus, and never leave a flag
+  // behind for a later pathname change to consume.
   const router = useRouter();
   const pendingFocus = useRef(false);
+  const lastFocusPathname = useRef(router.history.location.pathname);
   useEffect(() => {
-    return router.history.subscribe(({ action }) => {
+    return router.history.subscribe(({ action, location }) => {
+      if (action.type === 'BACK' || action.type === 'FORWARD' || action.type === 'REPLACE') {
+        pendingFocus.current = false;
+        lastFocusPathname.current = location.pathname;
+        return;
+      }
       if (action.type !== 'PUSH') return;
-      pendingFocus.current = true;
+      const changedPathname = location.pathname !== lastFocusPathname.current;
+      lastFocusPathname.current = location.pathname;
+      // A same-pathname PUSH leaves focus to the feature screen; only a
+      // cross-pathname PUSH moves it to the destination heading.
+      if (changedPathname) pendingFocus.current = true;
       setDrawerOpen(false);
     });
   }, [router]);
