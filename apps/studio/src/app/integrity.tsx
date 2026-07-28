@@ -14,7 +14,7 @@
  * unsupported path.
  */
 import type { ReactNode } from 'react';
-import { ErrorState } from '@tai42/studio-sdk';
+import { AlertTriangleIcon } from '@tai42/studio-sdk';
 
 interface ScriptSupport {
   supports?: (type: string) => boolean;
@@ -38,11 +38,32 @@ export function importMapIntegrityEnforced(
   }
 }
 
-/** The loud, non-blocking banner shown when integrity is not enforced. */
+/**
+ * The loud, non-blocking banner shown when integrity is not enforced. It is a
+ * DEGRADED state, not a failure — the app works, the byte-check does not — so it
+ * wears the design system's warn surface and announces politely (`role="status"`)
+ * rather than the assertive error surface, which would state a severity it does
+ * not have and interrupt on every navigation.
+ */
 export function IntegrityBanner(): ReactNode {
   return (
-    <div data-testid="integrity-banner" style={{ padding: 'var(--tai-space-3)' }}>
-      <ErrorState message="Studio-plugin byte-integrity not enforced by this browser: served plugin bundles are not byte-verified against their manifest hashes. Update to a current Chrome, Firefox, or Safari for full protection." />
+    <div
+      data-testid="integrity-banner"
+      role="status"
+      className="tai-warn-state tai-stack tai-stack-2"
+    >
+      <strong
+        className="tai-row"
+        style={{ gap: 'var(--tai-space-2)', color: 'var(--tai-color-warn-text)' }}
+      >
+        <AlertTriangleIcon />
+        Plugin integrity not enforced
+      </strong>
+      <p style={{ margin: 0 }}>
+        Studio-plugin byte-integrity not enforced by this browser: served plugin bundles are not
+        byte-verified against their manifest hashes. Update to a current Chrome, Firefox, or Safari
+        for full protection.
+      </p>
     </div>
   );
 }

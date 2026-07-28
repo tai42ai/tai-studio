@@ -179,14 +179,18 @@ describe('shell plugin nav', () => {
     expect(getPluginHostState().status).toBe('ready');
   });
 
-  it('renders a text-only nav entry (no icon box) when the entry has no icon', async () => {
+  it('renders an empty fallback glyph box when a nav entry has no icon', async () => {
     serveShell();
     const importModule = vi.fn(() => Promise.resolve({ register: registerPageAndNav(false) }));
 
     renderStudio({ initialPath: '/interactions', sessionKey: 'k-nav', importModule });
 
     const link = await screen.findByRole('link', { name: 'Reference' });
-    expect(link.querySelector('[aria-hidden="true"]')).toBeNull();
+    // A no-icon entry keeps the fixed glyph box so its label aligns with the
+    // iconned rows — but the box is empty (no icon element inside).
+    const box = link.querySelector('[aria-hidden="true"]');
+    expect(box).not.toBeNull();
+    expect(box?.querySelector('svg')).toBeNull();
   });
 
   it('marks the plugin nav link aria-current on its own active path', async () => {

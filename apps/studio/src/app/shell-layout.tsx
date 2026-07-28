@@ -1,15 +1,27 @@
 /**
- * The authenticated shell chrome: a sidebar of `AppLink`s to the mounted feature
- * routes, a theme toggle, the globally-surfaced interactions floating badge, and
- * the loud integrity-unsupported banner. The routed feature page renders in the
- * `<Outlet/>`.
+ * The authenticated shell chrome, wired onto the design-system layout classes:
+ * a 232 px sidebar beside the scrolling content column at >=1024, a 72 px labelled
+ * icon rail from 640, and a sticky 56 px mobile top bar below 640 whose hamburger
+ * opens the navigation in a modal drawer. The routed feature page renders in the
+ * `<Outlet/>` inside the centred content column.
  *
  * The nav is a PROJECTION of the caller's capabilities (`useCapabilities`): a full
- * projection shows every token (today's nav), a scoped session shows only the
- * tokens whose backing routes it can reach, loading shows a skeleton, and a `/me`
- * failure shows a loud retryable ErrorState — never an optimistic full nav (the
- * UI fails closed exactly as the server would). Plugin nav entries + pages gate on
- * their optional `requiredCapabilities` the same way.
+ * projection shows every token, a scoped session shows only the tokens whose backing
+ * routes it can reach, loading shows a skeleton, and a `/me` failure shows a loud
+ * retryable ErrorState — never an optimistic full nav (the UI fails closed exactly
+ * as the server would). Plugin nav entries + pages gate on their optional
+ * `requiredCapabilities` the same way.
+ *
+ * The three-state theme control (light / dark / system) is rendered ONCE per
+ * breakpoint — in the sidebar footer at >=640, in the top bar below 640 — never
+ * both in one DOM, decided by `useBreakpoint`. Sign-out lives in the sidebar footer
+ * at >=640 and in the drawer footer below 640, where the top bar has no room.
+ *
+ * A forward navigation (a nav-link activation) moves focus to the new page's `<h1>`;
+ * the landing route's replace-navigation and Back/Forward restoration do not, per
+ * the SPA route-change convention. A drawer nav-link activation closes the drawer
+ * and lets that focus move win; Escape / overlay / close return focus to the
+ * hamburger.
  *
  * On mount (post-login, since the auth guard gates this layout) it kicks off the
  * Studio-plugin load pass so contributed tool panels populate before the operator
@@ -17,21 +29,32 @@
  * pass via its route loader). The pass is itself gated on the projection: a scoped
  * session that cannot reach the registry route skips it (absence, not error).
  */
-import { useEffect, useMemo, type ReactNode } from 'react';
-import { Link, Outlet, useLocation } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link, Outlet, useLocation, useRouter, useRouterState } from '@tanstack/react-router';
 import { useStore } from 'zustand';
 import {
   AppLink,
   Button,
+  Drawer,
   ErrorState,
+  MenuIcon,
+  MonitorIcon,
+  MoonIcon,
+  NAV_ICONS,
+  RadioGroup,
+  SignOutIcon,
   Skeleton,
+  SunIcon,
   coversAnyRoute,
   isFullProjection,
   useApi,
   useAuth,
+  useBreakpoint,
   useCapabilities,
   useTheme,
+  type CapabilityState,
   type RegisteredNavEntry,
+  type ThemePreference,
 } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
 import { ApiError, type MeProjection } from '@tai42/api-client';
@@ -72,60 +95,6 @@ const NAV_LABELS: Record<FeatureToken, string> = {
   marketplace: 'Marketplace',
 };
 
-function NavItem({ token }: { token: FeatureToken }): ReactNode {
-  const { pathname } = useLocation();
-  const isActive = pathname === PATH[token];
-  return (
-    <li>
-      <AppLink to={token} className="tai-nav-link" aria-current={isActive ? 'page' : undefined}>
-        {NAV_LABELS[token]}
-      </AppLink>
-    </li>
-  );
-}
-
-/**
- * A sidebar link a plugin contributed via `registerNavEntry`. It targets the
- * plugin's own page under the shell's catch-all (`/plugins/{pluginId}/{path}`) —
- * a path outside the token-typed feature contract, so it uses the router's own
- * `Link` rather than the token-typed `AppLink`. The optional icon renders in a
- * fixed, `aria-hidden` box before the title (the accessible name is the title),
- * with the color inherited from the link.
- *
- * The box brings no margin of its own: `.tai-nav-link` is a flex row and owns the
- * icon-to-label gap from the spacing scale, so this row sits at the same 8 px as
- * every other nav row. Any margin here would be ADDITIVE to that gap.
- */
-function PluginNavItem({ entry }: { entry: RegisteredNavEntry }): ReactNode {
-  const { pathname } = useLocation();
-  const href = `/plugins/${entry.pluginId}/${entry.path}`;
-  const Icon = entry.icon;
-  return (
-    <li>
-      <Link
-        to={href}
-        className="tai-nav-link"
-        aria-current={pathname === href ? 'page' : undefined}
-      >
-        {Icon !== undefined ? (
-          <span
-            aria-hidden="true"
-            style={{
-              display: 'inline-flex',
-              width: '1em',
-              height: '1em',
-              verticalAlign: '-0.125em',
-            }}
-          >
-            <Icon />
-          </span>
-        ) : null}
-        {entry.title}
-      </Link>
-    </li>
-  );
-}
-
 const navListStyle = {
   listStyle: 'none',
   margin: 0,
@@ -139,6 +108,59 @@ const navGroupsStyle = {
   display: 'grid',
   gap: 'var(--tai-space-3)',
 } as const;
+
+function NavItem({ token }: { token: FeatureToken }): ReactNode {
+  const { pathname } = useLocation();
+  const isActive = pathname === PATH[token];
+  const Icon = NAV_ICONS[token];
+  return (
+    <li>
+      <AppLink to={token} className="tai-nav-link" aria-current={isActive ? 'page' : undefined}>
+        <Icon />
+        <span>{NAV_LABELS[token]}</span>
+      </AppLink>
+    </li>
+  );
+}
+
+/**
+ * A sidebar link a plugin contributed via `registerNavEntry`. It targets the
+ * plugin's own page under the shell's catch-all (`/plugins/{pluginId}/{path}`) —
+ * a path outside the token-typed feature contract, so it uses the router's own
+ * `Link` rather than the token-typed `AppLink`. The optional icon renders in a
+ * fixed, `aria-hidden` box before the title (the accessible name is the title),
+ * with the color inherited from the link; a plugin without an icon gets a fixed
+ * empty box so its label aligns with the iconned rows.
+ */
+function PluginNavItem({ entry }: { entry: RegisteredNavEntry }): ReactNode {
+  const { pathname } = useLocation();
+  const href = `/plugins/${entry.pluginId}/${entry.path}`;
+  const Icon = entry.icon;
+  return (
+    <li>
+      <Link
+        to={href}
+        className="tai-nav-link"
+        aria-current={pathname === href ? 'page' : undefined}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '16px',
+            height: '16px',
+            flex: 'none',
+          }}
+        >
+          {Icon !== undefined ? <Icon /> : null}
+        </span>
+        <span>{entry.title}</span>
+      </Link>
+    </li>
+  );
+}
 
 /** The DOM id of a section's header, so its item list can be `aria-labelledby` it
  * (the list is named by the visible header, not a duplicated `aria-label`). */
@@ -196,12 +218,116 @@ function NavSkeleton(): ReactNode {
   );
 }
 
+/**
+ * The Primary + Plugins navigation, shared by the sidebar and the mobile drawer.
+ * The primary nav follows the capability projection's three states; the Plugins
+ * nav appears only when a contribution is both loaded and covered.
+ */
+function NavBody({
+  state,
+  retry,
+  visibleNavEntries,
+}: {
+  state: CapabilityState;
+  retry: () => void;
+  visibleNavEntries: readonly RegisteredNavEntry[];
+}): ReactNode {
+  return (
+    <>
+      <nav aria-label="Primary">
+        {state.status === 'loading' ? (
+          <NavSkeleton />
+        ) : state.status === 'failed' ? (
+          // Fail closed and loud: never an optimistic full nav on a `/me` error.
+          <ErrorState
+            message="Your access could not be loaded. Retry to reload the navigation."
+            onRetry={retry}
+          />
+        ) : (
+          <NavSections projection={state.projection} />
+        )}
+      </nav>
+      {visibleNavEntries.length > 0 ? (
+        <nav aria-label="Plugins">
+          <ul style={navListStyle}>
+            {visibleNavEntries.map((entry) => (
+              <PluginNavItem key={`${entry.pluginId}/${entry.path}`} entry={entry} />
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+    </>
+  );
+}
+
+/** The brand row: the theme-matched mark plus the wordmark. The label hides in the
+ * 72 px rail (the mark stands alone there); the mark is decorative, the wordmark is
+ * the accessible name where it shows. */
+function Brand(): ReactNode {
+  const { theme } = useTheme();
+  const src = theme === 'dark' ? '/tai42-logo-icon-dark.png' : '/tai42-logo-icon.png';
+  return (
+    <div className="tai-brand">
+      <img className="tai-brand-mark" src={src} alt="" width={24} height={24} />
+      <span className="tai-brand-label">TAI42 Studio</span>
+    </div>
+  );
+}
+
+/** The three-state theme control: a segmented radiogroup of light / dark / system,
+ * each an icon with a visually-hidden text name. Vertical in the 72 px rail (a
+ * horizontal trio does not fit); horizontal elsewhere. */
+function ThemeControl({ orientation }: { orientation: 'horizontal' | 'vertical' }): ReactNode {
+  const { preference, setPreference } = useTheme();
+  return (
+    <RadioGroup
+      aria-label="Theme"
+      variant="segmented"
+      orientation={orientation}
+      value={preference}
+      onValueChange={(value) => {
+        setPreference(value as ThemePreference);
+      }}
+      options={[
+        { value: 'light', label: 'Light', icon: <SunIcon />, visuallyHiddenLabel: true },
+        { value: 'dark', label: 'Dark', icon: <MoonIcon />, visuallyHiddenLabel: true },
+        { value: 'system', label: 'System', icon: <MonitorIcon />, visuallyHiddenLabel: true },
+      ]}
+    />
+  );
+}
+
+/** Sign-out. Icon-only in the 72 px rail (a labelled button does not fit), icon +
+ * label everywhere else. The accessible name is always "Sign out". */
+function SignOutButton({
+  compact,
+  onSignOut,
+}: {
+  compact: boolean;
+  onSignOut: () => void;
+}): ReactNode {
+  if (compact) {
+    return (
+      <button type="button" className="tai-icon-btn" aria-label="Sign out" onClick={onSignOut}>
+        <SignOutIcon />
+      </button>
+    );
+  }
+  return (
+    <Button variant="ghost" onClick={onSignOut}>
+      <SignOutIcon />
+      Sign out
+    </Button>
+  );
+}
+
 export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
-  const { theme, toggle } = useTheme();
   const { logout } = useAuth();
   const api = useApi();
   const { state, retry } = useCapabilities();
+  const { band, isPhone } = useBreakpoint();
   const integrityEnforced = useMemo(() => importMapIntegrityEnforced(), []);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Plugin nav entries are read only once the load pass has committed them; the
   // status subscription re-renders this section when the pass completes. Core nav
@@ -251,6 +377,42 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
     }
   }, [loader, state]);
 
+  // A FORWARD navigation (a nav-link activation) dismisses the mobile drawer and
+  // moves focus to the new page's <h1>. The history action distinguishes that
+  // PUSH from the landing route's replace-navigation (REPLACE) and Back/Forward
+  // restoration (BACK/FORWARD), so initial load and history traversal do neither.
+  // The focus move runs on the next frame, after the route has committed and after
+  // a closing drawer has returned focus to its opener, so a drawer nav-click lands
+  // on the heading, not the hamburger. (Escape / overlay / close leave this alone
+  // and let Radix return focus to the hamburger.)
+  const router = useRouter();
+  const pendingFocus = useRef(false);
+  useEffect(() => {
+    return router.history.subscribe(({ action }) => {
+      if (action.type !== 'PUSH') return;
+      pendingFocus.current = true;
+      setDrawerOpen(false);
+    });
+  }, [router]);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => {
+    if (!pendingFocus.current) return;
+    pendingFocus.current = false;
+    const frame = requestAnimationFrame(() => {
+      const main = document.getElementById('main-content');
+      const heading = main?.querySelector('h1') ?? null;
+      const target = heading ?? main;
+      if (target === null) return;
+      if (heading !== null && !heading.hasAttribute('tabindex')) {
+        heading.setAttribute('tabindex', '-1');
+      }
+      target.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
+
   // Sign-out revokes the server-side session BEFORE clearing the local credential
   // (the revoke call needs it), then clears UNCONDITIONALLY so a dead server never
   // traps the user signed in. A 404 is the expected answer for a plain API key
@@ -274,69 +436,68 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
       logout();
     }
   }
+  const signOut = (): void => {
+    void handleSignOut();
+  };
 
   return (
-    <div style={{ minHeight: '100%', display: 'flex' }}>
+    <div className="tai-shell">
       <a href="#main-content" className="tai-skip-link">
         Skip to content
       </a>
-      <aside
-        style={{
-          width: '15rem',
-          flex: '0 0 auto',
-          borderRight: '1px solid var(--tai-color-border)',
-          background: 'var(--tai-color-surface-raised)',
-          padding: 'var(--tai-space-4)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--tai-space-4)',
-        }}
-      >
-        <div style={{ font: 'var(--tai-text-lg) var(--tai-font-sans)', fontWeight: 600 }}>
-          TAI42 Studio
-        </div>
-        <nav aria-label="Primary">
-          {state.status === 'loading' ? (
-            <NavSkeleton />
-          ) : state.status === 'failed' ? (
-            // Fail closed and loud: never an optimistic full nav on a `/me` error.
-            <ErrorState
-              message="Your access could not be loaded. Retry to reload the navigation."
-              onRetry={retry}
-            />
-          ) : (
-            <NavSections projection={state.projection} />
-          )}
-        </nav>
-        {visibleNavEntries.length > 0 ? (
-          <nav aria-label="Plugins">
-            <ul style={navListStyle}>
-              {visibleNavEntries.map((entry) => (
-                <PluginNavItem key={`${entry.pluginId}/${entry.path}`} entry={entry} />
-              ))}
-            </ul>
-          </nav>
-        ) : null}
-        <div style={{ marginTop: 'auto', display: 'grid', gap: 'var(--tai-space-2)' }}>
-          <Button
-            onClick={toggle}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+
+      <aside className="tai-shell-sidebar">
+        <Brand />
+        <NavBody state={state} retry={retry} visibleNavEntries={visibleNavEntries} />
+        {isPhone ? null : (
+          <div
+            style={{
+              marginTop: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--tai-space-3)',
+            }}
           >
-            {theme === 'dark' ? 'Light theme' : 'Dark theme'}
-          </Button>
-          <Button onClick={() => void handleSignOut()} aria-label="Sign out">
-            Sign out
-          </Button>
-        </div>
+            <ThemeControl orientation={band === 'compact' ? 'vertical' : 'horizontal'} />
+            <SignOutButton compact={band === 'compact'} onSignOut={signOut} />
+          </div>
+        )}
       </aside>
-      <main id="main-content" tabIndex={-1} style={{ flex: '1 1 auto', minWidth: 0 }}>
-        {integrityEnforced ? null : <IntegrityBanner />}
-        <div style={{ padding: 'var(--tai-space-6)' }}>
+
+      <header className="tai-topbar">
+        <Brand />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
+          {isPhone ? <ThemeControl orientation="horizontal" /> : null}
+          <Drawer
+            title="Navigation"
+            side="left"
+            open={drawerOpen}
+            onOpenChange={setDrawerOpen}
+            trigger={
+              <button type="button" className="tai-icon-btn" aria-label="Open navigation">
+                <MenuIcon />
+              </button>
+            }
+          >
+            <div className="tai-stack">
+              <NavBody state={state} retry={retry} visibleNavEntries={visibleNavEntries} />
+              <div style={{ marginTop: 'var(--tai-space-2)' }}>
+                <SignOutButton compact={false} onSignOut={signOut} />
+              </div>
+            </div>
+          </Drawer>
+        </div>
+      </header>
+
+      <main id="main-content" className="tai-shell-main" tabIndex={-1}>
+        <div className="tai-page">
+          {integrityEnforced ? null : <IntegrityBanner />}
           <RouteCapabilityBoundary>
             <Outlet />
           </RouteCapabilityBoundary>
         </div>
       </main>
+
       {interactionsVisible ? <InteractionsBadge /> : null}
     </div>
   );
