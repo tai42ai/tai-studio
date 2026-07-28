@@ -103,6 +103,8 @@ describe('InteractionsPage — inbox lifecycle', () => {
     const { channel } = renderInbox();
     await emitFrame(channel, 'interaction.backlog_done', '{}');
     expect(await screen.findByText('No pending questions')).toBeInTheDocument();
+    // The page header is the SDK PageHeader; its h1 name stays verbatim.
+    expect(screen.getByRole('heading', { level: 1, name: 'Interactions' })).toBeInTheDocument();
     expect(screen.queryByTestId('interactions-loading')).not.toBeInTheDocument();
   });
 

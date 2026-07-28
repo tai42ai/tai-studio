@@ -155,8 +155,6 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the solid error fill, published so a chart legend or a status swatch draws `--tai-color-err-fill` with the `on-fill` ink instead of inventing its own pair',
   'tai-badge-solid-warn':
     'the solid warning fill, published so a chart legend or a status swatch draws `--tai-color-warn-fill` with the `on-fill` ink instead of inventing its own pair',
-  'tai-card-title':
-    'the card-scale heading, sibling of the rendered `.tai-section-title`; a card body is authored by whoever composes the card',
   'tai-grid-cards':
     'the responsive card grid the sheet steps from three columns to two to one; published page layout, not a component',
   'tai-input-mono':
@@ -167,11 +165,6 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the design system inline link, and a member of the shared focus ring; prose this Studio does not author carries links of its own',
   'tai-nav-item':
     'the design system name for a nav row; this shell renders the identical rule under its own `.tai-nav-link`, and both are declared together',
-  'tai-split': 'the master/detail pair, two fluid panes above 1024 px and exactly one below it',
-  'tai-split-list':
-    'the list pane of that pair, the one a `data-pane` switch hides on a narrow screen',
-  'tai-split-detail':
-    'the detail pane of that pair, held at 480 px or wider by the grid own minmax',
 };
 
 /**

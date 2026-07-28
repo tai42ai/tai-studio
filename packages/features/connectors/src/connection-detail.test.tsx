@@ -37,6 +37,7 @@ describe('ConnectionDetail', () => {
     await waitFor(() => {
       expect(screen.getByText('work')).toBeInTheDocument();
     });
+    expect(screen.getByRole('heading', { level: 1, name: 'work' })).toBeInTheDocument();
     expect(screen.getByText('octocat')).toBeInTheDocument();
     // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
     // platform fallback face beside Inter. The icon set carries the mark instead.

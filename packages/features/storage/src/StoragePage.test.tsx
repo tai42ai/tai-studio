@@ -120,6 +120,7 @@ describe('StoragePage', () => {
     renderPage(<StoragePage search={{}} />, { client });
 
     expect(await screen.findByText('FsStorage')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Storage' })).toBeInTheDocument();
     expect(screen.getByText('plugin.storage')).toBeInTheDocument();
     const table = await screen.findByTestId('storage-table');
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page

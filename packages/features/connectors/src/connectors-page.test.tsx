@@ -19,6 +19,7 @@ describe('ConnectorsPage — list', () => {
     await waitFor(() => {
       expect(screen.getByText('GitHub')).toBeInTheDocument();
     });
+    expect(screen.getByRole('heading', { level: 1, name: 'Connectors' })).toBeInTheDocument();
     expect(screen.getByText('work')).toBeInTheDocument();
   });
 

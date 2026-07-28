@@ -21,6 +21,7 @@ import {
   ChevronRightIcon,
   EmptyState,
   ErrorState,
+  PageHeader,
   Skeleton,
   errorMessage,
   groupIntoFamilies,
@@ -33,12 +34,6 @@ import { ApplyExtensionsPanel } from './apply-extensions';
 import { extensionsQueryKey } from './keys';
 
 export { extensionsQueryKey } from './keys';
-
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
 
 const familyGridStyle: CSSProperties = {
   display: 'flex',
@@ -63,14 +58,17 @@ const memberRowStyle: CSSProperties = {
 };
 
 const memberNameStyle: CSSProperties = {
-  font: 'var(--tai-text-md) var(--tai-font-mono)',
+  fontFamily: 'var(--tai-font-mono)',
+  fontSize: 'var(--tai-text-md)',
   color: 'var(--tai-color-text)',
   wordBreak: 'break-all',
 };
 
+// The family is keyed on its base TOOL name — a machine identifier, so mono.
 const familyHeadingStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-lg) var(--tai-font-sans)',
+  fontFamily: 'var(--tai-font-mono)',
+  fontSize: 'var(--tai-text-lg)',
   color: 'var(--tai-color-text)',
 };
 
@@ -87,12 +85,6 @@ const familyCountStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text-muted)',
   fontWeight: 400,
-};
-
-const pageHeadingStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-xl) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
 };
 
 /** A single extension entry: its (escaped) name and its `kind` Badge. */
@@ -191,17 +183,15 @@ export function ExtensionsPage(_props: PageProps<'extensions'>): ReactNode {
   }
 
   return (
-    <section style={pageStyle} aria-labelledby="extensions-heading">
-      <h1 id="extensions-heading" style={pageHeadingStyle}>
-        Tool extensions
-      </h1>
+    <div className="tai-stack">
+      <PageHeader title="Tool extensions" eyebrow="Capabilities" />
 
       <ApplyExtensionsPanel />
 
       <div style={familyGridStyle}>
-        <h2 style={pageHeadingStyle}>Extension catalog</h2>
+        <h2 className="tai-section-title">Extension catalog</h2>
         {body}
       </div>
-    </section>
+    </div>
   );
 }

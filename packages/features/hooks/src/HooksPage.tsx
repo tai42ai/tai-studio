@@ -11,6 +11,8 @@ import { useState, type ReactNode } from 'react';
 import {
   Card,
   Field,
+  PageHeader,
+  Stack,
   TextInput,
   coversAnyRoute,
   isFullProjection,
@@ -38,8 +40,8 @@ export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
     (isFullProjection(state.projection) || coversAnyRoute(state.projection, [TRIGGER_LINKS_ROUTE]));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Hooks</h1>
+    <Stack gap={6}>
+      <PageHeader eyebrow="Integrations" title="Hooks" />
 
       <Card>
         <Field
@@ -60,6 +62,6 @@ export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
       {triggerLinksVisible ? <TriggerLinksList /> : null}
       <TopicVerifierForm />
       <RegisterHookForm />
-    </div>
+    </Stack>
   );
 }

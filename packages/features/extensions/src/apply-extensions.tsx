@@ -60,7 +60,7 @@ const panelStyle: CSSProperties = {
 
 const headingStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-lg) var(--tai-font-sans)',
+  fontSize: 'var(--tai-text-lg)',
   color: 'var(--tai-color-text)',
 };
 

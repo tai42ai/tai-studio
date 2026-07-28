@@ -29,7 +29,9 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  PageHeader,
   Skeleton,
+  Stack,
   isFullProjection,
   useApi,
   useCapabilities,
@@ -42,18 +44,6 @@ import { InteractionCard } from './renderers';
 
 /** Shown when a 409 says the question was resolved elsewhere (not a generic error). */
 const ALREADY_ANSWERED_MESSAGE = 'This question was already answered elsewhere.';
-
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-4)',
-};
-
-const headingStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-xl) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
 
 const listStyle: CSSProperties = {
   display: 'flex',
@@ -176,13 +166,11 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
   }
 
   return (
-    <section style={pageStyle} aria-labelledby="interactions-heading">
-      <h1 id="interactions-heading" style={headingStyle}>
-        Interactions
-      </h1>
+    <Stack gap={4}>
+      <PageHeader eyebrow="Activity" title="Interactions" />
       <ChannelsCard />
       {errorMessage !== null ? <ErrorState message={errorMessage} /> : null}
       {body}
-    </section>
+    </Stack>
   );
 }

@@ -9,14 +9,17 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
+  ArrowLeftIcon,
   Button,
   Card,
   EmptyState,
   ErrorState,
+  PageHeader,
   Skeleton,
   Spinner,
   errorMessage,
   useApi,
+  useBreakpoint,
   type PageProps,
 } from '@tai42/studio-sdk';
 
@@ -54,9 +57,10 @@ function TemplateList({ selected }: { selected: string | undefined }): ReactNode
           display: 'block',
           padding: 'var(--tai-space-2) var(--tai-space-3)',
           borderRadius: 'var(--tai-radius-md)',
-          font: 'var(--tai-text-md) var(--tai-font-sans)',
-          color: isActive ? 'var(--tai-color-primary-text)' : 'var(--tai-color-text)',
-          background: isActive ? 'var(--tai-color-primary)' : 'transparent',
+          fontFamily: 'var(--tai-font-mono)',
+          fontSize: 'var(--tai-text-md)',
+          color: isActive ? 'var(--tai-color-accent-on-tint)' : 'var(--tai-color-text)',
+          background: isActive ? 'var(--tai-color-accent-tint)' : 'transparent',
           textDecoration: 'none',
           wordBreak: 'break-all',
         };
@@ -81,6 +85,10 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const selected = search.template;
+  const { isSinglePane } = useBreakpoint();
+  // Below 1024 the split collapses to one pane; the detail shows when a template
+  // is selected, otherwise the list.
+  const pane = selected !== undefined ? 'detail' : 'list';
 
   const clearCache = useMutation({
     mutationFn: () => api.clearTemplatesCache(),
@@ -93,48 +101,45 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 'var(--tai-space-4)',
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Templates</h1>
-        <Button
-          onClick={() => {
-            clearCache.mutate();
-          }}
-          disabled={clearCache.isPending}
-        >
-          {clearCache.isPending ? <Spinner label="Clearing cache" /> : null}
-          Clear cache
-        </Button>
-      </header>
+    <div className="tai-stack tai-stack-6">
+      <PageHeader
+        title="Templates"
+        eyebrow="Capabilities"
+        actions={
+          <Button
+            onClick={() => {
+              clearCache.mutate();
+            }}
+            disabled={clearCache.isPending}
+          >
+            {clearCache.isPending ? <Spinner label="Clearing cache" /> : null}
+            Clear cache
+          </Button>
+        }
+      />
 
       {clearCache.isError ? <ErrorState message={errorMessage(clearCache.error)} /> : null}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(16rem, 22rem) 1fr',
-          gap: 'var(--tai-space-6)',
-          alignItems: 'start',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-          <Card>
-            <h2 style={{ margin: '0 0 var(--tai-space-4)', fontSize: 'var(--tai-text-lg)' }}>
-              All templates
-            </h2>
-            <TemplateList selected={selected} />
-          </Card>
-          <UploadTemplateForm />
+      <div className="tai-split" data-pane={isSinglePane ? pane : undefined}>
+        <div className="tai-split-list">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
+            <Card>
+              <h2 style={{ margin: '0 0 var(--tai-space-4)', fontSize: 'var(--tai-text-lg)' }}>
+                All templates
+              </h2>
+              <TemplateList selected={selected} />
+            </Card>
+            <UploadTemplateForm />
+          </div>
         </div>
 
-        <div>
+        <div className="tai-split-detail">
+          {isSinglePane && selected !== undefined ? (
+            <AppLink to="templates" search={{}} className="tai-btn tai-btn-ghost">
+              <ArrowLeftIcon />
+              Back
+            </AppLink>
+          ) : null}
           {selected !== undefined ? (
             <TemplateDetail templateId={selected} />
           ) : (

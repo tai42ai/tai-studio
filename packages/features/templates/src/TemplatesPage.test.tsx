@@ -5,7 +5,7 @@
  * detail view, upload/delete/render/clear-cache mutations, the loud invalid-JSON
  * field error, and the XSS pin that rendered output is ESCAPED text.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -211,5 +211,43 @@ describe('TemplatesPage — clear cache', () => {
     await waitFor(() => {
       expect(clearTemplatesCache).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('TemplatesPage — single-pane (compact band)', () => {
+  beforeEach(() => {
+    // jsdom has no matchMedia, which pins useBreakpoint at the `full` band. A
+    // fake driven off an 800px viewport reports the `compact` band, so the split
+    // collapses to one pane and the detail carries a Back control.
+    const width = 800;
+    globalThis.matchMedia = (query: string): MediaQueryList => {
+      const match = /max-width:\s*(\d+)/.exec(query);
+      const matches = match !== null && width <= Number(match[1]);
+      return {
+        matches,
+        media: query,
+        addEventListener: () => {
+          // Fixed viewport: the band never changes, so no listener is needed.
+        },
+        removeEventListener: () => {
+          // Paired with the no-op addEventListener above.
+        },
+      } as unknown as MediaQueryList;
+    };
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'matchMedia');
+  });
+
+  it('collapses to the detail pane with a Back control when a template is selected', async () => {
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
+    };
+    renderWithProviders(<TemplatesPage search={{ template: 'prompts/a.md' }} />, { client });
+
+    const back = await screen.findByRole('link', { name: 'Back' });
+    expect(back).toBeInTheDocument();
   });
 });

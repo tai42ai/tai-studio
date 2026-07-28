@@ -37,6 +37,8 @@ describe('SchedulingPage — table', () => {
     await waitFor(() => {
       expect(screen.getByText('nightly-report')).toBeInTheDocument();
     });
+    // The page header is the SDK PageHeader; its h1 name stays verbatim.
+    expect(screen.getByRole('heading', { level: 1, name: 'Scheduling' })).toBeInTheDocument();
     expect(screen.getByText('run_report_schedule_task')).toBeInTheDocument();
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
     // widens the document instead of scrolling inside its own box.

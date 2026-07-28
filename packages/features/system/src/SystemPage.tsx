@@ -36,9 +36,11 @@ import {
   EmptyState,
   ErrorState,
   FleetReport,
+  PageHeader,
   ScrollRegion,
   Skeleton,
   Spinner,
+  Stack,
   TBody,
   TD,
   TH,
@@ -65,25 +67,12 @@ const HEALTHY_BODY = 'OK';
  */
 const FLEET_RELOAD_ROUTE = '/api/fleet/reload-config';
 
-const pageStyle: CSSProperties = {
-  display: 'grid',
-  gap: 'var(--tai-space-6)',
-  maxWidth: '64rem',
-};
-
 const cardHeaderStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: 'var(--tai-space-4)',
   marginBottom: 'var(--tai-space-4)',
-};
-
-const titleStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-lg) var(--tai-font-sans)',
-  fontWeight: 600,
-  color: 'var(--tai-color-text)',
 };
 
 const monoStyle: CSSProperties = { fontFamily: 'var(--tai-font-mono)' };
@@ -106,7 +95,7 @@ function HealthCard(): ReactNode {
   return (
     <Card>
       <div style={cardHeaderStyle}>
-        <h2 style={titleStyle}>Health</h2>
+        <h2 className="tai-card-title">Health</h2>
       </div>
       {health.isPending ? (
         <Skeleton width={96} height={22} />
@@ -141,7 +130,7 @@ function BackendCard({ info }: { info: UseQueryResult<BackendInfo> }): ReactNode
   return (
     <Card>
       <div style={cardHeaderStyle}>
-        <h2 style={titleStyle}>Backend</h2>
+        <h2 className="tai-card-title">Backend</h2>
       </div>
       {info.isPending ? (
         <Skeleton height={72} />
@@ -339,7 +328,9 @@ function WorkersCard(): ReactNode {
   return (
     <Card>
       <div style={cardHeaderStyle}>
-        <h2 style={titleStyle}>Workers{workers.data ? ` (${String(origins.length)})` : ''}</h2>
+        <h2 className="tai-card-title">
+          Workers{workers.data ? ` (${String(origins.length)})` : ''}
+        </h2>
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
           <Button
             onClick={() => void workers.refetch()}
@@ -501,7 +492,7 @@ function KindsCard(): ReactNode {
   return (
     <Card>
       <div style={cardHeaderStyle}>
-        <h2 style={titleStyle}>Plugin kinds</h2>
+        <h2 className="tai-card-title">Plugin kinds</h2>
         <Button
           onClick={() => void kinds.refetch()}
           disabled={kinds.isFetching}
@@ -524,10 +515,10 @@ function KindsCard(): ReactNode {
  * nothing from it.
  */
 export const SystemPage: (props: PageProps<'system'>) => ReactNode = () => (
-  <div style={pageStyle}>
-    <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>System</h1>
+  <Stack gap={6} style={{ maxWidth: '64rem' }}>
+    <PageHeader eyebrow="Administration" title="System" />
     <HealthCard />
-    <KindsCard />
     <BackendFleet />
-  </div>
+    <KindsCard />
+  </Stack>
 );

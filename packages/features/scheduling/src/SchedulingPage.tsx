@@ -26,6 +26,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  PageHeader,
   ScrollRegion,
   Skeleton,
   Spinner,
@@ -174,23 +175,23 @@ function ScheduleTable({ schedules }: { schedules: readonly ScheduleItem[] }): R
           <THead>
             <TR>
               <TH>Name</TH>
-              <TH>Tool</TH>
               <TH>Schedule</TH>
               <TH>Status</TH>
+              <TH>Tool</TH>
               <TH>Actions</TH>
             </TR>
           </THead>
           <TBody>
             {schedules.map((item) => (
               <TR key={item.name}>
-                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{item.name}</TD>
-                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{toolIdentity(item)}</TD>
-                <TD>{scheduleSummary(item.schedule)}</TD>
+                <TD className="tai-table-id">{item.name}</TD>
+                <TD className="tai-mono">{scheduleSummary(item.schedule)}</TD>
                 <TD>
                   <Badge variant={item.enabled ? 'success' : 'neutral'}>
                     {item.enabled ? 'Enabled' : 'Disabled'}
                   </Badge>
                 </TD>
+                <TD className="tai-mono">{toolIdentity(item)}</TD>
                 <TD>
                   <Button
                     variant="danger"
@@ -227,37 +228,28 @@ export function SchedulingPage(_props: PageProps<'scheduling'>): ReactNode {
   const noBackend = query.isError && query.error instanceof ApiError && query.error.status === 501;
 
   return (
-    <div
-      data-testid="scheduling-page"
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}
-    >
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 'var(--tai-space-4)',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-          <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Scheduling</h1>
-          <ServerClock />
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
-          <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
-            {query.isFetching ? <Spinner label="Refreshing" /> : null}
-            Refresh
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setAddOpen(true);
-            }}
-          >
-            Add schedule
-          </Button>
-        </div>
-      </header>
+    <div className="tai-stack tai-stack-6" data-testid="scheduling-page">
+      <PageHeader
+        eyebrow="Activity"
+        title="Scheduling"
+        actions={
+          <>
+            <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
+              {query.isFetching ? <Spinner label="Refreshing" /> : null}
+              Refresh
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setAddOpen(true);
+              }}
+            >
+              Add schedule
+            </Button>
+          </>
+        }
+      />
+      <ServerClock />
 
       {query.isPending ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>

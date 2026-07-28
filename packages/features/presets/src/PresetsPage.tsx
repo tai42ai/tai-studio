@@ -6,37 +6,46 @@
  * rollback, delete). Mirrors the tools page's `?tool=` master/detail shape.
  */
 import type { ReactNode } from 'react';
-import { Card, EmptyState, type PageProps } from '@tai42/studio-sdk';
+import {
+  AppLink,
+  ArrowLeftIcon,
+  Card,
+  EmptyState,
+  PageHeader,
+  useBreakpoint,
+  type PageProps,
+} from '@tai42/studio-sdk';
 
 import { PresetsList } from './PresetsList';
 import { PresetDetail } from './PresetDetail';
 
 export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
   const selected = search.preset;
+  const { isSinglePane } = useBreakpoint();
+  // Below 1024 the split collapses to one pane; the detail shows when a preset is
+  // selected, otherwise the list.
+  const pane = selected !== undefined ? 'detail' : 'list';
 
   return (
-    <div
-      data-testid="presets-page"
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}
-    >
-      <header style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Presets</h1>
-        <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-          Named, versioned tool presets — a base tool with fixed kwargs baked in.
-        </p>
-      </header>
+    <div className="tai-stack tai-stack-6" data-testid="presets-page">
+      <PageHeader
+        title="Presets"
+        eyebrow="Capabilities"
+        description="Named, versioned tool presets — a base tool with fixed kwargs baked in."
+      />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(20rem, 28rem) 1fr',
-          gap: 'var(--tai-space-6)',
-          alignItems: 'start',
-        }}
-      >
-        <PresetsList selected={selected} />
+      <div className="tai-split" data-pane={isSinglePane ? pane : undefined}>
+        <div className="tai-split-list">
+          <PresetsList selected={selected} />
+        </div>
 
-        <div>
+        <div className="tai-split-detail">
+          {isSinglePane && selected !== undefined ? (
+            <AppLink to="presets" search={{}} className="tai-btn tai-btn-ghost">
+              <ArrowLeftIcon />
+              Back
+            </AppLink>
+          ) : null}
           {selected !== undefined ? (
             <PresetDetail key={selected} name={selected} />
           ) : (
