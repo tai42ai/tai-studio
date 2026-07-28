@@ -185,7 +185,7 @@ function RenamePresetDialog({
           />
         </Field>
         {hasReferees ? (
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-danger)' }}>
+          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
             Referenced by: {referees.join(', ')} — update those presets first.
           </p>
         ) : null}
@@ -323,7 +323,7 @@ export function PresetDetail({
           </header>
 
           {conflicted ? (
-            <p role="alert" style={{ margin: 0, color: 'var(--tai-color-danger)' }}>
+            <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
               {preset.conflicted_reason ??
                 "This preset's name collided with an existing tool at startup — it is not registered. Delete to resolve."}
             </p>

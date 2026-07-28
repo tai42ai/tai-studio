@@ -43,7 +43,7 @@ const GENERIC_CONFLICT_REASON =
   'Name collided with an existing tool at startup — delete to resolve.';
 
 const linkStyle: CSSProperties = {
-  color: 'var(--tai-color-primary)',
+  color: 'var(--tai-color-accent)',
   textDecoration: 'none',
   fontFamily: 'var(--tai-font-mono)',
   wordBreak: 'break-all',
@@ -211,7 +211,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
                   style={{
                     margin: 0,
                     fontSize: 'var(--tai-text-md)',
-                    color: 'var(--tai-color-danger)',
+                    color: 'var(--tai-color-err-text)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 'var(--tai-space-2)',
