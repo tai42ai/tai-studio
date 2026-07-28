@@ -119,3 +119,64 @@ test.describe('at 320 px', () => {
     expect(overflow, 'the document overflows horizontally at 320 px').toBeLessThanOrEqual(0);
   });
 });
+
+/**
+ * The AUTHENTICATED shell — the surface the credential screen above does not cover
+ * — at the two narrowest widths. Below 640 the fixed sidebar is replaced by a
+ * sticky top bar and a modal drawer, so the document must not scroll sideways.
+ */
+for (const width of [320, 390] as const) {
+  test.describe(`the shell at ${String(width)} px`, () => {
+    test.use({ viewport: { width, height: 900 } });
+
+    test('never scrolls sideways', async ({ page }) => {
+      await seedCredential(page);
+      await page.goto('/observability');
+      await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+
+      const overflow = await page.evaluate(() => {
+        const root = document.documentElement;
+        return root.scrollWidth - root.clientWidth;
+      });
+      expect(
+        overflow,
+        `the shell overflows horizontally at ${String(width)} px`,
+      ).toBeLessThanOrEqual(0);
+    });
+  });
+}
+
+/**
+ * The mobile navigation drawer: below 640 the nav lives behind the top bar's
+ * hamburger in an APG modal dialog. Escape returns focus to the hamburger; a
+ * nav-link activation dismisses it and changes the route.
+ */
+test.describe('the mobile navigation drawer', () => {
+  test.use({ viewport: { width: 375, height: 900 } });
+
+  test('opens from the top bar, closes on Escape returning focus, and closes on navigation', async ({
+    page,
+  }) => {
+    await seedCredential(page);
+    await page.goto('/observability');
+
+    const hamburger = page.getByRole('button', { name: 'Open navigation' });
+    await expect(hamburger).toBeVisible();
+    await hamburger.click();
+
+    const dialog = page.getByRole('dialog', { name: 'Navigation' });
+    await expect(dialog).toBeVisible();
+
+    // Escape dismisses the modal and returns focus to the opener.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(hamburger).toBeFocused();
+
+    // Re-open and activate a nav link: the drawer closes and the route changes.
+    await hamburger.click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('link', { name: 'Tools' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page).toHaveURL(/\/tools/);
+  });
+});
