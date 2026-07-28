@@ -25,6 +25,7 @@ import {
   ErrorState,
   Field,
   JsonTree,
+  PageHeader,
   RadioGroup,
   ScrollRegion,
   Skeleton,
@@ -44,12 +45,6 @@ import {
 } from '@tai42/studio-sdk';
 
 import { storageInfoKey, storageResourcesKey, storageStatKey } from './keys';
-
-const pageStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-6)',
-};
 
 const monoStyle: CSSProperties = { fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' };
 
@@ -328,7 +323,9 @@ function ResourceRow({
 }): ReactNode {
   return (
     <TR>
-      <TD style={monoStyle}>{id}</TD>
+      <TD className="tai-table-id" style={{ wordBreak: 'break-all' }}>
+        {id}
+      </TD>
       <TD>
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)', justifyContent: 'flex-end' }}>
           <Button aria-label={`Stat ${id}`} onClick={onStat}>
@@ -592,10 +589,8 @@ export function StoragePage({ search }: PageProps<'storage'>): ReactNode {
   }
 
   return (
-    <div data-testid="storage-page" style={pageStyle}>
-      <header>
-        <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Storage</h1>
-      </header>
+    <div className="tai-stack tai-stack-6" data-testid="storage-page">
+      <PageHeader eyebrow="Integrations" title="Storage" />
       {body}
     </div>
   );

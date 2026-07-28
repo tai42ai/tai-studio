@@ -59,7 +59,8 @@ export function Notice({
     border: `1px solid ${palette.border}`,
     borderRadius: 'var(--tai-radius-md)',
     color: 'var(--tai-color-text)',
-    font: 'var(--tai-text-md) var(--tai-font-sans)',
+    fontSize: 'var(--tai-text-md)',
+    fontFamily: 'var(--tai-font-sans)',
   };
   return (
     <div role={palette.role} data-kind={notice.kind} style={style}>

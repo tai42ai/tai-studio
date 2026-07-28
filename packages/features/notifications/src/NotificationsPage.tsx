@@ -15,8 +15,10 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  PageHeader,
   ScrollRegion,
   Skeleton,
+  Stack,
   TBody,
   TD,
   TH,
@@ -33,8 +35,6 @@ import {
 import { notificationsKey } from './keys';
 
 const pageStyle: CSSProperties = {
-  display: 'grid',
-  gap: 'var(--tai-space-6)',
   maxWidth: '64rem',
 };
 
@@ -112,9 +112,9 @@ export const NotificationsPage: (props: PageProps<'notifications'>) => ReactNode
   }
 
   return (
-    <div style={pageStyle}>
-      <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Notifications</h1>
+    <Stack gap={6} style={pageStyle}>
+      <PageHeader eyebrow="Activity" title="Notifications" />
       <Card>{body}</Card>
-    </div>
+    </Stack>
   );
 };

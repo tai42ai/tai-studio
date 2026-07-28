@@ -111,7 +111,7 @@ function SubMcpList({
             const tools = entryTools(entry);
             return (
               <TR key={slug}>
-                <TD>{slug}</TD>
+                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{slug}</TD>
                 <TD>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
                     {tools.length === 0 ? (

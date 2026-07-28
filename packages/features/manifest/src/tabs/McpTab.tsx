@@ -79,7 +79,7 @@ function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode 
               const pending = reload.isPending && reload.variables === row.title;
               return (
                 <TR key={row.title}>
-                  <TD>{row.title}</TD>
+                  <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{row.title}</TD>
                   <TD>
                     <Badge variant={row.healthy ? 'success' : 'danger'}>
                       {row.healthy ? 'bound' : 'failed'}

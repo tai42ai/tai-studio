@@ -17,12 +17,6 @@ const bodyStyle: CSSProperties = {
   gap: 'var(--tai-space-3)',
 };
 
-const titleStyle: CSSProperties = {
-  margin: 0,
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
-  color: 'var(--tai-color-text)',
-};
-
 const rowStyle: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
@@ -67,7 +61,7 @@ export function ChannelsCard(): ReactNode {
   return (
     <Card>
       <div style={bodyStyle} data-testid="channels-card">
-        <h2 style={titleStyle}>Delivery channels</h2>
+        <h2 className="tai-card-title">Delivery channels</h2>
         {body}
       </div>
     </Card>

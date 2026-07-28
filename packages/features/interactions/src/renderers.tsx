@@ -65,7 +65,8 @@ const cardBodyStyle: CSSProperties = {
 
 const promptStyle: CSSProperties = {
   margin: 0,
-  font: 'var(--tai-text-md) var(--tai-font-sans)',
+  fontSize: 'var(--tai-text-md)',
+  fontFamily: 'var(--tai-font-sans)',
   color: 'var(--tai-color-text)',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',

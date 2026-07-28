@@ -6,6 +6,7 @@
  * the OAuth popup flow.
  */
 import {
+  AppLink,
   ArrowLeftIcon,
   Badge,
   Button,
@@ -17,6 +18,7 @@ import {
   FleetReport,
   Skeleton,
   Spinner,
+  Stack,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
@@ -187,18 +189,15 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
   const busy = patch.isPending || reconnect.isPending || disconnect.isPending || oauth.pending;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-        <Button
-          onClick={() => {
-            navigate('connectors', {});
-          }}
-          aria-label="Back to connectors"
-        >
+    <Stack gap={4}>
+      <div>
+        <AppLink to="connectors" search={{}} className="tai-btn tai-btn-ghost">
           <ArrowLeftIcon />
           Back
-        </Button>
-        <h1 style={{ margin: 0, font: 'var(--tai-text-lg) var(--tai-font-sans)' }}>
+        </AppLink>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
+        <h1 className="tai-section-title" style={{ margin: 0 }}>
           {connection.alias}
         </h1>
         <Badge variant={HEALTH_VARIANT[connection.auth_health_state]}>
@@ -225,7 +224,7 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
           role="status"
           style={{
             margin: 0,
-            font: 'var(--tai-text-sm) var(--tai-font-sans)',
+            fontSize: 'var(--tai-text-sm)',
             color: 'var(--tai-color-text-muted)',
           }}
         >
@@ -333,6 +332,6 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
       {/* A disconnect whose reload did not converge across the fleet leaves the
           stranded origins visible here instead of navigating away and hiding them. */}
       {disconnectFanout !== null ? <FleetReport summary={disconnectFanout} /> : null}
-    </div>
+    </Stack>
   );
 }

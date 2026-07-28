@@ -9,7 +9,17 @@
  * failed request or a zod mismatch is never a silent empty render, and a 401 is
  * not special-cased here.
  */
-import { AppLink, Badge, Button, Card, EmptyState, ErrorState, Skeleton } from '@tai42/studio-sdk';
+import {
+  AppLink,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  Skeleton,
+  Stack,
+} from '@tai42/studio-sdk';
 import type { PageProps } from '@tai42/studio-sdk';
 import type { ConnectionView, ProviderView } from '@tai42/api-client';
 import { useQuery } from '@tanstack/react-query';
@@ -29,9 +39,7 @@ const HEALTH_VARIANT: Record<ConnectionView['auth_health_state'], string> = {
 
 function SectionHeading({ children }: { children: ReactNode }): ReactNode {
   return (
-    <h2
-      style={{ margin: '0 0 var(--tai-space-3)', font: 'var(--tai-text-lg) var(--tai-font-sans)' }}
-    >
+    <h2 className="tai-section-title" style={{ margin: '0 0 var(--tai-space-3)' }}>
       {children}
     </h2>
   );
@@ -191,8 +199,8 @@ function ConnectionsSection(): ReactNode {
 function ConnectorsList(): ReactNode {
   const [connectProvider, setConnectProvider] = useState<ProviderView | null>(null);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <h1 style={{ margin: 0, fontSize: 'var(--tai-text-xl)' }}>Connectors</h1>
+    <Stack gap={6}>
+      <PageHeader eyebrow="Integrations" title="Connectors" />
       <ProvidersSection onConnect={setConnectProvider} />
       <ConnectionsSection />
       {connectProvider !== null ? (
@@ -203,7 +211,7 @@ function ConnectorsList(): ReactNode {
           }}
         />
       ) : null}
-    </div>
+    </Stack>
   );
 }
 
