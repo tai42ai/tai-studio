@@ -43,8 +43,8 @@ catalogs:
       specifier: ^25.0.1
       version: 25.0.1
     prettier:
-      specifier: ^3.4.2
-      version: 3.9.4
+      specifier: ^3.9.6
+      version: 3.9.6
     react:
       specifier: ^19.2.7
       version: 19.2.7
@@ -95,7 +95,7 @@ importers:
         version: 1.13.6
       prettier:
         specifier: 'catalog:'
-        version: 3.9.4
+        version: 3.9.6
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -243,7 +243,7 @@ importers:
         version: 9.39.4(jiti@2.7.0)
       prettier:
         specifier: 'catalog:'
-        version: 3.9.4
+        version: 3.9.6
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -3769,8 +3769,8 @@ packages:
     engines: {node: '>=10.13.0'}
     hasBin: true
 
-  prettier@3.9.4:
-    resolution: {integrity: sha512-yWG/o/4oJfo036EKAfK6ACAoDOfHeRHx4tuxkfBZiauURiaSmYwlpOr5LQqKtIkRD2z1PLteme2WoxEnj4tHTg==}
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
     engines: {node: '>=14'}
     hasBin: true
 
@@ -7231,7 +7231,7 @@ snapshots:
 
   prettier@2.8.8: {}
 
-  prettier@3.9.4: {}
+  prettier@3.9.6: {}
 
   pretty-format@27.5.1:
     dependencies:
