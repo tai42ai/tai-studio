@@ -83,6 +83,7 @@ function SearchBar({ search }: { readonly search: MarketplaceSearch }): ReactNod
         navigate('marketplace', mergeSearch(search, { q: draft.trim() || undefined }));
       }}
       className="tai-row"
+      style={{ alignItems: 'flex-end' }}
     >
       <Field label="Search" style={{ flex: '1 1 auto' }}>
         <TextInput
