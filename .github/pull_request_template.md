@@ -13,6 +13,6 @@
 - [ ] Lint is clean (`pnpm -r lint`)
 - [ ] Formatting is clean (`pnpm -r format:check`)
 - [ ] Tests pass (`pnpm -r test --coverage`)
-- [ ] Changeset added (`pnpm changeset`) — CI blocks a PR that changes package
-      code without one; use `pnpm changeset --empty` for a docs-only or otherwise
-      no-release change
+- [ ] Commits follow Conventional Commits (`feat:`/`fix:`/`chore:` …) — commitlint
+      gates this, and release-please derives the version bump and release notes
+      from them

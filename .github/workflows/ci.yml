@@ -49,39 +49,6 @@ jobs:
       - name: Test
         run: pnpm -r test --coverage
 
-  # Changeset gate: a pull request that changes a workspace package's code must
-  # carry a changeset, so the version bumps and release notes stay honest.
-  # `changeset status --since=origin/main` diffs the branch against the base and
-  # exits non-zero when a package changed but no changeset was added. A docs-only
-  # or otherwise no-release PR satisfies it with an empty changeset
-  # (`pnpm changeset --empty`, committed on the branch). Pull-request only, and
-  # Dependabot is skipped: its dependency bumps get a changeset at release time,
-  # and a weekly red required check only trains people to ignore CI.
-  changeset:
-    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        # Full history so `--since=origin/main` has a real merge base to diff.
-        with:
-          fetch-depth: 0
-      # actions/checkout leaves the PR merge/head checked out; fetch the base
-      # branch so the `origin/main` ref `--since` names actually resolves.
-      - name: Fetch base branch
-        run: git fetch --no-tags origin main
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-        with:
-          version: 11.9.0
-      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Require a changeset
-        run: pnpm changeset status --since=origin/main
-
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) resolves the skeleton as the sibling
   # ``../tai-skeleton`` and runs it from its own ``.venv``; the skeleton's
@@ -163,3 +130,44 @@ jobs:
         run: pnpm --filter @tai42/e2e exec playwright install --with-deps
       - name: Playwright e2e
         run: pnpm e2e
+
+  # Fleet e2e gate. On push:main and on pull_request, after this repo's own
+  # checks pass, dispatch tai-e2e for the tested sha; tai-e2e runs the cross-repo
+  # suite and posts a `fleet-e2e` commit status back, which branch protection
+  # requires. The dispatch token is a repo Actions secret AND a Dependabot secret
+  # so Dependabot PRs dispatch too; a fork PR has neither, so the guarded step
+  # skips and the required status stays unset for a maintainer to run.
+  trigger-e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      E2E_DISPATCH_TOKEN: ${{ secrets.TAI_E2E_DISPATCH_TOKEN }}
+    steps:
+      # Build the payload with jq so the branch name (untrusted) is JSON-escaped,
+      # never interpolated into a shell or into the payload text.
+      - name: Build dispatch payload
+        id: payload
+        if: env.E2E_DISPATCH_TOKEN != ''
+        env:
+          SRC_REPO: tai-studio
+          SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REF_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          LEGS: ""
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc \
+            --arg repo "$SRC_REPO" \
+            --arg ref "$SHA" \
+            --arg ref_name "$REF_NAME" \
+            --arg legs "$LEGS" \
+            '{repo: $repo, ref: $ref, ref_name: $ref_name} + (if $legs == "" then {} else {legs: $legs} end)')"
+          echo "json=$payload" >> "$GITHUB_OUTPUT"
+      - name: Dispatch fleet-e2e
+        if: env.E2E_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.E2E_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai-e2e
+          event-type: fleet-e2e
+          client-payload: ${{ steps.payload.outputs.json }}

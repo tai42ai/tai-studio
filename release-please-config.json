@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "include-component-in-tag": false,
+  "packages": {
+    ".": {
+      "skip-changelog": true,
+      "package-name": "tai-studio",
+      "extra-files": [
+        {
+          "type": "json",
+          "path": "packages/studio-sdk/package.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "packages/api-client/package.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}
