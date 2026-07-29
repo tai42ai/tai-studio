@@ -1,0 +1,238 @@
+/**
+ * The presets master table (left pane). One row per store-backed preset. Active
+ * presets fill the main table; the conflicted (quarantined) ones — whose names
+ * collided with a foreign tool at boot — are split into their own danger-accented
+ * "Conflicted" Card below, each row carrying the server's `conflicted_reason` (a
+ * conflicted preset is DELETE-ONLY; the detail pane offers only Delete for it, so
+ * the table never presents a dead button). The name cell is an `AppLink` that sets
+ * `?preset=` to drive the detail pane from either table; the active row is
+ * highlighted.
+ *
+ * SAFETY: a preset carries arbitrary server-supplied strings, so every cell renders
+ * them as ESCAPED text through the DS components, never an HTML sink.
+ */
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import type { PresetRecord } from '@tai42/api-client';
+import {
+  AppLink,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  ScrollRegion,
+  Skeleton,
+  Spinner,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+  Table,
+  errorMessage,
+  useApi,
+} from '@tai42/studio-sdk';
+
+import { CreatePresetForm } from './CreatePresetForm';
+import { TagChips } from './tags';
+import { presetsListKey } from './keys';
+
+/** The generic fallback shown when a conflicted row carries no server reason. */
+const GENERIC_CONFLICT_REASON =
+  'Name collided with an existing tool at startup — delete to resolve.';
+
+const linkStyle: CSSProperties = {
+  color: 'var(--tai-color-accent)',
+  textDecoration: 'none',
+  fontFamily: 'var(--tai-font-mono)',
+  wordBreak: 'break-all',
+};
+
+function PresetRow({
+  preset,
+  selected,
+}: {
+  readonly preset: PresetRecord;
+  readonly selected: boolean;
+}): ReactNode {
+  const rowStyle: CSSProperties = {
+    background: selected ? 'var(--tai-color-surface)' : undefined,
+    opacity: preset.conflicted ? 0.7 : undefined,
+  };
+
+  return (
+    <TR data-testid={`preset-row-${preset.name}`} style={rowStyle}>
+      <TD>
+        <AppLink
+          to="presets"
+          search={{ preset: preset.name }}
+          aria-label={`Open preset ${preset.name}`}
+          aria-current={selected ? 'page' : undefined}
+        >
+          <span style={linkStyle}>{preset.name}</span>
+        </AppLink>
+        {preset.conflicted ? (
+          <div
+            data-testid={`preset-conflicted-${preset.name}`}
+            style={{
+              marginTop: 'var(--tai-space-1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--tai-space-1)',
+            }}
+          >
+            <span>
+              <Badge variant="danger">Conflicted</Badge>
+            </span>
+            <span style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
+              {preset.conflicted_reason ?? GENERIC_CONFLICT_REASON}
+            </span>
+          </div>
+        ) : null}
+      </TD>
+      <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{preset.base_tool}</TD>
+      <TD>{preset.description || '—'}</TD>
+      <TD>{preset.active_version}</TD>
+      <TD>{preset.tags.length > 0 ? <TagChips tags={preset.tags} /> : '—'}</TD>
+      <TD>{preset.extensions.length}</TD>
+    </TR>
+  );
+}
+
+/** The shared column header row — identical for the active and conflicted tables. */
+function PresetTableHead(): ReactNode {
+  return (
+    <THead>
+      <TR>
+        <TH>Name</TH>
+        <TH>Base tool</TH>
+        <TH>Description</TH>
+        <TH>Active version</TH>
+        <TH>Tags</TH>
+        <TH>Combos</TH>
+      </TR>
+    </THead>
+  );
+}
+
+function PresetTable({
+  presets,
+  selected,
+}: {
+  readonly presets: readonly PresetRecord[];
+  readonly selected: string | undefined;
+}): ReactNode {
+  return (
+    <ScrollRegion label="Presets">
+      <Table>
+        <PresetTableHead />
+        <TBody>
+          {presets.map((preset) => (
+            <PresetRow key={preset.name} preset={preset} selected={preset.name === selected} />
+          ))}
+        </TBody>
+      </Table>
+    </ScrollRegion>
+  );
+}
+
+export function PresetsList({ selected }: { readonly selected: string | undefined }): ReactNode {
+  const api = useApi();
+  const query = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const active = (query.data ?? []).filter((preset) => !preset.conflicted);
+  const conflicted = (query.data ?? []).filter((preset) => preset.conflicted);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--tai-space-2)',
+        }}
+      >
+        <h2 className="tai-card-title">All presets</h2>
+        <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
+          <Button type="button" onClick={() => void query.refetch()} disabled={query.isFetching}>
+            {query.isFetching ? <Spinner label="Refreshing" /> : null}
+            Refresh
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              setCreateOpen(true);
+            }}
+          >
+            Create preset
+          </Button>
+        </div>
+      </header>
+
+      {query.isPending ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+          <Skeleton height={32} />
+          <Skeleton height={32} />
+          <Skeleton height={32} />
+        </div>
+      ) : query.isError ? (
+        <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
+      ) : query.data.length === 0 ? (
+        <Card>
+          <EmptyState
+            title="No presets yet"
+            description="Create a preset to bind a base tool with fixed kwargs into a new named tool."
+          />
+        </Card>
+      ) : (
+        <>
+          <Card>
+            {active.length > 0 ? (
+              <PresetTable presets={active} selected={selected} />
+            ) : (
+              <EmptyState
+                title="No active presets"
+                description="Every preset is currently conflicted — resolve them below."
+              />
+            )}
+          </Card>
+
+          {conflicted.length > 0 ? (
+            <Card>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}
+                data-testid="presets-conflicted-section"
+              >
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 'var(--tai-text-md)',
+                    color: 'var(--tai-color-err-text)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 'var(--tai-space-2)',
+                  }}
+                >
+                  Conflicted <Badge variant="danger">{conflicted.length}</Badge>
+                </h3>
+                <PresetTable presets={conflicted} selected={selected} />
+              </div>
+            </Card>
+          ) : null}
+        </>
+      )}
+
+      {createOpen ? (
+        <CreatePresetForm
+          onClose={() => {
+            setCreateOpen(false);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}

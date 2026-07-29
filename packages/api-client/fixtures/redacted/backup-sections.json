@@ -1,0 +1,11 @@
+[
+  { "name": "manifest", "secret": false },
+  { "name": "env", "secret": true },
+  { "name": "access_control", "secret": true },
+  { "name": "sub_mcp", "secret": false },
+  { "name": "webhooks", "secret": false },
+  { "name": "templates", "secret": false },
+  { "name": "schedules", "secret": true },
+  { "name": "connector_catalog", "secret": false },
+  { "name": "connector_connections", "secret": true }
+]

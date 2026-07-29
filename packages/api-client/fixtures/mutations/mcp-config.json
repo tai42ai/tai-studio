@@ -1,0 +1,27 @@
+{
+  "status": "ok",
+  "env_keys": 3,
+  "fanout": {
+    "mode": "fleet",
+    "op": "reload_config",
+    "reachable": true,
+    "local_only": false,
+    "results": [
+      {
+        "origin": "serve-4f1c9a2b",
+        "outcome": "applied",
+        "payload": { "status": "ok", "env_keys": 3 },
+        "error": null,
+        "detail": null
+      },
+      {
+        "origin": "serve-7d3e5b8c",
+        "outcome": "applied",
+        "payload": { "status": "ok", "env_keys": 3 },
+        "error": null,
+        "detail": null
+      }
+    ],
+    "error": null
+  }
+}

@@ -1,0 +1,56 @@
+# Studio screenshot regeneration hook.
+#
+# On a push to `main` that touches the Studio UI (the rendered screens, the design
+# system every screen is drawn with, the API client whose shapes they render, the
+# app shell/branding, or the docs-demo capture config), this fires a
+# `repository_dispatch` at the org's tai-docs repo, triggering the `screenshots`
+# job in tai-docs' docs-screenshots.yml. That job
+# rebuilds the SPA, boots a docs-demo backend, recaptures the Studio shots, and
+# opens an automated PR if any changed.
+#
+# Separate from notify-docs.yml (which fires on EVERY push to regenerate the
+# reference MDX): screenshots are heavy and only track UI changes, so this hook is
+# path-filtered and fires a distinct event type.
+#
+# The dispatch needs a `TAI_DOCS_DISPATCH_TOKEN` secret (`contents: write` on
+# tai-docs). A fork has no such secret, so the step is skipped there.
+
+name: notify-docs-screenshots
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/features/**'
+      - 'packages/studio-sdk/**'
+      - 'packages/api-client/**'
+      - 'apps/studio/**'
+      - 'e2e/scripts/docs-screenshots.mjs'
+      - 'e2e/docs-demo/**'
+      # The lockfile pins the rendered typeface: the SDK depends on
+      # `@fontsource-variable/*`, whose resolved version decides which webfont
+      # binaries the build materialises. A bump changes the glyphs in every shot
+      # while touching no path above it.
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    env:
+      DOCS_DISPATCH_TOKEN: ${{ secrets.TAI_DOCS_DISPATCH_TOKEN }}
+    steps:
+      - name: Trigger the tai-docs screenshot regeneration
+        if: env.DOCS_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.DOCS_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai-docs
+          event-type: studio-screenshots
+          client-payload: |
+            {
+              "repo": "${{ github.repository }}",
+              "sha": "${{ github.sha }}"
+            }

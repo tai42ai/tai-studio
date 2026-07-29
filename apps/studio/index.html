@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--tai-importmap-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The browser UI (mobile address bar) tracks the app ground per scheme: the
+         light page bg and the dark page bg. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FFFFFF" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0C0E12" />
+    <!-- The unqualified icon comes first as the fallback every browser understands;
+         the dark-scheme companion follows, so a browser that honours `media` on an
+         icon link picks the mark redrawn for a dark tab strip. The light mark's
+         gradient runs to near-black, which is not legible against a dark ground. -->
+    <link rel="icon" type="image/png" sizes="155x155" href="/tai42-logo-icon.png" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="155x155"
+      media="(prefers-color-scheme: dark)"
+      href="/tai42-logo-icon-dark.png"
+    />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>TAI42 Studio</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

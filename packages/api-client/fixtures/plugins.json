@@ -1,0 +1,19 @@
+[
+  {
+    "name": "reference_plugin",
+    "version": "0.1.0",
+    "api_version": 1,
+    "entry": "reference-plugin-B9itFKyZ.js",
+    "integrity": {
+      "reference-plugin-B9itFKyZ.js": "sha384-JBre7hHsCZ3fKNXjbUY7zkoY4rlSKMqB1PoTUyB+bYfFRGsi5UYSIX3/P7DH55AN"
+    },
+    "contributions": {
+      "tool_panels": {
+        "studio_demo_echo": "EchoPanel"
+      },
+      "pages": ["demo"],
+      "settings_tabs": [],
+      "nav_entries": ["demo"]
+    }
+  }
+]

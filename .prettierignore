@@ -1,0 +1,11 @@
+# Build outputs and artifacts — never formatted.
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+pnpm-lock.yaml
+
+# The reference plugin's COMPILED bundle + generated manifest (emitted by
+# build:reference-plugin, shipped inside the Python package).
+e2e/reference-plugin/src/reference_plugin/studio/

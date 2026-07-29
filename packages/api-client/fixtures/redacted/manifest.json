@@ -1,0 +1,7 @@
+{
+  "mcp": [
+    { "title": "github", "transport": "stdio", "command": "tai-mcp-github" },
+    { "title": "filesystem", "transport": "stdio", "command": "tai-mcp-fs" }
+  ],
+  "user_tools": ["studio_demo_echo", "studio_demo_form"]
+}

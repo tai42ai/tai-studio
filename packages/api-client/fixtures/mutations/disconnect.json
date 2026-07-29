@@ -1,0 +1,10 @@
+{
+  "connection_id": "conn_9f8e7d6c",
+  "upstream_revoke_outcome": "success",
+  "upstream_revoke_status": 200,
+  "removed_manifest_entries": ["mcp:github", "mcp:github:issues"],
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

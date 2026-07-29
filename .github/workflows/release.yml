@@ -1,0 +1,46 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+# One release run at a time; never cancel an in-flight version PR update.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Version-PR only: this workflow never touches the npm registry. It collects the
+  # pending changesets into a pull request carrying the version bumps and the
+  # changelog entries. Publishing is the separate, tag-triggered release-npm.yml,
+  # so exactly one workflow can reach the registry.
+  #
+  # Gated behind the RELEASE_ENABLED repository variable: while it is not 'true'
+  # this job is skipped cleanly (a neutral pass, not a red run).
+  release:
+    if: vars.RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the version PR's branch and commits
+      pull-requests: write # create and update the version PR
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0 # changesets diffs against released tags; needs full history
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Opens or updates the version PR while changesets are pending. Merging it
+      # consumes them; pushing the resulting `v<version>` tag then publishes.
+      - name: Create version PR
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,4 @@
+{
+  "flow_id": "d1e2f3a4-5566-4777-8888-99990000aaaa",
+  "authorize_url": "https://provider.example.com/oauth/authorize?flow=d1e2f3a4-5566-4777-8888-99990000aaaa"
+}

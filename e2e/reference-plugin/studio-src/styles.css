@@ -1,0 +1,23 @@
+/*
+ * The reference plugin's own SCOPED stylesheet — the smallest complete
+ * demonstration of the three plugin styling rules the host injects this file to
+ * exercise:
+ *   1. No global resets: no html/body/:root/*, no bare element selectors.
+ *   2. Every selector is scoped under this plugin's own root class, prefixed
+ *      with the package name (`reference_plugin-`), which the plugin renders on
+ *      the element itself — no host-stamped wrapper.
+ *   3. Every value comes from the SDK design-system tokens (`var(--tai-*)`), so
+ *      the rule themes itself in light and dark with no logic of its own.
+ *
+ * The host injects this as an SRI'd <link> before the bundle's JS imports, so
+ * these styles are in the cascade before the page renders.
+ */
+.reference_plugin-demo {
+  margin-top: var(--tai-space-4);
+  padding: var(--tai-space-4);
+  border: 1px solid var(--tai-color-border);
+  border-radius: var(--tai-radius-lg);
+  background: var(--tai-color-surface-raised);
+  color: var(--tai-color-text);
+  font: var(--tai-text-md) var(--tai-font-sans);
+}

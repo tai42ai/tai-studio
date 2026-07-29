@@ -1,0 +1,14 @@
+[
+  {
+    "name": "nightly-report",
+    "enabled": true,
+    "schedule": { "__type": "crontab", "minute": "0", "hour": "2" },
+    "kwargs": { "backend_tool_name": "run_report_schedule_task" }
+  },
+  {
+    "name": "hourly-sync",
+    "enabled": false,
+    "schedule": { "__type": "interval", "every": 3600 },
+    "kwargs": { "backend_tool_name": "sync_schedule_task" }
+  }
+]

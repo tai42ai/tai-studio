@@ -1,0 +1,7 @@
+{
+  "workers": [
+    { "origin": "serve-4f1c9a2b", "kind": "serve", "pid": 101 },
+    { "origin": "serve-7d3e5b8c", "kind": "serve", "pid": 102 },
+    { "origin": "backend-a9c2e1f4", "kind": "backend", "pid": 205 }
+  ]
+}

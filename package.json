@@ -1,0 +1,55 @@
+{
+  "name": "tai-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "The Studio: a React 19 + TypeScript web UI for a tai42-skeleton MCP server.",
+  "license": "Apache-2.0",
+  "author": "tai42 <oss@tai42.ai>",
+  "homepage": "https://tai42.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tai42ai/tai-studio"
+  },
+  "bugs": {
+    "url": "https://github.com/tai42ai/tai-studio/issues"
+  },
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 128",
+    "safari >= 16.4",
+    "ios_saf >= 16.4"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter @tai42/studio-app dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm -r test",
+    "e2e": "pnpm --filter @tai42/e2e run e2e",
+    "fixtures:refresh": "pnpm --filter @tai42/e2e run fixtures:refresh",
+    "changeset": "changeset",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@eslint/js": "^9.17.0",
+    "eslint": "catalog:",
+    "eslint-plugin-boundaries": "catalog:",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "lefthook": "^1.10.1",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.19.1",
+    "vite": "^6.0.7",
+    "vitest": "catalog:"
+  }
+}
