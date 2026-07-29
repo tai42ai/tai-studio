@@ -463,7 +463,10 @@ function labelledProseSurfaces(root: Element): LabelledProseSurface[] {
 
   for (const node of root.querySelectorAll<HTMLElement>(PROSE_SURFACE_SELECTOR)) {
     if (node.matches(HEADING_SELECTOR)) {
-      const text = node.textContent.trim();
+      // textContent is nullable under strict DOM typings; the local eslint
+      // profile assumes non-null, so the necessary guard trips its rule.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      const text = (node.textContent ?? '').trim();
       if (text !== '') headings.push({ element: node, text });
       continue;
     }
