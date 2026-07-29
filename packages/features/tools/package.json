@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-tools",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Tools surface: browse and exercise the skeleton's registered tools.",
   "license": "Apache-2.0",

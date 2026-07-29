@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-marketplace",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Marketplace surface: browse, install, update, and uninstall plugins.",
   "license": "Apache-2.0",

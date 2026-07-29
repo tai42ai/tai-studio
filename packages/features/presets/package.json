@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-presets",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Presets surface: author, version, and manage versioned tool presets.",
   "license": "Apache-2.0",

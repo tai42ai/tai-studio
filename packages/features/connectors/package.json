@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-connectors",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Connectors surface: OAuth connections to outside apps.",
   "license": "Apache-2.0",

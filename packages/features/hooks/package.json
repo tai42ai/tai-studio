@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-hooks",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Hooks surface: lifecycle hooks registered on the skeleton.",
   "license": "Apache-2.0",

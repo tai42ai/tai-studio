@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-scheduling",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Scheduling surface: list, create, and delete backend-tool schedules.",
   "license": "Apache-2.0",

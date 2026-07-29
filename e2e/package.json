@@ -1,6 +1,6 @@
 {
   "name": "@tai42/e2e",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Playwright end-to-end suites for the Studio.",
   "license": "Apache-2.0",

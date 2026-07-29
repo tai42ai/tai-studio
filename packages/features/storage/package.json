@@ -1,6 +1,6 @@
 {
   "name": "@tai42/feature-storage",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Storage surface: the content store a storage-provider plugin exposes.",
   "license": "Apache-2.0",
