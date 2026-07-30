@@ -153,7 +153,7 @@ jobs:
           SRC_REPO: tai-studio
           SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           REF_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
-          LEGS: ""
+          LEGS: ''
         run: |
           set -euo pipefail
           payload="$(jq -nc \

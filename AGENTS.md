@@ -6,12 +6,12 @@ Contributor and agent rules for this repository. Terse by design.
 
 Conventional Commits. The type sets the release:
 
-| Type | Release |
-| --- | --- |
-| `fix:` | patch |
-| `feat:` | minor |
-| `feat!:` or a `BREAKING CHANGE:` footer | major |
-| `chore:` `docs:` `test:` `ci:` `refactor:` `perf:` `build:` `style:` | none |
+| Type                                                                 | Release |
+| -------------------------------------------------------------------- | ------- |
+| `fix:`                                                               | patch   |
+| `feat:`                                                              | minor   |
+| `feat!:` or a `BREAKING CHANGE:` footer                              | major   |
+| `chore:` `docs:` `test:` `ci:` `refactor:` `perf:` `build:` `style:` | none    |
 
 release-please parses merged commits and raises a release PR; a human merges it,
 which tags `v<version>` and publishes. Non-conforming commits and PR titles fail
