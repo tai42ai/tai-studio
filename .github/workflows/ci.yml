@@ -50,15 +50,16 @@ jobs:
         run: pnpm -r test --coverage
 
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
-  # The boot recipe (e2e/boot/boot.sh) resolves the skeleton as the sibling
-  # ``../tai-skeleton`` and runs it from its own ``.venv``; the skeleton's
-  # uv.lock in turn resolves tai42-contract, tai42-kit, tai42-toolbox (the last via the
-  # ``dev`` extra's ``tai42-skeleton[toolbox]`` self-reference), and tai42-identity-redis
-  # (the e2e manifest's ``redis`` identity provider, pinned editable in uv.lock)
-  # from sibling editable paths, so all five are checked out next to this repo.
-  # Cross-repo checkout uses TAI_CI_TOKEN (fine-grained, Contents:read) to
-  # authenticate those sibling checkouts: the default GITHUB_TOKEN is scoped to
-  # this repository alone. Fork pull requests run without repository secrets, and
+  # The boot recipe (e2e/boot/boot.sh) runs the skeleton from its own ``.venv``,
+  # built by "Sync skeleton env" with UV_NO_SOURCES=1 so the skeleton's committed
+  # uv.lock resolves tai42-contract/tai42-kit/tai42-toolbox/tai42-identity-redis
+  # from PyPI (published resolution, matching the skeleton's own CI) — those four
+  # are no longer checked out. Only two siblings are cloned: ``../tai-skeleton``
+  # (the backend the boot recipe serves) and ``../tai-webhook-verifier-github``
+  # (boot.sh pip-installs it into the skeleton venv to register the "github"
+  # verifier). Cross-repo checkout uses TAI_CI_TOKEN (fine-grained, Contents:read)
+  # to authenticate those private sibling checkouts: the default GITHUB_TOKEN is
+  # scoped to this repository alone. Fork pull requests run without repository secrets, and
   # Dependabot pull requests run with secrets withheld even though their branch
   # lives in this repo, so this job is gated to pushes and same-repo, non-Dependabot
   # pull requests where TAI_CI_TOKEN exists; forks and Dependabot fall back to the
@@ -80,26 +81,6 @@ jobs:
           token: ${{ secrets.TAI_CI_TOKEN }}
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          repository: ${{ github.repository_owner }}/tai-contract
-          path: tai-contract
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-toolbox
-          path: tai-toolbox
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-kit
-          path: tai-kit
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-identity-redis
-          path: tai-identity-redis
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
           repository: ${{ github.repository_owner }}/tai-webhook-verifier-github
           path: tai-webhook-verifier-github
           token: ${{ secrets.TAI_CI_TOKEN }}
@@ -117,8 +98,14 @@ jobs:
           enable-cache: true
       - run: uv python install 3.13
       # Build the skeleton's venv that the boot recipe runs the backend from.
+      # UV_NO_SOURCES: the skeleton's committed uv.lock is published-resolution, so
+      # resolve its siblings from PyPI (no editable-path sources); matches the
+      # skeleton's own CI. Only tai-skeleton and tai-webhook-verifier-github are
+      # cloned above; the boot recipe pip-installs both into this venv.
       - name: Sync skeleton env
         working-directory: tai-skeleton
+        env:
+          UV_NO_SOURCES: "1"
         run: uv sync --locked --python 3.13 --extra dev
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
