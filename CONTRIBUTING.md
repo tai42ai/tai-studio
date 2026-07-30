@@ -62,10 +62,12 @@ provisions pnpm via corepack, Homebrew, or a global npm install.
 `pnpm e2e` runs the Playwright suites against a real backend and is a
 **maintainer command**, not part of the ordinary loop. The boot recipe
 (`e2e/boot/boot.sh`) needs Docker (it brings up a loopback Redis and Postgres),
-`uv`, and five checkouts beside this repo: `tai-skeleton` — run from its own
-`.venv` — plus `tai-contract`, `tai-kit`, `tai-toolbox`, and `tai-identity-redis`,
-which the skeleton's `uv.lock` resolves as editable siblings. CI runs it for you
-on every pull request from this repo.
+`uv`, and two checkouts beside this repo: `tai-skeleton` — run from its own
+`.venv` — and `tai-webhook-verifier-github`, which boot.sh installs into that
+`.venv`. The skeleton's other first-party dependencies (`tai-contract`,
+`tai-kit`, `tai-toolbox`, `tai-identity-redis`) resolve from PyPI when the
+`.venv` is built with `UV_NO_SOURCES=1`, matching the skeleton's own CI. CI runs
+it for you on every pull request from this repo.
 
 Before any commit, run a secret scan over the tree (e.g. `detect-secrets scan`) —
 never commit a real `.env` or an API key.
