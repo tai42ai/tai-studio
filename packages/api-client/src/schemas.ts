@@ -1501,23 +1501,88 @@ export const marketplacePluginDetail = z.object({
 export type MarketplacePluginDetail = z.infer<typeof marketplacePluginDetail>;
 
 /**
- * One installed marketplace plugin as the local attribution store records it.
- * `latest` is the newest registry version (`null` when unknown); update
- * availability comes from the wire field `update_available` (computed
- * server-side as a PEP 440 comparison). `missing_upstream` flags a plugin the
- * registry no longer lists.
+ * One installed plugin's compat verdict against the RUNNING tai42-contract:
+ * `compatible` / `incompatible` per its declared contract range, `unknown` when
+ * no verdict could be computed. `reason` is the human-readable explanation of a
+ * non-`compatible` verdict, `null` when compatible. CLOSED (`.strict()`): the
+ * server is built against exactly this shape, so an unknown key is drift and
+ * throws instead of being stripped.
  */
-export const marketplaceInstalledPlugin = z.object({
-  ref: z.string(),
-  version: z.string(),
-  source: z.string(),
-  installed_at: z.string(),
-  latest: z.string().nullable(),
-  update_available: z.boolean(),
-  missing_upstream: z.boolean(),
-});
-export const marketplaceInstalled = z.array(marketplaceInstalledPlugin);
+export const marketplaceInstalledCompat = z
+  .object({
+    status: z.enum(['compatible', 'incompatible', 'unknown']),
+    reason: z.string().nullable(),
+  })
+  .strict();
+export type MarketplaceInstalledCompat = z.infer<typeof marketplaceInstalledCompat>;
+
+/**
+ * One installed marketplace plugin as the local attribution store records it.
+ * `latest` is the newest registry version (`null` when unknown);
+ * `update_available` advertises only a newer COMPATIBLE version, and
+ * `incompatible_newer` names the newest version blocked by the running
+ * contract (`null` when none), so "an update exists but needs a newer core" is
+ * visible. `missing_upstream` flags a plugin the registry no longer lists.
+ * `compat` is the row's verdict against the running contract. CLOSED, like
+ * every shape of the installed listing.
+ */
+export const marketplaceInstalledPlugin = z
+  .object({
+    ref: z.string(),
+    version: z.string(),
+    source: z.string(),
+    installed_at: z.string(),
+    latest: z.string().nullable(),
+    update_available: z.boolean(),
+    incompatible_newer: z.string().nullable(),
+    missing_upstream: z.boolean(),
+    compat: marketplaceInstalledCompat,
+  })
+  .strict();
 export type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
+
+/** One plugin the boot pass quarantined instead of loading, with why. CLOSED. */
+export const marketplaceQuarantinedPlugin = z
+  .object({
+    name: z.string(),
+    reason: z.string(),
+  })
+  .strict();
+export type MarketplaceQuarantinedPlugin = z.infer<typeof marketplaceQuarantinedPlugin>;
+
+/**
+ * The installed inventory (`GET /api/marketplace/installed`): the attributed
+ * rows plus every plugin the boot pass quarantined instead of loading. CLOSED.
+ */
+export const marketplaceInstalled = z
+  .object({
+    installed: z.array(marketplaceInstalledPlugin),
+    quarantined: z.array(marketplaceQuarantinedPlugin),
+  })
+  .strict();
+export type MarketplaceInstalled = z.infer<typeof marketplaceInstalled>;
+
+/**
+ * One per-plugin outcome of `POST /api/marketplace/upgrade-all`: `upgraded`,
+ * already `up-to-date`, `no-compatible-version` in the registry, or `failed`;
+ * `detail` always carries the human-readable specifics. CLOSED.
+ */
+export const marketplaceUpgradeAllRow = z
+  .object({
+    ref: z.string(),
+    outcome: z.enum(['upgraded', 'up-to-date', 'no-compatible-version', 'failed']),
+    detail: z.string(),
+  })
+  .strict();
+export type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
+
+/** The whole upgrade-all readout: one outcome row per installed plugin. CLOSED. */
+export const marketplaceUpgradeAllResult = z
+  .object({
+    results: z.array(marketplaceUpgradeAllRow),
+  })
+  .strict();
+export type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
 
 /** The advisory state for installed plugins, with when it was last fetched. */
 export const marketplaceAdvisories = z.object({

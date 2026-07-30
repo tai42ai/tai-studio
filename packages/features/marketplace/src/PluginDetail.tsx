@@ -35,7 +35,7 @@ import {
 } from '@tai42/studio-sdk';
 import type {
   MarketplaceInstallResult,
-  MarketplaceInstalledPlugin,
+  MarketplaceInstalled,
   MarketplacePluginDetail,
   MarketplaceVersion,
 } from '@tai42/api-client';
@@ -504,9 +504,7 @@ function ActionsCard({
   onOpen,
 }: {
   readonly detail: MarketplacePluginDetail;
-  readonly installedQuery: ReturnType<
-    typeof useQuery<readonly MarketplaceInstalledPlugin[], Error>
-  >;
+  readonly installedQuery: ReturnType<typeof useQuery<MarketplaceInstalled, Error>>;
   readonly onOpen: (action: ActiveAction) => void;
 }): ReactNode {
   const ref = `${detail.namespace}/${detail.name}`;
@@ -529,7 +527,7 @@ function ActionsCard({
     );
   }
 
-  const installed = installedQuery.data.find((row) => row.ref === ref);
+  const installed = installedQuery.data.installed.find((row) => row.ref === ref);
 
   return (
     <Card>

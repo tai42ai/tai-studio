@@ -522,8 +522,7 @@ describe('ToolsPage — tool_meta overlay merge', () => {
 });
 
 describe('ToolsPage — effective visibility', () => {
-  it('excludes an effectively hidden tool and reveals it with the Show hidden toggle', async () => {
-    const user = userEvent.setup();
+  it('excludes an effectively hidden tool from the list outright', async () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['visible', 'secret']),
       listToolTags: vi.fn().mockResolvedValue([
@@ -539,13 +538,11 @@ describe('ToolsPage — effective visibility', () => {
     };
     renderWithProviders(<ToolsPage search={{}} />, { client });
 
+    // The shown tool renders; the hidden tool is absent — unhiding is a CLI/API
+    // operation (`tai tool-meta … --visibility shown`), verified by the overlay-unhide
+    // test below, with no screen affordance to reveal it here.
     expect(await screen.findByRole('link', { name: 'Open tool visible' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open tool secret' })).toBeNull();
-
-    await user.click(screen.getByRole('button', { name: 'Show hidden (1)' }));
-
-    expect(await screen.findByRole('link', { name: 'Open tool secret' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hide hidden' })).toBeInTheDocument();
   });
 
   it('an overlay hidden:false unhides a plugin-hidden tool; no override defers to the plugin', async () => {

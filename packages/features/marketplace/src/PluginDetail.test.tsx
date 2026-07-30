@@ -15,6 +15,7 @@ import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/test
 import type {
   MarketplaceAdvisory,
   MarketplaceInstallResult,
+  MarketplaceInstalled,
   MarketplaceInstalledPlugin,
   MarketplacePluginDetail,
 } from '@tai42/api-client';
@@ -70,9 +71,16 @@ function installedRow(
     installed_at: '2026-07-01T00:00:00Z',
     latest: null,
     update_available: false,
+    incompatible_newer: null,
     missing_upstream: false,
+    compat: { status: 'compatible', reason: null },
     ...overrides,
   };
+}
+
+/** The installed-listing envelope: rows plus the boot-quarantine list. */
+function installedList(plugins: MarketplaceInstalledPlugin[]): MarketplaceInstalled {
+  return { installed: plugins, quarantined: [] };
 }
 
 function advisory(overrides: Partial<MarketplaceAdvisory> = {}): MarketplaceAdvisory {
@@ -107,7 +115,7 @@ function reads(
 ): StubApiClient {
   return {
     getMarketplacePlugin: vi.fn().mockResolvedValue(detail),
-    listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installed),
+    listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList(installed)),
     getMarketplaceAdvisories: vi.fn().mockResolvedValue(advisories),
   };
 }
@@ -121,7 +129,7 @@ describe('PluginDetail — gating', () => {
   it('shows no info card while the detail is pending', () => {
     const client: StubApiClient = {
       getMarketplacePlugin: vi.fn(() => pending<MarketplacePluginDetail>()),
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([]),
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([])),
       getMarketplaceAdvisories: vi.fn().mockResolvedValue(emptyAdvisories),
     };
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
@@ -131,7 +139,7 @@ describe('PluginDetail — gating', () => {
   it('shows a loud error with retry when the detail fails', async () => {
     const client: StubApiClient = {
       getMarketplacePlugin: vi.fn().mockRejectedValue(new Error('boom: detail')),
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([]),
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([])),
       getMarketplaceAdvisories: vi.fn().mockResolvedValue(emptyAdvisories),
     };
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
@@ -266,7 +274,7 @@ describe('PluginDetail — advisories', () => {
   it('keeps the detail and shows an inline error when advisories fail', async () => {
     const client: StubApiClient = {
       getMarketplacePlugin: vi.fn().mockResolvedValue(detailFixture()),
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([]),
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([])),
       getMarketplaceAdvisories: vi.fn().mockRejectedValue(new Error('boom: advisories')),
     };
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
@@ -316,7 +324,7 @@ describe('PluginDetail — install state', () => {
   it('shows no action buttons while the installed query is pending', async () => {
     const client: StubApiClient = {
       getMarketplacePlugin: vi.fn().mockResolvedValue(detailFixture()),
-      listInstalledMarketplacePlugins: vi.fn(() => pending<MarketplaceInstalledPlugin[]>()),
+      listInstalledMarketplacePlugins: vi.fn(() => pending<MarketplaceInstalled>()),
       getMarketplaceAdvisories: vi.fn().mockResolvedValue(emptyAdvisories),
     };
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
@@ -599,7 +607,7 @@ describe('PluginDetail — panes that scroll are keyboard targets', () => {
     // prose, taking the instrumented regions with it and dropping the reader
     // standing in one onto the document body.
     act(() => {
-      queryClient.setQueryData(marketplaceInstalledKey, [installedRow()]);
+      queryClient.setQueryData(marketplaceInstalledKey, installedList([installedRow()]));
     });
     expect(await screen.findByText('Installed v1.2.0')).toBeInTheDocument();
 

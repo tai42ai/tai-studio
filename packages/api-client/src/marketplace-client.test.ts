@@ -2,7 +2,8 @@
  * Transport-level tests for the marketplace client methods: `searchMarketplace`,
  * `getMarketplacePlugin`, `listMarketplaceCategories`,
  * `listInstalledMarketplacePlugins`, `installMarketplacePlugin`,
- * `uninstallMarketplacePlugin`, `updateMarketplacePlugin`, and
+ * `uninstallMarketplacePlugin`, `updateMarketplacePlugin`,
+ * `upgradeAllMarketplacePlugins`, and
  * `getMarketplaceAdvisories` — URL (incl. REPEATED `tags` params and
  * percent-encoded path segments), HTTP method, request-body shaping, the
  * `{ data }` envelope unwrap, and a LOUD error on a 4xx `{error}` plus an
@@ -63,6 +64,21 @@ const SEARCH_ROW = {
   latest_version: '0.1.0',
   downloads: 3,
   updated_at: '2026-07-12T00:00:00Z',
+};
+
+const INSTALLED_ROW = {
+  ref: 'tai42/toolbox',
+  version: '0.1.0',
+  source: 'github',
+  installed_at: '2026-07-12T00:00:00Z',
+  latest: '0.2.0',
+  update_available: true,
+  incompatible_newer: '0.3.0',
+  missing_upstream: false,
+  compat: {
+    status: 'incompatible',
+    reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
+  },
 };
 
 const ADVISORY = {
@@ -164,26 +180,76 @@ describe('marketplace client transport', () => {
     expect(out).toEqual(['productivity', 'utilities']);
   });
 
-  it('listInstalledMarketplacePlugins GETs /api/marketplace/installed and parses the list', async () => {
+  it('listInstalledMarketplacePlugins GETs /api/marketplace/installed and parses installed + quarantined', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: [
-          {
-            ref: 'tai42/toolbox',
-            version: '0.1.0',
-            source: 'github',
-            installed_at: '2026-07-12T00:00:00Z',
-            latest: '0.2.0',
-            update_available: true,
-            missing_upstream: false,
-          },
-        ],
+        data: {
+          installed: [INSTALLED_ROW],
+          quarantined: [
+            { name: 'tai42-broken', reason: 'requires tai42-contract<0.2; running 0.2.0' },
+          ],
+        },
       }),
     );
     const out = await client.listInstalledMarketplacePlugins();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/marketplace/installed');
-    expect(out[0]?.update_available).toBe(true);
+    expect(out.installed[0]?.update_available).toBe(true);
+    expect(out.installed[0]?.incompatible_newer).toBe('0.3.0');
+    expect(out.installed[0]?.compat).toEqual({
+      status: 'incompatible',
+      reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
+    });
+    expect(out.quarantined[0]?.name).toBe('tai42-broken');
+  });
+
+  it('throws ApiSchemaError LOUDLY on an unknown key in the CLOSED installed shapes', async () => {
+    // The installed listing is a closed contract: the server is built against
+    // exactly these shapes, so an extra key is drift, never silently stripped.
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { installed: [{ ...INSTALLED_ROW, surprise: 1 }], quarantined: [] },
+      }),
+    );
+    await expect(client.listInstalledMarketplacePlugins()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('upgradeAllMarketplacePlugins POSTs body-less and parses the per-plugin outcomes', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          results: [
+            { ref: 'tai42/toolbox', outcome: 'upgraded', detail: '0.1.0 -> 0.2.0' },
+            {
+              ref: 'tai42/stable',
+              outcome: 'up-to-date',
+              detail: '0.1.0 is the latest compatible version',
+            },
+            { ref: 'tai42/orphan', outcome: 'no-compatible-version', detail: 'newest is 9.0.0' },
+            { ref: 'tai42/flaky', outcome: 'failed', detail: 'pip install failed' },
+          ],
+        },
+      }),
+    );
+    const out = await client.upgradeAllMarketplacePlugins();
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/marketplace/upgrade-all');
+    expect(captured[0]?.body).toBeUndefined();
+    expect(out.results.map((row) => row.outcome)).toEqual([
+      'upgraded',
+      'up-to-date',
+      'no-compatible-version',
+      'failed',
+    ]);
+  });
+
+  it('throws ApiSchemaError LOUDLY on an outcome outside the upgrade-all enum', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { results: [{ ref: 'tai42/toolbox', outcome: 'exploded', detail: 'x' }] },
+      }),
+    );
+    await expect(client.upgradeAllMarketplacePlugins()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
   it('installMarketplacePlugin POSTs the body and parses the receipt (notes + advisories)', async () => {

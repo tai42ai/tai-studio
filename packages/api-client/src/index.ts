@@ -156,7 +156,12 @@ export type {
   MarketplaceLatestVersion,
   MarketplaceAdvisory,
   MarketplacePluginDetail,
+  MarketplaceInstalledCompat,
   MarketplaceInstalledPlugin,
+  MarketplaceQuarantinedPlugin,
+  MarketplaceInstalled,
+  MarketplaceUpgradeAllRow,
+  MarketplaceUpgradeAllResult,
   MarketplaceInstallResult,
   MarketplaceUninstallResult,
 } from './schemas';

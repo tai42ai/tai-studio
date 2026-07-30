@@ -203,7 +203,9 @@ export function ExtensionComboBuilder({
               // of its own — so an index key is stable and cannot collide.
               <li key={index} className="tai-card tai-stack tai-stack-2">
                 <div className="tai-row">
-                  <span className="tai-row">
+                  {/* The badges take the row's spare width so the Edit/Remove pair
+                      pins to a stable trailing edge across combos of varied length. */}
+                  <span className="tai-row" style={{ flex: 1 }}>
                     {names.map((name, position) => (
                       <Fragment key={`${name}-${String(position)}`}>
                         {position > 0 ? (

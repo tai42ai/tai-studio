@@ -13,9 +13,11 @@
  * The current folder is local view state; the tree is entity-backed by the overlay.
  *
  * HIDDEN: a tool whose EFFECTIVE visibility is hidden (`overlay.hidden ?? plugin
- * declaration`) is excluded from the list; a "Show hidden" toggle reveals them for
- * management (a visibility feature, never a security boundary — the tool stays
- * callable). Writers edit a tool's overlay through the per-tool edit dialog.
+ * declaration`) is excluded from the list outright — there is no screen affordance
+ * to reveal it. Unhiding is a CLI/API operation (`tai tool-meta … --visibility
+ * shown`, which writes `overlay.hidden = false`); once shown, the tool appears and
+ * writers edit its overlay through the per-tool edit dialog. Hiding is a visibility
+ * choice, never a security boundary — a hidden tool stays callable on the server.
  *
  * Server state flows through TanStack Query: loading → `Skeleton`, empty →
  * `EmptyState`, error → a loud `ErrorState`. A tags OR overlay read failure never
@@ -34,8 +36,6 @@ import {
   Card,
   EmptyState,
   ErrorState,
-  EyeIcon,
-  EyeOffIcon,
   FolderBreadcrumb,
   FolderRow,
   PageHeader,
@@ -71,6 +71,9 @@ const MAX_VISIBLE_TAG_CHIPS = 8;
 /** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
 const TOOL_META_WRITE_ROUTE = '/api/tool-meta/tools';
 
+/** Push a following flex item to the far edge of its `.tai-row`. */
+const spacerStyle = { marginLeft: 'auto' };
+
 /** One tool row: its display label as an `AppLink` setting `?tool=` (preserving the
  * active `?tags=`), the real name shown secondary+mono when a display name overrides
  * it, and — for writers — an edit affordance opening the overlay dialog. */
@@ -100,15 +103,18 @@ function ToolItem({
         {view.hasCustomName ? <span className="tai-muted tai-mono">{view.name}</span> : null}
       </AppLink>
       {canWrite ? (
-        <Button
-          variant="ghost"
-          aria-label={`Edit tool ${view.name}`}
-          onClick={() => {
-            onEdit(view);
-          }}
-        >
-          Edit
-        </Button>
+        <>
+          <div style={spacerStyle} />
+          <Button
+            variant="ghost"
+            aria-label={`Edit tool ${view.name}`}
+            onClick={() => {
+              onEdit(view);
+            }}
+          >
+            Edit
+          </Button>
+        </>
       ) : null}
     </div>
   );
@@ -311,7 +317,6 @@ function ToolList({
   const canWrite = useCanWrite(TOOL_META_WRITE_ROUTE, 'PATCH');
   const { state } = useCapabilities();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
 
   const toolsQuery = useQuery({ queryKey: toolsListKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: toolTagsKey, queryFn: () => api.listToolTags() });
@@ -359,14 +364,10 @@ function ToolList({
       : null;
 
   // The current directory: its subfolders, and the tools filed directly in it. A tool
-  // whose effective visibility is hidden is excluded unless "Show hidden" is on.
+  // whose effective visibility is hidden is excluded outright — unhiding is a CLI/API
+  // operation (`tai tool-meta … --visibility shown`), never a screen affordance.
   const subfolders = childFolders(folders, currentFolderId);
-  const inFolder = allViews.filter(
-    (view) => view.folderId === currentFolderId && (showHidden || !view.hidden),
-  );
-  const hiddenInFolderCount = allViews.filter(
-    (view) => view.folderId === currentFolderId && view.hidden,
-  ).length;
+  const inFolder = allViews.filter((view) => view.folderId === currentFolderId && !view.hidden);
 
   const vocabulary = buildVocabulary(inFolder, selectedTags);
   const selectedSet = new Set(selectedTags);
@@ -469,26 +470,12 @@ function ToolList({
         />
       ) : null}
 
-      <div className="tai-row">
-        <FolderBreadcrumb
-          folders={folders}
-          currentFolderId={currentFolderId}
-          onNavigate={setCurrentFolderId}
-          rootLabel="All tools"
-        />
-        {hiddenInFolderCount > 0 || showHidden ? (
-          <Button
-            variant="ghost"
-            aria-pressed={showHidden}
-            onClick={() => {
-              setShowHidden((value) => !value);
-            }}
-          >
-            {showHidden ? <EyeOffIcon /> : <EyeIcon />}
-            {showHidden ? 'Hide hidden' : `Show hidden (${String(hiddenInFolderCount)})`}
-          </Button>
-        ) : null}
-      </div>
+      <FolderBreadcrumb
+        folders={folders}
+        currentFolderId={currentFolderId}
+        onNavigate={setCurrentFolderId}
+        rootLabel="All tools"
+      />
 
       {subfolders.length > 0 ? (
         <div className="tai-stack tai-stack-2">

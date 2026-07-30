@@ -960,6 +960,10 @@ export function createApiClient(config: ApiConfig) {
       req('/api/marketplace/uninstall', s.marketplaceUninstallResult, { method: 'POST', body }),
     updateMarketplacePlugin: (body: MarketplaceInstallBody) =>
       req('/api/marketplace/update', s.marketplaceInstallResult, { method: 'POST', body }),
+    // Upgrade EVERY installed plugin to its newest compatible version in one
+    // pass; the response is the per-plugin outcome readout.
+    upgradeAllMarketplacePlugins: () =>
+      req('/api/marketplace/upgrade-all', s.marketplaceUpgradeAllResult, { method: 'POST' }),
     getMarketplaceAdvisories: (signal?: AbortSignal) =>
       req('/api/marketplace/advisories', s.marketplaceAdvisories, { signal }),
 

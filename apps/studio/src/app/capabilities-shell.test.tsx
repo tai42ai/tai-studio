@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { PluginContext } from '@tai42/studio-sdk';
+import type { NavEntrySection, PluginContext } from '@tai42/studio-sdk';
 import type { MeProjection } from '@tai42/api-client';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 
@@ -331,8 +331,9 @@ describe('plugin capability gating', () => {
     };
   }
 
-  /** Register a page + nav entry, optionally with a capability requirement. */
-  function register(required?: { routes: string[] }) {
+  /** Register a page + nav entry, optionally with a capability requirement and a
+   * declared sidebar section (a raw string, so an unknown value can be exercised). */
+  function register(required?: { routes: string[] }, section?: string) {
     return (ctx: PluginContext): void => {
       ctx.registerPage({
         path: 'demo',
@@ -344,6 +345,7 @@ describe('plugin capability gating', () => {
         path: 'demo',
         title: 'Reference',
         ...(required ? { requiredCapabilities: required } : {}),
+        ...(section !== undefined ? { section: section as NavEntrySection } : {}),
       });
     };
   }
@@ -476,6 +478,86 @@ describe('plugin capability gating', () => {
     expect(screen.queryByText('secret demo page')).toBeNull();
     expect(screen.queryByTestId('route-content-skeleton')).toBeNull();
     spy.mockRestore();
+  });
+});
+
+describe('plugin nav sections', () => {
+  function pluginManifest() {
+    return {
+      name: 'acme',
+      version: '1.0.0',
+      api_version: 1,
+      entry: 'index.js',
+      integrity: { 'index.js': 'sha384-abc' },
+      contributions: { tool_panels: {}, pages: ['demo'], settings_tabs: [] },
+    };
+  }
+
+  /** Register a page + nav entry titled "Reference", optionally declaring a section. */
+  function register(section?: string) {
+    return (ctx: PluginContext): void => {
+      ctx.registerPage({
+        path: 'demo',
+        title: 'Demo',
+        component: () => <div>demo page</div>,
+      });
+      ctx.registerNavEntry({
+        path: 'demo',
+        title: 'Reference',
+        ...(section !== undefined ? { section: section as NavEntrySection } : {}),
+      });
+    };
+  }
+
+  /** Land on `/interactions` with one full-projection plugin nav entry loaded. */
+  function landWithEntry(section?: string): void {
+    server.use(
+      http.get('*/api/plugins', () => HttpResponse.json({ data: [pluginManifest()] })),
+      okChannels,
+    );
+    const importModule = vi.fn(() => Promise.resolve({ register: register(section) }));
+    renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap', importModule });
+  }
+
+  it('renders an undeclared plugin nav entry under the Plugins section header', async () => {
+    landWithEntry();
+
+    const pluginsNav = await screen.findByRole('navigation', { name: 'Plugins' });
+    // The header names its list (aria-labelledby), and the entry sits inside it.
+    const list = within(pluginsNav).getByRole('list', { name: 'Plugins' });
+    expect(within(list).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
+    // The Plugins section is separate from the core Administration section.
+    const admin = within(screen.getByRole('list', { name: 'Administration' }));
+    expect(admin.queryByRole('link', { name: 'Reference' })).toBeNull();
+  });
+
+  it('renders a plugin nav entry declaring a core section inside that section, after the core rows', async () => {
+    landWithEntry('Administration');
+
+    const admin = await screen.findByRole('list', { name: 'Administration' });
+    // The plugin row lands in Administration, ordered after every core row.
+    const names = within(admin)
+      .getAllByRole('link')
+      .map((el) => el.textContent);
+    expect(names).toEqual(['Marketplace', 'Manifest', 'Settings', 'System', 'Reference']);
+    // No separate Plugins section is created for a declared entry.
+    expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
+  });
+
+  it('falls back to the Plugins section for an unrecognised declared section value', async () => {
+    landWithEntry('Nowhere');
+
+    const pluginsNav = await screen.findByRole('navigation', { name: 'Plugins' });
+    expect(within(pluginsNav).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
+  });
+
+  it('renders no Plugins section when no undeclared plugin entry is visible', async () => {
+    // The only entry declares a core section, so nothing is left for the Plugins group.
+    landWithEntry('Administration');
+
+    await screen.findByRole('list', { name: 'Administration' });
+    expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Plugins' })).toBeNull();
   });
 });
 

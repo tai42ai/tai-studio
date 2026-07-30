@@ -110,6 +110,22 @@ const navGroupsStyle = {
   gap: 'var(--tai-space-3)',
 } as const;
 
+/** The catch-all section for plugin nav entries that name no core section. */
+const PLUGINS_SECTION_LABEL = 'Plugins' as const;
+
+/** The core section labels a plugin nav entry may target; every other value
+ * (absent field, `'Plugins'`, or an unrecognised string from a newer bundle)
+ * lands in the {@link PLUGINS_SECTION_LABEL} section. */
+const CORE_SECTION_LABELS: ReadonlySet<string> = new Set(NAV_SECTIONS.map((s) => s.label));
+
+/** The sidebar section a plugin nav entry renders in: its declared core section,
+ * else the Plugins section. Tolerates an unknown declared value at runtime. */
+function navEntrySectionLabel(entry: RegisteredNavEntry): string {
+  return entry.section !== undefined && CORE_SECTION_LABELS.has(entry.section)
+    ? entry.section
+    : PLUGINS_SECTION_LABEL;
+}
+
 function NavItem({ token }: { token: FeatureToken }): ReactNode {
   const { pathname } = useLocation();
   const isActive = pathname === PATH[token];
@@ -185,11 +201,21 @@ function sectionHeaderId(prefix: string, label: string): string {
 /**
  * The primary nav body under a ready projection: the standalone Dashboard row
  * first, then each {@link NAV_SECTIONS} group as an uppercase muted header over
- * its items. Every row is capability-filtered by {@link tokenCovered}; a section
- * whose items are ALL filtered out renders NOTHING (no empty labelled group), and
- * the Dashboard row hides the same way.
+ * its items — the section's core tokens, then any plugin nav entry that declared
+ * that section (rendered after the core rows). Core rows are capability-filtered
+ * by {@link tokenCovered}; the plugin entries arrive already filtered. A section
+ * with no visible item of either kind renders NOTHING (no empty labelled group),
+ * and the Dashboard row hides the same way.
  */
-function NavSections({ projection }: { projection: MeProjection }): ReactNode {
+function NavSections({
+  projection,
+  navEntries,
+  activeKey,
+}: {
+  projection: MeProjection;
+  navEntries: readonly RegisteredNavEntry[];
+  activeKey: string | undefined;
+}): ReactNode {
   // Unique per NavBody instance, so the sidebar's and the drawer's copies of the
   // same sections never share a header id when both are mounted (drawer open).
   const idPrefix = useId();
@@ -202,7 +228,8 @@ function NavSections({ projection }: { projection: MeProjection }): ReactNode {
       ) : null}
       {NAV_SECTIONS.map((section) => {
         const tokens = section.tokens.filter((token) => tokenCovered(projection, token));
-        if (tokens.length === 0) return null;
+        const entries = navEntries.filter((entry) => navEntrySectionLabel(entry) === section.label);
+        if (tokens.length === 0 && entries.length === 0) return null;
         const headerId = sectionHeaderId(idPrefix, section.label);
         return (
           <div key={section.label}>
@@ -213,6 +240,10 @@ function NavSections({ projection }: { projection: MeProjection }): ReactNode {
               {tokens.map((token) => (
                 <NavItem key={token} token={token} />
               ))}
+              {entries.map((entry) => {
+                const key = navEntryKey(entry);
+                return <PluginNavItem key={key} entry={entry} active={key === activeKey} />;
+              })}
             </ul>
           </div>
         );
@@ -268,8 +299,10 @@ function activeNavKey(
 
 /**
  * The Primary + Plugins navigation, shared by the sidebar and the mobile drawer.
- * The primary nav follows the capability projection's three states; the Plugins
- * nav appears only when a contribution is both loaded and covered.
+ * The primary nav follows the capability projection's three states, and each of
+ * its sections carries the plugin entries that declared it. The Plugins nav holds
+ * the entries that named no core section; it renders only when at least one such
+ * entry is both loaded and covered (no empty labelled section).
  */
 function NavBody({
   state,
@@ -284,6 +317,13 @@ function NavBody({
   // matching entry wins, so nested prefix entries never both light up.
   const { pathname } = useLocation();
   const activeKey = activeNavKey(visibleNavEntries, pathname);
+  // Unique per NavBody instance, so the sidebar's and drawer's copies never share
+  // this header id when both are mounted (drawer open beside the sidebar).
+  const idPrefix = useId();
+  const pluginsHeaderId = sectionHeaderId(idPrefix, PLUGINS_SECTION_LABEL);
+  const pluginsEntries = visibleNavEntries.filter(
+    (entry) => navEntrySectionLabel(entry) === PLUGINS_SECTION_LABEL,
+  );
   return (
     <>
       <nav aria-label="Primary">
@@ -296,13 +336,20 @@ function NavBody({
             onRetry={retry}
           />
         ) : (
-          <NavSections projection={state.projection} />
+          <NavSections
+            projection={state.projection}
+            navEntries={visibleNavEntries}
+            activeKey={activeKey}
+          />
         )}
       </nav>
-      {visibleNavEntries.length > 0 ? (
+      {pluginsEntries.length > 0 ? (
         <nav aria-label="Plugins">
-          <ul style={navListStyle}>
-            {visibleNavEntries.map((entry) => {
+          <div id={pluginsHeaderId} className="tai-nav-section-header">
+            {PLUGINS_SECTION_LABEL}
+          </div>
+          <ul style={navListStyle} aria-labelledby={pluginsHeaderId}>
+            {pluginsEntries.map((entry) => {
               const key = navEntryKey(entry);
               return <PluginNavItem key={key} entry={entry} active={key === activeKey} />;
             })}

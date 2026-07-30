@@ -118,6 +118,16 @@ export interface RegisteredPage extends PageContribution {
   readonly pluginId: string;
 }
 
+/**
+ * The sidebar section a nav entry renders in. A named core section groups the
+ * entry there, after that section's core rows; `'Plugins'`, an absent field, or
+ * any unrecognised value falls to the Plugins section. The shell tolerates an
+ * unknown value at runtime (a bundle newer than this host), so the field is a
+ * placement hint, never a hard contract.
+ */
+export type NavEntrySection =
+  'Capabilities' | 'Integrations' | 'Activity' | 'Administration' | 'Plugins';
+
 export interface NavEntryContribution {
   /**
    * Path of a page THIS plugin registers. The nav entry links to
@@ -126,6 +136,12 @@ export interface NavEntryContribution {
    */
   readonly path: string;
   readonly title: string;
+  /**
+   * Optional target sidebar section (see {@link NavEntrySection}); absent ⇒ the
+   * Plugins section. Additive — an older bundle omits it and stays on the same
+   * plugin API version.
+   */
+  readonly section?: NavEntrySection;
   /**
    * Optional icon rendered before the title. It must be a square inline SVG that
    * fills its box and draws with `currentColor`; the host constrains the slot,

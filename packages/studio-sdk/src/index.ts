@@ -40,6 +40,7 @@ export type {
   SettingsTabContribution,
   RegisteredSettingsTab,
   NavEntryContribution,
+  NavEntrySection,
   RegisteredNavEntry,
   PluginContributions,
   RequiredCapabilities,

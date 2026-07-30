@@ -447,7 +447,9 @@ describe('MarketplacePage — tabs and drill-in', () => {
 
   it('renders the installed tab content when the installed tab is active', async () => {
     const client: StubApiClient = {
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([]),
+      listInstalledMarketplacePlugins: vi
+        .fn()
+        .mockResolvedValue({ installed: [], quarantined: [] }),
       getMarketplaceAdvisories: vi.fn().mockResolvedValue({ advisories: [], fetched_at: 'x' }),
     };
     renderWithProviders(<MarketplacePage search={{ tab: 'installed' }} />, { client });
@@ -457,7 +459,9 @@ describe('MarketplacePage — tabs and drill-in', () => {
   it('renders the detail view instead of the browse chrome when a plugin is selected', async () => {
     const client: StubApiClient = {
       getMarketplacePlugin: vi.fn().mockResolvedValue(detailFixture()),
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([]),
+      listInstalledMarketplacePlugins: vi
+        .fn()
+        .mockResolvedValue({ installed: [], quarantined: [] }),
       getMarketplaceAdvisories: vi.fn().mockResolvedValue({ advisories: [], fetched_at: 'x' }),
     };
     renderWithProviders(<MarketplacePage search={{ plugin: 'tai42/toolbox' }} />, { client });
@@ -470,7 +474,9 @@ describe('MarketplacePage — tabs and drill-in', () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
       getMarketplacePlugin: vi.fn().mockResolvedValue(detailFixture()),
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue([]),
+      listInstalledMarketplacePlugins: vi
+        .fn()
+        .mockResolvedValue({ installed: [], quarantined: [] }),
       getMarketplaceAdvisories: vi.fn().mockResolvedValue({ advisories: [], fetched_at: 'x' }),
     };
     const { navigate } = renderWithProviders(
