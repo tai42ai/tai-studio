@@ -39,7 +39,14 @@ export function renderWithProviders(
     <QueryClientProvider client={queryClient}>
       <ApiProvider value={apiClient}>
         <ThemeProvider>
-          <NavigationProvider value={{ navigate, resolvePath: () => '/x' }}>
+          <NavigationProvider
+            value={{
+              navigate,
+              resolvePath: () => '/x',
+              navigatePlugin: vi.fn(),
+              resolvePluginPath: () => '/x',
+            }}
+          >
             {ui}
           </NavigationProvider>
         </ThemeProvider>

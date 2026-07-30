@@ -25,7 +25,14 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
       <QueryClientProvider client={queryClient}>
         <ApiProvider value={client}>
           <ThemeProvider>
-            <NavigationProvider value={{ navigate: vi.fn(), resolvePath: () => '/x' }}>
+            <NavigationProvider
+              value={{
+                navigate: vi.fn(),
+                resolvePath: () => '/x',
+                navigatePlugin: vi.fn(),
+                resolvePluginPath: () => '/x',
+              }}
+            >
               {children}
             </NavigationProvider>
           </ThemeProvider>
@@ -41,9 +48,17 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
  * Build a mock `ApiClient` from a partial set of methods; the feature only ever
  * touches the scheduling seams, so unstubbed methods are irrelevant to these
  * tests (a call to one that was not provided throws, surfacing the omission).
+ *
+ * The add dialog's picker enriches with the tool tags + tool_meta overlay to drop
+ * effective-hidden tools; those two reads are best-effort, so they get a benign
+ * empty default here and a test overrides them only when it exercises the exclusion.
  */
 export function makeClient(overrides: Partial<ApiClient>): ApiClient {
-  return overrides as ApiClient;
+  return {
+    listToolTags: vi.fn(() => Promise.resolve([])),
+    listToolMeta: vi.fn(() => Promise.resolve({ folders: [], meta: [] })),
+    ...overrides,
+  } as ApiClient;
 }
 
 /**

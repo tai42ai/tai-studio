@@ -277,6 +277,43 @@ describe('AddScheduleDialog — tools list error', () => {
   });
 });
 
+describe('AddScheduleDialog — hidden-tool exclusion', () => {
+  it('excludes an EFFECTIVE-hidden tool, keeping an overlay-`false` unhidden one', async () => {
+    // `secret_task` is plugin-hidden with no overlay opinion → excluded. `open_task`
+    // is plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
+    const user = userEvent.setup();
+    const client = makeClient({
+      listTools: vi
+        .fn()
+        .mockResolvedValue(['run_report_schedule_task', 'secret_task', 'open_task']),
+      listToolTags: vi.fn().mockResolvedValue([
+        { name: 'run_report_schedule_task', tags: [], hidden: false },
+        { name: 'secret_task', tags: [], hidden: true },
+        { name: 'open_task', tags: [], hidden: true },
+      ]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          { tool_name: 'open_task', display_name: null, folder_id: null, tags: [], hidden: false },
+        ],
+      }),
+      addSchedule: vi.fn(),
+    });
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox'));
+
+    expect(
+      await screen.findByRole('option', { name: 'run_report_schedule_task' }),
+    ).toBeInTheDocument();
+    // The overlay UNHIDES the plugin-hidden `open_task`, so it IS offered.
+    expect(screen.getByRole('option', { name: 'open_task' })).toBeInTheDocument();
+    // The effective-hidden `secret_task` is absent from the picker.
+    expect(screen.queryByRole('option', { name: 'secret_task' })).toBeNull();
+  });
+});
+
 describe('AddScheduleDialog — close paths', () => {
   it('calls onClose when Cancel is clicked', async () => {
     const user = userEvent.setup();

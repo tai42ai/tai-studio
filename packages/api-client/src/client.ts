@@ -142,18 +142,20 @@ export interface PinRoutePublicBody {
 }
 
 /**
- * Body for creating a preset (POST `/api/presets`). `tags` are the preset's
- * categorization labels. `extensions` is the combos list — the create flow OMITS
- * it when there are no combos (the route rejects an explicit `extensions: []`).
- * `output_schema` is the optional author-set output JSON Schema. Each combo
- * element is a bare extension name or a `{ name, config }` mapping.
+ * Body for creating a preset (POST `/api/presets`). `description` is the bound
+ * tool's LLM-facing docstring — REQUIRED non-empty on every create path (the door
+ * rejects an empty one with a 422); it is never the tool_meta `display_name`.
+ * `extensions` is the combos list — the create flow OMITS it when there are no
+ * combos (the route rejects an explicit `extensions: []`). `output_schema` is the
+ * optional author-set output JSON Schema. Each combo element is a bare extension
+ * name or a `{ name, config }` mapping. Categorization tags live in the tool_meta
+ * overlay, written after a successful create — never in this body.
  */
 export interface CreatePresetBody {
   readonly name: string;
   readonly base_tool: string;
-  readonly description?: string;
+  readonly description: string;
   readonly fixed_kwargs?: Record<string, unknown>;
-  readonly tags?: readonly string[];
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
 }
@@ -162,12 +164,14 @@ export interface CreatePresetBody {
  * Body for saving a new preset version (POST `/api/presets/{name}/versions`). At
  * least one field must be provided (an empty body is a loud 400). Each field's
  * sentinel is uniform: omitted carries the active version's value forward; an
- * explicit `[]` clears `tags`/`extensions`, and an explicit `null` clears
- * `output_schema`.
+ * explicit `[]` clears `extensions`, and an explicit `null` clears `output_schema`.
+ * `description` carries forward when omitted; an explicit non-empty string sets it
+ * (the API rejects an explicit empty one). Categorization tags are no longer a
+ * version field — they live in the tool_meta overlay.
  */
 export interface SavePresetVersionBody {
   readonly fixed_kwargs?: Record<string, unknown>;
-  readonly tags?: readonly string[];
+  readonly description?: string;
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
 }
@@ -184,9 +188,26 @@ export interface ValidatePresetBody {
   readonly base_tool?: string;
   readonly description?: string;
   readonly fixed_kwargs?: Record<string, unknown>;
-  readonly tags?: readonly string[];
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
+}
+
+/**
+ * Merge-patch body for a tool's overlay row (PATCH
+ * `/api/tool-meta/tools/{tool_name}`). Only the fields PRESENT are written; a
+ * present-null clears (`hidden: null` writes the tri-state "defer to the plugin
+ * declaration" state, `display_name: null` clears the label, `folder_id: null`
+ * unfiles); a present `tags` array replaces the whole set. Absent fields are left
+ * untouched — there is no full-row replace, so a display-name+tags editor sends
+ * ONLY those two keys with no risk to `folder_id`/`hidden`. At least one field must
+ * be present. A blank/whitespace-only `display_name` is rejected by the API (422) —
+ * callers map an emptied label to `null`, never `""`.
+ */
+export interface ToolMetaPatch {
+  readonly display_name?: string | null;
+  readonly folder_id?: string | null;
+  readonly tags?: readonly string[];
+  readonly hidden?: boolean | null;
 }
 
 /**
@@ -436,6 +457,43 @@ export function createApiClient(config: ApiConfig) {
         s.presetVersionTags,
         { method: 'PUT', body: { tags } },
       ),
+
+    // -- tool_meta (the organizational overlay) ------------------------------
+    // The folder tree + per-tool overlay rows in one read; the features merge the
+    // rows against the live tool list and native tags client-side.
+    listToolMeta: (signal?: AbortSignal) => req('/api/tool-meta', s.toolMetaOverlay, { signal }),
+    // Merge-patch a tool's overlay row (create it if absent). `patch` carries ONLY
+    // the fields to change — a present-null clears, an absent field is untouched,
+    // and a present `tags` array replaces the set.
+    upsertToolMeta: (toolName: string, patch: ToolMetaPatch) =>
+      req(`/api/tool-meta/tools/${encodeSegment(toolName)}`, s.toolMetaRecord, {
+        method: 'PATCH',
+        body: patch,
+      }),
+    deleteToolMeta: (toolName: string) =>
+      req(`/api/tool-meta/tools/${encodeSegment(toolName)}`, s.toolMetaDeleted, {
+        method: 'DELETE',
+      }),
+    createFolder: (name: string, parentId: string | null = null) =>
+      req('/api/tool-meta/folders', s.folderRecord, {
+        method: 'POST',
+        body: { name, parent_id: parentId },
+      }),
+    renameFolder: (folderId: string, name: string) =>
+      req(`/api/tool-meta/folders/${encodeSegment(folderId)}/rename`, s.folderRecord, {
+        method: 'POST',
+        body: { name },
+      }),
+    // `null` re-parents to the root.
+    moveFolder: (folderId: string, parentId: string | null) =>
+      req(`/api/tool-meta/folders/${encodeSegment(folderId)}/move`, s.folderRecord, {
+        method: 'POST',
+        body: { parent_id: parentId },
+      }),
+    deleteFolder: (folderId: string) =>
+      req(`/api/tool-meta/folders/${encodeSegment(folderId)}`, s.folderDeleted, {
+        method: 'DELETE',
+      }),
 
     // -- storage -------------------------------------------------------------
     // The content store a storage-provider plugin exposes. Dead by default:

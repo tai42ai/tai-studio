@@ -45,9 +45,39 @@ export interface ToolPanelProps {
   readonly run: (args: Record<string, unknown>) => Promise<unknown>;
 }
 
-/** Props a contributed full page receives. Navigation is via shell route tokens. */
+/**
+ * Props a contributed full page receives. A page is deep-linkable: the shell mounts
+ * it at `/plugins/{pluginId}/{path}` and, when the contribution declares a
+ * {@link PluginPageParamsSchema}, forwards the VALIDATED sub-path remainder as
+ * `params` and the VALIDATED search object as `search`. Both are OPTIONAL — a page
+ * that declares no schema receives neither (and accepts no sub-path), so this stays
+ * a non-breaking addition to every existing contribution and the plugin API version
+ * does not move. Navigate between plugin pages with `usePluginNavigation`.
+ */
 export interface PluginPageProps {
   readonly pluginId: string;
+  /** The validated sub-path remainder (present only when the page declared a schema). */
+  readonly params?: Record<string, unknown>;
+  /** The validated search object (present only when the page declared a schema). */
+  readonly search?: Record<string, unknown>;
+}
+
+/**
+ * A page's optional deep-link schema. The shell resolves a URL to a page by
+ * LONGEST registered `path` prefix; the remainder of the URL after the matched
+ * prefix is handed to `parseParams`, and the raw search object to `parseSearch`.
+ * Each parser VALIDATES and shapes its input, RAISING on anything it rejects — the
+ * shell renders that throw as a loud error card, never a blank or partial view. A
+ * contribution that omits the schema entirely accepts no sub-path (the pre-deep-link
+ * behavior, unchanged). Omitting just one parser leaves that half unvalidated:
+ * absent `parseParams` means the page still matches only its exact `path`; absent
+ * `parseSearch` means `search` is not forwarded.
+ */
+export interface PluginPageParamsSchema {
+  /** Validate + shape the sub-path remainder after this page's prefix; throws to reject. */
+  readonly parseParams?: (remainder: string) => Record<string, unknown>;
+  /** Validate + shape the raw search object; throws to reject. */
+  readonly parseSearch?: (raw: Record<string, unknown>) => Record<string, unknown>;
 }
 
 /** Props a contributed settings tab receives. */
@@ -67,6 +97,13 @@ export interface PageContribution {
   readonly component: ComponentType<PluginPageProps>;
   /** Capability gate (see {@link RequiredCapabilities}); absent ⇒ full-only. */
   readonly requiredCapabilities?: RequiredCapabilities;
+  /**
+   * Deep-link schema (see {@link PluginPageParamsSchema}). When present the page is
+   * addressable under its `path` PREFIX, and the shell validates the sub-path
+   * remainder + search before rendering. Absent ⇒ the page matches only its exact
+   * `path` and receives no `params`/`search` (unchanged behavior).
+   */
+  readonly params?: PluginPageParamsSchema;
 }
 
 /**

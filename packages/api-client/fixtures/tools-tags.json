@@ -1,6 +1,6 @@
 [
-  { "name": "echo", "tags": [] },
-  { "name": "paris_weather", "tags": ["geo"] },
-  { "name": "quick", "tags": ["scratch"] },
-  { "name": "weather", "tags": [] }
+  { "name": "echo", "tags": [], "hidden": false },
+  { "name": "paris_weather", "tags": ["geo"], "hidden": false },
+  { "name": "quick", "tags": ["scratch"], "hidden": false },
+  { "name": "weather", "tags": [], "hidden": false }
 ]

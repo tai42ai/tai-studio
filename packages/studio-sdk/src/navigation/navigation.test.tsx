@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AppLink, NavigationProvider, useAppNavigate } from './context';
-import type { NavigationContextValue, RouteSearch, RouteToken } from './types';
+import { AppLink, NavigationProvider, useAppNavigate, usePluginNavigation } from './context';
+import type { NavigationContextValue, PluginSearch, RouteSearch, RouteToken } from './types';
 
 function makeNav(): NavigationContextValue {
   return {
@@ -12,6 +12,14 @@ function makeNav(): NavigationContextValue {
       const qs = search ? new URLSearchParams(search as Record<string, string>).toString() : '';
       return `/${token}${qs ? `?${qs}` : ''}`;
     }),
+    navigatePlugin: vi.fn(),
+    resolvePluginPath: vi.fn(
+      (pluginId: string, pagePath: string, params?: string, search?: PluginSearch) => {
+        const remainder = params !== undefined && params !== '' ? `/${params}` : '';
+        const qs = search ? new URLSearchParams(search as Record<string, string>).toString() : '';
+        return `/plugins/${pluginId}/${pagePath}${remainder}${qs ? `?${qs}` : ''}`;
+      },
+    ),
   };
 }
 
@@ -86,6 +94,39 @@ describe('navigation', () => {
       return null;
     }
     // Silence the expected React error boundary log for this render.
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    expect(() => render(<Bare />)).toThrow(/NavigationProvider/);
+    spy.mockRestore();
+  });
+
+  it('usePluginNavigation drives navigatePlugin with the plugin path, params and search', async () => {
+    const nav = makeNav();
+    function Go() {
+      const { navigatePlugin, resolvePluginPath } = usePluginNavigation();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            navigatePlugin('flows', 'index', 'myflow', { dir: 'root' });
+          }}
+        >
+          {resolvePluginPath('flows', 'index', 'myflow', { dir: 'root' })}
+        </button>
+      );
+    }
+    wrap(nav, <Go />);
+    const button = screen.getByRole('button');
+    // `resolvePluginPath` yields the deep-link href verbatim.
+    expect(button).toHaveTextContent('/plugins/flows/index/myflow?dir=root');
+    await userEvent.click(button);
+    expect(nav.navigatePlugin).toHaveBeenCalledWith('flows', 'index', 'myflow', { dir: 'root' });
+  });
+
+  it('usePluginNavigation throws loudly outside a NavigationProvider', () => {
+    function Bare() {
+      usePluginNavigation();
+      return null;
+    }
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     expect(() => render(<Bare />)).toThrow(/NavigationProvider/);
     spy.mockRestore();

@@ -29,6 +29,7 @@ export const FIXTURE_ENDPOINTS = [
   },
   { name: 'extensions', path: '/api/extensions', schema: 'extensions' },
   { name: 'tools-tags', path: '/api/tools/tags', schema: 'toolTags' },
+  { name: 'tool-meta', path: '/api/tool-meta', schema: 'toolMetaOverlay' },
   { name: 'mcp-status', path: '/api/mcp-status', schema: 'mcpStatus' },
   { name: 'plugins', path: '/api/plugins', schema: 'studioPluginRegistry' },
 ];

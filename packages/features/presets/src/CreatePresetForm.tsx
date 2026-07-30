@@ -1,7 +1,9 @@
 /**
  * The CREATE-PRESET dialog off the list header.
  *
- *  1. `name` (required) and `description`.
+ *  1. `name` and `description` — both REQUIRED, and both gate submit: an empty or
+ *     whitespace-only value blocks the create with a loud inline field error (the
+ *     API rejects an empty description with a 422, so the client mirrors that rule).
  *  2. `base_tool` — the shared `ToolPicker` over `listTools()`, EXCLUDING existing
  *     non-conflicted preset names (a preset can never be another preset's base).
  *     The server stays the authority: a name that slips through is rejected with a
@@ -9,9 +11,16 @@
  *  3. `fixed_kwargs` — a JSON textarea with a loud parse (a malformed body blocks
  *     submit and shows the parser message, never a silent empty bake). When the base
  *     tool's schema resolves its input field names are shown as a read-only hint.
- *  4. `tags` — free-text chips.
+ *  4. `tags` — free-text chips. These are NOT part of the create body: overlay
+ *     categorization tags live in the tool_meta overlay, so they are written with
+ *     `upsertToolMeta` AFTER the create succeeds (only when at least one was entered
+ *     — an empty patch is rejected), once the preset's live tool exists to carry them.
  *  5. `extensions` — the `ExtensionComboBuilder`; OMITTED from the body when empty
  *     (the route rejects an explicit `extensions: []`).
+ *
+ * The base picker groups its options on the MERGED tag map — native `listToolTags`
+ * tags unioned with each tool's overlay `listToolMeta` tags — so grouping reflects
+ * what an operator actually curated, not just the plugin-declared set.
  *
  * On success it invalidates the presets list AND the tools master list (a create
  * binds a live tool), closes, and navigates the detail to the new preset.
@@ -32,6 +41,7 @@ import {
   ToolPicker,
   XCircleIcon,
   errorMessage,
+  hiddenToolNames,
   toolsListKey,
   useApi,
   useAppNavigate,
@@ -45,6 +55,7 @@ import {
   presetAgentsKey,
   presetExtensionsKey,
   presetSchemaKey,
+  presetToolMetaKey,
   presetToolTagsKey,
   presetToolsKey,
   presetsListKey,
@@ -65,6 +76,10 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const toolsQuery = useQuery({ queryKey: presetToolsKey, queryFn: () => api.listTools() });
   const presetsQuery = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
   const tagsQuery = useQuery({ queryKey: presetToolTagsKey, queryFn: () => api.listToolTags() });
+  const toolMetaQuery = useQuery({
+    queryKey: presetToolMetaKey,
+    queryFn: () => api.listToolMeta(),
+  });
   const extensionsQuery = useQuery({
     queryKey: presetExtensionsKey,
     queryFn: () => api.listExtensions(),
@@ -98,19 +113,39 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
     [agentsQuery.data],
   );
 
-  // A preset cannot be another preset's base: exclude every NON-conflicted preset
-  // name (a conflicted row's name is either a foreign live tool — a valid base — or
-  // unregistered, so it is never among the base options anyway).
-  const excludeNames = useMemo(
-    () => (presetsQuery.data ?? []).filter((row) => !row.conflicted).map((row) => row.name),
-    [presetsQuery.data],
+  // Tools whose EFFECTIVE visibility is hidden (`overlay.hidden ?? plugin
+  // declaration`) are excluded from the picker exactly as they are from the tools
+  // screen — the same shared tri-state rule, off the same native + overlay reads.
+  const hiddenNames = useMemo(
+    () => hiddenToolNames(tagsQuery.data ?? [], toolMetaQuery.data?.meta ?? []),
+    [tagsQuery.data, toolMetaQuery.data],
   );
 
+  // A preset cannot be another preset's base: exclude every NON-conflicted preset
+  // name (a conflicted row's name is either a foreign live tool — a valid base — or
+  // unregistered, so it is never among the base options anyway). Effective-hidden
+  // tools are excluded alongside them.
+  const excludeNames = useMemo(
+    () => [
+      ...(presetsQuery.data ?? []).filter((row) => !row.conflicted).map((row) => row.name),
+      ...hiddenNames,
+    ],
+    [presetsQuery.data, hiddenNames],
+  );
+
+  // The grouping map the picker reads: each tool's NATIVE tags unioned with its
+  // overlay tags. An operator groups by what they curated, so a tool whose only tags
+  // are overlay ones still lands in the right cluster; de-duplicated so a tag present
+  // in both sets is not shown twice.
   const tagsByTool = useMemo(() => {
-    const map: Record<string, readonly string[]> = {};
-    for (const entry of tagsQuery.data ?? []) map[entry.name] = entry.tags;
+    const map: Record<string, string[]> = {};
+    for (const entry of tagsQuery.data ?? []) map[entry.name] = [...entry.tags];
+    for (const entry of toolMetaQuery.data?.meta ?? []) {
+      const merged = new Set([...(map[entry.tool_name] ?? []), ...entry.tags]);
+      map[entry.tool_name] = [...merged];
+    }
     return map;
-  }, [tagsQuery.data]);
+  }, [tagsQuery.data, toolMetaQuery.data]);
 
   const schemaQuery = useQuery({
     queryKey: presetSchemaKey(base ?? ''),
@@ -118,15 +153,27 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
     enabled: base !== null && base !== '',
   });
 
-  const enrichmentFailed = tagsQuery.isError || agentsQuery.isError || schemaQuery.isError;
+  const enrichmentFailed =
+    tagsQuery.isError || toolMetaQuery.isError || agentsQuery.isError || schemaQuery.isError;
   const retryEnrichment = (): void => {
     if (tagsQuery.isError) void tagsQuery.refetch();
+    if (toolMetaQuery.isError) void toolMetaQuery.refetch();
     if (agentsQuery.isError) void agentsQuery.refetch();
     if (schemaQuery.isError) void schemaQuery.refetch();
   };
 
   const create = useMutation({
-    mutationFn: (body: CreatePresetBody) => api.createPreset(body),
+    mutationFn: async (body: CreatePresetBody) => {
+      const record = await api.createPreset(body);
+      // Overlay categorization tags are NOT a create-body field — they live in the
+      // tool_meta overlay, writable only once the preset's live tool exists. Write
+      // them here, sequenced after the create so the two are one user-visible
+      // operation: a failed tag write surfaces loudly through the create error state
+      // rather than being swallowed. Skipped when the author entered none (an empty
+      // merge-patch is rejected by the API).
+      if (tags.length > 0) await api.upsertToolMeta(record.name, { tags });
+      return record;
+    },
     onSuccess: (record) => {
       void queryClient.invalidateQueries({ queryKey: presetsListKey });
       void queryClient.invalidateQueries({ queryKey: toolsListKey });
@@ -144,15 +191,17 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const resetValidate = validate.reset;
 
   const nameMissing = name.trim() === '';
+  const descriptionMissing = description.trim() === '';
   const baseMissing = base === null || base === '';
   const parsed = parseJsonObject(kwargsText);
   const kwargsParses = !('error' in parsed);
 
+  // Tags are NOT in the draft signature: they no longer ride the create/validate body
+  // (they land in the overlay post-create), so editing them must not clear a verdict.
   const draftSignature = JSON.stringify({
     name,
     description,
     base,
-    tags,
     combos,
     kwargsText,
     outputSchema: outputSchema.schema,
@@ -175,7 +224,6 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
       base_tool: base ?? '',
       description: description.trim(),
       fixed_kwargs: parsed.value,
-      tags,
       // OMIT extensions entirely when there are no combos — the route rejects an
       // explicit `extensions: []`.
       ...(combos.length > 0 ? { extensions: combos } : {}),
@@ -192,7 +240,10 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
     setSubmitted(true);
-    if (nameMissing || baseMissing) return;
+    // Name, base, AND description each gate the create: the API rejects a create with
+    // an empty description (422), so an empty one blocks here exactly like a missing
+    // name rather than round-tripping a certain failure.
+    if (nameMissing || baseMissing || descriptionMissing) return;
     // A non-empty output schema that fails parse/lint, or an unknown extension name,
     // blocks submit — the inline messages already say why.
     if (!outputSchema.valid || !extensionsValid) return;
@@ -233,13 +284,17 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           />
         </Field>
 
-        <Field label="Description">
+        <Field
+          label="Description"
+          error={submitted && descriptionMissing ? 'A description is required.' : undefined}
+        >
           <TextInput
             value={description}
             onChange={(event) => {
               setDescription(event.target.value);
             }}
             placeholder="Paris weather"
+            aria-required
           />
         </Field>
 
@@ -289,6 +344,12 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
               <p className="tai-field-error" style={{ margin: 0 }}>
                 <XCircleIcon />
                 {`Tag grouping is unavailable: ${errorMessage(tagsQuery.error)}`}
+              </p>
+            ) : null}
+            {toolMetaQuery.isError ? (
+              <p className="tai-field-error" style={{ margin: 0 }}>
+                <XCircleIcon />
+                {`Overlay tags are unavailable: ${errorMessage(toolMetaQuery.error)}`}
               </p>
             ) : null}
             {agentsQuery.isError ? (

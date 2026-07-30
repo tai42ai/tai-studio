@@ -26,7 +26,6 @@ function record(name: string): PresetRecord {
     base_tool: 'weather',
     description: 'A preset',
     active_version: 1,
-    tags: [],
     extensions: [],
     output_schema: null,
     conflicted: false,
@@ -40,6 +39,7 @@ function detailClient(names: readonly string[] = ['paris']): StubApiClient {
     listPresets: vi.fn().mockResolvedValue(names.map(record)),
     getPreset: vi.fn().mockImplementation((name: string) => Promise.resolve(record(name))),
     listPresetVersions: vi.fn().mockResolvedValue([]),
+    listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
   };
 }
 

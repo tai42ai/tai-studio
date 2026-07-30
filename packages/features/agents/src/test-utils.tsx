@@ -69,6 +69,8 @@ export function renderWithProviders(
                         : '';
                       return qs ? `/${to}?${qs}` : `/${to}`;
                     },
+                    navigatePlugin: vi.fn(),
+                    resolvePluginPath: () => '/x',
                   }}
                 >
                   {children}
@@ -150,7 +152,6 @@ export function presetRecord(overrides: Partial<PresetRecord> = {}): PresetRecor
     base_tool: 'authorable_agent',
     description: 'A helpdesk agent',
     active_version: 1,
-    tags: [],
     extensions: [],
     output_schema: null,
     conflicted: false,
@@ -183,6 +184,18 @@ export function stubClient(parts: Partial<ApiClient> = {}): ApiClient {
     listPresets: () => Promise.resolve([] as PresetRecord[]),
     listTools: () => Promise.resolve([] as string[]),
     listToolTags: () => Promise.resolve([] as ToolTagEntry[]),
+    // Compose writes overlay tags after a create; a benign default so a test that
+    // enters tags does not have to stub the write, and the merged-map read is empty.
+    listToolMeta: () => Promise.resolve({ folders: [], meta: [] }),
+    upsertToolMeta: vi.fn(() =>
+      Promise.resolve({
+        tool_name: 'support_bot',
+        display_name: null,
+        folder_id: null,
+        tags: [],
+        hidden: null,
+      }),
+    ),
     streamAgentRun: emptyStream(),
     streamAuthoredAgentRun: emptyStream(),
     ...parts,

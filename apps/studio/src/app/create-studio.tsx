@@ -22,6 +22,7 @@ import {
   UnauthorizedProvider,
   useAuth,
   type AuthState,
+  type NavigationContextValue,
 } from '@tai42/studio-sdk';
 import { ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
 
@@ -53,6 +54,9 @@ export interface Studio {
   readonly queryClient: QueryClient;
   readonly pluginLoader: PluginLoader;
   readonly apiClient: ApiClient;
+  /** The runtime navigation surface, exposed so a caller (and tests) can drive
+   * token and plugin-page navigation directly. */
+  readonly navigation: NavigationContextValue;
 }
 
 const nativeImport: ImportModule = (url) => import(/* @vite-ignore */ url);
@@ -207,5 +211,5 @@ export function createStudio(deps: StudioDeps): Studio {
     );
   }
 
-  return { App, router, queryClient, pluginLoader, apiClient };
+  return { App, router, queryClient, pluginLoader, apiClient, navigation };
 }

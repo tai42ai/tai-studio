@@ -1,4 +1,10 @@
-export { NavigationProvider, AppLink, useAppNavigate, useResolvePath } from './context';
+export {
+  NavigationProvider,
+  AppLink,
+  useAppNavigate,
+  useResolvePath,
+  usePluginNavigation,
+} from './context';
 export type { AppLinkProps } from './context';
 export type {
   RouteToken,
@@ -6,4 +12,5 @@ export type {
   RouteSearchByToken,
   PageProps,
   NavigationContextValue,
+  PluginSearch,
 } from './types';

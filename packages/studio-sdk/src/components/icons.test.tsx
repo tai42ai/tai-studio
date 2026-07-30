@@ -72,6 +72,8 @@ const REQUIRED_ICONS = [
   'SignOutIcon',
   'MenuIcon',
   'CloseIcon',
+  'FolderIcon',
+  'GridIcon',
   'SunIcon',
   'MoonIcon',
   'MonitorIcon',

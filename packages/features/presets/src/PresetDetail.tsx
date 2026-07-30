@@ -3,12 +3,20 @@
  * active version's baked `fixed_kwargs`, rendered via `JsonTree`) and exposes the
  * lifecycle actions:
  *  - New version (`SaveVersionDialog`) — hidden for a conflicted record;
+ *  - Edit details (`EditOverlayDialog`) — the tool_meta overlay's DISPLAY NAME +
+ *    overlay tags, via the shared `OverlayDetailsFields`. This screen renders AND
+ *    edits ONLY those two overlay fields (no folder navigation, no visibility
+ *    control — those live on the tools/flows surfaces); hidden for a conflicted
+ *    record, and disabled until the overlay read lands so a merge-patch never
+ *    clobbers unread tags;
  *  - Rename (`RenamePresetDialog`) — hidden for a conflicted record (a preset's
  *    name is its live tool name; the server rebinds and 409s a conflicted record);
  *  - Version history (`PresetVersions`) — hidden for a conflicted record;
  *  - Delete (confirm) — the ONLY action on a conflicted record.
  *
- * A conflicted (quarantined) preset is not registered and is DELETE-ONLY (the
+ * The record no longer carries categorization tags; the Tags row and the display
+ * name both read the tool_meta overlay (`listToolMeta`), keyed by the preset's tool
+ * name. A conflicted (quarantined) preset is not registered and is DELETE-ONLY (the
  * server 409s every other action), so its detail shows a loud note and only Delete.
  * A successful delete invalidates the list + tools master list and clears `?preset=`.
  *
@@ -25,19 +33,28 @@ import {
   ErrorState,
   Field,
   JsonTree,
+  OverlayDetailsFields,
   Skeleton,
   Spinner,
   TextInput,
   errorMessage,
+  overlayDetailsPatch,
   toolsListKey,
   useApi,
   useAppNavigate,
+  type OverlayDetails,
 } from '@tai42/studio-sdk';
 
 import { PresetVersions } from './PresetVersions';
 import { SaveVersionDialog } from './SaveVersionDialog';
 import { TagChips } from './tags';
-import { presetDetailKey, presetRefereesKey, presetVersionsKey, presetsListKey } from './keys';
+import {
+  presetDetailKey,
+  presetRefereesKey,
+  presetToolMetaKey,
+  presetVersionsKey,
+  presetsListKey,
+} from './keys';
 
 function DeletePresetDialog({
   name,
@@ -217,6 +234,74 @@ function RenamePresetDialog({
   );
 }
 
+/**
+ * The overlay-details editor: the tool_meta DISPLAY NAME + overlay tags for the
+ * preset's live tool, on the shared `OverlayDetailsFields` control. The write is a
+ * MERGE-PATCH sending only those two keys (`overlayDetailsPatch`), so `folder_id`
+ * and `hidden` are left untouched — this surface never owns them. Seeded from the
+ * tool's current overlay row so an unedited save round-trips the same values rather
+ * than clobbering them.
+ */
+function EditOverlayDialog({
+  toolName,
+  initial,
+  onClose,
+}: {
+  readonly toolName: string;
+  readonly initial: OverlayDetails;
+  readonly onClose: () => void;
+}): ReactNode {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const [value, setValue] = useState<OverlayDetails>(initial);
+
+  const save = useMutation({
+    mutationFn: () => api.upsertToolMeta(toolName, overlayDetailsPatch(value)),
+    onSuccess: () => {
+      // The overlay row changed — refetch the tool_meta map behind the detail grid
+      // and the list's display-name/tags cells.
+      void queryClient.invalidateQueries({ queryKey: presetToolMetaKey });
+      onClose();
+    },
+  });
+
+  return (
+    <Dialog
+      title={`Edit details — ${toolName}`}
+      description="A display name and overlay tags for this tool. Both live in the tool_meta overlay, not the preset record."
+      open
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
+      >
+        <OverlayDetailsFields
+          value={value}
+          onChange={setValue}
+          disabled={save.isPending}
+          namePlaceholder={toolName}
+        />
+        {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
+          <Button type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={save.isPending}>
+            {save.isPending ? <Spinner label="Saving details" /> : null}
+            Save details
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
 export function PresetDetail({
   name,
   headingRef,
@@ -233,9 +318,14 @@ export function PresetDetail({
     queryKey: presetDetailKey(name),
     queryFn: ({ signal }) => api.getPreset(name, signal),
   });
+  // The overlay row (display name + tags) for this preset's live tool. Enrichment,
+  // not load-bearing for the record — but the Edit affordance stays disabled until it
+  // lands, since a merge-patch built on unread tags would clear them.
+  const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
   const [saveOpen, setSaveOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (query.isPending) {
     return (
@@ -257,6 +347,9 @@ export function PresetDetail({
 
   const preset = query.data;
   const conflicted = preset.conflicted;
+  const overlay = metaQuery.data?.meta.find((row) => row.tool_name === preset.name);
+  const overlayTags = overlay?.tags ?? [];
+  const overlayDisplayName = overlay?.display_name ?? null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
@@ -301,6 +394,21 @@ export function PresetDetail({
               {conflicted ? null : (
                 <Button
                   type="button"
+                  aria-label={`Edit details for ${preset.name}`}
+                  // Disabled until the overlay read lands: the editor seeds from the
+                  // current tags, and a merge-patch built on an unread set would clear
+                  // them. A read failure is stated in the record grid below.
+                  disabled={!metaQuery.isSuccess}
+                  onClick={() => {
+                    setEditOpen(true);
+                  }}
+                >
+                  Edit details
+                </Button>
+              )}
+              {conflicted ? null : (
+                <Button
+                  type="button"
                   aria-label={`Rename preset ${preset.name}`}
                   onClick={() => {
                     setRenameOpen(true);
@@ -339,17 +447,29 @@ export function PresetDetail({
           >
             <dt style={{ color: 'var(--tai-color-text-muted)' }}>Base tool</dt>
             <dd style={{ margin: 0, fontFamily: 'var(--tai-font-mono)' }}>{preset.base_tool}</dd>
+            <dt style={{ color: 'var(--tai-color-text-muted)' }}>Display name</dt>
+            <dd style={{ margin: 0 }}>{overlayDisplayName ?? '—'}</dd>
             <dt style={{ color: 'var(--tai-color-text-muted)' }}>Description</dt>
             <dd style={{ margin: 0 }}>{preset.description || '—'}</dd>
             <dt style={{ color: 'var(--tai-color-text-muted)' }}>Active version</dt>
             <dd style={{ margin: 0 }}>{preset.active_version}</dd>
             <dt style={{ color: 'var(--tai-color-text-muted)' }}>Tags</dt>
             <dd style={{ margin: 0 }}>
-              {preset.tags.length > 0 ? <TagChips tags={preset.tags} /> : '—'}
+              {overlayTags.length > 0 ? <TagChips tags={overlayTags} /> : '—'}
             </dd>
             <dt style={{ color: 'var(--tai-color-text-muted)' }}>Extension combos</dt>
             <dd style={{ margin: 0 }}>{preset.extensions.length}</dd>
           </dl>
+
+          {metaQuery.isError ? (
+            // The display name + overlay tags come from a SECONDARY read; its failure
+            // degrades those two rows to their empty state rather than walling the
+            // detail, but it is stated (never a silent "no tags") and it is why Edit
+            // details stays disabled.
+            <p role="alert" style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
+              Overlay details unavailable: {errorMessage(metaQuery.error)}
+            </p>
+          ) : null}
 
           <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
             <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Fixed kwargs</h3>
@@ -380,6 +500,16 @@ export function PresetDetail({
                 // The preset still exists under the new name — select it so the detail
                 // pane stays on the renamed record rather than a now-404 old name.
                 navigate('presets', { preset: newName });
+              }}
+            />
+          ) : null}
+
+          {editOpen ? (
+            <EditOverlayDialog
+              toolName={preset.name}
+              initial={{ displayName: overlayDisplayName ?? '', tags: overlayTags }}
+              onClose={() => {
+                setEditOpen(false);
               }}
             />
           ) : null}

@@ -1,10 +1,17 @@
 /**
  * The COMPOSE dialog: pick a base agent → author the composable spec fields
  * (`system_prompt`, `tool_names`, `presets`, `subagents`, plus any schema-driven
- * extras) into a `fixed_kwargs`, then create a named, tagged, versioned preset over
- * the base agent's run tool. The `presets`/`subagents` fields hold INLINE
- * self-contained objects; the preset picker EXPANDS a stored preset into an inline
- * `PresetSpec` object, never a stored-name reference.
+ * extras) into a `fixed_kwargs`, then create a named, versioned preset over the base
+ * agent's run tool. The `presets`/`subagents` fields hold INLINE self-contained
+ * objects; the preset picker EXPANDS a stored preset into an inline `PresetSpec`
+ * object, never a stored-name reference.
+ *
+ * `name` and `description` are both REQUIRED and gate submit — the API rejects a
+ * create with an empty description (422), so an empty one blocks here like a missing
+ * name. The tags entered here are NOT part of the create body: overlay
+ * categorization tags live in the tool_meta overlay, written with `upsertToolMeta`
+ * AFTER the create succeeds (only when at least one was entered), once the composed
+ * agent's live tool exists to carry them.
  *
  * SAFETY: a spec carries arbitrary operator-authored prompt/tool/agent names, all
  * rendered as ESCAPED text through the DS components (React escapes them) — never
@@ -29,6 +36,7 @@ import {
   Textarea,
   defaultValueForSchema,
   errorMessage,
+  hiddenToolNames,
   toolsListKey,
   useApi,
   validateAgainstSchema,
@@ -37,7 +45,12 @@ import {
   type SchemaFormErrors,
 } from '@tai42/studio-sdk';
 
-import { authoredPresetsKey, authoredToolTagsKey, authoredToolsKey } from './keys';
+import {
+  authoredPresetsKey,
+  authoredToolMetaKey,
+  authoredToolTagsKey,
+  authoredToolsKey,
+} from './keys';
 import type { InlinePresetSpec, InlineSubAgentSpec } from './authoring-types';
 import {
   ALL_SPEC_FIELDS,
@@ -128,6 +141,7 @@ export function ComposeAgentDialog({
 
   const toolsQuery = useQuery({ queryKey: authoredToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: authoredToolTagsKey, queryFn: () => api.listToolTags() });
+  const metaQuery = useQuery({ queryKey: authoredToolMetaKey, queryFn: () => api.listToolMeta() });
   const presetsQuery = useQuery({
     queryKey: authoredPresetsKey,
     queryFn: () => api.listPresets(),
@@ -200,6 +214,18 @@ export function ComposeAgentDialog({
     return Object.keys(map).length > 0 ? map : undefined;
   }, [tagsQuery.data]);
 
+  // Effective-hidden tools (`overlay.hidden ?? plugin declaration`) are removed from
+  // the population the compose pickers offer — the same tri-state rule the tools
+  // screen applies to its list. Removing them from the offered `toolNames` (rather
+  // than through the pickers' internal `excludeNames`, which the multi-picker already
+  // uses for the already-selected chips) is the one clean seam across both the
+  // `tool_names` picker and the sub-agent composer's pickers. Best-effort enrichment:
+  // a failed tags/meta read leaves everything visible (the server stays the authority).
+  const visibleToolNames = useMemo(() => {
+    const hidden = hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []);
+    return (toolsQuery.data ?? []).filter((name) => !hidden.has(name));
+  }, [toolsQuery.data, tagsQuery.data, metaQuery.data]);
+
   // Re-seed the extra-spec form to the schema defaults whenever the base changes.
   useEffect(() => {
     setExtraSpec(extraSchema ? defaultValueForSchema(extraSchema) : {});
@@ -244,7 +270,16 @@ export function ComposeAgentDialog({
   };
 
   const create = useMutation({
-    mutationFn: (body: CreatePresetBody) => api.createPreset(body),
+    mutationFn: async (body: CreatePresetBody) => {
+      const record = await api.createPreset(body);
+      // Overlay categorization tags are NOT a create-body field — they live in the
+      // tool_meta overlay, writable only once the composed agent's live tool exists.
+      // Written here, sequenced after the create so a failed tag write surfaces
+      // loudly through the create error state; skipped when the operator entered none
+      // (an empty merge-patch is rejected by the API).
+      if (tags.length > 0) await api.upsertToolMeta(record.name, { tags });
+      return record;
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: authoredPresetsKey });
       // A composed agent binds a live preset-tool, so the shared registered-tool
@@ -256,6 +291,7 @@ export function ComposeAgentDialog({
   });
 
   const nameMissing = name.trim() === '';
+  const descriptionMissing = description.trim() === '';
   const baseMissing = baseAgent === null;
 
   /** Assemble `fixed_kwargs` from only the spec fields the operator actually set. */
@@ -294,7 +330,9 @@ export function ComposeAgentDialog({
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
     setSubmitted(true);
-    if (baseAgent === null || nameMissing) return;
+    // Base, name, AND description each gate the create: the API rejects a create with
+    // an empty description (422), so an empty one blocks here like a missing name.
+    if (baseAgent === null || nameMissing || descriptionMissing) return;
     // A tool/preset read the spec fields depend on is in error, so the pickers show
     // no choices this form could honestly submit.
     if (readFailed) return;
@@ -317,7 +355,6 @@ export function ComposeAgentDialog({
       base_tool: baseAgent.name,
       description: description.trim(),
       fixed_kwargs: buildFixedKwargs(),
-      tags,
     });
   };
 
@@ -341,7 +378,10 @@ export function ComposeAgentDialog({
           />
         </Field>
 
-        <Field label="Description">
+        <Field
+          label="Description"
+          error={submitted && descriptionMissing ? 'A description is required.' : undefined}
+        >
           <TextInput
             value={description}
             onChange={(event) => {
@@ -409,7 +449,7 @@ export function ComposeAgentDialog({
                       />
                     ) : null}
                     <MultiToolPicker
-                      toolNames={toolsQuery.data ?? []}
+                      toolNames={visibleToolNames}
                       tagsByTool={tagsByTool}
                       value={toolNames}
                       onChange={setToolNames}
@@ -468,7 +508,7 @@ export function ComposeAgentDialog({
                       />
                     ) : null}
                     <SubAgentComposer
-                      toolNames={toolsQuery.data ?? []}
+                      toolNames={visibleToolNames}
                       tagsByTool={tagsByTool}
                       presetRecords={usablePresets}
                       value={subagents}

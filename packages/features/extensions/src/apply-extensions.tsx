@@ -11,10 +11,12 @@
  *  - PRESET tool (its name matches a preset row) — read the ACTIVE version's
  *    combos from `getPreset(...).extensions`, write via
  *    `savePresetVersion(name, {extensions})` — extensions ALONE, so the
- *    save-version sentinels carry `fixed_kwargs`/`tags` forward. NEVER the manifest
- *    route (which correctly raises for a preset tool). A `conflicted: true` preset
- *    is excluded from the preset branch (delete-only) — if its name is a foreign
- *    live tool it is served by the manifest branch instead.
+ *    save-version sentinels carry the other version fields (`fixed_kwargs`,
+ *    `description`) forward. Categorization tags are not a version field — they live
+ *    in the tool_meta overlay — so a version save never touches them. NEVER the
+ *    manifest route (which correctly raises for a preset tool). A `conflicted: true`
+ *    preset is excluded from the preset branch (delete-only) — if its name is a
+ *    foreign live tool it is served by the manifest branch instead.
  *
  * A save error (e.g. a slipped-through invalid combo the server rejects 400/409)
  * is surfaced LOUDLY as ESCAPED text, never swallowed. Every server-supplied string
@@ -40,12 +42,15 @@ import {
   comboElementNames,
   errorMessage,
   extensionElementName,
+  hiddenToolNames,
   toolsListKey,
   useApi,
 } from '@tai42/studio-sdk';
 
 import {
   applyPresetsKey,
+  applyToolMetaKey,
+  applyToolTagsKey,
   applyToolsKey,
   comboLoadKey,
   extensionsQueryKey,
@@ -369,6 +374,14 @@ export function ApplyExtensionsPanel(): ReactNode {
     queryKey: applyPresetsKey,
     queryFn: ({ signal }) => api.listPresets(signal),
   });
+  const tagsQuery = useQuery({
+    queryKey: applyToolTagsKey,
+    queryFn: ({ signal }) => api.listToolTags(signal),
+  });
+  const metaQuery = useQuery({
+    queryKey: applyToolMetaKey,
+    queryFn: ({ signal }) => api.listToolMeta(signal),
+  });
 
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -377,6 +390,16 @@ export function ApplyExtensionsPanel(): ReactNode {
     for (const row of presetsQuery.data ?? []) map.set(row.name, row);
     return map;
   }, [presetsQuery.data]);
+
+  // Tools whose EFFECTIVE visibility is hidden (`overlay.hidden ?? plugin
+  // declaration`) are kept out of the picker, the same tri-state rule the tools
+  // screen applies to its list. Best-effort enrichment: a failed tags/meta read
+  // leaves the set empty (the server stays the authority over the write itself).
+  const hiddenNames = useMemo(
+    () => hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []),
+    [tagsQuery.data, metaQuery.data],
+  );
+  const excludeToolNames = useMemo(() => [...hiddenNames], [hiddenNames]);
 
   const presetRow = selected === null ? undefined : presetsByName.get(selected);
   // A non-conflicted preset row owns its extensions through the presets API; a
@@ -425,6 +448,7 @@ export function ApplyExtensionsPanel(): ReactNode {
               onChange={setSelected}
               disabled={toolsQuery.isPending || presetsQuery.isPending}
               placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
+              excludeNames={excludeToolNames}
             />
           </Field>
         )}

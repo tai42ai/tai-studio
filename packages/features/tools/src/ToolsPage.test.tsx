@@ -15,6 +15,7 @@ import { __resetContributions } from '@tai42/studio-sdk/testing';
 import type { ToolTagEntry } from '@tai42/api-client';
 
 import { ToolsPage } from './ToolsPage';
+import { toolMetaKey } from './keys';
 import {
   fullProjection,
   renderWithProviders,
@@ -27,7 +28,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const emptyTags = { listToolTags: vi.fn().mockResolvedValue([]) };
+/** The two side reads the merged view needs, both empty — the shape a pre-overlay
+ * test expects (no native tags, no overlay rows/folders). */
+const emptyTags = {
+  listToolTags: vi.fn().mockResolvedValue([]),
+  listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+};
+
+/** An empty overlay read, spread into a client that already sets `listToolTags`. */
+const emptyOverlay = { listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }) };
 
 /** A client that can drive a full detail pane (schema + extensions + presets). */
 function detailClient(names: readonly string[] = ['echo']): StubApiClient {
@@ -216,16 +225,17 @@ describe('ToolsPage — responsive master/detail', () => {
 
 const toolNames = ['alpha', 'beta', 'gamma', 'solo'];
 const toolTags: ToolTagEntry[] = [
-  { name: 'alpha', tags: ['x', 'y'] },
-  { name: 'beta', tags: ['x'] },
-  { name: 'gamma', tags: ['y'] },
-  { name: 'solo', tags: [] },
+  { name: 'alpha', tags: ['x', 'y'], hidden: false },
+  { name: 'beta', tags: ['x'], hidden: false },
+  { name: 'gamma', tags: ['y'], hidden: false },
+  { name: 'solo', tags: [], hidden: false },
 ];
 
 function taggedClient(overrides: StubApiClient = {}): StubApiClient {
   return {
     listTools: vi.fn().mockResolvedValue(toolNames),
     listToolTags: vi.fn().mockResolvedValue(toolTags),
+    ...emptyOverlay,
     ...overrides,
   };
 }
@@ -332,11 +342,16 @@ describe('ToolsPage — tag filtering', () => {
 
 describe('ToolsPage — tag chip overflow', () => {
   const manyNames = Array.from({ length: 10 }, (_, i) => `tool${String(i)}`);
-  const manyTags: ToolTagEntry[] = manyNames.map((name, i) => ({ name, tags: [`t${String(i)}`] }));
+  const manyTags: ToolTagEntry[] = manyNames.map((name, i) => ({
+    name,
+    tags: [`t${String(i)}`],
+    hidden: false,
+  }));
   function manyTagsClient(): StubApiClient {
     return {
       listTools: vi.fn().mockResolvedValue(manyNames),
       listToolTags: vi.fn().mockResolvedValue(manyTags),
+      ...emptyOverlay,
     };
   }
 
@@ -444,5 +459,204 @@ describe('ToolsPage — capability projection', () => {
 
     expect(await screen.findByTestId('schema-form')).toBeInTheDocument();
     expect(screen.queryByText('Tool not available')).not.toBeInTheDocument();
+  });
+});
+
+describe('ToolsPage — tool_meta overlay merge', () => {
+  it('renders the overlay display name and keeps the real name secondary', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          { tool_name: 'echo', display_name: 'Echo Tool', folder_id: null, tags: [], hidden: null },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    expect(await screen.findByText('Echo Tool')).toBeInTheDocument();
+    // The real name stays on screen (secondary) so the tool is still identifiable.
+    expect(screen.getByText('echo')).toBeInTheDocument();
+  });
+
+  it('groups a tool under BOTH its native and its overlay tags (merged everywhere but the editor)', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([{ name: 'echo', tags: ['native'], hidden: false }]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          {
+            tool_name: 'echo',
+            display_name: null,
+            folder_id: null,
+            tags: ['custom'],
+            hidden: null,
+          },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    // The tag vocabulary carries both sources merged, each counting the one tool.
+    expect(await screen.findByRole('button', { name: 'custom (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'native (1)' })).toBeInTheDocument();
+    // echo carries both, so it renders once under each merged group.
+    expect(screen.getAllByRole('link', { name: 'Open tool echo' })).toHaveLength(2);
+  });
+
+  it('survives an overlay-read failure: the flat list stays under a loud strip', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client: {
+        listTools: vi.fn().mockResolvedValue(['echo']),
+        listToolTags: vi.fn().mockResolvedValue([]),
+        listToolMeta: vi.fn().mockRejectedValue(new Error('boom: overlay failed')),
+      },
+    });
+
+    expect(await screen.findByRole('link', { name: 'Open tool echo' })).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('boom: overlay failed');
+  });
+});
+
+describe('ToolsPage — effective visibility', () => {
+  it('excludes an effectively hidden tool and reveals it with the Show hidden toggle', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['visible', 'secret']),
+      listToolTags: vi.fn().mockResolvedValue([
+        { name: 'visible', tags: [], hidden: false },
+        { name: 'secret', tags: [], hidden: false },
+      ]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          { tool_name: 'secret', display_name: null, folder_id: null, tags: [], hidden: true },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    expect(await screen.findByRole('link', { name: 'Open tool visible' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool secret' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Show hidden (1)' }));
+
+    expect(await screen.findByRole('link', { name: 'Open tool secret' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide hidden' })).toBeInTheDocument();
+  });
+
+  it('an overlay hidden:false unhides a plugin-hidden tool; no override defers to the plugin', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['unhidden', 'stillhidden']),
+      listToolTags: vi.fn().mockResolvedValue([
+        { name: 'unhidden', tags: [], hidden: true },
+        { name: 'stillhidden', tags: [], hidden: true },
+      ]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          { tool_name: 'unhidden', display_name: null, folder_id: null, tags: [], hidden: false },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    // overlay `false` overrides the plugin's hidden → shown; a plugin-hidden tool with
+    // no overlay override defers to the declaration → excluded.
+    expect(await screen.findByRole('link', { name: 'Open tool unhidden' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool stillhidden' })).toBeNull();
+  });
+});
+
+describe('ToolsPage — folder navigation', () => {
+  it('files tools by folder and navigates in and back out via the breadcrumb', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['root_tool', 'filed_tool']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
+        meta: [
+          { tool_name: 'filed_tool', display_name: null, folder_id: 'f1', tags: [], hidden: null },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    // At the root: the unfiled tool and the subfolder row, but not the filed tool.
+    expect(await screen.findByRole('link', { name: 'Open tool root_tool' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool filed_tool' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Weather' }));
+
+    // Inside Weather: the filed tool shows, the root tool does not.
+    expect(await screen.findByRole('link', { name: 'Open tool filed_tool' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool root_tool' })).toBeNull();
+
+    // The breadcrumb's root crumb navigates back out.
+    await user.click(screen.getByRole('button', { name: 'All tools' }));
+    expect(await screen.findByRole('link', { name: 'Open tool root_tool' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool filed_tool' })).toBeNull();
+  });
+});
+
+describe('ToolsPage — overlay edit affordance', () => {
+  it('opens the per-tool edit dialog, writes a merge-patch, and invalidates the overlay', async () => {
+    const user = userEvent.setup();
+    const upsertToolMeta = vi.fn().mockResolvedValue({
+      tool_name: 'echo',
+      display_name: null,
+      folder_id: null,
+      tags: [],
+      hidden: true,
+    });
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+      upsertToolMeta,
+    };
+    const { queryClient } = renderWithProviders(<ToolsPage search={{}} />, {
+      client,
+      projection: fullProjection(),
+    });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    await user.click(await screen.findByRole('button', { name: 'Edit tool echo' }));
+
+    // The dialog opens for this tool.
+    expect(await screen.findByText('Edit echo')).toBeInTheDocument();
+
+    // Flip visibility to Hidden and save — the merge-patch carries all four owned fields.
+    await user.click(screen.getByRole('radio', { name: 'Hidden' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(upsertToolMeta).toHaveBeenCalledWith('echo', {
+      display_name: null,
+      tags: [],
+      folder_id: null,
+      hidden: true,
+    });
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
+    });
+  });
+
+  it('offers no Edit affordance to a read-only (scoped) caller', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, {
+      client,
+      projection: scopedProjection({ tools: ['echo'] }),
+    });
+
+    expect(await screen.findByRole('link', { name: 'Open tool echo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit tool echo' })).toBeNull();
   });
 });

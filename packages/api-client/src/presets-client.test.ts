@@ -47,7 +47,6 @@ const record = {
   base_tool: 'weather',
   description: 'Paris weather',
   active_version: 1,
-  tags: ['geo'],
   extensions: [],
   output_schema: null,
   conflicted: false,
@@ -64,7 +63,11 @@ describe('preset client transport', () => {
 
   it('createPreset POSTs the body and parses the new record row', async () => {
     const { client, captured } = harness(() => jsonResponse({ data: record }));
-    const out = await client.createPreset({ name: 'paris_weather', base_tool: 'weather' });
+    const out = await client.createPreset({
+      name: 'paris_weather',
+      base_tool: 'weather',
+      description: 'Paris weather',
+    });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/presets');
     expect(out.active_version).toBe(1);
@@ -76,6 +79,7 @@ describe('preset client transport', () => {
     await client.createPreset({
       name: 'paris_weather',
       base_tool: 'weather',
+      description: 'Paris weather',
       extensions: [['chain']],
       output_schema: { type: 'object' },
     });
@@ -93,7 +97,6 @@ describe('preset client transport', () => {
         description: '',
         fixed_kwargs: {},
         extensions: [],
-        tags: [],
         output_schema: null,
       },
       tags: [],
@@ -101,10 +104,10 @@ describe('preset client transport', () => {
       is_current: true,
     };
     const { client, captured } = harness(() => jsonResponse({ data: version }));
-    await client.savePresetVersion('paris_weather', { tags: ['eu'] });
+    await client.savePresetVersion('paris_weather', { description: 'refreshed' });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/presets/paris_weather/versions');
-    expect(captured[0]?.body).toEqual({ tags: ['eu'] });
+    expect(captured[0]?.body).toEqual({ description: 'refreshed' });
   });
 
   it('rollbackPreset POSTs {version} to the rollback route', async () => {
@@ -161,7 +164,6 @@ describe('preset client transport', () => {
         description: '',
         fixed_kwargs: {},
         extensions: [],
-        tags: [],
         output_schema: null,
       },
       tags: [],
@@ -183,7 +185,6 @@ describe('preset client transport', () => {
         description: '',
         fixed_kwargs: {},
         extensions: [],
-        tags: [],
         output_schema: null,
       },
       tags: [],
@@ -231,7 +232,7 @@ describe('preset client transport', () => {
 
   it('listToolTags hits /api/tools/tags', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: [{ name: 'weather', tags: [] }] }),
+      jsonResponse({ data: [{ name: 'weather', tags: [], hidden: false }] }),
     );
     const out = await client.listToolTags();
     expect(captured[0]?.url).toBe('/api/tools/tags');

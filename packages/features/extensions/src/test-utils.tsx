@@ -25,7 +25,14 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
       <QueryClientProvider client={queryClient}>
         <ApiProvider value={client}>
           <ThemeProvider>
-            <NavigationProvider value={{ navigate: vi.fn(), resolvePath: () => '/x' }}>
+            <NavigationProvider
+              value={{
+                navigate: vi.fn(),
+                resolvePath: () => '/x',
+                navigatePlugin: vi.fn(),
+                resolvePluginPath: () => '/x',
+              }}
+            >
               {children}
             </NavigationProvider>
           </ThemeProvider>

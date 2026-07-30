@@ -29,3 +29,8 @@ export const toolPresetsKey = ['tools', 'presets'] as const;
 
 /** The per-tool native tags (`GET /api/tools/tags`), feeding the tag filter + grouping. */
 export const toolTagsKey = ['tools', 'tags'] as const;
+
+/** The tool_meta overlay (`GET /api/tool-meta`): folder tree + per-tool display
+ * name / tags / folder / visibility, merged onto the native reads. A write through
+ * `upsertToolMeta` invalidates this key. */
+export const toolMetaKey = ['tools', 'tool-meta'] as const;

@@ -1,10 +1,11 @@
 /**
  * Create-form tests: the assembled POST body (extensions OMITTED when no combos,
- * tag chips → array), navigation to the new preset on success, and verbatim
- * rendering of the server's ordered 409/400 pre-check messages.
+ * NO tags — those go to the overlay after create), the required-description submit
+ * gate, the post-create overlay tag write, navigation to the new preset on success,
+ * and verbatim rendering of the server's ordered 409/400 pre-check messages.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { toolsListKey } from '@tai42/studio-sdk';
@@ -16,9 +17,8 @@ import { renderWithProviders, type StubApiClient } from './test-utils';
 const record = {
   name: 'paris_weather',
   base_tool: 'weather',
-  description: '',
+  description: 'Paris weather',
   active_version: 1,
-  tags: ['geo'],
   extensions: [],
   output_schema: null,
   conflicted: false,
@@ -30,6 +30,14 @@ function baseClient(overrides: StubApiClient = {}): StubApiClient {
     listTools: vi.fn().mockResolvedValue(['weather']),
     listPresets: vi.fn().mockResolvedValue([]),
     listToolTags: vi.fn().mockResolvedValue([]),
+    listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+    upsertToolMeta: vi.fn().mockResolvedValue({
+      tool_name: 'paris_weather',
+      display_name: null,
+      folder_id: null,
+      tags: ['geo'],
+      hidden: null,
+    }),
     listExtensions: vi.fn().mockResolvedValue([]),
     listAgents: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     getToolSchema: vi.fn().mockResolvedValue({
@@ -41,36 +49,54 @@ function baseClient(overrides: StubApiClient = {}): StubApiClient {
   };
 }
 
+/** Name + base only — used by the validate tests (an empty description is valid to validate). */
 async function fillNameAndBase(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.type(screen.getByPlaceholderText('paris_weather'), 'paris_weather');
   await user.click(await screen.findByRole('combobox'));
   await user.click(await screen.findByRole('option', { name: 'weather' }));
 }
 
+/** Name + base + description — the full gate a create must clear before submit. */
+async function fillCreatable(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await fillNameAndBase(user);
+  await user.type(screen.getByPlaceholderText('Paris weather'), 'Paris weather');
+}
+
 describe('CreatePresetForm', () => {
-  it('assembles the body with tags as an array and OMITS extensions when empty', async () => {
+  it('assembles a TAGLESS body, writes the tags to the overlay AFTER create, and OMITS extensions', async () => {
     const user = userEvent.setup();
     const createPreset = vi.fn().mockResolvedValue(record);
-    const client = baseClient({ createPreset });
+    const upsertToolMeta = vi.fn().mockResolvedValue({
+      tool_name: 'paris_weather',
+      display_name: null,
+      folder_id: null,
+      tags: ['geo'],
+      hidden: null,
+    });
+    const client = baseClient({ createPreset, upsertToolMeta });
     const { navigate, queryClient } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client,
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     await user.type(screen.getByLabelText('Tags'), 'geo');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
     expect(createPreset).toHaveBeenCalledTimes(1);
-    // An exact-object match: `extensions` is OMITTED when there are no combos (an
-    // extra key would fail this equality), and the tag chip became an array.
+    // An exact-object match: `extensions` is OMITTED when there are no combos, and
+    // NO `tags` key rides the create body — tags are the overlay's, not the record's.
     expect(createPreset).toHaveBeenCalledWith({
       name: 'paris_weather',
       base_tool: 'weather',
-      description: '',
+      description: 'Paris weather',
       fixed_kwargs: {},
-      tags: ['geo'],
+    });
+    // The entered tags land in the tool_meta overlay, keyed by the new preset's tool
+    // name, AFTER the create returns.
+    await waitFor(() => {
+      expect(upsertToolMeta).toHaveBeenCalledWith('paris_weather', { tags: ['geo'] });
     });
     // On success the detail navigates to the new preset.
     expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
@@ -80,13 +106,109 @@ describe('CreatePresetForm', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: toolsListKey });
   });
 
+  it('does NOT write the overlay when no tags were entered', async () => {
+    const user = userEvent.setup();
+    const createPreset = vi.fn().mockResolvedValue(record);
+    const upsertToolMeta = vi.fn();
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ createPreset, upsertToolMeta }),
+    });
+
+    await fillCreatable(user);
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledTimes(1);
+    });
+    // An empty overlay merge-patch is rejected by the API, so it is never sent.
+    expect(upsertToolMeta).not.toHaveBeenCalled();
+  });
+
+  it('blocks submit and shows the field error when the description is empty', async () => {
+    const user = userEvent.setup();
+    const createPreset = vi.fn().mockResolvedValue(record);
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ createPreset }),
+    });
+
+    // Name + base are set but the description is left blank — submit is blocked
+    // exactly like a missing name (the API rejects an empty description with a 422).
+    await fillNameAndBase(user);
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    expect(screen.getByText('A description is required.')).toBeInTheDocument();
+    expect(createPreset).not.toHaveBeenCalled();
+  });
+
+  it('groups the base picker on the MERGED native + overlay tag map (union of both reads)', async () => {
+    const user = userEvent.setup();
+    // `weather` carries a NATIVE tag; `radar` carries only an OVERLAY tag. The tag
+    // filter lists the UNION, so a tag from either read proves the map is merged.
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({
+        listTools: vi.fn().mockResolvedValue(['weather', 'radar']),
+        listToolTags: vi
+          .fn()
+          .mockResolvedValue([{ name: 'weather', tags: ['native-geo'], hidden: false }]),
+        listToolMeta: vi.fn().mockResolvedValue({
+          folders: [],
+          meta: [
+            {
+              tool_name: 'radar',
+              display_name: null,
+              folder_id: null,
+              tags: ['overlay-geo'],
+              hidden: null,
+            },
+          ],
+        }),
+      }),
+    });
+
+    // Grouping is on, so the tag filter appears; its options are the merged tag set.
+    const filter = await screen.findByRole('combobox', { name: 'Filter by tag' });
+    await user.click(filter);
+    expect(await screen.findByRole('option', { name: 'native-geo' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'overlay-geo' })).toBeInTheDocument();
+  });
+
+  it('excludes an EFFECTIVE-hidden base tool, keeping an overlay-`false` unhidden one', async () => {
+    // `secret` is plugin-hidden with no overlay opinion → excluded. `radar` is
+    // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
+    // `weather` is a plain visible tool → offered.
+    const user = userEvent.setup();
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({
+        listTools: vi.fn().mockResolvedValue(['weather', 'secret', 'radar']),
+        listToolTags: vi.fn().mockResolvedValue([
+          { name: 'weather', tags: [], hidden: false },
+          { name: 'secret', tags: [], hidden: true },
+          { name: 'radar', tags: [], hidden: true },
+        ]),
+        listToolMeta: vi.fn().mockResolvedValue({
+          folders: [],
+          meta: [
+            { tool_name: 'radar', display_name: null, folder_id: null, tags: [], hidden: false },
+          ],
+        }),
+      }),
+    });
+
+    await user.click(await screen.findByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'weather' })).toBeInTheDocument();
+    // The overlay UNHIDES the plugin-hidden `radar`, so it IS a selectable base.
+    expect(screen.getByRole('option', { name: 'radar' })).toBeInTheDocument();
+    // The effective-hidden `secret` is absent from the picker.
+    expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
+  });
+
   it('includes output_schema in the body when the author sets one', async () => {
     const user = userEvent.setup();
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     const schema = { type: 'object', title: 'Weather', properties: {} };
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: JSON.stringify(schema) },
@@ -104,7 +226,7 @@ describe('CreatePresetForm', () => {
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: '{ broken' },
     });
@@ -124,7 +246,7 @@ describe('CreatePresetForm', () => {
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: '{"type":"object","title":"X"}' },
     });
@@ -141,7 +263,7 @@ describe('CreatePresetForm', () => {
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     const kwargs = screen.getByLabelText('Fixed kwargs JSON');
     await user.clear(kwargs);
     await user.type(kwargs, '123');
@@ -160,7 +282,7 @@ describe('CreatePresetForm', () => {
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -177,13 +299,13 @@ describe('CreatePresetForm', () => {
     await fillNameAndBase(user);
     await user.click(screen.getByRole('button', { name: 'Validate' }));
 
-    // The draft is sent exactly as submit would send it (full field set, no combos).
+    // The draft is sent exactly as submit would send it (full field set, no combos,
+    // no tags — tags are the overlay's, never the create/validate body).
     expect(validatePreset).toHaveBeenCalledWith({
       name: 'paris_weather',
       base_tool: 'weather',
       description: '',
       fixed_kwargs: {},
-      tags: [],
     });
     expect(await screen.findByText('Draft binds cleanly')).toBeInTheDocument();
   });
@@ -249,7 +371,7 @@ describe('CreatePresetForm', () => {
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await fillNameAndBase(user);
+    await fillCreatable(user);
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(

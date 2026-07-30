@@ -78,13 +78,38 @@ export interface PageProps<T extends RouteToken> {
 }
 
 /**
+ * A plugin page's deep-link search object. Plugin paths are RUNTIME contributions
+ * outside the compile-time {@link RouteToken} map, so their search is an open bag of
+ * serializable values (the page's own {@link PluginPageParamsSchema} validates it);
+ * this is deliberately NOT a `RouteSearch`.
+ */
+export type PluginSearch = Record<string, unknown>;
+
+/**
  * The runtime navigation surface the shell provides through
  * {@link NavigationProvider}. `navigate` performs a client-side transition;
  * `resolvePath` produces the href a link should point at (so an AppLink is a real
  * anchor — middle-click / open-in-new-tab work — while still driving a
  * client-side transition on plain click).
+ *
+ * `navigatePlugin`/`resolvePluginPath` are the plugin-page twins: they target a
+ * runtime plugin path (`/plugins/{pluginId}/{pagePath}` plus an optional validated
+ * sub-path `params` and `search`), NOT a route token — `routes.ts` never learns
+ * plugin paths. Plugins reach these two via the {@link usePluginNavigation} hook.
  */
 export interface NavigationContextValue {
   navigate: <T extends RouteToken>(token: T, search?: RouteSearch<T>) => void;
   resolvePath: <T extends RouteToken>(token: T, search?: RouteSearch<T>) => string;
+  navigatePlugin: (
+    pluginId: string,
+    pagePath: string,
+    params?: string,
+    search?: PluginSearch,
+  ) => void;
+  resolvePluginPath: (
+    pluginId: string,
+    pagePath: string,
+    params?: string,
+    search?: PluginSearch,
+  ) => string;
 }

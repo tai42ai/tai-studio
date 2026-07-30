@@ -8,6 +8,10 @@
  * `?preset=` to drive the detail pane from either table; the active row is
  * highlighted.
  *
+ * The Name cell also surfaces the tool's overlay DISPLAY NAME (from `listToolMeta`)
+ * as a muted sub-line, and the Tags column renders the tool's OVERLAY tags — record
+ * categorization tags are gone; that curation lives in the tool_meta overlay now.
+ *
  * SAFETY: a preset carries arbitrary server-supplied strings, so every cell renders
  * them as ESCAPED text through the DS components, never an HTML sink.
  */
@@ -36,7 +40,13 @@ import {
 
 import { CreatePresetForm } from './CreatePresetForm';
 import { TagChips } from './tags';
-import { presetsListKey } from './keys';
+import { presetToolMetaKey, presetsListKey } from './keys';
+
+/** A tool's overlay projection the table cells read: its display name + user tags. */
+interface OverlayDetail {
+  readonly displayName: string | null;
+  readonly tags: readonly string[];
+}
 
 /** The generic fallback shown when a conflicted row carries no server reason. */
 const GENERIC_CONFLICT_REASON =
@@ -51,15 +61,19 @@ const linkStyle: CSSProperties = {
 
 function PresetRow({
   preset,
+  overlay,
   selected,
 }: {
   readonly preset: PresetRecord;
+  readonly overlay: OverlayDetail | undefined;
   readonly selected: boolean;
 }): ReactNode {
   const rowStyle: CSSProperties = {
     background: selected ? 'var(--tai-color-surface)' : undefined,
     opacity: preset.conflicted ? 0.7 : undefined,
   };
+  const displayName = overlay?.displayName ?? null;
+  const tags = overlay?.tags ?? [];
 
   return (
     <TR data-testid={`preset-row-${preset.name}`} style={rowStyle}>
@@ -72,6 +86,14 @@ function PresetRow({
         >
           <span style={linkStyle}>{preset.name}</span>
         </AppLink>
+        {displayName !== null && displayName !== '' ? (
+          <div
+            style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}
+            data-testid={`preset-display-name-${preset.name}`}
+          >
+            {displayName}
+          </div>
+        ) : null}
         {preset.conflicted ? (
           <div
             data-testid={`preset-conflicted-${preset.name}`}
@@ -94,7 +116,7 @@ function PresetRow({
       <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{preset.base_tool}</TD>
       <TD>{preset.description || '—'}</TD>
       <TD>{preset.active_version}</TD>
-      <TD>{preset.tags.length > 0 ? <TagChips tags={preset.tags} /> : '—'}</TD>
+      <TD>{tags.length > 0 ? <TagChips tags={tags} /> : '—'}</TD>
       <TD>{preset.extensions.length}</TD>
     </TR>
   );
@@ -118,9 +140,11 @@ function PresetTableHead(): ReactNode {
 
 function PresetTable({
   presets,
+  overlayByTool,
   selected,
 }: {
   readonly presets: readonly PresetRecord[];
+  readonly overlayByTool: ReadonlyMap<string, OverlayDetail>;
   readonly selected: string | undefined;
 }): ReactNode {
   return (
@@ -129,7 +153,12 @@ function PresetTable({
         <PresetTableHead />
         <TBody>
           {presets.map((preset) => (
-            <PresetRow key={preset.name} preset={preset} selected={preset.name === selected} />
+            <PresetRow
+              key={preset.name}
+              preset={preset}
+              overlay={overlayByTool.get(preset.name)}
+              selected={preset.name === selected}
+            />
           ))}
         </TBody>
       </Table>
@@ -140,7 +169,18 @@ function PresetTable({
 export function PresetsList({ selected }: { readonly selected: string | undefined }): ReactNode {
   const api = useApi();
   const query = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
+  // The overlay read is enrichment: a preset row renders fully without it, so its
+  // failure never walls the table — the display-name sub-line and the overlay tags
+  // simply fall back to their empty state rather than blocking the list.
+  const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
   const [createOpen, setCreateOpen] = useState(false);
+
+  const overlayByTool = new Map<string, OverlayDetail>(
+    (metaQuery.data?.meta ?? []).map((row) => [
+      row.tool_name,
+      { displayName: row.display_name, tags: row.tags },
+    ]),
+  );
 
   const active = (query.data ?? []).filter((preset) => !preset.conflicted);
   const conflicted = (query.data ?? []).filter((preset) => preset.conflicted);
@@ -192,7 +232,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
         <>
           <Card>
             {active.length > 0 ? (
-              <PresetTable presets={active} selected={selected} />
+              <PresetTable presets={active} overlayByTool={overlayByTool} selected={selected} />
             ) : (
               <EmptyState
                 title="No active presets"
@@ -219,7 +259,11 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
                 >
                   Conflicted <Badge variant="danger">{conflicted.length}</Badge>
                 </h3>
-                <PresetTable presets={conflicted} selected={selected} />
+                <PresetTable
+                  presets={conflicted}
+                  overlayByTool={overlayByTool}
+                  selected={selected}
+                />
               </div>
             </Card>
           ) : null}

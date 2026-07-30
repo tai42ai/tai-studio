@@ -1,32 +1,32 @@
 /**
- * Tools page — the flagship surface. The master list comes from
- * `api.listTools`; selecting a name sets the `tool` search param (shell-owned
- * routing via `AppLink`), which drives the run panel and the extension-combo
- * editor. Server state flows through TanStack Query: loading → `Skeleton`, empty →
- * `EmptyState`, error → a loud `ErrorState` that is always visible (no
- * special-casing of 401).
+ * Tools page — the flagship surface. The master list comes from `api.listTools`,
+ * merged with each tool's native tags + plugin-declared visibility
+ * (`api.listToolTags`) and the tool_meta overlay (`api.listToolMeta`, the folder
+ * tree + per-tool display name / user tags / folder / tri-state visibility). Every
+ * tool renders its `display_name ?? name`, keeps its real name visible (monospace,
+ * secondary) so it stays identifiable, and is grouped/filtered by its MERGED tags
+ * (native ∪ overlay). Selecting a name sets the `tool` search param (shell-owned
+ * routing via `AppLink`), which drives the run panel and the extension-combo editor.
  *
- * LAYOUT is a design-system master/detail split (`.tai-split` + `.tai-split-list` +
- * `.tai-split-detail`). Below 1024 (`useBreakpoint().isSinglePane`) exactly one
- * pane shows, driven by `data-pane`: the list until a tool is chosen, then the
- * detail with a Back control (an arrow-left icon and the word "Back") that clears
- * the selection. Selecting a tool moves focus to the detail heading; Back returns
- * focus to the list row it came from. A deep-link that arrives WITH a selection
- * does not steal focus on load — focus only follows a client-side change.
+ * FOLDERS: the list is a current-directory explorer — a breadcrumb plus the current
+ * folder's subfolders, then the tools filed there (unfiled tools live at the root).
+ * The current folder is local view state; the tree is entity-backed by the overlay.
  *
- * The list is additionally grouped and filterable by NATIVE TOOL TAGS
- * (`api.listToolTags`): a toggle row of `.tai-chip` filters selects tags (OR
- * semantics; an "Untagged" chip selects tools carrying no tag), and the filtered
- * tools are grouped under per-tag headers (untagged last, a multi-tag tool under
- * each of its tags). The selection persists in the `?tags=` search param, so a
- * filtered view is linkable. When the vocabulary is large the chip row collapses
- * its overflow into a STATIC "+N more" count (never an expander) — every tag still
- * appears as a group header below, and every selected chip stays visible so it
- * remains toggleable. A tags-query failure never takes down browsing: the flat
- * list survives and the tag row shows a loud `ErrorState` strip instead of grouping.
+ * HIDDEN: a tool whose EFFECTIVE visibility is hidden (`overlay.hidden ?? plugin
+ * declaration`) is excluded from the list; a "Show hidden" toggle reveals them for
+ * management (a visibility feature, never a security boundary — the tool stays
+ * callable). Writers edit a tool's overlay through the per-tool edit dialog.
+ *
+ * Server state flows through TanStack Query: loading → `Skeleton`, empty →
+ * `EmptyState`, error → a loud `ErrorState`. A tags OR overlay read failure never
+ * takes down browsing — the flat list survives under a loud notice.
+ *
+ * LAYOUT is a design-system master/detail split. Below 1024
+ * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
+ * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import { useEffect, useRef, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
   ArrowLeftIcon,
@@ -34,85 +34,122 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  EyeIcon,
+  EyeOffIcon,
+  FolderBreadcrumb,
+  FolderRow,
   PageHeader,
   Skeleton,
   Stack,
+  childFolders,
   errorMessage,
   isFullProjection,
   useApi,
   useAppNavigate,
   useBreakpoint,
+  useCanWrite,
   useCapabilities,
   type CapabilityState,
+  type Folder,
   type PageProps,
 } from '@tai42/studio-sdk';
-import type { ToolTagEntry } from '@tai42/api-client';
+import type { ToolMetaPatch } from '@tai42/api-client';
 
 import { RunPanel } from './RunPanel';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
-import { toolTagsKey, toolsListKey } from './keys';
+import { ToolMetaEditDialog } from './ToolMetaEditDialog';
+import { buildToolViews, toFolders, type ToolView } from './toolView';
+import { toolMetaKey, toolTagsKey, toolsListKey } from './keys';
 
-/** The reserved route token selecting tools that carry NO tag (a namespaced sentinel). */
+/** The reserved token selecting tools that carry NO tag (a namespaced sentinel). */
 const UNTAGGED_TOKEN = '__untagged__';
 const UNTAGGED_LABEL = 'Untagged';
 
-/** How many tag chips the filter row shows before collapsing the rest into "+N more".
- * Selected chips are always shown (they stay toggleable), so this caps the UNSELECTED
- * chips on show; every tag still appears as a group header below. */
+/** How many tag chips the filter row shows before collapsing the rest into "+N more". */
 const MAX_VISIBLE_TAG_CHIPS = 8;
 
-/** One tool row: a borderless nav-item link that sets `?tool=` while preserving the
- * active `?tags=`. Selected → accent tint + inset rail via `.tai-nav-item` +
- * `aria-current="page"`. The tool name is a machine identifier, so it renders mono. */
+/** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
+const TOOL_META_WRITE_ROUTE = '/api/tool-meta/tools';
+
+/** One tool row: its display label as an `AppLink` setting `?tool=` (preserving the
+ * active `?tags=`), the real name shown secondary+mono when a display name overrides
+ * it, and — for writers — an edit affordance opening the overlay dialog. */
 function ToolItem({
-  name,
+  view,
   selected,
   preserveTags,
+  canWrite,
+  onEdit,
 }: {
-  readonly name: string;
+  readonly view: ToolView;
   readonly selected: boolean;
   readonly preserveTags: readonly string[];
+  readonly canWrite: boolean;
+  readonly onEdit: (view: ToolView) => void;
 }): ReactNode {
   return (
-    <AppLink
-      to="tools"
-      search={{ tool: name, tags: preserveTags.length > 0 ? [...preserveTags] : undefined }}
-      aria-label={`Open tool ${name}`}
-      aria-current={selected ? 'page' : undefined}
-      className="tai-nav-item tai-mono"
-    >
-      {name}
-    </AppLink>
+    <div className="tai-row">
+      <AppLink
+        to="tools"
+        search={{ tool: view.name, tags: preserveTags.length > 0 ? [...preserveTags] : undefined }}
+        aria-label={`Open tool ${view.name}`}
+        aria-current={selected ? 'page' : undefined}
+        className="tai-nav-item"
+      >
+        <span className={view.hasCustomName ? undefined : 'tai-mono'}>{view.displayName}</span>
+        {view.hasCustomName ? <span className="tai-muted tai-mono">{view.name}</span> : null}
+      </AppLink>
+      {canWrite ? (
+        <Button
+          variant="ghost"
+          aria-label={`Edit tool ${view.name}`}
+          onClick={() => {
+            onEdit(view);
+          }}
+        >
+          Edit
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
 /**
  * The tools visible to the caller. A scoped session sees only the tools its
  * projection lists; a full session — and any not-yet-ready projection — sees the
- * whole catalog, with the server the final authority on every run. The run panel is
- * gated the same way (see {@link ToolsPage}): a scoped deep-link to an unprojected
- * tool renders a "not available" state rather than mounting the run panel.
+ * whole catalog, with the server the final authority on every run.
  */
-function projectedTools(names: readonly string[], state: CapabilityState): readonly string[] {
-  if (state.status !== 'ready' || isFullProjection(state.projection)) return names;
+function projectedTools(views: readonly ToolView[], state: CapabilityState): ToolView[] {
+  if (state.status !== 'ready' || isFullProjection(state.projection)) return [...views];
   const allowed = new Set(state.projection.tools);
-  return names.filter((name) => allowed.has(name));
+  return views.filter((view) => allowed.has(view.name));
 }
 
-/** A flat, ungrouped list of tool names — the view when no tags are available. */
+/** A flat, ungrouped list of tools — the view when no tags are available. */
 function FlatToolList({
-  names,
+  views,
   selected,
   preserveTags,
+  canWrite,
+  onEdit,
 }: {
-  readonly names: readonly string[];
+  readonly views: readonly ToolView[];
   readonly selected: string | undefined;
   readonly preserveTags: readonly string[];
+  readonly canWrite: boolean;
+  readonly onEdit: (view: ToolView) => void;
 }): ReactNode {
   return (
     <div className="tai-stack tai-stack-2">
-      {names.map((name) => (
-        <ToolItem key={name} name={name} selected={name === selected} preserveTags={preserveTags} />
+      {views.map((view) => (
+        <ToolItem
+          key={view.name}
+          view={view}
+          selected={view.name === selected}
+          preserveTags={preserveTags}
+          canWrite={canWrite}
+          onEdit={onEdit}
+        />
       ))}
     </div>
   );
@@ -121,22 +158,33 @@ function FlatToolList({
 /** A group of tools sharing one tag, rendered under a titled, counted header. */
 function TagGroup({
   label,
-  names,
+  views,
   selected,
   preserveTags,
+  canWrite,
+  onEdit,
 }: {
   readonly label: string;
-  readonly names: readonly string[];
+  readonly views: readonly ToolView[];
   readonly selected: string | undefined;
   readonly preserveTags: readonly string[];
+  readonly canWrite: boolean;
+  readonly onEdit: (view: ToolView) => void;
 }): ReactNode {
   return (
     <section className="tai-stack tai-stack-2">
       <h3 className="tai-label">
-        {label} <span className="tai-muted">{names.length}</span>
+        {label} <span className="tai-muted">{views.length}</span>
       </h3>
-      {names.map((name) => (
-        <ToolItem key={name} name={name} selected={name === selected} preserveTags={preserveTags} />
+      {views.map((view) => (
+        <ToolItem
+          key={view.name}
+          view={view}
+          selected={view.name === selected}
+          preserveTags={preserveTags}
+          canWrite={canWrite}
+          onEdit={onEdit}
+        />
       ))}
     </section>
   );
@@ -148,9 +196,7 @@ interface TagVocabularyEntry {
   readonly count: number;
 }
 
-/** A togglable tag chip; `aria-pressed` reflects whether the tag filters the list.
- * `.tai-chip` paints the pressed tint on `aria-pressed="true"`, so selection needs
- * no colour of its own. */
+/** A togglable tag chip; `aria-pressed` reflects whether the tag filters the list. */
 function TagChip({
   entry,
   active,
@@ -175,8 +221,7 @@ function TagChip({
 }
 
 /** The filter row: every selected chip plus as many unselected chips as fit under the
- * cap, with the remainder collapsed into a STATIC "+N more" count (not an expander —
- * every collapsed tag still appears as a group header below). */
+ * cap, with the remainder collapsed into a STATIC "+N more" count. */
 function TagFilterRow({
   vocabulary,
   selectedSet,
@@ -219,18 +264,58 @@ function TagFilterRow({
   );
 }
 
+/** The tag vocabulary over a set of tools (merged tags), sorted, plus an "Untagged"
+ * pseudo-tag; a selected token whose tools vanished still renders so it can be cleared. */
+function buildVocabulary(
+  views: readonly ToolView[],
+  selectedTags: readonly string[],
+): TagVocabularyEntry[] {
+  const counts = new Map<string, number>();
+  let untaggedCount = 0;
+  for (const view of views) {
+    if (view.tags.length === 0) {
+      untaggedCount += 1;
+      continue;
+    }
+    for (const tag of view.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  const vocabulary: TagVocabularyEntry[] = [...counts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, count]) => ({ token: label, label, count }));
+  if (untaggedCount > 0) {
+    vocabulary.push({ token: UNTAGGED_TOKEN, label: UNTAGGED_LABEL, count: untaggedCount });
+  }
+  for (const token of selectedTags) {
+    if (!vocabulary.some((entry) => entry.token === token)) {
+      vocabulary.push({
+        token,
+        label: token === UNTAGGED_TOKEN ? UNTAGGED_LABEL : token,
+        count: 0,
+      });
+    }
+  }
+  return vocabulary;
+}
+
 function ToolList({
   selected,
   selectedTags,
+  onEdit,
 }: {
   readonly selected: string | undefined;
   readonly selectedTags: readonly string[];
+  readonly onEdit: (view: ToolView, folders: readonly Folder[]) => void;
 }): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
+  const canWrite = useCanWrite(TOOL_META_WRITE_ROUTE, 'PATCH');
   const { state } = useCapabilities();
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+
   const toolsQuery = useQuery({ queryKey: toolsListKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: toolTagsKey, queryFn: () => api.listToolTags() });
+  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
 
   if (toolsQuery.isPending) {
     return (
@@ -249,8 +334,14 @@ function ToolList({
       />
     );
   }
-  const names = projectedTools(toolsQuery.data, state);
-  if (names.length === 0) {
+
+  const overlayRows = metaQuery.data?.meta ?? [];
+  const folders: Folder[] = toFolders(metaQuery.data?.folders ?? []);
+  const allViews = projectedTools(
+    buildToolViews(toolsQuery.data, tagsQuery.data ?? [], overlayRows),
+    state,
+  );
+  if (allViews.length === 0) {
     return (
       <EmptyState
         title="No tools available"
@@ -259,65 +350,25 @@ function ToolList({
     );
   }
 
-  // A tags failure must not take down tool browsing: fall back to the flat list and
-  // surface the failure loudly on the tag row (never a silent empty tag view).
-  if (tagsQuery.isError) {
-    return (
-      <div className="tai-stack">
-        <ErrorState
-          message={errorMessage(tagsQuery.error)}
-          onRetry={() => void tagsQuery.refetch()}
-        />
-        <FlatToolList names={names} selected={selected} preserveTags={selectedTags} />
-      </div>
-    );
-  }
-  // While tags load the list already renders flat (browsing never waits on tags).
-  if (tagsQuery.isPending) {
-    return <FlatToolList names={names} selected={selected} preserveTags={selectedTags} />;
-  }
+  // A tags OR overlay read failure must not take down browsing: the merged view still
+  // renders (from whatever loaded), under a loud notice on the tag/folder controls.
+  const sideReadError = tagsQuery.isError
+    ? tagsQuery.error
+    : metaQuery.isError
+      ? metaQuery.error
+      : null;
 
-  const tagsByTool = new Map<string, readonly string[]>(
-    tagsQuery.data.map((entry: ToolTagEntry) => [entry.name, entry.tags]),
+  // The current directory: its subfolders, and the tools filed directly in it. A tool
+  // whose effective visibility is hidden is excluded unless "Show hidden" is on.
+  const subfolders = childFolders(folders, currentFolderId);
+  const inFolder = allViews.filter(
+    (view) => view.folderId === currentFolderId && (showHidden || !view.hidden),
   );
-  const tagsFor = (name: string): readonly string[] => tagsByTool.get(name) ?? [];
+  const hiddenInFolderCount = allViews.filter(
+    (view) => view.folderId === currentFolderId && view.hidden,
+  ).length;
 
-  // The tag vocabulary: every distinct tag with the count of tools carrying it,
-  // sorted, plus an "Untagged" pseudo-tag counting the tools with no tag.
-  const counts = new Map<string, number>();
-  let untaggedCount = 0;
-  for (const name of names) {
-    const tags = tagsFor(name);
-    if (tags.length === 0) {
-      untaggedCount += 1;
-      continue;
-    }
-    for (const tag of tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  }
-  const vocabulary: TagVocabularyEntry[] = [...counts.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([label, count]) => ({ token: label, label, count }));
-  if (untaggedCount > 0) {
-    vocabulary.push({ token: UNTAGGED_TOKEN, label: UNTAGGED_LABEL, count: untaggedCount });
-  }
-  // A selected token whose tools have all vanished (a stale/shared `?tags=` link) still
-  // renders as an active chip so it can be toggled off — otherwise the filter would strand
-  // the user on "No tools match" with no in-page way to clear it.
-  for (const token of selectedTags) {
-    if (!vocabulary.some((entry) => entry.token === token)) {
-      vocabulary.push({
-        token,
-        label: token === UNTAGGED_TOKEN ? UNTAGGED_LABEL : token,
-        count: 0,
-      });
-    }
-  }
-
-  // No tags anywhere and no selection → the flat list, no filter row.
-  if (vocabulary.length === 0) {
-    return <FlatToolList names={names} selected={selected} preserveTags={selectedTags} />;
-  }
-
+  const vocabulary = buildVocabulary(inFolder, selectedTags);
   const selectedSet = new Set(selectedTags);
   const toggle = (token: string): void => {
     const next = selectedSet.has(token)
@@ -326,54 +377,128 @@ function ToolList({
     navigate('tools', { tool: selected, tags: next.length > 0 ? next : undefined });
   };
 
-  // OR semantics: no selection shows every tool; otherwise a tool matches when it
-  // carries any selected tag, or is untagged and the "Untagged" chip is selected.
-  const matches = (name: string): boolean => {
+  // OR semantics over merged tags: no selection shows every tool; otherwise a tool
+  // matches when it carries any selected tag, or is untagged and "Untagged" is picked.
+  const matches = (view: ToolView): boolean => {
     if (selectedSet.size === 0) return true;
-    const tags = tagsFor(name);
-    if (tags.length === 0) return selectedSet.has(UNTAGGED_TOKEN);
-    return tags.some((tag) => selectedSet.has(tag));
+    if (view.tags.length === 0) return selectedSet.has(UNTAGGED_TOKEN);
+    return view.tags.some((tag) => selectedSet.has(tag));
   };
-  const filtered = names.filter(matches);
+  const filtered = inFolder.filter(matches);
 
-  // Group the filtered tools under each tag they carry (untagged last); a multi-tag
-  // tool appears under every one of its tags. Each group carries its reserved token so
-  // its React key never collides with a real tag that happens to be spelled "Untagged".
-  const groups: { token: string; label: string; names: string[] }[] = vocabulary
+  const groups: { token: string; label: string; views: ToolView[] }[] = vocabulary
     .filter((entry) => entry.token !== UNTAGGED_TOKEN)
     .map((entry) => ({
       token: entry.token,
       label: entry.label,
-      names: filtered.filter((name) => tagsFor(name).includes(entry.label)),
+      views: filtered.filter((view) => view.tags.includes(entry.label)),
     }))
-    .filter((group) => group.names.length > 0);
-  const untaggedFiltered = filtered.filter((name) => tagsFor(name).length === 0);
+    .filter((group) => group.views.length > 0);
+  const untaggedFiltered = filtered.filter((view) => view.tags.length === 0);
   if (untaggedFiltered.length > 0) {
-    groups.push({ token: UNTAGGED_TOKEN, label: UNTAGGED_LABEL, names: untaggedFiltered });
+    groups.push({ token: UNTAGGED_TOKEN, label: UNTAGGED_LABEL, views: untaggedFiltered });
   }
+
+  const listBody =
+    sideReadError !== null ? (
+      // A tags/overlay read failed: browsing survives as a FLAT list of what loaded,
+      // under the loud strip below — no grouping/filter chips built from partial data.
+      <FlatToolList
+        views={inFolder}
+        selected={selected}
+        preserveTags={selectedTags}
+        canWrite={canWrite}
+        onEdit={(view) => {
+          onEdit(view, folders);
+        }}
+      />
+    ) : vocabulary.length === 0 ? (
+      inFolder.length === 0 && subfolders.length === 0 ? (
+        <EmptyState
+          title="This folder is empty"
+          description="No tools or subfolders are filed here."
+        />
+      ) : (
+        <FlatToolList
+          views={inFolder}
+          selected={selected}
+          preserveTags={selectedTags}
+          canWrite={canWrite}
+          onEdit={(view) => {
+            onEdit(view, folders);
+          }}
+        />
+      )
+    ) : (
+      <div className="tai-stack">
+        <TagFilterRow vocabulary={vocabulary} selectedSet={selectedSet} onToggle={toggle} />
+        {groups.length === 0 ? (
+          <EmptyState
+            title="No tools match"
+            description="No tool carries any of the selected tags."
+          />
+        ) : (
+          <div className="tai-stack">
+            {groups.map((group) => (
+              <TagGroup
+                key={group.token}
+                label={group.label}
+                views={group.views}
+                selected={selected}
+                preserveTags={selectedTags}
+                canWrite={canWrite}
+                onEdit={(view) => {
+                  onEdit(view, folders);
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
 
   return (
     <div className="tai-stack">
-      <TagFilterRow vocabulary={vocabulary} selectedSet={selectedSet} onToggle={toggle} />
-
-      {groups.length === 0 ? (
-        <EmptyState
-          title="No tools match"
-          description="No tool carries any of the selected tags."
+      {sideReadError !== null ? (
+        <ErrorState
+          message={errorMessage(sideReadError)}
+          onRetry={() => {
+            if (tagsQuery.isError) void tagsQuery.refetch();
+            if (metaQuery.isError) void metaQuery.refetch();
+          }}
         />
-      ) : (
-        <div className="tai-stack">
-          {groups.map((group) => (
-            <TagGroup
-              key={group.token}
-              label={group.label}
-              names={group.names}
-              selected={selected}
-              preserveTags={selectedTags}
-            />
+      ) : null}
+
+      <div className="tai-row">
+        <FolderBreadcrumb
+          folders={folders}
+          currentFolderId={currentFolderId}
+          onNavigate={setCurrentFolderId}
+          rootLabel="All tools"
+        />
+        {hiddenInFolderCount > 0 || showHidden ? (
+          <Button
+            variant="ghost"
+            aria-pressed={showHidden}
+            onClick={() => {
+              setShowHidden((value) => !value);
+            }}
+          >
+            {showHidden ? <EyeOffIcon /> : <EyeIcon />}
+            {showHidden ? 'Hide hidden' : `Show hidden (${String(hiddenInFolderCount)})`}
+          </Button>
+        ) : null}
+      </div>
+
+      {subfolders.length > 0 ? (
+        <div className="tai-stack tai-stack-2">
+          {subfolders.map((folder) => (
+            <FolderRow key={folder.id} folder={folder} onOpen={setCurrentFolderId} />
           ))}
         </div>
-      )}
+      ) : null}
+
+      {listBody}
     </div>
   );
 }
@@ -381,14 +506,34 @@ function ToolList({
 export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
   const selected = search.tool;
   const selectedTags = search.tags ?? [];
+  const api = useApi();
+  const queryClient = useQueryClient();
   const { state } = useCapabilities();
   const navigate = useAppNavigate();
   const { isSinglePane } = useBreakpoint();
 
+  // The tool being edited, plus the folder tree snapshot the dialog opened with.
+  const [editing, setEditing] = useState<{ view: ToolView; folders: readonly Folder[] } | null>(
+    null,
+  );
+
+  const upsert = useMutation({
+    mutationFn: ({ name, patch }: { name: string; patch: ToolMetaPatch }) =>
+      api.upsertToolMeta(name, patch),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: toolMetaKey });
+      setEditing(null);
+    },
+  });
+
+  const createFolder = async (name: string, parentId: string | null): Promise<string> => {
+    const folder = await api.createFolder(name, parentId);
+    await queryClient.invalidateQueries({ queryKey: toolMetaKey });
+    return folder.id;
+  };
+
   const listRef = useRef<HTMLDivElement>(null);
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
-  // Seed the previous selection on MOUNT so an initial `?tool=` deep-link never steals
-  // focus (focus moves only on a client-side selection change, never on load).
   const prevSelected = useRef<string | undefined>(selected);
 
   useEffect(() => {
@@ -396,29 +541,18 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
     const previous = prevSelected.current;
     prevSelected.current = selected;
     if (selected !== undefined) {
-      // Moved INTO a selection → focus the detail heading (present when the tool is
-      // available; a scoped-unavailable selection has no heading to take focus).
       detailHeadingRef.current?.focus();
     } else if (previous !== undefined) {
-      // Cleared (Back) → return focus to the list row it came from, matched inside the
-      // list pane by the link's own accessible name.
       listRef.current?.querySelector<HTMLElement>(`[aria-label="Open tool ${previous}"]`)?.focus();
     }
   }, [selected]);
 
-  // Projection ⊆ gate: a scoped caller who deep-links `?tool=<tool outside its
-  // projection>` must NOT get the run panel + extensions editor for a tool the
-  // server would 403 on (the run action is server-gated; the UI must not advertise
-  // a door the gate denies). A full — or not-yet-ready — projection defers to the
-  // server and shows any selected tool.
   const selectionAvailable =
     selected === undefined ||
     state.status !== 'ready' ||
     isFullProjection(state.projection) ||
     state.projection.tools.includes(selected);
 
-  // Below 1024 exactly one pane shows: the detail (with a Back control) once a tool is
-  // chosen, otherwise the list. Above 1024 both panes show and `data-pane` is inert.
   const pane = isSinglePane && selected !== undefined ? 'detail' : 'list';
   const showBack = isSinglePane && selected !== undefined;
 
@@ -437,7 +571,13 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
         <Card className="tai-split-list" ref={listRef}>
           <Stack>
             <h2 className="tai-card-title">All tools</h2>
-            <ToolList selected={selected} selectedTags={selectedTags} />
+            <ToolList
+              selected={selected}
+              selectedTags={selectedTags}
+              onEdit={(view, folders) => {
+                setEditing({ view, folders });
+              }}
+            />
           </Stack>
         </Card>
 
@@ -482,6 +622,22 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
           )}
         </Stack>
       </div>
+
+      {editing !== null ? (
+        <ToolMetaEditDialog
+          tool={editing.view}
+          folders={editing.folders}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditing(null);
+          }}
+          onCreateFolder={createFolder}
+          onSubmit={(patch) => {
+            upsert.mutate({ name: editing.view.name, patch });
+          }}
+          saving={upsert.isPending}
+        />
+      ) : null}
     </Stack>
   );
 }

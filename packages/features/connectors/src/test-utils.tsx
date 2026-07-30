@@ -30,6 +30,8 @@ export function renderWithProviders(
   const nav: NavigationContextValue = {
     navigate: vi.fn(),
     resolvePath: () => '/x',
+    navigatePlugin: vi.fn(),
+    resolvePluginPath: () => '/x',
   };
   const utils = render(
     <QueryClientProvider client={queryClient}>

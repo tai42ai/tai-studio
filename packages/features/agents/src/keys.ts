@@ -19,6 +19,9 @@ export const authoredToolsKey = ['agents', 'authored', 'tools'] as const;
 /** Per-tool native tags (`GET /api/tools/tags`) feeding the ToolPicker grouping. */
 export const authoredToolTagsKey = ['agents', 'authored', 'tool-tags'] as const;
 
+/** The tool_meta overlay (`GET /api/tool-meta`), for the pickers' effective-hidden exclusion. */
+export const authoredToolMetaKey = ['agents', 'authored', 'tool-meta'] as const;
+
 /** One authored agent's detail (`GET /api/presets/{name}`) — its baked spec keys. */
 export function authoredPresetKey(name: string): readonly ['agents', 'authored', 'preset', string] {
   return ['agents', 'authored', 'preset', name];

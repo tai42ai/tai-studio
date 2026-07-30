@@ -124,11 +124,11 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
       />
     );
   }
-  // The presets read only tags preset tools; wait for it while it is genuinely
-  // loading (its result flips the editor to a hint), but a FAILED presets read is
-  // NOT walled — a scoped tools-caller that cannot reach `/api/presets` (or any
-  // presets error) falls through to the manifest path with a working card below,
-  // under the loud notice the card renders for that failure.
+  // The presets read only IDENTIFIES which tools are preset-authored (its result
+  // flips the editor to a hint); wait for it while it is genuinely loading, but a
+  // FAILED presets read is NOT walled — a scoped tools-caller that cannot reach
+  // `/api/presets` (or any presets error) falls through to the manifest path with a
+  // working card below, under the loud notice the card renders for that failure.
   if (extensionsQuery.isPending || presetsQuery.isPending) {
     return (
       <div className="tai-stack">

@@ -43,7 +43,6 @@ const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => ({
   base_tool: 'echo',
   description: 'Pinned echo',
   active_version: 1,
-  tags: [],
   extensions: [],
   output_schema: null,
   conflicted: false,
@@ -165,6 +164,13 @@ describe('ComposeAgentDialog', () => {
     await userEvent.click(await screen.findByRole('option', { name: /authorable_agent/ }));
   }
 
+  // Name + description — both REQUIRED, both gate submit. Used by every test that
+  // drives a successful create (an empty description would block it like a missing name).
+  async function fillNameAndDescription(name: string): Promise<void> {
+    await userEvent.type(screen.getByLabelText('Name'), name);
+    await userEvent.type(screen.getByLabelText('Description'), 'A helpdesk agent');
+  }
+
   it('builds a valid fixed_kwargs from the pickers and submits POST /api/presets', async () => {
     const createPreset = vi.fn((_body: CreatePresetBody) => Promise.resolve(presetRecord()));
     renderWithProviders(
@@ -172,7 +178,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await fillNameAndDescription('support_bot');
     await pickBaseAgent();
 
     await userEvent.type(screen.getByLabelText('System prompt'), 'You are a helpdesk agent.');
@@ -189,15 +195,15 @@ describe('ComposeAgentDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 
     await waitFor(() => {
+      // NO tags key on the create body — overlay tags are written separately, after.
       expect(createPreset).toHaveBeenCalledWith({
         name: 'support_bot',
         base_tool: 'authorable_agent',
-        description: '',
+        description: 'A helpdesk agent',
         fixed_kwargs: {
           system_prompt: 'You are a helpdesk agent.',
           tool_names: ['echo'],
         },
-        tags: [],
       });
     });
     // An un-checked non-spec field (user_message) is never baked into fixed_kwargs.
@@ -216,7 +222,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await fillNameAndDescription('support_bot');
     await userEvent.click(await screen.findByRole('combobox', { name: 'Base agent' }));
     await userEvent.click(await screen.findByRole('option', { name: /reg_name/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
@@ -245,7 +251,7 @@ describe('ComposeAgentDialog', () => {
       }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await fillNameAndDescription('support_bot');
     await pickBaseAgent();
 
     await userEvent.click(await screen.findByRole('combobox', { name: 'Preset to expand' }));
@@ -299,6 +305,45 @@ describe('ComposeAgentDialog', () => {
     expect(screen.queryByRole('option', { name: 'quarantined' })).toBeNull();
   });
 
+  it('excludes an EFFECTIVE-hidden tool from the tools picker, keeping an overlay-`false` unhidden one', async () => {
+    // `secret` is plugin-hidden with no overlay opinion → excluded. `open_tool` is
+    // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({
+        listTools: () => Promise.resolve(['echo', 'secret', 'open_tool']),
+        listToolTags: () =>
+          Promise.resolve([
+            { name: 'echo', tags: [], hidden: false },
+            { name: 'secret', tags: [], hidden: true },
+            { name: 'open_tool', tags: [], hidden: true },
+          ]),
+        listToolMeta: () =>
+          Promise.resolve({
+            folders: [],
+            meta: [
+              {
+                tool_name: 'open_tool',
+                display_name: null,
+                folder_id: null,
+                tags: [],
+                hidden: false,
+              },
+            ],
+          }),
+      }),
+    );
+
+    await pickBaseAgent();
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Add a tool' }));
+
+    expect(await screen.findByRole('option', { name: 'echo' })).toBeInTheDocument();
+    // The overlay UNHIDES the plugin-hidden `open_tool`, so it IS offered.
+    expect(screen.getByRole('option', { name: 'open_tool' })).toBeInTheDocument();
+    // The effective-hidden `secret` is absent from the picker.
+    expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
+  });
+
   it('surfaces a server 400 (an unknown/blocked reference) loudly', async () => {
     const createPreset = vi.fn(() =>
       Promise.reject(
@@ -310,7 +355,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await fillNameAndDescription('support_bot');
     await pickBaseAgent();
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 
@@ -318,24 +363,53 @@ describe('ComposeAgentDialog', () => {
     expect(within(alert).getByText(/references unknown tool 'ghost'/)).toBeInTheDocument();
   });
 
-  it('includes the entered tags in the createPreset body', async () => {
-    const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
+  it('writes the entered tags to the tool_meta overlay AFTER create, not in the body', async () => {
+    const createPreset = vi.fn((_body: CreatePresetBody) => Promise.resolve(presetRecord()));
+    const upsertToolMeta = vi.fn(() =>
+      Promise.resolve({
+        tool_name: 'support_bot',
+        display_name: null,
+        folder_id: null,
+        tags: ['helpdesk'],
+        hidden: null,
+      }),
+    );
     renderWithProviders(
       <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
-      composeClient({ createPreset }),
+      composeClient({ createPreset, upsertToolMeta }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await fillNameAndDescription('support_bot');
     await pickBaseAgent();
     await userEvent.type(screen.getByLabelText('Tags'), 'helpdesk');
     await userEvent.click(screen.getByRole('button', { name: 'Add tag' }));
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 
     await waitFor(() => {
-      expect(createPreset).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'support_bot', tags: ['helpdesk'] }),
-      );
+      expect(createPreset).toHaveBeenCalled();
     });
+    // The create body carries NO tags key…
+    expect(createPreset.mock.lastCall?.[0]).not.toHaveProperty('tags');
+    // …the tags land in the overlay, keyed by the composed agent's tool name, after.
+    await waitFor(() => {
+      expect(upsertToolMeta).toHaveBeenCalledWith('support_bot', { tags: ['helpdesk'] });
+    });
+  });
+
+  it('blocks submit and shows the field error when the description is empty', async () => {
+    const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ createPreset }),
+    );
+
+    // Name + base are set but the description is blank — blocked like a missing name.
+    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await pickBaseAgent();
+    await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
+
+    expect(screen.getByText('A description is required.')).toBeInTheDocument();
+    expect(createPreset).not.toHaveBeenCalled();
   });
 
   // A base agent declaring a non-spec bakeable knob (e.g. a step budget) beyond the
@@ -373,7 +447,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'bounded_agent');
+    await fillNameAndDescription('bounded_agent');
     await pickBaseAgent();
     await userEvent.click(await screen.findByRole('checkbox', { name: /count/ }));
     // Checking the field surfaces its subset-form input (a number spinbutton,
@@ -407,7 +481,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'moded_agent');
+    await fillNameAndDescription('moded_agent');
     await pickBaseAgent();
     // Checking the $ref field renders its resolved enum control (does not throw).
     await userEvent.click(await screen.findByRole('checkbox', { name: /mode/ }));
@@ -428,7 +502,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'bounded_agent');
+    await fillNameAndDescription('bounded_agent');
     await pickBaseAgent();
     await userEvent.click(await screen.findByRole('checkbox', { name: /count/ }));
     // Leave the required subset field empty → the subset validation blocks submit.
@@ -503,7 +577,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'structured_bot');
+    await fillNameAndDescription('structured_bot');
     await pickBaseAgent();
     const schema = { type: 'object', title: 'Report', properties: {} };
     fireEvent.change(await screen.findByLabelText('Response format JSON'), {
@@ -526,7 +600,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'structured_bot');
+    await fillNameAndDescription('structured_bot');
     await pickBaseAgent();
     // A schema with no top-level title fails the requireTitle lint (loud + inline).
     fireEvent.change(await screen.findByLabelText('Response format JSON'), {
@@ -547,7 +621,7 @@ describe('ComposeAgentDialog', () => {
       composeClient({ createPreset }),
     );
 
-    await userEvent.type(screen.getByLabelText('Name'), 'support_bot');
+    await fillNameAndDescription('support_bot');
     await pickBaseAgent();
     await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
 

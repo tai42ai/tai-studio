@@ -53,7 +53,14 @@ function renderWithProviders(
         <ApiProvider value={apiClient}>
           <CapabilityProvider>
             <ThemeProvider>
-              <NavigationProvider value={{ navigate: vi.fn(), resolvePath: () => '/x' }}>
+              <NavigationProvider
+                value={{
+                  navigate: vi.fn(),
+                  resolvePath: () => '/x',
+                  navigatePlugin: vi.fn(),
+                  resolvePluginPath: () => '/x',
+                }}
+              >
                 {children}
               </NavigationProvider>
             </ThemeProvider>

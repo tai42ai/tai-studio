@@ -477,6 +477,23 @@ export const PendingIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** Folder: a tabbed folder, for the tool-organization tree and breadcrumbs. */
+export const FolderIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M3 6.5a2 2 0 0 1 2-2h4l2 2.5h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </Icon>
+);
+
+/** Grid: a 2x2 tile array — the card-view half of the list/card toggle. */
+export const GridIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+    <rect x="13" y="13" width="7" height="7" rx="1.5" />
+  </Icon>
+);
+
 // -- Route mapping -----------------------------------------------------------
 
 /**

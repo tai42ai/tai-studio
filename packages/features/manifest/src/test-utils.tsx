@@ -16,6 +16,8 @@ import { vi } from 'vitest';
 const navigation: NavigationContextValue = {
   navigate: vi.fn(),
   resolvePath: () => '/x',
+  navigatePlugin: vi.fn(),
+  resolvePluginPath: () => '/x',
 };
 
 export function renderWithProviders(

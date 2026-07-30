@@ -19,10 +19,13 @@
 import { useMemo, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 import { EmptyState, ErrorState, useCapabilities } from '@tai42/studio-sdk';
+import type { RegisteredPage } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
+import { useLocation } from '@tanstack/react-router';
 
 import { contributionCovered } from './token-requirements';
 import { ContentSkeleton } from './route-capability-boundary';
+import { resolvePluginPage, type PluginPageResolution } from './plugin-page-resolve';
 import type { PluginLoader } from './plugin-loader';
 
 export function PluginPage({
@@ -37,16 +40,25 @@ export function PluginPage({
   const registryError = useStore(loader.store, (s) => s.registryError);
   const errors = useStore(loader.store, (s) => s.errors);
   const { state } = useCapabilities();
+  // The RAW search of the current location. The plugin catch-all route declares no
+  // `validateSearch` (TanStack's is compile-time per-route and cannot see a runtime
+  // contribution's schema), so validation happens HERE against the matched page's
+  // own schema — this is the unvalidated bag it validates.
+  const rawSearch = useLocation({ select: (location) => location.search }) as Record<
+    string,
+    unknown
+  >;
 
-  const match = useMemo(() => {
+  const resolution = useMemo<PluginPageResolution>(() => {
     // Contributions are registered by the bundle at import time; the route loader
-    // has already awaited the pass, so reading them here is deterministic.
-    const pages = getContributions().pages;
-    // Match on the owning plugin AND the path: a page resolves only under its
-    // own plugin's prefix, so two plugins may register the same path safely.
-    return pages.find((page) => page.pluginId === pluginId && page.path === path) ?? null;
-  }, [pluginId, path]);
-
+    // has already awaited the pass, so reading them here is deterministic. Resolution
+    // is LONGEST-registered-prefix-wins; a page with no params schema matches only its
+    // exact path (the pre-deep-link behavior).
+    const pages: readonly RegisteredPage[] = getContributions().pages.filter(
+      (page) => page.pluginId === pluginId,
+    );
+    return resolvePluginPage(pages, path, rawSearch);
+  }, [pluginId, path, rawSearch]);
   // Mirror the route boundary's capability state machine before touching any
   // plugin data: while the projection is LOADING show the same content skeleton the
   // boundary uses (never the page), and on a FAILED projection render nothing (fail
@@ -66,7 +78,7 @@ export function PluginPage({
     return <ErrorState message={`Studio plugin “${pluginId}” failed to load: ${pluginError}`} />;
   }
 
-  if (match === null) {
+  if (resolution.status === 'not-found') {
     return (
       <EmptyState
         title="Page not found"
@@ -74,6 +86,17 @@ export function PluginPage({
       />
     );
   }
+
+  // A page matched by prefix but its sub-path or search failed the contribution's own
+  // schema: render a LOUD error card, never a blank or half-populated view. The schema
+  // parser's throw carries the reason.
+  if (resolution.status === 'invalid') {
+    return (
+      <ErrorState message={`The link to “${pluginId}/${path}” is not valid: ${resolution.error}`} />
+    );
+  }
+
+  const match = resolution.page;
 
   // A page is gated by its declared `requiredCapabilities` the same way its nav
   // entry is (absent ⇒ full projection only). A scoped session that does not cover
@@ -89,6 +112,10 @@ export function PluginPage({
     );
   }
 
+  // Forward the validated sub-path `params` and `search` (present only when the page
+  // declared a schema; a schemaless page receives neither, unchanged).
   const PageComponent = match.component;
-  return <PageComponent pluginId={pluginId} />;
+  return (
+    <PageComponent pluginId={pluginId} params={resolution.params} search={resolution.search} />
+  );
 }

@@ -1,7 +1,8 @@
 /**
  * Save-version tests: submit is disabled until a field is dirty; only changed
  * fields are sent (untouched fields omitted → carry-forward); a cleared extensions
- * builder sends an explicit `[]`; and a 409 renders verbatim.
+ * builder sends an explicit `[]`; an edited-blank description is rejected client
+ * side; and a 409 renders verbatim.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
@@ -16,9 +17,8 @@ import { renderWithProviders, type StubApiClient } from './test-utils';
 const detail = {
   name: 'paris_weather',
   base_tool: 'weather',
-  description: '',
+  description: 'Paris weather',
   active_version: 2,
-  tags: ['geo'],
   extensions: [['chain']],
   output_schema: null,
   conflicted: false,
@@ -48,7 +48,7 @@ describe('SaveVersionDialog', () => {
     expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
   });
 
-  it('sends ONLY the changed tags field (untouched fields carry forward)', async () => {
+  it('sends ONLY the changed description field (untouched fields carry forward)', async () => {
     const user = userEvent.setup();
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
@@ -63,17 +63,37 @@ describe('SaveVersionDialog', () => {
     );
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
-    await user.type(screen.getByLabelText('Tags'), 'eu');
-    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    const description = screen.getByLabelText('Description');
+    await user.clear(description);
+    await user.type(description, 'Updated');
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
-    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { tags: ['geo', 'eu'] });
+    // Only the edited description is sent; every untouched field carries forward.
+    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { description: 'Updated' });
     // A successful save invalidates the list, this preset's detail + versions, and
     // the tools master list (the reload rebinds the live tool).
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetsListKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetDetailKey('paris_weather') });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetVersionsKey('paris_weather') });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: toolsListKey });
+  });
+
+  it('rejects an edited-blank description client side (inline error, submit blocked)', async () => {
+    const user = userEvent.setup();
+    const savePresetVersion = vi.fn();
+    renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+      client: client({ savePresetVersion }),
+    });
+
+    // Clearing the seeded description to blank is a certain 422 (the route rejects an
+    // explicit empty description), so the client blocks it with a loud inline error.
+    await user.clear(screen.getByLabelText('Description'));
+    expect(await screen.findByText('A description is required.')).toBeInTheDocument();
+
+    const submit = screen.getByRole('button', { name: 'Save as new version' });
+    expect(submit).toBeDisabled();
+    await user.click(submit);
+    expect(savePresetVersion).not.toHaveBeenCalled();
   });
 
   it('sends an explicit [] when the extensions builder is cleared', async () => {
@@ -170,12 +190,12 @@ describe('SaveVersionDialog', () => {
       client: client({ savePresetVersion }),
     });
 
-    // Change only tags; the seeded output_schema is untouched, so it is NOT sent.
-    await user.type(screen.getByLabelText('Tags'), 'eu');
-    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    // Change only the description; the seeded output_schema is untouched, so it is NOT sent.
+    await user.clear(screen.getByLabelText('Description'));
+    await user.type(screen.getByLabelText('Description'), 'Updated');
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
-    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { tags: ['geo', 'eu'] });
+    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { description: 'Updated' });
     expect(savePresetVersion.mock.lastCall?.[1]).not.toHaveProperty('output_schema');
   });
 
@@ -243,8 +263,8 @@ describe('SaveVersionDialog', () => {
       client: client({ savePresetVersion }),
     });
 
-    await user.type(screen.getByLabelText('Tags'), 'eu');
-    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    await user.clear(screen.getByLabelText('Description'));
+    await user.type(screen.getByLabelText('Description'), 'Updated');
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -262,10 +282,11 @@ describe('SaveVersionDialog', () => {
     // Validate is enabled even before any edit; it sends the current editable set.
     await user.click(await screen.findByRole('button', { name: 'Validate' }));
 
+    // No tags (gone from the version body) and description omitted (untouched, so it
+    // carries forward) — the verdict reads the merged editable set under save semantics.
     expect(validatePreset).toHaveBeenCalledWith({
       name: 'paris_weather',
       fixed_kwargs: { city: 'Paris' },
-      tags: ['geo'],
       extensions: [['chain']],
       output_schema: null,
     });
@@ -287,8 +308,8 @@ describe('SaveVersionDialog', () => {
     expect(await screen.findByText('Unknown extension: chain.')).toBeInTheDocument();
 
     // Make the form dirty; submit still stays blocked while a name is unknown.
-    await user.type(screen.getByLabelText('Tags'), 'eu');
-    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    await user.clear(screen.getByLabelText('Description'));
+    await user.type(screen.getByLabelText('Description'), 'Updated');
     expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
     expect(savePresetVersion).not.toHaveBeenCalled();
   });

@@ -13,7 +13,6 @@ const record = {
   base_tool: 'weather',
   description: 'Paris weather',
   active_version: 1,
-  tags: ['geo'],
   extensions: [],
   output_schema: null,
   conflicted: false,
@@ -88,7 +87,6 @@ describe('presetVersion — immutable version row', () => {
       description: 'Paris weather',
       fixed_kwargs: { units: 'imperial' },
       extensions: [],
-      tags: ['geo', 'eu'],
       output_schema: null,
     },
     tags: [],
@@ -109,17 +107,22 @@ describe('presetVersion — immutable version row', () => {
   });
 });
 
-describe('toolTags — additive per-tool native-tags map', () => {
-  it('parses an array of {name, tags} entries', () => {
+describe('toolTags — additive per-tool native surface', () => {
+  it('parses an array of {name, tags, hidden} entries', () => {
     const parsed = schemas.toolTags.parse([
-      { name: 'echo', tags: [] },
-      { name: 'paris_weather', tags: ['geo'] },
+      { name: 'echo', tags: [], hidden: false },
+      { name: 'flow_step', tags: ['babelfish'], hidden: true },
     ]);
-    expect(parsed[1]?.tags).toEqual(['geo']);
+    expect(parsed[1]?.tags).toEqual(['babelfish']);
+    expect(parsed[1]?.hidden).toBe(true);
   });
 
   it('throws loudly on a non-string tag (no coercion)', () => {
-    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [1] }])).toThrow();
+    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [1], hidden: false }])).toThrow();
+  });
+
+  it('throws loudly when the declared-visibility flag is absent (no silent default)', () => {
+    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [] }])).toThrow();
   });
 });
 

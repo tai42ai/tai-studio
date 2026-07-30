@@ -63,6 +63,7 @@ import { InteractionsBadge } from '@tai42/feature-interactions';
 import { DASHBOARD_TOKEN, NAV_SECTIONS, PATH, type FeatureToken } from './routes';
 import { contributionCovered, tokenCovered } from './token-requirements';
 import { RouteCapabilityBoundary } from './route-capability-boundary';
+import { pathHasPrefix } from './plugin-page-resolve';
 import { SIGN_OUT_NOTICE_KEY } from './login-page';
 import { IntegrityBanner, importMapIntegrityEnforced } from './integrity';
 import type { PluginLoader } from './plugin-loader';
@@ -132,16 +133,25 @@ function NavItem({ token }: { token: FeatureToken }): ReactNode {
  * with the color inherited from the link; a plugin without an icon gets a fixed
  * empty box so its label aligns with the iconned rows.
  */
-function PluginNavItem({ entry }: { entry: RegisteredNavEntry }): ReactNode {
-  const { pathname } = useLocation();
+function PluginNavItem({
+  entry,
+  active,
+}: {
+  entry: RegisteredNavEntry;
+  active: boolean;
+}): ReactNode {
   const href = `/plugins/${entry.pluginId}/${entry.path}`;
   const Icon = entry.icon;
   return (
     <li>
+      {/* `activeOptions.exact` turns OFF the router Link's own prefix-match highlight
+          (which would force `aria-current="page"` on EVERY ancestor entry of a deep
+          link); the single winner is chosen once by the parent and passed in `active`. */}
       <Link
         to={href}
         className="tai-nav-link"
-        aria-current={pathname === href ? 'page' : undefined}
+        activeOptions={{ exact: true }}
+        aria-current={active ? 'page' : undefined}
       >
         <span
           aria-hidden="true"
@@ -225,6 +235,37 @@ function NavSkeleton(): ReactNode {
   );
 }
 
+/** The registry key of a nav entry — its owner + page path, unique across plugins. */
+function navEntryKey(entry: RegisteredNavEntry): string {
+  return `${entry.pluginId}/${entry.path}`;
+}
+
+/**
+ * The key of the SINGLE nav entry that owns the current pathname, or undefined when
+ * none matches. The winner is the entry whose href is the LONGEST prefix of the
+ * pathname under the shared `/`-boundary rule ({@link pathHasPrefix}), mirroring the
+ * page resolver's longest-prefix single-winner choice. When a plugin registers nested
+ * entries that share a prefix (`flows` and `flows/detail`), a deep link under the
+ * child highlights only the deepest match, so exactly one row carries
+ * `aria-current="page"`; the ordinary single-entry deep link still highlights its one
+ * entry.
+ */
+function activeNavKey(
+  entries: readonly RegisteredNavEntry[],
+  pathname: string,
+): string | undefined {
+  let winner: RegisteredNavEntry | undefined;
+  let winnerHrefLength = -1;
+  for (const entry of entries) {
+    const href = `/plugins/${entry.pluginId}/${entry.path}`;
+    if (pathHasPrefix(pathname, href) && href.length > winnerHrefLength) {
+      winner = entry;
+      winnerHrefLength = href.length;
+    }
+  }
+  return winner === undefined ? undefined : navEntryKey(winner);
+}
+
 /**
  * The Primary + Plugins navigation, shared by the sidebar and the mobile drawer.
  * The primary nav follows the capability projection's three states; the Plugins
@@ -239,6 +280,10 @@ function NavBody({
   retry: () => void;
   visibleNavEntries: readonly RegisteredNavEntry[];
 }): ReactNode {
+  // The active plugin nav row is chosen ONCE for the whole list: only the longest
+  // matching entry wins, so nested prefix entries never both light up.
+  const { pathname } = useLocation();
+  const activeKey = activeNavKey(visibleNavEntries, pathname);
   return (
     <>
       <nav aria-label="Primary">
@@ -257,9 +302,10 @@ function NavBody({
       {visibleNavEntries.length > 0 ? (
         <nav aria-label="Plugins">
           <ul style={navListStyle}>
-            {visibleNavEntries.map((entry) => (
-              <PluginNavItem key={`${entry.pluginId}/${entry.path}`} entry={entry} />
-            ))}
+            {visibleNavEntries.map((entry) => {
+              const key = navEntryKey(entry);
+              return <PluginNavItem key={key} entry={entry} active={key === activeKey} />;
+            })}
           </ul>
         </nav>
       ) : null}

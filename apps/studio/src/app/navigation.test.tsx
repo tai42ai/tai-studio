@@ -59,6 +59,33 @@ describe('shell navigation', () => {
     );
   });
 
+  it('resolvePluginPath builds a plugin deep-link href with the sub-path and search', () => {
+    const nav = makeNav();
+    // Plugin paths are runtime contributions resolved through the catch-all route,
+    // never a RouteToken — so they carry a pluginId, a page path, an optional sub-path
+    // remainder, and an open search bag.
+    expect(nav.resolvePluginPath('acme', 'flows')).toBe('/plugins/acme/flows');
+    expect(nav.resolvePluginPath('acme', 'flows', 'myflow')).toBe('/plugins/acme/flows/myflow');
+    expect(nav.resolvePluginPath('acme', 'flows', 'myflow', { dir: 'eu' })).toBe(
+      '/plugins/acme/flows/myflow?dir=eu',
+    );
+  });
+
+  it('navigatePlugin drives the router to the plugin deep link', async () => {
+    server.use(
+      http.get('*/api/plugins', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/tools', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/tools/tags', () => HttpResponse.json({ data: [] })),
+    );
+    const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-nav-plugin' });
+    await screen.findByRole('link', { name: 'Tools' });
+    studio.navigation.navigatePlugin('acme', 'flows', 'myflow', { dir: 'eu' });
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/myflow');
+      expect(studio.router.state.location.searchStr).toBe('?dir=eu');
+    });
+  });
+
   it('renders sidebar AppLinks with resolved hrefs and navigate drives the router', async () => {
     server.use(
       http.get('*/api/plugins', () => HttpResponse.json({ data: [] })),
@@ -200,6 +227,67 @@ describe('shell plugin nav', () => {
     renderStudio({ initialPath: '/plugins/acme/demo', sessionKey: 'k-nav', importModule });
 
     const link = await screen.findByRole('link', { name: 'Reference' });
+    expect(link).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('marks ONLY the longest-prefix entry when nested nav entries share a prefix', async () => {
+    serveShell(['flows', 'flows/detail']);
+    // A plugin registers two nested pages + nav entries whose hrefs are prefixes of
+    // one another. Both pages accept a sub-path so the deep link resolves cleanly.
+    const register = (ctx: PluginContext): void => {
+      ctx.registerPage({
+        path: 'flows',
+        title: 'Flows',
+        component: () => <div>flows page</div>,
+        params: { parseParams: (remainder) => ({ rest: remainder }) },
+      });
+      ctx.registerPage({
+        path: 'flows/detail',
+        title: 'Flows detail',
+        component: () => <div>flows detail page</div>,
+        params: { parseParams: (remainder) => ({ rest: remainder }) },
+      });
+      ctx.registerNavEntry({ path: 'flows', title: 'Flows' });
+      ctx.registerNavEntry({ path: 'flows/detail', title: 'Detail' });
+    };
+    const importModule = vi.fn(() => Promise.resolve({ register }));
+
+    renderStudio({
+      initialPath: '/plugins/acme/flows/detail/x',
+      sessionKey: 'k-nav',
+      importModule,
+    });
+
+    const pluginsNav = await screen.findByRole('navigation', { name: 'Plugins' });
+    const detailLink = within(pluginsNav).getByRole('link', { name: 'Detail' });
+    const flowsLink = within(pluginsNav).getByRole('link', { name: 'Flows' });
+    // The deep path sits under BOTH hrefs, but aria-current marks EXACTLY the
+    // deepest match (`flows/detail`) — never both, so a single winner is announced.
+    expect(detailLink).toHaveAttribute('aria-current', 'page');
+    expect(flowsLink).not.toHaveAttribute('aria-current');
+  });
+
+  it('still highlights a lone nav entry on a deep sub-path (no nesting)', async () => {
+    serveShell(['flows']);
+    const register = (ctx: PluginContext): void => {
+      ctx.registerPage({
+        path: 'flows',
+        title: 'Flows',
+        component: () => <div>flows page</div>,
+        params: { parseParams: (remainder) => ({ rest: remainder }) },
+      });
+      ctx.registerNavEntry({ path: 'flows', title: 'Flows' });
+    };
+    const importModule = vi.fn(() => Promise.resolve({ register }));
+
+    renderStudio({
+      initialPath: '/plugins/acme/flows/deep',
+      sessionKey: 'k-nav',
+      importModule,
+    });
+
+    // The ordinary case is unchanged: a deep sub-path still highlights its one entry.
+    const link = await screen.findByRole('link', { name: 'Flows' });
     expect(link).toHaveAttribute('aria-current', 'page');
   });
 

@@ -3,7 +3,6 @@
   "base_tool": "weather",
   "description": "Paris weather",
   "active_version": 1,
-  "tags": ["geo"],
   "extensions": [],
   "output_schema": {
     "type": "object",

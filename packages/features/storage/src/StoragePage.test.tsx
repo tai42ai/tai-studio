@@ -37,7 +37,14 @@ function renderPage(
     <QueryClientProvider client={queryClient}>
       <ApiProvider value={client}>
         <ThemeProvider>
-          <NavigationProvider value={{ navigate, resolvePath: () => '/x' }}>
+          <NavigationProvider
+            value={{
+              navigate,
+              resolvePath: () => '/x',
+              navigatePlugin: vi.fn(),
+              resolvePluginPath: () => '/x',
+            }}
+          >
             {children}
           </NavigationProvider>
         </ThemeProvider>
@@ -73,6 +80,8 @@ function LiveUrlStoragePage({ client }: { readonly client: ApiClient }): ReactEl
         setSearch(next ?? {});
       },
       resolvePath: () => '/x',
+      navigatePlugin: vi.fn(),
+      resolvePluginPath: () => '/x',
     }),
     [],
   );

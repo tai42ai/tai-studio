@@ -14,7 +14,7 @@
  * visual cron builder: the string is the exact value the skeleton expects, so it is
  * passed straight through without an intermediate builder to translate.
  */
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
@@ -28,10 +28,11 @@ import {
   TextInput,
   ToolPicker,
   errorMessage,
+  hiddenToolNames,
   useApi,
 } from '@tai42/studio-sdk';
 
-import { scheduleToolsKey, schedulesKey } from './keys';
+import { scheduleToolMetaKey, scheduleToolTagsKey, scheduleToolsKey, schedulesKey } from './keys';
 
 type ScheduleMode = 'interval' | 'crontab';
 
@@ -67,6 +68,18 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   const queryClient = useQueryClient();
 
   const toolsQuery = useQuery({ queryKey: scheduleToolsKey, queryFn: () => api.listTools() });
+  const tagsQuery = useQuery({ queryKey: scheduleToolTagsKey, queryFn: () => api.listToolTags() });
+  const metaQuery = useQuery({ queryKey: scheduleToolMetaKey, queryFn: () => api.listToolMeta() });
+
+  // Tools whose EFFECTIVE visibility is hidden (`overlay.hidden ?? plugin
+  // declaration`) are kept out of the picker, the same tri-state rule the tools
+  // screen applies to its list. Best-effort enrichment: a failed tags/meta read
+  // leaves the set empty (the server stays the authority over what may be run).
+  const hiddenNames = useMemo(
+    () => hiddenToolNames(tagsQuery.data ?? [], metaQuery.data?.meta ?? []),
+    [tagsQuery.data, metaQuery.data],
+  );
+  const excludeToolNames = useMemo(() => [...hiddenNames], [hiddenNames]);
 
   const [name, setName] = useState('');
   const [tool, setTool] = useState<string | null>(null);
@@ -164,6 +177,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
               onChange={setTool}
               disabled={toolsQuery.isPending}
               placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
+              excludeNames={excludeToolNames}
             />
           </Field>
         )}

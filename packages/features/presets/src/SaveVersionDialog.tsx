@@ -1,10 +1,17 @@
 /**
- * The SAVE-NEW-VERSION dialog. Pre-fills `fixed_kwargs` (JSON textarea), `tags`
- * (chips), and `extensions` (the `ExtensionComboBuilder`) from the preset's ACTIVE
- * body, then sends ONLY the fields the user changed:
+ * The SAVE-NEW-VERSION dialog. Pre-fills `fixed_kwargs` (JSON textarea),
+ * `description` (text), and `extensions` (the `ExtensionComboBuilder`) from the
+ * preset's ACTIVE body, then sends ONLY the fields the user changed:
  *  - an untouched field is OMITTED (the route carries the active value forward);
- *  - extensions the user cleared are sent as an explicit `[]` (the route clears them).
+ *  - extensions the user cleared are sent as an explicit `[]` (the route clears them);
+ *  - an edited `description` sends its new value; an emptied one is rejected client
+ *    side (loud inline error, submit blocked), mirroring the API's own rule (the
+ *    route rejects an explicit empty description with a 422).
  * Submit is disabled until at least one field is dirty (an empty body is a loud 400).
+ *
+ * Overlay categorization tags are NOT a version field — they live in the tool_meta
+ * overlay and are edited on the detail pane, not here. The per-version generic label
+ * list is a separate feature, edited in the version-history panel.
  *
  * A successful save invalidates the list, this preset's detail + versions, and the
  * tools master list (the reload rebinds the live tool). A malformed `fixed_kwargs`
@@ -26,6 +33,7 @@ import {
   Field,
   SchemaEditor,
   Spinner,
+  TextInput,
   Textarea,
   errorMessage,
   toolsListKey,
@@ -33,7 +41,6 @@ import {
   type SchemaEditorChange,
 } from '@tai42/studio-sdk';
 
-import { TagsInput } from './tags';
 import { jsonEqual, parseJsonObject } from './parse';
 import { ValidateVerdict } from './verdict';
 import { presetDetailKey, presetExtensionsKey, presetVersionsKey, presetsListKey } from './keys';
@@ -60,7 +67,7 @@ export function SaveVersionDialog({
   const seedCombos = useMemo(() => detail.extensions.map((combo) => [...combo]), [detail]);
 
   const [kwargsText, setKwargsText] = useState(seedKwargsText);
-  const [tags, setTags] = useState<string[]>([...detail.tags]);
+  const [description, setDescription] = useState(detail.description);
   const [combos, setCombos] = useState<PresetExtensionElement[][]>(seedCombos);
   const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
     schema: detail.output_schema,
@@ -76,10 +83,14 @@ export function SaveVersionDialog({
   const parsed = parseJsonObject(kwargsText);
   const kwargsParses = !('error' in parsed);
   const kwargsChanged = 'error' in parsed ? true : !jsonEqual(parsed.value, detail.fixed_kwargs);
-  const tagsChanged = !jsonEqual(tags, detail.tags);
+  const descriptionChanged = description !== detail.description;
+  // An EDITED description emptied to blank is rejected by the route (422), so the
+  // client blocks it with a loud inline error rather than round-tripping a certain
+  // failure. An UNTOUCHED description is never validated — it simply carries forward.
+  const descriptionInvalid = descriptionChanged && description.trim() === '';
   const extensionsChanged = !jsonEqual(combos, detail.extensions);
   const outputSchemaChanged = !jsonEqual(outputSchema.schema, detail.output_schema);
-  const dirty = kwargsChanged || tagsChanged || extensionsChanged || outputSchemaChanged;
+  const dirty = kwargsChanged || descriptionChanged || extensionsChanged || outputSchemaChanged;
 
   const save = useMutation({
     mutationFn: (body: SavePresetVersionBody) => api.savePresetVersion(name, body),
@@ -102,7 +113,7 @@ export function SaveVersionDialog({
 
   const draftSignature = JSON.stringify({
     kwargsText,
-    tags,
+    description,
     combos,
     outputSchema: outputSchema.schema,
   });
@@ -110,9 +121,10 @@ export function SaveVersionDialog({
     resetValidate();
   }, [draftSignature, resetValidate]);
 
-  // Validate is enabled whenever the form parses — the submit precondition MINUS the
-  // dirtiness gate (a clean draft is validatable even before any edit).
-  const canValidate = kwargsParses && outputSchema.valid && extensionsValid;
+  // Validate is enabled whenever the form parses and the description is not an edited
+  // blank — the submit precondition MINUS the dirtiness gate (a clean draft is
+  // validatable even before any edit).
+  const canValidate = kwargsParses && outputSchema.valid && extensionsValid && !descriptionInvalid;
 
   const onValidate = (): void => {
     if ('error' in parsed) {
@@ -123,7 +135,9 @@ export function SaveVersionDialog({
     validate.mutate({
       name,
       fixed_kwargs: parsed.value,
-      tags,
+      // Mirror the write: a changed description is sent, an untouched one omitted so
+      // the verdict is read under the same carry-forward semantics as the save.
+      ...(descriptionChanged ? { description: description.trim() } : {}),
       // The config-aware builder carries each combo's author config verbatim; an
       // empty list means "no combos", read under save-version (edit) semantics.
       extensions: combos,
@@ -134,9 +148,9 @@ export function SaveVersionDialog({
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
     if (!dirty) return;
-    // A non-empty output schema that fails parse/lint, or an unknown extension name,
-    // blocks submit — the inline messages already say why.
-    if (!outputSchema.valid || !extensionsValid) return;
+    // A non-empty output schema that fails parse/lint, an unknown extension name, or
+    // an edited-blank description each blocks submit — the inline messages say why.
+    if (!outputSchema.valid || !extensionsValid || descriptionInvalid) return;
     if ('error' in parsed) {
       setKwargsError(parsed.error);
       return;
@@ -144,7 +158,9 @@ export function SaveVersionDialog({
     setKwargsError(undefined);
     const body: SavePresetVersionBody = {
       ...(kwargsChanged ? { fixed_kwargs: parsed.value } : {}),
-      ...(tagsChanged ? { tags } : {}),
+      // A changed description sends its trimmed value; an untouched one is omitted and
+      // the route carries the active description forward.
+      ...(descriptionChanged ? { description: description.trim() } : {}),
       // A cleared builder sends an explicit `[]`; the route clears the combos. The
       // config-aware builder carries each combo's author `config` verbatim, so the
       // edited value is sent as-is.
@@ -184,8 +200,18 @@ export function SaveVersionDialog({
           />
         </Field>
 
-        <Field label="Tags" description="Categorization labels for this version.">
-          <TagsInput value={tags} onChange={setTags} />
+        <Field
+          label="Description"
+          description="The tool's LLM-facing description. Leave it unchanged to carry the active one forward."
+          error={descriptionInvalid ? 'A description is required.' : undefined}
+        >
+          <TextInput
+            value={description}
+            onChange={(event) => {
+              setDescription(event.target.value);
+            }}
+            aria-required
+          />
         </Field>
 
         {/* A labelled GROUP, not a `Field`: the builder nests many checkboxes, and a
@@ -253,7 +279,13 @@ export function SaveVersionDialog({
           <Button
             type="submit"
             variant="primary"
-            disabled={save.isPending || !dirty || !outputSchema.valid || !extensionsValid}
+            disabled={
+              save.isPending ||
+              !dirty ||
+              !outputSchema.valid ||
+              !extensionsValid ||
+              descriptionInvalid
+            }
           >
             {save.isPending ? <Spinner label="Saving version" /> : null}
             Save as new version

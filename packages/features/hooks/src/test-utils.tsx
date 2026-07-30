@@ -72,7 +72,14 @@ export function renderWithProviders(
         <ApiProvider value={apiClient}>
           <CapabilityProvider>
             <ThemeProvider>
-              <NavigationProvider value={{ navigate, resolvePath: () => '/x' }}>
+              <NavigationProvider
+                value={{
+                  navigate,
+                  resolvePath: () => '/x',
+                  navigatePlugin: vi.fn(),
+                  resolvePluginPath: () => '/x',
+                }}
+              >
                 {children}
               </NavigationProvider>
             </ThemeProvider>

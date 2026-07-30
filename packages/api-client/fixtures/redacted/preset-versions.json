@@ -20,7 +20,6 @@
           }
         ]
       ],
-      "tags": ["geo"],
       "output_schema": null
     },
     "tags": [],
@@ -34,7 +33,6 @@
       "description": "Paris weather",
       "fixed_kwargs": { "units": "imperial", "api_key": "***" },
       "extensions": [],
-      "tags": ["geo", "eu"],
       "output_schema": {
         "type": "object",
         "title": "Weather",

@@ -43,6 +43,14 @@ export const presetToolsKey = [PRESETS_KEY_ROOT, 'tools'] as const;
 /** Key for the per-tool native-tags map feeding the `ToolPicker` tag grouping. */
 export const presetToolTagsKey = [PRESETS_KEY_ROOT, 'tool-tags'] as const;
 
+/**
+ * Key for the tool_meta overlay (`GET /api/tool-meta`). Its per-tool overlay tags
+ * are MERGED with the native `tool-tags` map so the base picker groups on the union
+ * an operator actually sees; it is also the read behind the detail pane's overlay
+ * display name + tags.
+ */
+export const presetToolMetaKey = [PRESETS_KEY_ROOT, 'tool-meta'] as const;
+
 /** Key for the extension catalog feeding the `ExtensionComboBuilder`. */
 export const presetExtensionsKey = [PRESETS_KEY_ROOT, 'extensions'] as const;
 

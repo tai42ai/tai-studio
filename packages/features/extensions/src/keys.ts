@@ -22,6 +22,12 @@ export const applyToolsKey = ['extensions', 'apply', 'tools'] as const;
 /** The preset list feeding the apply panel's origin classification. */
 export const applyPresetsKey = ['extensions', 'apply', 'presets'] as const;
 
+/** Native tool tags + plugin-declared visibility, for the picker's hidden exclusion. */
+export const applyToolTagsKey = ['extensions', 'apply', 'tool-tags'] as const;
+
+/** The tool_meta overlay, for the picker's effective-hidden exclusion. */
+export const applyToolMetaKey = ['extensions', 'apply', 'tool-meta'] as const;
+
 /** The origin a tool's extensions are read/written through. */
 export type ToolExtensionsOrigin = 'manifest' | 'preset';
 

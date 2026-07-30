@@ -1245,7 +1245,7 @@
 
   .tai-table td {
     padding: var(--tai-space-3);
-    vertical-align: top;
+    vertical-align: middle;
     border-bottom: 1px solid var(--tai-color-border);
   }
 

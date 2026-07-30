@@ -19,6 +19,11 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
+    // The authoring suite drives real `user-event` keystrokes through full Radix
+    // `Select` open→select cycles on real timers — legitimately expensive, not slow
+    // by accident. The 5000ms default flakes on a loaded box; match the
+    // `features/hooks` precedent rather than retry-wrap or weaken assertions.
+    testTimeout: 20_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

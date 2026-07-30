@@ -48,6 +48,21 @@ export function useResolvePath(): NavigationContextValue['resolvePath'] {
   return useNavigation().resolvePath;
 }
 
+/**
+ * Plugin-page navigation: `navigatePlugin` drives a client-side transition to a
+ * runtime plugin path, `resolvePluginPath` yields its href. These are the ONLY
+ * navigation methods a plugin page uses to reach its own deep-linkable sub-paths —
+ * the token-typed {@link useAppNavigate}/{@link useResolvePath} address the shell's
+ * compile-time routes and know nothing of plugin paths.
+ */
+export function usePluginNavigation(): Pick<
+  NavigationContextValue,
+  'navigatePlugin' | 'resolvePluginPath'
+> {
+  const { navigatePlugin, resolvePluginPath } = useNavigation();
+  return { navigatePlugin, resolvePluginPath };
+}
+
 export interface AppLinkProps<T extends RouteToken> {
   to: T;
   search?: RouteSearch<T>;

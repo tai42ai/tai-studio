@@ -32,6 +32,7 @@ export type {
   PluginEntry,
   ToolPanelProps,
   PluginPageProps,
+  PluginPageParamsSchema,
   SettingsTabProps,
   ToolPanelContribution,
   PageContribution,
@@ -70,7 +71,13 @@ export { useInteractionsStream } from './hooks/useSse';
 export type { InteractionsStreamState, StreamInteraction } from './hooks/useSse';
 
 // -- Navigation (shell ⇄ feature route-token contract) -----------------------
-export { NavigationProvider, AppLink, useAppNavigate, useResolvePath } from './navigation';
+export {
+  NavigationProvider,
+  AppLink,
+  useAppNavigate,
+  useResolvePath,
+  usePluginNavigation,
+} from './navigation';
 export type {
   AppLinkProps,
   RouteToken,
@@ -78,6 +85,7 @@ export type {
   RouteSearchByToken,
   PageProps,
   NavigationContextValue,
+  PluginSearch,
 } from './navigation';
 
 // -- Utilities ---------------------------------------------------------------
@@ -89,6 +97,9 @@ export { toolsListKey, extensionsQueryKey, subMcpKey, tokensPayloadKey } from '.
 
 // -- Extension-combo editing helpers -----------------------------------------
 export { comboElementNames, extensionElementName } from './extension-combos';
+
+// -- Tool-visibility tri-state -----------------------------------------------
+export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 
 // -- Design system -----------------------------------------------------------
 export { Button, Card, Skeleton, EmptyState, ErrorState, Spinner } from './components/primitives';
@@ -154,6 +165,28 @@ export { JsonDiff, diffJson } from './components/json-diff';
 export type { JsonDiffProps, JsonDiffRow } from './components/json-diff';
 export { TagChips, TagsInput } from './components/tags';
 export type { TagChipsProps, TagsInputProps } from './components/tags';
+export { OverlayDetailsFields, overlayDetailsPatch } from './components/overlay-details-fields';
+export type {
+  OverlayDetails,
+  OverlayDetailsFieldsProps,
+} from './components/overlay-details-fields';
+export { ViewToggle, useViewMode } from './components/view-toggle';
+export type { ViewMode, ViewToggleProps } from './components/view-toggle';
+export { EntityCardGrid } from './components/entity-card-grid';
+export type { EntityCardGridProps } from './components/entity-card-grid';
+export {
+  FolderBreadcrumb,
+  FolderRow,
+  FolderPicker,
+  childFolders,
+  folderPathTo,
+} from './components/folder-nav';
+export type {
+  Folder,
+  FolderBreadcrumbProps,
+  FolderRowProps,
+  FolderPickerProps,
+} from './components/folder-nav';
 export { CodeBlock } from './components/code-block';
 export type { CodeBlockProps } from './components/code-block';
 export { FleetReport } from './components/fleet-report';
@@ -212,6 +245,8 @@ export {
   SignOutIcon,
   MenuIcon,
   CloseIcon,
+  FolderIcon,
+  GridIcon,
   FilterIcon,
   ArrowLeftIcon,
   ArrowUpIcon,

@@ -57,12 +57,19 @@ export const toolMediaResult = z
 export type ToolMediaResult = z.infer<typeof toolMediaResult>;
 
 /**
- * The ADDITIVE per-tool native-tags map (`GET /api/tools/tags`). Distinct from the
- * flat `toolNames` contract (`GET /api/tools`, unchanged): this surfaces each
- * tool's FastMCP `tags` — including the ones preset bodies project — so the shared
- * `ToolPicker` can group/filter its options by tag.
+ * The ADDITIVE per-tool native surface (`GET /api/tools/tags`). Distinct from the
+ * flat `toolNames` contract (`GET /api/tools`, unchanged): each entry carries the
+ * tool's read-only FastMCP `tags` — so the shared `ToolPicker` can group/filter its
+ * options — plus `hidden`, the tool's OWN plugin-declared visibility (read from the
+ * FastMCP `meta` under `tai42/hidden`; a tool that never declared it is not hidden).
+ * The tool_meta overlay's tri-state override is merged on top client-side; this read
+ * exposes only the declaration.
  */
-export const toolTagEntry = z.object({ name: z.string(), tags: z.array(z.string()) });
+export const toolTagEntry = z.object({
+  name: z.string(),
+  tags: z.array(z.string()),
+  hidden: z.boolean(),
+});
 export const toolTags = z.array(toolTagEntry);
 export type ToolTagEntry = z.infer<typeof toolTagEntry>;
 
@@ -109,9 +116,9 @@ export const presetExtensions = z.array(z.array(presetExtensionElement));
  * One preset as `GET /api/presets` returns it. Every preset is versioned, so
  * `active_version` is always an int; `conflicted` marks a QUARANTINED row (its
  * name collided with a foreign tool at boot — delete-only). `extensions` are the
- * ACTIVE version's extension combos, `tags` the preset's categorization labels
- * (distinct from a version's generic label list), and `output_schema` the
- * optional author-set output JSON Schema. A drift throws `ApiSchemaError`;
+ * ACTIVE version's extension combos and `output_schema` the optional author-set
+ * output JSON Schema. Categorization tags live in the tool_meta overlay
+ * (`GET /api/tool-meta`), never on the record. A drift throws `ApiSchemaError`;
  * nothing is coerced.
  */
 export const presetRecord = z.object({
@@ -119,7 +126,6 @@ export const presetRecord = z.object({
   base_tool: z.string(),
   description: z.string(),
   active_version: z.number(),
-  tags: z.array(z.string()),
   extensions: presetExtensions,
   output_schema: z.record(z.string(), z.unknown()).nullable(),
   conflicted: z.boolean(),
@@ -144,7 +150,6 @@ export const presetBody = z.object({
   description: z.string(),
   fixed_kwargs: z.record(z.string(), z.unknown()),
   extensions: presetExtensions,
-  tags: z.array(z.string()),
   output_schema: z.record(z.string(), z.unknown()).nullable(),
 });
 export type PresetBody = z.infer<typeof presetBody>;
@@ -152,7 +157,8 @@ export type PresetBody = z.infer<typeof presetBody>;
 /**
  * One immutable version row (`GET /api/presets/{name}/versions[/{version}]`).
  * `is_current` flags the active version; `tags` here is the GENERIC per-version
- * label list (kind-agnostic), distinct from the categorization `body.tags`.
+ * label list (kind-agnostic) — the only preset tags that remain, distinct from the
+ * removed record-level categorization and from the tool_meta overlay.
  */
 export const presetVersion = z.object({
   version: z.number(),
@@ -215,6 +221,54 @@ export const presetVersionTags = z.object({
   tags: z.array(z.string()),
 });
 export type PresetVersionTags = z.infer<typeof presetVersionTags>;
+
+// -- tool_meta (the organizational overlay) ----------------------------------
+
+/**
+ * One folder in the tool-organization tree (`tool_folders`). `parent_id` is `null`
+ * for a root folder and otherwise the containing folder's `id`; nesting is endless
+ * via the parent chain. Ids are UUID strings. A drift throws `ApiSchemaError`.
+ */
+export const folderRecord = z.object({
+  id: z.string(),
+  name: z.string(),
+  parent_id: z.string().nullable(),
+});
+export type FolderRecord = z.infer<typeof folderRecord>;
+
+/**
+ * The organizational overlay for one tool, keyed by `tool_name`. `display_name`
+ * overrides the rendered label (`display_name ?? name`); `folder_id` places the tool
+ * in a folder (`null` = unfiled); `tags` is the user's editable categorization,
+ * merged with the tool's read-only native tags by the UI; `hidden` is TRI-STATE —
+ * `null` = defer to the plugin declaration, `true` = force hidden, `false` = force
+ * visible. A drift throws `ApiSchemaError`.
+ */
+export const toolMetaRecord = z.object({
+  tool_name: z.string(),
+  display_name: z.string().nullable(),
+  folder_id: z.string().nullable(),
+  tags: z.array(z.string()),
+  hidden: z.boolean().nullable(),
+});
+export type ToolMetaRecord = z.infer<typeof toolMetaRecord>;
+
+/**
+ * `GET /api/tool-meta` — the whole overlay in one read: the flat folder tree plus
+ * every per-tool row. The UI builds the tree and merges the rows against the live
+ * tool list client-side. A drift throws `ApiSchemaError`.
+ */
+export const toolMetaOverlay = z.object({
+  folders: z.array(folderRecord),
+  meta: z.array(toolMetaRecord),
+});
+export type ToolMetaOverlay = z.infer<typeof toolMetaOverlay>;
+
+/** `DELETE /api/tool-meta/tools/{tool_name}` — the dropped overlay row (idempotent). */
+export const toolMetaDeleted = z.object({ tool_name: z.string(), deleted: z.literal(true) });
+
+/** `DELETE /api/tool-meta/folders/{folder_id}` — the removed empty folder. */
+export const folderDeleted = z.object({ folder_id: z.string(), deleted: z.literal(true) });
 
 // -- templates ---------------------------------------------------------------
 

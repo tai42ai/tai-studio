@@ -36,7 +36,6 @@ const parisPreset: PresetRecord = {
   base_tool: 'weather',
   description: '',
   active_version: 2,
-  tags: [],
   extensions: [['marka']],
   output_schema: null,
   conflicted: false,
@@ -48,13 +47,15 @@ function makeClient(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     listTools: vi.fn().mockResolvedValue(['shout', 'paris_weather']),
     listPresets: vi.fn().mockResolvedValue([parisPreset]),
+    listToolTags: vi.fn().mockResolvedValue([]),
+    listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
     listExtensions: vi.fn().mockResolvedValue(CATALOG),
     getToolExtensions: vi.fn().mockResolvedValue({ combos: [['marka']], available: CATALOG }),
     setToolExtensions: vi.fn().mockResolvedValue({ status: 'ok', env_keys: 0 }),
     getPreset: vi.fn().mockResolvedValue({ ...parisPreset, fixed_kwargs: {} }),
     savePresetVersion: vi.fn().mockResolvedValue({
       version: 3,
-      body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [], tags: [] },
+      body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [] },
       tags: [],
       created_at: 'now',
       is_current: true,
@@ -262,7 +263,7 @@ describe('ApplyExtensionsPanel — origin branch', () => {
     const getPreset = vi.fn().mockResolvedValue({ ...parisPreset, fixed_kwargs: {} });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
-      body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [], tags: [] },
+      body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [] },
       tags: [],
       created_at: 'now',
       is_current: true,
@@ -326,7 +327,6 @@ describe('ApplyExtensionsPanel — origin branch', () => {
       base_tool: 'weather',
       description: '',
       active_version: 2,
-      tags: [],
       extensions: [['marka']],
       output_schema: null,
       conflicted: true,
@@ -367,7 +367,7 @@ describe('ApplyExtensionsPanel — config-bearing combos', () => {
     const catalog: Extension[] = [...CATALOG, { name: 'output_schema', kind: 'wrapper' }];
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
-      body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [], tags: [] },
+      body: { base_tool: 'weather', description: '', fixed_kwargs: {}, extensions: [] },
       tags: [],
       created_at: 'now',
       is_current: true,
@@ -434,5 +434,43 @@ describe('ApplyExtensionsPanel — combos load states', () => {
     await selectTool(user, 'shout');
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(/did not match its expected schema/);
+  });
+});
+
+describe('ApplyExtensionsPanel — hidden-tool exclusion', () => {
+  it('excludes an EFFECTIVE-hidden tool, keeping an overlay-`false` unhidden one', async () => {
+    // `secret` is plugin-hidden with no overlay opinion → excluded. `open_tool` is
+    // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
+    const user = userEvent.setup();
+    renderWithProviders(<ApplyExtensionsPanel />, {
+      client: makeClient({
+        listTools: vi.fn().mockResolvedValue(['shout', 'secret', 'open_tool']),
+        listPresets: vi.fn().mockResolvedValue([]),
+        listToolTags: vi.fn().mockResolvedValue([
+          { name: 'shout', tags: [], hidden: false },
+          { name: 'secret', tags: [], hidden: true },
+          { name: 'open_tool', tags: [], hidden: true },
+        ]),
+        listToolMeta: vi.fn().mockResolvedValue({
+          folders: [],
+          meta: [
+            {
+              tool_name: 'open_tool',
+              display_name: null,
+              folder_id: null,
+              tags: [],
+              hidden: false,
+            },
+          ],
+        }),
+      }),
+    });
+
+    await user.click(await screen.findByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'shout' })).toBeInTheDocument();
+    // The overlay UNHIDES the plugin-hidden `open_tool`, so it IS offered.
+    expect(screen.getByRole('option', { name: 'open_tool' })).toBeInTheDocument();
+    // The effective-hidden `secret` is absent from the picker.
+    expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
   });
 });

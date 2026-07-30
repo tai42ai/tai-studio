@@ -5,13 +5,19 @@
  * `?preset=` selection.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { toolsListKey } from '@tai42/studio-sdk';
 
 import { PresetDetail } from './PresetDetail';
-import { presetDetailKey, presetRefereesKey, presetVersionsKey, presetsListKey } from './keys';
+import {
+  presetDetailKey,
+  presetRefereesKey,
+  presetToolMetaKey,
+  presetVersionsKey,
+  presetsListKey,
+} from './keys';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 const detail = {
@@ -19,13 +25,15 @@ const detail = {
   base_tool: 'weather',
   description: 'Paris weather',
   active_version: 7,
-  tags: ['geo'],
   extensions: [],
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
   fixed_kwargs: { city: 'Paris' },
 };
+
+/** An empty overlay map — the default for tests that don't exercise overlay details. */
+const emptyMeta = { folders: [], meta: [] };
 
 const versions = [
   {
@@ -49,6 +57,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
@@ -59,11 +68,92 @@ describe('PresetDetail', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
   });
 
+  it('renders the overlay display name + tags from listToolMeta', async () => {
+    const client: StubApiClient = {
+      getPreset: vi.fn().mockResolvedValue(detail),
+      listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          {
+            tool_name: 'paris_weather',
+            display_name: 'Paris Weather',
+            folder_id: null,
+            tags: ['geo'],
+            hidden: null,
+          },
+        ],
+      }),
+    };
+    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+
+    // Both come from the overlay, not the record (the record has neither field now).
+    expect(await screen.findByText('Paris Weather')).toBeInTheDocument();
+    expect(screen.getByText('geo')).toBeInTheDocument();
+  });
+
+  it('edits the overlay display name + tags via the two-field merge-patch', async () => {
+    const user = userEvent.setup();
+    const upsertToolMeta = vi.fn().mockResolvedValue({
+      tool_name: 'paris_weather',
+      display_name: 'Paris Weather',
+      folder_id: null,
+      tags: ['geo', 'eu'],
+      hidden: null,
+    });
+    const client: StubApiClient = {
+      getPreset: vi.fn().mockResolvedValue(detail),
+      listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          {
+            tool_name: 'paris_weather',
+            display_name: null,
+            folder_id: null,
+            tags: ['geo'],
+            hidden: null,
+          },
+        ],
+      }),
+      upsertToolMeta,
+    };
+    const { queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+    // Edit stays disabled until the overlay read lands (its tags seed the editor).
+    const edit = await screen.findByRole('button', { name: 'Edit details for paris_weather' });
+    await waitFor(() => {
+      expect(edit).toBeEnabled();
+    });
+    await user.click(edit);
+
+    const nameInput = screen.getByLabelText('Display name');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Paris Weather');
+    // The tags input carries an explicit aria-label inside its Field, so target the
+    // textbox by role to disambiguate it from the Field's own "Tags" group label.
+    await user.type(screen.getByRole('textbox', { name: 'Tags' }), 'eu');
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    await user.click(screen.getByRole('button', { name: 'Save details' }));
+
+    // The write is a merge-patch of ONLY display_name + tags (folder/hidden untouched).
+    expect(upsertToolMeta).toHaveBeenCalledWith('paris_weather', {
+      display_name: 'Paris Weather',
+      tags: ['geo', 'eu'],
+    });
+    // The overlay map behind the detail grid + list is refetched on success.
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: presetToolMetaKey });
+    });
+  });
+
   it('offers New version + version history and the soft-delete copy on a normal record', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
@@ -84,6 +174,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(withSchema),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
@@ -96,6 +187,7 @@ describe('PresetDetail', () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue({ ...detail, conflicted: true }),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
@@ -114,6 +206,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     const { unmount } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
     expect(
@@ -123,6 +216,7 @@ describe('PresetDetail', () => {
 
     const conflictedClient: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue({ ...detail, conflicted: true }),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client: conflictedClient });
     await screen.findByText(/not\s+registered/i);
@@ -136,6 +230,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       renamePreset,
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
@@ -157,6 +252,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       renamePreset,
     };
     const { navigate, queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, {
@@ -188,6 +284,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       renamePreset: vi.fn().mockRejectedValue(new Error(serverMessage)),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
@@ -207,6 +304,7 @@ describe('PresetDetail', () => {
         conflicted: true,
         conflicted_reason: 'name shadowed by manifest tool weather at boot',
       }),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
@@ -221,6 +319,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       getPresetReferees: vi
         .fn()
         .mockResolvedValue({ name: 'paris_weather', referees: ['a_ref', 'z_ref'] }),
@@ -252,6 +351,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       getPresetReferees,
       renamePreset,
     };
@@ -277,6 +377,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       getPresetReferees: vi.fn().mockRejectedValue(new Error('referees door 503')),
       renamePreset,
     };
@@ -299,6 +400,7 @@ describe('PresetDetail', () => {
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
       deletePreset,
     };
     const { navigate, queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, {
