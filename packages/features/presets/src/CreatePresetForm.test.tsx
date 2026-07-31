@@ -84,6 +84,14 @@ describe('CreatePresetForm', () => {
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
+    // The create runs a CHAIN: createPreset → overlay upsertToolMeta → onSuccess
+    // (invalidate ×2, then navigate). Synchronize on the navigate the chain ENDS on,
+    // so every earlier step is already recorded when read — asserting on the middle
+    // (upsertToolMeta) instead lets the tail (navigate/invalidate) race behind it.
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+    });
+
     expect(createPreset).toHaveBeenCalledTimes(1);
     // An exact-object match: `extensions` is OMITTED when there are no combos, and
     // NO `tags` key rides the create body — tags are the overlay's, not the record's.
@@ -94,12 +102,8 @@ describe('CreatePresetForm', () => {
       fixed_kwargs: {},
     });
     // The entered tags land in the tool_meta overlay, keyed by the new preset's tool
-    // name, AFTER the create returns.
-    await waitFor(() => {
-      expect(upsertToolMeta).toHaveBeenCalledWith('paris_weather', { tags: ['geo'] });
-    });
-    // On success the detail navigates to the new preset.
-    expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+    // name, AFTER the create returns and BEFORE the success navigate.
+    expect(upsertToolMeta).toHaveBeenCalledWith('paris_weather', { tags: ['geo'] });
     // …and the presets list + tools master list are invalidated (a create binds a
     // live tool the tools page shows).
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetsListKey });
@@ -110,16 +114,20 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup();
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi.fn();
-    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+    const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({ createPreset, upsertToolMeta }),
     });
 
     await fillCreatable(user);
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
+    // Synchronize on the navigate the whole create chain ENDS on, so the negative
+    // below proves the overlay is never written across the FULL flow — not merely
+    // that it has not been written YET, mid-chain.
     await waitFor(() => {
-      expect(createPreset).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
     });
+    expect(createPreset).toHaveBeenCalledTimes(1);
     // An empty overlay merge-patch is rejected by the API, so it is never sent.
     expect(upsertToolMeta).not.toHaveBeenCalled();
   });
