@@ -69,3 +69,27 @@ jobs:
           set -euo pipefail
           pnpm --filter @tai42/studio-sdk publish --access public --provenance --no-git-checks
           pnpm --filter @tai42/api-client publish --access public --provenance --no-git-checks
+
+  # Image refresh hook: a published Studio release pokes tai-distribution, whose
+  # refresh-studio-ref pipeline pins docker/STUDIO_REF to this commit and
+  # rebuilds the platform image. Fork runs carry no token and skip.
+  notify-distribution:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DIST_DISPATCH_TOKEN: ${{ secrets.TAI_DIST_DISPATCH_TOKEN }}
+    steps:
+      - name: Trigger the tai-distribution studio-ref refresh
+        if: env.DIST_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.DIST_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai-distribution
+          event-type: studio-release
+          client-payload: |
+            {
+              "sha": "${{ github.sha }}",
+              "tag": "${{ github.ref_name }}"
+            }
