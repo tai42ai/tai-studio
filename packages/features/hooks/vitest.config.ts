@@ -19,8 +19,9 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
-    // Page-level register cases are slow; the default flakes on a loaded box.
-    testTimeout: 20_000,
+    // The register/create-flow tests drive full typed forms through userEvent and
+    // run 2-5s wall on shared CI runners; the 5s default leaves no headroom.
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
