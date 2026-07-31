@@ -156,6 +156,99 @@ describe('useInteractionsStream', () => {
     expect(result.current.interactions[0]?.interaction_id).toBe('a');
   });
 
+  it('keeps an answered interaction across a reconnect whose pending backlog omits it', async () => {
+    // conn1: a is added then answered (client-terminal). conn2's backlog is the
+    // PENDING set only, which never carries an answered item — so the reconcile
+    // must NOT drop a: an answered card survives reconnect and ages out only
+    // client-side (never re-vanished by a pending-only backlog).
+    const { result } = renderStream(
+      scriptedClient([add('a'), answered('a'), backlogDone], [backlogDone]),
+    );
+    await flush();
+    expect(result.current.interactions).toHaveLength(1);
+    expect(result.current.interactions[0]?.answered).toBe(true);
+
+    // Advance the exact reconnect delay so connection 2's empty backlog replays.
+    await flush(750);
+    expect(result.current.interactions).toHaveLength(1);
+    expect(result.current.interactions[0]?.interaction_id).toBe('a');
+    expect(result.current.interactions[0]?.answered).toBe(true);
+  });
+
+  it('reconciles a reconnect backlog by pending state: drops a pending id, keeps an answered one', async () => {
+    // conn1 carries a (answered) + b and c (pending). conn2's pending backlog
+    // replays only c — b (removed while disconnected) is reconciled away, c is
+    // kept, and a (answered) is exempt from reconciliation, never dropped for
+    // being absent from the pending-only backlog.
+    const { result } = renderStream(
+      scriptedClient(
+        [add('a'), answered('a'), add('b'), add('c'), backlogDone],
+        [add('c'), backlogDone],
+      ),
+    );
+    await flush();
+    expect(result.current.interactions.map((i) => i.interaction_id).sort()).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
+
+    // Advance the exact reconnect delay so connection 2's backlog replays.
+    await flush(750);
+    expect(result.current.interactions.map((i) => i.interaction_id).sort()).toEqual(['a', 'c']);
+    expect(result.current.interactions.find((i) => i.interaction_id === 'a')?.answered).toBe(true);
+  });
+
+  it('ages an answered card out after the retention window', async () => {
+    // The server sends no removal for an answered card, so the client ages it out.
+    // a is answered at t0; b arrives only AFTER the 10-minute retention window, and
+    // its frame is the lazy tick on which the now-aged a is swept away.
+    async function* laterTick(): AsyncGenerator<SseFrame> {
+      yield add('a');
+      yield answered('a');
+      yield backlogDone;
+      // Suspend the OPEN connection past the retention window (no reconnect timer
+      // is pending while the generator is mid-await), then emit the sweeping tick.
+      await new Promise<void>((resolve) => setTimeout(resolve, 10 * 60 * 1000 + 1000));
+      yield add('b');
+      yield backlogDone;
+    }
+    const stream = vi.fn<(signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame>>>();
+    stream.mockResolvedValueOnce(laterTick());
+    stream.mockImplementation(() => Promise.resolve(iterate([])));
+    const client = { streamInteractions: stream } as unknown as ApiClient;
+    const { result } = renderStream(client);
+
+    await flush();
+    expect(result.current.interactions.map((i) => i.interaction_id)).toEqual(['a']);
+    expect(result.current.interactions[0]?.answered).toBe(true);
+
+    // Advance past the retention window; the generator then yields b, whose tick
+    // sweeps the aged-out a.
+    await flush(10 * 60 * 1000 + 1000);
+    expect(result.current.interactions.map((i) => i.interaction_id)).toEqual(['b']);
+    expect(result.current.interactions[0]?.answered).toBe(false);
+  });
+
+  it('caps retained answered items at the newest ANSWERED_CAP, evicting the oldest', async () => {
+    // 201 interactions are added and answered on one connection (arrival order is
+    // age order). The hard cap (200) keeps only the newest 200: the earliest is
+    // evicted as the flood backstop, the latest is kept.
+    const frames: SseFrame[] = [];
+    for (let i = 0; i <= 200; i += 1) {
+      const id = `i${String(i)}`;
+      frames.push(add(id), answered(id));
+    }
+    frames.push(backlogDone);
+    const { result } = renderStream(scriptedClient(frames));
+    await flush();
+
+    expect(result.current.interactions).toHaveLength(200);
+    const ids = new Set(result.current.interactions.map((it) => it.interaction_id));
+    expect(ids.has('i0')).toBe(false); // oldest-answered evicted by the cap
+    expect(ids.has('i200')).toBe(true); // newest-answered kept
+  });
+
   it('clears a transient malformed-frame error on the next good frame', async () => {
     const { result } = renderStream(
       scriptedClient([{ event: 'interaction.add', data: 'not json' }, add('a'), backlogDone]),

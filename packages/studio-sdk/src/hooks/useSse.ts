@@ -6,10 +6,23 @@
  * `interaction.answered` / `interaction.removed` / `interaction.backlog_done`.
  * The `add` frame (backlog on connect + live tail) carries the full question;
  * `answered` / `removed` frames carry only ids. On (re)connect the server
- * replays the current pending set as the backlog; this hook treats that backlog
- * as authoritative — an entry not re-seen by `interaction.backlog_done` is
- * dropped, so an interaction removed while the client was disconnected does not
- * linger. `add` frames are at-least-once, so entries are de-duplicated by
+ * replays the current PENDING set as the backlog (answered items are NOT in it);
+ * this hook treats that backlog as authoritative for the PENDING set only — a
+ * still-pending entry not re-seen by `interaction.backlog_done` is dropped
+ * (removed while the client was disconnected), while a locally-ANSWERED entry is
+ * exempt from that reconcile so it survives reconnect (reconcile-deleting it
+ * would vanish an answered card on the next reconnect, since the pending-only
+ * backlog never replays it).
+ *
+ * ANSWERED-CARD LIFECYCLE: the server emits no removal for an answered card —
+ * only `interaction.answered`, never `interaction.removed` for it — so answered
+ * cards would otherwise pile up unbounded in the always-mounted badge/inbox. This
+ * hook AGES them out itself: an answered card is dropped once it is older than
+ * `ANSWERED_RETENTION_MS`, with `ANSWERED_CAP` as a hard newest-N flood backstop.
+ * Both are swept lazily on frame/reconnect ticks (the stream carries no idle
+ * heartbeat frame), never a per-item timer.
+ *
+ * `add` frames are at-least-once, so entries are de-duplicated by
  * `interaction_id`, and a redelivered `add` preserves the client `answered` flag.
  *
  * The `Interaction` type is imported type-only (no runtime dep on api-client);
@@ -25,6 +38,14 @@ import { useOnUnauthorized } from './useUnauthorized';
 
 /** A live interaction plus the client-maintained `answered` flag. */
 export type StreamInteraction = Interaction & { readonly answered: boolean };
+
+/**
+ * The internal map value: a `StreamInteraction` plus the wall-clock ms of its
+ * answered frame (`null` while pending), read only by the client-side aging
+ * sweep. `answeredAt` is stripped before the interaction is published — it is not
+ * part of the public `StreamInteraction` contract.
+ */
+type TrackedInteraction = StreamInteraction & { readonly answeredAt: number | null };
 
 export interface InteractionsStreamState {
   readonly interactions: StreamInteraction[];
@@ -42,6 +63,16 @@ export interface InteractionsStreamState {
 // clients apart rather than retrying in lockstep.
 const RECONNECT_BASE_MS = 1500;
 const RECONNECT_CAP_MS = 30000;
+
+// The server emits no removal for an answered card — only `interaction.answered`,
+// never `interaction.removed` for it — so answered cards would otherwise pile up
+// unbounded in the always-mounted badge/inbox. The client ages them out: drop an
+// answered card ANSWERED_RETENTION_MS after its answered frame (a "recently
+// answered" window), keeping at most ANSWERED_CAP as a hard flood backstop. Swept
+// lazily on frame/reconnect ticks (the stream carries no idle heartbeat frame),
+// never a per-item timer.
+const ANSWERED_RETENTION_MS = 10 * 60 * 1000;
+const ANSWERED_CAP = 200;
 
 // The wire `answer_format` values. Duplicated from the api-client enum by design:
 // the SDK is the leaf and must not import api-client at runtime. The `satisfies`
@@ -159,18 +190,48 @@ export function useInteractionsStream(): InteractionsStreamState {
   });
   // Source of truth: a dedupe map keyed by interaction_id, rebuilt into the
   // ordered array on every change.
-  const mapRef = useRef<Map<string, StreamInteraction>>(new Map());
+  const mapRef = useRef<Map<string, TrackedInteraction>>(new Map());
 
   useEffect(() => {
     const controller = new AbortController();
     const aborted = () => controller.signal.aborted;
 
+    // The published list carries the public shape only — the internal
+    // `answeredAt` aging stamp is stripped here.
+    const toPublicList = (): StreamInteraction[] =>
+      Array.from(mapRef.current.values(), ({ answeredAt: _answeredAt, ...rest }) => rest);
+
+    // Age answered cards out (the server sends no removal for them): drop any past
+    // the retention window, then — as a flood backstop — the oldest beyond the
+    // count cap. Pending items (`answeredAt === null`) are never touched. Called on
+    // every frame/reconnect tick so the always-mounted badge cannot grow unbounded.
+    const sweepAnswered = () => {
+      const now = Date.now();
+      const answered: { id: string; answeredAt: number }[] = [];
+      for (const entry of mapRef.current.values()) {
+        if (entry.answeredAt !== null) {
+          answered.push({ id: entry.interaction_id, answeredAt: entry.answeredAt });
+        }
+      }
+      for (const { id, answeredAt } of answered) {
+        if (now - answeredAt >= ANSWERED_RETENTION_MS) mapRef.current.delete(id);
+      }
+      const live = answered.filter(({ id }) => mapRef.current.has(id));
+      if (live.length > ANSWERED_CAP) {
+        live.sort((a, b) => a.answeredAt - b.answeredAt); // oldest first
+        for (const { id } of live.slice(0, live.length - ANSWERED_CAP)) {
+          mapRef.current.delete(id);
+        }
+      }
+    };
+
     // A successful data frame rebuilds the list and clears any transient
     // frame-parse error — one bad frame on a healthy stream must not stick.
     const publish = () => {
+      sweepAnswered();
       setState((prev) => ({
         ...prev,
-        interactions: Array.from(mapRef.current.values()),
+        interactions: toPublicList(),
         error: null,
       }));
     };
@@ -179,9 +240,10 @@ export function useInteractionsStream(): InteractionsStreamState {
       setState((prev) => ({ ...prev, error: new Error(`malformed interaction frame: ${event}`) }));
     };
 
-    // Per-connection reconcile state: the replayed backlog is authoritative, so
-    // ids not re-seen by `interaction.backlog_done` are dropped as
-    // removed-while-disconnected.
+    // Per-connection reconcile state: the replayed backlog is the PENDING set
+    // only, so a still-pending id not re-seen by `interaction.backlog_done` is
+    // dropped (removed while disconnected); a locally-answered id is exempt — it
+    // survives reconnect and is aged out client-side (see `sweepAnswered`).
     let reconciling = false;
     let seenInBacklog = new Set<string>();
     // Consecutive failed reconnect attempts. Reset only when a connection proves
@@ -197,17 +259,23 @@ export function useInteractionsStream(): InteractionsStreamState {
     const applyFrame = (event: string, data: string) => {
       if (event === 'interaction.backlog_done') {
         if (reconciling) {
-          for (const id of mapRef.current.keys()) {
-            if (!seenInBacklog.has(id)) mapRef.current.delete(id);
+          // The pending-only backlog is authoritative for pending items alone:
+          // drop a still-pending id it did not replay (removed while
+          // disconnected), but NEVER an answered id — that is terminal and the
+          // backlog never carries it, so reconcile-deleting it would vanish an
+          // answered card on every reconnect.
+          for (const [id, item] of mapRef.current) {
+            if (!seenInBacklog.has(id) && !item.answered) mapRef.current.delete(id);
           }
           reconciling = false;
         }
         // A completed backlog is proof the connection is healthy — clear the
         // reconnect backoff so the next drop reconnects promptly.
         reconnectAttempt = 0;
+        sweepAnswered();
         setState((prev) => ({
           ...prev,
-          interactions: Array.from(mapRef.current.values()),
+          interactions: toPublicList(),
           backlogLoaded: true,
         }));
         return;
@@ -230,9 +298,14 @@ export function useInteractionsStream(): InteractionsStreamState {
         }
         // The answered frame carries only ids — flip the existing item's flag,
         // keeping its question/format. An answered event for an item we never saw
-        // has nothing to show.
+        // has nothing to show. Stamp the answered time on the FIRST answered frame
+        // only; a redelivered answered keeps the original stamp so the retention
+        // window is not extended.
         const existing = mapRef.current.get(id);
-        if (existing) mapRef.current.set(id, { ...existing, answered: true });
+        if (existing) {
+          const answeredAt = existing.answered ? existing.answeredAt : Date.now();
+          mapRef.current.set(id, { ...existing, answered: true, answeredAt });
+        }
         publish();
         return;
       }
@@ -243,12 +316,15 @@ export function useInteractionsStream(): InteractionsStreamState {
         return;
       }
       if (reconciling) seenInBacklog.add(interaction.interaction_id);
-      // Dedupe by id; a redelivered add preserves the client answered flag so a
-      // prior `answered` is not undone by an at-least-once replay.
+      // Dedupe by id; a redelivered add preserves the client answered flag (and
+      // its aging stamp) so a prior `answered` is not undone by an at-least-once
+      // replay. A fresh (pending) add carries no stamp until its answered frame.
       const existing = mapRef.current.get(interaction.interaction_id);
+      const answered = existing?.answered ?? false;
       mapRef.current.set(interaction.interaction_id, {
         ...interaction,
-        answered: existing?.answered ?? false,
+        answered,
+        answeredAt: answered ? (existing?.answeredAt ?? null) : null,
       });
       publish();
     };
