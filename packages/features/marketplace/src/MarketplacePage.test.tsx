@@ -80,14 +80,16 @@ function pending<T>(): Promise<T> {
   return new Promise<T>(() => undefined);
 }
 
-/** Browse-only reads: the search page + the category facet's own list. */
+/** Browse-only reads: the search page + the category and kind facets' own lists. */
 function browseReads(
   page: MarketplaceSearchPage,
   categories: string[] = ['productivity'],
+  kinds: string[] = ['tool', 'agent'],
 ): StubApiClient {
   return {
     searchMarketplace: vi.fn().mockResolvedValue(page),
     listMarketplaceCategories: vi.fn().mockResolvedValue(categories),
+    listMarketplaceKinds: vi.fn().mockResolvedValue(kinds),
   };
 }
 
@@ -108,6 +110,7 @@ describe('MarketplacePage — browse tri-state', () => {
     const client: StubApiClient = {
       searchMarketplace: vi.fn(() => pending<MarketplaceSearchPage>()),
       listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<MarketplacePage search={{}} />, { client });
     expect(screen.queryByText('A box of tools.')).toBeNull();
@@ -117,6 +120,7 @@ describe('MarketplacePage — browse tri-state', () => {
     const client: StubApiClient = {
       searchMarketplace: vi.fn().mockRejectedValue(new Error('boom: search')),
       listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<MarketplacePage search={{}} />, { client });
     const alert = await screen.findByRole('alert');
@@ -144,11 +148,32 @@ describe('MarketplacePage — grouping', () => {
 
     expect(await screen.findByText('Generate a UUID.')).toBeInTheDocument();
     expect(screen.getByText('Summarize text.')).toBeInTheDocument();
-    // one listing → one card → one "View" link and one downloads stat
-    expect(screen.getAllByText('View')).toHaveLength(1);
+    // one listing → one card → one title link and one downloads stat
+    expect(screen.getAllByRole('link', { name: 'Toolbox' })).toHaveLength(1);
     expect(screen.getByText('1234 downloads')).toBeInTheDocument();
     // a single page whose page*page_size >= total shows no load-more
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
+  });
+
+  it('caps item rows per card and folds the rest into a detail link', async () => {
+    const rows = Array.from({ length: 6 }, (_, i) =>
+      row({
+        item: {
+          kind: 'tool',
+          name: `tool-${String(i)}`,
+          description: `Tool ${String(i)}.`,
+          tags: [],
+        },
+      }),
+    );
+    renderWithProviders(<MarketplacePage search={{}} />, { client: browseReads(pageOf(rows)) });
+
+    expect(await screen.findByText('Tool 0.')).toBeInTheDocument();
+    expect(screen.getByText('Tool 3.')).toBeInTheDocument();
+    // beyond the cap of 4, later items are not rendered as rows
+    expect(screen.queryByText('Tool 4.')).toBeNull();
+    // the overflow leads to the plugin detail via a "+N more" link
+    expect(screen.getByRole('link', { name: '+2 more' })).toBeInTheDocument();
   });
 });
 
@@ -171,12 +196,49 @@ describe('MarketplacePage — kind chips', () => {
     expect(navigate).toHaveBeenCalledWith('marketplace', {});
   });
 
-  it('renders a stale URL kind as an active chip', async () => {
+  it('renders a stale URL kind absent from the served vocabulary as an active chip', async () => {
+    // `agent` is not in the served list, yet the URL selects it: it is appended so
+    // it still renders as a clearable active chip.
     renderWithProviders(<MarketplacePage search={{ kind: 'agent' }} />, {
-      client: browseReads(pageOf([row()])),
+      client: browseReads(pageOf([row()]), ['productivity'], ['tool']),
     });
     const chip = await screen.findByRole('button', { name: 'agent' });
     expect(chip).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('renders the kind vocabulary served by the registry, not from loaded rows', async () => {
+    // The loaded page carries only a `tool` row, yet the server-served kinds with
+    // no rows are still offered — the chip set is the registry vocabulary, not
+    // row-derived, and keeps the served catalog order.
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(
+        pageOf([row()]),
+        ['productivity'],
+        ['webhook-verifier', 'tool', 'middleware'],
+      ),
+    });
+    await screen.findByText('A box of tools.');
+    expect(screen.getByRole('button', { name: 'middleware' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'webhook-verifier' })).toBeInTheDocument();
+    // The chips render in exactly the served catalog order (a deliberately
+    // non-alphabetical vocabulary), not sorted or row-derived.
+    const kindGroup = screen.getByRole('group', { name: 'Filter by kind' });
+    const chipOrder = within(kindGroup)
+      .getAllByRole('button')
+      .map((chip) => chip.textContent);
+    expect(chipOrder).toEqual(['webhook-verifier', 'tool', 'middleware']);
+  });
+
+  it('renders an inline error for the kind facet while results still render', async () => {
+    const client: StubApiClient = {
+      searchMarketplace: vi.fn().mockResolvedValue(pageOf([row()])),
+      listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockRejectedValue(new Error('boom: kinds')),
+    };
+    renderWithProviders(<MarketplacePage search={{}} />, { client });
+
+    expect(await screen.findByText('A box of tools.')).toBeInTheDocument();
+    expect(await screen.findByText('boom: kinds')).toBeInTheDocument();
   });
 });
 
@@ -233,24 +295,33 @@ describe('MarketplacePage — category and sort', () => {
     expect(await screen.findByText('boom: categories')).toBeInTheDocument();
   });
 
-  it('offers relevance only when a query string is set, and navigates with the sort', async () => {
+  it('names the default most-downloaded without a query and navigates a non-default sort', async () => {
     const user = userEvent.setup();
     const withoutQuery = renderWithProviders(<MarketplacePage search={{}} />, {
       client: browseReads(pageOf([row()])),
     });
     await screen.findByText('A box of tools.');
     await user.click(screen.getByRole('combobox', { name: 'Sort' }));
+    // No query → default IS downloads, so the default option says so and there is
+    // no separate downloads option and no relevance option.
+    expect(await screen.findByRole('option', { name: 'Most downloaded' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Relevance' })).toBeNull();
-    await user.click(await screen.findByRole('option', { name: 'Most downloads' }));
-    expect(withoutQuery.navigate).toHaveBeenCalledWith('marketplace', { sort: 'downloads' });
+    await user.click(screen.getByRole('option', { name: 'Recently updated' }));
+    expect(withoutQuery.navigate).toHaveBeenCalledWith('marketplace', { sort: 'updated' });
     withoutQuery.unmount();
 
-    renderWithProviders(<MarketplacePage search={{ q: 'uuid' }} />, {
+    const withQuery = renderWithProviders(<MarketplacePage search={{ q: 'uuid' }} />, {
       client: browseReads(pageOf([row()])),
     });
     await screen.findByText('A box of tools.');
     await user.click(screen.getByRole('combobox', { name: 'Sort' }));
+    // A query → default IS relevance; downloads is now an explicit choice.
     expect(await screen.findByRole('option', { name: 'Relevance' })).toBeInTheDocument();
+    await user.click(screen.getByRole('option', { name: 'Most downloaded' }));
+    expect(withQuery.navigate).toHaveBeenCalledWith('marketplace', {
+      q: 'uuid',
+      sort: 'downloads',
+    });
   });
 });
 
@@ -330,6 +401,7 @@ describe('MarketplacePage — load more', () => {
     const client: StubApiClient = {
       searchMarketplace,
       listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<MarketplacePage search={{}} />, { client });
 
@@ -337,7 +409,8 @@ describe('MarketplacePage — load more', () => {
     await user.click(loadMore);
 
     await waitFor(() => {
-      expect(screen.getAllByText('View')).toHaveLength(2);
+      // Two cards → two title links (each single-item card, so no "+N more").
+      expect(screen.getAllByRole('link')).toHaveLength(2);
     });
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
@@ -371,6 +444,7 @@ describe('MarketplacePage — load more', () => {
     const client: StubApiClient = {
       searchMarketplace,
       listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<MarketplacePage search={{}} />, { client });
 
@@ -407,6 +481,7 @@ describe('MarketplacePage — background refetch', () => {
     const client: StubApiClient = {
       searchMarketplace,
       listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockResolvedValue([]),
     };
     const { queryClient } = renderWithProviders(<MarketplacePage search={{}} />, { client });
 

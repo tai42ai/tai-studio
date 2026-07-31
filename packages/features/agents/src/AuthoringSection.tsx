@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ApiError } from '@tai42/api-client';
 import {
+  AppLink,
   Button,
   Card,
   EmptyState,
@@ -104,7 +105,16 @@ export function AuthoringSection({
         <Card>
           <EmptyState
             title="No authorable agent installed"
-            description="Add a generic tools-agent plugin to compose, version, and run authored agents here."
+            description="Install a generic tools-agent plugin from the marketplace to compose, version, and run authored agents here."
+            action={
+              <AppLink
+                to="marketplace"
+                search={{ kind: 'agent' }}
+                className="tai-btn tai-btn-secondary"
+              >
+                Browse marketplace
+              </AppLink>
+            }
           />
         </Card>
       </section>

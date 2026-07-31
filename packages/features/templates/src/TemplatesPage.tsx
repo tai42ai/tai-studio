@@ -25,7 +25,7 @@ import {
 
 import { TemplateDetail } from './TemplateDetail';
 import { UploadTemplateForm } from './UploadTemplateForm';
-import { templatesListKey } from './keys';
+import { storageInfoKey, templatesListKey } from './keys';
 
 function TemplateList({ selected }: { selected: string | undefined }): ReactNode {
   const api = useApi();
@@ -62,7 +62,10 @@ function TemplateList({ selected }: { selected: string | undefined }): ReactNode
           color: isActive ? 'var(--tai-color-accent-on-tint)' : 'var(--tai-color-text)',
           background: isActive ? 'var(--tai-color-accent-tint)' : 'transparent',
           textDecoration: 'none',
-          wordBreak: 'break-all',
+          // The name is one token: keep it on a single line so it never breaks mid-word.
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
         };
         return (
           <li key={name}>
@@ -86,8 +89,18 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
   const queryClient = useQueryClient();
   const selected = search.template;
   const { isSinglePane } = useBreakpoint();
-  // Below 1024 the split collapses to one pane; the detail shows when a template
-  // is selected, otherwise the list.
+  // Templates are stored through a storage-provider plugin; with none installed the
+  // template doors 500. Gate the surface on the same storage-presence signal the
+  // storage page reads (`present: false` is a 200, not an error), so a missing
+  // provider shows a pointer to the marketplace instead of a loud failure. A real
+  // storage-info failure stays loud below.
+  const storage = useQuery({
+    queryKey: storageInfoKey,
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
+  const storageReady = storage.data?.present === true;
+  // `list` shows the list full width; `detail` shows the split. Below 1024 it
+  // collapses to the one pane the selection names.
   const pane = selected !== undefined ? 'detail' : 'list';
 
   // FOCUS MANAGEMENT (WCAG 2.4.3). Single-pane, selecting a row hides the list pane
@@ -149,50 +162,74 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
         title="Templates"
         eyebrow="Capabilities"
         actions={
-          <Button
-            onClick={() => {
-              clearCache.mutate();
-            }}
-            disabled={clearCache.isPending}
-          >
-            {clearCache.isPending ? <Spinner label="Clearing cache" /> : null}
-            Clear cache
-          </Button>
+          storageReady ? (
+            <Button
+              onClick={() => {
+                clearCache.mutate();
+              }}
+              disabled={clearCache.isPending}
+            >
+              {clearCache.isPending ? <Spinner label="Clearing cache" /> : null}
+              Clear cache
+            </Button>
+          ) : undefined
         }
       />
 
       {clearCache.isError ? <ErrorState message={errorMessage(clearCache.error)} /> : null}
 
-      <div className="tai-split" data-pane={isSinglePane ? pane : undefined}>
-        <div className="tai-split-list" ref={listRef}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-            <Card>
-              <h2 className="tai-card-title">All templates</h2>
-              <TemplateList selected={selected} />
-            </Card>
-            <UploadTemplateForm />
+      {storage.isPending ? (
+        <Skeleton height={96} />
+      ) : storage.isError ? (
+        <ErrorState message={errorMessage(storage.error)} onRetry={() => void storage.refetch()} />
+      ) : !storage.data.present ? (
+        <Card>
+          <EmptyState
+            title="Templates need a storage-provider plugin"
+            description="Templates are stored through a storage-provider plugin. Install one from the marketplace to upload and render templates here."
+            action={
+              <AppLink
+                to="marketplace"
+                search={{ kind: 'storage' }}
+                className="tai-btn tai-btn-secondary"
+              >
+                Browse marketplace
+              </AppLink>
+            }
+          />
+        </Card>
+      ) : (
+        <div className="tai-split" data-pane={pane}>
+          <div className="tai-split-list" ref={listRef}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
+              <Card>
+                <h2 className="tai-card-title">All templates</h2>
+                <TemplateList selected={selected} />
+              </Card>
+              <UploadTemplateForm />
+            </div>
+          </div>
+
+          <div className="tai-split-detail">
+            {isSinglePane && selected !== undefined ? (
+              <AppLink to="templates" search={{}} className="tai-btn tai-btn-ghost">
+                <ArrowLeftIcon />
+                Back
+              </AppLink>
+            ) : null}
+            {selected !== undefined ? (
+              <TemplateDetail templateId={selected} headingRef={setDetailHeading} />
+            ) : (
+              <Card>
+                <EmptyState
+                  title="No template selected"
+                  description="Choose a template from the list to view and render it."
+                />
+              </Card>
+            )}
           </div>
         </div>
-
-        <div className="tai-split-detail">
-          {isSinglePane && selected !== undefined ? (
-            <AppLink to="templates" search={{}} className="tai-btn tai-btn-ghost">
-              <ArrowLeftIcon />
-              Back
-            </AppLink>
-          ) : null}
-          {selected !== undefined ? (
-            <TemplateDetail templateId={selected} headingRef={setDetailHeading} />
-          ) : (
-            <Card>
-              <EmptyState
-                title="No template selected"
-                description="Choose a template from the list to view and render it."
-              />
-            </Card>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

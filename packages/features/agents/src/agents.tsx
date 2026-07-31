@@ -83,7 +83,16 @@ function AgentsList({ onRun }: { readonly onRun: (agent: AgentSummary) => void }
     return (
       <EmptyState
         title="No agents registered"
-        description="Agents declared in the manifest appear here, ready to run."
+        description="Agents come from installed agent plugins — install one from the marketplace to run it here."
+        action={
+          <AppLink
+            to="marketplace"
+            search={{ kind: 'agent' }}
+            className="tai-btn tai-btn-secondary"
+          >
+            Browse marketplace
+          </AppLink>
+        }
       />
     );
   }

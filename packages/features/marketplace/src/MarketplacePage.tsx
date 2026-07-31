@@ -31,12 +31,15 @@ import type { MarketplaceItem, MarketplaceSearchRow } from '@tai42/api-client';
 
 import { ListingIcon, listingTitle } from './display';
 import { activeTab, mergeSearch, searchParams, type MarketplaceSearch } from './filters';
-import { marketplaceCategoriesKey, marketplaceSearchKey } from './keys';
+import { marketplaceCategoriesKey, marketplaceKindsKey, marketplaceSearchKey } from './keys';
 import { InstalledTab } from './InstalledTab';
 import { PluginDetail } from './PluginDetail';
 
 /** The Select sentinel for the cleared / default option (empty item values are invalid). */
 const NONE = '__none__';
+
+/** Item rows shown per card before the rest fold into the plugin detail link. */
+const CARD_ITEM_CAP = 4;
 
 /**
  * A togglable facet chip. `.tai-chip` publishes the control's whole rendering —
@@ -101,14 +104,10 @@ function SearchBar({ search }: { readonly search: MarketplaceSearch }): ReactNod
   );
 }
 
-/** Distinct values in `values`, sorted, plus any `selected` value not already present. */
+/** Distinct values across `values` and `selected`, sorted alphabetically. */
 function vocabularyWith(values: readonly string[], selected: readonly string[]): string[] {
-  const set = new Set(values);
-  const vocab = [...set].sort((a, b) => a.localeCompare(b));
-  for (const value of selected) {
-    if (!set.has(value)) vocab.push(value);
-  }
-  return vocab;
+  const set = new Set([...values, ...selected]);
+  return [...set].sort((a, b) => a.localeCompare(b));
 }
 
 interface PluginGroup {
@@ -144,6 +143,8 @@ function PluginCard({
   const { row } = group;
   const title = listingTitle(row.display_name, row.name);
   const detailSearch = mergeSearch(search, { plugin: group.ref });
+  const shownItems = group.items.slice(0, CARD_ITEM_CAP);
+  const hiddenCount = group.items.length - shownItems.length;
   return (
     <Card interactive>
       <div style={{ display: 'flex', gap: 'var(--tai-space-3)', alignItems: 'flex-start' }}>
@@ -161,23 +162,56 @@ function PluginCard({
             <Badge>{row.pricing}</Badge>
           </div>
           <span className="tai-muted">{row.downloads} downloads</span>
+          {/* Each row stays one scannable line: a shrink-to-fit description that
+              ellipsizes rather than wrapping the card into paragraphs. */}
           <ul
             className="tai-stack tai-stack-2"
             style={{ listStyle: 'none', margin: 0, padding: 0 }}
           >
-            {group.items.map((item) => (
-              <li key={`${item.kind}/${item.name}`} className="tai-row">
+            {shownItems.map((item) => (
+              <li
+                key={`${item.kind}/${item.name}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--tai-space-2)',
+                  minWidth: 0,
+                }}
+              >
                 <Badge>{item.kind}</Badge>
-                <strong>{item.name}</strong>
-                <span className="tai-muted">{item.description}</span>
+                <strong
+                  style={{
+                    flex: '0 1 auto',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.name}
+                </strong>
+                <span
+                  className="tai-muted"
+                  style={{
+                    flex: '1 1 auto',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.description}
+                </span>
               </li>
             ))}
+            {hiddenCount > 0 ? (
+              <li>
+                <AppLink to="marketplace" search={detailSearch}>
+                  +{hiddenCount} more
+                </AppLink>
+              </li>
+            ) : null}
           </ul>
-          <div>
-            <AppLink to="marketplace" search={detailSearch}>
-              View
-            </AppLink>
-          </div>
         </div>
       </div>
     </Card>
@@ -228,25 +262,96 @@ function CategoryFacet({ search }: { readonly search: MarketplaceSearch }): Reac
   );
 }
 
-/** The sort facet. `relevance` is offered only when a query string is set. */
+/**
+ * The kind facet: its own query against the registry's controlled item-kind list,
+ * rendered as a chip row. The chips keep the served catalog order and stay put as
+ * result pages arrive (they render from the vocabulary, not the loaded rows). A
+ * stale URL kind outside the vocabulary is appended so it still shows as a
+ * clearable active chip.
+ */
+function KindFacet({ search }: { readonly search: MarketplaceSearch }): ReactNode {
+  const api = useApi();
+  const navigate = useAppNavigate();
+  const kindsQuery = useQuery({
+    queryKey: marketplaceKindsKey,
+    queryFn: ({ signal }) => api.listMarketplaceKinds(signal),
+  });
+
+  if (kindsQuery.isError) {
+    return (
+      <ErrorState
+        message={errorMessage(kindsQuery.error)}
+        onRetry={() => void kindsQuery.refetch()}
+      />
+    );
+  }
+
+  const selectedKind = search.kind;
+  const kinds = kindsQuery.data ?? [];
+  const kindVocab =
+    selectedKind !== undefined && !kinds.includes(selectedKind) ? [...kinds, selectedKind] : kinds;
+  if (kindVocab.length === 0) {
+    return null;
+  }
+
+  const toggleKind = (kind: string): void => {
+    navigate(
+      'marketplace',
+      mergeSearch(search, { kind: selectedKind === kind ? undefined : kind }),
+    );
+  };
+
+  return (
+    <div role="group" aria-label="Filter by kind" className="tai-row">
+      {kindVocab.map((kind) => (
+        <FacetChip
+          key={kind}
+          label={kind}
+          active={selectedKind === kind}
+          onToggle={() => {
+            toggleKind(kind);
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The sort facet. The default option (NONE) names the server's actual default —
+ * relevance when a query is set, most-downloaded otherwise — so the control never
+ * lies about the resting order. With a query, `downloads` is the one explicit way
+ * to force the download order over relevance; without a query it IS the default,
+ * so no separate option is offered.
+ */
 function SortFacet({ search }: { readonly search: MarketplaceSearch }): ReactNode {
   const navigate = useAppNavigate();
-  const options = [
-    { value: NONE, label: 'Default order' },
-    { value: 'downloads', label: 'Most downloads' },
-    { value: 'updated', label: 'Recently updated' },
-    { value: 'name', label: 'Name' },
-    ...(search.q ? [{ value: 'relevance', label: 'Relevance' }] : []),
-  ];
-  // A stale `sort=relevance` with no query shows as the default order (it is
-  // dropped from the request too), so the control never displays an unavailable
-  // option.
-  const displaySort = search.sort === 'relevance' && !search.q ? undefined : search.sort;
+  const hasQuery = Boolean(search.q);
+  const options = hasQuery
+    ? [
+        { value: NONE, label: 'Relevance' },
+        { value: 'downloads', label: 'Most downloaded' },
+        { value: 'updated', label: 'Recently updated' },
+        { value: 'name', label: 'Name' },
+      ]
+    : [
+        { value: NONE, label: 'Most downloaded' },
+        { value: 'updated', label: 'Recently updated' },
+        { value: 'name', label: 'Name' },
+      ];
+  // Only `updated`/`name` are non-default selections; every other state
+  // (unset, relevance, or downloads without a query) resolves to the default.
+  const displaySort =
+    search.sort === 'updated' || search.sort === 'name'
+      ? search.sort
+      : hasQuery && search.sort === 'downloads'
+        ? 'downloads'
+        : NONE;
   return (
     <Field label="Sort">
       <Select
         options={options}
-        value={displaySort ?? NONE}
+        value={displaySort}
         onValueChange={(value) => {
           navigate('marketplace', {
             ...mergeSearch(search, {
@@ -273,25 +378,14 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
   });
 
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const selectedKind = search.kind;
   const selectedTags = search.tags ?? [];
 
-  const kindVocab = vocabularyWith(
-    rows.map((row) => row.item.kind),
-    selectedKind !== undefined ? [selectedKind] : [],
-  );
   const tagVocab = vocabularyWith(
     rows.flatMap((row) => row.item.tags),
     selectedTags,
   );
   const selectedTagSet = new Set(selectedTags);
 
-  const toggleKind = (kind: string): void => {
-    navigate(
-      'marketplace',
-      mergeSearch(search, { kind: selectedKind === kind ? undefined : kind }),
-    );
-  };
   const toggleTag = (tag: string): void => {
     const next = selectedTagSet.has(tag)
       ? selectedTags.filter((value) => value !== tag)
@@ -310,20 +404,7 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
         <CategoryFacet search={search} />
       </div>
 
-      {kindVocab.length > 0 ? (
-        <div role="group" aria-label="Filter by kind" className="tai-row">
-          {kindVocab.map((kind) => (
-            <FacetChip
-              key={kind}
-              label={kind}
-              active={selectedKind === kind}
-              onToggle={() => {
-                toggleKind(kind);
-              }}
-            />
-          ))}
-        </div>
-      ) : null}
+      <KindFacet search={search} />
 
       {tagVocab.length > 0 ? (
         <div role="group" aria-label="Filter by tag" className="tai-row">

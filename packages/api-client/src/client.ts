@@ -952,6 +952,8 @@ export function createApiClient(config: ApiConfig) {
       ),
     listMarketplaceCategories: (signal?: AbortSignal) =>
       req('/api/marketplace/categories', s.marketplaceCategories, { signal }),
+    listMarketplaceKinds: (signal?: AbortSignal) =>
+      req('/api/marketplace/kinds', s.marketplaceKinds, { signal }),
     listInstalledMarketplacePlugins: (signal?: AbortSignal) =>
       req('/api/marketplace/installed', s.marketplaceInstalled, { signal }),
     installMarketplacePlugin: (body: MarketplaceInstallBody) =>

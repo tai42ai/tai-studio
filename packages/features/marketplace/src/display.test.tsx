@@ -5,7 +5,7 @@
  * image src).
  */
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { ListingIcon, listingTitle, monogramInitials } from './display';
 
@@ -45,6 +45,18 @@ describe('ListingIcon', () => {
     const img = container.querySelector('img');
     expect(img).not.toBeNull();
     expect(img).toHaveAttribute('src', 'https://cdn.example/icon.png');
+  });
+
+  it('falls back to the monogram when the image fails to load', () => {
+    const { container } = render(
+      <ListingIcon iconUrl="https://cdn.example/missing.png" title="Toolbox Pro" />,
+    );
+    const img = container.querySelector('img');
+    if (img === null) throw new Error('expected a thumbnail image');
+    fireEvent.error(img);
+    // the broken image is replaced by the monogram, never left as a broken glyph
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('TP')).toBeInTheDocument();
   });
 
   it('renders a monogram when the url is null', () => {

@@ -350,7 +350,12 @@ function ToolList({
     return (
       <EmptyState
         title="No tools available"
-        description="The skeleton has no registered tools to run."
+        description="Tools arrive as marketplace plugins — install one to run it here."
+        action={
+          <AppLink to="marketplace" search={{ kind: 'tool' }} className="tai-btn tai-btn-secondary">
+            Browse marketplace
+          </AppLink>
+        }
       />
     );
   }
@@ -540,7 +545,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
     isFullProjection(state.projection) ||
     state.projection.tools.includes(selected);
 
-  const pane = isSinglePane && selected !== undefined ? 'detail' : 'list';
+  const pane = selected !== undefined ? 'detail' : 'list';
   const showBack = isSinglePane && selected !== undefined;
 
   const clearSelection = (): void => {

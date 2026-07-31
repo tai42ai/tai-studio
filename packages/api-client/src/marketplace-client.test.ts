@@ -180,6 +180,14 @@ describe('marketplace client transport', () => {
     expect(out).toEqual(['productivity', 'utilities']);
   });
 
+  it('listMarketplaceKinds GETs /api/marketplace/kinds and parses the list', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: ['tool', 'agent'] }));
+    const out = await client.listMarketplaceKinds();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/marketplace/kinds');
+    expect(out).toEqual(['tool', 'agent']);
+  });
+
   it('listInstalledMarketplacePlugins GETs /api/marketplace/installed and parses installed + quarantined', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({

@@ -26,6 +26,7 @@ describe('ChannelsCard', () => {
 
     expect(await screen.findByText(/No delivery channels installed/)).toBeInTheDocument();
     expect(screen.queryByTestId('channels-list')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Browse marketplace' })).toBeInTheDocument();
   });
 
   it('surfaces a loud ErrorState when the catalog request rejects (never a blank card)', async () => {

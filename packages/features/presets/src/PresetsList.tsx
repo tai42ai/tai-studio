@@ -56,7 +56,10 @@ const linkStyle: CSSProperties = {
   color: 'var(--tai-color-accent)',
   textDecoration: 'none',
   fontFamily: 'var(--tai-font-mono)',
-  wordBreak: 'break-all',
+  // The name is one token: keep it on a single line so auto table layout gives the
+  // column its width rather than collapsing it to a character. The ScrollRegion
+  // scrolls a very long name; sibling sub-lines (display name, reason) still wrap.
+  whiteSpace: 'nowrap',
 };
 
 function PresetRow({

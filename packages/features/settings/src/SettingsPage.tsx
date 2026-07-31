@@ -48,7 +48,6 @@ import {
   Card,
   ErrorBoundary,
   ErrorState,
-  Page,
   PageHeader,
   Skeleton,
   Stack,
@@ -251,11 +250,9 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
   }
 
   return (
-    <Page>
-      <Stack>
-        <PageHeader eyebrow="Administration" title="Settings" id="settings-heading" />
-        {body}
-      </Stack>
-    </Page>
+    <Stack>
+      <PageHeader eyebrow="Administration" title="Settings" id="settings-heading" />
+      {body}
+    </Stack>
   );
 }

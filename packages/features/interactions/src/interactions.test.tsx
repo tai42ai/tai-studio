@@ -81,7 +81,14 @@ function renderInbox(
 } {
   const channel = makeChannel();
   const answer = answerInteraction ?? vi.fn().mockResolvedValue(undefined);
-  const client = stubClient({ channel, answerInteraction: answer });
+  // A populated channel catalog so the delivery-channels chrome renders badges, not
+  // its empty-state marketplace anchor — these tests scan the page for the interaction
+  // card's own anchor (the empty-state link is covered in ChannelsCard.test.tsx).
+  const client = stubClient({
+    channel,
+    answerInteraction: answer,
+    listChannels: vi.fn().mockResolvedValue({ channels: ['telegram'] }),
+  });
   const { container } = renderWithProviders(<InteractionsPage search={{}} />, {
     client,
     projection,

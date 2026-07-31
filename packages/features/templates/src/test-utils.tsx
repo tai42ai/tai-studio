@@ -32,8 +32,13 @@ export function renderWithProviders(
   // feeds back in) so a client-side selection change actually fires the focus effect.
   const navigate = navigateOverride ?? vi.fn();
   // The stub only implements the methods exercised by a given test; the cast
-  // asserts the shape the SDK context expects.
-  const apiClient = client as ApiClient;
+  // asserts the shape the SDK context expects. The templates surface gates on the
+  // storage-provider presence door, so a provider is present by default — a test
+  // for the no-provider gate overrides `getStorageInfo`.
+  const apiClient = {
+    getStorageInfo: vi.fn().mockResolvedValue({ present: true, provider: 'fs', module: 'fs.mod' }),
+    ...client,
+  } as ApiClient;
 
   const result = render(
     <QueryClientProvider client={queryClient}>

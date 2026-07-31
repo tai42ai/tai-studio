@@ -9,6 +9,7 @@ import {
   marketplaceAdvisoriesKey,
   marketplaceCategoriesKey,
   marketplaceInstalledKey,
+  marketplaceKindsKey,
   marketplacePluginKey,
   marketplaceSearchKey,
 } from './keys';
@@ -30,6 +31,7 @@ describe('marketplace query keys', () => {
   it('exposes the singleton keys', () => {
     expect(marketplaceInstalledKey).toEqual(['marketplace', 'installed']);
     expect(marketplaceCategoriesKey).toEqual(['marketplace', 'categories']);
+    expect(marketplaceKindsKey).toEqual(['marketplace', 'kinds']);
     expect(marketplaceAdvisoriesKey).toEqual(['marketplace', 'advisories']);
   });
 });

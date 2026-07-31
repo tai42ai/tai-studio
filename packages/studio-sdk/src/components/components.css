@@ -1979,13 +1979,22 @@
   }
 
   /* -- Master / detail ---------------------------------------------------------------
-     Two fluid panes side by side; below 1024 exactly ONE pane is on screen and
-     the consumer drives which through `data-pane`. */
+     `data-pane` drives the layout at every width: `list` gives the list the full
+     width with no empty detail pane; `detail` shows a balanced two-pane split.
+     Below 1024 exactly ONE pane is on screen. */
   .tai-split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(480px, 1.4fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: var(--tai-space-6);
     align-items: start;
+  }
+
+  .tai-split[data-pane='list'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tai-split[data-pane='list'] > .tai-split-detail {
+    display: none;
   }
 
   .tai-split-list,
@@ -2003,7 +2012,7 @@
   /* -- Responsive bands ---------------------------------------------------------------
      1024-1279 medium: the card grid drops to two columns. The sidebar keeps the
      width it has at every band above 1023, and `.tai-split` is already fluid —
-     its `minmax()` columns hold the detail pane at 480 px or wider. */
+     its `minmax()` columns split evenly when the detail pane shows. */
   @media (max-width: 1279px) {
     .tai-grid-cards {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2057,7 +2066,8 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .tai-split[data-pane='list'] > .tai-split-detail,
+    /* `data-pane='list'` hides the detail pane at every width above; here the
+       detail pane also claims the whole column, so `detail` hides the list. */
     .tai-split[data-pane='detail'] > .tai-split-list {
       display: none;
     }

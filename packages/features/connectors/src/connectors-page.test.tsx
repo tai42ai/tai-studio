@@ -31,9 +31,11 @@ describe('ConnectorsPage — list', () => {
     renderWithProviders(<ConnectorsPage search={{}} />, { client });
 
     await waitFor(() => {
-      expect(screen.getByText('No providers available')).toBeInTheDocument();
+      expect(screen.getByText('No connectors installed')).toBeInTheDocument();
     });
     expect(screen.getByText('No connections yet')).toBeInTheDocument();
+    // Both empty states point at the marketplace (one per section).
+    expect(screen.getAllByRole('link', { name: 'Browse marketplace' })).toHaveLength(2);
   });
 
   it('shows a loud error state when a list request fails', async () => {

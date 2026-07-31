@@ -7,7 +7,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { Badge, Card, ErrorState, Skeleton, useApi } from '@tai42/studio-sdk';
+import { AppLink, Badge, Card, ErrorState, Skeleton, useApi } from '@tai42/studio-sdk';
 
 import { channelsKey } from './keys';
 
@@ -43,7 +43,10 @@ export function ChannelsCard(): ReactNode {
   } else if (query.data.channels.length === 0) {
     body = (
       <span style={mutedStyle}>
-        No delivery channels installed — questions appear only in this inbox.
+        No delivery channels installed — questions appear only in this inbox.{' '}
+        <AppLink to="marketplace" search={{ kind: 'channel' }} className="tai-link">
+          Browse marketplace
+        </AppLink>
       </span>
     );
   } else {

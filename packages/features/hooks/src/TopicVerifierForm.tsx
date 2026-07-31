@@ -24,6 +24,7 @@
 import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AppLink,
   Button,
   Card,
   ErrorState,
@@ -186,7 +187,10 @@ export function TopicVerifierForm(): ReactNode {
             />
           ) : catalogEmpty ? (
             <p role="status" style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-              No webhook verifiers registered.
+              No webhook verifiers registered.{' '}
+              <AppLink to="marketplace" search={{ kind: 'webhook-verifier' }} className="tai-link">
+                Browse marketplace
+              </AppLink>
             </p>
           ) : (
             <Select

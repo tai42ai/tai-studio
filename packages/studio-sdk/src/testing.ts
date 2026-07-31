@@ -17,6 +17,44 @@ interface LiveResizeObserver {
 const liveResizeObservers = new Set<LiveResizeObserver>();
 
 /**
+ * An in-memory Web Storage, installed for both `localStorage` and
+ * `sessionStorage`. The platform storage is unreliable across the supported Node
+ * range: Node >= 24 defines a native experimental `globalThis.localStorage` that,
+ * without `--localstorage-file`, is a non-functional stub, and under Vitest's
+ * jsdom environment (`window === globalThis`) it shadows jsdom's own
+ * `localStorage`, leaving it `undefined`. Installing one class for the whole
+ * subsystem keeps `Storage.prototype` a single spy-able object shared by both
+ * stores, so `vi.spyOn(Storage.prototype, ...)` intercepts either.
+ */
+class MemoryStorage {
+  readonly #entries = new Map<string, string>();
+
+  get length(): number {
+    return this.#entries.size;
+  }
+
+  key(index: number): string | null {
+    return [...this.#entries.keys()][index] ?? null;
+  }
+
+  getItem(key: string): string | null {
+    return this.#entries.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.#entries.set(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.#entries.delete(key);
+  }
+
+  clear(): void {
+    this.#entries.clear();
+  }
+}
+
+/**
  * A full `ResizeObserverEntry` shape for `target`. Radix's `useSize` reads
  * `borderBoxSize[0].inlineSize`, so a `target`-only entry would throw there;
  * jsdom reports zero geometry, which is exactly what a real headless observer
@@ -208,6 +246,22 @@ export function installJsdomStubs(): void {
       });
     };
   }
+
+  // Web Storage: reinstall from one class so `localStorage`/`sessionStorage` are
+  // present and their methods share a single spy-able `Storage.prototype`,
+  // regardless of the running Node's native-storage behaviour (see MemoryStorage).
+  const storage = { value: MemoryStorage, configurable: true, writable: true };
+  Object.defineProperty(globalThis, 'Storage', storage);
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: new MemoryStorage(),
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(globalThis, 'sessionStorage', {
+    value: new MemoryStorage(),
+    configurable: true,
+    writable: true,
+  });
 }
 
 /**

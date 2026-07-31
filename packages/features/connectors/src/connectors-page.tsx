@@ -77,7 +77,21 @@ function ProvidersSection({
       />
     );
   } else if (query.data.length === 0) {
-    body = <EmptyState title="No providers available" description="No connectors are installed." />;
+    body = (
+      <EmptyState
+        title="No connectors installed"
+        description="Connectors arrive as marketplace plugins — install one to add a provider."
+        action={
+          <AppLink
+            to="marketplace"
+            search={{ kind: 'connector' }}
+            className="tai-btn tai-btn-secondary"
+          >
+            Browse marketplace
+          </AppLink>
+        }
+      />
+    );
   } else {
     body = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
@@ -134,6 +148,12 @@ function ConnectionsSection(): ReactNode {
     queryKey: CONNECTIONS_KEY,
     queryFn: ({ signal }) => api.listConnections(signal),
   });
+  // The empty copy branches on provider availability, so the section reads the same
+  // providers list the section above does (same key — one request, shared cache).
+  const providers = useQuery({
+    queryKey: PROVIDERS_KEY,
+    queryFn: ({ signal }) => api.listProviders(signal),
+  });
 
   let body: ReactNode;
   if (query.isPending) {
@@ -146,12 +166,27 @@ function ConnectionsSection(): ReactNode {
       />
     );
   } else if (query.data.items.length === 0) {
-    body = (
-      <EmptyState
-        title="No connections yet"
-        description="Connect a provider above to get started."
-      />
-    );
+    body =
+      providers.data?.length === 0 ? (
+        <EmptyState
+          title="No connections yet"
+          description="Install a connector plugin from the marketplace, then connect it here."
+          action={
+            <AppLink
+              to="marketplace"
+              search={{ kind: 'connector' }}
+              className="tai-btn tai-btn-secondary"
+            >
+              Browse marketplace
+            </AppLink>
+          }
+        />
+      ) : (
+        <EmptyState
+          title="No connections yet"
+          description="Connect a provider above to get started."
+        />
+      );
   } else {
     body = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>

@@ -12,3 +12,7 @@ export const templatesListKey = ['templates'] as const;
 export function templateDetailKey(templateId: string): readonly ['template', string] {
   return ['template', templateId];
 }
+
+/** Key for the storage-provider presence gate (templates are stored through it).
+ *  Same tuple the storage page uses, so both share one request. */
+export const storageInfoKey = ['storage', 'info'] as const;

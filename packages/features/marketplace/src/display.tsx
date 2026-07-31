@@ -4,7 +4,7 @@
  * beside it — a rounded thumbnail when the registry serves a safe http(s)
  * `icon_url`, otherwise a generated monogram badge from the title's initials.
  */
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { isSafeHttpUrl } from '@tai42/studio-sdk';
 
 /** The title to show for a listing: its display name, or its name titleized. */
@@ -54,8 +54,24 @@ export function ListingIcon({
   readonly title: string;
   readonly size?: number;
 }): ReactNode {
-  if (iconUrl !== null && isSafeHttpUrl(iconUrl)) {
-    return <img src={iconUrl} alt="" width={size} height={size} style={boxStyle(size)} />;
+  // The URL that failed is remembered (not a bare flag) so a listing that later
+  // serves a different icon gets a fresh attempt instead of the old failure.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (iconUrl !== null && isSafeHttpUrl(iconUrl) && iconUrl !== failedSrc) {
+    // A safe URL can still 404, expire, or be blocked; `onError` falls back to
+    // the monogram so a broken image never paints the browser's broken glyph.
+    return (
+      <img
+        src={iconUrl}
+        alt=""
+        width={size}
+        height={size}
+        style={boxStyle(size)}
+        onError={() => {
+          setFailedSrc(iconUrl);
+        }}
+      />
+    );
   }
   // A branded monogram tile: the accent tint ground and its on-tint ink — the
   // same pair every accent surface paints with — so the fallback reads as part

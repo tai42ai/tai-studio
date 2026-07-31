@@ -157,8 +157,6 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the solid warning fill, published so a chart legend or a status swatch draws `--tai-color-warn-fill` with the `on-fill` ink instead of inventing its own pair',
   'tai-input-mono':
     'the mono variant of `.tai-input`, declared in the same rule as the rendered `.tai-textarea-mono` so a single-line identifier field matches the editor',
-  'tai-link':
-    'the design system inline link, and a member of the shared focus ring; prose this Studio does not author carries links of its own',
 };
 
 /**

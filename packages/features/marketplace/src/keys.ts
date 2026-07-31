@@ -21,5 +21,8 @@ export const marketplaceInstalledKey = ['marketplace', 'installed'] as const;
 /** Key for the registry's controlled category list (the category facet). */
 export const marketplaceCategoriesKey = ['marketplace', 'categories'] as const;
 
+/** Key for the registry's controlled item-kind list (the kind facet). */
+export const marketplaceKindsKey = ['marketplace', 'kinds'] as const;
+
 /** Key for the advisory state covering installed plugins. */
 export const marketplaceAdvisoriesKey = ['marketplace', 'advisories'] as const;

@@ -20,6 +20,7 @@ import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type ScheduleItem } from '@tai42/api-client';
 import {
+  AppLink,
   Badge,
   Button,
   Card,
@@ -262,6 +263,15 @@ export function SchedulingPage(_props: PageProps<'scheduling'>): ReactNode {
           <EmptyState
             title="Scheduling needs a backend plugin"
             description="No installed backend exposes scheduling tools. Install a scheduling backend plugin to create and manage schedules."
+            action={
+              <AppLink
+                to="marketplace"
+                search={{ kind: 'backend' }}
+                className="tai-btn tai-btn-secondary"
+              >
+                Browse marketplace
+              </AppLink>
+            }
           />
         </Card>
       ) : query.isError ? (

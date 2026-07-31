@@ -22,8 +22,8 @@ import { PresetDetail } from './PresetDetail';
 export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
   const selected = search.preset;
   const { isSinglePane } = useBreakpoint();
-  // Below 1024 the split collapses to one pane; the detail shows when a preset is
-  // selected, otherwise the list.
+  // `list` shows the list full width; `detail` shows the split. Below 1024 it
+  // collapses to the one pane the selection names.
   const pane = selected !== undefined ? 'detail' : 'list';
 
   // FOCUS MANAGEMENT (WCAG 2.4.3). Single-pane, selecting a row hides the list pane
@@ -78,7 +78,7 @@ export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
         description="Named, versioned tool presets — a base tool with fixed kwargs baked in."
       />
 
-      <div className="tai-split" data-pane={isSinglePane ? pane : undefined}>
+      <div className="tai-split" data-pane={pane}>
         <div className="tai-split-list" ref={listRef}>
           <PresetsList selected={selected} />
         </div>

@@ -168,7 +168,16 @@ export function ExtensionsPage(_props: PageProps<'extensions'>): ReactNode {
     body = (
       <EmptyState
         title="No tool extensions"
-        description="This deployment has no registered extensions."
+        description="Extensions arrive as marketplace plugins — install one to see it here."
+        action={
+          <AppLink
+            to="marketplace"
+            search={{ kind: 'extension' }}
+            className="tai-btn tai-btn-secondary"
+          >
+            Browse marketplace
+          </AppLink>
+        }
       />
     );
   } else {

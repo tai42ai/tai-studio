@@ -17,6 +17,7 @@
 import { useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AppLink,
   Button,
   Card,
   ConfirmDialog,
@@ -562,6 +563,15 @@ export function StoragePage({ search }: PageProps<'storage'>): ReactNode {
         <EmptyState
           title="Storage needs a storage-provider plugin"
           description="No installed plugin exposes a storage provider. Install one to browse, upload, and manage stored objects."
+          action={
+            <AppLink
+              to="marketplace"
+              search={{ kind: 'storage' }}
+              className="tai-btn tai-btn-secondary"
+            >
+              Browse marketplace
+            </AppLink>
+          }
         />
       </Card>
     );

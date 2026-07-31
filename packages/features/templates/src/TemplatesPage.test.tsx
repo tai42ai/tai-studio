@@ -102,6 +102,34 @@ describe('TemplatesPage — detail', () => {
   });
 });
 
+describe('TemplatesPage — storage-provider gate', () => {
+  it('shows the marketplace pointer, not the 500, when no storage provider is installed', async () => {
+    const listTemplates = vi.fn().mockRejectedValue(new Error('no storage provider'));
+    const client: StubApiClient = {
+      listTemplates,
+      getStorageInfo: vi.fn().mockResolvedValue({ present: false, provider: null, module: null }),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    expect(await screen.findByText('Templates need a storage-provider plugin')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Browse marketplace' })).toBeInTheDocument();
+    // The gate is upstream of the template doors, so the list is never requested and
+    // the meaningless clear-cache action is withheld.
+    expect(listTemplates).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Clear cache' })).not.toBeInTheDocument();
+  });
+
+  it('surfaces a loud error when the storage-info door itself fails', async () => {
+    const client: StubApiClient = {
+      getStorageInfo: vi.fn().mockRejectedValue(new Error('boom: storage door failed')),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('boom: storage door failed');
+  });
+});
+
 describe('TemplatesPage — upload', () => {
   it('uploads a template and invalidates the list', async () => {
     const user = userEvent.setup();
@@ -230,7 +258,7 @@ describe('TemplatesPage — clear cache', () => {
     };
     renderWithProviders(<TemplatesPage search={{}} />, { client });
 
-    await user.click(screen.getByRole('button', { name: 'Clear cache' }));
+    await user.click(await screen.findByRole('button', { name: 'Clear cache' }));
     await waitFor(() => {
       expect(clearTemplatesCache).toHaveBeenCalledTimes(1);
     });

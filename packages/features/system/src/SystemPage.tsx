@@ -28,6 +28,7 @@ import {
   type KindStatus,
 } from '@tai42/api-client';
 import {
+  AppLink,
   Badge,
   Button,
   Card,
@@ -120,6 +121,15 @@ function noBackendState(): ReactNode {
     <EmptyState
       title="No execution backend registered"
       description="No task backend plugin is wired, so runs execute in-process. This reports the backend identity only; the worker fleet below is unaffected."
+      action={
+        <AppLink
+          to="marketplace"
+          search={{ kind: 'backend' }}
+          className="tai-btn tai-btn-secondary"
+        >
+          Browse marketplace
+        </AppLink>
+      }
     />
   );
 }
@@ -515,7 +525,7 @@ function KindsCard(): ReactNode {
  * nothing from it.
  */
 export const SystemPage: (props: PageProps<'system'>) => ReactNode = () => (
-  <Stack gap={6} style={{ maxWidth: '64rem' }}>
+  <Stack gap={6}>
     <PageHeader eyebrow="Administration" title="System" />
     <HealthCard />
     <BackendFleet />

@@ -8,7 +8,7 @@
  */
 import type { ReactNode } from 'react';
 import { ApiError } from '@tai42/api-client';
-import { EmptyState } from '@tai42/studio-sdk';
+import { AppLink, EmptyState } from '@tai42/studio-sdk';
 
 /** True when `error` is the monitoring read-not-supported failure from the skeleton. */
 export function isReadNotSupported(error: unknown): boolean {
@@ -31,6 +31,15 @@ export function ReadNotSupported(): ReactNode {
       <EmptyState
         title="Monitoring reads are not available"
         description="The installed monitoring backend does not support reading. Install a read-capable monitoring plugin to see runs, traces, and metrics here."
+        action={
+          <AppLink
+            to="marketplace"
+            search={{ kind: 'monitoring' }}
+            className="tai-btn tai-btn-secondary"
+          >
+            Browse marketplace
+          </AppLink>
+        }
       />
     </div>
   );

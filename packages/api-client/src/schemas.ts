@@ -1593,6 +1593,9 @@ export const marketplaceAdvisories = z.object({
 /** The registry's controlled category list, proxied through the skeleton. */
 export const marketplaceCategories = z.array(z.string());
 
+/** The registry's controlled item-kind list, proxied through the skeleton. */
+export const marketplaceKinds = z.array(z.string());
+
 /**
  * The receipt of an install / update: what landed and at which version.
  * `notes` (env-selected items naming their activating env var) and any

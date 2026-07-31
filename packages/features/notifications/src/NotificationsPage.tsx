@@ -34,10 +34,6 @@ import {
 
 import { notificationsKey } from './keys';
 
-const pageStyle: CSSProperties = {
-  maxWidth: '64rem',
-};
-
 const mutedStyle: CSSProperties = {
   color: 'var(--tai-color-text-muted)',
 };
@@ -112,7 +108,7 @@ export const NotificationsPage: (props: PageProps<'notifications'>) => ReactNode
   }
 
   return (
-    <Stack gap={6} style={pageStyle}>
+    <Stack gap={6}>
       <PageHeader eyebrow="Activity" title="Notifications" />
       <Card>{body}</Card>
     </Stack>
