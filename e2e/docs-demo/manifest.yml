@@ -56,6 +56,7 @@ routers_modules:
   - tai42_skeleton.routers.sub_mcp
   - tai42_skeleton.routers.config
   - tai42_skeleton.routers.templates
+  - tai42_skeleton.routers.storage # /api/storage          (Templates page storage-provider gate)
   - tai42_skeleton.routers.manifest
   - tai42_skeleton.routers.connectors
   - tai42_skeleton.routers.hooks
