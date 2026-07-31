@@ -57,7 +57,8 @@ Two further CI jobs gate a pull request:
 - **`e2e`** — `pnpm -r build`, then
   `pnpm --filter @tai42/e2e exec playwright install --with-deps` and `pnpm e2e`.
   Playwright drives the built Studio against a real `tai42-skeleton` backend, so
-  it also needs `uv` and the sibling checkouts that `e2e/boot/boot.sh` resolves.
+  it also needs `uv` and the `tai42` monorepo checkout beside this repo that
+  `e2e/boot/boot.sh` resolves.
 
 The dev server proxies `/api` to a running skeleton — point it with
 `VITE_API_PROXY_TARGET` (default `http://localhost:8765`), or copy

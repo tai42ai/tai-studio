@@ -21,7 +21,9 @@
 # Env knobs (all have safe defaults for local runs):
 #   STUDIO_API_KEY   the seeded key the Studio pastes at /login (default below)
 #   STUDIO_USER_ID   the user_id that key resolves to (default below)
-#   SKELETON_DIR     path to the tai-skeleton checkout (default: sibling repo)
+#   MONOREPO_DIR     path to the tai42 monorepo checkout (default: sibling repo);
+#                    the skeleton lives at its core/skeleton and the uv workspace
+#                    venv at its .venv
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist instead of
 #                    building it; unset (or anything else) builds the SPA AND every
@@ -41,7 +43,10 @@ set -euo pipefail
 BOOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(cd "${BOOT_DIR}/.." && pwd)"
 STUDIO_REPO="$(cd "${E2E_DIR}/.." && pwd)"
-SKELETON_DIR="${SKELETON_DIR:-$(cd "${STUDIO_REPO}/../tai-skeleton" && pwd)}"
+# The tai42 monorepo: skeleton at core/skeleton, plugins under plugins/, and the
+# single uv workspace venv at its root .venv.
+MONOREPO_DIR="${MONOREPO_DIR:-$(cd "${STUDIO_REPO}/../tai42" && pwd)}"
+SKELETON_DIR="${MONOREPO_DIR}/core/skeleton"
 
 STUDIO_DIST="${STUDIO_REPO}/apps/studio/dist"
 MANIFEST_PATH="${MANIFEST_PATH:-${BOOT_DIR}/manifest.yml}"
@@ -118,20 +123,20 @@ else
 fi
 
 # --- 3. Reference plugin into the skeleton env ------------------------------
-SKELETON_PY="${SKELETON_DIR}/.venv/bin/python"
-if [[ ! -x "${SKELETON_PY}" ]]; then
-  log "ERROR: skeleton venv not found at ${SKELETON_PY} (set SKELETON_DIR)"
+VENV_PY="${MONOREPO_DIR}/.venv/bin/python"
+if [[ ! -x "${VENV_PY}" ]]; then
+  log "ERROR: workspace venv not found at ${VENV_PY} (set MONOREPO_DIR; sync it with 'uv sync' from the monorepo root)"
   exit 1
 fi
 log "installing reference-plugin into the skeleton env"
-uv pip install --python "${SKELETON_PY}" --quiet "${E2E_DIR}/reference-plugin"
+uv pip install --python "${VENV_PY}" --quiet "${E2E_DIR}/reference-plugin"
 
 # The GitHub webhook-verifier plugin; its import registers a "github" verifier on the
 # app's `webhook_verifiers` facet. Import-only, no env config.
-WEBHOOK_VERIFIER_DIR="${SKELETON_DIR}/../tai-webhook-verifier-github"
+WEBHOOK_VERIFIER_DIR="${MONOREPO_DIR}/plugins/webhook-verifier-github"
 if [[ -d "${WEBHOOK_VERIFIER_DIR}" ]]; then
   log "installing webhook-verifier-github into the skeleton env"
-  uv pip install --python "${SKELETON_PY}" --quiet "${WEBHOOK_VERIFIER_DIR}"
+  uv pip install --python "${VENV_PY}" --quiet "${WEBHOOK_VERIFIER_DIR}"
 else
   log "ERROR: webhook-verifier-github not found at ${WEBHOOK_VERIFIER_DIR}"
   exit 1
@@ -142,13 +147,13 @@ fi
 # this to add the agents/storage/toolbox/monitoring plugins the docs-demo manifest
 # loads. Unset for the lean e2e boot (no extra installs). `set -f` disables
 # pathname expansion for the split so a pip extras spec like
-# `/abs/tai-toolbox[prometheus]` is passed literally (the `[...]` is a glob bracket
-# that must not be expanded against on-disk siblings).
+# `/abs/plugins/toolbox[prometheus]` is passed literally (the `[...]` is a glob
+# bracket that must not be expanded against on-disk paths).
 if [[ -n "${EXTRA_PLUGINS:-}" ]]; then
   set -f
   for plugin_spec in ${EXTRA_PLUGINS}; do
     log "installing extra plugin: ${plugin_spec}"
-    uv pip install --python "${SKELETON_PY}" --quiet "${plugin_spec}"
+    uv pip install --python "${VENV_PY}" --quiet "${plugin_spec}"
   done
   set +f
 fi
@@ -161,7 +166,7 @@ fi
 # already up (step 1) and the plugin is installed above, so this runs cleanly here.
 if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
   log "applying tai42-accounts-postgres schema (python -m tai42_accounts_postgres.db apply)"
-  "${SKELETON_PY}" -m tai42_accounts_postgres.db apply >&2
+  "${VENV_PY}" -m tai42_accounts_postgres.db apply >&2
 fi
 
 # --- 4. Seed the test API key (Redis), policy + route mappings (Postgres) ----
@@ -256,7 +261,7 @@ export CONNECTOR_STORE_PG_DB=tai
 
 log "launching tai serve on http://127.0.0.1:${STUDIO_PORT} (access control ON)"
 log "  API key (test-only): ${STUDIO_API_KEY}"
-cd "${SKELETON_DIR}"
+cd "${MONOREPO_DIR}"
 exec uv run --no-sync tai serve \
   --manifest-path "${MANIFEST_PATH}" \
   --host 127.0.0.1 \

@@ -101,7 +101,7 @@ const PLUGIN_DETAIL = {
   readme_md: '<p>Docs.</p>',
   license: 'Apache-2.0',
   homepage_url: 'https://tai42.ai',
-  repository_url: 'https://github.com/tai42ai/tai-toolbox',
+  repository_url: 'https://github.com/tai42ai/tai42/tree/main/plugins/toolbox',
   categories: ['productivity'],
   tags: ['uuid', 'hashing'],
   trust_tier: 'official',

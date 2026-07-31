@@ -50,20 +50,16 @@ jobs:
         run: pnpm -r test --coverage
 
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
-  # The boot recipe (e2e/boot/boot.sh) runs the skeleton from its own ``.venv``,
-  # built by "Sync skeleton env" with UV_NO_SOURCES=1 so the skeleton's committed
-  # uv.lock resolves tai42-contract/tai42-kit/tai42-toolbox/tai42-identity-redis
-  # from PyPI (published resolution, matching the skeleton's own CI) — those four
-  # are no longer checked out. Only two siblings are cloned: ``../tai-skeleton``
-  # (the backend the boot recipe serves) and ``../tai-webhook-verifier-github``
-  # (boot.sh pip-installs it into the skeleton venv to register the "github"
-  # verifier). Cross-repo checkout uses TAI_CI_TOKEN (fine-grained, Contents:read)
-  # to authenticate those private sibling checkouts: the default GITHUB_TOKEN is
-  # scoped to this repository alone. Fork pull requests run without repository secrets, and
-  # Dependabot pull requests run with secrets withheld even though their branch
-  # lives in this repo, so this job is gated to pushes and same-repo, non-Dependabot
-  # pull requests where TAI_CI_TOKEN exists; forks and Dependabot fall back to the
-  # ``check`` job only.
+  # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
+  # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
+  # skeleton env": the monorepo's uv.lock resolves tai42-skeleton and every
+  # first-party dependency from the workspace itself. One sibling is cloned — the
+  # public ``tai42`` monorepo; the boot recipe pip-installs the reference plugin
+  # and ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) into that
+  # venv. The monorepo is public, so the cross-repo checkout reads it with the
+  # default GITHUB_TOKEN. This job is heavy (Docker + a full backend), so it is
+  # gated to pushes and same-repo, non-Dependabot pull requests; forks and
+  # Dependabot fall back to the ``check`` job only.
   e2e:
     if: (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
@@ -76,14 +72,8 @@ jobs:
           path: tai-studio
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          repository: ${{ github.repository_owner }}/tai-skeleton
-          path: tai-skeleton
-          token: ${{ secrets.TAI_CI_TOKEN }}
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          repository: ${{ github.repository_owner }}/tai-webhook-verifier-github
-          path: tai-webhook-verifier-github
-          token: ${{ secrets.TAI_CI_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai42
+          path: tai42
       - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
         with:
           version: 11.9.0
@@ -97,16 +87,14 @@ jobs:
           version: '0.11.26'
           enable-cache: true
       - run: uv python install 3.13
-      # Build the skeleton's venv that the boot recipe runs the backend from.
-      # UV_NO_SOURCES: the skeleton's committed uv.lock is published-resolution, so
-      # resolve its siblings from PyPI (no editable-path sources); matches the
-      # skeleton's own CI. Only tai-skeleton and tai-webhook-verifier-github are
-      # cloned above; the boot recipe pip-installs both into this venv.
+      # Build the workspace venv (tai42/.venv) the boot recipe runs the backend
+      # from. The monorepo's uv.lock resolves tai42-skeleton and every first-party
+      # dependency from the workspace itself. The reference plugin and
+      # tai42/plugins/webhook-verifier-github are pip-installed into this venv by
+      # the boot recipe.
       - name: Sync skeleton env
-        working-directory: tai-skeleton
-        env:
-          UV_NO_SOURCES: '1'
-        run: uv sync --locked --python 3.13 --extra dev
+        working-directory: tai42
+        run: uv sync --locked --package tai42-skeleton --extra dev
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
       # Build the workspace so the boot recipe's SPA + reference-plugin builds
@@ -119,9 +107,10 @@ jobs:
         run: pnpm e2e
 
   # Fleet e2e gate. On push:main and on pull_request, after this repo's own
-  # checks pass, dispatch tai-e2e for the tested sha; tai-e2e runs the cross-repo
-  # suite and posts a `fleet-e2e` commit status back, which branch protection
-  # requires. The dispatch token is a repo Actions secret AND a Dependabot secret
+  # checks pass, dispatch the tai42 monorepo's fleet-e2e receiver for the tested
+  # sha; it runs the browser suite against the monorepo harness and posts a
+  # `fleet-e2e` commit status back, which branch protection requires. The
+  # dispatch token is a repo Actions secret AND a Dependabot secret
   # so Dependabot PRs dispatch too; a fork PR has neither, so the guarded step
   # skips and the required status stays unset for a maintainer to run.
   trigger-e2e:
@@ -155,6 +144,6 @@ jobs:
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ env.E2E_DISPATCH_TOKEN }}
-          repository: ${{ github.repository_owner }}/tai-e2e
+          repository: ${{ github.repository_owner }}/tai42
           event-type: fleet-e2e
           client-payload: ${{ steps.payload.outputs.json }}

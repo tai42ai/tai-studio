@@ -33,7 +33,8 @@
 #   - the Playwright chromium browser: pnpm --dir e2e exec playwright install chromium
 #
 # Env knobs (all default to sibling checkouts / sensible values):
-#   SKELETON_DIR TAI_DOCS_DIR TAI_AGENTS_DIR TAI_STORAGE_LOCAL_DIR TAI_TOOLBOX_DIR
+#   MONOREPO_DIR     the tai42 monorepo checkout (skeleton + plugins + workspace venv)
+#   TAI_DOCS_DIR     the tai-docs checkout (where the PNGs land)
 #   OUT_DIR          where the PNGs are written (default: <tai-docs>/images/studio)
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist (fast reruns)
@@ -54,15 +55,11 @@ require_dir() {
   [[ -d "$path" ]] || die "${var} not found at '${path}' — set ${var} to the checkout path"
   ( cd "$path" && pwd )
 }
-SKELETON_DIR="$(require_dir SKELETON_DIR "${SKELETON_DIR:-${STUDIO_REPO}/../tai-skeleton}")"
+# The tai42 monorepo: skeleton at core/skeleton, plugins under plugins/, and the
+# uv workspace venv at its root .venv (boot.sh derives all three from this).
+MONOREPO_DIR="$(require_dir MONOREPO_DIR "${MONOREPO_DIR:-${STUDIO_REPO}/../tai42}")"
 TAI_DOCS_DIR="$(require_dir TAI_DOCS_DIR "${TAI_DOCS_DIR:-${STUDIO_REPO}/../tai-docs}")"
-TAI_AGENTS_DIR="$(require_dir TAI_AGENTS_DIR "${TAI_AGENTS_DIR:-${STUDIO_REPO}/../tai-agents}")"
-TAI_STORAGE_LOCAL_DIR="$(require_dir TAI_STORAGE_LOCAL_DIR "${TAI_STORAGE_LOCAL_DIR:-${STUDIO_REPO}/../tai-storage-local}")"
-TAI_TOOLBOX_DIR="$(require_dir TAI_TOOLBOX_DIR "${TAI_TOOLBOX_DIR:-${STUDIO_REPO}/../tai-toolbox}")"
-# The Postgres accounts plugin: its lifecycle module + login/users routers power the
-# login screen's password form and the users-admin page, and its shipped studio/ dist
-# mounts the users-admin Studio page. Installed into the skeleton venv below.
-TAI_ACCOUNTS_POSTGRES_DIR="$(require_dir TAI_ACCOUNTS_POSTGRES_DIR "${TAI_ACCOUNTS_POSTGRES_DIR:-${STUDIO_REPO}/../tai-accounts-postgres}")"
+PLUGINS_DIR="${MONOREPO_DIR}/plugins"
 
 STUDIO_PORT="${STUDIO_PORT:-8765}"
 BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
@@ -79,9 +76,12 @@ mkdir -p "${OUT_DIR}" "${PROM_DIR}"
 export MANIFEST_PATH="${E2E_DIR}/docs-demo/manifest.yml"
 export STUDIO_API_KEY="${DEMO_KEY}"
 export STUDIO_PORT
-export SKELETON_DIR
-# Extra plugins the docs-demo manifest loads, installed into the skeleton venv.
-export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${TAI_AGENTS_DIR} ${TAI_STORAGE_LOCAL_DIR} ${TAI_TOOLBOX_DIR}[prometheus] ${TAI_ACCOUNTS_POSTGRES_DIR}"
+export MONOREPO_DIR
+# Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
+# accounts-postgres plugin's lifecycle module + login/users routers power the login
+# screen's password form and the users-admin page (its shipped studio/ dist mounts
+# that Studio page); the rest back the toolbox/agents/storage/monitoring surfaces.
+export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the first-owner bootstrap gate to a known token so the
 # runner can seed the owner deterministically, and tell boot.sh to apply the accounts
