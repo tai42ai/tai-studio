@@ -72,7 +72,11 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/tai42
           path: tai42
+      # Both checkouts land in subdirectories, so the pinned packageManager must
+      # be read from the tai-studio manifest explicitly.
       - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          package_json_file: tai-studio/package.json
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 22
