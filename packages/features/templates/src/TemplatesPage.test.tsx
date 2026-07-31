@@ -128,6 +128,29 @@ describe('TemplatesPage — storage-provider gate', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('boom: storage door failed');
   });
+
+  it('retries the storage-info door and recovers the surface on success', async () => {
+    const user = userEvent.setup();
+    const getStorageInfo = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom: storage door failed'))
+      .mockResolvedValue({ present: true, provider: 'fs', module: 'fs.mod' });
+    const client: StubApiClient = {
+      getStorageInfo,
+      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    // The first door failure is loud; its Retry refetches and, now that the
+    // provider is present, the gate opens to the real templates surface.
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('boom: storage door failed');
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('All templates')).toBeInTheDocument();
+    expect(await screen.findByText('prompts/a.md')).toBeInTheDocument();
+    expect(getStorageInfo).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe('TemplatesPage — upload', () => {
