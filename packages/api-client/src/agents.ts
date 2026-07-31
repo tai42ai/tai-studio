@@ -18,7 +18,7 @@ import { z } from 'zod';
 
 import { ApiError, ApiUnauthorizedError } from './errors';
 import { encodeSegment, extractError, type ApiConfig } from './http';
-import { SseFrameParser, readSseFrames, type SseFrame } from './sse';
+import { SseFrameParser, readSseFrames, sseOpenToken, type SseFrame } from './sse';
 
 // -- list schema -------------------------------------------------------------
 
@@ -185,7 +185,9 @@ async function openAgentStream(
     'content-type': 'application/json',
   };
   if (token) headers['x-api-key'] = token;
-  const response = await doFetch(`${config.baseUrl ?? ''}${path}`, {
+  // Distinct-URL per open — see the canonical constraint on `sseOpenToken`.
+  const url = `${config.baseUrl ?? ''}${path}?_=${sseOpenToken()}`;
+  const response = await doFetch(url, {
     method: 'POST',
     headers,
     body: JSON.stringify(input),

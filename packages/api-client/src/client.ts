@@ -14,7 +14,7 @@ import {
   isUnsafePathSegment,
 } from './http';
 import { ApiError, ApiLoginFailedError, ApiUnauthorizedError } from './errors';
-import { readSseFrames } from './sse';
+import { readSseFrames, sseOpenToken } from './sse';
 import { agentList, streamAgentRun, streamAuthoredAgentRun } from './agents';
 import { getToolRun, listToolRuns, submitToolRun, type SubmitToolRunArgs } from './tool-runs';
 import * as s from './schemas';
@@ -987,7 +987,9 @@ export function createApiClient(config: ApiConfig) {
       const token = config.getToken();
       const headers: Record<string, string> = { accept: 'text/event-stream' };
       if (token) headers['x-api-key'] = token;
-      const response = await doFetch(`${config.baseUrl ?? ''}/api/interactions/stream`, {
+      // Distinct-URL per open — see the canonical constraint on `sseOpenToken`.
+      const url = `${config.baseUrl ?? ''}/api/interactions/stream?_=${sseOpenToken()}`;
+      const response = await doFetch(url, {
         headers,
         signal,
       });

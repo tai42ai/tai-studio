@@ -79,7 +79,10 @@ export async function findInteractionId(
 ): Promise<string> {
   const id = await page.evaluate(
     async ({ apiKey, target }) => {
-      const res = await fetch('/api/interactions/stream', {
+      // Unique query token per open — identical concurrent SSE URLs coalesce
+      // onto one connection in some engines (canonical constraint: the
+      // api-client's sseOpenToken).
+      const res = await fetch(`/api/interactions/stream?_=${Date.now().toString(36)}`, {
         headers: { 'x-api-key': apiKey, accept: 'text/event-stream' },
       });
       const reader = res.body?.getReader();

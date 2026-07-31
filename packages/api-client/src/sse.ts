@@ -9,6 +9,19 @@ export interface SseFrame {
   readonly data: string;
 }
 
+// CANONICAL constraint for every SSE open in this client. Engines coalesce
+// concurrent fetches to an IDENTICAL URL onto one connection, serializing later
+// opens behind the first — and an SSE body never ends, so a second identical open
+// would block forever (Firefox does this deterministically). Any stream two
+// consumers can open at once (the always-mounted interactions badge + the inbox
+// page; two views of one agent run) MUST give each open a distinct URL. Append
+// this token to the SSE request URL; servers ignore it.
+let sseOpenSeq = 0;
+export function sseOpenToken(): string {
+  sseOpenSeq += 1;
+  return sseOpenSeq.toString(36);
+}
+
 /**
  * Incrementally parse SSE text. Feed it chunks; it yields complete frames and
  * retains any partial trailing frame across calls. A frame ends on a blank line.

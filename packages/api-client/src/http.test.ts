@@ -294,6 +294,22 @@ describe('createApiClient', () => {
     expect(captured['x-api-key']).toBe('k');
   });
 
+  it('gives every stream open a DISTINCT url so concurrent opens are never coalesced', async () => {
+    const urls: string[] = [];
+    const fetchImpl = vi.fn(async (url: string) => {
+      urls.push(url);
+      return sseResponse('event: interaction.backlog_done\ndata: {}\n\n');
+    });
+    const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
+    // Two concurrent opens (the always-mounted badge + the inbox page) must not
+    // share a URL: engines coalesce identical concurrent fetches onto one endless
+    // SSE connection, blocking the second forever.
+    await Promise.all([client.streamInteractions(), client.streamInteractions()]);
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).not.toBe(urls[1]);
+    for (const url of urls) expect(url).toContain('/api/interactions/stream?');
+  });
+
   it('omits the auth header on the stream when unauthenticated', async () => {
     let captured: Record<string, string> = {};
     const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {

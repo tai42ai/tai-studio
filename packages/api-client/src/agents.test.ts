@@ -134,10 +134,30 @@ describe('streamAgentRun', () => {
 
     expect(knownTypes(events).at(-1)).toBe('stream.end');
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/agents/faker/runs');
+    expect(url).toMatch(/^\/api\/agents\/faker\/runs\?_=/);
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>)['x-api-key']).toBe('key');
     expect(init.body).toBe(JSON.stringify({ prompt: 'hi' }));
+  });
+
+  it('gives every open a DISTINCT url so concurrent runs are never coalesced', async () => {
+    const urls: string[] = [];
+    const fetchMock = vi.fn(async (url: string) => {
+      urls.push(url);
+      return new Response(TRANSCRIPT, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      });
+    });
+    // Two concurrent views of the same agent run must not share a URL: engines
+    // coalesce identical concurrent fetches onto one endless SSE connection.
+    await Promise.all([
+      streamAgentRun({ ...config, fetch: fetchMock as unknown as typeof fetch }, 'faker', {}),
+      streamAgentRun({ ...config, fetch: fetchMock as unknown as typeof fetch }, 'faker', {}),
+    ]);
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).not.toBe(urls[1]);
+    for (const url of urls) expect(url).toMatch(/^\/api\/agents\/faker\/runs\?/);
   });
 
   it('throws ApiUnauthorizedError on a 401 open', async () => {
@@ -190,10 +210,36 @@ describe('streamAuthoredAgentRun', () => {
 
     expect(knownTypes(events).at(-1)).toBe('stream.end');
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/agents/authored/support_bot/runs');
+    expect(url).toMatch(/^\/api\/agents\/authored\/support_bot\/runs\?_=/);
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>)['x-api-key']).toBe('key');
     expect(init.body).toBe(JSON.stringify({ user_message: 'my order is late' }));
+  });
+
+  it('gives every open a DISTINCT url so concurrent runs are never coalesced', async () => {
+    const urls: string[] = [];
+    const fetchMock = vi.fn(async (url: string) => {
+      urls.push(url);
+      return new Response(TRANSCRIPT, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      });
+    });
+    await Promise.all([
+      streamAuthoredAgentRun(
+        { ...config, fetch: fetchMock as unknown as typeof fetch },
+        'support_bot',
+        {},
+      ),
+      streamAuthoredAgentRun(
+        { ...config, fetch: fetchMock as unknown as typeof fetch },
+        'support_bot',
+        {},
+      ),
+    ]);
+    expect(urls).toHaveLength(2);
+    expect(urls[0]).not.toBe(urls[1]);
+    for (const url of urls) expect(url).toMatch(/^\/api\/agents\/authored\/support_bot\/runs\?/);
   });
 
   it('surfaces the baked-field override 400 message verbatim (not the bare status text)', async () => {
