@@ -227,8 +227,11 @@ OWNER_USER_ID="$(api "${BASE_URL}/api/auth/users" \
 
 # The jq fence: the owned key reaches only these route prefixes, so its projection
 # (the scoped nav + tools slice) is limited to them. It must cover EVERY door the
-# scoped pages hit: /api/tools* (tools list + tags), /api/tool-runs* (the background-
-# runs door — a NON-admin-fenced tool-run door, so reaching it makes the projection's
+# scoped pages hit: /api/tools* (tools list + tags) AND /api/tool-meta* (the tools
+# page's organizational overlay — display names / folders / tags — read on mount; the
+# path does NOT start with /api/tools, so it needs its own clause, else the scoped
+# tools page meets a loud overlay-read error), /api/tool-runs* (the background-runs
+# door — a NON-admin-fenced tool-run door, so reaching it makes the projection's
 # `tools` list the full registry rather than empty; without it a non-admin key
 # projects ZERO tools and the scoped tools page is empty), /api/interactions* (the
 # inbox SSE stream + answer door) AND /api/channels (the interactions ChannelsCard),
@@ -236,7 +239,7 @@ OWNER_USER_ID="$(api "${BASE_URL}/api/auth/users" \
 # projection + the settings self-service surfaces). The only non-public scope with a
 # route mapping in this boot is 'studio' (studio_authed → studio), so the key carries
 # THAT scope and the fence narrows it — '*' has no mapping and the mint door rejects it.
-OWNED_CONDITION='(.request.path | startswith("/api/tools")) or (.request.path | startswith("/api/tool-runs")) or (.request.path | startswith("/api/interactions")) or (.request.path | startswith("/api/channels")) or (.request.path | startswith("/api/notifications")) or (.request.path | startswith("/api/auth"))'
+OWNED_CONDITION='(.request.path | startswith("/api/tools")) or (.request.path | startswith("/api/tool-meta")) or (.request.path | startswith("/api/tool-runs")) or (.request.path | startswith("/api/interactions")) or (.request.path | startswith("/api/channels")) or (.request.path | startswith("/api/notifications")) or (.request.path | startswith("/api/auth"))'
 
 # Mint is NOT idempotent (a duplicate user_id hits the door's duplicate guard) and a
 # raw key is returned ONLY at mint, so revoke any prior owned key first, then re-mint
