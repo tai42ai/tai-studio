@@ -43,6 +43,13 @@ default_routers: none
 routers_modules:
   - tai42_skeleton.routers.interactions
   - tai42_skeleton.routers.tools
+  # The tool-metadata overlay (`/api/tool-meta`). The tools page GETs this on mount
+  # to merge each tool's display name / folder / user tags / visibility over the
+  # native catalog; without this router that fetch 404s and the tools list shows a
+  # spurious "Something went wrong" notice next to the working catalog. Its
+  # `tool_folders` + `tool_meta` tables ship in the init.sql boot.sh applies, and
+  # boot.sh points `TOOL_META_STORE_*` at the compose Postgres.
+  - tai42_skeleton.routers.tool_meta
   - tai42_skeleton.routers.extensions
   # Per-tool extension combos (`/api/tools/{name}/extensions`). Every tool detail
   # page renders a `ToolExtensionsCard` that GETs this on mount, so without this

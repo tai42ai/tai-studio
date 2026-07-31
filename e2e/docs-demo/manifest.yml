@@ -49,6 +49,7 @@ routers_modules:
   - tai42_skeleton.routers.channels # /api/channels          (Interactions delivery channels)
   - tai42_skeleton.routers.notifications # /api/notifications      (Notifications inbox)
   - tai42_skeleton.routers.tools
+  - tai42_skeleton.routers.tool_meta # /api/tool-meta         (Tools page folder tree + overlay)
   - tai42_skeleton.routers.extensions
   - tai42_skeleton.routers.tool_extensions
   - tai42_skeleton.routers.presets

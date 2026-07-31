@@ -223,6 +223,18 @@ export VERSIONING_STORE_PG_PORT="${PG_HOST_PORT}"
 export VERSIONING_STORE_PG_USER=postgres
 export VERSIONING_STORE_PG_PASSWORD=postgres
 export VERSIONING_STORE_PG_DB=tai
+
+# The tool-metadata overlay store (`TOOL_META_STORE_*` DSN) backs the tools page's
+# folder tree + per-tool overlay. Every ToolsPage GETs `/api/tool-meta` on mount and
+# that read ALWAYS hits the store (list folders + list overlay rows), so it must
+# resolve — point it at the same compose Postgres (its `tool_folders` + `tool_meta`
+# tables ship in the init.sql applied above). Without this the store falls back to
+# its localhost:5432 default and the read 500s instead of serving the empty overlay.
+export TOOL_META_STORE_PG_HOST=127.0.0.1
+export TOOL_META_STORE_PG_PORT="${PG_HOST_PORT}"
+export TOOL_META_STORE_PG_USER=postgres
+export TOOL_META_STORE_PG_PASSWORD=postgres
+export TOOL_META_STORE_PG_DB=tai
 export STUDIO_DIST_PATH="${STUDIO_DIST}"
 
 # Interactions (ask_user): its Redis defaults to loopback :6379 and always
