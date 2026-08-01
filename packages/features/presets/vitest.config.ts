@@ -19,6 +19,9 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
+    // The create-flow tests drive full typed forms through userEvent and run
+    // 2-5s wall on shared CI runners; the 5s default leaves no headroom.
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

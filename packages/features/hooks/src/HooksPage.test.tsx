@@ -578,7 +578,9 @@ describe('HooksPage — the dialog opened over the register form', () => {
 
     // Both forms mount an "Execution key" picker; the modal hides the background one.
     expect(await screen.findByRole('combobox', { name: 'Execution key' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create trigger link' }));
+    // The button rides the capability projection (a separate async from the picker's
+    // key list), so await it — the combobox resolving does not mean it is present yet.
+    await user.click(await screen.findByRole('button', { name: 'Create trigger link' }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('combobox', { name: 'Execution key' })).toBeInTheDocument();
