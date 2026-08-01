@@ -384,6 +384,8 @@ const CONTAINER_STRIPS = [
   '.tai-error-state-title',
   '.tai-field-error',
   '.tai-segmented',
+  '.tai-explorer-controls',
+  '.tai-explorer-folder',
 ];
 
 /**

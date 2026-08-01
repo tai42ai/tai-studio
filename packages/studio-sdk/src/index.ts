@@ -177,6 +177,21 @@ export type { ViewMode, ViewToggleProps } from './components/view-toggle';
 export { EntityCardGrid } from './components/entity-card-grid';
 export type { EntityCardGridProps } from './components/entity-card-grid';
 export {
+  ExplorerView,
+  buildTagVocabulary,
+  matchesSelectedTags,
+  UNTAGGED_TOKEN,
+} from './components/explorer-view';
+export type {
+  ExplorerViewProps,
+  ExplorerColumn,
+  ExplorerTags,
+  ExplorerSearch,
+  ExplorerEmptyState,
+  ExplorerEmptyStates,
+  TagVocabularyEntry,
+} from './components/explorer-view';
+export {
   FolderBreadcrumb,
   FolderRow,
   FolderPicker,

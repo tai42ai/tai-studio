@@ -2031,6 +2031,36 @@
     min-width: 0;
   }
 
+  /* -- Explorer ---------------------------------------------------------------------
+     The shared current-directory explorer: controls row, breadcrumb, tag chips,
+     then the folder/item body. Vertical rhythm only — the body carries its own
+     table/grid. */
+  .tai-explorer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tai-space-4);
+  }
+
+  /* Search on the leading edge, the view toggle on the trailing edge; wraps under
+     its own width on a narrow surface. */
+  .tai-explorer-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tai-space-3);
+    flex-wrap: wrap;
+  }
+
+  /* A first-class folder entry (row cell or card): the folder affordance beside
+     its optional actions, the actions pushed to the trailing edge. */
+  .tai-explorer-folder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tai-space-2);
+    flex-wrap: wrap;
+  }
+
   /* -- Card grids ------------------------------------------------------------------- */
   .tai-grid-cards {
     display: grid;
