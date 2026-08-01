@@ -1764,6 +1764,19 @@
     padding: var(--tai-space-6) var(--tai-space-8);
   }
 
+  /* Fill mode: a page that opted in via `useFillViewport`. The wrapper stops being
+     content-sized and instead fills `.tai-shell-main--fill` (which carries the
+     viewport height), so a canvas page's `height: 100%`/`flex: 1` resolves down
+     the chain. `min-height: 0` lets the flex child shrink below its content and
+     scroll internally. A canvas wants the whole pane, so the reading-column cap
+     and page padding are dropped — no letterboxing. */
+  .tai-page--fill {
+    flex: 1;
+    min-height: 0;
+    max-width: none;
+    padding: 0;
+  }
+
   .tai-stack {
     display: flex;
     flex-direction: column;
@@ -1941,6 +1954,22 @@
     background: var(--tai-color-bg);
   }
 
+  /* Fill mode: `<main>` becomes a flex column pinned to the viewport height so a
+     fill page has a definite height to resolve against (a stretched grid item's
+     height is not a reliable percentage base). The `100vh`/`100dvh` pair matches
+     `.tai-shell-sidebar` — `dvh` is the live viewport, `vh` the pre-`dvh` fallback
+     a browser below the floor keeps. `--shell-fill-offset` is the chrome above
+     `<main>` in the grid column: 0 beside the full-height sidebar, the top-bar
+     height on the phone band where the sticky bar takes the first row. */
+  .tai-shell-main--fill {
+    --shell-fill-offset: 0px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: calc(100vh - var(--shell-fill-offset));
+    height: calc(100dvh - var(--shell-fill-offset));
+  }
+
   .tai-brand {
     display: flex;
     align-items: center;
@@ -2096,6 +2125,12 @@
     .tai-page {
       padding: var(--tai-space-4);
       gap: var(--tai-space-5);
+    }
+
+    /* The sticky top bar occupies the first grid row here, so a fill `<main>` gets
+       the viewport LESS that bar rather than the whole viewport. */
+    .tai-shell-main--fill {
+      --shell-fill-offset: var(--shell-topbar-height);
     }
 
     .tai-grid-cards {

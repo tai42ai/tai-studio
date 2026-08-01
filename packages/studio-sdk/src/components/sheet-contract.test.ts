@@ -390,16 +390,20 @@ describe('component sheet contract', () => {
       expect(ringRule?.selectors ?? []).toContain('.tai-brand:focus-visible');
     });
 
-    it('names the sticky bar height once, so three unlinked rules cannot drift', () => {
+    it('names the sticky bar height once, so four unlinked rules cannot drift', () => {
       // The bar's own box, the scroll padding that keeps it from covering an
-      // element scrolled to by a focus move, and the scroll margin that keeps it
-      // from covering an anchor jump. As three bare literals a mutant left 82/82
-      // green.
+      // element scrolled to by a focus move, the scroll margin that keeps it from
+      // covering an anchor jump, and the phone-band fill offset that subtracts the
+      // bar from a full-height `<main>`. As bare literals a mutant left 82/82 green.
       const references = [...stylesheet.matchAll(/var\(--shell-topbar-height\)/g)];
-      expect(references.length).toBe(3);
+      expect(references.length).toBe(4);
       expect(declaredValues('.tai-topbar', 'height')).toEqual(['var(--shell-topbar-height)']);
       expect(declaredValues('html', 'scroll-padding-top')).toEqual(['var(--shell-topbar-height)']);
       expect(declaredValues(':target', 'scroll-margin-top')).toEqual([
+        'var(--shell-topbar-height)',
+      ]);
+      expect(declaredValues('.tai-shell-main--fill', '--shell-fill-offset')).toEqual([
+        '0px',
         'var(--shell-topbar-height)',
       ]);
       // …and no rule keeps a copy of the number.

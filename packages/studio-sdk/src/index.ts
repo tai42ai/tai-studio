@@ -116,6 +116,7 @@ export type {
 } from './components/primitives';
 export { PageHeader, Page, Stack } from './components/page-header';
 export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
+export { PageFillProvider, useFillViewport, usePageFillActive } from './components/page-fill';
 export { ErrorBoundary } from './components/error-boundary';
 export type { ErrorBoundaryProps } from './components/error-boundary';
 export { Field, useFieldControl } from './components/field';

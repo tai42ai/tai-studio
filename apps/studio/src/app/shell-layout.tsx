@@ -41,6 +41,7 @@ import {
   MonitorIcon,
   MoonIcon,
   NAV_ICONS,
+  PageFillProvider,
   RadioGroup,
   SignOutIcon,
   Skeleton,
@@ -51,6 +52,7 @@ import {
   useAuth,
   useBreakpoint,
   useCapabilities,
+  usePageFillActive,
   useTheme,
   type CapabilityState,
   type RegisteredNavEntry,
@@ -421,6 +423,31 @@ function SignOutButton({
   );
 }
 
+/**
+ * The routed content column. Reads {@link usePageFillActive} so a page that opted
+ * into fill mode gets the viewport-height flex chain (`--fill` modifiers) while
+ * every scrolling page keeps the default content-sized `.tai-page`. Lives under
+ * the shell's {@link PageFillProvider} so the opt-in a page raises from inside the
+ * `<Outlet/>` reaches these class names.
+ */
+function ShellMain({ integrityEnforced }: { integrityEnforced: boolean }): ReactNode {
+  const fill = usePageFillActive();
+  return (
+    <main
+      id="main-content"
+      className={fill ? 'tai-shell-main tai-shell-main--fill' : 'tai-shell-main'}
+      tabIndex={-1}
+    >
+      <div className={fill ? 'tai-page tai-page--fill' : 'tai-page'}>
+        {integrityEnforced ? null : <IntegrityBanner />}
+        <RouteCapabilityBoundary>
+          <Outlet />
+        </RouteCapabilityBoundary>
+      </div>
+    </main>
+  );
+}
+
 export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
   const { logout } = useAuth();
   const api = useApi();
@@ -624,14 +651,9 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
         </div>
       </header>
 
-      <main id="main-content" className="tai-shell-main" tabIndex={-1}>
-        <div className="tai-page">
-          {integrityEnforced ? null : <IntegrityBanner />}
-          <RouteCapabilityBoundary>
-            <Outlet />
-          </RouteCapabilityBoundary>
-        </div>
-      </main>
+      <PageFillProvider>
+        <ShellMain integrityEnforced={integrityEnforced} />
+      </PageFillProvider>
 
       {interactionsVisible ? <InteractionsBadge /> : null}
     </div>
