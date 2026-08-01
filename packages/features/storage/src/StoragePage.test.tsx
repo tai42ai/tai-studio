@@ -1,10 +1,12 @@
 /**
  * Page-level tests for the Storage surface, driven through the exact provider stack
  * the shell supplies at runtime with a stub `ApiClient`. They assert the two honesty
- * layers (absent provider → empty state; present → provider card + browser), the
- * in-memory filter, stat expansion (including `content_type: null`), the upload text
- * and file paths, the download save-helper call, and the delete / delete-directory
- * confirms with their invalidations and verbatim server errors.
+ * layers (absent provider → empty state; present → provider card + shared explorer),
+ * path-shaped ids folding into virtual folders (folder rows/cards, navigation, the
+ * per-folder delete-directory action), the in-memory substring filter, stat
+ * expansion (including `content_type: null`), the upload text and file paths, the
+ * download save-helper call, and the delete / delete-directory confirms with their
+ * invalidations and verbatim server errors.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within, type RenderResult } from '@testing-library/react';
@@ -26,6 +28,9 @@ vi.mock('@tai42/studio-sdk', async (importActual) => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  // The explorer persists its list/card choice per surface; clear it so each test
+  // starts in the default list view.
+  globalThis.localStorage.clear();
 });
 
 function renderPage(
@@ -63,10 +68,9 @@ function stubClient(overrides: Partial<ApiClient>): ApiClient {
 }
 
 /**
- * The page under a LIVE url: `navigate` writes the committed search back into the
- * `search` prop, the way the shell's router does. A `vi.fn()` navigate cannot see a
- * commit-time remount at all, because the committed value never reaches the page —
- * so the focus contract below is only observable through this harness.
+ * The page under a LIVE url: `navigate` writes the committed filter back into the
+ * `search` prop, the way the shell's router does, so a commit actually re-renders
+ * the page — the only way a remount-on-commit could detach the filter input.
  */
 function LiveUrlStoragePage({ client }: { readonly client: ApiClient }): ReactElement {
   const [search, setSearch] = useState<RouteSearch<'storage'>>({});
@@ -108,7 +112,7 @@ describe('StoragePage', () => {
     renderPage(<StoragePage search={{}} />, { client });
 
     expect(await screen.findByText('Storage needs a storage-provider plugin')).toBeInTheDocument();
-    expect(screen.queryByTestId('storage-table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('surfaces a loud error state when the info request rejects', async () => {
@@ -121,7 +125,7 @@ describe('StoragePage', () => {
     expect(within(alert).getByText('storage info boom')).toBeInTheDocument();
   });
 
-  it('renders the provider identity and the resource list', async () => {
+  it('renders the provider identity and the current-directory listing', async () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'nested/b.bin'] }),
@@ -131,14 +135,46 @@ describe('StoragePage', () => {
     expect(await screen.findByText('FsStorage')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Storage' })).toBeInTheDocument();
     expect(screen.getByText('plugin.storage')).toBeInTheDocument();
-    const table = await screen.findByTestId('storage-table');
-    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
-    // widens the document instead of scrolling inside its own box.
-    for (const table of document.querySelectorAll('table')) {
-      expect(table.closest('.tai-scroll-region')).not.toBeNull();
-    }
+
+    const table = await screen.findByRole('table');
+    // The root shows the root-level file plus the virtual folder its nested id
+    // implies; the nested id itself lives inside that folder, not at the root.
     expect(within(table).getByText('a.txt')).toBeInTheDocument();
+    expect(within(table).getByRole('button', { name: 'nested' })).toBeInTheDocument();
+    expect(within(table).queryByText('nested/b.bin')).not.toBeInTheDocument();
+  });
+
+  it('navigates into a virtual folder to its members', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'nested/b.bin'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'nested' }));
+
+    const table = screen.getByRole('table');
     expect(within(table).getByText('nested/b.bin')).toBeInTheDocument();
+    expect(within(table).queryByText('a.txt')).not.toBeInTheDocument();
+  });
+
+  it('renders folders and resources as cards in card view', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'nested/b.bin'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('radio', { name: 'Card view' }));
+
+    const grid = screen.getByRole('list', { name: 'Resources' });
+    expect(within(grid).getByRole('button', { name: 'nested' })).toBeInTheDocument();
+    expect(within(grid).getByText('a.txt')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('filters the fetched id list in memory without refetching', async () => {
@@ -149,57 +185,44 @@ describe('StoragePage', () => {
     });
     renderPage(<StoragePage search={{ filter: 'alpha' }} />, { client });
 
-    const table = await screen.findByTestId('storage-table');
+    const table = await screen.findByRole('table');
     expect(within(table).getByText('alpha.txt')).toBeInTheDocument();
     expect(within(table).queryByText('beta.txt')).not.toBeInTheDocument();
     // The filter is a pure in-memory narrowing: the list is fetched once.
     expect(list).toHaveBeenCalledTimes(1);
   });
 
-  it('commits the filter to the URL on Enter', async () => {
+  it('narrows the listing as the filter box is typed into', async () => {
     const user = userEvent.setup();
-    const navigate = vi.fn();
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['alpha.txt', 'beta.txt'] }),
     });
-    renderPage(<StoragePage search={{}} />, { client, navigate });
+    renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
-    const input = screen.getByLabelText('Filter');
-    await user.type(input, 'a.tx{Enter}');
-    expect(navigate).toHaveBeenCalledWith('storage', { filter: 'a.tx' });
+    await screen.findByRole('table');
+    await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'beta');
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('beta.txt')).toBeInTheDocument();
+    expect(within(table).queryByText('alpha.txt')).not.toBeInTheDocument();
   });
 
-  it('does not re-navigate when the filter loses focus unchanged', async () => {
-    const user = userEvent.setup();
-    const navigate = vi.fn();
+  it('re-seeds the filter box when the url filter changes underneath it', async () => {
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
     });
-    renderPage(<StoragePage search={{ filter: 'a' }} />, { client, navigate });
+    const { rerender } = renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
-    await user.click(screen.getByLabelText('Filter'));
-    // Blur (tab out) with the draft untouched: no redundant history write.
-    await user.tab();
-    expect(navigate).not.toHaveBeenCalled();
-  });
+    await screen.findByRole('table');
+    expect(screen.getByRole('textbox', { name: 'Filter resources' })).toHaveValue('');
 
-  it('commits the filter to the URL on an edited blur', async () => {
-    const user = userEvent.setup();
-    const navigate = vi.fn();
-    const client = stubClient({
-      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
-    });
-    renderPage(<StoragePage search={{}} />, { client, navigate });
-
-    await screen.findByTestId('storage-table');
-    await user.type(screen.getByLabelText('Filter'), 'a.tx');
-    await user.tab();
-    expect(navigate).toHaveBeenCalledWith('storage', { filter: 'a.tx' });
+    rerender(<StoragePage search={{ filter: 'zulu' }} />);
+    expect(screen.getByRole('textbox', { name: 'Filter resources' })).toHaveValue('zulu');
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('zulu.log')).toBeInTheDocument();
+    expect(within(table).queryByText('a.txt')).not.toBeInTheDocument();
   });
 
   it('renders the no-resources empty state when the store is empty', async () => {
@@ -212,6 +235,103 @@ describe('StoragePage', () => {
     expect(await screen.findByText('No resources')).toBeInTheDocument();
   });
 
+  it('renders the no-match empty state when the filter excludes every resource', async () => {
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['alpha.txt', 'beta.txt'] }),
+    });
+    renderPage(<StoragePage search={{ filter: 'zzz' }} />, { client });
+
+    expect(await screen.findByText('No matching resources')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('commits the filter to the URL on Enter', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client, navigate });
+
+    await screen.findByRole('table');
+    await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'a.tx{Enter}');
+    expect(navigate).toHaveBeenCalledWith('storage', { filter: 'a.tx' });
+  });
+
+  it('commits the filter to the URL on an edited blur', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client, navigate });
+
+    await screen.findByRole('table');
+    await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'a.tx');
+    await user.tab();
+    expect(navigate).toHaveBeenCalledWith('storage', { filter: 'a.tx' });
+  });
+
+  it('clears the filter param when the box is emptied and committed', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
+    });
+    renderPage(<StoragePage search={{ filter: 'zulu' }} />, { client, navigate });
+
+    await screen.findByRole('table');
+    const input = screen.getByRole('textbox', { name: 'Filter resources' });
+    await user.clear(input);
+    await user.keyboard('{Enter}');
+    // Emptying and committing must clear the param so the URL and box cannot drift.
+    expect(navigate).toHaveBeenCalledWith('storage', { filter: undefined });
+  });
+
+  it('does not navigate while the filter is only being typed', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['alpha.txt', 'beta.txt'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client, navigate });
+
+    await screen.findByRole('table');
+    // Typing narrows the list live but must not touch the URL until a commit.
+    await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'beta');
+    expect(within(screen.getByRole('table')).queryByText('alpha.txt')).not.toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the keyboard caret in the filter input when Enter commits (WCAG 2.4.3)', async () => {
+    const user = userEvent.setup();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
+    });
+    render(<LiveUrlStoragePage client={client} />);
+
+    await screen.findByRole('table');
+    // The node identity taken BEFORE the commit is the whole point: a remount on the
+    // committed filter would render an identical-looking input while detaching the
+    // one the operator was typing into, dropping the caret on `document.body`.
+    const input = screen.getByRole('textbox', { name: 'Filter resources' });
+    await user.type(input, 'a.tx{Enter}');
+
+    // The commit landed: the URL narrowed the table.
+    await waitFor(() => {
+      expect(within(screen.getByRole('table')).queryByText('zulu.log')).toBeNull();
+    });
+    expect(input.isConnected).toBe(true);
+    expect(document.activeElement).toBe(input);
+    expect(input).toHaveValue('a.tx');
+  });
+
   it('expands a resource stat, including a null content_type', async () => {
     const user = userEvent.setup();
     const client = stubClient({
@@ -221,7 +341,7 @@ describe('StoragePage', () => {
     });
     renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
+    await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: 'Stat blob' }));
 
     const dialog = await screen.findByRole('dialog');
@@ -354,7 +474,9 @@ describe('StoragePage', () => {
     });
     renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
+    // The resource lives in a folder; open it, then download from inside.
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'nested' }));
     await user.click(screen.getByRole('button', { name: 'Download nested/b.bin' }));
 
     await waitFor(() => {
@@ -371,7 +493,7 @@ describe('StoragePage', () => {
     });
     renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
+    await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: 'Download gone' }));
 
     expect(await screen.findByText("resource 'gone' not found")).toBeInTheDocument();
@@ -392,7 +514,7 @@ describe('StoragePage', () => {
     });
     renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
+    await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: 'Delete a.txt' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -405,7 +527,7 @@ describe('StoragePage', () => {
     });
   });
 
-  it('deletes a directory after confirm and invalidates the list', async () => {
+  it('deletes a directory from its folder action and invalidates the list', async () => {
     const user = userEvent.setup();
     const list = vi
       .fn()
@@ -419,9 +541,9 @@ describe('StoragePage', () => {
     });
     renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
-    await user.click(screen.getByRole('button', { name: 'Delete directory' }));
-    await user.type(screen.getByLabelText('Directory path'), 'reports');
+    await screen.findByRole('table');
+    // The delete-directory action rides the `reports` folder row for its own prefix.
+    await user.click(screen.getByRole('button', { name: 'Delete directory reports' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete directory' }));
 
@@ -435,61 +557,19 @@ describe('StoragePage', () => {
 
   it('renders a rejected directory delete verbatim in the dialog', async () => {
     const user = userEvent.setup();
-    const message = "directory '.' must be a relative path with no '..' segment";
+    const message = "directory 'reports' could not be removed";
     const client = stubClient({
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['reports/x.csv'] }),
       deleteStorageDir: vi.fn().mockRejectedValue(new Error(message)),
     });
     renderPage(<StoragePage search={{}} />, { client });
 
-    await screen.findByTestId('storage-table');
-    await user.click(screen.getByRole('button', { name: 'Delete directory' }));
-    await user.type(screen.getByLabelText('Directory path'), '.');
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'Delete directory reports' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Delete directory' }));
 
     expect(await within(dialog).findByText(message)).toBeInTheDocument();
-  });
-
-  it('keeps the keyboard caret in the filter input when Enter commits (WCAG 2.4.3)', async () => {
-    const user = userEvent.setup();
-    const client = stubClient({
-      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
-    });
-    render(<LiveUrlStoragePage client={client} />);
-
-    await screen.findByTestId('storage-table');
-    // The node identity taken BEFORE the commit is the whole point: a remount keyed
-    // on the committed filter renders an input that looks identical and holds the
-    // same value, while the one the operator was typing into is detached.
-    const input = screen.getByLabelText('Filter');
-    await user.type(input, 'a.tx{Enter}');
-
-    // The commit landed: the URL narrowed the table.
-    await waitFor(() => {
-      expect(within(screen.getByTestId('storage-table')).queryByText('zulu.log')).toBeNull();
-    });
-    expect(input.isConnected).toBe(true);
-    expect(document.activeElement).toBe(input);
-    expect(input).toHaveValue('a.tx');
-  });
-
-  it('re-seeds the filter draft when the url changes underneath it', async () => {
-    // The other half of the contract the remount `key` used to carry: a filter
-    // arriving WITHOUT a local edit (browser back/forward) still overwrites the
-    // draft, so the box never states a filter the table is not showing.
-    const client = stubClient({
-      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
-      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
-    });
-    const { rerender } = renderPage(<StoragePage search={{}} />, { client });
-
-    await screen.findByTestId('storage-table');
-    expect(screen.getByLabelText('Filter')).toHaveValue('');
-
-    rerender(<StoragePage search={{ filter: 'zulu' }} />);
-    expect(screen.getByLabelText('Filter')).toHaveValue('zulu');
   });
 });

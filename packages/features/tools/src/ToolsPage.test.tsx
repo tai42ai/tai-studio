@@ -2,17 +2,18 @@
  * Behavioural tests for the tools page: the master list (data / empty /
  * loud error), selecting a tool sets the `tool` search param via the shell
  * navigate spy, a selected tool mounts the run panel driven by its fetched
- * schema, the tag filter row groups + filters the list (persisting the selection
- * through the `?tags=` search param) and collapses its overflow into a static
- * "+N more", and the responsive master/detail behaviour — single-pane Back control
- * and focus management on selection change.
+ * schema, the `ExplorerView` explorer — folders as first-class rows/cards, a
+ * list/card toggle, and a tag filter row that OR-filters the flat list (persisting
+ * the selection through the `?tags=` search param) and collapses its overflow into a
+ * static "+N more" — and the responsive master/detail behaviour: single-pane Back
+ * control and focus management on selection change.
  */
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
-import type { ToolTagEntry } from '@tai42/api-client';
+import type { MeProjection, ToolTagEntry } from '@tai42/api-client';
 
 import { ToolsPage } from './ToolsPage';
 import { toolMetaKey } from './keys';
@@ -26,6 +27,9 @@ import {
 afterEach(() => {
   __resetContributions();
   vi.unstubAllGlobals();
+  // The explorer persists its list/card choice per surface in localStorage; clear it
+  // so each test starts in the default list view.
+  globalThis.localStorage.clear();
 });
 
 /** The two side reads the merged view needs, both empty — the shape a pre-overlay
@@ -63,7 +67,11 @@ interface ToolsSearch {
  * search param it receives — exactly how the shell router drives it. This is what
  * lets a click (or Back) actually change the selection so the focus effect fires.
  */
-function renderToolsHarness(client: StubApiClient, initial: ToolsSearch = {}) {
+function renderToolsHarness(
+  client: StubApiClient,
+  initial: ToolsSearch = {},
+  projection?: MeProjection,
+) {
   let setSearch: ((next: ToolsSearch) => void) | undefined;
   function Harness(): ReactNode {
     const [search, setSearchState] = useState<ToolsSearch>(initial);
@@ -73,7 +81,7 @@ function renderToolsHarness(client: StubApiClient, initial: ToolsSearch = {}) {
   const navigate = vi.fn((_token: string, next?: ToolsSearch) => {
     setSearch?.({ tool: next?.tool, tags: next?.tags });
   });
-  return renderWithProviders(<Harness />, { client, navigate });
+  return renderWithProviders(<Harness />, { client, navigate, projection });
 }
 
 /** Force `useBreakpoint` into the single-pane band (below 1024, not phone). */
@@ -249,11 +257,11 @@ describe('ToolsPage — tag filtering', () => {
     expect(screen.getByRole('button', { name: 'Untagged (1)' })).toBeInTheDocument();
   });
 
-  it('groups all tools with no selection; a multi-tag tool appears under each group', async () => {
+  it('lists every tool once with no selection (flat, ungrouped)', async () => {
     renderWithProviders(<ToolsPage search={{}} />, { client: taggedClient() });
 
-    // alpha carries both x and y, so it renders under both groups.
-    expect(await screen.findAllByRole('link', { name: 'Open tool alpha' })).toHaveLength(2);
+    // alpha carries both x and y, but the flat explorer lists it a single time.
+    expect(await screen.findAllByRole('link', { name: 'Open tool alpha' })).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'Open tool beta' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open tool gamma' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open tool solo' })).toBeInTheDocument();
@@ -270,8 +278,8 @@ describe('ToolsPage — tag filtering', () => {
   it('filters to tools carrying a selected tag (OR semantics) from the route', async () => {
     renderWithProviders(<ToolsPage search={{ tags: ['x'] }} />, { client: taggedClient() });
 
-    // Only x-tagged tools survive; alpha also shows under its y group.
-    expect(await screen.findAllByRole('link', { name: 'Open tool alpha' })).toHaveLength(2);
+    // Only x-tagged tools survive; alpha (x and y) still lists once.
+    expect(await screen.findAllByRole('link', { name: 'Open tool alpha' })).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'Open tool beta' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open tool gamma' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open tool solo' })).not.toBeInTheDocument();
@@ -295,9 +303,7 @@ describe('ToolsPage — tag filtering', () => {
       client: taggedClient(),
     });
 
-    const [firstAlpha] = await screen.findAllByRole('link', { name: 'Open tool alpha' });
-    if (firstAlpha === undefined) throw new Error('expected an alpha tool link');
-    await user.click(firstAlpha);
+    await user.click(await screen.findByRole('link', { name: 'Open tool alpha' }));
     expect(navigate).toHaveBeenCalledWith('tools', { tool: 'alpha', tags: ['x'] });
   });
 
@@ -322,8 +328,8 @@ describe('ToolsPage — tag filtering', () => {
     // beta carries only x and gamma only y; OR keeps BOTH — under AND each would be dropped.
     expect(await screen.findByRole('link', { name: 'Open tool beta' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open tool gamma' })).toBeInTheDocument();
-    // alpha carries both, so it appears under each selected group.
-    expect(screen.getAllByRole('link', { name: 'Open tool alpha' })).toHaveLength(2);
+    // alpha carries both, and still lists once in the flat explorer.
+    expect(screen.getAllByRole('link', { name: 'Open tool alpha' })).toHaveLength(1);
     // solo is untagged → excluded by the tag selection.
     expect(screen.queryByRole('link', { name: 'Open tool solo' })).not.toBeInTheDocument();
   });
@@ -481,7 +487,7 @@ describe('ToolsPage — tool_meta overlay merge', () => {
     expect(screen.getByText('echo')).toBeInTheDocument();
   });
 
-  it('groups a tool under BOTH its native and its overlay tags (merged everywhere but the editor)', async () => {
+  it('merges a tool native + overlay tags into one vocabulary (listed once)', async () => {
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['echo']),
       listToolTags: vi.fn().mockResolvedValue([{ name: 'echo', tags: ['native'], hidden: false }]),
@@ -503,8 +509,8 @@ describe('ToolsPage — tool_meta overlay merge', () => {
     // The tag vocabulary carries both sources merged, each counting the one tool.
     expect(await screen.findByRole('button', { name: 'custom (1)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'native (1)' })).toBeInTheDocument();
-    // echo carries both, so it renders once under each merged group.
-    expect(screen.getAllByRole('link', { name: 'Open tool echo' })).toHaveLength(2);
+    // echo carries both tags, and the flat explorer lists it once.
+    expect(screen.getAllByRole('link', { name: 'Open tool echo' })).toHaveLength(1);
   });
 
   it('survives an overlay-read failure: the flat list stays under a loud strip', async () => {
@@ -566,6 +572,27 @@ describe('ToolsPage — effective visibility', () => {
     expect(await screen.findByRole('link', { name: 'Open tool unhidden' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open tool stillhidden' })).toBeNull();
   });
+
+  it('shows the all-hidden empty state — not the install prompt — when every tool is hidden', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['secret']),
+      listToolTags: vi.fn().mockResolvedValue([{ name: 'secret', tags: [], hidden: false }]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          { tool_name: 'secret', display_name: null, folder_id: null, tags: [], hidden: true },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    // A non-empty catalog whose every tool is hidden → the all-hidden copy, NOT the
+    // "install a plugin" prompt (plugins exist, they are just hidden).
+    expect(await screen.findByText('No visible tools')).toBeInTheDocument();
+    expect(screen.getByText(/Every installed tool is hidden/)).toBeInTheDocument();
+    expect(screen.queryByText('No tools available')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Open tool secret' })).toBeNull();
+  });
 });
 
 describe('ToolsPage — folder navigation', () => {
@@ -597,6 +624,114 @@ describe('ToolsPage — folder navigation', () => {
     await user.click(screen.getByRole('button', { name: 'All tools' }));
     expect(await screen.findByRole('link', { name: 'Open tool root_tool' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open tool filed_tool' })).toBeNull();
+  });
+
+  it('renders a subfolder as a first-class row above the tools in the table', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['root_tool']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
+        meta: [],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    // The subfolder is a first-class row inside the tools table, beside the tool rows.
+    const rows = await screen.findAllByRole('row');
+    const weatherRow = rows.find(
+      (row) => within(row).queryByRole('button', { name: 'Weather' }) !== null,
+    );
+    expect(weatherRow).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Open tool root_tool' })).toBeInTheDocument();
+  });
+
+  it('renders folders and tools as cards in one grid in card view', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['root_tool']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [{ id: 'f1', name: 'Weather', parent_id: null }],
+        meta: [],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    await user.click(await screen.findByRole('radio', { name: 'Card view' }));
+    const grid = screen.getByRole('list', { name: 'Tools' });
+    expect(within(grid).getByRole('button', { name: 'Weather' })).toBeInTheDocument();
+    expect(within(grid).getByRole('link', { name: 'Open tool root_tool' })).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('shows the folder-empty state inside a subfolder with nothing filed', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['root_tool']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [{ id: 'f1', name: 'Empty', parent_id: null }],
+        meta: [],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Empty' }));
+    expect(await screen.findByText('This folder is empty')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool root_tool' })).toBeNull();
+  });
+});
+
+describe('ToolsPage — row/card open selects the tool', () => {
+  it('selects a tool into the detail pane on a bare row click', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderToolsHarness(detailClient(['echo']), {}, fullProjection());
+
+    // The bare row (not the name link, not the Edit button) opens the tool — the same
+    // navigation the name link performs, so the detail pane mounts for it.
+    const row = (await screen.findByRole('button', { name: 'Edit tool echo' })).closest('tr');
+    if (row === null) throw new Error('tool row not rendered');
+    await user.click(row);
+
+    expect(navigate).toHaveBeenCalledWith('tools', { tool: 'echo', tags: undefined });
+    expect(await screen.findByRole('heading', { level: 2, name: 'echo' })).toBeInTheDocument();
+  });
+
+  it('preserves the active tags in the row-open navigation', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([{ name: 'echo', tags: ['x'], hidden: false }]),
+      ...emptyOverlay,
+      getToolSchema: vi.fn().mockResolvedValue({
+        input: { type: 'object', properties: {}, required: [] },
+        output: null,
+        description: null,
+      }),
+      getToolExtensions: vi.fn().mockResolvedValue({ combos: [], available: [] }),
+      listPresets: vi.fn().mockResolvedValue([]),
+    };
+    const { navigate } = renderToolsHarness(client, { tags: ['x'] }, fullProjection());
+
+    const row = (await screen.findByRole('button', { name: 'Edit tool echo' })).closest('tr');
+    if (row === null) throw new Error('tool row not rendered');
+    await user.click(row);
+
+    // The row-open mirrors the name link's search params exactly, tags included.
+    expect(navigate).toHaveBeenCalledWith('tools', { tool: 'echo', tags: ['x'] });
+  });
+
+  it('does NOT select the tool when the Edit button is clicked (dialog opens instead)', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderToolsHarness(detailClient(['echo']), {}, fullProjection());
+
+    await user.click(await screen.findByRole('button', { name: 'Edit tool echo' }));
+
+    // The Edit control opens its dialog; the SDK yields to it, so no tool is selected.
+    expect(await screen.findByText('Edit echo')).toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByText('No tool selected')).toBeInTheDocument();
   });
 });
 

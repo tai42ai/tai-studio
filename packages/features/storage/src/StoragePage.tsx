@@ -6,15 +6,24 @@
  *    skeleton ships no provider), so `present: false` renders a calm EmptyState and
  *    nothing else. When present it shows the provider class + module verbatim.
  *  - the RESOURCE browser (only when a provider is present) — `listStorageResources`
- *    served as a `{ resources }` id list, filtered in memory by the `?filter=`
- *    substring (case-sensitive; the door has no filter param), with per-row stat /
- *    download / delete and the delete-directory + upload dialogs.
+ *    served as a `{ resources }` id list, explored through the shared
+ *    {@link ExplorerView}: path-shaped ids fold into virtual folders (a folder
+ *    exists only through its members), per-file stat / download / delete stay on the
+ *    row/card, and a folder carries the delete-directory action for its own prefix.
  *
  * Every server-supplied value (provider identity, resource ids, stat fields, error
  * messages) renders as ESCAPED React text — never through an HTML sink. Failures
  * surface loudly through `ErrorState`; a server error message is shown verbatim.
  */
-import { useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
@@ -24,32 +33,63 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  ExplorerView,
   Field,
   JsonTree,
   PageHeader,
   RadioGroup,
-  ScrollRegion,
   Skeleton,
-  TBody,
   TD,
-  TH,
-  THead,
-  TR,
-  Table,
-  TextInput,
   Textarea,
+  TextInput,
   downloadBlob,
   errorMessage,
   useApi,
   useAppNavigate,
+  type ExplorerColumn,
+  type ExplorerEmptyStates,
+  type Folder,
   type PageProps,
 } from '@tai42/studio-sdk';
 
+import { deriveFolders, parentPrefix } from './folders';
 import { storageInfoKey, storageResourcesKey, storageStatKey } from './keys';
 
 const monoStyle: CSSProperties = { fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' };
 
-/** The final `/`-separated segment of an id — the download filename. */
+/** The explorer's list/card view-mode persistence key. */
+const STORAGE_VIEW_SURFACE = 'studio-storage';
+
+/** The filter box's accessible name; the commit listener keys the search input on it. */
+const SEARCH_LABEL = 'Filter resources';
+
+/** True when a delegated blur/keydown originated on the explorer's filter input. */
+function isSearchInput(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.getAttribute('aria-label') === SEARCH_LABEL;
+}
+
+/** The resource table's columns; folder rows span both. */
+const COLUMNS: ExplorerColumn[] = [
+  { key: 'resource', header: 'Resource' },
+  { key: 'actions', header: <span style={{ display: 'block', textAlign: 'right' }}>Actions</span> },
+];
+
+const EMPTY_STATES: ExplorerEmptyStates = {
+  empty: {
+    title: 'No resources',
+    description: 'The storage provider holds no objects yet. Upload one to get started.',
+  },
+  emptyFolder: {
+    title: 'This directory is empty',
+    description: 'No resources or subdirectories are filed here.',
+  },
+  noMatch: {
+    title: 'No matching resources',
+    description: 'No id contains the filter text.',
+  },
+};
+
+/** The final `/`-separated segment of an id — the download filename and card name. */
 function basename(id: string): string {
   const parts = id.split('/');
   const last = parts[parts.length - 1];
@@ -120,49 +160,37 @@ function DeleteResourceDialog({ id, onClose }: { id: string; onClose: () => void
 }
 
 /**
- * The delete-directory dialog: a directory-path input plus a danger confirm that
- * removes the whole subtree (`deleteStorageDir`) and invalidates the id list. A
- * rejected delete (e.g. the root-path 400) renders the server message verbatim.
+ * The delete-directory confirm for one folder prefix: a danger confirm that removes
+ * the whole subtree (`deleteStorageDir`) and invalidates the id list. A rejected
+ * delete renders the server message verbatim.
  */
-function DeleteDirDialog({ onClose }: { onClose: () => void }): ReactNode {
+function DeleteDirDialog({ dir, onClose }: { dir: string; onClose: () => void }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
-  const [path, setPath] = useState('');
   const remove = useMutation({
-    mutationFn: (dir: string) => api.deleteStorageDir(dir),
+    mutationFn: () => api.deleteStorageDir(dir),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
       onClose();
     },
   });
 
-  const trimmed = path.trim();
   return (
     <ConfirmDialog
       title="Delete directory"
       confirmLabel="Delete directory"
       pendingLabel="Deleting directory"
       onConfirm={() => {
-        remove.mutate(trimmed);
+        remove.mutate();
       }}
       onClose={onClose}
       isPending={remove.isPending}
       error={remove.error}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-        <p style={{ margin: 0 }}>
-          Delete a directory and everything under it. This cannot be undone.
-        </p>
-        <Field label="Directory path">
-          <TextInput
-            value={path}
-            placeholder="reports/2026"
-            onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              setPath(event.target.value);
-            }}
-          />
-        </Field>
-      </div>
+      <p style={{ margin: 0 }}>
+        Delete <strong style={monoStyle}>{dir}</strong> and everything under it? This cannot be
+        undone.
+      </p>
     </ConfirmDialog>
   );
 }
@@ -308,8 +336,8 @@ function UploadDialog({ onClose }: { onClose: () => void }): ReactNode {
   );
 }
 
-/** One resource row: the id plus its Stat / Download / Delete actions. */
-function ResourceRow({
+/** The Stat / Download / Delete controls shared by a resource's row and card. */
+function ResourceActions({
   id,
   onStat,
   onDelete,
@@ -323,74 +351,22 @@ function ResourceRow({
   readonly downloading: boolean;
 }): ReactNode {
   return (
-    <TR>
-      <TD className="tai-table-id" style={{ wordBreak: 'break-all' }}>
-        {id}
-      </TD>
-      <TD>
-        <div style={{ display: 'flex', gap: 'var(--tai-space-2)', justifyContent: 'flex-end' }}>
-          <Button aria-label={`Stat ${id}`} onClick={onStat}>
-            Stat
-          </Button>
-          <Button aria-label={`Download ${id}`} onClick={onDownload} disabled={downloading}>
-            Download
-          </Button>
-          <Button variant="danger" aria-label={`Delete ${id}`} onClick={onDelete}>
-            Delete
-          </Button>
-        </div>
-      </TD>
-    </TR>
-  );
-}
-
-/**
- * The filter input. Seeded from the committed `?filter=` value and remounted (via a
- * `key` at the call site) whenever that value changes, so its local draft stays a
- * pure local edit until an explicit commit. Enter or blur writes the URL — the
- * shell `navigate` has no `replace`, so per-keystroke writes would spam history.
- */
-function FilterInput({
-  initial,
-  onCommit,
-}: {
-  readonly initial: string;
-  readonly onCommit: (value: string) => void;
-}): ReactNode {
-  const [draft, setDraft] = useState(initial);
-  const [seed, setSeed] = useState(initial);
-  // Re-seed the draft from the committed filter DURING RENDER (React's documented
-  // adjust-state-on-prop-change pattern) rather than by remounting on a `key`: this
-  // input is what commits the filter, so a remount keyed on the committed value
-  // detaches the focused element the instant Enter fires and drops the keyboard
-  // caret on `document.body` (WCAG 2.4.3).
-  if (seed !== initial) {
-    setSeed(initial);
-    setDraft(initial);
-  }
-  return (
-    <Field label="Filter">
-      <TextInput
-        value={draft}
-        placeholder="Substring of the resource id"
-        onChange={(event: ChangeEvent<HTMLInputElement>) => {
-          setDraft(event.target.value);
-        }}
-        onBlur={() => {
-          // Only write on a real edit: blurring an untouched input (e.g. tabbing
-          // through) must not push a redundant history entry for the same value.
-          if (draft !== initial) onCommit(draft);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') onCommit(draft);
-        }}
-      />
-    </Field>
+    <div style={{ display: 'flex', gap: 'var(--tai-space-2)', justifyContent: 'flex-end' }}>
+      <Button aria-label={`Stat ${id}`} onClick={onStat}>
+        Stat
+      </Button>
+      <Button aria-label={`Download ${id}`} onClick={onDownload} disabled={downloading}>
+        Download
+      </Button>
+      <Button variant="danger" aria-label={`Delete ${id}`} onClick={onDelete}>
+        Delete
+      </Button>
+    </div>
   );
 }
 
 /** The resource browser, rendered only when a provider is present. */
-function ResourceBrowser({ filter }: { filter: string }): ReactNode {
+function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
   const resources = useQuery({
@@ -398,10 +374,61 @@ function ResourceBrowser({ filter }: { filter: string }): ReactNode {
     queryFn: ({ signal }) => api.listStorageResources(signal),
   });
 
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [statId, setStatId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [dirOpen, setDirOpen] = useState(false);
+  const [deleteDir, setDeleteDir] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+
+  const [query, setQuery] = useState(initialFilter);
+  const [seed, setSeed] = useState(initialFilter);
+  // Re-seed the live filter from the committed `?filter=` DURING RENDER (React's
+  // adjust-state-on-prop-change pattern): a filter arriving from the URL
+  // (deep-link, browser back/forward) overwrites the box so it never states a
+  // filter the list is not showing.
+  if (seed !== initialFilter) {
+    setSeed(initialFilter);
+    setQuery(initialFilter);
+  }
+
+  // Write the live filter to `?filter=` — never per keystroke (the shell navigate
+  // has no replace; per-keystroke writes would spam history), only on an explicit
+  // commit. A cleared box commits `undefined` so the URL and box cannot drift.
+  const commitFilter = useCallback(
+    (value: string): void => {
+      const next = value.trim();
+      navigate('storage', { filter: next === '' ? undefined : next });
+    },
+    [navigate],
+  );
+
+  // The SDK search input is controlled (value/onChange only), so the URL commit is
+  // delegated on the container: Enter or an edited blur of the filter box writes the
+  // URL. The ref holds the latest value so the listeners bind once, not per keystroke.
+  const commitState = useRef({ query, initialFilter });
+  commitState.current = { query, initialFilter };
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el === null) throw new Error('Storage browser container ref did not attach.');
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Enter' && isSearchInput(event.target)) {
+        commitFilter(commitState.current.query);
+      }
+    };
+    const onFocusOut = (event: FocusEvent): void => {
+      const { query: q, initialFilter: committed } = commitState.current;
+      // An untouched blur (tabbing through) must not push a redundant history entry
+      // for the value already committed to the URL.
+      if (isSearchInput(event.target) && q.trim() !== committed) commitFilter(q);
+    };
+    el.addEventListener('keydown', onKeyDown);
+    el.addEventListener('focusout', onFocusOut);
+    return () => {
+      el.removeEventListener('keydown', onKeyDown);
+      el.removeEventListener('focusout', onFocusOut);
+    };
+  }, [commitFilter]);
 
   const download = useMutation({
     mutationFn: async (id: string) => {
@@ -410,10 +437,61 @@ function ResourceBrowser({ filter }: { filter: string }): ReactNode {
     },
   });
 
-  function commitFilter(value: string): void {
-    const next = value.trim();
-    navigate('storage', { filter: next === '' ? undefined : next });
-  }
+  const renderActions = (id: string): ReactNode => (
+    <ResourceActions
+      id={id}
+      downloading={download.isPending}
+      onStat={() => {
+        setStatId(id);
+      }}
+      onDelete={() => {
+        setDeleteId(id);
+      }}
+      onDownload={() => {
+        download.mutate(id);
+      }}
+    />
+  );
+
+  const renderRow = (id: string): ReactNode => (
+    <>
+      <TD className="tai-table-id" style={{ wordBreak: 'break-all' }}>
+        {id}
+      </TD>
+      <TD>{renderActions(id)}</TD>
+    </>
+  );
+
+  const renderCard = (id: string): ReactNode => {
+    const name = basename(id);
+    return (
+      <Card interactive>
+        <div className="tai-stack tai-stack-2">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ wordBreak: 'break-all' }}>{name}</span>
+            {name !== id ? (
+              <span className="tai-muted tai-mono" style={{ wordBreak: 'break-all' }}>
+                {id}
+              </span>
+            ) : null}
+          </div>
+          {renderActions(id)}
+        </div>
+      </Card>
+    );
+  };
+
+  const renderFolderActions = (folder: Folder): ReactNode => (
+    <Button
+      variant="danger"
+      aria-label={`Delete directory ${folder.id}`}
+      onClick={() => {
+        setDeleteDir(folder.id);
+      }}
+    >
+      Delete
+    </Button>
+  );
 
   let body: ReactNode;
   if (resources.isPending) {
@@ -431,80 +509,50 @@ function ResourceBrowser({ filter }: { filter: string }): ReactNode {
         onRetry={() => void resources.refetch()}
       />
     );
-  } else if (resources.data.resources.length === 0) {
+  } else {
+    const ids = resources.data.resources;
     body = (
-      <EmptyState
-        title="No resources"
-        description="The storage provider holds no objects yet. Upload one to get started."
+      <ExplorerView<string>
+        items={ids}
+        getItemKey={(id) => id}
+        getFolderId={(id) => parentPrefix(id)}
+        folders={deriveFolders(ids)}
+        currentFolderId={currentFolderId}
+        onNavigate={setCurrentFolderId}
+        rootLabel="All resources"
+        viewSurface={STORAGE_VIEW_SURFACE}
+        label="Resources"
+        columns={COLUMNS}
+        renderRow={renderRow}
+        renderCard={renderCard}
+        search={{
+          value: query,
+          onChange: setQuery,
+          matches: (id, q) => id.includes(q),
+          label: SEARCH_LABEL,
+          placeholder: 'Substring of the resource id',
+        }}
+        renderFolderActions={renderFolderActions}
+        emptyStates={EMPTY_STATES}
       />
     );
-  } else {
-    const filtered = resources.data.resources.filter((id) => id.includes(filter));
-    body =
-      filtered.length === 0 ? (
-        <EmptyState title="No matching resources" description="No id contains the filter text." />
-      ) : (
-        <ScrollRegion label="Resources">
-          <Table data-testid="storage-table">
-            <THead>
-              <TR>
-                <TH>Resource</TH>
-                <TH style={{ textAlign: 'right' }}>Actions</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {filtered.map((id) => (
-                <ResourceRow
-                  key={id}
-                  id={id}
-                  downloading={download.isPending}
-                  onStat={() => {
-                    setStatId(id);
-                  }}
-                  onDelete={() => {
-                    setDeleteId(id);
-                  }}
-                  onDownload={() => {
-                    download.mutate(id);
-                  }}
-                />
-              ))}
-            </TBody>
-          </Table>
-        </ScrollRegion>
-      );
   }
 
   return (
     <Card>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            gap: 'var(--tai-space-4)',
-            flexWrap: 'wrap',
-          }}
-        >
-          <FilterInput initial={filter} onCommit={commitFilter} />
-          <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
-            <Button
-              onClick={() => {
-                setDirOpen(true);
-              }}
-            >
-              Delete directory
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setUploadOpen(true);
-              }}
-            >
-              Upload
-            </Button>
-          </div>
+      <div
+        ref={containerRef}
+        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            variant="primary"
+            onClick={() => {
+              setUploadOpen(true);
+            }}
+          >
+            Upload
+          </Button>
         </div>
 
         {download.isError ? <ErrorState message={errorMessage(download.error)} /> : null}
@@ -527,10 +575,11 @@ function ResourceBrowser({ filter }: { filter: string }): ReactNode {
           }}
         />
       ) : null}
-      {dirOpen ? (
+      {deleteDir !== null ? (
         <DeleteDirDialog
+          dir={deleteDir}
           onClose={() => {
-            setDirOpen(false);
+            setDeleteDir(null);
           }}
         />
       ) : null}
@@ -593,7 +642,7 @@ export function StoragePage({ search }: PageProps<'storage'>): ReactNode {
             <dd style={{ margin: 0, ...monoStyle }}>{info.data.module}</dd>
           </dl>
         </Card>
-        <ResourceBrowser filter={search.filter ?? ''} />
+        <ResourceBrowser initialFilter={search.filter ?? ''} />
       </>
     );
   }

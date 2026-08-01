@@ -213,6 +213,51 @@ describe('ExplorerView folders as first-class rows', () => {
     const grid = screen.getByRole('list', { name: 'Rows' });
     expect(within(grid).getByRole('button', { name: 'Manage Weather' })).toBeInTheDocument();
   });
+
+  it('wraps the table in a scroll region so it scrolls in its own box', () => {
+    const { container } = render(
+      <ExplorerView<Row>
+        items={ROWS}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={FOLDERS}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={`explorer-scroll-${Math.random().toString(36).slice(2)}`}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+      />,
+    );
+    expect(screen.getByRole('table').closest('.tai-scroll-region')).not.toBeNull();
+    expect(container.querySelectorAll('.tai-scroll-region')).toHaveLength(1);
+  });
+
+  it('does not wrap the card grid in a scroll region', async () => {
+    const { container } = render(
+      <ExplorerView<Row>
+        items={ROWS}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={FOLDERS}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={`explorer-scroll-cards-${Math.random().toString(36).slice(2)}`}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+      />,
+    );
+    await userEvent.click(screen.getByRole('radio', { name: 'Card view' }));
+    expect(screen.getByRole('list', { name: 'Rows' })).toBeInTheDocument();
+    expect(container.querySelector('.tai-scroll-region')).toBeNull();
+  });
 });
 
 describe('ExplorerView tag filter', () => {

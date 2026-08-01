@@ -19,6 +19,7 @@ import { childFolders, FolderBreadcrumb, FolderRow, type Folder } from './folder
 import { SearchIcon } from './icons';
 import { TextInput } from './inputs';
 import { Card, EmptyState } from './primitives';
+import { ScrollRegion } from './scroll-region';
 import { Table, TBody, TD, TH, THead, TR } from './table';
 import { useViewMode, ViewToggle } from './view-toggle';
 
@@ -378,36 +379,39 @@ export function ExplorerView<T>({
   } else {
     // Folder rows share the item table, spanning every column, sorted above items —
     // so a folder-with-only-subfolders is folder ROWS, never a header-only table.
+    // A too-wide table scrolls inside its own box rather than widening the page.
     body = (
-      <Table>
-        <THead>
-          <TR>
-            {columns.map((column) => (
-              <TH key={column.key} numeric={column.numeric}>
-                {column.header}
-              </TH>
+      <ScrollRegion label={label}>
+        <Table>
+          <THead>
+            <TR>
+              {columns.map((column) => (
+                <TH key={column.key} numeric={column.numeric}>
+                  {column.header}
+                </TH>
+              ))}
+            </TR>
+          </THead>
+          <TBody>
+            {subfolders.map((folder) => (
+              <TR key={`folder:${folder.id}`}>
+                <TD colSpan={columns.length}>
+                  <FolderEntry
+                    folder={folder}
+                    onNavigate={onNavigate}
+                    renderFolderActions={renderFolderActions}
+                  />
+                </TD>
+              </TR>
             ))}
-          </TR>
-        </THead>
-        <TBody>
-          {subfolders.map((folder) => (
-            <TR key={`folder:${folder.id}`}>
-              <TD colSpan={columns.length}>
-                <FolderEntry
-                  folder={folder}
-                  onNavigate={onNavigate}
-                  renderFolderActions={renderFolderActions}
-                />
-              </TD>
-            </TR>
-          ))}
-          {filtered.map((item) => (
-            <TR key={`item:${getItemKey(item)}`} {...openProps(item)}>
-              {renderRow(item)}
-            </TR>
-          ))}
-        </TBody>
-      </Table>
+            {filtered.map((item) => (
+              <TR key={`item:${getItemKey(item)}`} {...openProps(item)}>
+                {renderRow(item)}
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
     );
   }
 
