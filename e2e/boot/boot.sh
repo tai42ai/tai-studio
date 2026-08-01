@@ -67,19 +67,19 @@ PG_HOST_PORT=55432
 
 # The accounts docs-demo (APPLY_ACCOUNTS_DDL=1, set by docs-screenshots.sh) needs the
 # accounts plugin's own Postgres env group pointed at the SAME compose database:
-#   TAI_ACCOUNTS_PG_*    the accounts plugin's own tables (double-PG is correct —
-#                        the PostgresConnectionSettings field `pg_host` under the
-#                        `TAI_ACCOUNTS_PG_` env_prefix reads `TAI_ACCOUNTS_PG_PG_HOST`).
+#   TAI_ACCOUNTS_PG_*    the accounts plugin's own tables (the
+#                        PostgresConnectionSettings field `pg_host` under the
+#                        `TAI_ACCOUNTS_` env_prefix reads `TAI_ACCOUNTS_PG_HOST`).
 # (The `VERSIONING_STORE_*` group, which also backs the seeded role templates, is
 # exported in step 5.)
 # Exported here (before the DDL apply and the skeleton launch, both of which read
 # them) using PG_HOST_PORT; gated so the lean e2e boot is untouched.
 if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
-  export TAI_ACCOUNTS_PG_PG_HOST=127.0.0.1
-  export TAI_ACCOUNTS_PG_PG_PORT="${PG_HOST_PORT}"
-  export TAI_ACCOUNTS_PG_PG_USER=postgres
-  export TAI_ACCOUNTS_PG_PG_PASSWORD=postgres
-  export TAI_ACCOUNTS_PG_PG_DB=tai
+  export TAI_ACCOUNTS_PG_HOST=127.0.0.1
+  export TAI_ACCOUNTS_PG_PORT="${PG_HOST_PORT}"
+  export TAI_ACCOUNTS_PG_USER=postgres
+  export TAI_ACCOUNTS_PG_PASSWORD=postgres
+  export TAI_ACCOUNTS_PG_DB=tai
 fi
 
 # A deterministic throwaway base64 32-byte key (test-only).
