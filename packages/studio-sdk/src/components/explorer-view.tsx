@@ -12,7 +12,7 @@
  * {@link matchesSelectedTags}, {@link UNTAGGED_TOKEN}) so every consuming screen
  * shares one vocabulary/untagged-sentinel/OR-match rule rather than copying it.
  */
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 
 import { EntityCardGrid } from './entity-card-grid';
 import { childFolders, FolderBreadcrumb, FolderRow, type Folder } from './folder-nav';
@@ -154,6 +154,12 @@ export interface ExplorerViewProps<T> {
   /** The item's `<Card>` — wrapped in a keyed `listitem` by the explorer. */
   readonly renderCard: (item: T) => ReactNode;
 
+  /** Open an item on a pointer click anywhere on its row/card — a convenience
+   *  ONLY. The accessible activation path stays the interactive element inside
+   *  the cell (the name link), so the row is never a focusable button; a click
+   *  originating on a nested control is left to that control. */
+  readonly onOpenItem?: (item: T) => void;
+
   readonly tags?: ExplorerTags<T>;
   readonly search?: ExplorerSearch<T>;
 
@@ -268,6 +274,7 @@ export function ExplorerView<T>({
   columns,
   renderRow,
   renderCard,
+  onOpenItem,
   tags,
   search,
   renderFolderActions,
@@ -311,6 +318,33 @@ export function ExplorerView<T>({
     tags.onChange(next);
   };
 
+  // The pointer-open props for one item's row/card, present only when `onOpenItem`
+  // is set. The handler yields to any nested interactive element the click landed
+  // on (a name link, an actions kebab) so it never hijacks its activation; a
+  // portalled menu (Radix) never bubbles here, so the role selectors are defensive
+  // for an inline menu only.
+  const openProps = (
+    item: T,
+  ): { onClick?: (event: MouseEvent<HTMLElement>) => void; style?: { cursor: 'pointer' } } => {
+    if (onOpenItem === undefined) return {};
+    return {
+      onClick: (event) => {
+        // A press-drag that selects the name text also fires a click; that is a
+        // selection, not an open intent.
+        if (window.getSelection()?.isCollapsed === false) return;
+        const target = event.target;
+        if (
+          target instanceof Element &&
+          target.closest('button, a, [role="menu"], [role="menuitem"]') !== null
+        ) {
+          return;
+        }
+        onOpenItem(item);
+      },
+      style: { cursor: 'pointer' },
+    };
+  };
+
   const hasEntries = subfolders.length > 0 || filtered.length > 0;
 
   let body: ReactNode;
@@ -335,7 +369,7 @@ export function ExplorerView<T>({
           </div>
         ))}
         {filtered.map((item) => (
-          <div role="listitem" key={`item:${getItemKey(item)}`}>
+          <div role="listitem" key={`item:${getItemKey(item)}`} {...openProps(item)}>
             {renderCard(item)}
           </div>
         ))}
@@ -368,7 +402,9 @@ export function ExplorerView<T>({
             </TR>
           ))}
           {filtered.map((item) => (
-            <TR key={`item:${getItemKey(item)}`}>{renderRow(item)}</TR>
+            <TR key={`item:${getItemKey(item)}`} {...openProps(item)}>
+              {renderRow(item)}
+            </TR>
           ))}
         </TBody>
       </Table>

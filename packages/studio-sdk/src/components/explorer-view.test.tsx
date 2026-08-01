@@ -344,3 +344,147 @@ describe('ExplorerView search', () => {
     expect(onChange).toHaveBeenCalled();
   });
 });
+
+describe('ExplorerView onOpenItem', () => {
+  const ROOT_ROWS = ROWS.filter((r) => r.folderId === null);
+
+  function renderWithOpen(
+    onOpenItem: ((row: Row) => void) | undefined,
+    onNested: () => void,
+  ): void {
+    render(
+      <ExplorerView<Row>
+        items={ROOT_ROWS}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={[]}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={`explorer-open-${Math.random().toString(36).slice(2)}`}
+        label="Rows"
+        columns={COLUMNS}
+        onOpenItem={onOpenItem}
+        renderRow={(row) => (
+          <TD>
+            <a
+              href="#open"
+              onClick={(event) => {
+                event.preventDefault();
+              }}
+            >
+              {row.name}
+            </a>
+            <button type="button" aria-label={`edit ${row.name}`} onClick={onNested}>
+              <svg data-testid={`icon-${row.name}`} width="12" height="12" aria-hidden="true" />
+            </button>
+          </TD>
+        )}
+        renderCard={(row) => (
+          <Card interactive>
+            <a
+              href="#open"
+              onClick={(event) => {
+                event.preventDefault();
+              }}
+            >
+              {row.name}
+            </a>
+            <button type="button" aria-label={`edit ${row.name}`} onClick={onNested}>
+              <svg
+                data-testid={`icon-card-${row.name}`}
+                width="12"
+                height="12"
+                aria-hidden="true"
+              />
+            </button>
+          </Card>
+        )}
+        emptyStates={EMPTY_STATES}
+      />,
+    );
+  }
+
+  it('opens an item on a row click', async () => {
+    const onOpenItem = vi.fn();
+    renderWithOpen(onOpenItem, vi.fn());
+    const row = screen.getByRole('button', { name: 'edit alpha' }).closest('tr');
+    if (row === null) throw new Error('item row not rendered');
+    await userEvent.click(row);
+    expect(onOpenItem).toHaveBeenCalledTimes(1);
+    expect(onOpenItem).toHaveBeenCalledWith(expect.objectContaining({ id: 'alpha' }));
+  });
+
+  it('marks item rows with a pointer cursor when the prop is set', () => {
+    renderWithOpen(vi.fn(), vi.fn());
+    const row = screen.getByRole('button', { name: 'edit alpha' }).closest('tr');
+    if (row === null) throw new Error('item row not rendered');
+    expect(row).toHaveStyle({ cursor: 'pointer' });
+  });
+
+  it('does not open when the click lands on a nested button in the row', async () => {
+    const onOpenItem = vi.fn();
+    const onNested = vi.fn();
+    renderWithOpen(onOpenItem, onNested);
+    await userEvent.click(screen.getByRole('button', { name: 'edit alpha' }));
+    expect(onNested).toHaveBeenCalledTimes(1);
+    expect(onOpenItem).not.toHaveBeenCalled();
+  });
+
+  it('does not open when the click lands on the name link in the row', async () => {
+    const onOpenItem = vi.fn();
+    renderWithOpen(onOpenItem, vi.fn());
+    await userEvent.click(screen.getByRole('link', { name: 'alpha' }));
+    expect(onOpenItem).not.toHaveBeenCalled();
+  });
+
+  it('does not open when the click target is an svg inside a nested button', async () => {
+    const onOpenItem = vi.fn();
+    renderWithOpen(onOpenItem, vi.fn());
+    await userEvent.click(screen.getByTestId('icon-alpha'));
+    expect(onOpenItem).not.toHaveBeenCalled();
+  });
+
+  it('does not open on a text-selection drag (a non-collapsed selection)', async () => {
+    const onOpenItem = vi.fn();
+    renderWithOpen(onOpenItem, vi.fn());
+    const row = screen.getByRole('button', { name: 'edit alpha' }).closest('tr');
+    if (row === null) throw new Error('item row not rendered');
+    const selection = { isCollapsed: false } as unknown as Selection;
+    const spy = vi.spyOn(window, 'getSelection').mockReturnValue(selection);
+    try {
+      await userEvent.click(row);
+      expect(onOpenItem).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('opens an item on a card click', async () => {
+    const onOpenItem = vi.fn();
+    renderWithOpen(onOpenItem, vi.fn());
+    await userEvent.click(screen.getByRole('radio', { name: 'Card view' }));
+    const card = screen.getByRole('button', { name: 'edit alpha' }).closest('[role="listitem"]');
+    if (card === null) throw new Error('item card not rendered');
+    await userEvent.click(card);
+    expect(onOpenItem).toHaveBeenCalledTimes(1);
+    expect(onOpenItem).toHaveBeenCalledWith(expect.objectContaining({ id: 'alpha' }));
+  });
+
+  it('does not open when the click lands on a nested control in the card', async () => {
+    const onOpenItem = vi.fn();
+    const onNested = vi.fn();
+    renderWithOpen(onOpenItem, onNested);
+    await userEvent.click(screen.getByRole('radio', { name: 'Card view' }));
+    await userEvent.click(screen.getByRole('button', { name: 'edit alpha' }));
+    expect(onNested).toHaveBeenCalledTimes(1);
+    expect(onOpenItem).not.toHaveBeenCalled();
+  });
+
+  it('wires no row handler when onOpenItem is absent', () => {
+    renderWithOpen(undefined, vi.fn());
+    const row = screen.getByRole('button', { name: 'edit alpha' }).closest('tr');
+    if (row === null) throw new Error('item row not rendered');
+    expect(row).not.toHaveStyle({ cursor: 'pointer' });
+  });
+});
