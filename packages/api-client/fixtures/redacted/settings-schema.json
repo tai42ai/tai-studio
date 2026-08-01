@@ -14,6 +14,7 @@
           "secret": false,
           "description": "Application log level.",
           "nested_group": null,
+          "default_namespace_var": null,
           "value": "INFO"
         },
         {
@@ -25,6 +26,7 @@
           "secret": true,
           "description": "OpenAI API key.",
           "nested_group": null,
+          "default_namespace_var": null,
           "value": "***"
         }
       ]

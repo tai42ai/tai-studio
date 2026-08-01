@@ -24,6 +24,7 @@ function schemaFixture(): SettingsSchema {
             secret: false,
             description: null,
             nested_group: null,
+            default_namespace_var: null,
             value: 8000,
           },
         ],

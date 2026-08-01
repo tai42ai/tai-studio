@@ -24,6 +24,7 @@ function schemaFixture(): SettingsSchema {
             secret: false,
             description: 'The listen port',
             nested_group: null,
+            default_namespace_var: null,
             value: 100,
           },
           {
@@ -35,6 +36,7 @@ function schemaFixture(): SettingsSchema {
             secret: false,
             description: null,
             nested_group: null,
+            default_namespace_var: null,
             value: false,
           },
           {
@@ -46,6 +48,7 @@ function schemaFixture(): SettingsSchema {
             secret: true,
             description: 'The upstream secret',
             nested_group: null,
+            default_namespace_var: null,
             value: 'topsecret',
           },
           {
@@ -57,6 +60,7 @@ function schemaFixture(): SettingsSchema {
             secret: false,
             description: null,
             nested_group: 'RedisSettings',
+            default_namespace_var: null,
             value: null,
           },
         ],

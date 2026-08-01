@@ -875,6 +875,7 @@ export const settingsSchema = z.object({
           secret: z.boolean(),
           description: z.string().nullable(),
           nested_group: z.string().nullable(),
+          default_namespace_var: z.string().nullable(),
           value: jsonValue.nullable(),
         }),
       ),

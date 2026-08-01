@@ -59,6 +59,7 @@ const settingsSchemaData = {
           secret: false,
           description: 'The app title',
           nested_group: null,
+          default_namespace_var: null,
           value: 'Studio',
         },
       ],
