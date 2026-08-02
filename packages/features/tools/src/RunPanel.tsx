@@ -25,11 +25,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   ErrorState,
+  FeatureDisabled,
   SchemaForm,
   Skeleton,
   Spinner,
   defaultValueForSchema,
   errorMessage,
+  isFeatureDisabled,
   useApi,
   useCanWrite,
   useCapabilities,
@@ -156,6 +158,11 @@ export function AutoFormRunPanel({
     if (kwargs !== null) background.mutate(kwargs);
   };
 
+  // The tool-run store is unconfigured: a background submit answered with a 501
+  // `tool-runs-not-configured`. Hide the background door and show the muted OFF
+  // note rather than a red error — the feature is off, not broken.
+  const backgroundDisabled = isFeatureDisabled(background.error);
+
   const timedOut = run.isError && run.error instanceof RunTimeoutError;
 
   return (
@@ -185,7 +192,7 @@ export function AutoFormRunPanel({
                 Run
               </Button>
             )}
-            {ready && !canRunBackground ? null : (
+            {(ready && !canRunBackground) || backgroundDisabled ? null : (
               <Button
                 type="button"
                 variant="secondary"
@@ -200,7 +207,13 @@ export function AutoFormRunPanel({
         )}
       </form>
 
-      {background.isError ? <ErrorState message={errorMessage(background.error)} /> : null}
+      {background.isError ? (
+        backgroundDisabled ? (
+          <FeatureDisabled feature="Background runs" envVar="TAI_TOOL_RUNS_REDIS_URL" />
+        ) : (
+          <ErrorState message={errorMessage(background.error)} />
+        )
+      ) : null}
 
       {run.isPending ? (
         <div role="status" className="tai-row">

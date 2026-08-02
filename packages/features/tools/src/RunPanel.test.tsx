@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ToolPanelProps } from '@tai42/studio-sdk';
+import { ApiError } from '@tai42/api-client';
 import { loadPlugin } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
 
@@ -154,6 +155,33 @@ describe('AutoFormRunPanel — validation + run', () => {
     const detail = await screen.findByTestId('tool-run-detail');
     expect(within(detail).getByText('ok:')).toBeInTheDocument();
     expect(within(detail).getByText('1')).toBeInTheDocument();
+  });
+
+  it('hides the background door and shows the OFF note when the tool-run store is not configured', async () => {
+    const user = userEvent.setup();
+    const submitToolRun = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'tool-runs-not-configured'));
+    const client: StubApiClient = {
+      runTool: vi.fn(),
+      submitToolRun,
+      listToolRuns: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
+      client,
+      projection: fullProjection(),
+    });
+
+    await user.click(await findEnabled('Run in background'));
+
+    // The 501 is rendered as the muted OFF note (naming the env var), never a red error.
+    expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+    expect(screen.getByText(/TAI_TOOL_RUNS_REDIS_URL/)).toBeInTheDocument();
+    // The background door is withdrawn; the sync Run door is unaffected.
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Run in background' })).toBeNull();
+    });
+    expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
   });
 
   it('refetches the recent-runs list after a background submit into an EMPTY list', async () => {

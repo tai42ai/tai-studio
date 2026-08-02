@@ -177,4 +177,38 @@ describe('SettingsTab', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('schema unavailable');
   });
+
+  it('shows an em-dash placeholder for a null-default field (never a blank that implies a hidden default)', async () => {
+    const schema: SettingsSchema = {
+      groups: [
+        {
+          name: 'AppSettings',
+          module: 'tai42_app.settings',
+          qualname: 'tai42_app.settings.AppSettings',
+          fields: [
+            {
+              name: 'pg_host',
+              env_var: 'TAI_DB_PG_HOST',
+              type: 'string',
+              default: null,
+              required: false,
+              secret: false,
+              description: null,
+              nested_group: null,
+              default_namespace_var: null,
+              value: null,
+            },
+          ],
+        },
+      ],
+    };
+    const client = stubClient({ getSettingsSchema: vi.fn(() => Promise.resolve(schema)) });
+    renderWithProviders(<SettingsTab readOnly={false} />, { client });
+
+    const input = await screen.findByLabelText('pg_host');
+    // Unset value, and the placeholder is an honest em-dash — not an empty string that
+    // could read as a silent localhost default.
+    expect(input).toHaveValue('');
+    expect(input).toHaveAttribute('placeholder', '—');
+  });
 });

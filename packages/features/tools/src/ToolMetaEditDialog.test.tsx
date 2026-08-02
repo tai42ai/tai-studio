@@ -49,6 +49,7 @@ function renderDialog(tool: ToolView) {
       onCreateFolder={onCreateFolder}
       onSubmit={onSubmit}
       saving={false}
+      disabled={false}
     />,
   );
   return { onSubmit, onOpenChange };
@@ -160,5 +161,27 @@ describe('ToolMetaEditDialog — cancel', () => {
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
+
+describe('ToolMetaEditDialog — store not configured', () => {
+  it('replaces the form with the muted OFF note when the overlay store is disabled', () => {
+    render(
+      <ToolMetaEditDialog
+        tool={toolView()}
+        folders={NO_FOLDERS}
+        open
+        onOpenChange={vi.fn()}
+        onCreateFolder={vi.fn(() => Promise.resolve('f-new'))}
+        onSubmit={vi.fn()}
+        saving={false}
+        disabled
+      />,
+    );
+
+    expect(screen.getByTestId('feature-disabled')).toBeInTheDocument();
+    expect(screen.getByText(/TOOL_META_STORE_PG_PASSWORD/)).toBeInTheDocument();
+    // No editable form and no Save affordance while the store is off.
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });
 });

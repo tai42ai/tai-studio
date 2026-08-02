@@ -396,6 +396,33 @@ describe('ComposeAgentDialog', () => {
     });
   });
 
+  it('completes the compose even when the overlay tag write is refused as not-configured', async () => {
+    const createPreset = vi.fn((_body: CreatePresetBody) => Promise.resolve(presetRecord()));
+    const upsertToolMeta = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
+    const onClose = vi.fn();
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={onClose} />,
+      composeClient({ createPreset, upsertToolMeta }),
+    );
+
+    await fillNameAndDescription('support_bot');
+    await pickBaseAgent();
+    await userEvent.type(screen.getByLabelText('Tags'), 'helpdesk');
+    await userEvent.click(screen.getByRole('button', { name: 'Add tag' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
+
+    // The compose succeeds and closes: the store-off tag write is a no-op, never a
+    // failure that turns a successful create red.
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled();
+    });
+    expect(createPreset).toHaveBeenCalled();
+    expect(upsertToolMeta).toHaveBeenCalledWith('support_bot', { tags: ['helpdesk'] });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('blocks submit and shows the field error when the description is empty', async () => {
     const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
     renderWithProviders(

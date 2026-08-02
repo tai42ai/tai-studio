@@ -93,6 +93,10 @@ export type {
 export { errorMessage } from './errors';
 export { downloadBlob } from './download';
 
+// -- Disabled-feature idiom (one helper + component, every consumer) ----------
+export { isFeatureDisabled, FeatureDisabled } from './feature-disabled';
+export type { FeatureDisabledProps } from './feature-disabled';
+
 // -- Cross-feature query keys ------------------------------------------------
 export { toolsListKey, extensionsQueryKey, subMcpKey, tokensPayloadKey } from './query-keys';
 

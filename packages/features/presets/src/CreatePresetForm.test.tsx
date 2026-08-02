@@ -9,6 +9,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { toolsListKey } from '@tai42/studio-sdk';
+import { ApiError } from '@tai42/api-client';
 
 import { CreatePresetForm } from './CreatePresetForm';
 import { presetsListKey } from './keys';
@@ -108,6 +109,31 @@ describe('CreatePresetForm', () => {
     // live tool the tools page shows).
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetsListKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: toolsListKey });
+  });
+
+  it('completes the create even when the overlay tag write is refused as not-configured', async () => {
+    const user = userEvent.setup();
+    const createPreset = vi.fn().mockResolvedValue(record);
+    const upsertToolMeta = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
+    const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ createPreset, upsertToolMeta }),
+    });
+
+    await fillCreatable(user);
+    await user.type(screen.getByLabelText('Tags'), 'geo');
+    await user.click(screen.getByRole('button', { name: 'Add tag' }));
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    // The create succeeds and navigates: the store-off tag write is a no-op, never a
+    // failure that turns a successful create red.
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+    });
+    expect(createPreset).toHaveBeenCalledTimes(1);
+    expect(upsertToolMeta).toHaveBeenCalledWith('paris_weather', { tags: ['geo'] });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('does NOT write the overlay when no tags were entered', async () => {
@@ -296,6 +322,46 @@ describe('CreatePresetForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "preset 'paris_weather' already exists",
     );
+  });
+
+  it('create — a store-off 501 shows the muted OFF note and withdraws both writes', async () => {
+    // A store-less deploy: the CREATE refuses with a 501 `versioning-not-configured`.
+    // OFF is a state, not an error — the muted note replaces the red alert, and both
+    // Create and Validate (they write the same store) are withdrawn so the
+    // certain-to-refuse writes cannot re-fire.
+    const user = userEvent.setup();
+    const createPreset = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'versioning-not-configured'));
+    const client = baseClient({ createPreset });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+
+    await fillCreatable(user);
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    const note = await screen.findByTestId('feature-disabled');
+    expect(note).toHaveTextContent('VERSIONING_STORE_PG_PASSWORD');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
+  });
+
+  it('validate — a store-off 501 is the muted OFF note, never an error state', async () => {
+    const user = userEvent.setup();
+    const validatePreset = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'versioning-not-configured'));
+    const client = baseClient({ validatePreset });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+
+    await fillNameAndBase(user);
+    await user.click(screen.getByRole('button', { name: 'Validate' }));
+
+    const note = await screen.findByTestId('feature-disabled');
+    expect(note).toHaveTextContent('VERSIONING_STORE_PG_PASSWORD');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();
   });
 
   it('validate — clean verdict: sends the full create draft and shows a success badge', async () => {

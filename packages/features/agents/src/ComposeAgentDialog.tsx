@@ -37,6 +37,7 @@ import {
   defaultValueForSchema,
   errorMessage,
   hiddenToolNames,
+  isFeatureDisabled,
   toolsListKey,
   useApi,
   validateAgainstSchema,
@@ -276,8 +277,17 @@ export function ComposeAgentDialog({
       // tool_meta overlay, writable only once the composed agent's live tool exists.
       // Written here, sequenced after the create so a failed tag write surfaces
       // loudly through the create error state; skipped when the operator entered none
-      // (an empty merge-patch is rejected by the API).
-      if (tags.length > 0) await api.upsertToolMeta(record.name, { tags });
+      // (an empty merge-patch is rejected by the API). A store-off refusal (501
+      // `tool-meta-not-configured`) is the ONE exception: the agent was created and
+      // OFF is a state, not an error, so a successful create is never turned into a
+      // failure just because tags cannot persist.
+      if (tags.length > 0) {
+        try {
+          await api.upsertToolMeta(record.name, { tags });
+        } catch (err) {
+          if (!isFeatureDisabled(err)) throw err;
+        }
+      }
       return record;
     },
     onSuccess: () => {

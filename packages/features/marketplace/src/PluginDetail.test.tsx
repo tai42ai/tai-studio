@@ -12,12 +12,13 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 
-import type {
-  MarketplaceAdvisory,
-  MarketplaceInstallResult,
-  MarketplaceInstalled,
-  MarketplaceInstalledPlugin,
-  MarketplacePluginDetail,
+import {
+  ApiError,
+  type MarketplaceAdvisory,
+  type MarketplaceInstallResult,
+  type MarketplaceInstalled,
+  type MarketplaceInstalledPlugin,
+  type MarketplacePluginDetail,
 } from '@tai42/api-client';
 
 import { PluginDetail } from './PluginDetail';
@@ -376,6 +377,58 @@ describe('PluginDetail — install flow', () => {
     expect(status).toHaveTextContent('Minor issue.');
     expect(invalidate).toHaveBeenCalledWith();
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('disables Install and shows the OFF note when the install store is not configured', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'marketplace-not-configured'));
+    const client: StubApiClient = { ...reads(detailFixture(), []), installMarketplacePlugin };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    // The 501 surfaces the muted OFF note on the actions card (outside the dialog),
+    // naming the env var. The dialog carries its own note too, so scope to the card.
+    const cardNote = (await screen.findAllByTestId('feature-disabled')).find(
+      (node) => !dialog.contains(node),
+    );
+    expect(cardNote).toBeDefined();
+    expect(cardNote).toHaveTextContent('MARKETPLACE_STORE_PG_PASSWORD');
+
+    // The actions-card Install button is disabled. `hidden: true` reaches it: while the
+    // confirm dialog is open, Radix marks the page background aria-hidden, so the plain
+    // accessibility-tree query would skip the (disabled) button behind the dialog.
+    const outerInstall = screen
+      .getAllByRole('button', { name: 'Install', hidden: true })
+      .find((button) => !dialog.contains(button));
+    expect(outerInstall).toBeDisabled();
+  });
+
+  it('shows the muted OFF note inside the install dialog — never a red alert — and blocks the confirm', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'marketplace-not-configured'));
+    const client: StubApiClient = { ...reads(detailFixture(), []), installMarketplacePlugin };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    // The 501 renders the muted OFF note in the dialog body, naming the env var — and
+    // NO loud red ErrorState (role="alert") anywhere on the page.
+    const note = await within(dialog).findByTestId('feature-disabled');
+    expect(note).toHaveTextContent('MARKETPLACE_STORE_PG_PASSWORD');
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    // The confirm button can no longer re-fire the certain-to-refuse install.
+    expect(within(dialog).getByRole('button', { name: 'Install' })).toBeDisabled();
   });
 
   it('disables the confirm button while the install is pending', async () => {

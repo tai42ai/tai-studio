@@ -10,10 +10,12 @@ import {
   Checkbox,
   Dialog,
   ErrorState,
+  FeatureDisabled,
   Field,
   FleetReport,
   Spinner,
   TextInput,
+  isFeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
 import {
@@ -117,9 +119,15 @@ export function ConnectDialog({
     setConfigValues((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  // Only disabled while a request is in flight — validation is surfaced loudly on
-  // submit (as field errors) rather than by silently blocking the button.
-  const canSubmit = !connect.isPending && !oauth.pending;
+  // The connector START refused with a 501 `connectors-not-configured`: the token
+  // store is off, so no connect can ever land. OFF is a state, not an error — show
+  // the muted note and withdraw the submit affordance rather than a loud red alert.
+  const connectorsDisabled = isFeatureDisabled(connect.error);
+
+  // Disabled while a request is in flight, and once the store reveals itself off (a
+  // certain-to-refuse write is not offered). Validation is surfaced loudly on submit
+  // (as field errors) rather than by silently blocking the button.
+  const canSubmit = !connect.isPending && !oauth.pending && !connectorsDisabled;
 
   const handleSubmit = useCallback(() => {
     setSubmitted(true);
@@ -146,7 +154,10 @@ export function ConnectDialog({
     enabled,
   ]);
 
-  const errorMessage = connect.error instanceof Error ? connect.error.message : null;
+  // A store-off refusal is rendered as the muted OFF note below, never here — so the
+  // red ErrorState is reserved for genuine errors (validation, upstream, 5xx).
+  const errorMessage =
+    !connectorsDisabled && connect.error instanceof Error ? connect.error.message : null;
 
   return (
     <Dialog
@@ -213,7 +224,11 @@ export function ConnectDialog({
           </Field>
         ))}
 
-        {errorMessage !== null ? <ErrorState message={errorMessage} /> : null}
+        {connectorsDisabled ? (
+          <FeatureDisabled feature="Connectors" envVar="CONNECTOR_STORE_PG_PASSWORD" />
+        ) : errorMessage !== null ? (
+          <ErrorState message={errorMessage} />
+        ) : null}
         {fleetFailure !== null ? <FleetReport summary={fleetFailure} /> : null}
         {oauth.notice !== null ? (
           <Notice notice={oauth.notice} onDismiss={oauth.clearNotice} />

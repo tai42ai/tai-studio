@@ -79,6 +79,18 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('scope is referenced by 3 agents');
   });
 
+  it('shows a muted disabledNote in place of the loud error and blocks the confirm', () => {
+    // The OFF (disabled-feature) case: the note takes the error slot, no red alert
+    // renders even when an error is also present, and the confirm cannot re-fire.
+    renderConfirm({
+      error: new Error('marketplace not configured'),
+      disabledNote: <p data-testid="off-note">Marketplace is not configured.</p>,
+    });
+    expect(screen.getByTestId('off-note')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Delete scope' })).toBeDisabled();
+  });
+
   it('lands its actions in the shared dialog-actions row', () => {
     renderConfirm();
     const actions = document.querySelector('.tai-dialog-actions');

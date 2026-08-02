@@ -38,6 +38,24 @@ describe('ConnectorsPage — list', () => {
     expect(screen.getAllByRole('link', { name: 'Browse marketplace' })).toHaveLength(2);
   });
 
+  it('renders the connections empty-state prose (not an error) when the store is off', async () => {
+    // The connectors gate stays on via registered providers, but the token store is
+    // unconfigured, so `listConnections` answers 200-empty (never a 500/501). The
+    // already-written empty-state prose must render — never a loud ErrorState.
+    const client = makeClient({
+      listProviders: vi.fn().mockResolvedValue([provider()]),
+      listConnections: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    });
+    renderWithProviders(<ConnectorsPage search={{}} />, { client });
+
+    await waitFor(() => {
+      expect(screen.getByText('No connections yet')).toBeInTheDocument();
+    });
+    // With providers present the copy nudges to connect above, and there is no error.
+    expect(screen.getByText('Connect a provider above to get started.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('shows a loud error state when a list request fails', async () => {
     const client = makeClient({
       listProviders: vi.fn().mockRejectedValue(new Error('providers boom')),

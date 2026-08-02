@@ -17,6 +17,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  FeatureDisabled,
   ScrollRegion,
   Skeleton,
   Table,
@@ -26,6 +27,7 @@ import {
   THead,
   TR,
   errorMessage,
+  isFeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
 import type {
@@ -161,6 +163,11 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
     );
   }
 
+  // The marketplace install store is unconfigured: an "Upgrade all" answered with a
+  // 501 `marketplace-not-configured`. Disable the write and show the muted OFF note
+  // instead of a red error. The installed/advisories reads stay 200-empty untouched.
+  const storeDisabled = isFeatureDisabled(upgradeAllMutation.error);
+
   const { installed, quarantined } = installedQuery.data;
   if (installed.length === 0 && quarantined.length === 0) {
     return (
@@ -199,14 +206,18 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
           onClick={() => {
             upgradeAllMutation.mutate();
           }}
-          disabled={upgradeAllMutation.isPending}
+          disabled={upgradeAllMutation.isPending || storeDisabled}
         >
           {upgradeAllMutation.isPending ? 'Upgrading…' : 'Upgrade all'}
         </Button>
       </div>
 
       {upgradeAllMutation.isError ? (
-        <ErrorState message={errorMessage(upgradeAllMutation.error)} />
+        storeDisabled ? (
+          <FeatureDisabled feature="Marketplace installs" envVar="MARKETPLACE_STORE_PG_PASSWORD" />
+        ) : (
+          <ErrorState message={errorMessage(upgradeAllMutation.error)} />
+        )
       ) : null}
       {upgradeAllMutation.data !== undefined ? (
         <UpgradeAllReadout results={upgradeAllMutation.data.results} />

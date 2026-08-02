@@ -5,6 +5,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 
 import { ConnectDialog } from './connect-dialog';
 import { OAUTH_MESSAGE_TYPE } from './oauth';
@@ -181,6 +182,35 @@ describe('ConnectDialog', () => {
 
     const input = screen.getByLabelText('Token');
     expect(input).toHaveAttribute('type', 'password');
+  });
+
+  it('shows the muted OFF note and disables Connect when the token store is not configured', async () => {
+    // Providers are installed (the dialog opens), but the connector token store is
+    // unconfigured: the START refuses with a 501 `connectors-not-configured`. OFF is a
+    // state, not an error — the muted note replaces the red alert and the affordance is
+    // withdrawn so the certain-to-refuse connect cannot re-fire.
+    const user = userEvent.setup();
+    const startConnect = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'connectors-not-configured'));
+    renderWithProviders(<ConnectDialog provider={provider()} onClose={vi.fn()} />, {
+      client: makeClient({ startConnect }),
+    });
+
+    await user.type(screen.getByLabelText('Alias'), 'work-account');
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    await waitFor(() => {
+      expect(startConnect).toHaveBeenCalled();
+    });
+
+    // The 501 renders the muted OFF note naming the env var — and NO loud red alert.
+    const note = await screen.findByTestId('feature-disabled');
+    expect(note).toHaveTextContent('CONNECTOR_STORE_PG_PASSWORD');
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    // The Connect button can no longer re-fire the certain-to-refuse connect.
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
   });
 
   it('requires an alias before submitting', () => {

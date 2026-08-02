@@ -5,10 +5,11 @@
  * `?preset=` selection.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { toolsListKey } from '@tai42/studio-sdk';
+import { ApiError } from '@tai42/api-client';
 
 import { PresetDetail } from './PresetDetail';
 import {
@@ -146,6 +147,44 @@ describe('PresetDetail', () => {
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: presetToolMetaKey });
     });
+  });
+
+  it('swaps the edit dialog to the muted OFF note and withdraws Edit details on a tool_meta 501', async () => {
+    const user = userEvent.setup();
+    const upsertToolMeta = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
+    const client: StubApiClient = {
+      getPreset: vi.fn().mockResolvedValue(detail),
+      listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
+      upsertToolMeta,
+    };
+    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
+
+    // Edit is enabled once the overlay read lands; open it and attempt a save.
+    const edit = await screen.findByRole('button', { name: 'Edit details for paris_weather' });
+    await waitFor(() => {
+      expect(edit).toBeEnabled();
+    });
+    await user.click(edit);
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
+
+    // The write revealed the tool_meta store off: the dialog body swaps to the muted
+    // OFF note (naming the env var) — NOT a loud red ErrorState (role="alert").
+    const note = await within(dialog).findByTestId('feature-disabled');
+    expect(note).toHaveTextContent('TOOL_META_STORE_PG_PASSWORD');
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+    // The form's own inputs are gone — the OFF note stands in place of the editor.
+    expect(within(dialog).queryByLabelText('Display name')).toBeNull();
+
+    // …and the Edit-details affordance is withdrawn entirely — a write it can only
+    // refuse is no longer offered (queried with hidden, since the open dialog marks
+    // the page background aria-hidden).
+    expect(
+      screen.queryByRole('button', { name: 'Edit details for paris_weather', hidden: true }),
+    ).toBeNull();
   });
 
   it('offers New version + version history and the soft-delete copy on a normal record', async () => {

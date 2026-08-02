@@ -18,6 +18,7 @@ import { useState, type ReactNode } from 'react';
 import {
   Button,
   Dialog,
+  FeatureDisabled,
   Field,
   FolderPicker,
   OverlayDetailsFields,
@@ -58,6 +59,8 @@ export interface ToolMetaEditDialogProps {
   readonly onCreateFolder: (name: string, parentId: string | null) => Promise<string>;
   readonly onSubmit: (patch: ToolMetaPatch) => void;
   readonly saving: boolean;
+  /** The tool_meta store is unconfigured: the overlay write refused with a 501. */
+  readonly disabled: boolean;
 }
 
 /** The dialog shell; the form body is keyed by the tool so it resets per tool. */
@@ -69,6 +72,7 @@ export function ToolMetaEditDialog({
   onCreateFolder,
   onSubmit,
   saving,
+  disabled,
 }: ToolMetaEditDialogProps): ReactNode {
   return (
     <Dialog
@@ -77,17 +81,23 @@ export function ToolMetaEditDialog({
       title={`Edit ${tool.name}`}
       description="Organize this tool: its display name, your tags, its folder, and its visibility."
     >
-      <EditForm
-        key={tool.name}
-        tool={tool}
-        folders={folders}
-        onCreateFolder={onCreateFolder}
-        onSubmit={onSubmit}
-        onCancel={() => {
-          onOpenChange(false);
-        }}
-        saving={saving}
-      />
+      {disabled ? (
+        // The overlay write refused with a 501 `tool-meta-not-configured`: the store
+        // is off, so the form cannot save. Show the muted OFF note in place of it.
+        <FeatureDisabled feature="Tool metadata" envVar="TOOL_META_STORE_PG_PASSWORD" />
+      ) : (
+        <EditForm
+          key={tool.name}
+          tool={tool}
+          folders={folders}
+          onCreateFolder={onCreateFolder}
+          onSubmit={onSubmit}
+          onCancel={() => {
+            onOpenChange(false);
+          }}
+          saving={saving}
+        />
+      )}
     </Dialog>
   );
 }

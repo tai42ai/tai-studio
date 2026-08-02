@@ -19,6 +19,7 @@ import {
   EmptyState,
   ErrorState,
   ExternalLinkButton,
+  FeatureDisabled,
   ScrollRegion,
   Skeleton,
   Stack,
@@ -30,6 +31,7 @@ import {
   Table,
   TagChips,
   errorMessage,
+  isFeatureDisabled,
   useApi,
   useProseScrollRegions,
 } from '@tai42/studio-sdk';
@@ -339,6 +341,16 @@ export function PluginDetail({
     );
   }
 
+  // The marketplace install store is unconfigured: an install/update/uninstall
+  // answered with a 501 `marketplace-not-configured`. Disable the write buttons and
+  // show the muted OFF note. Browse/detail reads never need the store, so they stay
+  // untouched. Uninstall is folded in for symmetry even though its button unmounts
+  // when the store is off (an unconfigured store carries no installed rows to remove).
+  const storeDisabled =
+    isFeatureDisabled(installMutation.error) ||
+    isFeatureDisabled(updateMutation.error) ||
+    isFeatureDisabled(uninstallMutation.error);
+
   const detail = detailQuery.data;
   const matching =
     advisoriesQuery.data !== undefined
@@ -365,6 +377,7 @@ export function PluginDetail({
       <ActionsCard
         detail={detail}
         installedQuery={installedQuery}
+        storeDisabled={storeDisabled}
         onOpen={(action) => {
           setActiveAction(action);
         }}
@@ -433,7 +446,17 @@ export function PluginDetail({
           pendingLabel="Installing"
           confirmVariant="primary"
           isPending={installMutation.isPending}
-          error={installMutation.error}
+          // An OFF 501 `marketplace-not-configured` is a state, not an error: show
+          // the muted note in the dialog (blocking retry), never a loud red alert.
+          error={isFeatureDisabled(installMutation.error) ? null : installMutation.error}
+          disabledNote={
+            isFeatureDisabled(installMutation.error) ? (
+              <FeatureDisabled
+                feature="Marketplace installs"
+                envVar="MARKETPLACE_STORE_PG_PASSWORD"
+              />
+            ) : undefined
+          }
           onConfirm={() => {
             installMutation.mutate();
           }}
@@ -453,7 +476,15 @@ export function PluginDetail({
           pendingLabel="Updating"
           confirmVariant="primary"
           isPending={updateMutation.isPending}
-          error={updateMutation.error}
+          error={isFeatureDisabled(updateMutation.error) ? null : updateMutation.error}
+          disabledNote={
+            isFeatureDisabled(updateMutation.error) ? (
+              <FeatureDisabled
+                feature="Marketplace installs"
+                envVar="MARKETPLACE_STORE_PG_PASSWORD"
+              />
+            ) : undefined
+          }
           onConfirm={() => {
             updateMutation.mutate();
           }}
@@ -501,10 +532,12 @@ function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
 function ActionsCard({
   detail,
   installedQuery,
+  storeDisabled,
   onOpen,
 }: {
   readonly detail: MarketplacePluginDetail;
   readonly installedQuery: ReturnType<typeof useQuery<MarketplaceInstalled, Error>>;
+  readonly storeDisabled: boolean;
   readonly onOpen: (action: ActiveAction) => void;
 }): ReactNode {
   const ref = `${detail.namespace}/${detail.name}`;
@@ -535,6 +568,7 @@ function ActionsCard({
         {installed === undefined ? (
           <Button
             variant="primary"
+            disabled={storeDisabled}
             onClick={() => {
               onOpen('install');
             }}
@@ -551,6 +585,7 @@ function ActionsCard({
                 <Badge variant="warning">Update available: v{installed.latest}</Badge>
                 <Button
                   variant="primary"
+                  disabled={storeDisabled}
                   onClick={() => {
                     onOpen('update');
                   }}
@@ -570,6 +605,9 @@ function ActionsCard({
           </>
         )}
       </div>
+      {storeDisabled ? (
+        <FeatureDisabled feature="Marketplace installs" envVar="MARKETPLACE_STORE_PG_PASSWORD" />
+      ) : null}
     </Card>
   );
 }

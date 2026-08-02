@@ -33,6 +33,7 @@ import {
   Dialog,
   ErrorState,
   ExtensionComboBuilder,
+  FeatureDisabled,
   Field,
   SchemaEditor,
   Spinner,
@@ -42,6 +43,7 @@ import {
   XCircleIcon,
   errorMessage,
   hiddenToolNames,
+  isFeatureDisabled,
   toolsListKey,
   useApi,
   useAppNavigate,
@@ -168,10 +170,18 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
       // Overlay categorization tags are NOT a create-body field — they live in the
       // tool_meta overlay, writable only once the preset's live tool exists. Write
       // them here, sequenced after the create so the two are one user-visible
-      // operation: a failed tag write surfaces loudly through the create error state
-      // rather than being swallowed. Skipped when the author entered none (an empty
-      // merge-patch is rejected by the API).
-      if (tags.length > 0) await api.upsertToolMeta(record.name, { tags });
+      // operation: a failed tag write surfaces loudly through the create error state.
+      // Skipped when the author entered none (an empty merge-patch is rejected).
+      // A store-off refusal (501 `tool-meta-not-configured`) is the ONE exception:
+      // the preset was created and OFF is a state, not an error, so a create that
+      // succeeded is never turned into a failure just because tags cannot persist.
+      if (tags.length > 0) {
+        try {
+          await api.upsertToolMeta(record.name, { tags });
+        } catch (err) {
+          if (!isFeatureDisabled(err)) throw err;
+        }
+      }
       return record;
     },
     onSuccess: (record) => {
@@ -259,6 +269,12 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   };
 
   const hints = inputFieldNames(schemaQuery.data?.input);
+
+  // The versioning store is off: create and validate both refuse with a 501
+  // `versioning-not-configured`. Both write to the same store, so once either reveals
+  // it off the other is certain to refuse too — show one muted OFF note and withdraw
+  // both affordances rather than a loud red alert. OFF is a state, not an error.
+  const versioningDisabled = isFeatureDisabled(create.error) || isFeatureDisabled(validate.error);
 
   return (
     <Dialog
@@ -440,28 +456,43 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           idPrefix="create-preset-output-schema"
         />
 
-        {create.isError ? <ErrorState message={errorMessage(create.error)} /> : null}
+        {/* A store-off refusal renders the muted OFF note below, never here: the red
+            ErrorState is reserved for genuine create failures (400/409/5xx). */}
+        {create.isError && !isFeatureDisabled(create.error) ? (
+          <ErrorState message={errorMessage(create.error)} />
+        ) : null}
 
-        {/* Dry-run verdict: a request failure (e.g. 503) is loud; otherwise the
-            server's valid/invalid verdict renders — the invalid message verbatim. */}
-        {validate.isError ? (
+        {/* Dry-run verdict: a request failure (e.g. 503) is loud; a store-off 501 is
+            the muted OFF note below instead; otherwise the server's valid/invalid
+            verdict renders — the invalid message verbatim. */}
+        {validate.isError && !isFeatureDisabled(validate.error) ? (
           <ErrorState message={errorMessage(validate.error)} />
         ) : validate.data !== undefined ? (
           <ValidateVerdict valid={validate.data.valid} error={validate.data.error} />
+        ) : null}
+
+        {versioningDisabled ? (
+          <FeatureDisabled feature="Preset versioning" envVar="VERSIONING_STORE_PG_PASSWORD" />
         ) : null}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
           <Button type="button" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="button" onClick={onValidate} disabled={!canValidate || validate.isPending}>
+          <Button
+            type="button"
+            onClick={onValidate}
+            disabled={!canValidate || validate.isPending || versioningDisabled}
+          >
             {validate.isPending ? <Spinner label="Validating draft" /> : null}
             Validate
           </Button>
           <Button
             type="submit"
             variant="primary"
-            disabled={create.isPending || !outputSchema.valid || !extensionsValid}
+            disabled={
+              create.isPending || !outputSchema.valid || !extensionsValid || versioningDisabled
+            }
           >
             {create.isPending ? <Spinner label="Creating preset" /> : null}
             Create preset

@@ -29,6 +29,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  FeatureDisabled,
   PageHeader,
   Skeleton,
   Stack,
@@ -98,7 +99,11 @@ function InboxLoading(): ReactNode {
  * there is nothing pending.
  */
 export function InteractionsBadge(): ReactNode {
-  const { interactions } = useInteractionsStream();
+  const { interactions, disabled } = useInteractionsStream();
+  // The interactions store is unconfigured: the stream is terminally 501 and will
+  // never carry a question, so the always-mounted badge stays absent rather than
+  // hanging at zero on a stream that keeps trying.
+  if (disabled) return null;
   const pending = interactions.filter((interaction) => !interaction.answered).length;
   if (pending === 0) return null;
   const label = pending === 1 ? '1 pending question' : `${String(pending)} pending questions`;
@@ -169,8 +174,16 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
     <Stack gap={4}>
       <PageHeader eyebrow="Activity" title="Interactions" />
       <ChannelsCard />
-      {errorMessage !== null ? <ErrorState message={errorMessage} /> : null}
-      {body}
+      {stream.disabled ? (
+        // The interactions store is unconfigured (terminal 501): render the muted
+        // OFF note naming the enabling env var, never the loud red stream error.
+        <FeatureDisabled feature="Interactions" envVar="INTERACTIONS_REDIS_URL" />
+      ) : (
+        <>
+          {errorMessage !== null ? <ErrorState message={errorMessage} /> : null}
+          {body}
+        </>
+      )}
     </Stack>
   );
 }

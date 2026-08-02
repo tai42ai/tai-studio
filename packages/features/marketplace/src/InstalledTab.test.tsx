@@ -12,11 +12,12 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 
-import type {
-  MarketplaceAdvisory,
-  MarketplaceInstalled,
-  MarketplaceInstalledPlugin,
-  MarketplaceQuarantinedPlugin,
+import {
+  ApiError,
+  type MarketplaceAdvisory,
+  type MarketplaceInstalled,
+  type MarketplaceInstalledPlugin,
+  type MarketplaceQuarantinedPlugin,
 } from '@tai42/api-client';
 
 import { InstalledTab } from './InstalledTab';
@@ -298,6 +299,31 @@ describe('InstalledTab — upgrade all', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('boom: upgrade-all');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('shows the OFF note and disables Upgrade all when the install store is not configured', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(installedList([installedRow({})])),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+      upgradeAllMarketplacePlugins: vi
+        .fn()
+        .mockRejectedValue(new ApiError('not configured', 501, 'marketplace-not-configured')),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, { client });
+
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'Upgrade all' }));
+
+    // The 501 is the muted OFF note (naming the env var), never a red error.
+    expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+    expect(screen.getByText(/MARKETPLACE_STORE_PG_PASSWORD/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upgrade all' })).toBeDisabled();
+    });
+    // The installed list stays — the 200-empty reads are untouched.
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });

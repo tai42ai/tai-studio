@@ -23,7 +23,7 @@
  * `fixed_kwargs` can carry credentials: it is rendered on this authed surface but
  * NEVER logged or toasted.
  */
-import { useState, type ReactNode, type Ref } from 'react';
+import { useEffect, useState, type ReactNode, type Ref } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -31,6 +31,7 @@ import {
   Card,
   Dialog,
   ErrorState,
+  FeatureDisabled,
   Field,
   JsonTree,
   OverlayDetailsFields,
@@ -38,6 +39,7 @@ import {
   Spinner,
   TextInput,
   errorMessage,
+  isFeatureDisabled,
   overlayDetailsPatch,
   toolsListKey,
   useApi,
@@ -246,10 +248,14 @@ function EditOverlayDialog({
   toolName,
   initial,
   onClose,
+  onDisabled,
 }: {
   readonly toolName: string;
   readonly initial: OverlayDetails;
   readonly onClose: () => void;
+  // Fired when the overlay write reveals the tool_meta store off (a 501
+  // `tool-meta-not-configured`), so the parent can withdraw the Edit-details button.
+  readonly onDisabled: () => void;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -265,6 +271,11 @@ function EditOverlayDialog({
     },
   });
 
+  const disabled = isFeatureDisabled(save.error);
+  useEffect(() => {
+    if (disabled) onDisabled();
+  }, [disabled, onDisabled]);
+
   return (
     <Dialog
       title={`Edit details — ${toolName}`}
@@ -274,30 +285,36 @@ function EditOverlayDialog({
         if (!next) onClose();
       }}
     >
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate();
-        }}
-        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
-      >
-        <OverlayDetailsFields
-          value={value}
-          onChange={setValue}
-          disabled={save.isPending}
-          namePlaceholder={toolName}
-        />
-        {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
-          <Button type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={save.isPending}>
-            {save.isPending ? <Spinner label="Saving details" /> : null}
-            Save details
-          </Button>
-        </div>
-      </form>
+      {disabled ? (
+        // The overlay write refused with a 501 `tool-meta-not-configured`: the store
+        // is off, so no save can land. Show the muted OFF note in place of the form.
+        <FeatureDisabled feature="Tool metadata" envVar="TOOL_META_STORE_PG_PASSWORD" />
+      ) : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate();
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
+        >
+          <OverlayDetailsFields
+            value={value}
+            onChange={setValue}
+            disabled={save.isPending}
+            namePlaceholder={toolName}
+          />
+          {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
+            <Button type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" disabled={save.isPending}>
+              {save.isPending ? <Spinner label="Saving details" /> : null}
+              Save details
+            </Button>
+          </div>
+        </form>
+      )}
     </Dialog>
   );
 }
@@ -326,6 +343,9 @@ export function PresetDetail({
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  // Set once an overlay write reveals the tool_meta store off (501): the
+  // Edit-details affordance is then hidden — a write it can only refuse is not offered.
+  const [metaWriteDisabled, setMetaWriteDisabled] = useState(false);
 
   if (query.isPending) {
     return (
@@ -391,13 +411,14 @@ export function PresetDetail({
                   New version
                 </Button>
               )}
-              {conflicted ? null : (
+              {conflicted || metaWriteDisabled ? null : (
                 <Button
                   type="button"
                   aria-label={`Edit details for ${preset.name}`}
                   // Disabled until the overlay read lands: the editor seeds from the
                   // current tags, and a merge-patch built on an unread set would clear
-                  // them. A read failure is stated in the record grid below.
+                  // them. A read failure is stated in the record grid below. Withdrawn
+                  // entirely (not just disabled) once a write reveals the store off.
                   disabled={!metaQuery.isSuccess}
                   onClick={() => {
                     setEditOpen(true);
@@ -510,6 +531,9 @@ export function PresetDetail({
               initial={{ displayName: overlayDisplayName ?? '', tags: overlayTags }}
               onClose={() => {
                 setEditOpen(false);
+              }}
+              onDisabled={() => {
+                setMetaWriteDisabled(true);
               }}
             />
           ) : null}

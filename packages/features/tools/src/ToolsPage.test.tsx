@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
-import type { MeProjection, ToolTagEntry } from '@tai42/api-client';
+import { ApiError, type MeProjection, type ToolTagEntry } from '@tai42/api-client';
 
 import { ToolsPage } from './ToolsPage';
 import { toolMetaKey } from './keys';
@@ -774,6 +774,33 @@ describe('ToolsPage — overlay edit affordance', () => {
     });
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
+    });
+  });
+
+  it('withdraws the Edit affordance and shows the OFF note once the overlay store is not configured', async () => {
+    const user = userEvent.setup();
+    const upsertToolMeta = vi
+      .fn()
+      .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+      upsertToolMeta,
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client, projection: fullProjection() });
+
+    await user.click(await screen.findByRole('button', { name: 'Edit tool echo' }));
+    await screen.findByText('Edit echo');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    // The dialog swaps its form for the muted OFF note, naming the env var.
+    expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+    expect(screen.getByText(/TOOL_META_STORE_PG_PASSWORD/)).toBeInTheDocument();
+
+    // The per-row Edit affordance is withdrawn list-wide — a write it can only refuse.
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Edit tool echo' })).toBeNull();
     });
   });
 

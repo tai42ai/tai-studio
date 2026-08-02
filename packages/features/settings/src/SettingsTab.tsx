@@ -123,9 +123,14 @@ function labelOf(field: Field_): string {
   return field.required ? `${field.name} *` : field.name;
 }
 
-/** The placeholder shown for an unset field, from its declared default. */
-function placeholderOf(field: Field_): string | undefined {
-  return field.default === null || field.default === undefined ? undefined : toText(field.default);
+/**
+ * The placeholder shown for an unset field. A field whose declared default is null
+ * (no hidden localhost fallback — the None-default doctrine) shows an em-dash, so an
+ * empty input reads honestly as "no value, no default" rather than a blank that
+ * could imply a silent default.
+ */
+function placeholderOf(field: Field_): string {
+  return field.default === null || field.default === undefined ? '—' : toText(field.default);
 }
 
 export interface SettingsTabProps {

@@ -461,6 +461,52 @@ describe('useInteractionsStream', () => {
     expect(stream).toHaveBeenCalledTimes(1);
   });
 
+  it('treats a terminal 501 as disabled: flags disabled and does not reconnect', async () => {
+    // The interactions store is unconfigured: the stream answers with a 501
+    // `interactions-not-configured`. Reconnecting would replay the same refusal on
+    // every backoff forever, so the hook stops and flags the OFF state.
+    const notConfigured = Object.assign(new Error('interactions store not configured'), {
+      name: 'ApiError',
+      status: 501,
+      code: 'interactions-not-configured',
+    });
+    const stream = vi.fn<(signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame>>>();
+    stream.mockRejectedValueOnce(notConfigured);
+    // Any further call would be an unwanted reconnect — make it observable.
+    stream.mockImplementation(() => Promise.resolve(iterate([])));
+    const client = { streamInteractions: stream } as unknown as ApiClient;
+    const { result } = renderStream(client);
+
+    await flush();
+    expect(result.current.disabled).toBe(true);
+    expect(result.current.connected).toBe(false);
+
+    // Advancing far past any backoff ceiling must NOT open another stream.
+    await flush(60000);
+    expect(stream).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats a -not-configured code as terminal even when the status is not 501', async () => {
+    // The `code` is authoritative; a machine code ending `-not-configured` is
+    // terminal regardless of the transport status the error happens to carry.
+    const notConfigured = Object.assign(new Error('off'), {
+      name: 'ApiError',
+      status: 400,
+      code: 'interactions-not-configured',
+    });
+    const stream = vi.fn<(signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame>>>();
+    stream.mockRejectedValueOnce(notConfigured);
+    stream.mockImplementation(() => Promise.resolve(iterate([])));
+    const client = { streamInteractions: stream } as unknown as ApiClient;
+    const { result } = renderStream(client);
+
+    await flush();
+    expect(result.current.disabled).toBe(true);
+
+    await flush(60000);
+    expect(stream).toHaveBeenCalledTimes(1);
+  });
+
   it('carries an add frame media array through to the interaction, items unvalidated', async () => {
     // media is z.array(z.unknown()).optional(): the array rides through; the items
     // stay opaque here and are validated per item by the renderer.

@@ -44,6 +44,7 @@ import {
   Stack,
   TD,
   errorMessage,
+  isFeatureDisabled,
   isFullProjection,
   useApi,
   useAppNavigate,
@@ -142,15 +143,21 @@ function projectedTools(views: readonly ToolView[], state: CapabilityState): Too
 function ToolList({
   selected,
   selectedTags,
+  metaWriteDisabled,
   onEdit,
 }: {
   readonly selected: string | undefined;
   readonly selectedTags: readonly string[];
+  readonly metaWriteDisabled: boolean;
   readonly onEdit: (view: ToolView, folders: readonly Folder[]) => void;
 }): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
-  const canWrite = useCanWrite(TOOL_META_WRITE_ROUTE, 'PATCH');
+  // The projection door AND the store must both be live: an unconfigured tool_meta
+  // store answers the overlay write with a 501 `tool-meta-not-configured`, so once a
+  // write has revealed the store off, the per-row edit affordance is withdrawn — a
+  // write it can only refuse is never offered.
+  const canWrite = useCanWrite(TOOL_META_WRITE_ROUTE, 'PATCH') && !metaWriteDisabled;
   const { state } = useCapabilities();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
@@ -319,6 +326,10 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
     },
   });
 
+  // The overlay write revealed the tool_meta store off (501 `tool-meta-not-configured`):
+  // withdraw the list edit affordances and show the muted OFF note in the dialog.
+  const metaWriteDisabled = isFeatureDisabled(upsert.error);
+
   const createFolder = async (name: string, parentId: string | null): Promise<string> => {
     const folder = await api.createFolder(name, parentId);
     await queryClient.invalidateQueries({ queryKey: toolMetaKey });
@@ -367,6 +378,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
             <ToolList
               selected={selected}
               selectedTags={selectedTags}
+              metaWriteDisabled={metaWriteDisabled}
               onEdit={(view, folders) => {
                 setEditing({ view, folders });
               }}
@@ -429,6 +441,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
             upsert.mutate({ name: editing.view.name, patch });
           }}
           saving={upsert.isPending}
+          disabled={metaWriteDisabled}
         />
       ) : null}
     </Stack>

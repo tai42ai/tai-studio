@@ -4,7 +4,10 @@
  * confirm button (showing a pending Spinner while the action runs and disabled
  * meanwhile), and a loud `ErrorState` when the action fails. The caller supplies
  * the prompt as `children` and drives the action through `onConfirm` /
- * `isPending` / `error`.
+ * `isPending` / `error`. When the failure is an OFF (disabled-feature) state
+ * rather than a real error, the caller passes `disabledNote` — a muted note that
+ * takes the error slot and blocks the confirm button, so an unconfigured store
+ * never shows a loud red alert or a retry loop.
  *
  * Mount it only while the confirmation is active; any close gesture — Cancel,
  * Escape, the overlay — calls `onClose`. The confirm button is destructive
@@ -37,6 +40,13 @@ export interface ConfirmDialogProps {
    * the other's.
    */
   readonly error?: Error | string | null;
+  /**
+   * A muted node shown in the error slot INSTEAD of the loud `ErrorState`, for the
+   * OFF (disabled-feature) case: the action's store is not configured, so the
+   * failure is a state, not an error. When set it takes the error slot AND disables
+   * the confirm button — the action can only refuse, so there is nothing to retry.
+   */
+  readonly disabledNote?: ReactNode;
   readonly confirmVariant?: 'primary' | 'danger';
   /** The prompt body — what the operator is confirming. */
   readonly children: ReactNode;
@@ -50,6 +60,7 @@ export function ConfirmDialog({
   onClose,
   isPending,
   error,
+  disabledNote,
   confirmVariant = 'danger',
   children,
 }: ConfirmDialogProps): ReactNode {
@@ -62,12 +73,17 @@ export function ConfirmDialog({
       }}
     >
       {children}
-      {error != null ? <ErrorState message={errorMessage(error)} /> : null}
+      {disabledNote ?? (error != null ? <ErrorState message={errorMessage(error)} /> : null)}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="button" variant={confirmVariant} disabled={isPending} onClick={onConfirm}>
+        <Button
+          type="button"
+          variant={confirmVariant}
+          disabled={isPending || disabledNote != null}
+          onClick={onConfirm}
+        >
           {isPending ? <Spinner label={pendingLabel} /> : null}
           {confirmLabel}
         </Button>

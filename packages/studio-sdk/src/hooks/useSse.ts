@@ -35,6 +35,7 @@ import type { Interaction } from '@tai42/api-client';
 
 import { useApi } from './useApi';
 import { useOnUnauthorized } from './useUnauthorized';
+import { isFeatureDisabled } from '../feature-disabled';
 
 /** A live interaction plus the client-maintained `answered` flag. */
 export type StreamInteraction = Interaction & { readonly answered: boolean };
@@ -52,6 +53,13 @@ export interface InteractionsStreamState {
   readonly connected: boolean;
   readonly backlogLoaded: boolean;
   readonly error: Error | null;
+  /**
+   * The interactions store is not configured on this deployment: the stream
+   * answered with a terminal 501 `interactions-not-configured`. Reconnection is
+   * abandoned (retrying would replay the same refusal forever) and the consumer
+   * renders the muted OFF state instead of a red error or a floating badge.
+   */
+  readonly disabled: boolean;
 }
 
 // Reconnect backoff: capped exponential with full jitter. The delay for attempt
@@ -187,6 +195,7 @@ export function useInteractionsStream(): InteractionsStreamState {
     connected: false,
     backlogLoaded: false,
     error: null,
+    disabled: false,
   });
   // Source of truth: a dedupe map keyed by interaction_id, rebuilt into the
   // ordered array on every change.
@@ -337,7 +346,11 @@ export function useInteractionsStream(): InteractionsStreamState {
           const frames = await api.streamInteractions(controller.signal);
           if (aborted()) return;
           beginConnection();
-          setState((prev) => ({ ...prev, connected: true, error: null }));
+          // Clear `disabled` on a fresh connect: the terminal-501 branch sets it and
+          // returns, so within a single mount this only ever writes false-over-false —
+          // but should the effect re-run and a later stream connect, the hook must not
+          // carry a stale OFF flag. Correct-by-construction, not load-bearing today.
+          setState((prev) => ({ ...prev, connected: true, error: null, disabled: false }));
           for await (const frame of frames) {
             if (aborted()) return;
             applyFrame(frame.event, frame.data);
@@ -352,6 +365,15 @@ export function useInteractionsStream(): InteractionsStreamState {
             // and hand off to the app's 401→login handler, the same path every
             // other data call takes; do not loop.
             onUnauthorized();
+            return;
+          }
+          if (isFeatureDisabled(error)) {
+            // A terminal 501 `interactions-not-configured`: the deployment runs no
+            // interactions store, so reconnecting would replay the same refusal on
+            // every backoff forever (this stream is always-mounted via the shell
+            // badge). Stop, and flag the OFF state so the badge disappears and the
+            // page renders the muted "not configured" note instead of a red error.
+            setState((prev) => ({ ...prev, connected: false, disabled: true }));
             return;
           }
         }

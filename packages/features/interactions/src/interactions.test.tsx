@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiConflictError, type ApiClient, type MeProjection } from '@tai42/api-client';
+import { ApiConflictError, ApiError, type ApiClient, type MeProjection } from '@tai42/api-client';
 
 import { InteractionsBadge, InteractionsPage } from './interactions';
 import {
@@ -271,6 +271,38 @@ describe('InteractionsBadge — floating count', () => {
       'interaction.removed',
       interactionJson({ interaction_id: 'b', format: 'confirm' }),
     );
+    expect(screen.queryByTestId('interactions-badge')).not.toBeInTheDocument();
+  });
+});
+
+describe('interactions store not configured — honest OFF state', () => {
+  /** A client whose interactions stream is terminally 501 `interactions-not-configured`. */
+  function offClient(): ApiClient {
+    return {
+      streamInteractions: () =>
+        Promise.reject(new ApiError('not configured', 501, 'interactions-not-configured')),
+      answerInteraction: vi.fn().mockResolvedValue(undefined),
+      listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+    } as unknown as ApiClient;
+  }
+
+  it('the page shows the muted "not configured" note, never the red stream error', async () => {
+    renderWithProviders(<InteractionsPage search={{}} />, {
+      client: offClient(),
+      projection: fullProjection(),
+    });
+    await settle();
+
+    expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+    expect(screen.getByText('Interactions is not configured')).toBeInTheDocument();
+    expect(screen.getByText(/INTERACTIONS_REDIS_URL/)).toBeInTheDocument();
+    // The OFF state is muted (role=status), not the loud stream ErrorState (role=alert).
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('the floating badge stays absent when the stream is disabled', async () => {
+    renderWithProviders(<InteractionsBadge />, { client: offClient() });
+    await settle();
     expect(screen.queryByTestId('interactions-badge')).not.toBeInTheDocument();
   });
 });
