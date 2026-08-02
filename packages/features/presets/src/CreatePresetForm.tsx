@@ -47,6 +47,7 @@ import {
   toolsListKey,
   useApi,
   useAppNavigate,
+  useFeatureOff,
   type SchemaEditorChange,
 } from '@tai42/studio-sdk';
 
@@ -74,6 +75,12 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const api = useApi();
   const queryClient = useQueryClient();
   const navigate = useAppNavigate();
+
+  // The overlay tags input is HIDDEN when the tool_meta store is OFF: an author must
+  // not type categorization tags that the OFF overlay would silently drop. Detected
+  // proactively off the system kind-status table; the post-create `isFeatureDisabled`
+  // swallow below stays as the backstop for a stale table.
+  const toolMetaOff = useFeatureOff('tool_meta');
 
   const toolsQuery = useQuery({ queryKey: presetToolsKey, queryFn: () => api.listTools() });
   const presetsQuery = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
@@ -408,9 +415,11 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           />
         </Field>
 
-        <Field label="Tags" description="Categorization labels for this preset.">
-          <TagsInput value={tags} onChange={setTags} />
-        </Field>
+        {toolMetaOff ? null : (
+          <Field label="Tags" description="Categorization labels for this preset.">
+            <TagsInput value={tags} onChange={setTags} />
+          </Field>
+        )}
 
         {/* A labelled GROUP, not a `Field`: the builder nests many checkboxes, and a
             single `Field` would hand them all one shared control id (breaking their

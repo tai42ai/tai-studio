@@ -212,6 +212,43 @@ describe('ComposeAgentDialog', () => {
     expect(body?.fixed_kwargs).not.toHaveProperty('user_message');
   });
 
+  it('HIDES the tags input when the tool_meta kind is OFF, and still composes', async () => {
+    const createPreset = vi.fn(() => Promise.resolve(presetRecord()));
+    const upsertToolMeta = vi.fn();
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient({ createPreset, upsertToolMeta }),
+      // The kind-status table reports the overlay store OFF, so the tags input is
+      // withdrawn PROACTIVELY — an author can never type tags the OFF overlay drops.
+      { systemKinds: [{ kind: 'tool_meta', state: 'off', plugin: null, detail: '' }] },
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Tags')).toBeNull();
+    });
+
+    // The compose still works with the input hidden, and never writes the overlay.
+    await fillNameAndDescription('support_bot');
+    await pickBaseAgent();
+    await userEvent.click(screen.getByRole('button', { name: 'Compose agent' }));
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledTimes(1);
+    });
+    expect(upsertToolMeta).not.toHaveBeenCalled();
+  });
+
+  it('KEEPS the tags input when the tool_meta kind is active', async () => {
+    renderWithProviders(
+      <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />,
+      composeClient(),
+      { systemKinds: [{ kind: 'tool_meta', state: 'active', plugin: 'overlay', detail: '' }] },
+    );
+    expect(screen.getByLabelText('Tags')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Tags')).toBeInTheDocument();
+    });
+  });
+
   it('submits the base agent REGISTRATION name as base_tool (not tool_name, which can differ)', async () => {
     // The backend registers/resolves the agent run tool under its REGISTRATION name,
     // which can differ from tool_name; base_tool must be the registration name.

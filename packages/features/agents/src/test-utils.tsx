@@ -14,6 +14,7 @@ import { vi } from 'vitest';
 import type {
   AgentSummary,
   ApiClient,
+  KindStatus,
   MeProjection,
   ParsedAgentEvent,
   PresetRecord,
@@ -24,6 +25,7 @@ import {
   AuthProvider,
   CapabilityProvider,
   NavigationProvider,
+  SystemKindsProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
 
@@ -33,24 +35,32 @@ const SESSION_KEY = 'tai-studio.apiKey';
 export function renderWithProviders(
   ui: ReactNode,
   client: ApiClient,
-  { projection }: { projection?: MeProjection } = {},
+  {
+    projection,
+    systemKinds,
+  }: { projection?: MeProjection; systemKinds?: readonly KindStatus[] } = {},
 ): RenderResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
 
-  // A projection drives the capability context to `ready`: seed a session key so
-  // `AuthProvider` is authenticated and `CapabilityProvider` fetches `getMe`. With
-  // no projection the context stays `loading` and the page renders unfiltered.
-  if (projection !== undefined) {
+  // A projection drives the capability context to `ready`, and a `systemKinds` table
+  // drives the kind-status context to `ready`: either seeds a session key so
+  // `AuthProvider` is authenticated and the providers fetch. With neither the two
+  // contexts stay `loading` and the page renders unfiltered / every feature not-off.
+  if (projection !== undefined || systemKinds !== undefined) {
     globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
   } else {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
-  const apiClient =
-    projection !== undefined
-      ? ({ ...client, getMe: () => Promise.resolve(projection) } as ApiClient)
-      : client;
+  // Once a session key is seeded BOTH providers fetch, so give each a benign default
+  // (a full projection / an empty kind table) unless the test drives it explicitly —
+  // otherwise the un-driven provider calls a stub method that is not defined.
+  const apiClient = {
+    ...client,
+    getMe: () => Promise.resolve(projection ?? fullProjection()),
+    getSystemKinds: () => Promise.resolve<KindStatus[]>(systemKinds ? [...systemKinds] : []),
+  } as ApiClient;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (
@@ -58,24 +68,26 @@ export function renderWithProviders(
         <AuthProvider>
           <ApiProvider value={apiClient}>
             <CapabilityProvider>
-              <ThemeProvider>
-                <NavigationProvider
-                  value={{
-                    navigate: vi.fn(),
-                    // Encode the token + search so a test can assert a link's target.
-                    resolvePath: (to, search) => {
-                      const qs = search
-                        ? new URLSearchParams(search as Record<string, string>).toString()
-                        : '';
-                      return qs ? `/${to}?${qs}` : `/${to}`;
-                    },
-                    navigatePlugin: vi.fn(),
-                    resolvePluginPath: () => '/x',
-                  }}
-                >
-                  {children}
-                </NavigationProvider>
-              </ThemeProvider>
+              <SystemKindsProvider>
+                <ThemeProvider>
+                  <NavigationProvider
+                    value={{
+                      navigate: vi.fn(),
+                      // Encode the token + search so a test can assert a link's target.
+                      resolvePath: (to, search) => {
+                        const qs = search
+                          ? new URLSearchParams(search as Record<string, string>).toString()
+                          : '';
+                        return qs ? `/${to}?${qs}` : `/${to}`;
+                      },
+                      navigatePlugin: vi.fn(),
+                      resolvePluginPath: () => '/x',
+                    }}
+                  >
+                    {children}
+                  </NavigationProvider>
+                </ThemeProvider>
+              </SystemKindsProvider>
             </CapabilityProvider>
           </ApiProvider>
         </AuthProvider>

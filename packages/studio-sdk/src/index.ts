@@ -64,6 +64,8 @@ export {
   coversWrite,
 } from './hooks/useCapabilities';
 export type { CapabilityState, CapabilityContextValue } from './hooks/useCapabilities';
+export { SystemKindsProvider, useSystemKinds, useFeatureOff } from './hooks/useSystemKinds';
+export type { SystemKindsState } from './hooks/useSystemKinds';
 export { ThemeProvider, useTheme } from './hooks/useTheme';
 export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
 export { useBreakpoint } from './hooks/useBreakpoint';

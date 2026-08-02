@@ -25,6 +25,7 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  FeatureDisabled,
   ScrollRegion,
   Skeleton,
   Spinner,
@@ -36,6 +37,7 @@ import {
   Table,
   errorMessage,
   useApi,
+  useFeatureOff,
 } from '@tai42/studio-sdk';
 
 import { CreatePresetForm } from './CreatePresetForm';
@@ -178,6 +180,13 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
   const metaQuery = useQuery({ queryKey: presetToolMetaKey, queryFn: () => api.listToolMeta() });
   const [createOpen, setCreateOpen] = useState(false);
 
+  // Preset CREATE is refused (501 `versioning-not-configured`) on a deployment whose
+  // versioning store is OFF. Detected proactively off the system kind-status table:
+  // the create affordance is WITHDRAWN and the muted OFF note stands where it was, so
+  // the operator never opens a form whose every submit is certain to refuse. OFF is a
+  // state, not an error.
+  const versioningOff = useFeatureOff('versioning');
+
   const overlayByTool = new Map<string, OverlayDetail>(
     (metaQuery.data?.meta ?? []).map((row) => [
       row.tool_name,
@@ -204,19 +213,28 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
             {query.isFetching ? <Spinner label="Refreshing" /> : null}
             Refresh
           </Button>
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => {
-              setCreateOpen(true);
-            }}
-          >
-            Create preset
-          </Button>
+          {versioningOff ? null : (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                setCreateOpen(true);
+              }}
+            >
+              Create preset
+            </Button>
+          )}
         </div>
       </header>
 
-      {query.isPending ? (
+      {versioningOff ? (
+        // The versioning store is OFF, so the preset store is empty and create is
+        // refused: stand the muted OFF note where the create-oriented empty state and
+        // its "Create a preset…" call to action would otherwise mislead.
+        <Card>
+          <FeatureDisabled feature="Preset versioning" envVar="VERSIONING_STORE_PG_PASSWORD" />
+        </Card>
+      ) : query.isPending ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
           <Skeleton height={32} />
           <Skeleton height={32} />

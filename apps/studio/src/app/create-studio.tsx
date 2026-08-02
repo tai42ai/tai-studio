@@ -18,6 +18,7 @@ import {
   AuthProvider,
   CapabilityProvider,
   NavigationProvider,
+  SystemKindsProvider,
   ThemeProvider,
   UnauthorizedProvider,
   useAuth,
@@ -199,8 +200,16 @@ export function createStudio(deps: StudioDeps): Studio {
                       and provides the caller's projection to the shell. It runs a
                       plain fetch state machine, so the query-cache wipe on auth flips
                       never drops it. */}
+                  {/* SystemKindsProvider reads the DB-backed feature states (`GET
+                      /api/system/kinds`) proactively, so a write affordance for an
+                      OFF feature hides before the user acts. Like CapabilityProvider
+                      it runs a plain fetch state machine that the query-cache wipe on
+                      auth flips never drops, and it fails open (not-off) rather than
+                      blocking the shell. */}
                   <CapabilityProvider>
-                    <Inner />
+                    <SystemKindsProvider>
+                      <Inner />
+                    </SystemKindsProvider>
                   </CapabilityProvider>
                 </UnauthorizedProvider>
               </ApiProvider>

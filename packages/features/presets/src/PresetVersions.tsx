@@ -48,6 +48,8 @@ export function PresetVersions({ name }: { readonly name: string }): ReactNode {
     },
   });
 
+  // No proactive versioning-OFF guard here (unlike the create/tags-input paths): a clean OFF
+  // deploy has an empty `listPresets`, so this panel never mounts — only a mid-session store-disable with it already open reaches the 501.
   const editTags = useMutation({
     mutationFn: ({ version, tags }: { version: number; tags: string[] }) =>
       api.setPresetVersionTags(name, version, tags),

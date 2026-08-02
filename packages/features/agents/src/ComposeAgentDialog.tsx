@@ -40,6 +40,7 @@ import {
   isFeatureDisabled,
   toolsListKey,
   useApi,
+  useFeatureOff,
   validateAgainstSchema,
   type JsonSchema,
   type SchemaEditorChange,
@@ -139,6 +140,12 @@ export function ComposeAgentDialog({
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+
+  // The overlay tags input is HIDDEN when the tool_meta store is OFF: an author must
+  // not type categorization tags that the OFF overlay would silently drop. Detected
+  // proactively off the system kind-status table; the post-create `isFeatureDisabled`
+  // swallow below stays as the backstop for a stale table.
+  const toolMetaOff = useFeatureOff('tool_meta');
 
   const toolsQuery = useQuery({ queryKey: authoredToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: authoredToolTagsKey, queryFn: () => api.listToolTags() });
@@ -401,9 +408,11 @@ export function ComposeAgentDialog({
           />
         </Field>
 
-        <Field label="Tags" description="Categorization labels for this agent.">
-          <TagsInput value={tags} onChange={setTags} />
-        </Field>
+        {toolMetaOff ? null : (
+          <Field label="Tags" description="Categorization labels for this agent.">
+            <TagsInput value={tags} onChange={setTags} />
+          </Field>
+        )}
 
         <Field
           label="Base agent"

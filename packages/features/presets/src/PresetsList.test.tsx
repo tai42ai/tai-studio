@@ -176,4 +176,35 @@ describe('PresetsList', () => {
 
     expect(await screen.findByText('No presets yet')).toBeInTheDocument();
   });
+
+  it('HIDES the create affordance and shows the muted OFF note when the versioning kind is OFF', async () => {
+    // A versioning-OFF deployment refuses preset create (501) and reads an empty
+    // store: the create button is WITHDRAWN and the muted OFF note stands where the
+    // create-oriented empty state would otherwise mislead.
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      client: listClient([]),
+      systemKinds: [{ kind: 'versioning', state: 'off', plugin: null, detail: '' }],
+    });
+
+    const note = await screen.findByTestId('feature-disabled');
+    expect(note).toHaveTextContent('Preset versioning is not configured');
+    // The enabling env var is named verbatim so an operator can act.
+    expect(note).toHaveTextContent('VERSIONING_STORE_PG_PASSWORD');
+    // The create affordance is gone; Refresh (a read) stays.
+    expect(screen.queryByRole('button', { name: 'Create preset' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    // The create-oriented empty state is replaced, not shown alongside.
+    expect(screen.queryByText('No presets yet')).toBeNull();
+  });
+
+  it('KEEPS the create affordance when the versioning kind is active', async () => {
+    renderWithProviders(<PresetsList selected={undefined} />, {
+      client: listClient([normal]),
+      systemKinds: [{ kind: 'versioning', state: 'active', plugin: 'pg', detail: '' }],
+    });
+
+    await screen.findByTestId('preset-row-paris_weather');
+    expect(screen.getByRole('button', { name: 'Create preset' })).toBeInTheDocument();
+    expect(screen.queryByTestId('feature-disabled')).toBeNull();
+  });
 });

@@ -77,6 +77,10 @@ const defaultHandlers = [
   ),
   http.get('*/api/auth/me', () => HttpResponse.json({ data: FULL_PROJECTION })),
   http.get('*/api/observability/metrics', () => HttpResponse.json({ data: DASHBOARD_METRICS })),
+  // Every authenticated render mounts the SystemKindsProvider, which reads the
+  // DB-backed feature states on mount; an empty table (no kind OFF) is the default,
+  // and the strict `onUnhandledRequest` guard would fail without an answer here.
+  http.get('*/api/system/kinds', () => HttpResponse.json({ data: [] })),
 ];
 
 /** The msw server; tests register per-case handlers with `server.use(...)`. */

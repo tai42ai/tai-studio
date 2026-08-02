@@ -158,6 +158,46 @@ describe('CreatePresetForm', () => {
     expect(upsertToolMeta).not.toHaveBeenCalled();
   });
 
+  it('HIDES the tags input when the tool_meta kind is OFF, and still creates', async () => {
+    const user = userEvent.setup();
+    const createPreset = vi.fn().mockResolvedValue(record);
+    const upsertToolMeta = vi.fn();
+    const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ createPreset, upsertToolMeta }),
+      // The kind-status table reports the overlay store OFF, so the tags input is
+      // withdrawn PROACTIVELY — an author can never type tags the OFF overlay drops.
+      systemKinds: [{ kind: 'tool_meta', state: 'off', plugin: null, detail: '' }],
+    });
+
+    // Once the table resolves to `ready`, the Tags field is gone (it renders until the
+    // proactive read lands — not-off is the loading default).
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Tags')).toBeNull();
+    });
+
+    // The create still works with the input hidden, and never writes the overlay.
+    await fillCreatable(user);
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+    });
+    expect(createPreset).toHaveBeenCalledTimes(1);
+    expect(upsertToolMeta).not.toHaveBeenCalled();
+  });
+
+  it('KEEPS the tags input when the tool_meta kind is active', async () => {
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient(),
+      systemKinds: [{ kind: 'tool_meta', state: 'active', plugin: 'overlay', detail: '' }],
+    });
+    // The input is present from the first render and stays present after the table
+    // resolves to a non-off state.
+    expect(screen.getByLabelText('Tags')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText('Tags')).toBeInTheDocument();
+    });
+  });
+
   it('blocks submit and shows the field error when the description is empty', async () => {
     const user = userEvent.setup();
     const createPreset = vi.fn().mockResolvedValue(record);
