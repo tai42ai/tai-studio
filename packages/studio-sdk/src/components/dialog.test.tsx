@@ -148,4 +148,89 @@ describe('Dialog', () => {
     expect(screen.getByText('body')).toBeInTheDocument();
     expect(document.querySelector('.tai-overlay')).not.toBeNull();
   });
+
+  it('adds the fullscreen class while keeping the surface class and the overlay', () => {
+    render(
+      <Dialog title="Editor" fullscreen defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    // The fullscreen variant composes with the surface class rather than
+    // replacing it, so the panel still draws its background, ink and z-index.
+    expect(dialog).toHaveClass('tai-dialog', 'tai-dialog-fullscreen');
+    // The overlay behaviour is untouched by the variant.
+    expect(document.querySelector('.tai-overlay')).not.toBeNull();
+  });
+
+  it('keeps the centred surface class and no fullscreen class by default', () => {
+    render(
+      <Dialog title="Editor" defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveClass('tai-dialog');
+    expect(dialog).not.toHaveClass('tai-dialog-fullscreen');
+  });
+
+  it('merges contentClassName onto the content after the surface classes', () => {
+    render(
+      <Dialog title="Editor" contentClassName="plugin-scope" fullscreen defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    // The passthrough is additive: the caller's scoping root joins the surface
+    // and variant classes without displacing either.
+    expect(dialog).toHaveClass('tai-dialog', 'tai-dialog-fullscreen', 'plugin-scope');
+  });
+
+  it('drops the visible title and the stack wrapper in chromeless mode', () => {
+    render(
+      <Dialog title="jq editor" chromeless defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    // The accessible name still comes from the title — it is only visually hidden.
+    expect(dialog).toHaveAccessibleName('jq editor');
+    const heading = screen.getByText('jq editor');
+    expect(heading).toHaveClass('tai-visually-hidden');
+    expect(heading).not.toHaveClass('tai-dialog-title');
+    // No forced tai-stack children wrapper: the body is a direct child of content.
+    expect(dialog.querySelector('.tai-stack')).toBeNull();
+    expect(screen.getByText('body').parentElement).toBe(dialog);
+  });
+
+  it('describes a chromeless dialog from a visually-hidden description when given', () => {
+    render(
+      <Dialog title="jq editor" description="Transform the payload" chromeless defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveAccessibleDescription('Transform the payload');
+    expect(screen.getByText('Transform the payload')).toHaveClass('tai-visually-hidden');
+  });
+
+  it('omits aria-describedby for a chromeless dialog with no description', () => {
+    render(
+      <Dialog title="jq editor" chromeless defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    // The dangling-IDREF opt-out still holds when the wrapper is gone.
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('aria-describedby');
+  });
+
+  it('keeps the visible title and stack wrapper when chromeless is off', () => {
+    render(
+      <Dialog title="Confirm delete" chromeless={false} defaultOpen>
+        <p>body</p>
+      </Dialog>,
+    );
+    expect(screen.getByText('Confirm delete')).toHaveClass('tai-dialog-title');
+    expect(screen.getByRole('dialog').querySelector('.tai-stack')).not.toBeNull();
+  });
 });

@@ -23,10 +23,10 @@
  * HTML sink. The value is never logged, and neither is a failure — the alert
  * names the reason, never the value. Pinned by a test.
  */
-import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
 import { CheckIcon, CopyIcon, XCircleIcon } from './icons';
+import { COPIED_LABEL, useClipboardCopy } from '../hooks/useClipboardCopy';
 
 export interface CopyFieldProps {
   readonly value: string;
@@ -35,29 +35,8 @@ export interface CopyFieldProps {
   readonly label?: string;
 }
 
-const COPIED_RESET_MS = 2000;
-
-/** The button's two faces. Whichever is exposed is also its accessible name. */
+/** The button's resting face; whichever face is exposed is also its accessible name. */
 const COPY_LABEL = 'Copy';
-const COPIED_LABEL = 'Copied';
-
-/** Announced once, and worded so it is never mistaken for the visible label. */
-const COPIED_ANNOUNCEMENT = 'Copied to clipboard';
-
-/**
- * `lib.dom` declares `navigator.clipboard` as always present, but the platform
- * exposes it only in a SECURE CONTEXT — over plain http it is not there at all.
- * Reading the navigator through this shape admits the absence the DOM types deny,
- * so the guard below is a real check rather than a cast around one.
- */
-interface MaybeClipboard {
-  readonly clipboard?: Clipboard;
-}
-
-/** The clipboard this browser actually offers, or `undefined` when it offers none. */
-function clipboardOf(host: MaybeClipboard): Clipboard | undefined {
-  return host.clipboard;
-}
 
 /** Shown when the browser offers no clipboard at all (any non-secure context). */
 const NO_CLIPBOARD =
@@ -91,45 +70,18 @@ const stateStyle: CSSProperties = {
 };
 
 export function CopyField({ value, caption, idPrefix = 'copy-field', label }: CopyFieldProps) {
-  const [copied, setCopied] = useState(false);
-  const [copyError, setCopyError] = useState<string | undefined>(undefined);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The clipboard write is async, so a copy can still be in flight when the
-  // component goes away — the caller's dialog closes on the same click. Clearing
-  // the timer alone would not cover that: at unmount there is no timer yet, and
-  // the resolution that follows would start one nothing is left to clear. This
-  // flag is what the resolution checks before it touches state at all.
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      if (resetTimer.current !== null) clearTimeout(resetTimer.current);
-    };
-  }, []);
+  const {
+    copied,
+    error: copyError,
+    announcement,
+    copy,
+  } = useClipboardCopy({
+    noClipboard: NO_CLIPBOARD,
+    writeFailed,
+  });
 
   const handleCopy = (): void => {
-    const clipboard = clipboardOf(navigator);
-    if (clipboard === undefined) {
-      setCopyError(NO_CLIPBOARD);
-      return;
-    }
-    setCopyError(undefined);
-    void clipboard.writeText(value).then(
-      () => {
-        if (!mounted.current) return;
-        setCopied(true);
-        if (resetTimer.current !== null) clearTimeout(resetTimer.current);
-        resetTimer.current = setTimeout(() => {
-          setCopied(false);
-        }, COPIED_RESET_MS);
-      },
-      (error: unknown) => {
-        if (!mounted.current) return;
-        setCopyError(writeFailed(error));
-      },
-    );
+    void copy(() => value);
   };
 
   return (
@@ -163,7 +115,7 @@ export function CopyField({ value, caption, idPrefix = 'copy-field', label }: Co
           </span>
         </button>
         <span aria-live="polite" className="tai-visually-hidden">
-          {copied ? COPIED_ANNOUNCEMENT : ''}
+          {announcement}
         </span>
       </div>
       {copyError !== undefined ? (

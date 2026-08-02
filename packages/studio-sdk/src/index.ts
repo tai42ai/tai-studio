@@ -80,6 +80,7 @@ export {
   useAppNavigate,
   useResolvePath,
   usePluginNavigation,
+  useNavigationGuard,
 } from './navigation';
 export type {
   AppLinkProps,
@@ -89,6 +90,7 @@ export type {
   PageProps,
   NavigationContextValue,
   PluginSearch,
+  NavigationGuardHandler,
 } from './navigation';
 
 // -- Utilities ---------------------------------------------------------------
@@ -148,6 +150,8 @@ export { Dialog } from './components/dialog';
 export type { DialogProps } from './components/dialog';
 export { ConfirmDialog } from './components/confirm-dialog';
 export type { ConfirmDialogProps } from './components/confirm-dialog';
+export { FormDialog } from './components/form-dialog';
+export type { FormDialogProps } from './components/form-dialog';
 export { Drawer } from './components/drawer';
 export type { DrawerProps } from './components/drawer';
 export { Tooltip } from './components/tooltip';
@@ -212,6 +216,19 @@ export type {
 } from './components/folder-nav';
 export { CodeBlock } from './components/code-block';
 export type { CodeBlockProps } from './components/code-block';
+export { Markdown, parseMarkdown } from './components/markdown';
+export type { MarkdownProps, MarkdownBlock, HeadingLevel } from './components/markdown';
+export {
+  DateRangePicker,
+  formatRangeLabel,
+  normalizeCustomRange,
+  DEFAULT_DATE_RANGE_PRESETS,
+} from './components/date-range-picker';
+export type {
+  DateRangePickerProps,
+  DateRangePreset,
+  DateRangeValue,
+} from './components/date-range-picker';
 export { FleetReport } from './components/fleet-report';
 export type { FleetReportProps } from './components/fleet-report';
 export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';

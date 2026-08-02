@@ -11,6 +11,19 @@
  * `min()` so it still fits a 320 px viewport. The one gap Radix leaves — focus
  * return for a dialog that renders no trigger — is filled by
  * `useModalFocusReturn`, which stands down whenever a trigger IS rendered.
+ *
+ * Three additive opt-ins let a caller reshape the panel without giving up any
+ * Radix behaviour:
+ *
+ *   - `fullscreen` swaps the centred fixed-size panel for one that fills the
+ *     viewport edge to edge (`tai-dialog-fullscreen`); the overlay is untouched.
+ *   - `contentClassName` merges onto `RadixDialog.Content` after the surface
+ *     classes, so a host can hang its own CSS-scoping root on the content element
+ *     — the mount point a plugin needs for its styles to reach inside the portal.
+ *   - `chromeless` drops the forced visual `Title` and the `tai-stack` children
+ *     wrapper, rendering `children` directly for a chrome-free content mode. The
+ *     `title` is still required and still names the dialog: it is rendered
+ *     visually-hidden so the accessible name never depends on the visible chrome.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ReactElement, ReactNode } from 'react';
@@ -35,6 +48,24 @@ export interface DialogProps {
   readonly open?: boolean;
   readonly defaultOpen?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
+  /**
+   * Fill the viewport edge to edge instead of centring a fixed-size panel. The
+   * overlay, the focus trap and every other Radix behaviour are unchanged.
+   */
+  readonly fullscreen?: boolean;
+  /**
+   * A class merged onto `RadixDialog.Content` after the surface classes, for a
+   * host that must reach the content element itself — e.g. a plugin hanging its
+   * CSS-scoping root on the panel so its styles apply inside the Radix portal.
+   */
+  readonly contentClassName?: string;
+  /**
+   * Drop the forced visual `Title` and the `tai-stack` children wrapper, rendering
+   * `children` directly for a chrome-free content mode. The `title` is still
+   * required and still names the dialog — it renders visually-hidden — so the
+   * accessible name never depends on the visible chrome.
+   */
+  readonly chromeless?: boolean;
 }
 
 export function Dialog({
@@ -45,9 +76,17 @@ export function Dialog({
   open,
   defaultOpen,
   onOpenChange,
+  fullscreen = false,
+  contentClassName,
+  chromeless = false,
 }: DialogProps) {
   const focusReturn = useModalFocusReturn(trigger !== undefined);
   if (trigger !== undefined) assertSlotElement(trigger, 'Dialog `trigger`');
+
+  const contentClasses = ['tai-dialog'];
+  if (fullscreen) contentClasses.push('tai-dialog-fullscreen');
+  if (contentClassName !== undefined) contentClasses.push(contentClassName);
+
   return (
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger !== undefined ? <RadixDialog.Trigger asChild>{trigger}</RadixDialog.Trigger> : null}
@@ -58,17 +97,34 @@ export function Dialog({
             Passing the prop as `undefined` is Radix's opt-out — it has to be
             ABSENT when a description IS rendered, or it would clear the wiring. */}
         <RadixDialog.Content
-          className="tai-dialog"
+          className={contentClasses.join(' ')}
           {...focusReturn}
           {...(description === undefined ? { 'aria-describedby': undefined } : {})}
         >
-          <RadixDialog.Title className="tai-dialog-title">{title}</RadixDialog.Title>
-          <div className="tai-stack">
-            {description !== undefined ? (
-              <RadixDialog.Description className="tai-muted">{description}</RadixDialog.Description>
-            ) : null}
-            {children}
-          </div>
+          {/* The title always names the dialog; `chromeless` only hides it, moving
+              it behind `tai-visually-hidden` so the accessible name is unchanged. */}
+          <RadixDialog.Title className={chromeless ? 'tai-visually-hidden' : 'tai-dialog-title'}>
+            {title}
+          </RadixDialog.Title>
+          {chromeless ? (
+            <>
+              {description !== undefined ? (
+                <RadixDialog.Description className="tai-visually-hidden">
+                  {description}
+                </RadixDialog.Description>
+              ) : null}
+              {children}
+            </>
+          ) : (
+            <div className="tai-stack">
+              {description !== undefined ? (
+                <RadixDialog.Description className="tai-muted">
+                  {description}
+                </RadixDialog.Description>
+              ) : null}
+              {children}
+            </div>
+          )}
         </RadixDialog.Content>
       </RadixDialog.Portal>
     </RadixDialog.Root>
