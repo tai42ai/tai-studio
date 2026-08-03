@@ -39,7 +39,7 @@ test('register a hook with a bound execution key, and see it run AS that key', a
   await page.goto('/hooks');
 
   const name = `e2e-runs-as-${Date.now().toString(36)}`;
-  await fillRegisterForm(page, { name, topic: 'e2e.hook.plain', tool: 'echo' });
+  await fillRegisterForm(page, { name, topic: 'e2e-hook-plain', tool: 'echo' });
   await registerForm(page).getByRole('button', { name: 'Register' }).click();
 
   const row = hookRow(page, name);
@@ -54,7 +54,7 @@ test('bind a verifier to a topic, then a hook on it shows the verifier-signed do
   await page.goto('/hooks');
 
   const suffix = Date.now().toString(36);
-  const topic = `e2e.hook.verified.${suffix}`;
+  const topic = `e2e-hook-verified-${suffix}`;
   const name = `e2e-verified-${suffix}`;
 
   // Bind a verifier to the topic via the ONE writer — the bind form.
@@ -100,7 +100,7 @@ test("a key the server refuses to bind surfaces the server's message VERBATIM", 
   const name = `e2e-refused-${Date.now().toString(36)}`;
   const form = registerForm(page);
   await form.getByLabel('Name').fill(name);
-  await form.getByLabel('Topic').fill('e2e.hook.refused');
+  await form.getByLabel('Topic').fill('e2e-hook-refused');
   await form.getByLabel('Tool', { exact: true }).fill('echo');
   await pickExecutionKey(page, form, conditionalKeyId);
 

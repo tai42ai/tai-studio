@@ -66,7 +66,7 @@ async function controlGeometry(control: Locator): Promise<ControlGeometry> {
 async function seedFilteredHookRow(page: Page): Promise<Locator> {
   const suffix = Date.now().toString(36);
   const name = `e2e-ds-${suffix}`;
-  const topic = `e2e.design-system.${suffix}`;
+  const topic = `e2e-design-system-${suffix}`;
   const registered = await page.request.post('/api/hooks', {
     headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
     data: { name, topic, tool: 'echo', execution_key: EXECUTION_KEY_ID },
