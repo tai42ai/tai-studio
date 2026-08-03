@@ -32,7 +32,7 @@ import { Timeline } from './timeline';
 
 // -- streaming run hook ------------------------------------------------------
 
-type RunStatus = 'idle' | 'running' | 'done' | 'error';
+type RunStatus = 'idle' | 'running' | 'done' | 'error' | 'stopped';
 
 interface RunState {
   readonly events: ParsedAgentEvent[];
@@ -90,7 +90,10 @@ export function useStreamRun(open: StreamOpener): AgentRun {
   const stop = useCallback(() => {
     controllerRef.current?.abort();
     controllerRef.current = null;
-    setState((prev) => (prev.status === 'running' ? { ...prev, status: 'idle' } : prev));
+    // A user Stop leaves a truncated transcript: settle 'stopped' so the badge
+    // marks the run as deliberately halted rather than falling back to 'Ready',
+    // which would read as a fresh, never-started run.
+    setState((prev) => (prev.status === 'running' ? { ...prev, status: 'stopped' } : prev));
   }, []);
 
   const start = useCallback(
@@ -107,9 +110,15 @@ export function useStreamRun(open: StreamOpener): AgentRun {
             if (controller.signal.aborted) return;
             setState((prev) => reduceEvent(prev, parsed));
           }
-          // The generator ended without a terminal frame (an abrupt close):
-          // settle as done rather than leave the view stuck "running".
-          setState((prev) => (prev.status === 'running' ? { ...prev, status: 'done' } : prev));
+          // Generator ended without a terminal frame: the backend emits one for
+          // every in-process outcome, so its absence means the connection died
+          // mid-run. Settle as an error, never a green "Finished". The message
+          // lives on `run.error` (no timeline item) so it renders exactly once.
+          setState((prev) =>
+            prev.status === 'running'
+              ? { ...prev, status: 'error', error: 'connection lost before the run finished' }
+              : prev,
+          );
         } catch (err) {
           if (controller.signal.aborted) return;
           setState((prev) => ({
@@ -155,6 +164,18 @@ const STATUS_LABEL: Record<RunStatus, string> = {
   running: 'Running…',
   done: 'Finished',
   error: 'Failed',
+  stopped: 'Stopped',
+};
+
+/** The Badge tint each run status wears. */
+const STATUS_VARIANT: Record<RunStatus, string> = {
+  idle: 'neutral',
+  running: 'neutral',
+  done: 'success',
+  error: 'danger',
+  // A user Stop is neither success nor failure — a warning tint marks the
+  // transcript as deliberately truncated.
+  stopped: 'warning',
 };
 
 /**
@@ -207,15 +228,7 @@ export function StreamRunView({
       <PageHeader
         eyebrow="Capabilities"
         title={title}
-        actions={
-          <Badge
-            variant={
-              run.status === 'error' ? 'danger' : run.status === 'done' ? 'success' : 'neutral'
-            }
-          >
-            {STATUS_LABEL[run.status]}
-          </Badge>
-        }
+        actions={<Badge variant={STATUS_VARIANT[run.status]}>{STATUS_LABEL[run.status]}</Badge>}
       />
 
       <Card>
