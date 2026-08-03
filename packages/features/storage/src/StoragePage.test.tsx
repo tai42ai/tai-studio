@@ -378,7 +378,7 @@ describe('StoragePage', () => {
     });
   });
 
-  it('uploads a file as base64 via FileReader', async () => {
+  it('uploads a single picked file as base64 in files mode', async () => {
     const user = userEvent.setup();
     const upload = vi.fn().mockResolvedValue({ id: 'a.txt', stored: true });
     const client = stubClient({
@@ -391,11 +391,11 @@ describe('StoragePage', () => {
     await screen.findByText('No resources');
     await user.click(screen.getByRole('button', { name: 'Upload' }));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Resource id'), 'a.txt');
-    await user.click(within(dialog).getByRole('radio', { name: 'File' }));
+    await user.click(within(dialog).getByRole('radio', { name: 'Files' }));
 
+    // The id is derived from the file name — no separate id field in files mode.
     const file = new File(['abc'], 'a.txt', { type: 'text/plain' });
-    await user.upload(within(dialog).getByLabelText('Choose a file'), file);
+    await user.upload(within(dialog).getByLabelText('Choose files'), file);
 
     const submit = within(dialog).getByRole('button', { name: 'Upload' });
     await waitFor(() => {
@@ -409,9 +409,98 @@ describe('StoragePage', () => {
     });
   });
 
-  it('clears a stale file-read error when switching the upload mode to Text', async () => {
+  it('loops the single-item door once per file across a multi-file batch', async () => {
     const user = userEvent.setup();
-    // A FileReader whose reads always fail, so onFileChange sets the read error.
+    const upload = vi.fn().mockResolvedValue({ stored: true });
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
+      uploadStorageResource: upload,
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByText('No resources');
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('radio', { name: 'Files' }));
+    await user.upload(within(dialog).getByLabelText('Choose files'), [
+      new File(['abc'], 'a.txt', { type: 'text/plain' }),
+      new File(['def'], 'b.txt', { type: 'text/plain' }),
+    ]);
+    const submit = within(dialog).getByRole('button', { name: 'Upload' });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    await user.click(submit);
+
+    await waitFor(() => {
+      expect(upload).toHaveBeenCalledTimes(2);
+    });
+    expect(upload).toHaveBeenCalledWith({ id: 'a.txt', content_base64: 'YWJj' });
+    expect(upload).toHaveBeenCalledWith({ id: 'b.txt', content_base64: 'ZGVm' });
+  });
+
+  it('blocks the whole batch BEFORE any request when a name already exists', async () => {
+    const user = userEvent.setup();
+    const upload = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+      uploadStorageResource: upload,
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByRole('table');
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('radio', { name: 'Files' }));
+    await user.upload(
+      within(dialog).getByLabelText('Choose files'),
+      new File(['abc'], 'a.txt', { type: 'text/plain' }),
+    );
+
+    // The collision is announced, Upload stays disabled, and nothing is sent.
+    expect(await within(dialog).findByText(/already exist/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Upload' })).toBeDisabled();
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('keeps the dialog open on a PARTIAL failure with the failed file still listed', async () => {
+    const user = userEvent.setup();
+    const upload = vi
+      .fn()
+      .mockResolvedValueOnce({ stored: true })
+      .mockRejectedValueOnce(new Error('quota exceeded'));
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
+      uploadStorageResource: upload,
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByText('No resources');
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('radio', { name: 'Files' }));
+    await user.upload(within(dialog).getByLabelText('Choose files'), [
+      new File(['abc'], 'a.txt', { type: 'text/plain' }),
+      new File(['def'], 'b.txt', { type: 'text/plain' }),
+    ]);
+    const submit = within(dialog).getByRole('button', { name: 'Upload' });
+    await waitFor(() => {
+      expect(submit).toBeEnabled();
+    });
+    await user.click(submit);
+
+    // close-on-success-only: the dialog stays open and names the failure verbatim.
+    expect(await within(dialog).findByText('quota exceeded')).toBeInTheDocument();
+    expect(within(dialog).getByText('Uploaded')).toBeInTheDocument();
+    expect(within(dialog).getByText('Failed')).toBeInTheDocument();
+  });
+
+  it('surfaces a per-file read error on upload and clears it when switching to Text', async () => {
+    const user = userEvent.setup();
+    // A FileReader whose reads always fail, so the per-file upload rejects loudly.
     class ErroringFileReader {
       onerror: (() => void) | null = null;
       onload: (() => void) | null = null;
@@ -424,19 +513,21 @@ describe('StoragePage', () => {
       const client = stubClient({
         getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
         listStorageResources: vi.fn().mockResolvedValue({ resources: [] }),
+        uploadStorageResource: vi.fn(),
       });
       renderPage(<StoragePage search={{}} />, { client });
 
       await screen.findByText('No resources');
       await user.click(screen.getByRole('button', { name: 'Upload' }));
       const dialog = await screen.findByRole('dialog');
-      await user.click(within(dialog).getByRole('radio', { name: 'File' }));
+      await user.click(within(dialog).getByRole('radio', { name: 'Files' }));
 
       const file = new File(['abc'], 'a.txt', { type: 'text/plain' });
-      await user.upload(within(dialog).getByLabelText('Choose a file'), file);
+      await user.upload(within(dialog).getByLabelText('Choose files'), file);
+      await user.click(within(dialog).getByRole('button', { name: 'Upload' }));
       expect(await within(dialog).findByText('Could not read a.txt')).toBeInTheDocument();
 
-      // Switching to Text must drop the stale file-read error (no file input present).
+      // Switching to Text drops the failed batch and its stale error.
       await user.click(within(dialog).getByRole('radio', { name: 'Text' }));
       expect(within(dialog).queryByText('Could not read a.txt')).not.toBeInTheDocument();
     } finally {

@@ -68,7 +68,9 @@ describe('TemplateDetail — delete', () => {
     await waitFor(() => {
       expect(deleteTemplate).toHaveBeenCalledWith('prompts/a.md');
     });
-    expect(navigate).toHaveBeenCalledWith('templates');
+    // The provider forwards `navigate('templates')` to the shell as
+    // `(token, search)` with search undefined (clearing `?template=`).
+    expect(navigate).toHaveBeenCalledWith('templates', undefined);
   });
 
   it('keeps a failed delete loud inside the dialog and does not navigate', async () => {

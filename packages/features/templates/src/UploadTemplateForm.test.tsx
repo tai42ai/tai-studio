@@ -110,3 +110,96 @@ describe('UploadTemplateForm', () => {
     expect(content).toHaveValue('Body');
   });
 });
+
+describe('UploadTemplateForm — files mode', () => {
+  it('loops the single-item door once per picked file, deriving the path from the name', async () => {
+    const user = userEvent.setup();
+    const uploadTemplate = vi.fn().mockResolvedValue({ uploaded: true });
+    const listTemplates = vi.fn().mockResolvedValue([]);
+    const client: StubApiClient = { uploadTemplate, listTemplates };
+    renderWithProviders(<UploadTemplateForm />, { client });
+
+    await user.click(screen.getByRole('radio', { name: 'Files' }));
+    await user.upload(screen.getByLabelText('Choose files'), [
+      new File(['one'], 'a.md', { type: 'text/markdown' }),
+      new File(['two'], 'b.md', { type: 'text/markdown' }),
+    ]);
+    // Submit unlocks once the existing-list query settles (no conflict).
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    await waitFor(() => {
+      expect(uploadTemplate).toHaveBeenCalledTimes(2);
+    });
+    expect(uploadTemplate).toHaveBeenCalledWith('a.md', 'one');
+    expect(uploadTemplate).toHaveBeenCalledWith('b.md', 'two');
+  });
+
+  it('blocks the whole batch BEFORE any request when a path already exists', async () => {
+    const user = userEvent.setup();
+    const uploadTemplate = vi.fn();
+    const listTemplates = vi.fn().mockResolvedValue(['a.md']);
+    const client: StubApiClient = { uploadTemplate, listTemplates };
+    renderWithProviders(<UploadTemplateForm />, { client });
+
+    await user.click(screen.getByRole('radio', { name: 'Files' }));
+    await user.upload(
+      screen.getByLabelText('Choose files'),
+      new File(['x'], 'a.md', { type: 'text/markdown' }),
+    );
+
+    // The list query resolves to `['a.md']`, so the derived path collides: the batch
+    // is blocked, Upload stays disabled, and no request is sent.
+    expect(await screen.findByText(/already exist/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
+    expect(uploadTemplate).not.toHaveBeenCalled();
+  });
+
+  it('does not silently proceed when the templates list errored — it blocks the batch loudly', async () => {
+    const user = userEvent.setup();
+    const uploadTemplate = vi.fn();
+    const listTemplates = vi.fn().mockRejectedValue(new Error('list unavailable'));
+    const client: StubApiClient = { uploadTemplate, listTemplates };
+    renderWithProviders(<UploadTemplateForm />, { client });
+
+    await user.click(screen.getByRole('radio', { name: 'Files' }));
+    await user.upload(
+      screen.getByLabelText('Choose files'),
+      new File(['x'], 'a.md', { type: 'text/markdown' }),
+    );
+
+    // Existing names are unknown, so the conflict guard cannot run: Upload stays
+    // disabled and the unavailability is surfaced — never a vacuous "no conflicts" pass.
+    expect(await screen.findByText(/Could not load existing templates/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled();
+    expect(uploadTemplate).not.toHaveBeenCalled();
+  });
+
+  it('keeps failed files listed on a PARTIAL failure and reports each outcome', async () => {
+    const user = userEvent.setup();
+    const uploadTemplate = vi
+      .fn()
+      .mockResolvedValueOnce({ uploaded: true })
+      .mockRejectedValueOnce(new Error('quota exceeded'));
+    const listTemplates = vi.fn().mockResolvedValue([]);
+    const client: StubApiClient = { uploadTemplate, listTemplates };
+    renderWithProviders(<UploadTemplateForm />, { client });
+
+    await user.click(screen.getByRole('radio', { name: 'Files' }));
+    await user.upload(screen.getByLabelText('Choose files'), [
+      new File(['one'], 'a.md', { type: 'text/markdown' }),
+      new File(['two'], 'b.md', { type: 'text/markdown' }),
+    ]);
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    // Per-file outcomes: one Uploaded, one Failed, with the server message verbatim.
+    expect(await screen.findByText('quota exceeded')).toBeInTheDocument();
+    expect(screen.getByText('Uploaded')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+  });
+});

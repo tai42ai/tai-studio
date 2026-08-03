@@ -25,6 +25,7 @@ import type { Extension } from '@tai42/api-client';
 import { Badge } from './badge';
 import { Checkbox } from './checkbox';
 import { groupByKind, kindVariant } from './extension-grouping';
+import { EmptyState } from './primitives';
 
 export interface ExtensionPickerProps {
   /** The extension catalog (`GET /api/extensions`) the checklist is drawn from. */
@@ -46,6 +47,17 @@ export function ExtensionPicker({
 }: ExtensionPickerProps) {
   const groups = groupByKind(available);
   const selected = new Set(value);
+
+  // An empty catalog renders the shared EmptyState HERE — inside the picker — so
+  // every call site inherits it rather than each guarding an empty checklist (a
+  // bare div that reads as broken). No provider has published an extension yet.
+  if (available.length === 0) {
+    return (
+      <div data-testid={idPrefix} className="tai-stack">
+        <EmptyState title="No extensions are available." />
+      </div>
+    );
+  }
 
   /**
    * Toggle a single extension. For a NON-STACKABLE kind (`backend`), checking one

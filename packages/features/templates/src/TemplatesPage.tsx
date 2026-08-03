@@ -5,7 +5,7 @@
  * "clear cache" action. All server state flows through TanStack Query:
  * loading → `Skeleton`, empty → `EmptyState`, error → a loud `ErrorState`.
  */
-import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
@@ -14,21 +14,72 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  ExplorerView,
   PageHeader,
   Skeleton,
   Spinner,
+  TD,
   errorMessage,
   useApi,
+  useAppNavigate,
   useBreakpoint,
+  type ExplorerColumn,
+  type ExplorerEmptyStates,
   type PageProps,
 } from '@tai42/studio-sdk';
 
 import { TemplateDetail } from './TemplateDetail';
 import { UploadTemplateForm } from './UploadTemplateForm';
+import { deriveTemplateFolders, templateFolderId, templateLabel } from './folders';
 import { storageInfoKey, templatesListKey } from './keys';
+
+/** The explorer's list/card view-mode persistence key. */
+const TEMPLATES_VIEW_SURFACE = 'templates';
+
+/** The templates table's single column; folder rows span it. */
+const COLUMNS: ExplorerColumn[] = [{ key: 'template', header: 'Template' }];
+
+const EMPTY_STATES: ExplorerEmptyStates = {
+  empty: {
+    title: 'No templates yet',
+    description: 'Upload a template to see it listed here.',
+  },
+  emptyFolder: {
+    title: 'This directory is empty',
+    description: 'No templates are filed here.',
+  },
+  noMatch: {
+    title: 'No matching templates',
+    description: 'No template in this directory matches.',
+  },
+};
+
+/** One template row/card body: its final-segment label as an `AppLink` setting
+ *  `?template=` to the FULL key (the breadcrumb carries the folder path). */
+function TemplateLink({
+  templateKey,
+  selected,
+}: {
+  readonly templateKey: string;
+  readonly selected: boolean;
+}): ReactNode {
+  return (
+    <AppLink
+      to="templates"
+      search={{ template: templateKey }}
+      aria-label={`Open template ${templateKey}`}
+      aria-current={selected ? 'page' : undefined}
+      className="tai-nav-item"
+    >
+      <span className="tai-mono">{templateLabel(templateKey)}</span>
+    </AppLink>
+  );
+}
 
 function TemplateList({ selected }: { selected: string | undefined }): ReactNode {
   const api = useApi();
+  const navigate = useAppNavigate();
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const query = useQuery({ queryKey: templatesListKey, queryFn: () => api.listTemplates() });
 
   if (query.isPending) {
@@ -43,44 +94,37 @@ function TemplateList({ selected }: { selected: string | undefined }): ReactNode
   if (query.isError) {
     return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
   }
-  if (query.data.length === 0) {
-    return (
-      <EmptyState title="No templates yet" description="Upload a template to see it listed here." />
-    );
-  }
+
+  // Template keys are path-shaped, so they fold into virtual folders exactly as
+  // storage/tools resources do — a `''` folder never appears (malformed keys file
+  // literally at the root) and a name that is both a file and a folder shows as both.
+  const keys = query.data;
+  const renderLink = (key: string): ReactNode => (
+    <TemplateLink templateKey={key} selected={key === selected} />
+  );
 
   return (
-    <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-      {query.data.map((name) => {
-        const isActive = name === selected;
-        const itemStyle: CSSProperties = {
-          display: 'block',
-          padding: 'var(--tai-space-2) var(--tai-space-3)',
-          borderRadius: 'var(--tai-radius-md)',
-          fontFamily: 'var(--tai-font-mono)',
-          fontSize: 'var(--tai-text-md)',
-          color: isActive ? 'var(--tai-color-accent-on-tint)' : 'var(--tai-color-text)',
-          background: isActive ? 'var(--tai-color-accent-tint)' : 'transparent',
-          textDecoration: 'none',
-          // The name is one token: keep it on a single line so it never breaks mid-word.
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        };
-        return (
-          <li key={name}>
-            <AppLink
-              to="templates"
-              search={{ template: name }}
-              aria-label={`Open template ${name}`}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <span style={itemStyle}>{name}</span>
-            </AppLink>
-          </li>
-        );
-      })}
-    </ul>
+    <ExplorerView<string>
+      items={keys}
+      getItemKey={(key) => key}
+      getFolderId={templateFolderId}
+      folders={deriveTemplateFolders(keys)}
+      currentFolderId={currentFolderId}
+      onNavigate={setCurrentFolderId}
+      rootLabel="All templates"
+      viewSurface={TEMPLATES_VIEW_SURFACE}
+      label="Templates"
+      columns={COLUMNS}
+      renderRow={(key) => <TD className="tai-table-id">{renderLink(key)}</TD>}
+      renderCard={(key) => <Card interactive>{renderLink(key)}</Card>}
+      // Open == select in this master/detail; a click anywhere on the row/card sets
+      // `?template=`, mirroring the name link (the SDK yields to that link so neither
+      // double-fires).
+      onOpenItem={(key) => {
+        navigate('templates', { template: key });
+      }}
+      emptyStates={EMPTY_STATES}
+    />
   );
 }
 

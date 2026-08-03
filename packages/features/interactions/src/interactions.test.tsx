@@ -275,6 +275,165 @@ describe('InteractionsBadge — floating count', () => {
   });
 });
 
+describe('InteractionsBadge — navigation + degraded state', () => {
+  it('is a real link to the interactions view (keyboard-operable), not an inert div', async () => {
+    const channel = makeChannel();
+    const client = stubClient({ channel });
+    renderWithProviders(<InteractionsBadge />, { client });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'a', format: 'text' }),
+    );
+
+    const badge = screen.getByTestId('interactions-badge');
+    const link = within(badge).getByRole('link');
+    // A real anchor carries an href (its resolved route), so it is focusable and
+    // middle-clickable — the fix for the old non-interactive status div.
+    expect(link).toHaveAttribute('href');
+    expect(link).toHaveAttribute('aria-label', expect.stringContaining('pending question'));
+  });
+
+  it('exposes a polite live region (role=status) so an arriving count is announced', async () => {
+    const channel = makeChannel();
+    const client = stubClient({ channel });
+    renderWithProviders(<InteractionsBadge />, { client });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'a', format: 'text' }),
+    );
+
+    // The badge is a live region so a screen reader is notified as pending
+    // questions arrive; its meaningful announced text is the link's label.
+    const badge = screen.getByTestId('interactions-badge');
+    expect(badge).toHaveAttribute('role', 'status');
+    expect(within(badge).getByRole('link')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('1 pending question'),
+    );
+    // A healthy badge carries no degraded icon — the icon marks only the outage.
+    expect(badge.querySelector('svg')).toBeNull();
+  });
+
+  it('does not degrade on a malformed frame while the stream stays connected', async () => {
+    const channel = makeChannel();
+    const client = stubClient({ channel });
+    renderWithProviders(<InteractionsBadge />, { client });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'a', format: 'text' }),
+    );
+    // A parse error on a still-open stream is transient — the count is intact and the
+    // stream is not disconnected, so the badge must keep its honest count, not flip.
+    await emitFrame(channel, 'interaction.add', '{not json');
+
+    const badge = screen.getByTestId('interactions-badge');
+    expect(badge).not.toHaveAttribute('data-degraded');
+    expect(within(badge).getByRole('link')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('1 pending question'),
+    );
+  });
+
+  it('flips to a degraded indicator on a true outage (errored and disconnected), even at a stale zero', async () => {
+    const client = {
+      streamInteractions: vi.fn().mockRejectedValue(new Error('network down')),
+      answerInteraction: vi.fn().mockResolvedValue(undefined),
+      listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+    } as unknown as ApiClient;
+    renderWithProviders(<InteractionsBadge />, { client });
+    await settle();
+
+    // The connection dropped with nothing pending: the badge announces the outage
+    // rather than vanishing or trusting a stale zero.
+    const badge = screen.getByTestId('interactions-badge');
+    expect(badge).toHaveAttribute('data-degraded', 'true');
+    expect(within(badge).getByRole('link')).toHaveAttribute(
+      'aria-label',
+      expect.stringContaining('disconnected'),
+    );
+    // WCAG 1.4.1: the outage is marked by an icon, not the warning tint alone.
+    expect(badge.querySelector('svg')).not.toBeNull();
+  });
+});
+
+describe('InteractionsPage — group_id grouping', () => {
+  /** A text add frame carrying an explicit shared `group_id`. */
+  function groupedJson(interactionId: string, groupId: string, prompt: string): string {
+    return encodeInteraction({
+      interaction_id: interactionId,
+      group_id: groupId,
+      answer_format: 'text',
+      question: prompt,
+      format_payload: {},
+      created_at: '2026-07-04T00:00:00Z',
+      timeout_at: '2026-07-04T00:05:00Z',
+    });
+  }
+
+  it('folds questions sharing a group_id into one collapsible group with a pending count', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(channel, 'interaction.add', groupedJson('q1', 'flow-1', 'First step?'));
+    await emitFrame(channel, 'interaction.add', groupedJson('q2', 'flow-1', 'Second step?'));
+
+    const group = screen.getByTestId('interaction-group');
+    expect(within(group).getAllByTestId('interaction-card')).toHaveLength(2);
+    // The per-group pending count is honest: both are unanswered.
+    expect(within(group).getByText('2 of 2 pending')).toBeInTheDocument();
+
+    // The header is a keyboard-operable disclosure; collapsing hides the questions.
+    const header = within(group).getByRole('button', { expanded: true });
+    await user.click(header);
+    expect(within(group).queryByTestId('interaction-card')).not.toBeInTheDocument();
+  });
+
+  it('leaves a lone question in its own group as a bare card (no group chrome)', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(channel, 'interaction.add', groupedJson('solo', 'flow-solo', 'Only one?'));
+
+    expect(screen.getByTestId('interaction-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('interaction-group')).not.toBeInTheDocument();
+  });
+
+  it('keeps questions with an empty group_id ungrouped as separate bare cards', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(channel, 'interaction.add', groupedJson('u1', '', 'Unrelated one?'));
+    await emitFrame(channel, 'interaction.add', groupedJson('u2', '', 'Unrelated two?'));
+
+    // An empty group_id is not a shared group: the two stay standalone cards, never
+    // folded into one section under a blank id.
+    expect(screen.getAllByTestId('interaction-card')).toHaveLength(2);
+    expect(screen.queryByTestId('interaction-group')).not.toBeInTheDocument();
+  });
+});
+
+describe('TextAnswer — empty submit guard', () => {
+  it('keeps Submit disabled until the answer has non-whitespace content', async () => {
+    const user = userEvent.setup();
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'q-text', format: 'text', prompt: 'Name?' }),
+    );
+
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    // A one-shot interaction 409s once answered, so an empty/whitespace answer must
+    // never be submittable — the control is a textarea guarded on trimmed content.
+    expect(screen.getByLabelText('Your answer').tagName).toBe('TEXTAREA');
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Your answer'), '   ');
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Your answer'), 'Ada');
+    expect(submit).toBeEnabled();
+  });
+});
+
 describe('interactions store not configured — honest OFF state', () => {
   /** A client whose interactions stream is terminally 501 `interactions-not-configured`. */
   function offClient(): ApiClient {

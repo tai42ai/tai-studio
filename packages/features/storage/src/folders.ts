@@ -1,8 +1,7 @@
 /**
- * Virtual folders for the storage explorer, derived from path-shaped resource ids.
- *
- * Virtual — a folder exists only through its members: every '/'-separated ancestor
- * prefix of an id becomes a folder, and none exists on its own.
+ * Virtual folders for the storage explorer: a folder exists only through its members —
+ * every '/'-separated ancestor prefix of a path-shaped id becomes a folder, none on
+ * its own.
  */
 import type { Folder } from '@tai42/studio-sdk';
 

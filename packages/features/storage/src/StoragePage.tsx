@@ -27,6 +27,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
+  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -39,6 +40,7 @@ import {
   PageHeader,
   RadioGroup,
   Skeleton,
+  Spinner,
   TD,
   Textarea,
   TextInput,
@@ -195,67 +197,130 @@ function DeleteDirDialog({ dir, onClose }: { dir: string; onClose: () => void })
   );
 }
 
-type UploadMode = 'text' | 'file';
+type UploadMode = 'text' | 'files';
+
+/** One picked file, its derived resource id, and its per-file upload outcome. */
+interface FileEntry {
+  readonly id: string;
+  readonly file: File;
+  readonly status: 'pending' | 'uploading' | 'done' | 'error';
+  readonly error: string | null;
+}
+
+const STATUS_BADGE: Record<FileEntry['status'], { label: string; variant: string }> = {
+  pending: { label: 'Ready', variant: 'neutral' },
+  uploading: { label: 'Uploading…', variant: 'primary' },
+  done: { label: 'Uploaded', variant: 'success' },
+  error: { label: 'Failed', variant: 'danger' },
+};
 
 /**
- * The upload dialog: an id, a text/file mode toggle, and the content. Text mode
- * sends `content_text`; file mode reads the chosen file via
- * `FileReader.readAsDataURL`, strips the `data:*;base64,` prefix, and sends
- * `content_base64`. Submit is disabled until both id and content are present.
- * Uploading an existing id overwrites it (provider passthrough). Server errors
- * render verbatim.
+ * Read a picked file as base64, stripping the `data:<mime>;base64,` prefix the door
+ * does not want. A read failure rejects loudly — never a stale/empty payload.
  */
-function UploadDialog({ onClose }: { onClose: () => void }): ReactNode {
+function readFileBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => {
+      reject(new Error(`Could not read ${file.name}`));
+    };
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error(`Could not read ${file.name}`));
+        return;
+      }
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * The upload dialog. TEXT mode authors one resource: an id + its text content
+ * (`content_text`). FILES mode picks one or MORE files at once; the backend door
+ * stays single-item, so the UI LOOPS it — one `content_base64` request per file,
+ * each id derived from the file name — reporting per-file success/failure. A
+ * CONFLICT CHECK runs BEFORE any request: a derived id that already exists (upload
+ * overwrites), or a name picked twice, blocks the whole batch so nothing is
+ * clobbered by accident. The dialog closes only when every file succeeded
+ * (close-on-success-only); a partial failure keeps the failed files listed to retry.
+ * Server errors render verbatim.
+ */
+function UploadDialog({
+  existingIds,
+  onClose,
+}: {
+  readonly existingIds: readonly string[];
+  readonly onClose: () => void;
+}): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
-  const [id, setId] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<UploadMode>('text');
+  const [id, setId] = useState('');
   const [text, setText] = useState('');
-  const [fileBase64, setFileBase64] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [readError, setReadError] = useState<string | null>(null);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  const upload = useMutation({
-    mutationFn: () =>
-      api.uploadStorageResource(
-        mode === 'text'
-          ? { id: id.trim(), content_text: text }
-          : { id: id.trim(), content_base64: fileBase64 ?? '' },
-      ),
+  const textUpload = useMutation({
+    mutationFn: () => api.uploadStorageResource({ id: id.trim(), content_text: text }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
       onClose();
     },
   });
 
-  function onFileChange(event: ChangeEvent<HTMLInputElement>): void {
-    const file = event.target.files?.[0];
-    setReadError(null);
-    setFileBase64(null);
-    setFileName(null);
-    if (file === undefined) return;
-    setFileName(file.name);
-    const reader = new FileReader();
-    reader.onerror = () => {
-      // A read failure must surface loudly, never leave a stale/empty payload.
-      setReadError(`Could not read ${file.name}`);
-    };
-    reader.onload = () => {
-      const result = reader.result;
-      if (typeof result !== 'string') {
-        setReadError(`Could not read ${file.name}`);
-        return;
-      }
-      // `readAsDataURL` yields `data:<mime>;base64,<payload>` — the door wants only
-      // the base64 payload.
-      const comma = result.indexOf(',');
-      setFileBase64(comma >= 0 ? result.slice(comma + 1) : result);
-    };
-    reader.readAsDataURL(file);
-  }
+  const existing = new Set(existingIds);
+  const outstanding = entries.filter((entry) => entry.status !== 'done');
+  // CONFLICT CHECK — BEFORE any request. An id already stored (upload overwrites) or
+  // a name picked twice blocks the whole batch.
+  const seen = new Map<string, number>();
+  for (const entry of outstanding) seen.set(entry.id, (seen.get(entry.id) ?? 0) + 1);
+  const conflicts = outstanding
+    .filter((entry) => existing.has(entry.id) || (seen.get(entry.id) ?? 0) > 1)
+    .map((entry) => entry.id);
+  const conflictSet = new Set(conflicts);
 
-  const hasContent = mode === 'text' ? text.length > 0 : fileBase64 !== null;
-  const canSubmit = id.trim().length > 0 && hasContent && !upload.isPending;
+  const onFilesChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(event.target.files ?? []);
+    setEntries(files.map((file) => ({ id: file.name, file, status: 'pending', error: null })));
+  };
+
+  const patch = (entryId: string, next: Partial<FileEntry>): void => {
+    setEntries((prev) =>
+      prev.map((entry) => (entry.id === entryId ? { ...entry, ...next } : entry)),
+    );
+  };
+
+  const canSubmitFiles = outstanding.length > 0 && conflicts.length === 0 && !submitting;
+
+  const submitFiles = async (): Promise<void> => {
+    if (!canSubmitFiles) return;
+    setSubmitting(true);
+    let anySuccess = false;
+    let anyFailure = false;
+    for (const entry of outstanding) {
+      patch(entry.id, { status: 'uploading', error: null });
+      try {
+        const content = await readFileBase64(entry.file);
+        await api.uploadStorageResource({ id: entry.id, content_base64: content });
+        patch(entry.id, { status: 'done', error: null });
+        anySuccess = true;
+      } catch (err) {
+        patch(entry.id, { status: 'error', error: errorMessage(err) });
+        anyFailure = true;
+      }
+    }
+    setSubmitting(false);
+    if (anySuccess) void queryClient.invalidateQueries({ queryKey: storageResourcesKey });
+    // Close ONLY when the whole batch succeeded; a partial failure stays open with the
+    // failed files listed so they alone can be retried.
+    if (!anyFailure) onClose();
+  };
+
+  const canSubmitText = id.trim().length > 0 && text.length > 0 && !textUpload.isPending;
 
   return (
     <Dialog
@@ -269,68 +334,133 @@ function UploadDialog({ onClose }: { onClose: () => void }): ReactNode {
         <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
           Uploading an existing id overwrites its content.
         </p>
-        <Field label="Resource id">
-          <TextInput
-            value={id}
-            placeholder="notes/todo.txt"
-            onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              setId(event.target.value);
-            }}
-          />
-        </Field>
-        <Field label="Content" group>
+        <Field label="Source" group>
           <RadioGroup
             name="upload-mode"
             value={mode}
             onValueChange={(next) => {
               setMode(next as UploadMode);
-              // Switching modes drops the other mode's transient file state so a
-              // stale read error can't linger over the text box (and vice versa).
-              setReadError(null);
-              setFileBase64(null);
-              setFileName(null);
+              // Switching modes drops the other mode's transient state so a stale
+              // file error can't linger over the text box (and vice versa).
+              setEntries([]);
+              if (inputRef.current !== null) inputRef.current.value = '';
             }}
             options={[
               { value: 'text', label: 'Text' },
-              { value: 'file', label: 'File' },
+              { value: 'files', label: 'Files' },
             ]}
           />
         </Field>
+
         {mode === 'text' ? (
-          <Field label="Text content">
-            <Textarea
-              value={text}
-              onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
-                setText(event.target.value);
-              }}
-            />
-          </Field>
+          <>
+            <Field label="Resource id">
+              <TextInput
+                value={id}
+                placeholder="notes/todo.txt"
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  setId(event.target.value);
+                }}
+              />
+            </Field>
+            <Field label="Text content">
+              <Textarea
+                value={text}
+                onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
+                  setText(event.target.value);
+                }}
+              />
+            </Field>
+            {textUpload.isError ? <ErrorState message={errorMessage(textUpload.error)} /> : null}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
+              <Button type="button" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!canSubmitText}
+                onClick={() => {
+                  textUpload.mutate();
+                }}
+              >
+                Upload
+              </Button>
+            </div>
+          </>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-            <span style={{ fontSize: 'var(--tai-text-sm)', fontWeight: 600 }}>File</span>
-            <input type="file" aria-label="Choose a file" onChange={onFileChange} />
-          </div>
+          <>
+            <Field label="Files" description="Each file becomes a resource id from its name." group>
+              <input
+                ref={inputRef}
+                type="file"
+                multiple
+                aria-label="Choose files"
+                onChange={onFilesChange}
+              />
+            </Field>
+
+            {entries.length > 0 ? (
+              <ul
+                style={{ listStyle: 'none', margin: 0, padding: 0 }}
+                className="tai-stack tai-stack-2"
+                aria-label="Selected files"
+              >
+                {entries.map((entry) => {
+                  const badge = STATUS_BADGE[entry.status];
+                  const conflict = conflictSet.has(entry.id);
+                  return (
+                    <li
+                      key={entry.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: 'var(--tai-space-2)',
+                      }}
+                    >
+                      <span style={{ flex: '1 1 auto', ...monoStyle }}>{entry.id}</span>
+                      <Badge variant={conflict ? 'danger' : badge.variant}>
+                        {conflict ? 'Conflict' : badge.label}
+                      </Badge>
+                      {entry.error !== null ? (
+                        <span className="tai-status tai-status-err" style={{ flexBasis: '100%' }}>
+                          {entry.error}
+                        </span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+
+            {conflicts.length > 0 ? (
+              <ErrorState
+                message={`These ids already exist or repeat in this batch: ${conflicts.join(', ')}. Rename or remove them before uploading.`}
+              />
+            ) : null}
+            {entries.some((entry) => entry.status === 'error') ? (
+              <ErrorState message="Some files failed to upload. The ones still marked Failed can be retried." />
+            ) : null}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
+              <Button type="button" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={!canSubmitFiles}
+                onClick={() => {
+                  void submitFiles();
+                }}
+              >
+                {submitting ? <Spinner label="Uploading" /> : null}
+                Upload
+              </Button>
+            </div>
+          </>
         )}
-        {mode === 'file' && fileName !== null ? (
-          <p style={{ margin: 0, fontSize: 'var(--tai-text-sm)', ...monoStyle }}>{fileName}</p>
-        ) : null}
-        {readError !== null ? <ErrorState message={readError} /> : null}
-        {upload.isError ? <ErrorState message={errorMessage(upload.error)} /> : null}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
-          <Button type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            disabled={!canSubmit}
-            onClick={() => {
-              upload.mutate();
-            }}
-          >
-            Upload
-          </Button>
-        </div>
       </div>
     </Dialog>
   );
@@ -585,6 +715,7 @@ function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNod
       ) : null}
       {uploadOpen ? (
         <UploadDialog
+          existingIds={resources.data?.resources ?? []}
           onClose={() => {
             setUploadOpen(false);
           }}

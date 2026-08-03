@@ -105,6 +105,29 @@ describe('MarketplacePage — page header', () => {
   });
 });
 
+describe('MarketplacePage — plugin card version + recency', () => {
+  it('renders the latest version and an updated-at recency line', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row({ downloads: 1234, latest_version: '1.2.0' })])),
+    });
+
+    // The "Recently updated" sort orders by exactly this timestamp, so both the
+    // version and the recency must be visible on the card.
+    expect(await screen.findByText('1.2.0')).toBeInTheDocument();
+    expect(screen.getByText(/1234 downloads · Updated/)).toBeInTheDocument();
+  });
+
+  it('omits the version badge when latest_version is null but still shows recency', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row({ latest_version: null })])),
+    });
+
+    await screen.findByText('A box of tools.');
+    expect(screen.queryByText('1.2.0')).not.toBeInTheDocument();
+    expect(screen.getByText(/downloads · Updated/)).toBeInTheDocument();
+  });
+});
+
 describe('MarketplacePage — browse tri-state', () => {
   it('shows no cards while the search is pending', () => {
     const client: StubApiClient = {
@@ -148,9 +171,9 @@ describe('MarketplacePage — grouping', () => {
 
     expect(await screen.findByText('Generate a UUID.')).toBeInTheDocument();
     expect(screen.getByText('Summarize text.')).toBeInTheDocument();
-    // one listing → one card → one title link and one downloads stat
+    // one listing → one card → one title link and one downloads/recency stat line
     expect(screen.getAllByRole('link', { name: 'Toolbox' })).toHaveLength(1);
-    expect(screen.getByText('1234 downloads')).toBeInTheDocument();
+    expect(screen.getByText(/1234 downloads · Updated/)).toBeInTheDocument();
     // a single page whose page*page_size >= total shows no load-more
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
   });

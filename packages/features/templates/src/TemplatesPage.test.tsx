@@ -36,14 +36,46 @@ function renderTemplatesHarness(client: StubApiClient, initial: TemplatesSearch 
 }
 
 describe('TemplatesPage — master list', () => {
-  it('renders the template names', async () => {
+  it('renders root-level template names', async () => {
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['a.md', 'b.md']),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    expect(await screen.findByText('a.md')).toBeInTheDocument();
+    expect(screen.getByText('b.md')).toBeInTheDocument();
+  });
+
+  it('folds path-shaped keys into folders and reveals the leaf on navigation', async () => {
+    const user = userEvent.setup();
     const client: StubApiClient = {
       listTemplates: vi.fn().mockResolvedValue(['prompts/a.md', 'prompts/b.md']),
     };
     renderWithProviders(<TemplatesPage search={{}} />, { client });
 
-    expect(await screen.findByText('prompts/a.md')).toBeInTheDocument();
-    expect(screen.getByText('prompts/b.md')).toBeInTheDocument();
+    // At the root the shared prefix is a single folder, never two flat rows.
+    const folder = await screen.findByRole('button', { name: 'prompts' });
+    expect(
+      screen.queryByRole('link', { name: 'Open template prompts/a.md' }),
+    ).not.toBeInTheDocument();
+
+    // Opening the folder reveals the leaves by their final segment (the breadcrumb
+    // carries the path); the link's accessible name is still the FULL key.
+    await user.click(folder);
+    expect(await screen.findByText('a.md')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open template prompts/a.md' })).toBeInTheDocument();
+  });
+
+  it('renders BOTH a file and a folder that share a name (collision)', async () => {
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['shared', 'shared/child.md']),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    // The file `shared` files at the root as its own item…
+    expect(await screen.findByRole('link', { name: 'Open template shared' })).toBeInTheDocument();
+    // …while `shared` is ALSO a navigable folder (from `shared/child.md`).
+    expect(screen.getByRole('button', { name: 'shared' })).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no templates', async () => {
@@ -66,24 +98,24 @@ describe('TemplatesPage — master list', () => {
   it('navigates to the detail route when a template is selected', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
-      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      listTemplates: vi.fn().mockResolvedValue(['a.md']),
     };
     const { navigate } = renderWithProviders(<TemplatesPage search={{}} />, { client });
 
-    await user.click(await screen.findByRole('link', { name: 'Open template prompts/a.md' }));
-    expect(navigate).toHaveBeenCalledWith('templates', { template: 'prompts/a.md' });
+    await user.click(await screen.findByRole('link', { name: 'Open template a.md' }));
+    expect(navigate).toHaveBeenCalledWith('templates', { template: 'a.md' });
   });
 
   it('marks the selected template link as the current page', async () => {
     const client: StubApiClient = {
-      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md', 'prompts/b.md']),
+      listTemplates: vi.fn().mockResolvedValue(['a.md', 'b.md']),
       getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
     };
-    renderWithProviders(<TemplatesPage search={{ template: 'prompts/a.md' }} />, { client });
+    renderWithProviders(<TemplatesPage search={{ template: 'a.md' }} />, { client });
 
-    const active = await screen.findByRole('link', { name: 'Open template prompts/a.md' });
+    const active = await screen.findByRole('link', { name: 'Open template a.md' });
     expect(active).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Open template prompts/b.md' })).not.toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Open template b.md' })).not.toHaveAttribute(
       'aria-current',
     );
   });
@@ -137,7 +169,7 @@ describe('TemplatesPage — storage-provider gate', () => {
       .mockResolvedValue({ present: true, provider: 'fs', module: 'fs.mod' });
     const client: StubApiClient = {
       getStorageInfo,
-      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      listTemplates: vi.fn().mockResolvedValue(['a.md']),
     };
     renderWithProviders(<TemplatesPage search={{}} />, { client });
 
@@ -147,8 +179,10 @@ describe('TemplatesPage — storage-provider gate', () => {
     expect(alert).toHaveTextContent('boom: storage door failed');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByText('All templates')).toBeInTheDocument();
-    expect(await screen.findByText('prompts/a.md')).toBeInTheDocument();
+    // The surface's card heading (the explorer breadcrumb root shares the label, so
+    // target the heading specifically).
+    expect(await screen.findByRole('heading', { name: 'All templates' })).toBeInTheDocument();
+    expect(await screen.findByText('a.md')).toBeInTheDocument();
     expect(getStorageInfo).toHaveBeenCalledTimes(2);
   });
 });
@@ -200,7 +234,9 @@ describe('TemplatesPage — delete', () => {
     await waitFor(() => {
       expect(deleteTemplate).toHaveBeenCalledWith('prompts/a.md');
     });
-    expect(navigate).toHaveBeenCalledWith('templates');
+    // The provider forwards `navigate('templates')` to the shell as
+    // `(token, search)` with search undefined (clearing `?template=`).
+    expect(navigate).toHaveBeenCalledWith('templates', undefined);
   });
 });
 
@@ -328,14 +364,14 @@ describe('TemplatesPage — single-pane (compact band)', () => {
   it('moves focus to the detail heading when a template is selected (client-side change)', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
-      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      listTemplates: vi.fn().mockResolvedValue(['a.md']),
       getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
     };
     renderTemplatesHarness(client);
 
-    await user.click(await screen.findByRole('link', { name: 'Open template prompts/a.md' }));
+    await user.click(await screen.findByRole('link', { name: 'Open template a.md' }));
 
-    const heading = await screen.findByRole('heading', { level: 2, name: 'prompts/a.md' });
+    const heading = await screen.findByRole('heading', { level: 2, name: 'a.md' });
     await waitFor(() => {
       expect(heading).toHaveFocus();
     });
@@ -357,10 +393,12 @@ describe('TemplatesPage — single-pane (compact band)', () => {
   it('returns focus to the originating row on Back', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
-      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      // A root-level key so the originating row sits at the top of the list (a
+      // path-shaped key would fold into a folder, hiding the leaf until navigated).
+      listTemplates: vi.fn().mockResolvedValue(['a.md']),
       getTemplate: vi.fn().mockResolvedValue({ template: 'body', schema: {} }),
     };
-    renderTemplatesHarness(client, { template: 'prompts/a.md' });
+    renderTemplatesHarness(client, { template: 'a.md' });
 
     const back = await screen.findByRole('link', { name: 'Back' });
     await user.click(back);
@@ -369,7 +407,7 @@ describe('TemplatesPage — single-pane (compact band)', () => {
     expect(await screen.findByText('No template selected')).toBeInTheDocument();
     // Focus returns to the originating list row.
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Open template prompts/a.md' })).toHaveFocus();
+      expect(screen.getByRole('link', { name: 'Open template a.md' })).toHaveFocus();
     });
   });
 });

@@ -3,7 +3,8 @@
  * switches off `interaction.answer_format` and turns the human-in-the-loop question
  * into a concrete control whose "answer" is the value the `/answer` route expects:
  *
- *   - `text`     → a TextInput; the answer is the entered string.
+ *   - `text`     → a Textarea guarded on non-empty trimmed content; the answer is
+ *                  the entered string (one-shot, so an empty submit is blocked).
  *   - `confirm`  → Yes / No buttons; the answer is a boolean.
  *   - `select`   → a RadioGroup / Select over `format_payload.options`; the answer
  *                  is the chosen string. A malformed options payload is a LOUD
@@ -37,7 +38,7 @@ import {
   RadioGroup,
   Select,
   SchemaForm,
-  TextInput,
+  Textarea,
   defaultValueForSchema,
   validateAgainstSchema,
 } from '@tai42/studio-sdk';
@@ -136,10 +137,15 @@ export function MalformedPayload({
 
 export function TextAnswer({ onSubmit, disabled }: AnswerRendererProps): ReactNode {
   const [value, setValue] = useState('');
+  // Interactions are ONE-SHOT (the door 409s on an already-answered question), so a
+  // stray click on an empty control would irreversibly answer `''`. A multi-line
+  // textarea suits a free-text answer, and Submit stays disabled until the text has
+  // non-whitespace content so an empty answer can never be sent.
+  const canSubmit = !disabled && value.trim() !== '';
   return (
     <div style={answerStackStyle}>
       <Field label="Your answer">
-        <TextInput
+        <Textarea
           value={value}
           disabled={disabled}
           onChange={(event) => {
@@ -151,7 +157,7 @@ export function TextAnswer({ onSubmit, disabled }: AnswerRendererProps): ReactNo
         <Button
           type="button"
           variant="primary"
-          disabled={disabled}
+          disabled={!canSubmit}
           onClick={() => {
             onSubmit(value);
           }}

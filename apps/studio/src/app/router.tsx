@@ -42,6 +42,7 @@ import { LoginPage } from './login-page';
 import { LandingRoute } from './landing-route';
 import { PluginPage } from './plugin-page';
 import { RouteErrorComponent } from './error-boundary';
+import { NotFoundComponent } from './not-found';
 import type { PluginLoader } from './plugin-loader';
 
 /**
@@ -382,6 +383,9 @@ export function buildRouter(options: BuildRouterOptions) {
     history: options.history,
     defaultPreload: false,
     defaultErrorComponent: RouteErrorComponent,
+    // An unknown path renders a shell-styled 404 with a link home, not TanStack's
+    // bare built-in text under an empty outlet.
+    defaultNotFoundComponent: NotFoundComponent,
   });
 }
 

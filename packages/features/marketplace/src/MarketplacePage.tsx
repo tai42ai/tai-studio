@@ -42,6 +42,16 @@ const NONE = '__none__';
 const CARD_ITEM_CAP = 4;
 
 /**
+ * An ISO-8601 `updated_at` rendered as a plain date for the card's recency line.
+ * An unparseable value is shown verbatim rather than swallowed.
+ */
+function formatUpdatedAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString();
+}
+
+/**
  * A togglable facet chip. `.tai-chip` publishes the control's whole rendering —
  * the resting pill, the hover, the pressed accent ground — keyed off
  * `aria-pressed`, which is also what tells assistive tech the filter is on. The
@@ -160,8 +170,15 @@ function PluginCard({
           <div className="tai-row">
             <Badge>{row.trust_tier}</Badge>
             <Badge>{row.pricing}</Badge>
+            {/* The latest published version, when the listing has one. It is nullable
+                defensively though the search relation only emits published listings. */}
+            {row.latest_version !== null ? <Badge>{row.latest_version}</Badge> : null}
           </div>
-          <span className="tai-muted">{row.downloads} downloads</span>
+          {/* Downloads and recency on one muted line — the "Recently updated" sort
+              orders by exactly this timestamp, so it must be visible on the card. */}
+          <span className="tai-muted">
+            {row.downloads} downloads · Updated {formatUpdatedAt(row.updated_at)}
+          </span>
           {/* Each row stays one scannable line: a shrink-to-fit description that
               ellipsizes rather than wrapping the card into paragraphs. */}
           <ul

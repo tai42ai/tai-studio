@@ -26,6 +26,13 @@ function Controlled({ initial = [] as string[] }: { initial?: string[] }) {
 }
 
 describe('ExtensionPicker', () => {
+  it('renders the shared empty state on an empty catalog, not a bare checklist', () => {
+    render(<ExtensionPicker available={[]} value={[]} onChange={vi.fn()} />);
+    // The EmptyState lives inside the picker so every call site inherits it.
+    expect(screen.getByText('No extensions are available.')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
   it('groups the catalog by kind with a kind badge per group', () => {
     render(<ExtensionPicker available={CATALOG} value={[]} onChange={vi.fn()} />);
     // The two kinds each render a badge label.
