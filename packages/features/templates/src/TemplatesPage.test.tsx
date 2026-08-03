@@ -121,6 +121,58 @@ describe('TemplatesPage — master list', () => {
   });
 });
 
+describe('TemplatesPage — explorer open + list retry', () => {
+  // Card view persists per-surface in localStorage; keep tests independent.
+  beforeEach(() => {
+    try {
+      localStorage.clear();
+    } catch {
+      // No storage in this env — nothing to clear.
+    }
+  });
+  afterEach(() => {
+    try {
+      localStorage.clear();
+    } catch {
+      // Paired with beforeEach.
+    }
+  });
+
+  it('opens a template by clicking its card body in card view', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['a.md']),
+    };
+    const { navigate } = renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    // Switch the explorer to cards, then click the card SHELL (not the name link):
+    // ExplorerView's row/card-open convenience selects the template.
+    await user.click(await screen.findByRole('radio', { name: 'Card view' }));
+    await user.click(await screen.findByRole('listitem'));
+
+    expect(navigate).toHaveBeenCalledWith('templates', { template: 'a.md' });
+  });
+
+  it('retries the master-list query from its error state and recovers', async () => {
+    const user = userEvent.setup();
+    const listTemplates = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom: list failed'))
+      .mockResolvedValue(['a.md']);
+    const client: StubApiClient = { listTemplates };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('boom: list failed');
+
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    // The retry refetches; the second call resolves and the list recovers.
+    expect(await screen.findByRole('link', { name: 'Open template a.md' })).toBeInTheDocument();
+    expect(listTemplates).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('TemplatesPage — detail', () => {
   it('renders the selected template content in an escaped code block', async () => {
     const client: StubApiClient = {

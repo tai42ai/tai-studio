@@ -5,7 +5,7 @@
  * in flight; a rejected upload surfaces loudly in an `ErrorState` and leaves the
  * typed values intact so the user can retry.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -201,5 +201,79 @@ describe('UploadTemplateForm — files mode', () => {
     expect(await screen.findByText('quota exceeded')).toBeInTheDocument();
     expect(screen.getByText('Uploaded')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
+  });
+});
+
+describe('UploadTemplateForm — file read failures', () => {
+  // readFileText wraps FileReader; swap the global with a controllable double per test.
+  const OriginalFileReader = globalThis.FileReader;
+  afterEach(() => {
+    globalThis.FileReader = OriginalFileReader;
+  });
+
+  it('surfaces "Could not read <name>" when the FileReader errors', async () => {
+    // A reader whose read always fires onerror.
+    class FailingFileReader {
+      onerror: (() => void) | null = null;
+      onload: (() => void) | null = null;
+      result: unknown = null;
+      readAsText(): void {
+        queueMicrotask(() => this.onerror?.());
+      }
+    }
+    globalThis.FileReader = FailingFileReader as unknown as typeof FileReader;
+
+    const user = userEvent.setup();
+    const uploadTemplate = vi.fn();
+    const listTemplates = vi.fn().mockResolvedValue([]);
+    const client: StubApiClient = { uploadTemplate, listTemplates };
+    renderWithProviders(<UploadTemplateForm />, { client });
+
+    await user.click(screen.getByRole('radio', { name: 'Files' }));
+    await user.upload(
+      screen.getByLabelText('Choose files'),
+      new File(['x'], 'a.md', { type: 'text/markdown' }),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    // The read failure rejects loudly with the file name; the upload door is never hit.
+    expect(await screen.findByText('Could not read a.md')).toBeInTheDocument();
+    expect(uploadTemplate).not.toHaveBeenCalled();
+  });
+
+  it('rejects a non-string read result with the same "Could not read" error', async () => {
+    // onload fires but yields binary (ArrayBuffer), not text.
+    class BinaryFileReader {
+      onerror: (() => void) | null = null;
+      onload: (() => void) | null = null;
+      result: unknown = new ArrayBuffer(3);
+      readAsText(): void {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    globalThis.FileReader = BinaryFileReader as unknown as typeof FileReader;
+
+    const user = userEvent.setup();
+    const uploadTemplate = vi.fn();
+    const listTemplates = vi.fn().mockResolvedValue([]);
+    const client: StubApiClient = { uploadTemplate, listTemplates };
+    renderWithProviders(<UploadTemplateForm />, { client });
+
+    await user.click(screen.getByRole('radio', { name: 'Files' }));
+    await user.upload(
+      screen.getByLabelText('Choose files'),
+      new File([new Uint8Array([1, 2, 3])], 'a.md'),
+    );
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: 'Upload' }));
+
+    // A non-string result is treated as a failed read, not a silent blank upload.
+    expect(await screen.findByText('Could not read a.md')).toBeInTheDocument();
+    expect(uploadTemplate).not.toHaveBeenCalled();
   });
 });
