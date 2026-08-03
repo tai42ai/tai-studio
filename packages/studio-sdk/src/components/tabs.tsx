@@ -19,15 +19,24 @@ export interface TabsProps {
   readonly value?: string;
   readonly defaultValue?: string;
   readonly onValueChange?: (value: string) => void;
+  /** `'manual'` commits on Enter/Space/click only — arrows just move focus. */
+  readonly activationMode?: 'automatic' | 'manual';
 }
 
-export function Tabs({ items, value, defaultValue, onValueChange }: TabsProps) {
+export function Tabs({
+  items,
+  value,
+  defaultValue,
+  onValueChange,
+  activationMode = 'automatic',
+}: TabsProps) {
   const firstValue = items[0]?.value;
   return (
     <RadixTabs.Root
       value={value}
       defaultValue={defaultValue ?? firstValue}
       onValueChange={onValueChange}
+      activationMode={activationMode}
     >
       <RadixTabs.List className="tai-tablist">
         {items.map((item) => (
