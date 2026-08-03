@@ -578,8 +578,10 @@ export function createApiClient(config: ApiConfig) {
 
     // -- sub-mcp -------------------------------------------------------------
     listSubMcp: (signal?: AbortSignal) => req('/api/sub-mcp', s.subMcpList, { signal }),
-    createSubMcp: (slug: string, tools: string[]) =>
-      req('/api/sub-mcp', s.subMcpCreated, { method: 'POST', body: { slug, tools } }),
+    // `transport` is optional at the client boundary (the server defaults it to
+    // `http`); when omitted, JSON.stringify drops the undefined key from the body.
+    createSubMcp: (slug: string, tools: string[], transport?: string) =>
+      req('/api/sub-mcp', s.subMcpCreated, { method: 'POST', body: { slug, tools, transport } }),
     deleteSubMcp: (slug: string) =>
       req(`/api/sub-mcp/${encodeSegment(slug)}`, s.subMcpRemoved, { method: 'DELETE' }),
 

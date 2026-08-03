@@ -7,10 +7,30 @@ import { renderWithProviders } from './test-utils';
 
 const MANIFEST = { mcp: [{ title: 'srv' }], user_tools: ['echo'] };
 
+/** The MCP-entry schema the config editor drives its form from. */
+const MCP_SCHEMA = {
+  $defs: {
+    MCPConfig: {
+      type: 'object',
+      title: 'MCPConfig',
+      properties: { command: { type: 'string', title: 'Command' } },
+    },
+  },
+  type: 'object',
+  title: 'TaiMCPConfig',
+  required: ['title', 'config'],
+  properties: {
+    title: { type: 'string', title: 'Title' },
+    config: { $ref: '#/$defs/MCPConfig' },
+  },
+} as const;
+
 function fullClient() {
   return {
     getManifest: vi.fn().mockResolvedValue(MANIFEST),
     getMcpStatus: vi.fn().mockResolvedValue({ bound: { srv: ['a'] }, failed: [] }),
+    getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+    listExtensions: vi.fn().mockResolvedValue([]),
     listSubMcp: vi.fn().mockResolvedValue({}),
     listTools: vi.fn().mockResolvedValue(['echo']),
   };
@@ -40,5 +60,28 @@ describe('ManifestPage', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Sub-MCP' }));
     expect(await screen.findByText('Sub-MCP servers')).toBeInTheDocument();
+  });
+
+  it('confirms before a tab switch discards unsaved MCP config edits', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ManifestPage search={{}} />, { client: fullClient() });
+
+    // Open the MCP tab and dirty the config editor.
+    await user.click(screen.getByRole('tab', { name: 'MCP' }));
+    const title = await screen.findByLabelText('Title');
+    await user.type(title, ' edited');
+
+    // Switching tabs while dirty opens the confirm and HOLDS the switch (the panel
+    // unmounts on switch, so an unconfirmed switch would silently drop the edits).
+    await user.click(screen.getByRole('tab', { name: 'Manifest' }));
+    expect(
+      await screen.findByText('This editor has unsaved changes. Leaving now discards them.'),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Title')).toBeInTheDocument();
+    expect(screen.queryByText(/user_tools/)).toBeNull();
+
+    // Confirming the discard completes the switch to the Manifest tab.
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(await screen.findByText(/user_tools/)).toBeInTheDocument();
   });
 });

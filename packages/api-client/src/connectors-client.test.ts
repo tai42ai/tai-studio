@@ -74,15 +74,27 @@ const connection = {
 };
 
 describe('connectors client transport', () => {
-  it('listProviders GETs the providers route and parses the catalog', async () => {
-    const { client, captured } = harness(() => jsonResponse({ data: [provider] }));
+  it('listProviders GETs the providers route and parses the catalog + category groupings', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          providers: [provider],
+          categories: [{ id: 'dev', display_name: 'Developer tools', sort_order: 1 }],
+        },
+      }),
+    );
     const out = await client.listProviders();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/connectors/providers');
-    expect(out[0]?.sub_services[0]?.id).toBe('repo');
+    expect(out.providers[0]?.sub_services[0]?.id).toBe('repo');
+    expect(out.categories[0]).toEqual({
+      id: 'dev',
+      display_name: 'Developer tools',
+      sort_order: 1,
+    });
   });
 
-  it('listConnections GETs the connections route and parses { items, total }', async () => {
+  it('listConnections parses { items, total } and defaults an omitted unhealthy count to undefined', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { items: [connection], total: 1 } }),
     );
@@ -90,14 +102,35 @@ describe('connectors client transport', () => {
     expect(captured[0]?.url).toBe('/api/connectors/connections');
     expect(out.total).toBe(1);
     expect(out.items[0]?.alias).toBe('work');
+    // The list projection is probe-free, so a listed connection defaults to no
+    // unreachable sub-services; a pre-reshape worker omits `unhealthy` entirely.
+    expect(out.items[0]?.unreachable_sub_services).toEqual([]);
+    expect(out.unhealthy).toBeUndefined();
   });
 
-  it('getConnection GETs the id-encoded route and parses the view', async () => {
+  it('listConnections carries the unhealthy attention count when the worker sends it', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { items: [connection], total: 3, unhealthy: 2 } }),
+    );
+    const out = await client.listConnections();
+    expect(out.unhealthy).toBe(2);
+  });
+
+  it('getConnection GETs the id-encoded route and parses the view (unreachable sub-services default empty)', async () => {
     const { client, captured } = harness(() => jsonResponse({ data: connection }));
     const out = await client.getConnection('conn 1');
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/connectors/connections/conn%201');
     expect(out.auth_health_state).toBe('healthy');
+    expect(out.unreachable_sub_services).toEqual([]);
+  });
+
+  it('getConnection surfaces the probed unreachable sub-services on the single view', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { ...connection, unreachable_sub_services: ['issues'] } }),
+    );
+    const out = await client.getConnection('conn_1');
+    expect(out.unreachable_sub_services).toEqual(['issues']);
   });
 
   it('startConnect POSTs the args and parses the oauth authorize variant', async () => {
@@ -248,7 +281,21 @@ describe('connectors client transport', () => {
 
   it('throws ApiSchemaError LOUDLY on a drifting provider row (missing id)', async () => {
     const { id: _dropped, ...broken } = provider;
-    const { client } = harness(() => jsonResponse({ data: [broken] }));
+    const { client } = harness(() =>
+      jsonResponse({ data: { providers: [broken], categories: [] } }),
+    );
+    await expect(client.listProviders()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY when the catalog is served as a bare array (pre-reshape shape)', async () => {
+    const { client } = harness(() => jsonResponse({ data: [provider] }));
+    await expect(client.listProviders()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a null connector icon_url (icon_url is non-nullable)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { providers: [{ ...provider, icon_url: null }], categories: [] } }),
+    );
     await expect(client.listProviders()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 

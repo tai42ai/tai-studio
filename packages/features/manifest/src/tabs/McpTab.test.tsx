@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -54,6 +55,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<McpTab />, { client });
 
@@ -86,6 +88,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       reloadMcp,
     };
     renderWithProviders(<McpTab />, { client });
@@ -118,6 +121,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       reloadMcp,
     };
     renderWithProviders(<McpTab />, { client });
@@ -139,6 +143,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<McpTab />, { client });
 
@@ -150,6 +155,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockRejectedValue(new Error('status boom')),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<McpTab />, { client });
 
@@ -172,6 +178,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<McpTab />, { client });
 
@@ -192,6 +199,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
     renderWithProviders(<McpTab />, { client });
@@ -238,6 +246,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest,
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
     renderWithProviders(<McpTab />, { client });
@@ -265,6 +274,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
     };
     renderWithProviders(<McpTab />, { client });
 
@@ -291,6 +301,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
     renderWithProviders(<McpTab />, { client });
@@ -313,6 +324,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
     renderWithProviders(<McpTab />, { client });
@@ -335,6 +347,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
     renderWithProviders(<McpTab />, { client });
@@ -360,6 +373,7 @@ describe('McpTab', () => {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
       getManifest: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
     const { container } = renderWithProviders(<McpTab />, { client });
@@ -371,5 +385,110 @@ describe('McpTab', () => {
     expect(alert).toBeInTheDocument();
     // The message rendered as TEXT — no live <script> element was injected.
     expect(container.querySelector('script')).toBeNull();
+  });
+
+  it('renders a connector-managed entry read-only with its provenance', async () => {
+    const managedManifest = {
+      mcp: [
+        {
+          title: 'github',
+          config: {},
+          include: ['create_issue'],
+          managed: { connection_id: 'c-1', provider_id: 'github', sub_service: 'issues' },
+        },
+      ],
+      user_tools: ['echo'],
+    };
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifest: vi.fn().mockResolvedValue(managedManifest),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<McpTab />, { client });
+
+    // The provenance is surfaced and removal is disabled — the connection owns it.
+    expect(
+      await screen.findByText(/Managed by connection c-1 \(provider github, issues\)/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Disconnect to remove/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove server 1' })).toBeDisabled();
+    // No schema-driven editor is rendered for a managed entry (it is read-only)…
+    expect(screen.queryByTestId('mcp-entry-0')).toBeNull();
+    // …but its bound tool is shown.
+    expect(screen.getByText('create_issue')).toBeInTheDocument();
+  });
+
+  it('composes a discovered tool with an extension into the include list', async () => {
+    const user = userEvent.setup();
+    const setMcpConfig = vi.fn().mockResolvedValue({
+      status: 'ok',
+      env_keys: 0,
+      fanout: { mode: 'local-only', note: 'lone worker' },
+    });
+    const client = {
+      // The status query binds `srv` with tools a, b — the discovered set the picker draws from.
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifest: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([{ name: 'chain', kind: 'wrapper' }]),
+      setMcpConfig,
+    };
+    renderWithProviders(<McpTab />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+
+    // Pick a discovered tool, stack an extension onto it, and add the composed token.
+    await user.click(screen.getByRole('combobox', { name: 'Included tools: choose a tool' }));
+    await user.click(await screen.findByRole('option', { name: 'a' }));
+    await user.click(screen.getByRole('checkbox', { name: 'chain' }));
+    await user.click(screen.getByRole('button', { name: 'Add to included tools' }));
+
+    // The composed `tool:ext` token lands as a removable chip.
+    expect(screen.getByText('a:chain')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Save config/ }));
+    await waitFor(() => {
+      expect(setMcpConfig).toHaveBeenCalledWith([
+        { title: 'srv', config: { command: 'run' }, include: ['a:chain'] },
+      ]);
+    });
+  });
+
+  it('keeps the draft and surfaces a conflict when the server config moves under unsaved edits', async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifest: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<McpTab />, { client, queryClient });
+
+    const entry = await screen.findByTestId('mcp-entry-0');
+    await user.type(within(entry).getByLabelText('Title'), ' draft');
+
+    // A background cache update lands a DIFFERENT server config under the unsaved edit.
+    act(() => {
+      queryClient.setQueryData(['manifest'], {
+        mcp: [{ title: 'srv', config: { command: 'server-changed' } }],
+        user_tools: ['echo'],
+      });
+    });
+
+    // The draft is preserved (not silently clobbered) and the conflict is surfaced loudly.
+    expect(
+      await screen.findByText(/changed on the server while you had unsaved edits/),
+    ).toBeInTheDocument();
+    expect(within(screen.getByTestId('mcp-entry-0')).getByLabelText('Title')).toHaveValue(
+      'srv draft',
+    );
+
+    // Choosing to load the server version replaces the draft with the server's config.
+    await user.click(screen.getByRole('button', { name: /load the server version/ }));
+    expect(within(screen.getByTestId('mcp-entry-0')).getByLabelText('Command')).toHaveValue(
+      'server-changed',
+    );
   });
 });

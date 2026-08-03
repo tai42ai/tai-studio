@@ -32,6 +32,7 @@ import {
   TextInput,
   errorMessage,
   useApi,
+  useRegisterDirty,
 } from '@tai42/studio-sdk';
 import { summarizeFleetFanout, type SettingsSchema } from '@tai42/api-client';
 
@@ -209,6 +210,19 @@ function EnvironmentEditor({
   const hasBlankKey = keys.some((key) => key.trim().length === 0);
   const hasDuplicateKey = new Set(keys).size !== keys.length;
   const isValid = !hasBlankKey && !hasDuplicateKey;
+
+  // Report to the enclosing tab guard whenever the editable state has diverged from
+  // the server baseline, so a tab switch / navigation / unload confirms before the
+  // fleet-reloading env is dropped unsaved. A read-only editor is never dirty.
+  const currentSignature = JSON.stringify({
+    rows: rows.map((row) => [row.key, row.value]),
+    secrets: [...secretKeys].sort(),
+  });
+  const initialSignature = JSON.stringify({
+    rows: Object.entries(initialEnv).filter(([key]) => key !== SECRET_MARKS_ENV_VAR),
+    secrets: [...initialSecretKeys].sort(),
+  });
+  useRegisterDirty(!readOnly && currentSignature !== initialSignature);
 
   const isOwned = (key: string): boolean => ownedSecret.has(key);
   const isEffectivelySecret = (key: string): boolean =>

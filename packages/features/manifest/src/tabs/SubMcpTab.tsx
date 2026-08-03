@@ -1,23 +1,31 @@
 /**
  * SUB-MCP tab — the derived sub-MCP servers (`/api/sub-mcp`): a slug mapped to a
- * curated subset of tool names.
+ * curated subset of tool names served on a transport.
  *
- *  - LIST every entry with a DELETE control guarded by a confirm `<Dialog>`.
+ *  - LIST every entry with its transport and its concrete endpoint URL
+ *    (`/app/{slug}`, copy-to-clipboard) plus a DELETE control guarded by a confirm
+ *    `<Dialog>`.
  *  - CREATE a new entry from a slug + a multi-select of tool names
- *    (`GET /api/tools`), posted with `POST /api/sub-mcp`.
+ *    (`GET /api/tools`) + a transport, posted with `POST /api/sub-mcp`. Register is
+ *    a SILENT-SWAP upsert server-side, so a slug that already exists is flagged and
+ *    the replacement is confirmed before the write.
  *
  * Every mutation invalidates `subMcpKey` so the list re-fetches.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { SubMcpMount } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
   Checkbox,
+  ConfirmDialog,
+  CopyField,
   Dialog,
   EmptyState,
   ErrorState,
   Field,
+  RadioGroup,
   ScrollRegion,
   Skeleton,
   Spinner,
@@ -31,16 +39,22 @@ import {
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import type { RadioOption } from '@tai42/studio-sdk';
 import { useState } from 'react';
 import type { ReactNode, SyntheticEvent } from 'react';
 
 import { subMcpAvailableToolsKey, subMcpKey } from '../keys';
 
-/** Pull the tool-name list out of a sub-MCP entry, tolerating an absent/loose shape. */
-function entryTools(entry: Record<string, unknown>): string[] {
-  const tools = entry.tools;
-  if (!Array.isArray(tools)) return [];
-  return tools.filter((item): item is string => typeof item === 'string');
+/** The transports the sub-MCP build path supports end to end (`http` default). */
+const TRANSPORT_OPTIONS: readonly RadioOption[] = [
+  { value: 'http', label: 'HTTP' },
+  { value: 'sse', label: 'SSE' },
+  { value: 'stdio', label: 'stdio' },
+];
+
+/** The endpoint a registered sub-MCP is served under (`/app/{slug}`). */
+function endpointFor(slug: string): string {
+  return `/app/${slug}`;
 }
 
 function DeleteSubMcpDialog({
@@ -91,7 +105,7 @@ function SubMcpList({
   entries,
   onDelete,
 }: {
-  entries: readonly [string, Record<string, unknown>][];
+  entries: readonly [string, SubMcpMount][];
   onDelete: (slug: string) => void;
 }): ReactNode {
   return (
@@ -100,6 +114,8 @@ function SubMcpList({
         <THead>
           <TR>
             <TH>Slug</TH>
+            <TH>Transport</TH>
+            <TH>Endpoint</TH>
             <TH>Tools</TH>
             <TH>
               <span className="tai-visually-hidden">Actions</span>
@@ -107,30 +123,37 @@ function SubMcpList({
           </TR>
         </THead>
         <TBody>
-          {entries.map(([slug, entry]) => {
-            const tools = entryTools(entry);
-            return (
-              <TR key={slug}>
-                <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{slug}</TD>
-                <TD>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
-                    {tools.length === 0 ? (
-                      <span style={{ color: 'var(--tai-color-text-muted)' }}>none</span>
-                    ) : (
-                      tools.map((tool) => (
-                        <Badge key={tool} variant="neutral">
-                          {tool}
-                        </Badge>
-                      ))
-                    )}
-                  </div>
-                </TD>
-                <TD>
-                  <DeleteSubMcpDialog slug={slug} onConfirm={onDelete} />
-                </TD>
-              </TR>
-            );
-          })}
+          {entries.map(([slug, mount]) => (
+            <TR key={slug}>
+              <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{slug}</TD>
+              <TD>
+                <Badge variant="neutral">{mount.transport}</Badge>
+              </TD>
+              <TD>
+                <CopyField
+                  value={endpointFor(slug)}
+                  label={`Endpoint for ${slug}`}
+                  idPrefix={`sub-mcp-endpoint-${slug}`}
+                />
+              </TD>
+              <TD>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-1)' }}>
+                  {mount.tools.length === 0 ? (
+                    <span style={{ color: 'var(--tai-color-text-muted)' }}>none</span>
+                  ) : (
+                    mount.tools.map((tool) => (
+                      <Badge key={tool} variant="neutral">
+                        {tool}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+              </TD>
+              <TD>
+                <DeleteSubMcpDialog slug={slug} onConfirm={onDelete} />
+              </TD>
+            </TR>
+          ))}
         </TBody>
       </Table>
     </ScrollRegion>
@@ -144,19 +167,29 @@ function CreateSubMcpForm(): ReactNode {
     queryKey: subMcpAvailableToolsKey,
     queryFn: ({ signal }) => api.listTools(signal),
   });
+  // The already-registered slugs, read from the shared list cache, drive the
+  // slug-swap pre-check (register is a silent-swap upsert server-side).
+  const listQuery = useQuery({
+    queryKey: subMcpKey,
+    queryFn: ({ signal }) => api.listSubMcp(signal),
+  });
+  const existingSlugs = new Set(Object.keys(listQuery.data ?? {}));
 
   const [slug, setSlug] = useState('');
   const [selected, setSelected] = useState<readonly string[]>([]);
+  const [transport, setTransport] = useState('http');
   const [slugError, setSlugError] = useState<string | undefined>(undefined);
   const [toolsError, setToolsError] = useState<string | undefined>(undefined);
+  const [confirmSwap, setConfirmSwap] = useState(false);
 
   const create = useMutation({
-    mutationFn: (input: { slug: string; tools: string[] }) =>
-      api.createSubMcp(input.slug, input.tools),
+    mutationFn: (input: { slug: string; tools: string[]; transport: string }) =>
+      api.createSubMcp(input.slug, input.tools, input.transport),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: subMcpKey });
       setSlug('');
       setSelected([]);
+      setTransport('http');
     },
   });
 
@@ -166,16 +199,27 @@ function CreateSubMcpForm(): ReactNode {
     );
   };
 
+  const trimmedSlug = slug.trim();
+  const wouldSwap = trimmedSlug !== '' && existingSlugs.has(trimmedSlug);
+
+  const runCreate = (): void => {
+    create.mutate({ slug: trimmedSlug, tools: [...selected], transport });
+  };
+
   const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const trimmed = slug.trim();
-    const nextSlugError = trimmed === '' ? 'A slug is required.' : undefined;
+    const nextSlugError = trimmedSlug === '' ? 'A slug is required.' : undefined;
     const nextToolsError =
       selected.length === 0 ? 'Select at least one tool for the sub-MCP.' : undefined;
     setSlugError(nextSlugError);
     setToolsError(nextToolsError);
     if (nextSlugError !== undefined || nextToolsError !== undefined) return;
-    create.mutate({ slug: trimmed, tools: [...selected] });
+    // A matching slug is a REPLACE, not an add — confirm before the swap.
+    if (wouldSwap) {
+      setConfirmSwap(true);
+      return;
+    }
+    runCreate();
   };
 
   return (
@@ -197,6 +241,28 @@ function CreateSubMcpForm(): ReactNode {
           autoComplete="off"
         />
       </Field>
+
+      {wouldSwap && slugError === undefined ? (
+        <p
+          role="alert"
+          style={{
+            margin: 0,
+            fontSize: 'var(--tai-text-sm)',
+            color: 'var(--tai-color-warn-text)',
+          }}
+        >
+          A sub-MCP named &ldquo;{trimmedSlug}&rdquo; already exists. Registering will replace it.
+        </p>
+      ) : null}
+
+      <RadioGroup
+        label="Transport"
+        options={TRANSPORT_OPTIONS}
+        value={transport}
+        onValueChange={setTransport}
+        orientation="horizontal"
+        variant="segmented"
+      />
 
       {/* A multi-select group. Not a single-control `Field`: several checkboxes
           cannot share one injected control id, so the label/description/error are
@@ -278,6 +344,27 @@ function CreateSubMcpForm(): ReactNode {
         </Button>
       </div>
       {create.isError ? <ErrorState message={errorMessage(create.error)} /> : null}
+
+      {confirmSwap ? (
+        <ConfirmDialog
+          title="Replace existing sub-MCP?"
+          confirmLabel="Replace sub-MCP"
+          pendingLabel="Replacing"
+          confirmVariant="danger"
+          isPending={create.isPending}
+          onConfirm={() => {
+            setConfirmSwap(false);
+            runCreate();
+          }}
+          onClose={() => {
+            setConfirmSwap(false);
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            {`A sub-MCP named “${trimmedSlug}” is already registered. Replacing it swaps its tools and transport for the ones above.`}
+          </p>
+        </ConfirmDialog>
+      ) : null}
     </form>
   );
 }

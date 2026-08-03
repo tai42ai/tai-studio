@@ -10,12 +10,10 @@ import {
   Checkbox,
   Dialog,
   ErrorState,
-  FeatureDisabled,
   Field,
   FleetReport,
   Spinner,
   TextInput,
-  isFeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
 import {
@@ -30,7 +28,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { CONNECTIONS_KEY } from './keys';
-import { Notice } from './notice';
+import { ConnectorRefusalNotice, Notice, readConnectorRefusal } from './notice';
 import { useOAuthPopup } from './oauth';
 
 type StartConnectResult = Awaited<ReturnType<ApiClient['startConnect']>>;
@@ -119,15 +117,17 @@ export function ConnectDialog({
     setConfigValues((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  // The connector START refused with a 501 `connectors-not-configured`: the token
-  // store is off, so no connect can ever land. OFF is a state, not an error — show
-  // the muted note and withdraw the submit affordance rather than a loud red alert.
-  const connectorsDisabled = isFeatureDisabled(connect.error);
+  // The connector START refused with a named 501: the token store is off
+  // (`connectors-not-configured`), or this provider's OAuth credentials are unset
+  // (`connector-provider-not-configured`). Either way no connect can land until an
+  // operator acts. OFF is a state, not an error — show the muted, named-actionable
+  // note and withdraw the submit affordance rather than a loud red alert.
+  const refusal = readConnectorRefusal(connect.error);
 
-  // Disabled while a request is in flight, and once the store reveals itself off (a
-  // certain-to-refuse write is not offered). Validation is surfaced loudly on submit
-  // (as field errors) rather than by silently blocking the button.
-  const canSubmit = !connect.isPending && !oauth.pending && !connectorsDisabled;
+  // Disabled while a request is in flight, and once a refusal reveals the write is
+  // certain to refuse (it is not offered). Validation is surfaced loudly on submit (as
+  // field errors) rather than by silently blocking the button.
+  const canSubmit = !connect.isPending && !oauth.pending && refusal === null;
 
   const handleSubmit = useCallback(() => {
     setSubmitted(true);
@@ -154,10 +154,10 @@ export function ConnectDialog({
     enabled,
   ]);
 
-  // A store-off refusal is rendered as the muted OFF note below, never here — so the
-  // red ErrorState is reserved for genuine errors (validation, upstream, 5xx).
+  // A named refusal is rendered as the muted OFF note below, never here — so the red
+  // ErrorState is reserved for genuine errors (validation, upstream, 5xx).
   const errorMessage =
-    !connectorsDisabled && connect.error instanceof Error ? connect.error.message : null;
+    refusal === null && connect.error instanceof Error ? connect.error.message : null;
 
   return (
     <Dialog
@@ -188,16 +188,40 @@ export function ConnectDialog({
             <legend style={{ fontSize: 'var(--tai-text-sm)', fontWeight: 600 }}>
               Sub-services
             </legend>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
               {provider.sub_services.map((service) => (
-                <Checkbox
+                <div
                   key={service.id}
-                  label={service.display_name}
-                  checked={enabled.has(service.id)}
-                  onCheckedChange={(checked) => {
-                    toggleSubService(service.id, checked);
-                  }}
-                />
+                  style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}
+                >
+                  <Checkbox
+                    label={service.display_name}
+                    checked={enabled.has(service.id)}
+                    onCheckedChange={(checked) => {
+                      toggleSubService(service.id, checked);
+                    }}
+                  />
+                  {/* A consent surface: the description AND the scopes are shown
+                      together (never one hiding the other) so the operator sees the
+                      access each sub-service grants before enabling it. */}
+                  <div
+                    style={{
+                      marginLeft: 'var(--tai-space-5)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 'var(--tai-space-1)',
+                      fontSize: 'var(--tai-text-sm)',
+                      color: 'var(--tai-color-text-muted)',
+                    }}
+                  >
+                    {service.description !== '' ? <span>{service.description}</span> : null}
+                    {service.scopes.length > 0 ? (
+                      <span>
+                        Scopes: <span className="tai-mono">{service.scopes.join(', ')}</span>
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
               ))}
             </div>
           </fieldset>
@@ -224,8 +248,8 @@ export function ConnectDialog({
           </Field>
         ))}
 
-        {connectorsDisabled ? (
-          <FeatureDisabled feature="Connectors" envVar="CONNECTOR_STORE_PG_PASSWORD" />
+        {refusal !== null ? (
+          <ConnectorRefusalNotice refusal={refusal} />
         ) : errorMessage !== null ? (
           <ErrorState message={errorMessage} />
         ) : null}

@@ -7,7 +7,13 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { OAUTH_MESSAGE_TYPE, useOAuthPopup } from './oauth';
+import {
+  OAUTH_MESSAGE_TYPE,
+  OAUTH_REDIRECT_STORAGE_KEY,
+  OAUTH_RESUME_PARAMS,
+  useOAuthPopup,
+  useOAuthRedirectResume,
+} from './oauth';
 import {
   makeClient,
   makeFakePopup,
@@ -31,6 +37,15 @@ function Harness({ url, onSuccess }: { url: string; onSuccess?: () => void }): R
         {oauth.notice ? `${oauth.notice.kind}:${oauth.notice.message}` : ''}
       </div>
       <div data-testid="pending">{String(oauth.pending)}</div>
+    </div>
+  );
+}
+
+function ResumeHarness(): React.ReactNode {
+  const resume = useOAuthRedirectResume();
+  return (
+    <div data-testid="notice">
+      {resume.notice ? `${resume.notice.kind}:${resume.notice.message}` : ''}
     </div>
   );
 }
@@ -89,6 +104,23 @@ describe('useOAuthPopup — trusted message', () => {
     await waitFor(() => {
       expect(screen.getByTestId('notice').textContent).toBe('failed:token exchange rejected');
     });
+  });
+
+  it('surfaces a loud error when completeOAuth rejects', async () => {
+    const popup = makeFakePopup();
+    stubOpen(popup);
+    const completeOAuth = vi.fn().mockRejectedValue(new Error('exchange boom'));
+    renderWithProviders(<Harness url="https://provider/auth" />, {
+      client: makeClient({ completeOAuth }),
+    });
+
+    fireEvent.click(screen.getByText('start'));
+    postMessageFrom(popup, goodMessage);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('notice').textContent).toBe('error:exchange boom');
+    });
+    expect(popup.close).toHaveBeenCalled();
   });
 
   it('reports cancelled on a cancelled result', async () => {
@@ -166,8 +198,12 @@ describe('useOAuthPopup — security pin: untrusted messages are ignored', () =>
 });
 
 describe('useOAuthPopup — popup lifecycle', () => {
-  it('surfaces a loud error when the popup is blocked (window.open returns null)', () => {
+  it('falls back to a full-page redirect when the popup is blocked (window.open null)', () => {
+    // jsdom's `location.assign` is a non-configurable no-op that cannot be spied, so the
+    // branch is verified by its observable side effect: the return path is stashed for
+    // the callback page (and no popup-blocked error is shown, no completion runs here).
     stubOpen(null);
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     const completeOAuth = vi.fn();
     renderWithProviders(<Harness url="https://provider/auth" />, {
       client: makeClient({ completeOAuth }),
@@ -175,9 +211,24 @@ describe('useOAuthPopup — popup lifecycle', () => {
 
     fireEvent.click(screen.getByText('start'));
 
-    expect(screen.getByTestId('notice').textContent).toContain('error:');
-    expect(screen.getByTestId('notice')).toHaveTextContent(/popup blocked/i);
+    expect(setItemSpy).toHaveBeenCalledWith(OAUTH_REDIRECT_STORAGE_KEY, expect.any(String));
+    expect(screen.getByTestId('notice').textContent).toBe('');
     expect(completeOAuth).not.toHaveBeenCalled();
+  });
+
+  it('refuses a non-http(s) URL before the redirect fallback when the popup is blocked', () => {
+    // The safe-URL guard runs before window.open, so a javascript: URL never reaches
+    // either the popup OR the redirect fallback — nothing is stashed.
+    stubOpen(null);
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    renderWithProviders(<Harness url="javascript:alert(1)" />, {
+      client: makeClient({ completeOAuth: vi.fn() }),
+    });
+
+    fireEvent.click(screen.getByText('start'));
+
+    expect(setItemSpy).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notice').textContent).toContain('error:');
   });
 
   it('refuses a non-http(s) authorize URL and never opens a window (XSS guard)', () => {
@@ -226,5 +277,77 @@ describe('useOAuthPopup — popup lifecycle', () => {
     unmount();
 
     expect(removeSpy).toHaveBeenCalledWith('message', expect.any(Function));
+  });
+});
+
+describe('useOAuthRedirectResume — completing a redirect flow', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('completes the exchange from the forwarded params and strips them from the URL', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?connection=c1&${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd`,
+    );
+    const completeOAuth = vi.fn().mockResolvedValue({
+      kind: 'success',
+      connection_id: 'c1',
+      return_url: '/connectors',
+      fanout: null,
+    });
+    renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
+
+    await waitFor(() => {
+      expect(completeOAuth).toHaveBeenCalledWith('st', 'cd', undefined);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('notice').textContent).toContain('success:');
+    });
+    // The single-use params are stripped so a reload cannot re-fire the state; the
+    // unrelated `connection` param is preserved.
+    expect(window.location.search).not.toContain(OAUTH_RESUME_PARAMS.state);
+    expect(window.location.search).toContain('connection=c1');
+  });
+
+  it('is a no-op on a page without the forwarded params', async () => {
+    window.history.replaceState(null, '', '/connectors');
+    const completeOAuth = vi.fn();
+    renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
+
+    await Promise.resolve();
+    expect(completeOAuth).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notice').textContent).toBe('');
+  });
+
+  it('surfaces the failure reason when the exchange fails', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd`,
+    );
+    const completeOAuth = vi
+      .fn()
+      .mockResolvedValue({ kind: 'failed', reason: 'token exchange rejected' });
+    renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('notice').textContent).toBe('failed:token exchange rejected');
+    });
+  });
+
+  it('surfaces a loud error when the resumed exchange rejects', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd`,
+    );
+    const completeOAuth = vi.fn().mockRejectedValue(new Error('resume boom'));
+    renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('notice').textContent).toBe('error:resume boom');
+    });
   });
 });

@@ -20,3 +20,6 @@ export const mcpConfigSchemaKey = ['mcp-config-schema'] as const;
 
 /** Key for the tool names a new sub-MCP entry can curate (`GET /api/tools`). */
 export const subMcpAvailableToolsKey = ['sub-mcp-available-tools'] as const;
+
+/** Key for the extension catalog the MCP tool composer draws from (`GET /api/extensions`). */
+export const mcpExtensionsKey = ['mcp-extensions'] as const;

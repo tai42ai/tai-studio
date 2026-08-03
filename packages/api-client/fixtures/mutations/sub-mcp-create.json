@@ -1,4 +1,5 @@
 {
   "slug": "reporting",
-  "tools": ["render_report", "export_csv"]
+  "tools": ["render_report", "export_csv"],
+  "transport": "http"
 }

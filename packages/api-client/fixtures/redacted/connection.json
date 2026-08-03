@@ -6,6 +6,7 @@
   "account_identity": "octocat",
   "enabled_sub_services": ["issues"],
   "granted_scopes": ["repo:issues"],
+  "unreachable_sub_services": [],
   "auth_health_state": "healthy",
   "created_at": "2026-06-01T12:00:00+00:00"
 }

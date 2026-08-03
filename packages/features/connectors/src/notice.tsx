@@ -1,9 +1,15 @@
 /**
- * A small dismissible banner for an {@link OAuthNotice} outcome. The message is
- * rendered as TEXT (JSX children) — never as HTML — so a provider- or
- * server-supplied string can carry no markup sink.
+ * Inline connector states rendered as banners.
+ *
+ * {@link Notice} is a small dismissible banner for an {@link OAuthNotice} outcome.
+ * {@link ConnectorRefusalNotice} is the muted, named-actionable surface for a 501
+ * connector refusal (`OFF is a state, not an error`): the token store being
+ * unconfigured, or a single provider's OAuth credentials being unset.
+ *
+ * Every message is rendered as TEXT (JSX children) — never as HTML — so a provider-
+ * or server-supplied string can carry no markup sink.
  */
-import { Button } from '@tai42/studio-sdk';
+import { Button, EmptyState, FeatureDisabled } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import type { OAuthNotice } from './oauth';
@@ -71,6 +77,63 @@ export function Notice({
       <Button onClick={onDismiss} aria-label="Dismiss notice">
         Dismiss
       </Button>
+    </div>
+  );
+}
+
+// The machine-readable `code`s the skeleton's named 501 refusals carry. The store
+// code names the whole feature being off; the provider code names one provider's
+// OAuth client-credentials env var gap (whose message names the offending var).
+const STORE_NOT_CONFIGURED_CODE = 'connectors-not-configured';
+const PROVIDER_NOT_CONFIGURED_CODE = 'connector-provider-not-configured';
+
+/** A classified connector refusal — the muted OFF states, distinct from real errors. */
+export type ConnectorRefusal =
+  { readonly kind: 'store-off' } | { readonly kind: 'provider-off'; readonly message: string };
+
+/**
+ * Classify a mutation error as a named 501 connector refusal, or `null` when it is a
+ * genuine error (validation, upstream, 5xx) that belongs in a loud ErrorState. Duck-
+ * types the error's `status` / `code` / `message` so it needs no `instanceof`.
+ *
+ * The provider-credential gap is checked before the store code, then a bare 501 with
+ * no specific code falls back to the whole-feature-off state.
+ */
+export function readConnectorRefusal(error: unknown): ConnectorRefusal | null {
+  if (typeof error !== 'object' || error === null) return null;
+  const { status, code, message } = error as {
+    status?: unknown;
+    code?: unknown;
+    message?: unknown;
+  };
+  if (code === PROVIDER_NOT_CONFIGURED_CODE) {
+    return {
+      kind: 'provider-off',
+      message:
+        typeof message === 'string' && message !== ''
+          ? message
+          : 'This connector is not configured on this deployment.',
+    };
+  }
+  if (code === STORE_NOT_CONFIGURED_CODE) return { kind: 'store-off' };
+  if (status === 501) return { kind: 'store-off' };
+  return null;
+}
+
+/**
+ * The muted, honest surface for a {@link ConnectorRefusal}. The store-off case names
+ * the enabling env var through the shared {@link FeatureDisabled} note; the
+ * provider-off case surfaces the server's actionable message (which names the
+ * offending env var) as a `role="status"` note — never a loud red alert, because a
+ * capability the deployment has not provided is a state, not a malfunction.
+ */
+export function ConnectorRefusalNotice({ refusal }: { refusal: ConnectorRefusal }): ReactNode {
+  if (refusal.kind === 'store-off') {
+    return <FeatureDisabled feature="Connectors" envVar="CONNECTOR_STORE_PG_PASSWORD" />;
+  }
+  return (
+    <div data-testid="connector-provider-off">
+      <EmptyState title="This connector is not configured" description={refusal.message} />
     </div>
   );
 }

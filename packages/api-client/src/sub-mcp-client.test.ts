@@ -44,14 +44,16 @@ function harness(responder: () => Response) {
 }
 
 describe('sub-mcp client transport', () => {
-  it('listSubMcp GETs /api/sub-mcp and parses the slug → definition map', async () => {
+  it('listSubMcp GETs /api/sub-mcp and parses the slug → { tools, transport } map', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { reporting: { tools: ['a', 'b'] } } }),
+      jsonResponse({ data: { reporting: { tools: ['a', 'b'], transport: 'http' } } }),
     );
     const out = await client.listSubMcp();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/sub-mcp');
-    expect(out.reporting).toEqual({ tools: ['a', 'b'] });
+    expect(out.reporting).toEqual({ tools: ['a', 'b'], transport: 'http' });
+    // `transport` is now typed on the mount value, not an opaque unknown.
+    expect(out.reporting?.transport).toBe('http');
   });
 
   it('listSubMcp accepts an empty registry', async () => {
@@ -59,15 +61,30 @@ describe('sub-mcp client transport', () => {
     expect(await client.listSubMcp()).toEqual({});
   });
 
-  it('createSubMcp POSTs { slug, tools } and parses the created mount', async () => {
+  it('throws ApiSchemaError LOUDLY on a mount missing transport (the wire always carries it)', async () => {
+    const { client } = harness(() => jsonResponse({ data: { reporting: { tools: ['a'] } } }));
+    await expect(client.listSubMcp()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('createSubMcp POSTs { slug, tools } (transport omitted) and parses the created mount', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { slug: 'reporting', tools: ['a', 'b'] } }),
+      jsonResponse({ data: { slug: 'reporting', tools: ['a', 'b'], transport: 'http' } }),
     );
     const out = await client.createSubMcp('reporting', ['a', 'b']);
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/sub-mcp');
+    // With transport undefined, JSON.stringify drops the key — the server defaults it.
     expect(captured[0]?.body).toEqual({ slug: 'reporting', tools: ['a', 'b'] });
-    expect(out).toEqual({ slug: 'reporting', tools: ['a', 'b'] });
+    expect(out).toEqual({ slug: 'reporting', tools: ['a', 'b'], transport: 'http' });
+  });
+
+  it('createSubMcp forwards an explicit transport choice in the body', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { slug: 'reporting', tools: ['a'], transport: 'stdio' } }),
+    );
+    const out = await client.createSubMcp('reporting', ['a'], 'stdio');
+    expect(captured[0]?.body).toEqual({ slug: 'reporting', tools: ['a'], transport: 'stdio' });
+    expect(out.transport).toBe('stdio');
   });
 
   it('deleteSubMcp DELETEs the slug-encoded route', async () => {

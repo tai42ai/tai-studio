@@ -22,11 +22,14 @@ const navigation: NavigationContextValue = {
 
 export function renderWithProviders(
   ui: ReactNode,
-  { client }: { client: Partial<ApiClient> },
+  { client, queryClient }: { client: Partial<ApiClient>; queryClient?: QueryClient },
 ): RenderResult {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // A caller can supply its own client (to drive a background cache update via
+  // `setQueryData` in-test); otherwise a fresh, retry-free one is used.
+  const resolvedQueryClient =
+    queryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={resolvedQueryClient}>
       {/* The stub only implements the methods each test exercises; the page reads
           nothing else, so widening the partial stub to the full client is safe. */}
       <ApiProvider value={client as ApiClient}>

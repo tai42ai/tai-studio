@@ -48,10 +48,10 @@ import {
   Card,
   ErrorBoundary,
   ErrorState,
+  GuardedTabs,
   PageHeader,
   Skeleton,
   Stack,
-  Tabs,
   coversAnyRoute,
   errorMessage,
   isFullProjection,
@@ -244,7 +244,9 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
             </Stack>
           </Card>
         ) : null}
-        <Tabs items={tabs} defaultValue={tabs[0]?.value} />
+        {/* GuardedTabs (not the bare SDK Tabs): switching away from a dirty env
+            editor first confirms the discard, since the panel unmounts on switch. */}
+        <GuardedTabs items={tabs} defaultValue={tabs[0]?.value} />
       </>
     );
   }

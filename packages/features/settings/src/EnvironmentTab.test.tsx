@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient, SettingsSchema } from '@tai42/api-client';
 
+import { GuardedTabs } from '@tai42/studio-sdk';
+
 import { EnvironmentTab } from './EnvironmentTab';
 import { renderWithProviders } from './test-utils';
 
@@ -81,6 +83,54 @@ function baseStub(setEnvConfig?: ApiClient['setEnvConfig']): ApiClient {
     ...(setEnvConfig === undefined ? {} : { setEnvConfig }),
   });
 }
+
+describe('EnvironmentTab unsaved-changes guard', () => {
+  it('confirms before a tab switch discards unsaved environment edits', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <GuardedTabs
+        items={[
+          { value: 'env', label: 'Environment', content: <EnvironmentTab readOnly={false} /> },
+          { value: 'other', label: 'Other', content: <div>other panel</div> },
+        ]}
+        defaultValue="env"
+      />,
+      { client: baseStub() },
+    );
+
+    // Dirty the editor by editing a variable's value.
+    const value = await screen.findByLabelText('Value of variable OPENAI_API_KEY');
+    await user.type(value, 'x');
+
+    // Switching tabs while dirty opens the confirm and HOLDS the switch.
+    await user.click(screen.getByRole('tab', { name: 'Other' }));
+    expect(await screen.findByText('Discard unsaved changes?')).toBeInTheDocument();
+    expect(screen.queryByText('other panel')).toBeNull();
+
+    // Confirming the discard completes the switch.
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(await screen.findByText('other panel')).toBeInTheDocument();
+  });
+
+  it('does not guard a read-only editor', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <GuardedTabs
+        items={[
+          { value: 'env', label: 'Environment', content: <EnvironmentTab readOnly /> },
+          { value: 'other', label: 'Other', content: <div>other panel</div> },
+        ]}
+        defaultValue="env"
+      />,
+      { client: baseStub() },
+    );
+
+    await screen.findByLabelText('Value of variable OPENAI_API_KEY');
+    await user.click(screen.getByRole('tab', { name: 'Other' }));
+    expect(await screen.findByText('other panel')).toBeInTheDocument();
+    expect(screen.queryByText(/unsaved changes/)).toBeNull();
+  });
+});
 
 describe('EnvironmentTab', () => {
   it('offers a secret toggle for an unowned key and saves the updated marks', async () => {

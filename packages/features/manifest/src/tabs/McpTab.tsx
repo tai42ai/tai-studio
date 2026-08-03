@@ -4,25 +4,36 @@
  *  1. STATUS: `GET /api/mcp-status` lists every mounted server (bound = healthy,
  *     failed = errored) with a per-server RELOAD button (`POST …/reload`).
  *  2. CONFIG: an editor for the manifest's `mcp` array with two views over the
- *     SAME working list. The FORM view (primary) renders one schema-driven
- *     `SchemaForm` per entry from the entry schema (`GET /api/mcp-config/schema`)
- *     with add/edit/remove. The JSON view (escape hatch) is a raw `Textarea`; a
- *     malformed edit is a LOUD inline field error and no request is sent.
+ *     SAME working list. The FORM view (primary) renders one editor per entry: a
+ *     schema-driven `SchemaForm` for the transport config plus a tool COMPOSER for
+ *     the `include`/`exclude` lists (pick a discovered tool, optionally stack
+ *     extensions into a `tool:ext[:ext]` token). Connector-OWNED entries (the
+ *     `managed` back-reference a connect flow writes) render READ-ONLY with delete
+ *     disabled — they are kept in sync by their connection, so the only way to
+ *     remove one is to disconnect. The JSON view (escape hatch) is a raw `Textarea`;
+ *     a malformed edit is a LOUD inline field error and no request is sent.
  *     Switching views serializes/parses the working list, and — when there are
  *     unsaved edits — first asks to confirm so nothing is silently lost. Both
  *     views save through `POST /api/mcp-config`, whose server-side
  *     `Manifest.model_validate` is the single gate; a 400 renders as ESCAPED
  *     text in the loud error surface.
+ *
+ * Dirtiness is reported to the enclosing tab guard (`useRegisterDirty`) so a tab
+ * switch, a route navigation, or a full-page unload all confirm before the fleet-
+ * reloading config is dropped unsaved.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { summarizeFleetFanout, summarizeFleetResult } from '@tai42/api-client';
+import type { ConnectorRef, Extension } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
+  CloseIcon,
   Dialog,
   EmptyState,
   ErrorState,
+  ExtensionPicker,
   Field,
   FleetReport,
   SchemaForm,
@@ -36,15 +47,17 @@ import {
   TR,
   Table,
   Textarea,
+  ToolPicker,
   defaultValueForSchema,
   errorMessage,
   useApi,
+  useRegisterDirty,
 } from '@tai42/studio-sdk';
 import type { JsonSchema } from '@tai42/studio-sdk';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 
-import { manifestKey, mcpConfigSchemaKey, mcpStatusKey } from '../keys';
+import { manifestKey, mcpConfigSchemaKey, mcpExtensionsKey, mcpStatusKey } from '../keys';
 
 interface ServerRow {
   readonly title: string;
@@ -159,6 +172,68 @@ function McpStatusSection(): ReactNode {
 
 type ConfigView = 'form' | 'json';
 
+/** A plain object view of one entry, tolerating a loose/absent shape. */
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+/** The string members of a possibly-absent, possibly-loose array field. */
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+/** The connector back-reference on a managed entry, or `null` for a hand-authored one. */
+function connectorRefOf(entry: unknown): ConnectorRef | null {
+  const managed = asRecord(entry).managed;
+  const ref = asRecord(managed);
+  if (
+    typeof ref.connection_id === 'string' &&
+    typeof ref.provider_id === 'string' &&
+    typeof ref.sub_service === 'string'
+  ) {
+    return {
+      connection_id: ref.connection_id,
+      provider_id: ref.provider_id,
+      sub_service: ref.sub_service,
+    };
+  }
+  return null;
+}
+
+/** The base tool name a composed `tool:ext[:ext]` token was built from. */
+function baseToolOf(token: string): string {
+  const separator = token.indexOf(':');
+  return separator === -1 ? token : token.slice(0, separator);
+}
+
+/**
+ * A shallow clone of an object schema with `fields` removed from `properties` and
+ * `required`, so the schema-driven form renders the transport config only and the
+ * tool lists / provenance are handled by dedicated surfaces (rather than as raw
+ * free-text string arrays). Non-object schemas pass through untouched.
+ */
+function stripSchemaFields(schema: JsonSchema, fields: readonly string[]): JsonSchema {
+  const record = asRecord(schema);
+  const properties = record.properties;
+  if (typeof properties !== 'object' || properties === null) return schema;
+  const nextProperties: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(properties as Record<string, unknown>)) {
+    if (!fields.includes(key)) nextProperties[key] = value;
+  }
+  const next: Record<string, unknown> = { ...record, properties: nextProperties };
+  if (Array.isArray(record.required)) {
+    next.required = record.required.filter(
+      (key) => typeof key !== 'string' || !fields.includes(key),
+    );
+  }
+  return next;
+}
+
+const STRIPPED_FIELDS = ['include', 'exclude', 'managed'] as const;
+
 /** Parse the raw JSON buffer into an MCP array, raising a loud message on any
  *  problem. Shared by the JSON-view save and the JSON→form switch. */
 function parseEntries(text: string): { entries: unknown[] } | { error: string } {
@@ -174,16 +249,370 @@ function parseEntries(text: string): { entries: unknown[] } | { error: string } 
   return { entries: parsed };
 }
 
-/** The form-view list of entries: one `SchemaForm` per entry, add and remove. */
+/** One removable token chip (a composed `tool:ext[:ext]` string). */
+function ToolChip({
+  token,
+  onRemove,
+}: {
+  readonly token: string;
+  readonly onRemove: () => void;
+}): ReactNode {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--tai-space-1)' }}>
+      <Badge variant="neutral">{token}</Badge>
+      <Button
+        type="button"
+        variant="secondary"
+        aria-label={`Remove ${token}`}
+        onClick={onRemove}
+        style={{ padding: '0 var(--tai-space-2)' }}
+      >
+        <CloseIcon />
+      </Button>
+    </span>
+  );
+}
+
+/**
+ * Editor for one tool list on an MCP entry (`include` or `exclude`). Existing
+ * tokens render as removable chips — even ones no longer in the discovered set (a
+ * server that is currently down), so the operator is never locked out of removing
+ * their own config. The add row selects a discovered tool; the `include` list adds
+ * an extension COMPOSER on top, stacking extensions into a `tool:ext[:ext]` token.
+ */
+function ToolListEditor({
+  legend,
+  description,
+  values,
+  discoveredTools,
+  extensions,
+  extensionsError,
+  composer,
+  idPrefix,
+  onChange,
+}: {
+  readonly legend: string;
+  readonly description: string;
+  readonly values: readonly string[];
+  readonly discoveredTools: readonly string[];
+  readonly extensions: readonly Extension[];
+  readonly extensionsError: string | undefined;
+  readonly composer: boolean;
+  readonly idPrefix: string;
+  readonly onChange: (next: string[]) => void;
+}): ReactNode {
+  const [base, setBase] = useState<string | null>(null);
+  const [exts, setExts] = useState<readonly string[]>([]);
+
+  const token =
+    base === null || base === ''
+      ? ''
+      : composer && exts.length > 0
+        ? [base, ...exts].join(':')
+        : base;
+  const duplicate = token !== '' && values.includes(token);
+
+  const add = (): void => {
+    if (token === '' || duplicate) return;
+    onChange([...values, token]);
+    setBase(null);
+    setExts([]);
+  };
+  const remove = (target: string): void => {
+    onChange(values.filter((value) => value !== target));
+  };
+
+  // `exclude` cannot list the same tool twice; `include` can (a base tool with
+  // different extension stacks), so only the non-composer list excludes its picks.
+  const excludeNames = composer ? undefined : values.map(baseToolOf);
+
+  return (
+    <fieldset
+      data-testid={idPrefix}
+      style={{
+        border: 'none',
+        margin: 0,
+        padding: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--tai-space-2)',
+      }}
+    >
+      <legend style={{ padding: 0, fontSize: 'var(--tai-text-sm)', fontWeight: 600 }}>
+        {legend}
+      </legend>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 'var(--tai-text-sm)',
+          color: 'var(--tai-color-text-muted)',
+        }}
+      >
+        {description}
+      </p>
+
+      {values.length > 0 ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--tai-space-2)' }}>
+          {values.map((value) => (
+            <ToolChip
+              key={value}
+              token={value}
+              onRemove={() => {
+                remove(value);
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {discoveredTools.length === 0 ? (
+        <p
+          style={{
+            margin: 0,
+            fontSize: 'var(--tai-text-sm)',
+            color: 'var(--tai-color-text-muted)',
+          }}
+        >
+          No discovered tools for this server yet — it may be offline. Existing entries above stay
+          editable.
+        </p>
+      ) : (
+        <ToolPicker
+          toolNames={discoveredTools}
+          value={base}
+          onChange={setBase}
+          excludeNames={excludeNames}
+          placeholder="Choose a tool…"
+          aria-label={`${legend}: choose a tool`}
+          idPrefix={`${idPrefix}-tool`}
+        />
+      )}
+
+      {composer && discoveredTools.length > 0 ? (
+        <>
+          {extensionsError !== undefined ? (
+            <ErrorState message={extensionsError} />
+          ) : (
+            <ExtensionPicker
+              available={extensions}
+              value={[...exts]}
+              onChange={setExts}
+              disabled={base === null || base === ''}
+              idPrefix={`${idPrefix}-extensions`}
+            />
+          )}
+          <p
+            style={{
+              margin: 0,
+              fontSize: 'var(--tai-text-sm)',
+              color: 'var(--tai-color-text-muted)',
+            }}
+          >
+            New entry: <span style={{ fontFamily: 'var(--tai-font-mono)' }}>{token || '—'}</span>
+          </p>
+        </>
+      ) : null}
+
+      {discoveredTools.length > 0 ? (
+        <div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={add}
+            disabled={token === '' || duplicate}
+          >
+            Add to {legend.toLowerCase()}
+          </Button>
+          {duplicate ? (
+            <span
+              style={{
+                marginLeft: 'var(--tai-space-2)',
+                fontSize: 'var(--tai-text-sm)',
+                color: 'var(--tai-color-text-muted)',
+              }}
+            >
+              Already in the list.
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </fieldset>
+  );
+}
+
+/**
+ * A connector-owned MCP entry, rendered READ-ONLY. Its scopes, tokens, and URLs
+ * are kept in sync by the connection that wrote it, so the editor surfaces the
+ * provenance and disables removal — the only way to remove it is to disconnect.
+ */
+function ManagedEntryCard({
+  entry,
+  index,
+  managed,
+}: {
+  readonly entry: unknown;
+  readonly index: number;
+  readonly managed: ConnectorRef;
+}): ReactNode {
+  const record = asRecord(entry);
+  const rawTitle = record.title;
+  const title =
+    typeof rawTitle === 'string' && rawTitle !== '' ? rawTitle : `Server ${String(index + 1)}`;
+  const include = stringArray(record.include);
+  return (
+    <Card style={{ background: 'var(--tai-color-surface)' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--tai-space-3)',
+          marginBottom: 'var(--tai-space-2)',
+        }}
+      >
+        <span style={{ fontWeight: 600, fontFamily: 'var(--tai-font-mono)' }}>{title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
+          <Badge variant="primary">Managed</Badge>
+          <Button
+            type="button"
+            variant="danger"
+            disabled
+            aria-label={`Remove server ${String(index + 1)}`}
+          >
+            Remove
+          </Button>
+        </div>
+      </div>
+      <p
+        role="note"
+        style={{
+          margin: 0,
+          fontSize: 'var(--tai-text-sm)',
+          color: 'var(--tai-color-text-muted)',
+        }}
+      >
+        Managed by connection {managed.connection_id} (provider {managed.provider_id},{' '}
+        {managed.sub_service}). Disconnect to remove.
+      </p>
+      {include.length > 0 ? (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'var(--tai-space-1)',
+            marginTop: 'var(--tai-space-2)',
+          }}
+        >
+          {include.map((tool) => (
+            <Badge key={tool} variant="neutral">
+              {tool}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+    </Card>
+  );
+}
+
+/** An editable, hand-authored MCP entry: transport config + include/exclude composer. */
+function EditableEntryCard({
+  entry,
+  index,
+  formSchema,
+  discoveredTools,
+  extensions,
+  extensionsError,
+  onChange,
+  onRemove,
+}: {
+  readonly entry: unknown;
+  readonly index: number;
+  readonly formSchema: JsonSchema;
+  readonly discoveredTools: readonly string[];
+  readonly extensions: readonly Extension[];
+  readonly extensionsError: string | undefined;
+  readonly onChange: (next: unknown) => void;
+  readonly onRemove: () => void;
+}): ReactNode {
+  const record = asRecord(entry);
+  return (
+    <Card style={{ background: 'var(--tai-color-surface)' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 'var(--tai-space-3)',
+        }}
+      >
+        <span style={{ fontWeight: 600 }}>Server {String(index + 1)}</span>
+        <Button
+          type="button"
+          variant="danger"
+          aria-label={`Remove server ${String(index + 1)}`}
+          onClick={onRemove}
+        >
+          Remove
+        </Button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+        {/* The transport config (title/config/extensions) rides the generic form; the
+            unknown-to-the-form `include`/`exclude`/`managed` keys are preserved by
+            ObjectFields' merge and edited through the dedicated surfaces below. */}
+        <SchemaForm
+          schema={formSchema}
+          value={entry}
+          onChange={onChange}
+          idPrefix={`mcp-entry-${String(index)}`}
+        />
+        <ToolListEditor
+          legend="Included tools"
+          description="Bind only these tools from this server. Optionally stack extensions onto a tool."
+          values={stringArray(record.include)}
+          discoveredTools={discoveredTools}
+          extensions={extensions}
+          extensionsError={extensionsError}
+          composer
+          idPrefix={`mcp-entry-${String(index)}-include`}
+          onChange={(next) => {
+            onChange({ ...record, include: next });
+          }}
+        />
+        <ToolListEditor
+          legend="Excluded tools"
+          description="Suppress these tools from this server."
+          values={stringArray(record.exclude)}
+          discoveredTools={discoveredTools}
+          extensions={extensions}
+          extensionsError={extensionsError}
+          composer={false}
+          idPrefix={`mcp-entry-${String(index)}-exclude`}
+          onChange={(next) => {
+            onChange({ ...record, exclude: next });
+          }}
+        />
+      </div>
+    </Card>
+  );
+}
+
+/** The form-view list of entries: managed entries read-only, hand-authored editable. */
 function EntryList({
   schema,
   entries,
+  discoveredTools,
+  extensions,
+  extensionsError,
   onChange,
 }: {
   readonly schema: JsonSchema;
   readonly entries: readonly unknown[];
+  readonly discoveredTools: Readonly<Record<string, readonly string[]>>;
+  readonly extensions: readonly Extension[];
+  readonly extensionsError: string | undefined;
   readonly onChange: (entries: unknown[]) => void;
 }): ReactNode {
+  const formSchema = stripSchemaFields(schema, STRIPPED_FIELDS);
   const setEntry = (index: number, next: unknown): void => {
     onChange(entries.map((entry, position) => (position === index ? next : entry)));
   };
@@ -191,7 +620,12 @@ function EntryList({
     onChange(entries.filter((_, position) => position !== index));
   };
   const addEntry = (): void => {
-    onChange([...entries, defaultValueForSchema(schema)]);
+    onChange([...entries, defaultValueForSchema(formSchema)]);
+  };
+
+  const toolsFor = (entry: unknown): readonly string[] => {
+    const title = asRecord(entry).title;
+    return typeof title === 'string' ? (discoveredTools[title] ?? []) : [];
   };
 
   return (
@@ -202,43 +636,31 @@ function EntryList({
           description="Add a server, fill in its details, then save."
         />
       ) : null}
-      {entries.map((entry, index) => (
-        <Card
-          // Index keys are correct here: entries have no stable identity and the
-          // whole list is one controlled value re-rendered on every edit.
-          key={index}
-          style={{ background: 'var(--tai-color-surface)' }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 'var(--tai-space-3)',
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>Server {String(index + 1)}</span>
-            <Button
-              type="button"
-              variant="danger"
-              aria-label={`Remove server ${String(index + 1)}`}
-              onClick={() => {
-                removeEntry(index);
-              }}
-            >
-              Remove
-            </Button>
-          </div>
-          <SchemaForm
-            schema={schema}
-            value={entry}
+      {entries.map((entry, index) => {
+        const managed = connectorRefOf(entry);
+        // Index keys are correct here: entries have no stable identity and the whole
+        // list is one controlled value re-rendered on every edit.
+        if (managed !== null) {
+          return <ManagedEntryCard key={index} entry={entry} index={index} managed={managed} />;
+        }
+        return (
+          <EditableEntryCard
+            key={index}
+            entry={entry}
+            index={index}
+            formSchema={formSchema}
+            discoveredTools={toolsFor(entry)}
+            extensions={extensions}
+            extensionsError={extensionsError}
             onChange={(next) => {
               setEntry(index, next);
             }}
-            idPrefix={`mcp-entry-${String(index)}`}
+            onRemove={() => {
+              removeEntry(index);
+            }}
           />
-        </Card>
-      ))}
+        );
+      })}
       <div>
         <Button type="button" variant="secondary" onClick={addEntry}>
           Add server
@@ -251,9 +673,15 @@ function EntryList({
 function McpConfigEditor({
   initialEntries,
   schema,
+  discoveredTools,
+  extensions,
+  extensionsError,
 }: {
   readonly initialEntries: readonly Record<string, unknown>[];
   readonly schema: JsonSchema;
+  readonly discoveredTools: Readonly<Record<string, readonly string[]>>;
+  readonly extensions: readonly Extension[];
+  readonly extensionsError: string | undefined;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -268,23 +696,18 @@ function McpConfigEditor({
   const [text, setText] = useState(() => JSON.stringify(initialEntries, null, 2));
   const [parseError, setParseError] = useState<string | undefined>(undefined);
   const [confirmTarget, setConfirmTarget] = useState<ConfigView | null>(null);
+  // Set when the server config moved under UNSAVED edits that differ from it — a
+  // real conflict, so the draft is kept and this flags it rather than clobbering it.
+  const [conflict, setConflict] = useState(false);
 
-  // Both buffers are re-seeded whenever the server config MOVES (a save that
-  // normalizes it, or a background/focus refetch) so a stale edit can't clobber
-  // newer server state. DURING RENDER — React's adjust-state-on-prop-change
-  // pattern — rather than by remounting on a `key`: this editor is what writes
-  // the config, so a remount keyed on it tears the editor down the instant its
-  // own save lands, dropping the keyboard caret from the Save button onto
-  // `document.body` (WCAG 2.4.3) and deleting the "Saved" badge and fleet report
-  // the save just produced. Re-seeding also leaves the operator in the view they
-  // chose, which a remount reset to Form.
-  const [seededFrom, setSeededFrom] = useState(baseline);
-  if (seededFrom !== baseline) {
-    setSeededFrom(baseline);
-    setEntries([...initialEntries]);
-    setText(JSON.stringify(initialEntries, null, 2));
-    setParseError(undefined);
-  }
+  // The signature of the current working list in whichever view is active, comparable
+  // to `baseline`/`seededFrom` (compact JSON of the entry array). An unparseable JSON
+  // buffer is its own signature so it counts as diverged, never as a silent match.
+  const draftSignature = ((): string => {
+    if (view === 'form') return JSON.stringify(entries);
+    const parsed = parseEntries(text);
+    return 'error' in parsed ? `error:${text}` : JSON.stringify(parsed.entries);
+  })();
 
   const save = useMutation({
     mutationFn: (mcp: unknown[]) => api.setMcpConfig(mcp),
@@ -294,11 +717,45 @@ function McpConfigEditor({
     },
   });
 
-  const isDirty = (): boolean => {
-    if (view === 'form') return JSON.stringify(entries) !== baseline;
-    const parsed = parseEntries(text);
-    return 'error' in parsed || JSON.stringify(parsed.entries) !== baseline;
+  // The buffers are re-seeded when the server config MOVES (a save that normalizes it,
+  // or a background/focus refetch) DURING RENDER — React's adjust-state-on-prop-change
+  // pattern — rather than by remounting on a `key`: this editor is what writes the
+  // config, so a remount keyed on it tears the editor down the instant its own save
+  // lands, dropping the keyboard caret from the Save button onto `document.body`
+  // (WCAG 2.4.3) and deleting the "Saved" badge and fleet report the save just
+  // produced. Re-seeding also leaves the operator in the view they chose.
+  //
+  // A move is ADOPTED only when it is safe: the draft carries no unsaved edits (it still
+  // matches the OLD server), or the draft already equals the NEW server (this editor's
+  // own just-saved config comes back this way). A move that lands while the draft holds
+  // unsaved edits that differ from it is a genuine CONFLICT — the draft is kept and
+  // surfaced, never silently replaced.
+  const [seededFrom, setSeededFrom] = useState(baseline);
+  if (seededFrom !== baseline) {
+    const adopt = draftSignature === seededFrom || draftSignature === baseline;
+    setSeededFrom(baseline);
+    if (adopt) {
+      setEntries([...initialEntries]);
+      setText(JSON.stringify(initialEntries, null, 2));
+      setParseError(undefined);
+      setConflict(false);
+    } else {
+      setConflict(true);
+    }
+  }
+
+  const loadServerVersion = (): void => {
+    setEntries([...initialEntries]);
+    setText(JSON.stringify(initialEntries, null, 2));
+    setParseError(undefined);
+    setConflict(false);
   };
+
+  const isDirty = (): boolean => draftSignature !== baseline;
+
+  // Report to the enclosing tab guard so a switch/navigation/unload confirms before
+  // the fleet-reloading config is dropped unsaved.
+  useRegisterDirty(isDirty());
 
   // Perform the actual switch, converting the working list across. A JSON→form
   // switch with an unparseable buffer stays in JSON and raises loudly rather
@@ -372,8 +829,42 @@ function McpConfigEditor({
         </Button>
       </div>
 
+      {conflict ? (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--tai-space-2)',
+            padding: 'var(--tai-space-3)',
+            borderRadius: 'var(--tai-radius-md)',
+            border: '1px solid var(--tai-color-warn-fill)',
+            background: 'var(--tai-color-warn-tint)',
+            color: 'var(--tai-color-warn-text)',
+            fontSize: 'var(--tai-text-sm)',
+          }}
+        >
+          <span>
+            The MCP config changed on the server while you had unsaved edits. Your draft is kept —
+            saving overwrites the server version.
+          </span>
+          <div>
+            <Button type="button" variant="secondary" onClick={loadServerVersion}>
+              Discard my draft and load the server version
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {view === 'form' ? (
-        <EntryList schema={schema} entries={entries} onChange={setEntries} />
+        <EntryList
+          schema={schema}
+          entries={entries}
+          discoveredTools={discoveredTools}
+          extensions={extensions}
+          extensionsError={extensionsError}
+          onChange={setEntries}
+        />
       ) : (
         <Field
           label="MCP config"
@@ -450,6 +941,19 @@ function McpConfigSection(): ReactNode {
     queryKey: mcpConfigSchemaKey,
     queryFn: ({ signal }) => api.getMcpConfigSchema(signal),
   });
+  // The discovered tools feed the include/exclude picker; shares the status query's
+  // cache with the section above.
+  const status = useQuery({
+    queryKey: mcpStatusKey,
+    queryFn: ({ signal }) => api.getMcpStatus(signal),
+  });
+  // The extension catalog feeds the include composer. A failed/absent catalog is a
+  // soft degrade — the config stays editable and the failure is surfaced inline in
+  // the composer — so an offline extensions route never walls the editor.
+  const extensions = useQuery({
+    queryKey: mcpExtensionsKey,
+    queryFn: ({ signal }) => api.listExtensions(signal),
+  });
 
   if (manifest.isError || schema.isError) {
     const error = manifest.error ?? schema.error;
@@ -465,7 +969,18 @@ function McpConfigSection(): ReactNode {
   }
   if (manifest.isPending || schema.isPending) return <Skeleton height={220} />;
 
-  return <McpConfigEditor initialEntries={manifest.data.mcp} schema={schema.data} />;
+  const discoveredTools = status.isSuccess ? status.data.bound : {};
+  const extensionsError = extensions.isError ? errorMessage(extensions.error) : undefined;
+
+  return (
+    <McpConfigEditor
+      initialEntries={manifest.data.mcp}
+      schema={schema.data}
+      discoveredTools={discoveredTools}
+      extensions={extensions.data ?? []}
+      extensionsError={extensionsError}
+    />
+  );
 }
 
 export function McpTab(): ReactNode {

@@ -6,7 +6,13 @@
  */
 import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import type { NavigationContextValue } from '@tai42/studio-sdk';
-import type { ApiClient, ConnectionView, ProviderView } from '@tai42/api-client';
+import type {
+  ApiClient,
+  ConnectionView,
+  ConnectorCategoryView,
+  ProviderCatalogResponse,
+  ProviderView,
+} from '@tai42/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
@@ -96,8 +102,24 @@ export function connection(overrides: Partial<ConnectionView> = {}): ConnectionV
     account_identity: 'octocat',
     enabled_sub_services: ['repo'],
     granted_scopes: ['repo'],
+    unreachable_sub_services: [],
     auth_health_state: 'healthy',
     created_at: '2026-07-04T00:00:00Z',
     ...overrides,
   };
+}
+
+export function category(overrides: Partial<ConnectorCategoryView> = {}): ConnectorCategoryView {
+  return { id: 'dev', display_name: 'Developer tools', sort_order: 0, ...overrides };
+}
+
+/**
+ * The reshaped `listProviders` response: providers plus their category groupings. A
+ * bare `providers` array is wrapped with a single matching category by default.
+ */
+export function providerCatalog(
+  providers: ProviderView[] = [provider()],
+  categories: ConnectorCategoryView[] = [category()],
+): ProviderCatalogResponse {
+  return { providers, categories };
 }

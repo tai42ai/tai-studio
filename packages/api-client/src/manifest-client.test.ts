@@ -79,6 +79,43 @@ describe('manifest / mcp client transport', () => {
     expect(out.user_tools).toEqual(['echo']);
   });
 
+  it('getManifest exposes the typed managed provenance and passes the rest of each entry through', async () => {
+    const managed = {
+      title: 'github-repo',
+      config: { transport: 'stdio', command: 'run' },
+      managed: { connection_id: 'c1', provider_id: 'github', sub_service: 'repo' },
+    };
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { mcp: [managed, { title: 'hand', config: {} }], user_tools: [] },
+      }),
+    );
+    const out = await client.getManifest();
+    // The connector-owned entry surfaces `managed` typed, for the read-only guard.
+    expect(out.mcp[0]?.managed).toEqual({
+      connection_id: 'c1',
+      provider_id: 'github',
+      sub_service: 'repo',
+    });
+    // A hand-authored entry carries no provenance marker.
+    expect(out.mcp[1]?.managed).toBeUndefined();
+    // Every other field rides through unmodeled so the editor edits the whole entry.
+    expect(out.mcp[0]?.config).toEqual({ transport: 'stdio', command: 'run' });
+    expect(out.mcp[0]?.title).toBe('github-repo');
+  });
+
+  it('throws ApiSchemaError LOUDLY on a malformed managed marker (missing connection_id)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          mcp: [{ title: 't', managed: { provider_id: 'github', sub_service: 'repo' } }],
+          user_tools: [],
+        },
+      }),
+    );
+    await expect(client.getManifest()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
   it('setMcpConfig POSTs { mcp } and parses the apply result (reload + fanout)', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({

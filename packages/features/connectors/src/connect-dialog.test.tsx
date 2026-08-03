@@ -213,6 +213,57 @@ describe('ConnectDialog', () => {
     expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
   });
 
+  it('shows the named provider-not-configured note and disables Connect on a provider 501', async () => {
+    // A registered provider whose OAuth client credentials env var is unset refuses the
+    // START with a named 501 whose message names the env var. It is a state, not an
+    // error — the muted, actionable note replaces the red alert and Connect is withdrawn.
+    const user = userEvent.setup();
+    const startConnect = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          'set GITHUB_OAUTH_CLIENT_SECRET to enable GitHub',
+          501,
+          'connector-provider-not-configured',
+        ),
+      );
+    renderWithProviders(<ConnectDialog provider={provider()} onClose={vi.fn()} />, {
+      client: makeClient({ startConnect }),
+    });
+
+    await user.type(screen.getByLabelText('Alias'), 'work-account');
+    fireEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    await waitFor(() => {
+      expect(startConnect).toHaveBeenCalled();
+    });
+
+    const note = await screen.findByTestId('connector-provider-off');
+    expect(note).toHaveTextContent('GITHUB_OAUTH_CLIENT_SECRET');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
+  });
+
+  it('shows each sub-service description AND its scopes together (consent surface)', () => {
+    const consentProvider = provider({
+      sub_services: [
+        {
+          id: 'repo',
+          display_name: 'Repositories',
+          description: 'Read and write your repositories',
+          scopes: ['repo', 'read:org'],
+        },
+      ],
+    });
+    renderWithProviders(<ConnectDialog provider={consentProvider} onClose={vi.fn()} />, {
+      client: makeClient({ startConnect: vi.fn() }),
+    });
+
+    // Neither hides the other — the description and the scopes are both visible.
+    expect(screen.getByText('Read and write your repositories')).toBeInTheDocument();
+    expect(screen.getByText('repo, read:org')).toBeInTheDocument();
+  });
+
   it('requires an alias before submitting', () => {
     const startConnect = vi.fn();
     renderWithProviders(<ConnectDialog provider={provider()} onClose={vi.fn()} />, {

@@ -28,21 +28,15 @@ export const allToolSchemas = z.record(z.string(), toolSchema);
 export const runToolResult = jsonValue;
 
 /**
- * The MEDIA variant a direct tool run (`/api/run-tool`) can return:
- * fastmcp serializes a returned `Image`/`Audio` MediaBlock to the MCP content
- * object `{ type: 'image' | 'audio', data: <base64>, mimeType: <mime> }`. The
- * `ResultViewer` detects this shape and renders an `<img>`/`<audio>` from a
- * `data:` URI. A tool result is still arbitrary JSON (`runToolResult`); this is
- * one recognised shape it can take, kept as its own schema so the viewer's
- * detection is a schema parse, not an ad-hoc shape check.
+ * The MEDIA content shape a direct tool run may return — fastmcp's serialized
+ * `Image`/`Audio` MediaBlock (`{ type, data: <base64>, mimeType }`). One recognised
+ * shape of the otherwise-arbitrary `runToolResult`, kept as its own schema so the
+ * viewer detects media by parse, not by ad-hoc shape check.
  *
- * SECURITY: the refinement pins `mimeType` to its media kind — an `image` block
- * MUST carry an `image/*` type, an `audio` block an `audio/*` type. A drifting or
- * arbitrary mimeType (e.g. a script type) fails the parse, so the viewer never
- * turns an unexpected mime into a `data:` URI — it falls back to the JSON/text
- * view instead. A `File` MediaBlock serializes to a distinct `EmbeddedResource`
- * shape (no top-level `data`/`mimeType`), so it also fails here and is not
- * media-rendered.
+ * SECURITY: the refinement pins `mimeType` to its kind — `image` MUST be `image/*`,
+ * `audio` MUST be `audio/*` — so a drifting/arbitrary mime fails the parse and is
+ * never turned into a `data:` URI (a `File` MediaBlock's distinct `EmbeddedResource`
+ * shape also fails here, by design).
  */
 export const toolMediaResult = z
   .object({
@@ -424,8 +418,36 @@ export type FleetReportFanout = z.infer<typeof fleetReportFanout>;
 
 // -- manifest / mcp ----------------------------------------------------------
 
+/**
+ * The back-reference a connector writes onto a manifest MCP entry to mark it
+ * connector-owned: the connection and the provider sub-service that own it.
+ * Hand-authored entries carry no `managed` marker.
+ */
+export const connectorRef = z.object({
+  connection_id: z.string(),
+  provider_id: z.string(),
+  sub_service: z.string(),
+});
+export type ConnectorRef = z.infer<typeof connectorRef>;
+
+/**
+ * One entry of the live manifest's MCP section. Only the `managed` provenance
+ * marker is typed — the connect/disconnect flows write it server-side to point a
+ * connector-owned entry back at its connection, and the editor renders such
+ * entries read-only. `.nullish()` because a hand-authored entry carries `null`
+ * (present) or omits the key. Every other field (title, config, extensions) rides
+ * through `.passthrough()` unmodeled so the config editor keeps editing the whole
+ * entry — narrowing it to a typed subset would silently strip the fields it saves.
+ */
+export const manifestMcpEntry = z
+  .object({
+    managed: connectorRef.nullish(),
+  })
+  .passthrough();
+export type ManifestMcpEntry = z.infer<typeof manifestMcpEntry>;
+
 export const manifestView = z.object({
-  mcp: z.array(z.record(z.string(), z.unknown())),
+  mcp: z.array(manifestMcpEntry),
   user_tools: z.array(z.string()),
 });
 /**
@@ -488,8 +510,26 @@ export type McpReloadResult = z.infer<typeof mcpReloadResult>;
 
 // -- sub-mcp -----------------------------------------------------------------
 
-export const subMcpList = z.record(z.string(), z.record(z.string(), z.unknown()));
-export const subMcpCreated = z.object({ slug: z.string(), tools: z.array(z.string()) });
+/**
+ * One registered sub-MCP mount as it rides the registry list and the projection:
+ * the tools it exposes and the transport it serves on. In `GET /api/sub-mcp` the
+ * slug is the map key, so the mount value carries no slug; {@link subMcpEntry}
+ * extends this with `slug` for the capability projection where mounts are a flat
+ * list. `transport` is always present on the wire (the server defaults it to
+ * `http`), so it is required — its absence is a drift, not a legal shape.
+ */
+export const subMcpMount = z.object({
+  tools: z.array(z.string()),
+  transport: z.string(),
+});
+export type SubMcpMount = z.infer<typeof subMcpMount>;
+
+export const subMcpList = z.record(z.string(), subMcpMount);
+export const subMcpCreated = z.object({
+  slug: z.string(),
+  tools: z.array(z.string()),
+  transport: z.string(),
+});
 export const subMcpRemoved = z.object({ slug: z.string(), removed: z.literal(true) });
 
 // -- config ------------------------------------------------------------------
@@ -500,12 +540,9 @@ export const envConfig = z.object({
 });
 /**
  * `GET /api/config/mode` — the active config backend mode (`file` / `k8s`). The
- * skeleton emits ONLY `config_mode`; `read_only` is a UI-side gate that no config
- * backend currently drives (both the `file` and `k8s` providers implement writes),
- * so it is tolerated-absent and defaults to `false` (writable). A deployment whose
- * config is genuinely read-only can still opt in by emitting `read_only: true`,
- * which the settings surface honors — but its absence is the normal case, not a
- * drift, so requiring it here would make every real `getConfigMode()` throw.
+ * skeleton emits only `config_mode`; `read_only` is a UI-side gate, tolerated-absent
+ * and defaulting to `false` (writable) so a normal response never drifts, while a
+ * genuinely read-only deployment can opt in by emitting `read_only: true`.
  */
 export const configMode = z.object({
   config_mode: z.string(),
@@ -540,8 +577,30 @@ export const providerView = z.object({
   sub_services: z.array(subServiceView),
   config_fields: z.array(configFieldView),
 });
-export const providers = z.array(providerView);
 export type ProviderView = z.infer<typeof providerView>;
+
+/**
+ * One `connector_category` grouping row served alongside the catalog: the UI's
+ * label and sort key for the providers it groups, so the list can group, order,
+ * and label providers by category without a second read.
+ */
+export const connectorCategoryView = z.object({
+  id: z.string(),
+  display_name: z.string(),
+  sort_order: z.number(),
+});
+export type ConnectorCategoryView = z.infer<typeof connectorCategoryView>;
+
+/**
+ * `GET /api/connectors/providers` — the provider catalog: the providers plus the
+ * category groupings the UI arranges them under. Reshaped from a bare provider
+ * array so the category label/order surface rides the same read.
+ */
+export const providers = z.object({
+  providers: z.array(providerView),
+  categories: z.array(connectorCategoryView),
+});
+export type ProviderCatalogResponse = z.infer<typeof providers>;
 
 export const connectionView = z.object({
   connection_id: z.string(),
@@ -551,12 +610,26 @@ export const connectionView = z.object({
   account_identity: z.string().nullable(),
   enabled_sub_services: z.array(z.string()),
   granted_scopes: z.array(z.string()),
+  // Sub-services whose MCP server did not answer a live reachability probe.
+  // Populated only on the single-connection GET (the list projection is
+  // probe-free and always sends `[]`). Reachability is distinct from
+  // `auth_health_state`: a healthy connection can still have a down sub-service.
+  // Defaulted so a projection that omits it (an older worker mid-rollout) still
+  // parses rather than false-failing the whole view.
+  unreachable_sub_services: z.array(z.string()).default([]),
   auth_health_state: z.enum(['healthy', 'reconnect_required', 'refresh_failing']),
   created_at: z.string(),
 });
 export type ConnectionView = z.infer<typeof connectionView>;
 
-export const connectionsList = z.object({ items: z.array(connectionView), total: z.number() });
+export const connectionsList = z.object({
+  items: z.array(connectionView),
+  total: z.number(),
+  // Count of connections whose `auth_health_state` is not healthy across the whole
+  // set (independent of any filter/limit) — the attention-badge count. Optional:
+  // no UI consumes it this mission, and an older worker mid-rollout omits it.
+  unhealthy: z.number().optional(),
+});
 
 // A connector mutation that writes the manifest embeds the mode-wrapped fleet
 // `fanout` of the reload it broadcast; it is `null` when the response path mutated no
@@ -1113,12 +1186,12 @@ export const patternEntry = z.object({
 });
 export type PatternEntry = z.infer<typeof patternEntry>;
 
-/** A sub-MCP mount the caller can reach, with the tools it exposes. */
-export const subMcpEntry = z.object({
-  slug: z.string(),
-  tools: z.array(z.string()),
-  transport: z.string(),
-});
+/**
+ * A sub-MCP mount the caller can reach, with the tools it exposes and its
+ * transport. Shares the {@link subMcpMount} shape with the registry list, adding
+ * the `slug` the projection carries inline (the list keys mounts by slug instead).
+ */
+export const subMcpEntry = subMcpMount.extend({ slug: z.string() });
 export type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
 /**

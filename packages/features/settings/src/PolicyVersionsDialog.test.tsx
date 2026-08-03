@@ -93,7 +93,7 @@ describe('PolicyVersionsDialog', () => {
     await user.click(await screen.findByRole('button', { name: 'Roll back to version 1' }));
     expect(rollbackPolicy).not.toHaveBeenCalled();
 
-    const confirmDialog = screen.getByRole('dialog');
+    const confirmDialog = screen.getByRole('dialog', { name: 'Roll back version' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'Roll back' }));
 
     await waitFor(() => {
@@ -173,7 +173,7 @@ describe('PolicyVersionsDialog', () => {
     });
 
     await user.click(await screen.findByRole('button', { name: 'Roll back to version 1' }));
-    const confirmDialog = screen.getByRole('dialog');
+    const confirmDialog = screen.getByRole('dialog', { name: 'Roll back version' });
     await user.click(within(confirmDialog).getByRole('button', { name: 'Roll back' }));
 
     expect(await screen.findByText('user has no policy version 1')).toBeInTheDocument();

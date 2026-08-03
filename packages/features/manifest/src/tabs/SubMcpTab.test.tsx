@@ -8,9 +8,9 @@ import { SubMcpTab } from './SubMcpTab';
 const TOOLS = ['echo', 'sum'];
 
 describe('SubMcpTab', () => {
-  it('lists sub-MCP servers with their tools', async () => {
+  it('lists sub-MCP servers with their transport, endpoint, and tools', async () => {
     const client = {
-      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'] } }),
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'sse' } }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
     };
     renderWithProviders(<SubMcpTab />, { client });
@@ -24,6 +24,9 @@ describe('SubMcpTab', () => {
     // The hidden Actions header wears the published clip class, not a partial
     // hand-rolled copy of it that stays selectable and readable to a magnifier.
     expect(screen.getByText('Actions')).toHaveClass('tai-visually-hidden');
+    // Transport and the concrete endpoint URL are surfaced per row.
+    expect(screen.getByText('sse')).toBeInTheDocument();
+    expect(screen.getByText('/app/alpha')).toBeInTheDocument();
     // The tool badge in the list row.
     expect(screen.getAllByText('echo').length).toBeGreaterThan(0);
   });
@@ -48,9 +51,11 @@ describe('SubMcpTab', () => {
     expect(await screen.findByText('list boom')).toBeInTheDocument();
   });
 
-  it('creates a sub-MCP from a slug and selected tools', async () => {
+  it('creates a sub-MCP from a slug and selected tools on the default transport', async () => {
     const user = userEvent.setup();
-    const createSubMcp = vi.fn().mockResolvedValue({ slug: 'beta', tools: ['sum'] });
+    const createSubMcp = vi
+      .fn()
+      .mockResolvedValue({ slug: 'beta', tools: ['sum'], transport: 'http' });
     const client = {
       listSubMcp: vi.fn().mockResolvedValue({}),
       listTools: vi.fn().mockResolvedValue(TOOLS),
@@ -64,7 +69,60 @@ describe('SubMcpTab', () => {
     await user.click(screen.getByRole('button', { name: /Create sub-MCP/ }));
 
     await waitFor(() => {
-      expect(createSubMcp).toHaveBeenCalledWith('beta', ['sum']);
+      expect(createSubMcp).toHaveBeenCalledWith('beta', ['sum'], 'http');
+    });
+  });
+
+  it('creates a sub-MCP on a chosen transport', async () => {
+    const user = userEvent.setup();
+    const createSubMcp = vi
+      .fn()
+      .mockResolvedValue({ slug: 'beta', tools: ['sum'], transport: 'sse' });
+    const client = {
+      listSubMcp: vi.fn().mockResolvedValue({}),
+      listTools: vi.fn().mockResolvedValue(TOOLS),
+      createSubMcp,
+    };
+    renderWithProviders(<SubMcpTab />, { client });
+
+    await screen.findByRole('checkbox', { name: 'sum' });
+    await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'beta');
+    await user.click(screen.getByRole('checkbox', { name: 'sum' }));
+    await user.click(screen.getByRole('radio', { name: 'SSE' }));
+    await user.click(screen.getByRole('button', { name: /Create sub-MCP/ }));
+
+    await waitFor(() => {
+      expect(createSubMcp).toHaveBeenCalledWith('beta', ['sum'], 'sse');
+    });
+  });
+
+  it('warns and confirms before replacing an existing slug', async () => {
+    const user = userEvent.setup();
+    const createSubMcp = vi
+      .fn()
+      .mockResolvedValue({ slug: 'alpha', tools: ['sum'], transport: 'http' });
+    const client = {
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'http' } }),
+      listTools: vi.fn().mockResolvedValue(TOOLS),
+      createSubMcp,
+    };
+    renderWithProviders(<SubMcpTab />, { client });
+
+    await screen.findByRole('checkbox', { name: 'sum' });
+    await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'alpha');
+    await user.click(screen.getByRole('checkbox', { name: 'sum' }));
+
+    // The slug already exists — a loud inline warning precedes any write.
+    expect(screen.getByText(/already exists\. Registering will replace it/)).toBeInTheDocument();
+
+    // Submitting a swap does NOT write until confirmed.
+    await user.click(screen.getByRole('button', { name: /Create sub-MCP/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(createSubMcp).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Replace sub-MCP' }));
+    await waitFor(() => {
+      expect(createSubMcp).toHaveBeenCalledWith('alpha', ['sum'], 'http');
     });
   });
 
@@ -90,7 +148,7 @@ describe('SubMcpTab', () => {
     const user = userEvent.setup();
     const deleteSubMcp = vi.fn().mockResolvedValue({ slug: 'alpha', removed: true });
     const client = {
-      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'] } }),
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'http' } }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
       deleteSubMcp,
     };

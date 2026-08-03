@@ -3,7 +3,9 @@
  * keyed on the active `topic` filter so the query refetches whenever the filter
  * changes (empty = list all). A hook's row shows its name / topic / tool, the
  * execution key, its trigger-auth door, plus a `condition` and/or `expr` badge
- * when either gate is set. Each row deletes behind a confirm `<Dialog>` that calls
+ * when either gate is set. Each row has an Edit door — it opens the
+ * {@link RegisterHookForm} in a `<Dialog>` prefilled from that hook, saving back
+ * over it — and a Delete door behind a confirm `<Dialog>` that calls
  * `api.unregisterHook`; a successful removal invalidates the whole list.
  *
  * Server state is surfaced loudly: loading → `Skeleton`, empty →
@@ -35,6 +37,7 @@ import type { HookList, HookParams, TriggerAuth } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
 import { describeTriggerAuth } from './trigger-auth';
+import { RegisterHookForm } from './RegisterHookForm';
 
 /** A topic's server-derived door; `undefined` when the list omits it. */
 function topicDoor(doors: HookList['trigger_auth'], topic: string): TriggerAuth | undefined {
@@ -174,6 +177,7 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
   const queryClient = useQueryClient();
 
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<HookParams | null>(null);
 
   const trimmedTopic = topic.trim();
   const query = useQuery({
@@ -248,15 +252,31 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
                     </div>
                   </TD>
                   <TD style={{ textAlign: 'right' }}>
-                    <Button
-                      variant="danger"
-                      aria-label={`Delete hook ${hook.name}`}
-                      onClick={() => {
-                        setPendingDelete(hook.name);
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        gap: 'var(--tai-space-2)',
+                        justifyContent: 'flex-end',
                       }}
                     >
-                      Delete
-                    </Button>
+                      <Button
+                        aria-label={`Edit hook ${hook.name}`}
+                        onClick={() => {
+                          setPendingEdit(hook);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="danger"
+                        aria-label={`Delete hook ${hook.name}`}
+                        onClick={() => {
+                          setPendingDelete(hook.name);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </TD>
                 </TR>
               );
@@ -308,6 +328,23 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
               </Button>
             </div>
           </div>
+        </Dialog>
+      ) : null}
+      {pendingEdit !== null ? (
+        <Dialog
+          open
+          title="Edit hook"
+          description={`Save to replace the current registration for "${pendingEdit.name}".`}
+          onOpenChange={(next) => {
+            if (!next) setPendingEdit(null);
+          }}
+        >
+          <RegisterHookForm
+            initial={pendingEdit}
+            onClose={() => {
+              setPendingEdit(null);
+            }}
+          />
         </Dialog>
       ) : null}
     </Card>

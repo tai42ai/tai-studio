@@ -370,6 +370,7 @@ export default tseslint.config(
         atob: 'readonly',
         Uint8Array: 'readonly',
         TextDecoder: 'readonly',
+        URL: 'readonly',
         URLSearchParams: 'readonly',
       },
     },
