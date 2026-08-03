@@ -1,33 +1,22 @@
 /**
  * `JsonTree` — a collapsible viewer for arbitrary JSON on the design system's
- * terminal ground (`tai-code-block`, which also supplies the mono face, the code
- * size and the line rhythm every row inherits). Objects and arrays are native
- * `<details>`/`<summary>` disclosures (keyboard-accessible, no custom ARIA
- * needed); primitives render inline, tinted by the `tai-syntax-*` class for their
- * type so a value's kind is readable at a glance. All values render as React TEXT
- * children, so a payload containing markup (e.g. `<script>`) is escaped by React
- * and never interpreted — this component is never an HTML sink.
+ * terminal ground (`tai-code-block`). Objects and arrays are native
+ * `<details>`/`<summary>` disclosures; primitives render inline, tinted by their
+ * `tai-syntax-*` type class. All values render as React TEXT children, so markup in
+ * a payload is escaped — never an HTML sink.
  *
- * The component mounts against guaranteed-large payloads (a trace span's whole
- * input/output), so it is BOUNDED by construction rather than rendered in full:
+ * It mounts against guaranteed-large payloads (a trace span's whole input/output),
+ * so it is BOUNDED by construction:
  *
- * - Nodes deeper than {@link AUTO_EXPAND_DEPTH} start COLLAPSED, and a collapsed
- *   node renders none of its children at all — so a deep tree costs nothing until
- *   a reader opens it. `defaultExpanded` overrides the default per call site: `true`
- *   opens the tree (up to the depth cap), `false` collapses it to the root.
- * - Expand-all / collapse-all drive every node from the toolbar. Expand-all opens
- *   nodes breadth-first only until a total of {@link AUTO_EXPAND_NODE_BUDGET} render,
- *   and never past {@link MAX_AUTO_DEPTH}: a node beyond either bound opens only by an
- *   explicit click, so no single action can force a wide-and-deep structure into the DOM.
- * - A container with more than {@link PAGE_SIZE} children renders one page and a
- *   "show more" control, so a million-element array never lays out at once.
- * - Copy-whole (toolbar) and copy-node (per disclosure) write the value's JSON to
- *   the clipboard; a write that the browser refuses is surfaced as a visible alert.
+ * - Nodes deeper than {@link AUTO_EXPAND_DEPTH} start COLLAPSED, and a collapsed node
+ *   renders no children. `defaultExpanded` overrides per call site.
+ * - Expand-all opens breadth-first only until {@link AUTO_EXPAND_NODE_BUDGET} nodes
+ *   render and never past {@link MAX_AUTO_DEPTH}; a node beyond either opens on click.
+ * - A container over {@link PAGE_SIZE} children renders one page plus a "show more".
+ * - Copy-whole and copy-node write JSON to the clipboard; a refused write shows an alert.
  *
- * The scrolling pane IS the scrolling box, so it carries the region attributes
- * itself rather than sitting inside a `ScrollRegion` wrapper that would add a
- * second scroller: a deeply indented value makes it a named keyboard target, a
- * shallow one leaves it an ordinary block.
+ * The scrolling pane IS the scrolling box, carrying the region attributes itself
+ * rather than nesting a `ScrollRegion` that would add a second scroller.
  */
 import {
   createContext,
@@ -185,9 +174,7 @@ function expandedOpenPaths(root: unknown): ReadonlySet<string> {
     if (node.depth >= MAX_AUTO_DEPTH) continue;
 
     const shown = Math.min(PAGE_SIZE, containerCount(node.value));
-    // Opening this node would render `shown` children; skip it when the remaining
-    // budget cannot seat a whole page rather than opening a partial one, and go on
-    // to the later queued nodes — a smaller one may still fit within what is left.
+    // Skip when the budget can't seat a whole page (a later, smaller node may still fit).
     if (shown > budget) continue;
     budget -= shown;
     open.add(node.path);
@@ -266,10 +253,8 @@ const summaryStyle: CSSProperties = {
 const nodeCopyStyle: CSSProperties = { marginLeft: 'auto' };
 
 /**
- * The per-node copy button's geometry. It borrows `tai-icon-btn` for the shared
- * focus ring, the muted ink and the hover, then shrinks to the code rhythm so a
- * disclosure row stays as dense as the values beneath it rather than growing to a
- * 36 px control.
+ * The per-node copy button's geometry: borrows `tai-icon-btn` for the focus ring,
+ * muted ink and hover, then shrinks to the code rhythm so the row stays dense.
  */
 const nodeCopyButtonStyle: CSSProperties = {
   width: 'auto',
@@ -310,9 +295,8 @@ function CopyButton({ value, label, variant }: CopyButtonProps): ReactElement {
   const { copy } = useJsonTreeContext();
   const [copied, setCopied] = useState(false);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The write is async, so a copy can still be in flight when the button goes
-  // away — a dialog holding the tree closes on the same click. This flag is what
-  // the resolution checks before it touches state.
+  // The write is async, so a copy can be in flight when the button unmounts (a dialog
+  // holding the tree closes on the same click); checked before the resolution sets state.
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -383,9 +367,7 @@ function sliceEntries(value: unknown, end: number): [string, unknown][] {
   if (Array.isArray(value)) {
     return value.slice(0, end).map((item, index) => [String(index), item]);
   }
-  // Slice the keys before reading their values, so only the visible window's values
-  // are materialized — reading every entry first would defeat the windowing on a
-  // huge object exactly as it does on a huge array.
+  // Slice the keys before reading values, so only the visible window is materialized.
   if (isRecord(value))
     return Object.keys(value)
       .slice(0, end)

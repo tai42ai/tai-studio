@@ -115,17 +115,13 @@ export interface NavigationContextValue {
 }
 
 /**
- * A navigation guard's decision function. While a guard is armed, this runs before
- * any navigation the SDK controls commits — a route-token {@link NavigationContextValue.navigate},
- * a plugin {@link NavigationContextValue.navigatePlugin}, or a browser back/forward
- * (`popstate`). It returns `true` to let the navigation proceed and `false` to veto
- * it; returning a promise lets the guard await a confirm dialog and resolve with the
- * user's choice.
+ * A navigation guard's decision function, run while armed before any SDK-controlled
+ * navigation commits ({@link NavigationContextValue.navigate},
+ * {@link NavigationContextValue.navigatePlugin}, or a browser back/forward). Returns
+ * `true` to proceed, `false` to veto; a promise lets it await a confirm dialog.
  *
- * Guards compose: a navigation proceeds only if every armed guard allows it, and the
- * first veto blocks it (later guards are not consulted, so at most one confirm dialog
- * is shown). A full-page unload (tab close / refresh) cannot await an async decision,
- * so it is covered by a `beforeunload` prompt that fires whenever any guard is armed —
- * independent of this handler.
+ * Guards compose — navigation proceeds only if every armed guard allows, and the first
+ * veto blocks (at most one dialog). A full-page unload can't await, so it is covered by
+ * a `beforeunload` prompt independent of this handler.
  */
 export type NavigationGuardHandler = () => boolean | Promise<boolean>;

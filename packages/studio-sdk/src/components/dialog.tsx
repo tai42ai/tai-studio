@@ -1,29 +1,14 @@
 /**
  * `Dialog` — a design-system wrapper over Radix Dialog: an accessible modal (role
- * `dialog`, focus trap, Escape to close) labelled by its title. Modality is
- * enforced by the focus trap and by Radix marking the rest of the page inert, not
- * by an `aria-modal` attribute — the panel ships none.
+ * `dialog`, focus trap, Escape to close) labelled by its title. Modality comes from
+ * the focus trap and Radix marking the page inert, not an `aria-modal` attribute.
  *
- * Radix owns every modal behaviour — the focus trap, the background scroll lock,
- * Escape, and focus return to the trigger — so this component adds no second
- * mechanism. It contributes only the design-system surface: `tai-overlay` paints
- * the scrim from `--tai-color-scrim`, and `tai-dialog` sizes the panel with a
- * `min()` so it still fits a 320 px viewport. The one gap Radix leaves — focus
- * return for a dialog that renders no trigger — is filled by
- * `useModalFocusReturn`, which stands down whenever a trigger IS rendered.
- *
- * Three additive opt-ins let a caller reshape the panel without giving up any
- * Radix behaviour:
- *
- *   - `fullscreen` swaps the centred fixed-size panel for one that fills the
- *     viewport edge to edge (`tai-dialog-fullscreen`); the overlay is untouched.
- *   - `contentClassName` merges onto `RadixDialog.Content` after the surface
- *     classes, so a host can hang its own CSS-scoping root on the content element
- *     — the mount point a plugin needs for its styles to reach inside the portal.
- *   - `chromeless` drops the forced visual `Title` and the `tai-stack` children
- *     wrapper, rendering `children` directly for a chrome-free content mode. The
- *     `title` is still required and still names the dialog: it is rendered
- *     visually-hidden so the accessible name never depends on the visible chrome.
+ * Radix owns every modal behaviour (focus trap, scroll lock, Escape, focus return
+ * to the trigger); this component adds only the design-system surface (`tai-overlay`
+ * scrim, `tai-dialog` panel). The one gap Radix leaves — focus return for a dialog
+ * with no trigger — is filled by `useModalFocusReturn`, which stands down when a
+ * trigger IS rendered. The `fullscreen`, `contentClassName` and `chromeless` opt-ins
+ * (see the props) reshape the panel without giving up any Radix behaviour.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { ReactElement, ReactNode } from 'react';

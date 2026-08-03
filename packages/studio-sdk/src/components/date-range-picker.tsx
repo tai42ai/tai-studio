@@ -1,31 +1,16 @@
 /**
  * `DateRangePicker` — the compact time-window control observability screens share.
+ * It emits ONE of two shapes:
  *
- * It offers two ways to name a window and emits ONE of two shapes:
+ * - a relative token from a PRESET chip, `{ kind: 'relative', token }` — the backend
+ *   resolves `\d+[hdw]` tokens, so a preset stays a token rather than freezing to an
+ *   instant at click time;
+ * - an ABSOLUTE range from the two native `datetime-local` inputs,
+ *   `{ kind: 'absolute', from, to }` with ISO instants — native inputs keep the
+ *   control inside the platform date UI, no third-party calendar.
  *
- * - a relative token from a PRESET chip (`24h`, `7d`, `30d`, `90d`), emitted as
- *   `{ kind: 'relative', token }` — the backend resolves `\d+[hdw]` tokens itself,
- *   so a preset stays a token rather than being frozen to an instant at click time;
- * - an ABSOLUTE range from the two native `datetime-local` inputs, emitted as
- *   `{ kind: 'absolute', from, to }` with ISO instants. Native inputs keep the
- *   control inside the platform date UI, matching the schema form's date-time
- *   fields — no third-party calendar rides along.
- *
- * Absolute ranges are normalized by {@link normalizeCustomRange}, which fixes the
- * three ways a raw from/to pair misbehaves:
- *
- * 1. REVERSED input is swapped so the earlier instant is the start, and only THEN
- *    are both ends clamped to now. Clamping first and swapping after can leave a
- *    future instant on the post-swap end; ordering the swap first cannot.
- * 2. The end is INCLUSIVE of the minute the user picked — the inputs carry minute
- *    precision, so the end instant runs to that minute's final millisecond
- *    (`:59.999`), which is why an end of `23:59` covers the whole day through
- *    `23:59:59.999` rather than stopping at `23:59:00.000`.
- * 3. Future instants are impossible: both ends are capped at now, because the
- *    native inputs accept a date past now that the backend would reject.
- *
- * {@link formatRangeLabel} renders the active window as human text and always
- * includes the YEAR, so a window is never ambiguous between years.
+ * Absolute ranges are normalized by {@link normalizeCustomRange}; the active window
+ * is rendered by {@link formatRangeLabel}, always with the YEAR present.
  */
 import { useState, type CSSProperties, type ReactNode } from 'react';
 
@@ -60,9 +45,8 @@ const RELATIVE_TOKEN = /^(\d+)([hdw])$/;
 const UNIT_NOUN: Record<string, string> = { h: 'hour', d: 'day', w: 'week' };
 
 /**
- * A relative token as a readable phrase (`7d` → `Last 7 days`). A token outside
- * the `\d+[hdw]` grammar is a caller bug, not a value to paper over, so it raises
- * rather than rendering a silent placeholder.
+ * A relative token as a readable phrase (`7d` → `Last 7 days`). A token outside the
+ * `\d+[hdw]` grammar raises rather than rendering a silent placeholder.
  */
 function relativePhrase(token: string): string {
   const match = RELATIVE_TOKEN.exec(token);
@@ -75,10 +59,8 @@ function relativePhrase(token: string): string {
 }
 
 /**
- * The active window as human text. A relative token reads as its matching preset
- * label, or as a derived phrase when no preset carries it. An absolute range reads
- * as both instants with the YEAR present on each, so two windows in different
- * years never render as the same string.
+ * The active window as human text: a relative token as its preset label (or a
+ * derived phrase), an absolute range as both instants with the YEAR present.
  */
 const ABSOLUTE_FORMAT = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
@@ -123,15 +105,10 @@ function toLocalInputValue(date: Date): string {
 }
 
 /**
- * A raw from/to pair from the two inputs, resolved to a clean absolute range.
- *
- * The steps run in this order for a reason: the reversed pair is SWAPPED first so
- * the earlier instant becomes the start, THEN both ends are capped at `now`.
- * Capping before the swap can move a future `to` onto the start and leave the
- * (originally earlier) `from` as a future `to`; swapping first makes that
- * impossible. The end is then taken as INCLUSIVE of its minute — the inputs carry
- * minute precision, so the window runs to `:59.999` of the selected minute, which
- * is what makes an end of `23:59` reach the day's final millisecond.
+ * A raw from/to pair resolved to a clean absolute range. Order matters: SWAP the
+ * reversed pair first (earlier instant becomes start), THEN cap both ends at `now` —
+ * capping first can leave a future instant on the post-swap end. The end is
+ * INCLUSIVE of its minute, extended to `:59.999`, so `23:59` reaches the day's end.
  */
 export function normalizeCustomRange(
   fromInput: string,
@@ -182,11 +159,9 @@ const FIELD_STYLE: CSSProperties = { flex: 1 };
  * `onValueChange` — a preset click emits its token immediately, while the custom
  * inputs hold a working draft until Apply commits the normalized absolute range.
  *
- * The draft inputs track the controlled value: a NEW absolute `value` from the
- * caller re-seeds both inputs, so Apply can never re-emit a range the caller has
- * already superseded. Re-seeding is keyed on the incoming absolute `from`/`to`, so
- * edits typed against an UNCHANGED value are preserved — only a genuinely different
- * value replaces an in-progress draft, and that controlled value deliberately wins.
+ * The drafts track the controlled value, re-seeded on a NEW absolute `value` (keyed
+ * on `from`/`to`), so edits against an unchanged value are preserved but a genuinely
+ * different value replaces an in-progress draft.
  */
 export function DateRangePicker({
   value,

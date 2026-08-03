@@ -1,27 +1,19 @@
 /**
- * `CopyField` — a show-once box for a freshly-minted secret (an API key or a
- * minted backup key). It renders the value in a monospace, break-all,
- * select-all box beside a copy button that writes the value to the clipboard and
- * shows a transient "Copied" affordance. It is PRESENTATIONAL: the caller owns
- * the value; this component fetches nothing and never re-reads the secret.
+ * `CopyField` — a show-once box for a freshly-minted secret (an API or backup key)
+ * beside a copy button that writes it to the clipboard and shows a transient "Copied"
+ * affordance. PRESENTATIONAL: the caller owns the value; this fetches nothing and
+ * never re-reads the secret.
  *
- * The button holds BOTH states stacked in one grid cell, so the widest of them
- * sets the width once and the flip never reflows the row. Only the active state
- * is exposed to assistive tech, and that state's own words are the button's
- * accessible name: a constant `aria-label` would leave a button reading "Copied"
- * named "Copy", which fails WCAG 2.5.3 (Label in Name) and leaves a voice-control
- * user naming a control they cannot see. The polite live region beside the button
- * is what actually announces the flip.
+ * The button holds BOTH states stacked in one grid cell, so the wider one sets the
+ * width once and the flip never reflows. Only the active state is exposed to
+ * assistive tech, and its own words are the button's accessible name — a constant
+ * `aria-label` would leave a "Copied" button named "Copy" (WCAG 2.5.3).
  *
- * A clipboard write can FAIL — a permissions policy blocks it, or the page is
- * not in a secure context, where `navigator.clipboard` does not exist at all.
- * Either way the value is a secret shown once, so the failure is rendered as a
- * visible `role="alert"` telling the reader to copy it by hand: throwing it at
- * the console would leave the button looking inert and the secret unrecoverable.
+ * A clipboard failure renders as a visible `role="alert"` telling the reader to copy
+ * by hand — the secret is shown once, so a swallowed failure leaves it unrecoverable.
  *
- * SAFETY: the value and caption render as TEXT (React escapes them) — never an
- * HTML sink. The value is never logged, and neither is a failure — the alert
- * names the reason, never the value. Pinned by a test.
+ * SAFETY: value and caption render as TEXT — never an HTML sink. The value is never
+ * logged, and the alert names the reason, never the value. Pinned by a test.
  */
 import type { CSSProperties } from 'react';
 

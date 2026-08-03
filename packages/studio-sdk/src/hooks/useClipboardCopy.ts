@@ -1,17 +1,11 @@
 /**
- * `useClipboardCopy` — the one clipboard-write interaction every copy control in
- * the design system shares: it reads the clipboard the browser actually offers,
- * writes the value, and holds a transient "copied" window that drives both the
- * control's confirmed face and a polite screen-reader announcement, reverting
- * after {@link COPIED_RESET_MS}. A write the browser refuses — or a value that
- * throws while being produced — surfaces as a caller-worded error string rather
- * than a thrown exception, so the control renders a visible alert instead of
- * looking inert while the copy silently never happened.
+ * `useClipboardCopy` — the shared clipboard-write interaction: reads the clipboard the
+ * browser actually offers, writes the value, and holds a transient "copied" window
+ * (confirmed face + polite announcement) reverting after {@link COPIED_RESET_MS}. A
+ * refused write, or a value that throws while being produced, surfaces as a
+ * caller-worded error string rather than a throw, so the control shows a visible alert.
  *
- * Only the WORDING is per control: the message shown when no clipboard exists and
- * the message shown when a write is refused come in as {@link ClipboardCopyMessages},
- * so a secret field, a code block and a JSON viewer each phrase the fallback in
- * their own terms while sharing this single guarded machinery.
+ * Only the WORDING is per control, supplied via {@link ClipboardCopyMessages}.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -65,14 +59,12 @@ export function useClipboardCopy(messages: ClipboardCopyMessages): ClipboardCopy
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The write is async, so a copy can still be in flight when the control goes
-  // away — a dialog holding it closes on the same click. Clearing the timer alone
-  // would not cover that: at unmount there is no timer yet, and the resolution
-  // that follows would start one nothing is left to clear. This flag is what the
-  // resolution checks before it touches state at all.
+  // The write is async, so a copy can be in flight when the control unmounts (a dialog
+  // holding it closes on the same click); checked before the resolution touches state.
+  // Clearing the timer alone can't cover it — at unmount no timer exists yet.
   const mounted = useRef(true);
-  // The wording is read at write time, not closed over, so the callback stays
-  // stable across renders even when the caller passes fresh message objects.
+  // Wording is read at write time, not closed over, so the callback stays stable even
+  // when the caller passes fresh message objects.
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 

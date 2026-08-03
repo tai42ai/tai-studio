@@ -19,18 +19,13 @@ import type {
   RouteToken,
 } from './types';
 
-/**
- * Shell-provided navigation. The context has no default: a feature rendered
- * outside the shell's {@link NavigationProvider} is a wiring bug, so
- * {@link useNavigation} raises loudly rather than silently no-op'ing a
- * transition.
- */
+/** Shell-provided navigation; no default, so use outside {@link NavigationProvider} throws. */
 const NavigationContext = createContext<NavigationContextValue | null>(null);
 
 /**
- * One armed navigation guard. Both fields are read live at decision time (the
- * registry holds this exact object, not a snapshot), so a consumer that flips
- * `when` or swaps its `handler` on re-render is reflected without re-registering.
+ * One armed navigation guard. The registry holds this exact object (not a
+ * snapshot), so flipping `when` or swapping `handler` on re-render takes effect
+ * without re-registering.
  */
 interface GuardEntry {
   when: boolean;
@@ -38,15 +33,10 @@ interface GuardEntry {
 }
 
 /**
- * The set of guards active under one {@link NavigationProvider}. It is the single
- * point every SDK-controlled navigation consults, so guards registered by a feature
- * and by a plugin page compose against the SAME registry — the guard boundary
- * crosses the plugin boundary exactly where navigation itself does.
- *
- * `run` walks the guards in registration order and stops at the first veto, so at
- * most one confirm dialog is shown even when several guards are armed. `subscribe`
- * lets the provider re-evaluate its browser-level listeners whenever the armed set
- * changes.
+ * The guards active under one {@link NavigationProvider} — the single registry
+ * every SDK-controlled navigation consults, so feature and plugin-page guards
+ * compose against the same set. `run` stops at the first veto (at most one confirm
+ * dialog); `subscribe` re-evaluates browser-level listeners when the armed set changes.
  */
 class NavigationGuardRegistry {
   private readonly guards = new Set<GuardEntry>();
@@ -98,8 +88,8 @@ class NavigationGuardRegistry {
 
 /**
  * Carries the provider's guard registry to {@link useNavigationGuard}. Separate from
- * {@link NavigationContext} so the shell-supplied navigation value stays exactly the
- * contract the shell implements — the registry is SDK-owned and needs no shell code.
+ * {@link NavigationContext} so the shell-supplied value stays exactly the shell's
+ * contract — the registry is SDK-owned.
  */
 const GuardRegistryContext = createContext<NavigationGuardRegistry | null>(null);
 
@@ -124,14 +114,13 @@ export function NavigationProvider({
   registryRef.current ??= new NavigationGuardRegistry();
   const registry = registryRef.current;
 
-  // The last committed history entry the SDK observed (URL plus `window.history.state`).
-  // It is what a canceled back/forward is restored to and what a browser-level guard
-  // decision consults. Router-internal URL changes made OUTSIDE the SDK's navigate entry
-  // points (an internal redirect / replaceState) are unobservable by design at this layer.
+  // The last committed history entry the SDK observed (URL + `history.state`): what a
+  // canceled back/forward restores to. URL changes made outside the SDK's navigate
+  // entry points are unobservable by design at this layer.
   const committedRef = useRef<{ href: string; state: unknown } | null>(null);
 
-  // Mirror the registry's armed state into React so the browser-level listeners are
-  // attached only while at least one guard is armed and are torn down otherwise.
+  // Mirror the registry's armed state into React so the browser listeners attach only
+  // while at least one guard is armed.
   const [armed, setArmed] = useState(false);
   useEffect(() => {
     setArmed(registry.hasArmedGuards());
@@ -143,19 +132,17 @@ export function NavigationProvider({
   useEffect(() => {
     if (!armed) return;
 
-    // The entry a guard protects, captured URL + state together. Any back/forward that
-    // lands elsewhere is first canceled back to here, so the user stays put — and the
-    // router's own entry state survives — while the guard is consulted.
+    // The protected entry (URL + state); a back/forward landing elsewhere is first
+    // canceled back to here while the guard is consulted.
     committedRef.current = { href: window.location.href, state: window.history.state };
-    // Set while replaying a guard-approved back/forward, so the `popstate` it triggers
-    // is passed through instead of being re-intercepted.
+    // Set while replaying a guard-approved back/forward, so its `popstate` passes
+    // through instead of being re-intercepted.
     let bypass = false;
-    // Latched while a guard decision for the current gesture is pending, so a second Back
-    // fired mid-decision keeps canceling (re-pushing the restore) without starting a
-    // concurrent `registry.run()` — one gesture, one dialog.
+    // Latched while a decision is pending, so a second Back mid-decision keeps canceling
+    // without starting a concurrent `registry.run()` — one gesture, one dialog.
     let pending = false;
-    // How many restore pushes we have stacked for the pending decision, so an approved
-    // replay unwinds exactly that far in one `go(-depth)`. Reset per decision.
+    // Restore pushes stacked for the pending decision, so an approved replay unwinds
+    // exactly that far in one `go(-depth)`. Reset per decision.
     let restores = 0;
 
     const onPopState = () => {
@@ -170,15 +157,10 @@ export function NavigationProvider({
       }
       const committed = committedRef.current;
       if (committed === null) return;
-      // The browser has already moved in history; cancel it by restoring the committed
-      // entry (URL and state) on top of wherever it landed. popstate exposes neither
-      // direction nor distance, and this layer must not stamp a position marker into
-      // history.state (the router owns that channel), so the restore can only push a new
-      // entry — it cannot delete the ones the browser walked past. A vetoed BACK
-      // round-trips cleanly ([B,A] -> [B,A']). A vetoed FORWARD necessarily strands the
-      // forward target behind the restore ([B,A,C] + Forward + veto -> [B,A,C,A']; Back
-      // then reaches C, not B); that residue is an accepted, self-healing limit — the
-      // next pushState navigation truncates the stubs.
+      // Cancel the browser's move by pushing the committed entry on top of wherever it
+      // landed. popstate exposes no direction/distance and the router owns
+      // `history.state`, so restore can only push, not delete. A vetoed forward thus
+      // strands a stub entry — an accepted limit the next pushState truncates.
       window.history.pushState(committed.state, '', committed.href);
       restores += 1;
       if (pending) return;
@@ -195,10 +177,8 @@ export function NavigationProvider({
 
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
-      // Browsers below the package floor (Chrome 108) still gate the native prompt on a
-      // set `returnValue` rather than on `preventDefault` alone; the string is ignored
-      // (browsers show their own copy). The property is typed deprecated but remains the
-      // required trigger across that supported range.
+      // Browsers below the floor (Chrome 108) gate the prompt on a set `returnValue`,
+      // not `preventDefault` alone; the string is ignored. Typed deprecated, still required.
       // eslint-disable-next-line @typescript-eslint/no-deprecated -- required beforeunload trigger for the supported browser range.
       event.returnValue = '';
     };
@@ -223,10 +203,9 @@ export function NavigationProvider({
       void registry.run().then((allowed) => {
         if (!allowed) return;
         value.navigate(token, search);
-        // Advance the committed entry to the page we just moved to, resolved through the
-        // shell (the router may commit asynchronously, so `window.location` would be
-        // stale). The new entry's router state is unobservable here, hence `state: null`.
-        // A no-op if the guard disarmed between the allow and this call.
+        // Advance the committed entry to the resolved destination (the router may commit
+        // async, so `window.location` would be stale). Its router state is unobservable
+        // here, hence `state: null`.
         if (committedRef.current !== null) {
           committedRef.current = { href: value.resolvePath(token, search), state: null };
         }
@@ -291,9 +270,8 @@ export function useResolvePath(): NavigationContextValue['resolvePath'] {
  * unload (tab close / refresh) is additionally covered by a native `beforeunload`
  * prompt that fires whenever any guard is armed.
  *
- * Guards compose against the provider's shared registry, so a feature and a plugin
- * page may each arm one and ANY veto blocks. Available to plugin pages for the same
- * reason navigation is: it flows through the shared {@link NavigationProvider}.
+ * Guards compose against the provider's shared registry: a feature and a plugin page
+ * may each arm one, and any veto blocks.
  */
 export function useNavigationGuard(when: boolean, handler: NavigationGuardHandler): void {
   const registry = useGuardRegistry();

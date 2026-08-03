@@ -1316,22 +1316,18 @@
     color: var(--tai-color-text);
   }
 
-  /* The fullscreen variant of the dialog: the panel fills the viewport edge to
-     edge instead of centring at a fixed size. Composes with `.tai-dialog`, so it
-     overrides only geometry and drops the panel's edge chrome — the surface ink,
-     the z-index and the scroll behaviour carry over. */
+  /* Fullscreen variant: fills the viewport instead of centring at a fixed size.
+     Composes with `.tai-dialog`, overriding only geometry and edge chrome. */
   .tai-dialog-fullscreen {
     top: 0;
     left: 0;
     transform: none;
-    /* The sheet caps every viewport-width surface on the border box it paints, so
-       the `100vw` width is the outer edge and never overflows on a host with no
-       preflight — declared here, not inherited from `.tai-dialog`. */
+    /* `border-box` so `100vw` is the outer edge and never overflows; declared here,
+       not inherited from `.tai-dialog`. */
     box-sizing: border-box;
     width: 100vw;
     max-width: none;
-    /* `dvh` is the live viewport with the `vh` fallback, matching `.tai-dialog`'s
-       own cap: a browser below the `dvh` floor keeps the first declaration. */
+    /* `dvh` is the live viewport with a `vh` fallback for browsers below the `dvh` floor. */
     height: 100vh;
     height: 100dvh;
     max-height: none;

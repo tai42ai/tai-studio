@@ -1,21 +1,14 @@
 /**
  * `Markdown` — a safe renderer for the markdown agents emit, on the design
- * system's prose ground (`tai-prose`). It supports a deliberate subset —
- * headings, emphasis, ordered/unordered lists, blockquotes, thematic breaks,
- * links, inline code and fenced code — and renders EVERYTHING through React
- * elements and text children, so every author-supplied string is escaped by
- * construction.
+ * system's prose ground (`tai-prose`). Supports a deliberate subset (headings,
+ * emphasis, lists, blockquotes, thematic breaks, links, inline and fenced code),
+ * rendered entirely through React elements and text children.
  *
- * SAFETY: this component is NEVER an HTML sink. There is no
- * `dangerouslySetInnerHTML`, no raw-HTML passthrough, and no network — an
- * `<img>`, a stylesheet or a script the source spells out never becomes an
- * element; the same no-HTML-sink contract the run timeline states for its
- * payloads. A link is admitted only when it is an absolute `http(s)` URL that
- * survives `safeHttpUrl`; every other spelling (`javascript:`, `data:`, a
- * relative reference) renders as its plain link text with no anchor. Images are
- * not rendered at all: `![alt](url)` collapses to its `alt` text, so no source
- * URL is ever fetched. Fenced code is handed to `CodeBlock`, which is itself a
- * text-only surface.
+ * SAFETY: never an HTML sink — no `dangerouslySetInnerHTML`, no raw-HTML
+ * passthrough, no network. A link is admitted only when `safeHttpUrl` accepts an
+ * absolute `http(s)` URL; every other spelling renders as plain link text.
+ * `![alt](url)` collapses to its `alt` text, so no source URL is fetched. Fenced
+ * code goes to `CodeBlock`, itself text-only.
  */
 import { useMemo, type ReactNode } from 'react';
 
@@ -224,14 +217,11 @@ interface EmphasisSpan {
 
 /**
  * The earliest run delimited by `marker` (`**`, `__`, `*` or `_`) at or after
- * `from`. The scanner walks the text once, holding the first still-open marker on
- * the current line and closing it at the first marker that sits a non-space away
- * (and, for `_`, does not abut a word character on its outer edges). Closer
- * validity never inspects the opener, so once the first opener on a line finds no
- * closer, no later opener on that line could either — tracking a single pending
- * opener per line reproduces the leftmost lazy match, quirks and all
- * (`***a***` → `***a**`, `**a*` → none). A newline drops the pending opener,
- * matching the same-line body. O(1) per character.
+ * `from`. Walks once, holding one pending opener per line and closing it at the
+ * first marker a non-space away (and, for `_`, not abutting a word character on
+ * its outer edges). One pending opener per line reproduces the leftmost lazy
+ * match, quirks and all (`***a***` → `***a**`, `**a*` → none); a newline drops the
+ * opener. O(1) per character.
  */
 function findEmphasisSpan(text: string, from: number, marker: string): EmphasisSpan | null {
   const m = marker.length;
@@ -245,9 +235,8 @@ function findEmphasisSpan(text: string, from: number, marker: string): EmphasisS
       continue;
     }
     if (ch !== mark || (m === 2 && text[j + 1] !== mark)) continue;
-    // A closer resolves the pending opener at the first marker at least one body
-    // character away whose preceding char is a non-space (and, for `_`, whose
-    // following char is not a word character).
+    // A closer: first marker >=1 body char away, preceded by a non-space (and,
+    // for `_`, not followed by a word character).
     if (
       opener !== -1 &&
       j >= opener + m + 1 &&
@@ -256,8 +245,8 @@ function findEmphasisSpan(text: string, from: number, marker: string): EmphasisS
     ) {
       return { index: opener, length: j + m - opener, content: text.slice(opener + m, j) };
     }
-    // The opener is the first marker followed by a non-space (and, for `_`, not
-    // abutting a word character on its left); only the first is kept.
+    // The opener: first marker followed by a non-space (and, for `_`, not abutting
+    // a word character on its left); only the first is kept.
     if (
       opener === -1 &&
       j + m < text.length &&
@@ -275,21 +264,17 @@ interface DestinationScan {
   /** The closing `)` index, or `-1` when the run is empty or unterminated. */
   readonly end: number;
   /**
-   * The index where the walk halted — the `)` on success, or the whitespace or
-   * end-of-text that ended a failure. On a failure that advanced past `start`,
-   * `[start, stop)` provably holds no `)`, which lets the caller memoize that
-   * dead span regardless of which failure kind ended it.
+   * Where the walk halted — the `)` on success, else the whitespace or end-of-text
+   * that ended a failure. On a failure that advanced, `[start, stop)` provably
+   * holds no `)`, which the caller memoizes as a dead span.
    */
   readonly stop: number;
 }
 
 /**
  * The destination run of a bracketed construct: one-or-more non-`)`, non-space
- * characters bounded by `)`. `end` is the index of the closing `)`, or `-1` when
- * the run is empty or unterminated; `stop` is the index where the walk halted —
- * the `)` on success, or the whitespace or end-of-text that stopped a failure.
- * A failure that advanced marks `[start, stop)` as containing no `)`, which the
- * caller memoizes as a dead span to its right. The cursor only moves forward.
+ * characters bounded by `)`. Forward-only cursor. See {@link DestinationScan} for
+ * `end`/`stop`.
  */
 function scanDestination(text: string, start: number): DestinationScan {
   let k = start;
@@ -311,25 +296,16 @@ interface BracketedSpan {
 /**
  * The earliest `[label](dest)` (or, when `image`, `![alt](dest)`) at or after
  * `from`. A label runs from `[` to the first `]`; a link needs a non-empty label,
- * an image admits an empty one. The destination is a `scanDestination` run. Each
- * `[` candidate reuses a forward-only `]` pointer and a destination memoized on
- * that `]`; and whenever a destination scan fails after advancing — whether it
- * stopped at whitespace or at the end of the text — `deadUntil` records where it
- * halted, so every later candidate whose destination starts inside that proven
- * no-`)` span skips the scan instead of repeating it. Because `]` pointers only
- * move forward, each fresh scan starts at or past the previous `deadUntil`, so a
- * run of `[` — with or without a trailing `(` and a shared trailing terminator —
- * costs one linear sweep, not a quadratic one.
+ * an image admits an empty one. Linear: each `[` candidate reuses a forward-only
+ * `]` pointer and a destination memoized on that `]`, and `deadUntil` records a
+ * proven no-`)` span so later candidates starting inside it skip the scan.
  */
 function findBracketed(text: string, from: number, image: boolean): BracketedSpan | null {
   let close = -1; // first `]` at an index the current candidate can still use
   let destKey = -1; // the `]` the memoized destination belongs to
   let destEnd = -1; // closing `)` for `destKey`, or -1
-  // Exclusive index up to which a scanned destination proved no `)` exists. A
-  // destination start below it shares that no-`)` span and would halt at the same
-  // whitespace or end-of-text, so its scan is skipped. Recorded on any failure that
-  // advanced, not just end-of-text; a start at or past it must still scan, since a
-  // `)` could sit further right. Call-local, so it never leaks across calls.
+  // Exclusive index up to which a scan proved no `)` exists; a destination start
+  // below it skips the scan. A start at or past it must still scan. Call-local.
   let deadUntil = -1;
 
   let bracket = text.indexOf('[', from);
@@ -402,13 +378,10 @@ function asFound(kind: InlineKind, span: EmphasisSpan | null): InlineFound | nul
 }
 
 /**
- * The inline constructs in the order a tie at the same position is resolved:
- * code before an image before a link before strong before emphasis, so `**` is
- * read as one strong span rather than two emphasis markers. Strong and emphasis
- * are split by marker — `**`/`__` and `*`/`_` — so each marker's scan caches its
- * own exhaustion independently and the cursor pass stays linear even when one
- * marker is absent; the star marker precedes the underscore marker at every
- * level, mirroring the alternation order of the reference oracle.
+ * Inline constructs in tie-break order at a shared position: code, image, link,
+ * strong, emphasis — so `**` reads as one strong span, not two emphasis markers.
+ * Strong and emphasis are split per marker (`**`/`__`, `*`/`_`) so each marker
+ * caches its own exhaustion and the pass stays linear; star precedes underscore.
  */
 const INLINE_RULES: readonly InlineRule[] = [
   { kind: 'code', find: findCode },

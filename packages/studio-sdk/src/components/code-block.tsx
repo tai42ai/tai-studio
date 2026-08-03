@@ -1,26 +1,17 @@
 /**
  * `CodeBlock` — escaped, monospaced preformatted text for tool results and string
  * payloads, on the design system's terminal ground (`tai-code-block`). The content
- * is a React text child inside `<pre><code>`, so it is escaped by React and
- * rendered verbatim; this component is NEVER an HTML sink (no
+ * is a React text child inside `<pre><code>`; NEVER an HTML sink (no
  * `dangerouslySetInnerHTML`).
  *
- * The `<pre>` IS the scrolling box, so it carries the region attributes itself
- * rather than sitting inside a `ScrollRegion` wrapper that would add a second
- * scroller: a long line makes it a named keyboard target, a short one leaves it
- * an ordinary block.
+ * The `<pre>` IS the scrolling box, carrying the region attributes itself rather
+ * than nesting a `ScrollRegion` that would add a second scroller.
  *
- * A top-right icon button copies the payload to the clipboard and flips to a
- * transient tick. It sits OUTSIDE the `<pre>`, pinned to a relatively-positioned
- * frame, so horizontal scrolling of a long line never carries it off-screen. Its
- * accessible name is the state it is showing — "Copy code" idle, "Copied" done —
- * so a voice-control user never names a control by words it has stopped saying.
- *
- * A clipboard write can FAIL — a permissions policy blocks it, or the page is not
- * in a secure context, where `navigator.clipboard` does not exist at all. Either
- * way the failure is rendered as a visible `role="alert"`: swallowing it would
- * leave the button looking inert and the reader believing a copy that never
- * happened. The alert names the reason, never the payload.
+ * A top-right copy button sits OUTSIDE the `<pre>`, pinned to a relatively-positioned
+ * frame, so horizontal scroll never carries it off-screen. Its accessible name is
+ * the state it shows ("Copy code" / "Copied"), so it is never named by words it has
+ * stopped saying (WCAG 2.5.3). A clipboard failure renders as a visible `role="alert"`
+ * naming the reason, never the payload — see {@link useClipboardCopy}.
  */
 import type { CSSProperties } from 'react';
 
