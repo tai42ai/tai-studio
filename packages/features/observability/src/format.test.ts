@@ -12,6 +12,7 @@ import {
   formatMetricValue,
   formatTimestamp,
   formatTokenCount,
+  previewTree,
   previewValue,
 } from './format';
 
@@ -120,5 +121,27 @@ describe('previewValue', () => {
   it('keeps a value exactly at the 80-char boundary intact', () => {
     const exact = 'y'.repeat(80);
     expect(previewValue(exact)).toBe(exact);
+  });
+});
+
+describe('previewTree', () => {
+  it('returns an object or array value as-is for exploring', () => {
+    const obj = { a: 1, b: { c: 2 } };
+    expect(previewTree(obj)).toBe(obj);
+    const arr = [1, 2, 3];
+    expect(previewTree(arr)).toBe(arr);
+  });
+
+  it('parses a string that is itself JSON so it too can be expanded', () => {
+    expect(previewTree('{"a":1}')).toEqual({ a: 1 });
+    expect(previewTree('[1,2]')).toEqual([1, 2]);
+  });
+
+  it('returns null for a plain scalar/string with no structure', () => {
+    expect(previewTree('hello')).toBeNull();
+    expect(previewTree('42')).toBeNull();
+    expect(previewTree(42)).toBeNull();
+    expect(previewTree(null)).toBeNull();
+    expect(previewTree(undefined)).toBeNull();
   });
 });

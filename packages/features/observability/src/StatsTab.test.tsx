@@ -122,6 +122,20 @@ describe('StatsTab', () => {
     });
   });
 
+  it('commits a time window to the URL from the range picker (A8)', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi.fn().mockResolvedValue(metricsFixture()),
+    };
+    const { navigate } = renderWithProviders(<StatsTab search={{ tab: 'dashboard' }} />, {
+      client,
+    });
+
+    await screen.findByText('Total runs');
+    await user.click(screen.getByRole('button', { name: 'Last 24 hours' }));
+    expect(navigate).toHaveBeenCalledWith('observability', { tab: 'dashboard', from: '24h' });
+  });
+
   it('drills through to the runs tab, carrying the filters and clearing any trace', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {

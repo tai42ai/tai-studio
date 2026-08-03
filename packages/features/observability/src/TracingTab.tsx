@@ -3,19 +3,28 @@
  * `listRuns(filters)`. The filter set, sort key/direction, and the drilled-in
  * trace id all live in the URL (written via `navigate`), so a view is linkable
  * and survives the stats→tracing drill-through. A row click sets `trace` in the
- * URL, switching this tab to the per-run {@link TraceView}. A 501 from the reader
- * renders the dedicated read-not-supported state; other failures are loud.
+ * URL, switching this tab to the per-run {@link TraceView}.
+ *
+ * The time window is a {@link DateRangePicker} (presets + custom), committed to the
+ * URL immediately. A metric sort (cost/latency/tokens) cannot combine with a
+ * level/cost/token/latency filter — the reader would answer 501 — so the widgets
+ * that would create the combo are guarded on both sides, and a combo arriving from
+ * the URL is repaired to a legal query before it is ever sent. A 501 that still
+ * reaches an already-loaded table renders inline, not as the full-page marketplace
+ * pitch (that pitch is only the right answer before any runs have loaded).
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { Run } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
+  DateRangePicker,
   EmptyState,
   ErrorState,
   Field,
+  JsonTree,
   NumberInput,
   ScrollRegion,
   Select,
@@ -40,14 +49,23 @@ import {
   formatLatencyMs,
   formatTimestamp,
   formatTokenCount,
+  previewTree,
   previewValue,
 } from './format';
-import { mergeSearch, runsParams, type ObservabilitySearch } from './filters';
+import {
+  hasMetricIncompatibleFilter,
+  isMetricSort,
+  mergeSearch,
+  rangeToPatch,
+  runsParams,
+  sanitizeSearch,
+  searchToRange,
+  type ObservabilitySearch,
+  type SortKey,
+} from './filters';
 import { runsKey } from './keys';
 import { isReadNotSupported, ReadNotSupported } from './read-support';
 import { TraceView } from './TraceView';
-
-type SortKey = NonNullable<ObservabilitySearch['sort']>;
 
 const STATUS_ANY = 'any';
 
@@ -63,8 +81,6 @@ function parseNum(value: string): number | undefined {
 }
 
 interface FilterDraft {
-  from: string;
-  to: string;
   status: string;
   tags: string;
   minCost: string;
@@ -77,8 +93,6 @@ interface FilterDraft {
 
 function draftFromSearch(search: ObservabilitySearch): FilterDraft {
   return {
-    from: search.from ?? '',
-    to: search.to ?? '',
     status: search.status ?? STATUS_ANY,
     tags: (search.tags ?? []).join(', '),
     minCost: num(search.minCost),
@@ -96,8 +110,6 @@ function draftToPatch(draft: FilterDraft): Partial<ObservabilitySearch> {
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
   return {
-    from: draft.from.trim() === '' ? undefined : draft.from.trim(),
-    to: draft.to.trim() === '' ? undefined : draft.to.trim(),
     status: draft.status === STATUS_ANY ? undefined : (draft.status as 'error' | 'success'),
     tags: tags.length === 0 ? undefined : tags,
     minCost: parseNum(draft.minCost),
@@ -108,6 +120,18 @@ function draftToPatch(draft: FilterDraft): Partial<ObservabilitySearch> {
     maxLatencyMs: parseNum(draft.maxLatencyMs),
   };
 }
+
+/** The advanced-filter keys the bar owns, so Clear drops exactly these. */
+const ADVANCED_FILTER_KEYS: readonly (keyof ObservabilitySearch)[] = [
+  'status',
+  'tags',
+  'minCost',
+  'maxCost',
+  'minTokens',
+  'maxTokens',
+  'minLatencyMs',
+  'maxLatencyMs',
+];
 
 const fieldRowStyle: CSSProperties = {
   display: 'grid',
@@ -138,6 +162,11 @@ function FilterBar({
     setDraft(draftFromSearch(search));
   }
 
+  // A metric sort cannot carry a level/cost/token/latency filter; while one is
+  // active those fields are disabled so the incompatible combo is never composed
+  // (the sort-header guard blocks the mirror case). Time range and tags stay live.
+  const metricSortActive = isMetricSort(search.sort);
+
   const set = (patch: Partial<FilterDraft>): void => {
     setDraft((prev) => ({ ...prev, ...patch }));
   };
@@ -147,35 +176,26 @@ function FilterBar({
   };
 
   const clear = (): void => {
+    const cleared: Partial<ObservabilitySearch> = {};
+    for (const key of ADVANCED_FILTER_KEYS) cleared[key] = undefined;
     setDraft(draftFromSearch({ tab: search.tab }));
-    navigate(
-      'observability',
-      mergeSearch(search, draftToPatch(draftFromSearch({ tab: search.tab }))),
-    );
+    navigate('observability', mergeSearch(search, cleared));
+  };
+
+  const onRangeChange = (value: Parameters<typeof rangeToPatch>[0]): void => {
+    navigate('observability', mergeSearch(search, rangeToPatch(value)));
   };
 
   return (
     <Card>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
+        <DateRangePicker
+          aria-label="Run time range"
+          value={searchToRange(search)}
+          onValueChange={onRangeChange}
+          disabled={disabled}
+        />
         <div style={fieldRowStyle}>
-          <Field label="From (ISO)">
-            <TextInput
-              value={draft.from}
-              placeholder="2026-01-01T00:00:00Z"
-              onChange={(e) => {
-                set({ from: e.target.value });
-              }}
-            />
-          </Field>
-          <Field label="To (ISO)">
-            <TextInput
-              value={draft.to}
-              placeholder="2026-02-01T00:00:00Z"
-              onChange={(e) => {
-                set({ to: e.target.value });
-              }}
-            />
-          </Field>
           <Field label="Status">
             <Select
               options={[
@@ -184,6 +204,7 @@ function FilterBar({
                 { value: 'error', label: 'Error' },
               ]}
               value={draft.status}
+              disabled={metricSortActive}
               onValueChange={(value) => {
                 set({ status: value });
               }}
@@ -197,11 +218,10 @@ function FilterBar({
               }}
             />
           </Field>
-        </div>
-        <div style={fieldRowStyle}>
           <Field label="Min cost">
             <NumberInput
               value={draft.minCost}
+              disabled={metricSortActive}
               onChange={(e) => {
                 set({ minCost: e.target.value });
               }}
@@ -210,6 +230,7 @@ function FilterBar({
           <Field label="Max cost">
             <NumberInput
               value={draft.maxCost}
+              disabled={metricSortActive}
               onChange={(e) => {
                 set({ maxCost: e.target.value });
               }}
@@ -218,6 +239,7 @@ function FilterBar({
           <Field label="Min tokens">
             <NumberInput
               value={draft.minTokens}
+              disabled={metricSortActive}
               onChange={(e) => {
                 set({ minTokens: e.target.value });
               }}
@@ -226,6 +248,7 @@ function FilterBar({
           <Field label="Max tokens">
             <NumberInput
               value={draft.maxTokens}
+              disabled={metricSortActive}
               onChange={(e) => {
                 set({ maxTokens: e.target.value });
               }}
@@ -234,6 +257,7 @@ function FilterBar({
           <Field label="Min latency (ms)">
             <NumberInput
               value={draft.minLatencyMs}
+              disabled={metricSortActive}
               onChange={(e) => {
                 set({ minLatencyMs: e.target.value });
               }}
@@ -242,12 +266,19 @@ function FilterBar({
           <Field label="Max latency (ms)">
             <NumberInput
               value={draft.maxLatencyMs}
+              disabled={metricSortActive}
               onChange={(e) => {
                 set({ maxLatencyMs: e.target.value });
               }}
             />
           </Field>
         </div>
+        {metricSortActive ? (
+          <p className="tai-muted" style={{ margin: 0, fontSize: 'var(--tai-text-sm)' }}>
+            Status, cost, token, and latency filters are unavailable while sorting by a metric. Sort
+            by When to use them.
+          </p>
+        ) : null}
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
           <Button variant="primary" onClick={apply} disabled={disabled}>
             Apply filters
@@ -275,7 +306,12 @@ function SortableHeader({
   const navigate = useAppNavigate();
   const active = search.sort === columnKey;
   const dir = active ? (search.dir ?? 'desc') : undefined;
+  // A metric-sort header is disabled while an incompatible filter is set: switching
+  // to it would send the one combo the reader answers 501 to. The mirror guard
+  // (disabling those filters under a metric sort) lives in the filter bar.
+  const disabled = isMetricSort(columnKey) && hasMetricIncompatibleFilter(search);
   const onClick = (): void => {
+    if (disabled) return;
     const nextDir: 'asc' | 'desc' = active && dir === 'desc' ? 'asc' : 'desc';
     navigate('observability', mergeSearch(search, { sort: columnKey, dir: nextDir }));
   };
@@ -287,14 +323,20 @@ function SortableHeader({
       <button
         type="button"
         onClick={onClick}
+        disabled={disabled}
+        title={
+          disabled
+            ? 'Clear the status, cost, token, and latency filters to sort by this metric.'
+            : undefined
+        }
         style={{
           appearance: 'none',
           background: 'transparent',
           border: 'none',
           padding: 0,
           font: 'inherit',
-          color: 'inherit',
-          cursor: 'pointer',
+          color: disabled ? 'var(--tai-color-text-disabled)' : 'inherit',
+          cursor: disabled ? 'not-allowed' : 'pointer',
           display: 'inline-flex',
           gap: 'var(--tai-space-1)',
         }}
@@ -306,6 +348,62 @@ function SortableHeader({
   );
 }
 
+function RunPreview({
+  value,
+  label,
+}: {
+  readonly value: unknown;
+  readonly label: string;
+}): ReactNode {
+  const [open, setOpen] = useState(false);
+  const inline = previewValue(value);
+  const tree = previewTree(value);
+
+  const truncStyle: CSSProperties = {
+    display: 'block',
+    maxWidth: '14rem',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontSize: 'var(--tai-text-xs)',
+    color: 'var(--tai-color-text-muted)',
+  };
+
+  if (tree === null) {
+    return (
+      <span className="tai-mono" style={truncStyle}>
+        {inline}
+      </span>
+    );
+  }
+
+  // The row drills into the trace on click/Enter; the row handler ignores events
+  // that originate inside this marked subtree, so expanding the preview never
+  // navigates. The JsonTree mounts only once open, so a long runs list never lays
+  // out a tree per row.
+  return (
+    <div
+      data-run-preview=""
+      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}
+    >
+      <button
+        type="button"
+        className="tai-btn tai-btn-ghost"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((prev) => !prev);
+        }}
+        style={{ justifyContent: 'flex-start', padding: 'var(--tai-space-1)' }}
+      >
+        <span className="tai-mono" style={truncStyle}>
+          {inline}
+        </span>
+      </button>
+      {open ? <JsonTree data={tree} defaultExpanded={false} label={label} /> : null}
+    </div>
+  );
+}
+
 function RunRow({
   run,
   onOpen,
@@ -313,6 +411,10 @@ function RunRow({
   readonly run: Run;
   readonly onOpen: (traceId: string) => void;
 }): ReactNode {
+  // A click or keypress that started inside a run preview (its expand button or the
+  // JSON tree it opens) is the preview's own — never a request to drill into the run.
+  const fromPreview = (target: EventTarget | null): boolean =>
+    target instanceof Element && target.closest('[data-run-preview]') !== null;
   const open = (): void => {
     onOpen(run.traceId);
   };
@@ -320,8 +422,12 @@ function RunRow({
     <TR
       data-testid={`run-row-${run.id}`}
       tabIndex={0}
-      onClick={open}
+      onClick={(e) => {
+        if (fromPreview(e.target)) return;
+        open();
+      }}
       onKeyDown={(e) => {
+        if (fromPreview(e.target)) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           open();
@@ -331,10 +437,28 @@ function RunRow({
     >
       <TD>{formatTimestamp(run.createdAt)}</TD>
       <TD>
-        <Badge variant={run.status === 'error' ? 'danger' : 'success'}>{run.status}</Badge>
+        <div
+          style={{
+            display: 'flex',
+            gap: 'var(--tai-space-1)',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+          }}
+        >
+          <Badge variant={run.status === 'error' ? 'danger' : 'success'}>{run.status}</Badge>
+          {run.fetchError !== null ? (
+            <span title={run.fetchError} style={{ display: 'inline-flex' }}>
+              <Badge variant="warning">trace unavailable</Badge>
+            </span>
+          ) : null}
+        </div>
       </TD>
-      <TD>{previewValue(run.inputPreview)}</TD>
-      <TD>{previewValue(run.outputPreview)}</TD>
+      <TD>
+        <RunPreview value={run.inputPreview} label={`${run.id} input`} />
+      </TD>
+      <TD>
+        <RunPreview value={run.outputPreview} label={`${run.id} output`} />
+      </TD>
       <TD>
         <div style={{ display: 'flex', gap: 'var(--tai-space-1)', flexWrap: 'wrap' }}>
           {run.tags.map((tag) => (
@@ -364,7 +488,11 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
     getNextPageParam: (last) => last.nextPage ?? undefined,
   });
 
-  if (query.isError && isReadNotSupported(query.error)) {
+  // The full-page marketplace pitch is only the right answer BEFORE any runs have
+  // loaded: a 501 that arrives on a refetch of an already-loaded table (or a
+  // guarded query that slipped through) renders inline instead of blanking the
+  // whole tab. Both 501 sources share one error code, so this keys off load state.
+  if (query.isError && isReadNotSupported(query.error) && query.data === undefined) {
     return <ReadNotSupported />;
   }
 
@@ -390,7 +518,10 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
       <FilterBar search={search} disabled={query.isPending} />
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
+        <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
+          {query.isFetching ? 'Refreshing…' : 'Refresh'}
+        </Button>
         <Button onClick={onExport}>Export CSV</Button>
       </div>
       {exportError !== null ? <ErrorState message={exportError} /> : null}
@@ -402,17 +533,17 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
           <Skeleton height={32} />
         </div>
       ) : query.isLoadingError ? (
-        // Only the INITIAL-load failure (no pages retained) blanks the table.
-        // query-core sets `status: 'error'` on any fetch error, data present or
-        // not, so reading `isError` here threw away a fully loaded table whenever a
-        // window-focus refetch or a Load-more failed.
+        // Only the INITIAL-load failure (no pages retained) blanks the table;
+        // query-core flags `status: 'error'` on any fetch error even with data
+        // present, so this must key off `isLoadingError`, not `isError`.
         <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
           {query.isError && !query.isFetchNextPageError ? (
-            // A background refetch (window focus, a filter round-trip) failed while
-            // pages are retained. A Load-more failure is also an error with data
-            // present, so it is excluded here and gets its own retry by the control.
+            // A background refetch (window focus, a filter round-trip, a manual
+            // Refresh) failed while pages are retained. A Load-more failure is also
+            // an error with data present, so it is excluded here and gets its own
+            // retry by the control.
             <div
               role="alert"
               style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}
@@ -502,17 +633,27 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
 
 export function TracingTab({ search }: { readonly search: ObservabilitySearch }): ReactNode {
   const navigate = useAppNavigate();
+  const cleaned = sanitizeSearch(search);
+  const repaired = cleaned !== search;
 
-  if (search.trace !== undefined) {
+  // A metric-sort×filter combo can only reach here from the URL (a shared or
+  // hand-edited link). Rewrite it to the repaired, legal search so the URL — the
+  // source of truth — never states a query the backend cannot serve. `sanitizeSearch`
+  // returns the same reference when nothing needs repair, so this fires at most once.
+  useEffect(() => {
+    if (repaired) navigate('observability', cleaned);
+  }, [repaired, cleaned, navigate]);
+
+  if (cleaned.trace !== undefined) {
     return (
       <TraceView
-        traceId={search.trace}
+        traceId={cleaned.trace}
         onBack={() => {
-          navigate('observability', mergeSearch(search, { trace: undefined }));
+          navigate('observability', mergeSearch(cleaned, { trace: undefined }));
         }}
       />
     );
   }
 
-  return <RunsTable search={search} />;
+  return <RunsTable search={cleaned} />;
 }

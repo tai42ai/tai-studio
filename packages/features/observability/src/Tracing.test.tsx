@@ -334,19 +334,26 @@ describe('TracingTab — runs table', () => {
 });
 
 describe('TracingTab — trace view', () => {
-  it('renders the nested span tree and escapes span payloads', async () => {
+  it('renders the two-pane trace view, auto-selecting the error span, and escapes payloads', async () => {
+    const user = userEvent.setup();
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockResolvedValue(traceFixture()),
     };
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', trace: 't1' }} />, { client });
 
+    // Both spans appear in the left-pane waterfall.
     expect(await screen.findByText('root-span')).toBeInTheDocument();
-    expect(screen.getByText('child-span')).toBeInTheDocument();
+    // The first error span (child-span) is auto-selected into the right pane.
+    const detail = screen.getByTestId('span-detail');
+    expect(within(detail).getByRole('heading', { name: 'child-span' })).toBeInTheDocument();
 
-    // The <script> payload is rendered as literal text (JsonTree), never as a
-    // live element — the XSS discipline.
-    const escaped = screen.getByText((content) => content.includes('<script>alert(1)</script>'));
-    expect(escaped).toBeInTheDocument();
+    // Selecting the root shows its payload as literal escaped text, never a live element.
+    await user.click(screen.getByText('root-span'));
+    expect(
+      within(screen.getByTestId('span-detail')).getByText((content) =>
+        content.includes('<script>alert(1)</script>'),
+      ),
+    ).toBeInTheDocument();
     expect(document.querySelector('script')).toBeNull();
   });
 
@@ -359,7 +366,7 @@ describe('TracingTab — trace view', () => {
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
 
-  it('surfaces a 404 trace as a loud error', async () => {
+  it('surfaces a 404 trace as a not-available state, not a retry-forever error', async () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockRejectedValue(new ApiError('trace not found', 404)),
     };
@@ -367,7 +374,8 @@ describe('TracingTab — trace view', () => {
       client,
     });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('trace not found');
+    expect(await screen.findByText('Trace not available')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('exports the trace and returns to the runs list on back', async () => {
@@ -419,5 +427,102 @@ describe('TracingTab — the runs pane is reachable without a pointer', () => {
     });
     expect(screen.getByRole('region', { name: 'Runs' })).toBe(pane);
     expect(pane).toHaveAttribute('tabindex', '0');
+  });
+});
+
+describe('TracingTab — A20 run.fetchError badge', () => {
+  it('flags a run whose trace could not be fetched with a "trace unavailable" badge', async () => {
+    const failing: Run = { ...run('r1', 't1'), fetchError: 'langfuse timed out' };
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [failing], page: 1, nextPage: null }),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+
+    const row = await screen.findByTestId('run-row-r1');
+    expect(within(row).getByText('trace unavailable')).toBeInTheDocument();
+  });
+});
+
+describe('TracingTab — A18 manual refresh', () => {
+  it('refetches the runs list when Refresh is clicked', async () => {
+    const user = userEvent.setup();
+    const listRuns = vi
+      .fn()
+      .mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: { listRuns },
+    });
+
+    await screen.findByTestId('run-row-r1');
+    expect(listRuns).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    await waitFor(() => {
+      expect(listRuns).toHaveBeenCalledTimes(2);
+    });
+  });
+});
+
+describe('TracingTab — A7 date-range picker', () => {
+  it('commits a relative preset to the URL window, clearing any explicit `to`', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    const { navigate } = renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client,
+    });
+
+    await screen.findByTestId('run-row-r1');
+    await user.click(screen.getByRole('button', { name: 'Last 7 days' }));
+    expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', from: '7d' });
+  });
+});
+
+describe('TracingTab — A9 metric-sort × filter guard', () => {
+  it('disables a metric-sort header while an incompatible filter is set', async () => {
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', minCost: 5 }} />, { client });
+
+    await screen.findByTestId('run-row-r1');
+    expect(screen.getByRole('button', { name: /Cost/ })).toBeDisabled();
+    // The native timestamp sort stays available with any filter.
+    expect(screen.getByRole('button', { name: /When/ })).toBeEnabled();
+  });
+
+  it('disables the incompatible filters while a metric sort is active', async () => {
+    const client: StubApiClient = {
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    };
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', sort: 'cost' }} />, {
+      client,
+    });
+
+    await screen.findByTestId('run-row-r1');
+    expect(screen.getByLabelText('Min cost')).toBeDisabled();
+    expect(screen.getByLabelText('Max latency (ms)')).toBeDisabled();
+    // Tags are still legal under a metric sort.
+    expect(screen.getByLabelText('Tags (comma-separated)')).toBeEnabled();
+  });
+
+  it('repairs an incompatible sort×filter combo that arrives from the URL', async () => {
+    const listRuns = vi
+      .fn()
+      .mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null });
+    const { navigate } = renderWithProviders(
+      <ObservabilityPage search={{ tab: 'tracing', sort: 'cost', dir: 'asc', minCost: 5 }} />,
+      { client: { listRuns } },
+    );
+
+    await screen.findByTestId('run-row-r1');
+    // The URL is rewritten to the legal, repaired search (the metric sort dropped).
+    expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', minCost: 5 });
+    // The runs query is sent without the illegal metric sort.
+    expect(listRuns).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: undefined, minCost: 5 }),
+      expect.anything(),
+    );
   });
 });

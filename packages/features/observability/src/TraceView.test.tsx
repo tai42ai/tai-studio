@@ -1,11 +1,13 @@
 /**
- * The per-run trace view rendered directly: the query states (loading, 404, 501,
- * empty), the nested span tree with level-driven coloring and escaped payloads,
- * the back action, and the export → download flow (anchor click spied so jsdom
- * logs no navigation while the real export wiring is asserted).
+ * The per-run trace explorer rendered directly: the query/availability states
+ * (loading, 404 → not-available, unavailable, 501, partial + fetchError), the R3
+ * two-pane layout (waterfall left, span detail right), auto-selection of the first
+ * error span, proportional waterfall bars, structural LLM messages, the usage /
+ * metadata panes, escaped payloads, jump-to-error / jump-to-slowest, and the
+ * export → download flow.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError, type RunSpan, type RunTrace } from '@tai42/api-client';
 
@@ -16,27 +18,27 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function span(overrides: Partial<RunSpan>): RunSpan {
+function span(overrides: Partial<RunSpan> & { id: string }): RunSpan {
   return {
-    id: 's1',
     parentId: null,
     traceId: 't1',
-    name: 'root-span',
-    type: 'llm',
-    level: 'DEFAULT',
+    name: overrides.id,
+    type: null,
+    level: null,
     statusMessage: null,
-    start: '2026-01-01T00:00:00.000Z',
-    end: '2026-01-01T00:00:01.500Z',
-    model: 'gpt-4o',
+    start: null,
+    end: null,
+    model: null,
     usage: null,
     metadata: null,
-    input: 'in',
-    output: 'out',
+    input: null,
+    output: null,
     nodeId: null,
     ...overrides,
   };
 }
 
+/** root(0–3s) → { llm-call GENERATION(0.5–2s), tool-call TOOL/ERROR(2.1–2.9s) } */
 function traceFixture(overrides: Partial<RunTrace> = {}): RunTrace {
   return {
     traceId: 't1',
@@ -49,17 +51,38 @@ function traceFixture(overrides: Partial<RunTrace> = {}): RunTrace {
     availability: 'full',
     fetchError: null,
     spans: [
-      span({ id: 's1', parentId: null, input: '<script>alert(1)</script>' }),
       span({
-        id: 's2',
-        parentId: 's1',
-        name: 'child-span',
-        type: 'tool',
+        id: 'root',
+        name: 'root-chain',
+        type: 'chain',
+        start: '2026-01-01T00:00:00.000Z',
+        end: '2026-01-01T00:00:03.000Z',
+        input: '<script>alert(1)</script>',
+      }),
+      span({
+        id: 'gen',
+        parentId: 'root',
+        name: 'llm-call',
+        type: 'GENERATION',
+        model: 'gpt-4o',
+        start: '2026-01-01T00:00:00.500Z',
+        end: '2026-01-01T00:00:02.000Z',
+        usage: { input_tokens: 10, output_tokens: 5 },
+        metadata: { temperature: 0.7 },
+        input: [{ role: 'user', content: 'ping' }],
+        output: 'pong',
+      }),
+      span({
+        id: 'tool',
+        parentId: 'root',
+        name: 'tool-call',
+        type: 'TOOL',
         level: 'ERROR',
         statusMessage: 'boom',
-        start: null,
-        end: null,
-        model: null,
+        start: '2026-01-01T00:00:02.100Z',
+        end: '2026-01-01T00:00:02.900Z',
+        input: { query: 'x' },
+        output: 'tool-out',
       }),
     ],
     ...overrides,
@@ -74,11 +97,9 @@ describe('TraceView', () => {
     renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
     expect(screen.getByRole('button', { name: 'Back to runs' })).toBeInTheDocument();
-    // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
-    // platform fallback face beside Inter. The icon set carries the mark instead.
-    expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
-    expect(screen.queryByText('root-span')).not.toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // `←`/`→` are in NO shipped font subset; the icon set carries the mark instead.
+    expect(document.body.textContent).not.toMatch(/[←→]/u);
+    expect(screen.queryByText('root-chain')).not.toBeInTheDocument();
   });
 
   it('calls onBack when the back button is clicked', async () => {
@@ -87,60 +108,111 @@ describe('TraceView', () => {
     const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
     renderWithProviders(<TraceView traceId="t1" onBack={onBack} />, { client });
 
-    await screen.findByText('root-span');
+    await screen.findByText('root-chain');
     await user.click(screen.getByRole('button', { name: 'Back to runs' }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the nested span tree, tags, and level color, escaping payloads', async () => {
+  it('rolls up the trace into the summary bar (status, duration, leaf-only tokens, cost, spans)', async () => {
     const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
     renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
-    expect(await screen.findByText('root-span')).toBeInTheDocument();
-    const child = screen.getByText('child-span');
-    expect(child).toBeInTheDocument();
-    // The ERROR span name is colored with the canonical error token; the DEFAULT one is not.
-    expect(child).toHaveStyle({ color: 'var(--tai-color-err-text)' });
-    expect(screen.getByText('root-span')).toHaveStyle({ color: 'var(--tai-color-text)' });
-    expect(screen.getByText('boom')).toBeInTheDocument();
+    const summary = await screen.findByTestId('trace-summary');
+    // An error span makes the whole trace error.
+    expect(within(summary).getByText('error')).toBeInTheDocument();
+    expect(within(summary).getByText('3.0s')).toBeInTheDocument();
+    expect(within(summary).getByText('$0.100')).toBeInTheDocument();
+    // Leaf-only tokens: only the generation leaf's 10+5; the wrapper is not counted.
+    expect(within(summary).getByText('15')).toBeInTheDocument();
+    // Span count.
+    expect(within(summary).getByText('3')).toBeInTheDocument();
+    // Trace tags ride along in the summary.
+    expect(within(summary).getByText('alpha')).toBeInTheDocument();
+  });
 
-    expect(screen.getByText('alpha')).toBeInTheDocument();
-    expect(screen.getByText('beta')).toBeInTheDocument();
+  it('renders the waterfall span tree with a proportional bar on the shared axis', async () => {
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
-    // The <script> payload renders as literal escaped text, never a live element.
+    await screen.findByText('root-chain');
+    // Scope the label assertions to the waterfall rows: the auto-selected error
+    // span also titles the detail pane, so its name is present twice on the page.
+    const genRow = document.querySelector<HTMLElement>('[data-span-id="gen"]');
+    const toolRow = document.querySelector<HTMLElement>('[data-span-id="tool"]');
+    if (genRow === null || toolRow === null) throw new Error('the span rows were not rendered');
+    expect(within(genRow).getByText('llm-call')).toBeInTheDocument();
+    expect(within(toolRow).getByText('tool-call')).toBeInTheDocument();
+
+    // The tool span starts 2.1s into a 3s axis, so its bar's left edge is 70%.
+    const bar = toolRow.querySelector<HTMLElement>('div[style*="left:"]');
+    expect(bar?.style.left).toBe('70%');
+  });
+
+  it('auto-selects the first error span and shows its detail on open', async () => {
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    const detail = await screen.findByTestId('span-detail');
+    expect(within(detail).getByRole('heading', { name: 'tool-call' })).toBeInTheDocument();
+    expect(within(detail).getByText('error')).toBeInTheDocument();
+    expect(within(detail).getByText('boom')).toBeInTheDocument();
+    // A tool span labels its payloads Arguments / Result.
+    expect(within(detail).getByText('Arguments')).toBeInTheDocument();
+    expect(within(detail).getByText('Result')).toBeInTheDocument();
+  });
+
+  it('renders a generation span structurally, and its usage + metadata, escaping payloads', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await screen.findByText('llm-call');
+    await user.click(screen.getByText('llm-call'));
+
+    const detail = screen.getByTestId('span-detail');
+    // The message array renders as role-tagged bubbles, not a raw JSON blob.
+    expect(within(detail).getByText('user')).toBeInTheDocument();
+    expect(within(detail).getByText('ping')).toBeInTheDocument();
+    // usage and metadata each get their own pane (both were previously unrendered).
+    expect(within(detail).getByText('Usage')).toBeInTheDocument();
+    expect(within(detail).getByText('Metadata')).toBeInTheDocument();
+  });
+
+  it('shows a selected span payload as escaped text, never a live element', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await user.click(await screen.findByText('root-chain'));
+    const detail = screen.getByTestId('span-detail');
     expect(
-      screen.getByText((content) => content.includes('<script>alert(1)</script>')),
+      within(detail).getByText((content) => content.includes('<script>alert(1)</script>')),
     ).toBeInTheDocument();
     expect(document.querySelector('script')).toBeNull();
   });
 
-  it('names each JSON pane for the span and the side it holds, never all of them "JSON"', async () => {
-    // A `JsonTree` pane becomes a keyboard tab stop the moment it scrolls, and
-    // its name is whatever the call site passed — omitted, EVERY pane in the
-    // trace announces itself as "JSON" and a reader tabbing through cannot tell
-    // one span's input from another span's output. jsdom runs no layout, so the
-    // overflow the region keys on is stated on the prototype for this test.
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, value: 100 });
-    Object.defineProperty(HTMLElement.prototype, 'scrollWidth', { configurable: true, value: 400 });
-    try {
-      const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
-      renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
-      await screen.findByText('root-span');
+  it('jumps to the slowest non-root span on demand', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
-      const names = [...document.querySelectorAll('.tai-code-block')].map((pane) =>
-        pane.getAttribute('aria-label'),
-      );
-      expect(names).toEqual([
-        'root-span input',
-        'root-span output',
-        'child-span input',
-        'child-span output',
-      ]);
-    } finally {
-      // Unshadow the jsdom getters this test hid on the prototype.
-      Reflect.deleteProperty(HTMLElement.prototype, 'clientWidth');
-      Reflect.deleteProperty(HTMLElement.prototype, 'scrollWidth');
-    }
+    await screen.findByText('llm-call');
+    // The generation (1.5s) is the longest non-root span; the root (3s) is ignored.
+    await user.click(screen.getByRole('button', { name: 'Slowest' }));
+    const detail = screen.getByTestId('span-detail');
+    expect(within(detail).getByRole('heading', { name: 'llm-call' })).toBeInTheDocument();
+  });
+
+  it('filters the span list down to matching names', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await screen.findByText('llm-call');
+    await user.type(screen.getByLabelText('Filter spans'), 'llm');
+    // Only the matching span survives in the tree; the others drop out.
+    expect(screen.getByText('llm-call')).toBeInTheDocument();
+    expect(screen.queryByText('root-chain')).not.toBeInTheDocument();
   });
 
   it('renders a placeholder when the trace has no spans', async () => {
@@ -152,7 +224,7 @@ describe('TraceView', () => {
     expect(await screen.findByText('This trace has no recorded spans.')).toBeInTheDocument();
   });
 
-  it('surfaces a partial-availability trace fetch error loudly', async () => {
+  it('surfaces a partial-availability trace as a loud banner over the spans it did load', async () => {
     const client: StubApiClient = {
       getRunTrace: vi
         .fn()
@@ -163,6 +235,20 @@ describe('TraceView', () => {
     renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
     expect(await screen.findByRole('alert')).toHaveTextContent('spans truncated');
+    // The spans that DID load are still shown.
+    expect(screen.getByText('root-chain')).toBeInTheDocument();
+  });
+
+  it('shows a not-available state for an unavailable trace, never a retry loop', async () => {
+    const client: StubApiClient = {
+      getRunTrace: vi
+        .fn()
+        .mockResolvedValue(traceFixture({ availability: 'unavailable', fetchError: 'no detail' })),
+    };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    expect(await screen.findByText('Trace not available')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('renders the read-not-supported state on a 501', async () => {
@@ -174,13 +260,24 @@ describe('TraceView', () => {
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
 
-  it('surfaces a 404 as a loud error', async () => {
+  it('renders a 404 as a not-available state, never a retry-forever error', async () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockRejectedValue(new ApiError('trace not found', 404)),
     };
     renderWithProviders(<TraceView traceId="missing" onBack={vi.fn()} />, { client });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('trace not found');
+    expect(await screen.findByText('Trace not available')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('surfaces a non-404/501 failure as a loud, retryable error', async () => {
+    const client: StubApiClient = {
+      getRunTrace: vi.fn().mockRejectedValue(new ApiError('reader exploded', 500)),
+    };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('reader exploded');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 
   it('exports the trace and streams the blob to a download', async () => {

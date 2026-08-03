@@ -11,6 +11,7 @@ import type { DashboardMetrics } from '@tai42/api-client';
 import {
   Button,
   Card,
+  DateRangePicker,
   EmptyState,
   ErrorState,
   Select,
@@ -28,7 +29,14 @@ import {
   formatTimestamp,
   formatTokenCount,
 } from './format';
-import { metricsParams, mergeSearch, type Granularity, type ObservabilitySearch } from './filters';
+import {
+  metricsParams,
+  mergeSearch,
+  rangeToPatch,
+  searchToRange,
+  type Granularity,
+  type ObservabilitySearch,
+} from './filters';
 import { metricsKey } from './keys';
 import { isReadNotSupported, ReadNotSupported } from './read-support';
 
@@ -161,12 +169,26 @@ export function StatsTab({ search }: { readonly search: ObservabilitySearch }): 
     queryFn: ({ signal }) => api.getObservabilityMetrics(params, signal),
   });
 
-  if (query.isError && isReadNotSupported(query.error)) {
+  // The full-page marketplace pitch is only the right answer before metrics have
+  // ever loaded; a 501 on a refetch of already-loaded data falls through to the
+  // inline error state below rather than blanking the whole dashboard.
+  if (query.isError && isReadNotSupported(query.error) && query.data === undefined) {
     return <ReadNotSupported />;
   }
 
   return (
     <div className="tai-stack tai-stack-6">
+      <Card>
+        <DateRangePicker
+          aria-label="Metrics time range"
+          value={searchToRange(search)}
+          onValueChange={(value) => {
+            navigate('observability', mergeSearch(search, rangeToPatch(value)));
+          }}
+          disabled={query.isFetching}
+        />
+      </Card>
+
       <div className="tai-row">
         <div style={{ width: '10rem' }}>
           <Select
