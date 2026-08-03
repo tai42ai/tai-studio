@@ -43,7 +43,7 @@ async function stubMcp(page: Page): Promise<void> {
 /** Open MCP tab, switch to the JSON view, and dirty the config buffer. */
 async function dirtyTheEditor(page: Page): Promise<void> {
   await page.goto('/manifest');
-  await page.getByRole('tab', { name: 'MCP' }).click();
+  await page.getByRole('tab', { name: 'MCP', exact: true }).click();
   await page
     .getByRole('group', { name: 'Config view' })
     .getByRole('button', { name: 'JSON' })

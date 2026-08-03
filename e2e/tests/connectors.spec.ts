@@ -213,7 +213,7 @@ test('a connector-managed MCP entry renders read-only in the config form', async
   );
 
   await page.goto('/manifest');
-  await page.getByRole('tab', { name: 'MCP' }).click();
+  await page.getByRole('tab', { name: 'MCP', exact: true }).click();
 
   // The managed entry is labelled Managed, explains its owning connection, and its
   // Remove control is disabled — the whole entry is read-only (disconnect to change it).
