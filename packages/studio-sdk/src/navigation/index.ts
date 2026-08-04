@@ -5,6 +5,7 @@ export {
   useResolvePath,
   usePluginNavigation,
   useNavigationGuard,
+  useNavigationGate,
 } from './context';
 export type { AppLinkProps } from './context';
 export type {

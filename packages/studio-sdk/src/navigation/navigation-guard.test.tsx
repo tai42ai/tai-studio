@@ -6,6 +6,7 @@ import {
   AppLink,
   NavigationProvider,
   useAppNavigate,
+  useNavigationGate,
   useNavigationGuard,
   usePluginNavigation,
 } from './context';
@@ -539,5 +540,84 @@ describe('useNavigationGuard — provider requirement', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     expect(() => render(<Bare />)).toThrow(/NavigationProvider/);
     spy.mockRestore();
+  });
+});
+
+/** A chrome link whose target is outside the token map: it must consult the same
+ * armed guards through the gate before it commits its own transition. */
+function ChromeLinkPage({
+  when,
+  handler,
+  onCommit,
+}: {
+  when: boolean;
+  handler: NavigationGuardHandler;
+  onCommit: () => void;
+}) {
+  useNavigationGuard(when, handler);
+  const gate = useNavigationGate();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void gate('/').then((allowed) => {
+          if (allowed) onCommit();
+        });
+      }}
+    >
+      chrome link
+    </button>
+  );
+}
+
+describe('useNavigationGate', () => {
+  it('commits a raw-path transition when no guard is armed', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(
+      <NavigationProvider value={makeNav()}>
+        <ChromeLinkPage when={false} handler={() => true} onCommit={onCommit} />
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'chrome link' }));
+
+    await waitFor(() => {
+      expect(onCommit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('blocks the transition when an armed guard vetoes', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const handler = vi.fn(() => false);
+    render(
+      <NavigationProvider value={makeNav()}>
+        <ChromeLinkPage when handler={handler} onCommit={onCommit} />
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'chrome link' }));
+
+    await waitFor(() => {
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('commits after an armed guard allows', async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    render(
+      <NavigationProvider value={makeNav()}>
+        <ChromeLinkPage when handler={() => Promise.resolve(true)} onCommit={onCommit} />
+      </NavigationProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'chrome link' }));
+
+    await waitFor(() => {
+      expect(onCommit).toHaveBeenCalledTimes(1);
+    });
   });
 });

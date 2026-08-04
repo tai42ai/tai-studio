@@ -93,6 +93,10 @@ class NavigationGuardRegistry {
  */
 const GuardRegistryContext = createContext<NavigationGuardRegistry | null>(null);
 
+/** Records an approved raw-path transition as the committed history entry, so a later
+ * back/forward restores to it exactly as it does after a token navigation. */
+const CommitHrefContext = createContext<((href: string) => void) | null>(null);
+
 function useGuardRegistry(): NavigationGuardRegistry {
   const registry = useContext(GuardRegistryContext);
   if (registry === null) {
@@ -235,10 +239,18 @@ export function NavigationProvider({
     return { ...value, navigate, navigatePlugin };
   }, [value, registry]);
 
+  const commitHref = useCallback((href: string) => {
+    if (committedRef.current !== null) committedRef.current = { href, state: null };
+  }, []);
+
   return createElement(
     GuardRegistryContext.Provider,
     { value: registry },
-    createElement(NavigationContext.Provider, { value: guarded }, children),
+    createElement(
+      CommitHrefContext.Provider,
+      { value: commitHref },
+      createElement(NavigationContext.Provider, { value: guarded }, children),
+    ),
   );
 }
 
@@ -284,6 +296,26 @@ export function useNavigationGuard(when: boolean, handler: NavigationGuardHandle
   useEffect(() => {
     registry.touch();
   }, [registry, when]);
+}
+
+/**
+ * Consult the armed navigation guards before a transition the shell drives itself
+ * (a chrome link whose target is outside the route-token map). Resolves `true` when
+ * the navigation may proceed. Token and plugin navigations already run this gate
+ * inside {@link NavigationProvider}; this is the escape hatch for the shell's own
+ * raw-path links, without which such a link would bypass every armed guard.
+ */
+export function useNavigationGate(): (href: string) => Promise<boolean> {
+  const registry = useGuardRegistry();
+  const commitHref = useContext(CommitHrefContext);
+  return useCallback(
+    async (href: string) => {
+      if (registry.hasArmedGuards() && !(await registry.run())) return false;
+      commitHref?.(href);
+      return true;
+    },
+    [registry, commitHref],
+  );
 }
 
 /**

@@ -29,7 +29,16 @@
  * pass via its route loader). The pass is itself gated on the projection: a scoped
  * session that cannot reach the registry route skips it (absence, not error).
  */
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import { Link, Outlet, useLocation, useRouter, useRouterState } from '@tanstack/react-router';
 import { useStore } from 'zustand';
 import {
@@ -52,7 +61,9 @@ import {
   useAuth,
   useBreakpoint,
   useCapabilities,
+  useNavigationGate,
   usePageFillActive,
+  usePluginNavigation,
   useTheme,
   type CapabilityState,
   type RegisteredNavEntry,
@@ -145,8 +156,9 @@ function NavItem({ token }: { token: FeatureToken }): ReactNode {
 /**
  * A sidebar link a plugin contributed via `registerNavEntry`. It targets the
  * plugin's own page under the shell's catch-all (`/plugins/{pluginId}/{path}`) —
- * a path outside the token-typed feature contract, so it uses the router's own
- * `Link` rather than the token-typed `AppLink`. The optional icon renders in a
+ * a path outside the token-typed feature contract, so it anchors the router's own
+ * `Link` and commits through the SDK's plugin navigation (which consults the armed
+ * unsaved-changes guards) rather than the token-typed `AppLink`. The optional icon renders in a
  * fixed, `aria-hidden` box before the title (the accessible name is the title),
  * with the color inherited from the link; a plugin without an icon gets a fixed
  * empty box so its label aligns with the iconned rows.
@@ -158,8 +170,19 @@ function PluginNavItem({
   entry: RegisteredNavEntry;
   active: boolean;
 }): ReactNode {
-  const href = `/plugins/${entry.pluginId}/${entry.path}`;
+  const { navigatePlugin, resolvePluginPath } = usePluginNavigation();
+  const href = resolvePluginPath(entry.pluginId, entry.path);
   const Icon = entry.icon;
+  const onClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (event.defaultPrevented) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      event.preventDefault();
+      navigatePlugin(entry.pluginId, entry.path);
+    },
+    [navigatePlugin, entry.pluginId, entry.path],
+  );
   return (
     <li>
       {/* `activeOptions.exact` turns OFF the router Link's own prefix-match highlight
@@ -170,6 +193,7 @@ function PluginNavItem({
         className="tai-nav-link"
         activeOptions={{ exact: true }}
         aria-current={active ? 'page' : undefined}
+        onClick={onClick}
       >
         <span
           aria-hidden="true"
@@ -362,17 +386,42 @@ function NavBody({
   );
 }
 
-/** The brand row: the theme-matched mark plus the wordmark. The label hides in the
- * 72 px rail (the mark stands alone there); the mark is decorative, the wordmark is
- * the accessible name where it shows. */
+/**
+ * Click handler for a chrome link whose target lies outside the route-token map.
+ * The router's own `Link` commits a pushState the guard registry never sees, so an
+ * armed unsaved-changes guard must be consulted here before the transition — plain
+ * modified clicks (new tab/window) are left to the browser.
+ */
+function useGuardedChromeLink(href: string): (event: MouseEvent<HTMLAnchorElement>) => void {
+  const gate = useNavigationGate();
+  const router = useRouter();
+  return useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      if (event.defaultPrevented) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+        return;
+      event.preventDefault();
+      void gate(href).then((allowed) => {
+        if (!allowed) return;
+        void router.navigate({ to: href });
+      });
+    },
+    [gate, router, href],
+  );
+}
+
+/** The brand row: the theme-matched mark plus the wordmark, linking home. The mark
+ * is decorative; the label hides in the 72 px rail, so the link carries an explicit
+ * accessible name that survives that collapse. */
 function Brand(): ReactNode {
   const { theme } = useTheme();
+  const onGuardedClick = useGuardedChromeLink('/');
   const src = theme === 'dark' ? '/tai42-logo-icon-dark.png' : '/tai42-logo-icon.png';
   return (
-    <div className="tai-brand">
+    <Link to="/" className="tai-brand" aria-label="TAI42 Studio home" onClick={onGuardedClick}>
       <img className="tai-brand-mark" src={src} alt="" width={24} height={24} />
       <span className="tai-brand-label">TAI42 Studio</span>
-    </div>
+    </Link>
   );
 }
 

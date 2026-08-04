@@ -81,6 +81,7 @@ export {
   useResolvePath,
   usePluginNavigation,
   useNavigationGuard,
+  useNavigationGate,
 } from './navigation';
 export type {
   AppLinkProps,
