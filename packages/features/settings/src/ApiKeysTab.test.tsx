@@ -1,3 +1,6 @@
+// The dialogs here are typing-heavy; userEvent runs without its inter-key delay so
+// a loaded runner cannot push a chain past the suite timeout. No assertion depends on
+// typing cadence.
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -89,7 +92,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('creates a key and shows the minted key once', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
 
@@ -118,7 +121,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('reopens a blank create form with the minted key cleared', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
 
@@ -145,7 +148,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('surfaces a 404 on revoke loudly (unknown user_id)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const revokeApiKey = vi.fn().mockRejectedValue(new ApiError('unknown user_id', 404));
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ revokeApiKey }) });
 
@@ -157,7 +160,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('round-trips policy_data key/value rows into the create body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
 
@@ -181,7 +184,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('does not block save when an inline jq condition fails its Test — warns, and saves anyway', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');
     const validateCondition = vi
       .fn()
@@ -215,7 +218,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('clears the failed-Test warning once the condition is edited', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validateCondition = vi
       .fn()
       .mockRejectedValue(new ApiError('jq: syntax error, unexpected end of file', 400));
@@ -235,7 +238,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('the Test button sends {condition, sample_context} and badges an allowed sample', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn().mockResolvedValue({ ok: true, result: true });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({ validateCondition }),
@@ -259,7 +262,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('the Test button badges a denied sample when the guard returns result false', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn().mockResolvedValue({ ok: true, result: false });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({ validateCondition }),
@@ -274,7 +277,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('the Test button badges compile-only (no sample) when the sample editor is blank', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn().mockResolvedValue({ ok: true, result: null });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({ validateCondition }),
@@ -294,7 +297,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('surfaces the guard 400 lock-out message VERBATIM and never rephrases it', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const lockout =
       'condition rendered empty — this would lock the key out of every request; refusing to save';
     const validateCondition = vi.fn().mockRejectedValue(new ApiError(lockout, 400));
@@ -311,7 +314,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('blocks the Test with a loud field error on malformed sample-context JSON (no request)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn();
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({ validateCondition }),
@@ -330,7 +333,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('template mode sends condition_id + condition_kwargs and never an inline condition', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
 
@@ -362,7 +365,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('pre-fills the edit dialog from the stored policy fields', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const withPolicy: TokensPayload = [
       {
         user_id: 'alice',
@@ -387,7 +390,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('edits a key description and scopes', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ editApiKey }) });
 
@@ -407,7 +410,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('"Remove condition" sends an explicit null clear for the whole condition', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({
@@ -433,7 +436,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('a plain emptied condition textarea preserves the saved condition (no null clear)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({
@@ -458,7 +461,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('"Clear policy data" sends an explicit policy_data null clear', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({
@@ -483,7 +486,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('removing all policy_data rows without the explicit clear preserves the saved value', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({
@@ -507,7 +510,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('re-emits untouched string-valued policy_data VERBATIM (no JSON-type coercion)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     // A stored STRING that LOOKS like a JSON literal — the row editor cannot tell it
     // from the number 7, so re-serializing an untouched editor would coerce it and
@@ -543,7 +546,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('re-emits untouched template condition_kwargs VERBATIM (no JSON-type coercion)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
       {
@@ -582,7 +585,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('re-emits an untouched inline condition VERBATIM (no whitespace normalization)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     // A stored condition carrying surrounding whitespace: a pristine save (only the
     // description changed) must NOT trim it into a changed body + phantom version.
@@ -619,7 +622,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('preserves an inline condition AND its stored kwargs on a pristine save', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     // An INLINE condition can be Jinja-templated and legitimately carry condition_kwargs
     // (enforcement renders inline conditions with kwargs). A description-only save must
@@ -661,7 +664,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('omits condition_kwargs on a pristine template whose stored kwargs are null', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     // A template-mode key whose stored condition_kwargs is null: a description-only save
     // must OMIT condition_kwargs (the PATCH preserves the stored null) rather than send
@@ -698,7 +701,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('switching a seeded template condition to inline mode clears the orphaned kwargs', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
       {
@@ -740,7 +743,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('the clear affordances are absent in create mode (nothing to clear)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())) }),
     });
@@ -753,7 +756,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('revokes a key after confirming', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const revokeApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', revoked: true });
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ revokeApiKey }) });
 
@@ -767,7 +770,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('surfaces a create failure loudly', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockRejectedValue(new Error('user_id already exists'));
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
 
@@ -815,7 +818,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('keeps Create enabled and the create flow intact when minting is available', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-mintable-1');
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({
@@ -914,7 +917,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('shows the mint button to a viewer (non-owned, mint route present) with capped scopes', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub(),
       projection: scopedProjection({ owner_user_id: null, routes: [MINT_ROUTE], scopes: ['read'] }),
@@ -933,7 +936,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('offers the WHOLE scope map to a "*"-scoped session (wildcard, not a concrete id)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // A `"*"` in the projection's scopes is the universal wildcard — it must expand
     // to every scope for minting, not intersect the concrete map to nothing.
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -949,7 +952,7 @@ describe('ApiKeysTab', () => {
   });
 
   it('shows the mint button with the full scope map for a full projection', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub(),
       projection: fullProjection(),
