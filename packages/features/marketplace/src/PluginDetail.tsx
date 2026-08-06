@@ -31,6 +31,7 @@ import {
   Table,
   TagChips,
   errorMessage,
+  featureDisabledMessage,
   isFeatureDisabled,
   useApi,
   useProseScrollRegions,
@@ -346,10 +347,11 @@ export function PluginDetail({
   // show the muted OFF note. Browse/detail reads never need the store, so they stay
   // untouched. Uninstall is folded in for symmetry even though its button unmounts
   // when the store is off (an unconfigured store carries no installed rows to remove).
-  const storeDisabled =
-    isFeatureDisabled(installMutation.error) ||
-    isFeatureDisabled(updateMutation.error) ||
-    isFeatureDisabled(uninstallMutation.error);
+  const storeRefusal = [installMutation.error, updateMutation.error, uninstallMutation.error].find(
+    isFeatureDisabled,
+  );
+  const storeRefusalMessage =
+    storeRefusal !== undefined ? featureDisabledMessage(storeRefusal) : null;
 
   const detail = detailQuery.data;
   const matching =
@@ -377,7 +379,7 @@ export function PluginDetail({
       <ActionsCard
         detail={detail}
         installedQuery={installedQuery}
-        storeDisabled={storeDisabled}
+        storeRefusalMessage={storeRefusalMessage}
         onOpen={(action) => {
           setActiveAction(action);
         }}
@@ -453,7 +455,7 @@ export function PluginDetail({
             isFeatureDisabled(installMutation.error) ? (
               <FeatureDisabled
                 feature="Marketplace installs"
-                envVar="MARKETPLACE_STORE_PG_PASSWORD"
+                message={featureDisabledMessage(installMutation.error)}
               />
             ) : undefined
           }
@@ -481,7 +483,7 @@ export function PluginDetail({
             isFeatureDisabled(updateMutation.error) ? (
               <FeatureDisabled
                 feature="Marketplace installs"
-                envVar="MARKETPLACE_STORE_PG_PASSWORD"
+                message={featureDisabledMessage(updateMutation.error)}
               />
             ) : undefined
           }
@@ -532,14 +534,15 @@ function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
 function ActionsCard({
   detail,
   installedQuery,
-  storeDisabled,
+  storeRefusalMessage,
   onOpen,
 }: {
   readonly detail: MarketplacePluginDetail;
   readonly installedQuery: ReturnType<typeof useQuery<MarketplaceInstalled, Error>>;
-  readonly storeDisabled: boolean;
+  readonly storeRefusalMessage: string | null;
   readonly onOpen: (action: ActiveAction) => void;
 }): ReactNode {
+  const storeDisabled = storeRefusalMessage !== null;
   const ref = `${detail.namespace}/${detail.name}`;
 
   if (installedQuery.isPending) {
@@ -605,8 +608,8 @@ function ActionsCard({
           </>
         )}
       </div>
-      {storeDisabled ? (
-        <FeatureDisabled feature="Marketplace installs" envVar="MARKETPLACE_STORE_PG_PASSWORD" />
+      {storeRefusalMessage !== null ? (
+        <FeatureDisabled feature="Marketplace installs" message={storeRefusalMessage} />
       ) : null}
     </Card>
   );

@@ -85,7 +85,8 @@ export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agen
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the first-owner bootstrap gate to a known token so the
 # runner can seed the owner deterministically, and tell boot.sh to apply the accounts
-# schema + export the TAI_ACCOUNTS_PG_*/VERSIONING_STORE_* env (see boot.sh). The
+# schema (the accounts tables live in the `default` named database boot.sh configures via
+# TAI_DATABASE_DEFAULT_PG_*, see boot.sh). The
 # seeded sk- studio key still authenticates every signed-in shot (redis provider);
 # the accounts provider only adds the password-login + users-admin surfaces.
 export ACCESS_CONTROL_AUTH_PROVIDERS='["accounts-postgres", "redis"]'

@@ -64,7 +64,12 @@ export {
   coversWrite,
 } from './hooks/useCapabilities';
 export type { CapabilityState, CapabilityContextValue } from './hooks/useCapabilities';
-export { SystemKindsProvider, useSystemKinds, useFeatureOff } from './hooks/useSystemKinds';
+export {
+  SystemKindsProvider,
+  useSystemKinds,
+  useFeatureOff,
+  useFeatureOffMessage,
+} from './hooks/useSystemKinds';
 export type { SystemKindsState } from './hooks/useSystemKinds';
 export { ThemeProvider, useTheme } from './hooks/useTheme';
 export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
@@ -99,7 +104,7 @@ export { errorMessage } from './errors';
 export { downloadBlob } from './download';
 
 // -- Disabled-feature idiom (one helper + component, every consumer) ----------
-export { isFeatureDisabled, FeatureDisabled } from './feature-disabled';
+export { isFeatureDisabled, featureDisabledMessage, FeatureDisabled } from './feature-disabled';
 export type { FeatureDisabledProps } from './feature-disabled';
 
 // -- Cross-feature query keys ------------------------------------------------

@@ -188,7 +188,7 @@ describe('SettingsTab', () => {
           fields: [
             {
               name: 'pg_host',
-              env_var: 'TAI_DB_PG_HOST',
+              env_var: 'TAI_DATABASE_DEFAULT_PG_HOST',
               type: 'string',
               default: null,
               required: false,

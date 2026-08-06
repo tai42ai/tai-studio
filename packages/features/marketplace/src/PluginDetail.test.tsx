@@ -383,7 +383,13 @@ describe('PluginDetail — install flow', () => {
     const user = userEvent.setup();
     const installMarketplacePlugin = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'marketplace-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'marketplace-not-configured',
+        ),
+      );
     const client: StubApiClient = { ...reads(detailFixture(), []), installMarketplacePlugin };
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
 
@@ -392,12 +398,15 @@ describe('PluginDetail — install flow', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Install' }));
 
     // The 501 surfaces the muted OFF note on the actions card (outside the dialog),
-    // naming the env var. The dialog carries its own note too, so scope to the card.
+    // showing the server's message. The dialog carries its own note too, so scope to
+    // the card.
     const cardNote = (await screen.findAllByTestId('feature-disabled')).find(
       (node) => !dialog.contains(node),
     );
     expect(cardNote).toBeDefined();
-    expect(cardNote).toHaveTextContent('MARKETPLACE_STORE_PG_PASSWORD');
+    expect(cardNote).toHaveTextContent(
+      'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
 
     // The actions-card Install button is disabled. `hidden: true` reaches it: while the
     // confirm dialog is open, Radix marks the page background aria-hidden, so the plain
@@ -412,7 +421,13 @@ describe('PluginDetail — install flow', () => {
     const user = userEvent.setup();
     const installMarketplacePlugin = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'marketplace-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'marketplace-not-configured',
+        ),
+      );
     const client: StubApiClient = { ...reads(detailFixture(), []), installMarketplacePlugin };
     renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
 
@@ -420,10 +435,12 @@ describe('PluginDetail — install flow', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Install' }));
 
-    // The 501 renders the muted OFF note in the dialog body, naming the env var — and
-    // NO loud red ErrorState (role="alert") anywhere on the page.
+    // The 501 renders the muted OFF note in the dialog body, showing the server's
+    // message — and NO loud red ErrorState (role="alert") anywhere on the page.
     const note = await within(dialog).findByTestId('feature-disabled');
-    expect(note).toHaveTextContent('MARKETPLACE_STORE_PG_PASSWORD');
+    expect(note).toHaveTextContent(
+      'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
     expect(within(dialog).queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
 

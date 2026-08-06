@@ -37,7 +37,7 @@ import {
   Table,
   errorMessage,
   useApi,
-  useFeatureOff,
+  useFeatureOffMessage,
 } from '@tai42/studio-sdk';
 
 import { CreatePresetForm } from './CreatePresetForm';
@@ -185,7 +185,10 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
   // the create affordance is WITHDRAWN and the muted OFF note stands where it was, so
   // the operator never opens a form whose every submit is certain to refuse. OFF is a
   // state, not an error.
-  const versioningOff = useFeatureOff('versioning');
+  // Proactive OFF read off the kind-status table (no write is attempted here): the
+  // server's own `detail` line is the remediation message.
+  const versioningOffMessage = useFeatureOffMessage('versioning');
+  const versioningOff = versioningOffMessage !== null;
 
   const overlayByTool = new Map<string, OverlayDetail>(
     (metaQuery.data?.meta ?? []).map((row) => [
@@ -227,12 +230,12 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
         </div>
       </header>
 
-      {versioningOff ? (
+      {versioningOffMessage !== null ? (
         // The versioning store is OFF, so the preset store is empty and create is
         // refused: stand the muted OFF note where the create-oriented empty state and
         // its "Create a preset…" call to action would otherwise mislead.
         <Card>
-          <FeatureDisabled feature="Preset versioning" envVar="VERSIONING_STORE_PG_PASSWORD" />
+          <FeatureDisabled feature="Preset versioning" message={versioningOffMessage} />
         </Card>
       ) : query.isPending ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>

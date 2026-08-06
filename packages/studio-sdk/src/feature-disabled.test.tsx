@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { FeatureDisabled, isFeatureDisabled } from './feature-disabled';
+import { FeatureDisabled, featureDisabledMessage, isFeatureDisabled } from './feature-disabled';
 
 /**
  * An ApiError-shaped value built WITHOUT importing `@tai42/api-client` — the SDK is
@@ -50,9 +50,35 @@ describe('isFeatureDisabled', () => {
   });
 });
 
+describe('featureDisabledMessage', () => {
+  it("returns the server's message verbatim when present", () => {
+    const error = apiErrorLike(501, 'interactions-not-configured');
+    (error as { message: string }).message =
+      'the interactions store is not configured: set INTERACTIONS_REDIS_URL';
+    expect(featureDisabledMessage(error)).toBe(
+      'the interactions store is not configured: set INTERACTIONS_REDIS_URL',
+    );
+  });
+
+  it('falls back to the machine code when the refusal carries no message', () => {
+    expect(featureDisabledMessage({ status: 501, code: 'marketplace-not-configured' })).toBe(
+      'marketplace-not-configured',
+    );
+  });
+
+  it('raises loudly when the refusal carries neither a message nor a code', () => {
+    expect(() => featureDisabledMessage({ status: 501 })).toThrow(/neither a message nor a code/);
+  });
+});
+
 describe('FeatureDisabled', () => {
-  it('names the feature and the enabling env var as a muted status, never an alert', () => {
-    render(<FeatureDisabled feature="Interactions" envVar="INTERACTIONS_REDIS_URL" />);
+  it("names the feature and shows the server's message as a muted status, never an alert", () => {
+    render(
+      <FeatureDisabled
+        feature="Interactions"
+        message="the interactions store is not configured: set INTERACTIONS_REDIS_URL"
+      />,
+    );
     expect(screen.getByTestId('feature-disabled')).toBeInTheDocument();
     expect(screen.getByText('Interactions is not configured')).toBeInTheDocument();
     expect(screen.getByText(/INTERACTIONS_REDIS_URL/)).toBeInTheDocument();

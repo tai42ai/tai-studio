@@ -372,7 +372,13 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup();
     const createPreset = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'versioning-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'versioning is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'versioning-not-configured',
+        ),
+      );
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
@@ -380,7 +386,9 @@ describe('CreatePresetForm', () => {
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
     const note = await screen.findByTestId('feature-disabled');
-    expect(note).toHaveTextContent('VERSIONING_STORE_PG_PASSWORD');
+    expect(note).toHaveTextContent(
+      'versioning is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
@@ -390,7 +398,13 @@ describe('CreatePresetForm', () => {
     const user = userEvent.setup();
     const validatePreset = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'versioning-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'versioning is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'versioning-not-configured',
+        ),
+      );
     const client = baseClient({ validatePreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
@@ -398,7 +412,9 @@ describe('CreatePresetForm', () => {
     await user.click(screen.getByRole('button', { name: 'Validate' }));
 
     const note = await screen.findByTestId('feature-disabled');
-    expect(note).toHaveTextContent('VERSIONING_STORE_PG_PASSWORD');
+    expect(note).toHaveTextContent(
+      'versioning is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();

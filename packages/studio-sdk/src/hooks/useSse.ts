@@ -137,6 +137,9 @@ function parseAddFrame(data: string): Interaction | null {
     sensitive,
     server_verified,
     channel,
+    recipient,
+    origin,
+    audience,
     media,
   } = obj;
   if (typeof interaction_id !== 'string') return null;
@@ -161,6 +164,12 @@ function parseAddFrame(data: string): Interaction | null {
   // only for a channel-delivered question; absent stays undefined, a present
   // non-string is malformed.
   if (channel !== undefined && typeof channel !== 'string') return null;
+  // Attribution fields are each z.string().optional(): `recipient` (delivery
+  // address), `origin` (asking run id), `audience` (addressed user_id) ride the
+  // frame only when set; absent stays undefined, a present non-string is malformed.
+  if (recipient !== undefined && typeof recipient !== 'string') return null;
+  if (origin !== undefined && typeof origin !== 'string') return null;
+  if (audience !== undefined && typeof audience !== 'string') return null;
   // `media` is z.array(z.unknown()).optional(): the display-only media rides the
   // frame only when the question carries some; absent stays undefined, a present
   // non-array is malformed. The ITEMS stay unknown here (loose by design) — each is
@@ -177,6 +186,9 @@ function parseAddFrame(data: string): Interaction | null {
     sensitive: sensitive ?? false,
     ...(typeof server_verified === 'boolean' ? { server_verified } : {}),
     ...(typeof channel === 'string' ? { channel } : {}),
+    ...(typeof recipient === 'string' ? { recipient } : {}),
+    ...(typeof origin === 'string' ? { origin } : {}),
+    ...(typeof audience === 'string' ? { audience } : {}),
     ...(Array.isArray(media) ? { media } : {}),
   };
 }

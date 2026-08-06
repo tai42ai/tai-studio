@@ -438,8 +438,16 @@ describe('interactions store not configured — honest OFF state', () => {
   /** A client whose interactions stream is terminally 501 `interactions-not-configured`. */
   function offClient(): ApiClient {
     return {
+      // Mirrors the parsed 501 envelope the client produces from the skeleton's OFF
+      // store: the verbatim remediation message plus its machine `code`.
       streamInteractions: () =>
-        Promise.reject(new ApiError('not configured', 501, 'interactions-not-configured')),
+        Promise.reject(
+          new ApiError(
+            'the interactions store is not configured: set INTERACTIONS_REDIS_URL (or TAI_DEFAULT_REDIS_URL)',
+            501,
+            'interactions-not-configured',
+          ),
+        ),
       answerInteraction: vi.fn().mockResolvedValue(undefined),
       listChannels: vi.fn().mockResolvedValue({ channels: [] }),
     } as unknown as ApiClient;
@@ -454,7 +462,11 @@ describe('interactions store not configured — honest OFF state', () => {
 
     expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
     expect(screen.getByText('Interactions is not configured')).toBeInTheDocument();
-    expect(screen.getByText(/INTERACTIONS_REDIS_URL/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'the interactions store is not configured: set INTERACTIONS_REDIS_URL (or TAI_DEFAULT_REDIS_URL)',
+      ),
+    ).toBeInTheDocument();
     // The OFF state is muted (role=status), not the loud stream ErrorState (role=alert).
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -797,6 +809,86 @@ describe('channel-delivered interaction — "via <channel>" badge', () => {
 
     expect(screen.getByTestId('interaction-answered')).toBeInTheDocument();
     expect(screen.getByTestId('interaction-channel')).toHaveTextContent('via telegram');
+  });
+});
+
+describe('interaction attribution — recipient / audience / origin badges', () => {
+  /** An add frame carrying any subset of the optional attribution fields. */
+  function attributionJson(
+    interactionId: string,
+    attribution: { recipient?: string; audience?: string; origin?: string } = {},
+  ): string {
+    const data: Record<string, unknown> = {
+      interaction_id: interactionId,
+      group_id: `g-${interactionId}`,
+      answer_format: 'text',
+      question: 'Reply on your phone',
+      format_payload: {},
+      created_at: '2026-07-04T00:00:00Z',
+      timeout_at: '2026-07-04T00:05:00Z',
+    };
+    if (attribution.recipient !== undefined) data.recipient = attribution.recipient;
+    if (attribution.audience !== undefined) data.audience = attribution.audience;
+    if (attribution.origin !== undefined) data.origin = attribution.origin;
+    return encodeInteraction(data);
+  }
+
+  it('shows all three attribution badges when the add frame carries them', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      attributionJson('q-attr', {
+        recipient: 'wa:+15551234',
+        audience: 'user-42',
+        origin: 'run-abc',
+      }),
+    );
+
+    expect(screen.getByTestId('interaction-recipient')).toHaveTextContent('to wa:+15551234');
+    expect(screen.getByTestId('interaction-audience')).toHaveTextContent('for user-42');
+    expect(screen.getByTestId('interaction-origin')).toHaveTextContent('run run-abc');
+  });
+
+  it('shows only the attribution fields the frame carries', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      attributionJson('q-partial', { origin: 'run-abc' }),
+    );
+
+    expect(screen.getByTestId('interaction-attribution')).toBeInTheDocument();
+    expect(screen.getByTestId('interaction-origin')).toHaveTextContent('run run-abc');
+    expect(screen.queryByTestId('interaction-recipient')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('interaction-audience')).not.toBeInTheDocument();
+  });
+
+  it('renders no attribution block when the frame carries none (card unchanged)', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(channel, 'interaction.add', attributionJson('q-none'));
+
+    expect(screen.getByTestId('interaction-card')).toBeInTheDocument();
+    expect(screen.queryByTestId('interaction-attribution')).not.toBeInTheDocument();
+  });
+
+  it('keeps the attribution badges on the answered card (they survive the flip)', async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      attributionJson('q-attr', {
+        recipient: 'wa:+15551234',
+        audience: 'user-42',
+        origin: 'run-abc',
+      }),
+    );
+    await emitFrame(channel, 'interaction.answered', idJson('q-attr'));
+
+    expect(screen.getByTestId('interaction-answered')).toBeInTheDocument();
+    expect(screen.getByTestId('interaction-recipient')).toHaveTextContent('to wa:+15551234');
+    expect(screen.getByTestId('interaction-audience')).toHaveTextContent('for user-42');
+    expect(screen.getByTestId('interaction-origin')).toHaveTextContent('run run-abc');
   });
 });
 

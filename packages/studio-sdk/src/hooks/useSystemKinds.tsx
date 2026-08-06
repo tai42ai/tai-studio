@@ -95,3 +95,17 @@ export function useFeatureOff(kind: string): boolean {
   if (state.status !== 'ready') return false;
   return state.kinds.some((row) => row.kind === kind && row.state === 'off');
 }
+
+/**
+ * The OFF row's server `detail` for `kind` — the proactive counterpart to a write
+ * refusal's message, so a proactively-hidden surface shows the SERVER's own
+ * remediation line rather than a client-composed env-var string. `null` whenever the
+ * kind is not reported OFF (table loading/failed, no provider, unknown kind, or the
+ * kind is on), mirroring `useFeatureOff`'s not-off-until-known default.
+ */
+export function useFeatureOffMessage(kind: string): string | null {
+  const state = useSystemKinds();
+  if (state.status !== 'ready') return null;
+  const row = state.kinds.find((entry) => entry.kind === kind && entry.state === 'off');
+  return row ? row.detail : null;
+}

@@ -23,6 +23,8 @@ import {
   FolderPicker,
   OverlayDetailsFields,
   RadioGroup,
+  featureDisabledMessage,
+  isFeatureDisabled,
   overlayDetailsPatch,
   type Folder,
 } from '@tai42/studio-sdk';
@@ -59,8 +61,8 @@ export interface ToolMetaEditDialogProps {
   readonly onCreateFolder: (name: string, parentId: string | null) => Promise<string>;
   readonly onSubmit: (patch: ToolMetaPatch) => void;
   readonly saving: boolean;
-  /** The tool_meta store is unconfigured: the overlay write refused with a 501. */
-  readonly disabled: boolean;
+  /** The overlay write's error; a 501 `tool-meta-not-configured` stands the disabled note. */
+  readonly writeError: unknown;
 }
 
 /** The dialog shell; the form body is keyed by the tool so it resets per tool. */
@@ -72,7 +74,7 @@ export function ToolMetaEditDialog({
   onCreateFolder,
   onSubmit,
   saving,
-  disabled,
+  writeError,
 }: ToolMetaEditDialogProps): ReactNode {
   return (
     <Dialog
@@ -81,10 +83,10 @@ export function ToolMetaEditDialog({
       title={`Edit ${tool.name}`}
       description="Organize this tool: its display name, your tags, its folder, and its visibility."
     >
-      {disabled ? (
+      {isFeatureDisabled(writeError) ? (
         // The overlay write refused with a 501 `tool-meta-not-configured`: the store
         // is off, so the form cannot save. Show the muted OFF note in place of it.
-        <FeatureDisabled feature="Tool metadata" envVar="TOOL_META_STORE_PG_PASSWORD" />
+        <FeatureDisabled feature="Tool metadata" message={featureDisabledMessage(writeError)} />
       ) : (
         <EditForm
           key={tool.name}

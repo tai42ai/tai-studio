@@ -161,7 +161,13 @@ describe('AutoFormRunPanel — validation + run', () => {
     const user = userEvent.setup();
     const submitToolRun = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'tool-runs-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'background tool runs are not configured: set TAI_TOOL_RUNS_REDIS_URL',
+          501,
+          'tool-runs-not-configured',
+        ),
+      );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,
@@ -174,9 +180,11 @@ describe('AutoFormRunPanel — validation + run', () => {
 
     await user.click(await findEnabled('Run in background'));
 
-    // The 501 is rendered as the muted OFF note (naming the env var), never a red error.
+    // The 501 is rendered as the muted OFF note (the server's message), never a red error.
     expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
-    expect(screen.getByText(/TAI_TOOL_RUNS_REDIS_URL/)).toBeInTheDocument();
+    expect(
+      screen.getByText('background tool runs are not configured: set TAI_TOOL_RUNS_REDIS_URL'),
+    ).toBeInTheDocument();
     // The background door is withdrawn; the sync Run door is unaffected.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Run in background' })).toBeNull();

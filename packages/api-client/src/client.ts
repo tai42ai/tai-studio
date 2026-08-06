@@ -11,6 +11,7 @@ import {
   apiRequest,
   apiText,
   encodeSegment,
+  extractError,
   isUnsafePathSegment,
 } from './http';
 import { ApiError, ApiLoginFailedError, ApiUnauthorizedError } from './errors';
@@ -998,8 +999,24 @@ export function createApiClient(config: ApiConfig) {
       if (response.status === 401) throw new ApiUnauthorizedError();
       // A non-ok stream open (5xx/4xx) still carries a body, which would parse to
       // zero frames and look like a silently-empty stream — surface it loudly so
-      // the caller shows an error instead of hanging on a reconnect loop.
-      if (!response.ok) throw new ApiError(response.statusText || 'stream failed', response.status);
+      // the caller shows an error instead of hanging on a reconnect loop. Read the
+      // `{ "error" }` envelope so a load-bearing server message (e.g. the OFF
+      // store's 501 remediation line) surfaces verbatim instead of collapsing to
+      // the bare status text.
+      if (!response.ok) {
+        let payload: unknown;
+        try {
+          payload = await response.json();
+        } catch {
+          throw new ApiError(response.statusText || 'stream failed', response.status);
+        }
+        const { message, code } = extractError(payload);
+        throw new ApiError(
+          message ?? (response.statusText || 'stream failed'),
+          response.status,
+          code,
+        );
+      }
       return readSseFrames(response, signal);
     },
   } as const;

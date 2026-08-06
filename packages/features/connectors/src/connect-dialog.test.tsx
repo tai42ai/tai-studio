@@ -192,7 +192,13 @@ describe('ConnectDialog', () => {
     const user = userEvent.setup();
     const startConnect = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'connectors-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'the connectors store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'connectors-not-configured',
+        ),
+      );
     renderWithProviders(<ConnectDialog provider={provider()} onClose={vi.fn()} />, {
       client: makeClient({ startConnect }),
     });
@@ -204,9 +210,12 @@ describe('ConnectDialog', () => {
       expect(startConnect).toHaveBeenCalled();
     });
 
-    // The 501 renders the muted OFF note naming the env var — and NO loud red alert.
+    // The 501 renders the muted OFF note showing the server's message — and NO loud
+    // red alert.
     const note = await screen.findByTestId('feature-disabled');
-    expect(note).toHaveTextContent('CONNECTOR_STORE_PG_PASSWORD');
+    expect(note).toHaveTextContent(
+      'the connectors store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
     expect(screen.queryByRole('alert')).toBeNull();
 
     // The Connect button can no longer re-fire the certain-to-refuse connect.

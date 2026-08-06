@@ -65,22 +65,17 @@ TOOL_RUNS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/3"
 HOOKS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/4"
 PG_HOST_PORT=55432
 
-# The accounts docs-demo (APPLY_ACCOUNTS_DDL=1, set by docs-screenshots.sh) needs the
-# accounts plugin's own Postgres env group pointed at the SAME compose database:
-#   TAI_ACCOUNTS_PG_*    the accounts plugin's own tables (the
-#                        PostgresConnectionSettings field `pg_host` under the
-#                        `TAI_ACCOUNTS_` env_prefix reads `TAI_ACCOUNTS_PG_HOST`).
-# (The `VERSIONING_STORE_*` group, which also backs the seeded role templates, is
-# exported in step 5.)
-# Exported here (before the DDL apply and the skeleton launch, both of which read
-# them) using PG_HOST_PORT; gated so the lean e2e boot is untouched.
-if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
-  export TAI_ACCOUNTS_PG_HOST=127.0.0.1
-  export TAI_ACCOUNTS_PG_PORT="${PG_HOST_PORT}"
-  export TAI_ACCOUNTS_PG_USER=postgres
-  export TAI_ACCOUNTS_PG_PASSWORD=postgres
-  export TAI_ACCOUNTS_PG_DB=tai
-fi
+# The one named "default" database every store binds to (TAI_DB_BINDING_* unset, so
+# each component's chain, guard, and stores resolve to `default`): the access-control
+# policy store, the versioning history, the tool-meta overlay, the connector store, and
+# the accounts plugin's own tables all read this single TAI_DATABASE_DEFAULT_PG_* group.
+# Points at the compose Postgres the DDL is applied to and the seeds are written to.
+# Exported before the accounts DDL apply and the skeleton launch, both of which read it.
+export TAI_DATABASE_DEFAULT_PG_HOST=127.0.0.1
+export TAI_DATABASE_DEFAULT_PG_PORT="${PG_HOST_PORT}"
+export TAI_DATABASE_DEFAULT_PG_USER=postgres
+export TAI_DATABASE_DEFAULT_PG_PASSWORD=postgres
+export TAI_DATABASE_DEFAULT_PG_DB=tai
 
 # A deterministic throwaway base64 32-byte key (test-only).
 TEST_B64_KEY="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
@@ -161,9 +156,10 @@ fi
 # Apply the tai42-accounts-postgres schema (accounts_users / accounts_sessions /
 # accounts_invites) when the docs-screenshot runner requests it. The plugin owns
 # its tables out-of-band via `python -m tai42_accounts_postgres.db apply` (idempotent),
-# which connects through the TAI_ACCOUNTS_PG_* env the runner exports. Gated so the
-# lean e2e boot (no accounts plugin installed) is untouched. The compose Postgres is
-# already up (step 1) and the plugin is installed above, so this runs cleanly here.
+# which connects through the default database's TAI_DATABASE_DEFAULT_PG_* env exported
+# above. Gated so the lean e2e boot (no accounts plugin installed) is untouched. The
+# compose Postgres is already up (step 1) and the plugin is installed above, so this
+# runs cleanly here.
 if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
   log "applying tai42-accounts-postgres schema (python -m tai42_accounts_postgres.db apply)"
   "${VENV_PY}" -m tai42_accounts_postgres.db apply >&2
@@ -207,34 +203,11 @@ export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/)(?!interact
 # --- 5. Skeleton env + launch -----------------------------------------------
 export ACCESS_CONTROL_ENABLE=true
 export ACCESS_CONTROL_REDIS_URL="${REDIS_URL}"
-# The access-control POLICY store is Postgres (policy bodies + route mappings); it
-# has its own `ACCESS_CONTROL_STORE_*` DSN namespace. Point it at the compose
-# Postgres the DDL was applied to and the seeds above were written to.
-export ACCESS_CONTROL_STORE_PG_HOST=127.0.0.1
-export ACCESS_CONTROL_STORE_PG_PORT="${PG_HOST_PORT}"
-export ACCESS_CONTROL_STORE_PG_USER=postgres
-export ACCESS_CONTROL_STORE_PG_PASSWORD=postgres
-export ACCESS_CONTROL_STORE_PG_DB=tai
-
-# The versioned-document store (`VERSIONING_STORE_*` DSN) backs the policy-version
-# history every api-key mint/edit appends. Point it at the same compose Postgres.
-export VERSIONING_STORE_PG_HOST=127.0.0.1
-export VERSIONING_STORE_PG_PORT="${PG_HOST_PORT}"
-export VERSIONING_STORE_PG_USER=postgres
-export VERSIONING_STORE_PG_PASSWORD=postgres
-export VERSIONING_STORE_PG_DB=tai
-
-# The tool-metadata overlay store (`TOOL_META_STORE_*` DSN) backs the tools page's
-# folder tree + per-tool overlay. Every ToolsPage GETs `/api/tool-meta` on mount and
-# that read ALWAYS hits the store (list folders + list overlay rows), so it must
-# resolve — point it at the same compose Postgres (its `tool_folders` + `tool_meta`
-# tables ship in the init.sql applied above). Without this the store falls back to
-# its localhost:5432 default and the read 500s instead of serving the empty overlay.
-export TOOL_META_STORE_PG_HOST=127.0.0.1
-export TOOL_META_STORE_PG_PORT="${PG_HOST_PORT}"
-export TOOL_META_STORE_PG_USER=postgres
-export TOOL_META_STORE_PG_PASSWORD=postgres
-export TOOL_META_STORE_PG_DB=tai
+# The access-control policy store (policy bodies + route mappings), the versioned-document
+# store (the policy-version history every api-key mint/edit appends), and the tool-metadata
+# overlay store (the tools page's folder tree + per-tool overlay, read on every ToolsPage
+# mount) all bind to the `default` named database exported above, so no per-store DSN is set
+# here. Their tables ship in the init.sql applied above.
 export STUDIO_DIST_PATH="${STUDIO_DIST}"
 
 # Interactions (ask_user): its Redis defaults to loopback :6379 and always
@@ -265,11 +238,6 @@ export CONNECTORS_KEK="${TEST_B64_KEY}"
 export CONNECTORS_REDIRECT_URI_ALLOWLIST="http://127.0.0.1:${STUDIO_PORT}"
 # export CONNECTORS_OAUTH_BRIDGE_URL="http://127.0.0.1:${STUDIO_PORT}"  # opt-in bridge
 export CONNECTOR_STORE_REDIS_URL="${CONNECTOR_STORE_REDIS_URL}"
-export CONNECTOR_STORE_PG_HOST=127.0.0.1
-export CONNECTOR_STORE_PG_PORT="${PG_HOST_PORT}"
-export CONNECTOR_STORE_PG_USER=postgres
-export CONNECTOR_STORE_PG_PASSWORD=postgres
-export CONNECTOR_STORE_PG_DB=tai
 
 log "launching tai serve on http://127.0.0.1:${STUDIO_PORT} (access control ON)"
 log "  API key (test-only): ${STUDIO_API_KEY}"

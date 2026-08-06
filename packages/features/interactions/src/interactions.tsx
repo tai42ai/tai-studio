@@ -35,6 +35,7 @@ import {
   EmptyState,
   ErrorState,
   FeatureDisabled,
+  featureDisabledMessage,
   PageHeader,
   Skeleton,
   Stack,
@@ -370,8 +371,9 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
       <ChannelsCard />
       {stream.disabled ? (
         // The interactions store is unconfigured (terminal 501): render the muted
-        // OFF note naming the enabling env var, never the loud red stream error.
-        <FeatureDisabled feature="Interactions" envVar="INTERACTIONS_REDIS_URL" />
+        // OFF note carrying the server's remediation message, never the loud red
+        // stream error.
+        <FeatureDisabled feature="Interactions" message={featureDisabledMessage(stream.error)} />
       ) : (
         <>
           {errorMessage !== null ? <ErrorState message={errorMessage} /> : null}

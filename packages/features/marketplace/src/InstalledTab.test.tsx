@@ -309,16 +309,26 @@ describe('InstalledTab — upgrade all', () => {
       getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
       upgradeAllMarketplacePlugins: vi
         .fn()
-        .mockRejectedValue(new ApiError('not configured', 501, 'marketplace-not-configured')),
+        .mockRejectedValue(
+          new ApiError(
+            'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+            501,
+            'marketplace-not-configured',
+          ),
+        ),
     };
     renderWithProviders(<InstalledTab search={{}} />, { client });
 
     await screen.findByRole('table');
     await user.click(screen.getByRole('button', { name: 'Upgrade all' }));
 
-    // The 501 is the muted OFF note (naming the env var), never a red error.
+    // The 501 is the muted OFF note (the server's message), never a red error.
     expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
-    expect(screen.getByText(/MARKETPLACE_STORE_PG_PASSWORD/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Upgrade all' })).toBeDisabled();

@@ -49,7 +49,7 @@ function renderDialog(tool: ToolView) {
       onCreateFolder={onCreateFolder}
       onSubmit={onSubmit}
       saving={false}
-      disabled={false}
+      writeError={null}
     />,
   );
   return { onSubmit, onOpenChange };
@@ -175,12 +175,21 @@ describe('ToolMetaEditDialog — store not configured', () => {
         onCreateFolder={vi.fn(() => Promise.resolve('f-new'))}
         onSubmit={vi.fn()}
         saving={false}
-        disabled
+        writeError={{
+          status: 501,
+          code: 'tool-meta-not-configured',
+          message:
+            'the tool-metadata overlay is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+        }}
       />,
     );
 
     expect(screen.getByTestId('feature-disabled')).toBeInTheDocument();
-    expect(screen.getByText(/TOOL_META_STORE_PG_PASSWORD/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'the tool-metadata overlay is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+      ),
+    ).toBeInTheDocument();
     // No editable form and no Save affordance while the store is off.
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
   });

@@ -39,6 +39,7 @@ import {
   Spinner,
   TextInput,
   errorMessage,
+  featureDisabledMessage,
   isFeatureDisabled,
   overlayDetailsPatch,
   toolsListKey,
@@ -288,7 +289,7 @@ function EditOverlayDialog({
       {disabled ? (
         // The overlay write refused with a 501 `tool-meta-not-configured`: the store
         // is off, so no save can land. Show the muted OFF note in place of the form.
-        <FeatureDisabled feature="Tool metadata" envVar="TOOL_META_STORE_PG_PASSWORD" />
+        <FeatureDisabled feature="Tool metadata" message={featureDisabledMessage(save.error)} />
       ) : (
         <form
           onSubmit={(event) => {

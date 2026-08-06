@@ -42,6 +42,7 @@ import {
   ToolPicker,
   XCircleIcon,
   errorMessage,
+  featureDisabledMessage,
   hiddenToolNames,
   isFeatureDisabled,
   toolsListKey,
@@ -281,7 +282,8 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   // `versioning-not-configured`. Both write to the same store, so once either reveals
   // it off the other is certain to refuse too — show one muted OFF note and withdraw
   // both affordances rather than a loud red alert. OFF is a state, not an error.
-  const versioningDisabled = isFeatureDisabled(create.error) || isFeatureDisabled(validate.error);
+  const versioningRefusal = [create.error, validate.error].find(isFeatureDisabled);
+  const versioningDisabled = versioningRefusal !== undefined;
 
   return (
     <Dialog
@@ -481,7 +483,10 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
         ) : null}
 
         {versioningDisabled ? (
-          <FeatureDisabled feature="Preset versioning" envVar="VERSIONING_STORE_PG_PASSWORD" />
+          <FeatureDisabled
+            feature="Preset versioning"
+            message={featureDisabledMessage(versioningRefusal)}
+          />
         ) : null}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>

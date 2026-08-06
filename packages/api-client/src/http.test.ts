@@ -333,6 +333,35 @@ describe('createApiClient', () => {
     await expect(client.streamInteractions()).rejects.toBeInstanceOf(ApiError);
   });
 
+  it('surfaces the 501 error envelope (message + code) verbatim on a non-ok stream open', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse(
+        {
+          error: 'the interactions store is not configured: set INTERACTIONS_REDIS_URL',
+          code: 'interactions-not-configured',
+        },
+        501,
+      ),
+    );
+    const client = createApiClient(config(fetchImpl));
+    const err = await client.streamInteractions().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).message).toBe(
+      'the interactions store is not configured: set INTERACTIONS_REDIS_URL',
+    );
+    expect((err as ApiError).status).toBe(501);
+    expect((err as ApiError).code).toBe('interactions-not-configured');
+  });
+
+  it('falls back to the status text when a non-ok stream open has a non-JSON body', async () => {
+    const fetchImpl = vi.fn(async () => textResponse('nope', 502));
+    const client = createApiClient(config(fetchImpl));
+    const err = await client.streamInteractions().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(502);
+    expect((err as ApiError).code).toBeUndefined();
+  });
+
   it('returns an iterator of parsed frames for a 200 SSE body', async () => {
     const fetchImpl = vi.fn(async () =>
       sseResponse('event: interaction.add\ndata: {"interaction_id":"q1"}\n\n'),

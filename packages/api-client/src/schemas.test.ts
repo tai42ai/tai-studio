@@ -58,6 +58,48 @@ describe('interaction add-frame schema — channel', () => {
   });
 });
 
+describe('interaction add-frame schema — attribution (recipient/origin/audience)', () => {
+  const base = {
+    interaction_id: 'q1',
+    group_id: 'g1',
+    answer_format: 'text',
+    question: 'Reply on your phone',
+    created_at: '2026-07-11T00:00:00Z',
+    timeout_at: '2026-07-11T00:05:00Z',
+  };
+
+  it('surfaces the attribution fields when the frame carries them', () => {
+    const parsed = schemas.interaction.parse({
+      ...base,
+      recipient: 'wa:+15551234',
+      origin: 'run-abc',
+      audience: 'user-42',
+    });
+    expect(parsed.recipient).toBe('wa:+15551234');
+    expect(parsed.origin).toBe('run-abc');
+    expect(parsed.audience).toBe('user-42');
+  });
+
+  it('leaves each attribution field undefined when the frame omits it', () => {
+    const parsed = schemas.interaction.parse(base);
+    expect(parsed.recipient).toBeUndefined();
+    expect(parsed.origin).toBeUndefined();
+    expect(parsed.audience).toBeUndefined();
+  });
+
+  it('rejects a non-string recipient', () => {
+    expect(() => schemas.interaction.parse({ ...base, recipient: 7 })).toThrow();
+  });
+
+  it('rejects a non-string origin', () => {
+    expect(() => schemas.interaction.parse({ ...base, origin: 7 })).toThrow();
+  });
+
+  it('rejects a non-string audience', () => {
+    expect(() => schemas.interaction.parse({ ...base, audience: 7 })).toThrow();
+  });
+});
+
 describe('interaction add-frame schema — media (loose wire field)', () => {
   const base = {
     interaction_id: 'q1',

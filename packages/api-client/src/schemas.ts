@@ -761,6 +761,14 @@ export const interaction = z.object({
   // Name of the channel plugin the question was also delivered through (e.g.
   // "telegram"); absent when the question lives only in this inbox.
   channel: z.string().optional(),
+  // Interaction attribution, each additive and absent when unset. `recipient` is
+  // the channel delivery address the question went to; `origin` is the run id of
+  // the background tool run that asked; `audience` is the user_id the question is
+  // addressed to. Display/binding data only, never an authorization axis; a
+  // present non-string is malformed.
+  recipient: z.string().optional(),
+  origin: z.string().optional(),
+  audience: z.string().optional(),
   // Display-only media shown WITH the question (images and/or links). Absent when
   // the question carries none. Deliberately LOOSE (`z.array(z.unknown())`): each
   // item is `safeParse`d per item by the renderer against `interactionMediaItem`,

@@ -27,6 +27,7 @@ import {
   THead,
   TR,
   errorMessage,
+  featureDisabledMessage,
   isFeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
@@ -214,7 +215,10 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
 
       {upgradeAllMutation.isError ? (
         storeDisabled ? (
-          <FeatureDisabled feature="Marketplace installs" envVar="MARKETPLACE_STORE_PG_PASSWORD" />
+          <FeatureDisabled
+            feature="Marketplace installs"
+            message={featureDisabledMessage(upgradeAllMutation.error)}
+          />
         ) : (
           <ErrorState message={errorMessage(upgradeAllMutation.error)} />
         )

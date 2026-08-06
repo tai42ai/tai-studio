@@ -90,6 +90,12 @@ const answeredStyle: CSSProperties = {
   gap: 'var(--tai-space-2)',
 };
 
+const attributionStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'var(--tai-space-2)',
+};
+
 const malformedStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -333,6 +339,39 @@ export function VerifiedCallbackPending(): ReactNode {
   );
 }
 
+// -- attribution -------------------------------------------------------------
+
+/**
+ * Secondary attribution badges on a card: `recipient` (the channel delivery
+ * address, labeled "to"), `audience` (the addressed user_id, labeled "for"), and
+ * `origin` (the asking tool run's id, labeled "run"). Each rides the frame only
+ * when set — an absent field renders nothing, and with none present the block is
+ * omitted entirely so a plain inbox card is unchanged.
+ */
+function Attribution({ interaction }: { readonly interaction: StreamInteraction }): ReactNode {
+  const { recipient, audience, origin } = interaction;
+  if (recipient === undefined && audience === undefined && origin === undefined) return null;
+  return (
+    <div data-testid="interaction-attribution" style={attributionStyle}>
+      {recipient !== undefined ? (
+        <span data-testid="interaction-recipient">
+          <Badge variant="neutral">to {recipient}</Badge>
+        </span>
+      ) : null}
+      {audience !== undefined ? (
+        <span data-testid="interaction-audience">
+          <Badge variant="neutral">for {audience}</Badge>
+        </span>
+      ) : null}
+      {origin !== undefined ? (
+        <span data-testid="interaction-origin">
+          <Badge variant="neutral">run {origin}</Badge>
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 // -- card wrapper ------------------------------------------------------------
 
 /**
@@ -368,6 +407,7 @@ export function InteractionCard({
             <Badge variant="neutral">via {interaction.channel}</Badge>
           </div>
         ) : null}
+        <Attribution interaction={interaction} />
         {interaction.answered ? (
           <div role="status" data-testid="interaction-answered" style={answeredStyle}>
             <Badge variant="success">Answered</Badge>

@@ -9,7 +9,7 @@
  * Every message is rendered as TEXT (JSX children) — never as HTML — so a provider-
  * or server-supplied string can carry no markup sink.
  */
-import { Button, EmptyState, FeatureDisabled } from '@tai42/studio-sdk';
+import { Button, EmptyState, FeatureDisabled, featureDisabledMessage } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import type { OAuthNotice } from './oauth';
@@ -89,7 +89,8 @@ const PROVIDER_NOT_CONFIGURED_CODE = 'connector-provider-not-configured';
 
 /** A classified connector refusal — the muted OFF states, distinct from real errors. */
 export type ConnectorRefusal =
-  { readonly kind: 'store-off' } | { readonly kind: 'provider-off'; readonly message: string };
+  | { readonly kind: 'store-off'; readonly message: string }
+  | { readonly kind: 'provider-off'; readonly message: string };
 
 /**
  * Classify a mutation error as a named 501 connector refusal, or `null` when it is a
@@ -115,21 +116,22 @@ export function readConnectorRefusal(error: unknown): ConnectorRefusal | null {
           : 'This connector is not configured on this deployment.',
     };
   }
-  if (code === STORE_NOT_CONFIGURED_CODE) return { kind: 'store-off' };
-  if (status === 501) return { kind: 'store-off' };
+  if (code === STORE_NOT_CONFIGURED_CODE || status === 501) {
+    return { kind: 'store-off', message: featureDisabledMessage(error) };
+  }
   return null;
 }
 
 /**
- * The muted, honest surface for a {@link ConnectorRefusal}. The store-off case names
- * the enabling env var through the shared {@link FeatureDisabled} note; the
- * provider-off case surfaces the server's actionable message (which names the
- * offending env var) as a `role="status"` note — never a loud red alert, because a
- * capability the deployment has not provided is a state, not a malfunction.
+ * The muted, honest surface for a {@link ConnectorRefusal}. Both cases surface the
+ * server's own actionable message (which names the missing configuration) — the
+ * store-off case through the shared {@link FeatureDisabled} note, the provider-off
+ * case as a `role="status"` note — never a loud red alert, because a capability the
+ * deployment has not provided is a state, not a malfunction.
  */
 export function ConnectorRefusalNotice({ refusal }: { refusal: ConnectorRefusal }): ReactNode {
   if (refusal.kind === 'store-off') {
-    return <FeatureDisabled feature="Connectors" envVar="CONNECTOR_STORE_PG_PASSWORD" />;
+    return <FeatureDisabled feature="Connectors" message={refusal.message} />;
   }
   return (
     <div data-testid="connector-provider-off">

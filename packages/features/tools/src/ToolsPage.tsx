@@ -441,7 +441,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
             upsert.mutate({ name: editing.view.name, patch });
           }}
           saving={upsert.isPending}
-          disabled={metaWriteDisabled}
+          writeError={upsert.error}
         />
       ) : null}
     </Stack>

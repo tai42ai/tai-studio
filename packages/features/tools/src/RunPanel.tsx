@@ -31,6 +31,7 @@ import {
   Spinner,
   defaultValueForSchema,
   errorMessage,
+  featureDisabledMessage,
   isFeatureDisabled,
   useApi,
   useCanWrite,
@@ -209,7 +210,10 @@ export function AutoFormRunPanel({
 
       {background.isError ? (
         backgroundDisabled ? (
-          <FeatureDisabled feature="Background runs" envVar="TAI_TOOL_RUNS_REDIS_URL" />
+          <FeatureDisabled
+            feature="Background runs"
+            message={featureDisabledMessage(background.error)}
+          />
         ) : (
           <ErrorState message={errorMessage(background.error)} />
         )

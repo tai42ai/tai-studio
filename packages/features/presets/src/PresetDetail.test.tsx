@@ -153,7 +153,13 @@ describe('PresetDetail', () => {
     const user = userEvent.setup();
     const upsertToolMeta = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'the tool-metadata overlay is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'tool-meta-not-configured',
+        ),
+      );
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
@@ -172,9 +178,11 @@ describe('PresetDetail', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
 
     // The write revealed the tool_meta store off: the dialog body swaps to the muted
-    // OFF note (naming the env var) — NOT a loud red ErrorState (role="alert").
+    // OFF note (the server's message) — NOT a loud red ErrorState (role="alert").
     const note = await within(dialog).findByTestId('feature-disabled');
-    expect(note).toHaveTextContent('TOOL_META_STORE_PG_PASSWORD');
+    expect(note).toHaveTextContent(
+      'the tool-metadata overlay is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
     expect(within(dialog).queryByRole('alert')).toBeNull();
     // The form's own inputs are gone — the OFF note stands in place of the editor.
     expect(within(dialog).queryByLabelText('Display name')).toBeNull();

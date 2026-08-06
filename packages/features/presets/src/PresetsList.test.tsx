@@ -183,13 +183,20 @@ describe('PresetsList', () => {
     // create-oriented empty state would otherwise mislead.
     renderWithProviders(<PresetsList selected={undefined} />, {
       client: listClient([]),
-      systemKinds: [{ kind: 'versioning', state: 'off', plugin: null, detail: '' }],
+      systemKinds: [
+        {
+          kind: 'versioning',
+          state: 'off',
+          plugin: null,
+          detail: 'TAI_DATABASE_DEFAULT_PG_PASSWORD not configured',
+        },
+      ],
     });
 
     const note = await screen.findByTestId('feature-disabled');
     expect(note).toHaveTextContent('Preset versioning is not configured');
-    // The enabling env var is named verbatim so an operator can act.
-    expect(note).toHaveTextContent('VERSIONING_STORE_PG_PASSWORD');
+    // The proactive OFF note shows the kind-status row's server `detail` verbatim.
+    expect(note).toHaveTextContent('TAI_DATABASE_DEFAULT_PG_PASSWORD not configured');
     // The create affordance is gone; Refresh (a read) stays.
     expect(screen.queryByRole('button', { name: 'Create preset' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();

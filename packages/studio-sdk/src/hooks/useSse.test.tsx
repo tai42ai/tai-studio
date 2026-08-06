@@ -540,4 +540,41 @@ describe('useInteractionsStream', () => {
     expect(result.current.error).toBeInstanceOf(Error);
     expect(result.current.interactions).toHaveLength(0);
   });
+
+  it('carries the attribution fields through to the interaction when present', async () => {
+    const { result } = renderStream(
+      scriptedClient([
+        {
+          event: 'interaction.add',
+          data: addData('a', { recipient: 'wa:+15551234', origin: 'run-abc', audience: 'user-42' }),
+        },
+        backlogDone,
+      ]),
+    );
+    await flush();
+    expect(result.current.error).toBeNull();
+    expect(result.current.interactions[0]?.recipient).toBe('wa:+15551234');
+    expect(result.current.interactions[0]?.origin).toBe('run-abc');
+    expect(result.current.interactions[0]?.audience).toBe('user-42');
+  });
+
+  it('leaves each attribution field undefined when the add frame omits it', async () => {
+    const { result } = renderStream(scriptedClient([add('a'), backlogDone]));
+    await flush();
+    expect(result.current.interactions[0]?.recipient).toBeUndefined();
+    expect(result.current.interactions[0]?.origin).toBeUndefined();
+    expect(result.current.interactions[0]?.audience).toBeUndefined();
+  });
+
+  it('surfaces an add with a non-string attribution field as an error, not a blank card', async () => {
+    const { result } = renderStream(
+      scriptedClient([
+        { event: 'interaction.add', data: addData('a', { recipient: 7 }) },
+        backlogDone,
+      ]),
+    );
+    await flush();
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.interactions).toHaveLength(0);
+  });
 });

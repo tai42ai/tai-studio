@@ -781,7 +781,13 @@ describe('ToolsPage — overlay edit affordance', () => {
     const user = userEvent.setup();
     const upsertToolMeta = vi
       .fn()
-      .mockRejectedValue(new ApiError('not configured', 501, 'tool-meta-not-configured'));
+      .mockRejectedValue(
+        new ApiError(
+          'the tool-metadata overlay is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'tool-meta-not-configured',
+        ),
+      );
     const client: StubApiClient = {
       listTools: vi.fn().mockResolvedValue(['echo']),
       listToolTags: vi.fn().mockResolvedValue([]),
@@ -794,9 +800,13 @@ describe('ToolsPage — overlay edit affordance', () => {
     await screen.findByText('Edit echo');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    // The dialog swaps its form for the muted OFF note, naming the env var.
+    // The dialog swaps its form for the muted OFF note, showing the server's message.
     expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
-    expect(screen.getByText(/TOOL_META_STORE_PG_PASSWORD/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'the tool-metadata overlay is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+      ),
+    ).toBeInTheDocument();
 
     // The per-row Edit affordance is withdrawn list-wide — a write it can only refuse.
     await waitFor(() => {
