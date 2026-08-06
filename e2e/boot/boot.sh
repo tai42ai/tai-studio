@@ -46,7 +46,6 @@ STUDIO_REPO="$(cd "${E2E_DIR}/.." && pwd)"
 # The tai42 monorepo: skeleton at core/skeleton, plugins under plugins/, and the
 # single uv workspace venv at its root .venv.
 MONOREPO_DIR="${MONOREPO_DIR:-$(cd "${STUDIO_REPO}/../tai42" && pwd)}"
-SKELETON_DIR="${MONOREPO_DIR}/core/skeleton"
 
 STUDIO_DIST="${STUDIO_REPO}/apps/studio/dist"
 MANIFEST_PATH="${MANIFEST_PATH:-${BOOT_DIR}/manifest.yml}"
@@ -88,15 +87,6 @@ docker compose -f "${COMPOSE_FILE}" up -d --wait
 
 redis_cli() { docker compose -f "${COMPOSE_FILE}" exec -T redis redis-cli "$@"; }
 pg_exec() { docker compose -f "${COMPOSE_FILE}" exec -T postgres psql -q -U postgres -d tai "$@"; }
-
-# Apply the connector-framework DDL (idempotent CREATE TABLE IF NOT EXISTS).
-CONNECTOR_DDL="${SKELETON_DIR}/src/tai42_skeleton/sql/resources/tai42_skeleton.init.sql"
-if [[ ! -f "${CONNECTOR_DDL}" ]]; then
-  log "ERROR: connector DDL not found at ${CONNECTOR_DDL}"
-  exit 1
-fi
-log "applying connector-framework schema to the 'tai' database"
-pg_exec < "${CONNECTOR_DDL}" >/dev/null
 
 # --- 2. Build the SPA and the reference-plugin bundle ------------------------
 # BEFORE step 3. `uv pip install` COPIES the plugin package into the venv, bundle
@@ -153,17 +143,42 @@ if [[ -n "${EXTRA_PLUGINS:-}" ]]; then
   set +f
 fi
 
-# Apply the tai42-accounts-postgres schema (accounts_users / accounts_sessions /
-# accounts_invites) when the docs-screenshot runner requests it. The plugin owns
-# its tables out-of-band via `python -m tai42_accounts_postgres.db apply` (idempotent),
-# which connects through the default database's TAI_DATABASE_DEFAULT_PG_* env exported
-# above. Gated so the lean e2e boot (no accounts plugin installed) is untouched. The
-# compose Postgres is already up (step 1) and the plugin is installed above, so this
-# runs cleanly here.
-if [[ "${APPLY_ACCOUNTS_DDL:-0}" == "1" ]]; then
-  log "applying tai42-accounts-postgres schema (python -m tai42_accounts_postgres.db apply)"
-  "${VENV_PY}" -m tai42_accounts_postgres.db apply >&2
-fi
+# Apply the platform migration chains the way production does: the kit Flyway-model
+# runner (tai42_kit.db.apply_migrations) over the packaged chains, recorded in
+# `tai_schema_history`. The skeleton chain always; the tai42-accounts-postgres plugin
+# chain (accounts_users / accounts_sessions / accounts_invites) when the docs-screenshot
+# runner sets APPLY_ACCOUNTS_DDL=1 — gated so the lean e2e boot (no accounts plugin
+# installed) is untouched. NOT `tai db migrate`: that discovers only marketplace-installed
+# plugins, so it would migrate the skeleton chain but skip the pip-installed accounts
+# plugin — the entries are built directly instead. Both chains bind to the `default`
+# database (TAI_DATABASE_DEFAULT_PG_* exported above), resolved through the registry's
+# migrator identity. The compose Postgres is up (step 1) and the plugins are installed
+# above, so this runs cleanly here; a discovery/apply failure exits non-zero.
+log "applying the platform migration chains (kit migration runner)"
+APPLY_ACCOUNTS_DDL="${APPLY_ACCOUNTS_DDL:-0}" "${VENV_PY}" - <<'PY' >&2
+import asyncio
+import importlib.resources
+import os
+
+from tai42_kit.db import apply_migrations
+from tai42_kit.plugins import parse_plugin_spec
+from tai42_skeleton.db.discovery import plugin_migration_entry, skeleton_entry
+
+entries = [skeleton_entry()]
+if os.environ.get("APPLY_ACCOUNTS_DDL", "0") == "1":
+    package = importlib.resources.files("tai42_accounts_postgres")
+    spec = parse_plugin_spec(
+        package.joinpath("tai-plugin.yml").read_bytes(),
+        source="tai42_accounts_postgres/tai-plugin.yml",
+    )
+    entry = plugin_migration_entry(spec)
+    if entry is None:
+        raise RuntimeError("tai42-accounts-postgres declares no 'migrations' chain; its schema cannot be applied")
+    entries.append(entry)
+
+applied = asyncio.run(apply_migrations(entries))
+print(f"[boot] applied {len(applied)} migration file(s) across {len(entries)} chain(s)")
+PY
 
 # --- 4. Seed the test API key (Redis), policy + route mappings (Postgres) ----
 log "seeding the test API key (Redis), policy + route mappings (Postgres)"
@@ -207,7 +222,7 @@ export ACCESS_CONTROL_REDIS_URL="${REDIS_URL}"
 # store (the policy-version history every api-key mint/edit appends), and the tool-metadata
 # overlay store (the tools page's folder tree + per-tool overlay, read on every ToolsPage
 # mount) all bind to the `default` named database exported above, so no per-store DSN is set
-# here. Their tables ship in the init.sql applied above.
+# here. Their tables ship in the skeleton migration chain applied above.
 export STUDIO_DIST_PATH="${STUDIO_DIST}"
 
 # Interactions (ask_user): its Redis defaults to loopback :6379 and always
