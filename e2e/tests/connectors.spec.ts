@@ -173,24 +173,31 @@ test('a disconnect whose upstream revoke FAILED surfaces the warning and stays o
 
 test('a connector-managed MCP entry renders read-only in the config form', async ({ page }) => {
   await seedCredential(page);
+  const manifestBody = {
+    data: {
+      mcp: [
+        {
+          title: 'acme-mcp',
+          transport: 'http',
+          include: ['acme.search'],
+          managed: { connection_id: 'conn-1', provider_id: 'acme', sub_service: 'search' },
+        },
+      ],
+      user_tools: [],
+    },
+  };
   await page.route(
     (url) => url.pathname === '/api/manifest',
     async (route) => {
-      await route.fulfill({
-        json: {
-          data: {
-            mcp: [
-              {
-                title: 'acme-mcp',
-                transport: 'http',
-                include: ['acme.search'],
-                managed: { connection_id: 'conn-1', provider_id: 'acme', sub_service: 'search' },
-              },
-            ],
-            user_tools: [],
-          },
-        },
-      });
+      await route.fulfill({ json: manifestBody });
+    },
+  );
+  // The MCP config editor seeds from the PRESERVED read, a distinct endpoint from
+  // the resolved `/api/manifest`; the managed entry must be present in both.
+  await page.route(
+    (url) => url.pathname === '/api/manifest/preserved',
+    async (route) => {
+      await route.fulfill({ json: manifestBody });
     },
   );
   await page.route(

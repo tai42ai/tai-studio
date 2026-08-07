@@ -20,6 +20,14 @@ async function stubMcp(page: Page): Promise<void> {
       await route.fulfill({ json: { data: { mcp: [], user_tools: [] } } });
     },
   );
+  // The MCP config editor seeds from the PRESERVED read (`!ENV` markers intact),
+  // a distinct endpoint from the resolved `/api/manifest` the Manifest tab renders.
+  await page.route(
+    (url) => url.pathname === '/api/manifest/preserved',
+    async (route) => {
+      await route.fulfill({ json: { data: { mcp: [], user_tools: [] } } });
+    },
+  );
   await page.route(
     (url) => url.pathname === '/api/mcp-config/schema',
     async (route) => {

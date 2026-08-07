@@ -135,13 +135,21 @@ test('the reference plugin contributes a Settings tab that mounts after the core
   await page.waitForFunction(() => '__pluginReact' in window);
 
   await page.goto('/settings');
-  // The four core tabs render immediately; the plugin tab appears once the load pass
+  // The core tabs render immediately; the plugin tab appears once the load pass
   // is ready and sorts AFTER them.
   const tablist = page.getByRole('tablist');
   const pluginTab = tablist.getByRole('tab', { name: 'Reference' });
   await expect(pluginTab).toBeVisible();
   const tabNames = await tablist.getByRole('tab').allInnerTexts();
-  expect(tabNames).toEqual(['Settings', 'Environment', 'API keys', 'Backup', 'Roles', 'Reference']);
+  expect(tabNames).toEqual([
+    'Settings',
+    'Environment',
+    'Profiles',
+    'API keys',
+    'Backup',
+    'Roles',
+    'Reference',
+  ]);
 
   // Selecting it mounts the plugin's tab content through the host's SDK singletons.
   await pluginTab.click();
