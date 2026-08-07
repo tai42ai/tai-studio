@@ -321,6 +321,8 @@ export type { IconProps, IconComponent } from './components/icons';
 // -- Schema-driven forms -----------------------------------------------------
 export {
   SchemaForm,
+  RecordEntryRendererContext,
+  SecretRefField,
   defaultValueForSchema,
   validateAgainstSchema,
   resolveRef,
@@ -328,6 +330,10 @@ export {
 export type {
   SchemaFormProps,
   CompletionProvider,
+  RecordEntryRenderer,
+  RecordEntryContext,
+  SecretRefFieldProps,
+  SecretRef,
   JsonSchema,
   JsonSchemaType,
   Discriminator,

@@ -67,6 +67,14 @@ export type FieldModel =
       readonly required: ReadonlySet<string>;
     }
   | {
+      // A string-keyed map typed by `additionalProperties` (no fixed
+      // `properties`), edited as key/value rows. `values` is the entry value
+      // schema AS WRITTEN — the entry editor resolves any `$ref` itself, exactly
+      // as `array.items` is.
+      readonly kind: 'record';
+      readonly values: JsonSchema;
+    }
+  | {
       readonly kind: 'union';
       readonly variants: readonly UnionVariant[];
       readonly discriminator: string | undefined;
@@ -279,6 +287,23 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
     }
     case 'object': {
       if (resolved.properties === undefined) {
+        // A free-form object typed by a VALUE SCHEMA (`additionalProperties` is a
+        // schema, not `false`/`true`/absent) is a string→X map — renderable as
+        // key/value rows. A boolean `additionalProperties` carries no value type
+        // to build an entry editor from, so it stays unsupported.
+        // Read as `unknown`: the value is parsed JSON, where `additionalProperties:
+        // null` is possible and `typeof null === 'object'` would otherwise classify
+        // it as a record with a `null` value schema.
+        const additional: unknown = resolved.additionalProperties;
+        if (typeof additional === 'object' && additional !== null) {
+          return {
+            model: { kind: 'record', values: additional as JsonSchema },
+            nullable: nullableByType,
+            schema: resolved,
+            title,
+            description,
+          };
+        }
         return unsupported(
           resolved,
           'free-form object (additionalProperties map) is not supported',

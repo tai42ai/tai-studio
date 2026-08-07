@@ -21,14 +21,17 @@ import {
 export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
   readonly client: ApiClient;
   readonly projection?: MeProjection;
+  /** Supply a client to spy on invalidations; otherwise a fresh retry-free one is used. */
+  readonly queryClient?: QueryClient;
 }
 
 /** The session key `AuthProvider` seeds from, set so `CapabilityProvider` fetches. */
 const SESSION_KEY = 'tai-studio.apiKey';
 
 export function renderWithProviders(ui: ReactNode, options: ProviderOptions): RenderResult {
-  const { client, projection, ...renderOptions } = options;
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { client, projection, queryClient: providedQueryClient, ...renderOptions } = options;
+  const queryClient =
+    providedQueryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   // A projection drives the capability context to `ready`: seed a session key so
   // `AuthProvider` is authenticated and `CapabilityProvider` fetches `getMe`. With

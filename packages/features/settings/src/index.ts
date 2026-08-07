@@ -16,6 +16,8 @@ export { BackupTab } from './BackupTab';
 export type { BackupTabProps } from './BackupTab';
 export { RolesTab } from './RolesTab';
 export type { RolesTabProps } from './RolesTab';
+export { ProfilesTab } from './ProfilesTab';
+export type { ProfilesTabProps } from './ProfilesTab';
 export {
   configModeKey,
   envConfigKey,
@@ -27,4 +29,8 @@ export {
   rolesKey,
   roleVersionsKey,
   backupSectionsKey,
+  settingsProfilesKey,
+  settingsProfileKey,
+  settingsProfileVersionsKey,
+  settingsProfileVersionKey,
 } from './keys';

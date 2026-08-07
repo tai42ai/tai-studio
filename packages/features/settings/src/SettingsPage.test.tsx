@@ -117,7 +117,7 @@ describe('SettingsPage plugin tabs', () => {
       getSettingsSchema: vi.fn(emptySchema),
     });
 
-  const CORE_LABELS = ['Settings', 'Environment', 'API keys', 'Backup', 'Roles'];
+  const CORE_LABELS = ['Settings', 'Environment', 'Profiles', 'API keys', 'Backup', 'Roles'];
 
   it('renders a contributed tab after the core tabs once the load pass is ready', async () => {
     await loadPlugin('acme', (ctx) => {
@@ -344,11 +344,13 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
       getSettingsSchema: vi.fn(emptySchema),
       getEnvConfig: vi.fn(() => Promise.resolve({ env: {}, secret_keys: [] })),
       listBackupSections: vi.fn(() => Promise.resolve([])),
+      listSettingsProfiles: vi.fn(() => Promise.resolve([])),
       listTokensPayload: vi.fn(() => Promise.resolve([])),
       listScopes: vi.fn(() => Promise.resolve({})),
       getAuthCapabilities: vi.fn(() => Promise.resolve({ mintable: false })),
     } as unknown as ApiClient;
   }
+  const PROFILES_READ = { path: '/api/config/profiles', methods: ['GET'] };
 
   it('a full projection shows every core tab', async () => {
     renderWithProviders(<SettingsPage search={{}} />, {
@@ -362,7 +364,7 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
     }
   });
 
-  it('a projection reaching /api/config shows Settings + Environment but not Backup', async () => {
+  it('a projection reaching /api/config shows Settings + Environment but not Backup or Profiles', async () => {
     renderWithProviders(<SettingsPage search={{}} />, {
       client: visibilityClient(),
       projection: scopedProjection({ routes: [CONFIG_READ] }),
@@ -373,6 +375,28 @@ describe('SettingsPage — capability-gated sub-tab visibility', () => {
     expect(screen.getByRole('tab', { name: 'Environment' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'API keys' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Backup' })).not.toBeInTheDocument();
+    // The config secret route is not the profiles list route — Profiles stays hidden.
+    expect(screen.queryByRole('tab', { name: 'Profiles' })).not.toBeInTheDocument();
+  });
+
+  it('a list-only editor reaching /api/config/profiles sees Profiles but NOT Settings/Environment', async () => {
+    // The over-show regression the profiles gate guards: the list route is `action=read`,
+    // so folding it into CONFIG_READ_ROUTES would open the admin-only Settings/Environment
+    // tabs (whose secret reads would 403) for an editor who can only list profiles.
+    renderWithProviders(<SettingsPage search={{}} />, {
+      client: visibilityClient(),
+      projection: scopedProjection({ routes: [PROFILES_READ] }),
+    });
+    await screen.findByRole('tab', { name: 'Profiles' });
+
+    expect(screen.getByRole('tab', { name: 'Profiles' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'API keys' })).toBeInTheDocument();
+    // The profiles list route is NOT the config secret routes, so those tabs — and the
+    // mode card — stay hidden. Settings/Environment visibility is unchanged by the gate.
+    expect(screen.queryByText('env-file')).not.toBeInTheDocument();
+    for (const label of ['Settings', 'Environment', 'Backup']) {
+      expect(screen.queryByRole('tab', { name: label })).not.toBeInTheDocument();
+    }
   });
 
   it('a projection reaching /api/backup shows Backup but not Settings/Environment', async () => {

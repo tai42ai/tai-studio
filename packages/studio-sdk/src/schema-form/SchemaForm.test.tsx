@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AlertTriangleIcon, XCircleIcon } from '../components/icons';
+import { RecordEntryRendererContext, type RecordEntryRenderer } from './context';
 import { defaultValueForSchema } from './default-value';
 import { SchemaForm, type CompletionProvider } from './SchemaForm';
 import type { JsonSchema } from './types';
@@ -39,6 +40,15 @@ function Harness({
 
 function emitted(): string {
   return screen.getByTestId('value').textContent;
+}
+
+/** The Nth control matching a role/name — used where a record renders one per row. */
+function nthByRole(role: string, name: string, index: number): HTMLElement {
+  const matches = screen.getAllByRole(role, { name });
+  const match = matches[index];
+  if (match === undefined)
+    throw new Error(`expected a "${name}" ${role} at index ${String(index)}`);
+  return match;
 }
 
 describe('SchemaForm — primitives', () => {
@@ -179,6 +189,91 @@ describe('SchemaForm — composite', () => {
 
     await user.click(screen.getByRole('button', { name: 'Remove item 1' }));
     expect(emitted()).toBe('{"tags":[]}');
+  });
+});
+
+describe('SchemaForm — record (additionalProperties map)', () => {
+  const recordSchema: JsonSchema = {
+    type: 'object',
+    properties: {
+      env: { type: 'object', additionalProperties: { type: 'string' }, title: 'Env' },
+    },
+  };
+
+  it('renders existing map entries as key/value rows', () => {
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1' } }} />);
+    expect(screen.getByRole('textbox', { name: 'Key 1' })).toHaveValue('A');
+    expect(screen.getByRole('textbox', { name: 'Value' })).toHaveValue('1');
+  });
+
+  it('propagates a value edit into the map', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1' } }} />);
+    const value = screen.getByRole('textbox', { name: 'Value' });
+    await user.clear(value);
+    await user.type(value, '2');
+    expect(emitted()).toBe('{"env":{"A":"2"}}');
+  });
+
+  it('propagates a key rename into the map', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1' } }} />);
+    const key = screen.getByRole('textbox', { name: 'Key 1' });
+    await user.clear(key);
+    await user.type(key, 'HOST');
+    expect(emitted()).toBe('{"env":{"HOST":"1"}}');
+  });
+
+  it('adds a blank entry, then fills it into the map', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1' } }} />);
+    await user.click(screen.getByRole('button', { name: 'Add entry' }));
+    // A blank key is withheld from the emitted map (surfaced, never silently kept).
+    expect(emitted()).toBe('{"env":{"A":"1"}}');
+    await user.type(screen.getByRole('textbox', { name: 'Key 2' }), 'B');
+    await user.type(nthByRole('textbox', 'Value', 1), '2');
+    expect(emitted()).toBe('{"env":{"A":"1","B":"2"}}');
+  });
+
+  it('removes an entry from the map', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1', B: '2' } }} />);
+    await user.click(screen.getByRole('button', { name: 'Remove entry 1' }));
+    expect(emitted()).toBe('{"env":{"B":"2"}}');
+  });
+
+  it('surfaces a blank key and does not emit it', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1' } }} />);
+    await user.click(screen.getByRole('button', { name: 'Add entry' }));
+    await user.type(nthByRole('textbox', 'Value', 1), 'orphan');
+    expect(screen.getByText('Key is required')).toBeInTheDocument();
+    expect(emitted()).toBe('{"env":{"A":"1"}}');
+  });
+
+  it('surfaces a duplicate key and does not clobber the first entry', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={recordSchema} initial={{ env: { A: '1' } }} />);
+    await user.click(screen.getByRole('button', { name: 'Add entry' }));
+    await user.type(screen.getByRole('textbox', { name: 'Key 2' }), 'A');
+    await user.type(nthByRole('textbox', 'Value', 1), '2');
+    expect(screen.getByText('Duplicate key')).toBeInTheDocument();
+    // The first entry keeps its value; the duplicate is withheld, not merged over it.
+    expect(emitted()).toBe('{"env":{"A":"1"}}');
+  });
+
+  it('mounts a host-supplied value renderer in the entry slot', () => {
+    const renderer: RecordEntryRenderer = (entry) => (
+      <span data-testid="adornment">{`secret:${entry.keyName}`}</span>
+    );
+    render(
+      <RecordEntryRendererContext.Provider value={renderer}>
+        <SchemaForm schema={recordSchema} value={{ env: { TOKEN: 'x' } }} onChange={vi.fn()} />
+      </RecordEntryRendererContext.Provider>,
+    );
+    // The injected renderer replaces the default value editor for the entry.
+    expect(screen.getByTestId('adornment')).toHaveTextContent('secret:TOKEN');
+    expect(screen.queryByRole('textbox', { name: 'Value' })).not.toBeInTheDocument();
   });
 });
 

@@ -54,6 +54,8 @@ export function defaultValueForSchema(schema: JsonSchema, root: JsonSchema = sch
     }
     case 'array':
       return [];
+    case 'record':
+      return {};
     case 'enum':
     case 'string':
     case 'number':

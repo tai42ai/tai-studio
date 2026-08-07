@@ -67,6 +67,7 @@ import { EnvironmentTab } from './EnvironmentTab';
 import { ApiKeysTab } from './ApiKeysTab';
 import { BackupTab } from './BackupTab';
 import { RolesTab } from './RolesTab';
+import { ProfilesTab } from './ProfilesTab';
 import { configModeKey } from './keys';
 
 /**
@@ -81,6 +82,16 @@ import { configModeKey } from './keys';
  */
 const CONFIG_READ_ROUTES = ['/api/config/settings-schema', '/api/config/env'] as const;
 const BACKUP_READ_ROUTE = '/api/backup';
+/**
+ * The Profiles tab reads only the `action=read` profiles LIST route. It is its OWN
+ * gate, deliberately NOT folded into `CONFIG_READ_ROUTES`: those are the two admin-only
+ * `secret` routes, and adding the list route to them would make `configVisible` true for
+ * a scoped editor who can list profiles but not read env/settings-schema — over-showing
+ * the Settings and Environment tabs into a 403 wall. An editor who reaches the list route
+ * sees the Profiles tab alone; the tab's own secret/fenced controls stay admin-gated
+ * server-side and are hidden when the projection is not full.
+ */
+const PROFILES_READ_ROUTES = ['/api/config/profiles'] as const;
 /**
  * The Roles tab reads `GET /api/auth/roles` — an admin-only `secret` route. A caller
  * whose projection cannot reach it (a scoped editor/viewer) never sees the tab, so
@@ -147,6 +158,7 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
   const configVisible = coreTabVisible(capabilityState, CONFIG_READ_ROUTES);
   const backupVisible = coreTabVisible(capabilityState, [BACKUP_READ_ROUTE]);
   const rolesVisible = coreTabVisible(capabilityState, [ROLES_READ_ROUTE]);
+  const profilesVisible = coreTabVisible(capabilityState, PROFILES_READ_ROUTES);
 
   const modeQuery = useQuery({
     queryKey: configModeKey,
@@ -191,6 +203,15 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
           content: <EnvironmentTab readOnly={readOnly} />,
         },
       );
+    }
+    // The Profiles tab has its OWN gate (the profiles list route), so a scoped editor
+    // who can list profiles sees it without the Settings/Environment tabs.
+    if (profilesVisible) {
+      tabs.push({
+        value: 'profiles',
+        label: 'Profiles',
+        content: <ProfilesTab readOnly={readOnly} />,
+      });
     }
     tabs.push({
       value: 'api-keys',

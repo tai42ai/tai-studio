@@ -14,6 +14,7 @@ import { classifySchema } from './classify';
 import { EnumField } from './enum-field';
 import { FieldGroup } from './field-group';
 import { ObjectFields } from './object-fields';
+import { RecordField } from './record-field';
 import { scalarLabel } from './resolve';
 import { StringField } from './string-field';
 import { UnionField } from './union-field';
@@ -141,6 +142,21 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
             skip={undefined}
           />
         </FieldGroup>
+      );
+    case 'record':
+      return (
+        <RecordField
+          heading={heading}
+          description={description}
+          error={error}
+          values={model.values}
+          root={root}
+          value={value}
+          onChange={onChange}
+          path={path}
+          errors={errors}
+          idPrefix={idPrefix}
+        />
       );
     case 'union':
       return (

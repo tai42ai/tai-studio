@@ -153,6 +153,16 @@ function walk(
       }
       return;
     }
+    case 'record': {
+      if (!isPlainObject(value)) {
+        errors[path] = 'must be an object';
+        return;
+      }
+      for (const [key, entryValue] of Object.entries(value)) {
+        walk(model.values, entryValue, joinPath(path, key), root, errors, maxUploadBytes);
+      }
+      return;
+    }
     case 'union': {
       const index = activeVariantIndex(value, model.variants, model.discriminator, root);
       const variant = index === -1 ? undefined : model.variants[index];

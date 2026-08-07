@@ -36,8 +36,10 @@ import {
   ExtensionPicker,
   Field,
   FleetReport,
+  RecordEntryRendererContext,
   SchemaForm,
   ScrollRegion,
+  SecretRefField,
   Skeleton,
   Spinner,
   TBody,
@@ -53,11 +55,18 @@ import {
   useApi,
   useRegisterDirty,
 } from '@tai42/studio-sdk';
-import type { JsonSchema } from '@tai42/studio-sdk';
-import { useState } from 'react';
+import type { JsonSchema, RecordEntryContext, RecordEntryRenderer } from '@tai42/studio-sdk';
+import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
-import { manifestKey, mcpConfigSchemaKey, mcpExtensionsKey, mcpStatusKey } from '../keys';
+import {
+  envConfigKey,
+  manifestKey,
+  mcpConfigSchemaKey,
+  mcpExtensionsKey,
+  mcpStatusKey,
+  preservedManifestKey,
+} from '../keys';
 
 interface ServerRow {
   readonly title: string;
@@ -207,6 +216,75 @@ function connectorRefOf(entry: unknown): ConnectorRef | null {
 function baseToolOf(token: string): string {
   const separator = token.indexOf(':');
   return separator === -1 ? token : token.slice(0, separator);
+}
+
+// The manifest stores a secret env reference as an `!ENV ${KEY}` leaf (the
+// `pyaml_env`-resolved marker the preserved read round-trips intact). These map
+// that wire form to/from a bare key name at the SecretRefField boundary; the
+// server's shared validator — not this parse — is the authority on danglers.
+const ENV_MARKER = /^!ENV\s+\$\{([^}]+)\}$/;
+
+/** The referenced env key of an `!ENV ${KEY}` leaf, or `null` for anything else. */
+function parseEnvMarker(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const match = ENV_MARKER.exec(value);
+  return match === null ? null : (match[1] ?? null);
+}
+
+/** The `!ENV ${KEY}` leaf that references env key `key`. */
+function formatEnvMarker(key: string): string {
+  return `!ENV \${${key}}`;
+}
+
+/** Every env key an `!ENV ${KEY}` leaf anywhere under `value` references. */
+function collectEnvRefs(value: unknown): Set<string> {
+  const refs = new Set<string>();
+  const walk = (node: unknown): void => {
+    if (typeof node === 'string') {
+      const key = parseEnvMarker(node);
+      if (key !== null) refs.add(key);
+    } else if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+    } else if (typeof node === 'object' && node !== null) {
+      for (const nested of Object.values(node)) walk(nested);
+    }
+  };
+  walk(value);
+  return refs;
+}
+
+/**
+ * The leaf value at a slash-separated manifest pointer (`mcp/0/env/KEY`) — the same
+ * pointer form the combined paste op targets — or `undefined` when any segment does
+ * not resolve. Array segments index by number; object segments key by name.
+ */
+function resolveManifestPointer(root: unknown, pointer: string): unknown {
+  let node: unknown = root;
+  for (const segment of pointer.split('/')) {
+    if (Array.isArray(node)) {
+      const index = Number(segment);
+      if (!Number.isInteger(index) || index < 0 || index >= node.length) return undefined;
+      node = node[index];
+    } else if (typeof node === 'object' && node !== null) {
+      if (!Object.hasOwn(node, segment)) return undefined;
+      node = (node as Record<string, unknown>)[segment];
+    } else {
+      return undefined;
+    }
+  }
+  return node;
+}
+
+/**
+ * Whether a record entry belongs to an `env` map (the secret-bearing map on an MCP
+ * entry) — its containing record field is named `env`. The renderer mounts the
+ * masked SecretRefField for these and the built-in value editor for every other map.
+ */
+function isEnvEntry(entry: RecordEntryContext): boolean {
+  const boundary = entry.path.lastIndexOf('.');
+  if (boundary === -1) return false;
+  const parent = entry.path.slice(0, boundary);
+  return parent === 'env' || parent.endsWith('.env');
 }
 
 /**
@@ -522,6 +600,10 @@ function EditableEntryCard({
   discoveredTools,
   extensions,
   extensionsError,
+  availableSecretKeys,
+  keyPickingAvailable,
+  dirty,
+  onPasteSecret,
   onChange,
   onRemove,
 }: {
@@ -531,10 +613,55 @@ function EditableEntryCard({
   readonly discoveredTools: readonly string[];
   readonly extensions: readonly Extension[];
   readonly extensionsError: string | undefined;
+  readonly availableSecretKeys: readonly string[];
+  readonly keyPickingAvailable: boolean;
+  readonly dirty: boolean;
+  readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
   readonly onChange: (next: unknown) => void;
   readonly onRemove: () => void;
 }): ReactNode {
   const record = asRecord(entry);
+
+  // The value renderer the schema-form consults for every `record` entry. Only the
+  // MCP entry's `env` map is secret-bearing: those entries mount the masked
+  // SecretRefField, mapping a `key` ref to the `!ENV ${KEY}` leaf and a pasted
+  // secret to the combined env+manifest op targeted at this entry's manifest
+  // pointer (head `mcp`). Every other map keeps the built-in value editor.
+  const renderRecordEntry: RecordEntryRenderer = (recordEntry) => {
+    if (!isEnvEntry(recordEntry)) return recordEntry.defaultField;
+    const referencedKey = parseEnvMarker(recordEntry.value);
+    // Pasting a new secret runs the combined op against THIS entry's manifest
+    // pointer, so it is safe only when the editor index matches the saved manifest
+    // (no unsaved edits) and the entry already has a key to hint the generated name.
+    // Referencing an existing key stays available in both cases.
+    const pasteDisabledReason = dirty
+      ? 'Save changes before adding a secret'
+      : recordEntry.keyName.trim() === ''
+        ? 'Name this variable before adding a secret'
+        : undefined;
+    return (
+      <SecretRefField
+        value={referencedKey === null ? undefined : { source: 'key', key: referencedKey }}
+        availableKeys={availableSecretKeys}
+        keyPickingAvailable={keyPickingAvailable}
+        pasteDisabledReason={pasteDisabledReason}
+        label={recordEntry.keyName === '' ? 'Secret value' : recordEntry.keyName}
+        idPrefix={`mcp-secret-${String(index)}-${recordEntry.keyName}`}
+        onChange={(ref) => {
+          if (ref.source === 'key') {
+            recordEntry.onChange(formatEnvMarker(ref.key));
+            return;
+          }
+          onPasteSecret(
+            `mcp/${String(index)}/${recordEntry.path.replaceAll('.', '/')}`,
+            recordEntry.keyName,
+            ref.secret,
+          );
+        }}
+      />
+    );
+  };
+
   return (
     <Card style={{ background: 'var(--tai-color-surface)' }}>
       <div
@@ -558,13 +685,16 @@ function EditableEntryCard({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
         {/* The transport config (title/config/extensions) rides the generic form; the
             unknown-to-the-form `include`/`exclude`/`managed` keys are preserved by
-            ObjectFields' merge and edited through the dedicated surfaces below. */}
-        <SchemaForm
-          schema={formSchema}
-          value={entry}
-          onChange={onChange}
-          idPrefix={`mcp-entry-${String(index)}`}
-        />
+            ObjectFields' merge and edited through the dedicated surfaces below. The
+            renderer mounts SecretRefField for the `env` map's entries. */}
+        <RecordEntryRendererContext.Provider value={renderRecordEntry}>
+          <SchemaForm
+            schema={formSchema}
+            value={entry}
+            onChange={onChange}
+            idPrefix={`mcp-entry-${String(index)}`}
+          />
+        </RecordEntryRendererContext.Provider>
         <ToolListEditor
           legend="Included tools"
           description="Bind only these tools from this server. Optionally stack extensions onto a tool."
@@ -603,6 +733,10 @@ function EntryList({
   discoveredTools,
   extensions,
   extensionsError,
+  availableSecretKeys,
+  keyPickingAvailable,
+  dirty,
+  onPasteSecret,
   onChange,
 }: {
   readonly schema: JsonSchema;
@@ -610,6 +744,10 @@ function EntryList({
   readonly discoveredTools: Readonly<Record<string, readonly string[]>>;
   readonly extensions: readonly Extension[];
   readonly extensionsError: string | undefined;
+  readonly availableSecretKeys: readonly string[];
+  readonly keyPickingAvailable: boolean;
+  readonly dirty: boolean;
+  readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
   readonly onChange: (entries: unknown[]) => void;
 }): ReactNode {
   const formSchema = stripSchemaFields(schema, STRIPPED_FIELDS);
@@ -652,6 +790,10 @@ function EntryList({
             discoveredTools={toolsFor(entry)}
             extensions={extensions}
             extensionsError={extensionsError}
+            availableSecretKeys={availableSecretKeys}
+            keyPickingAvailable={keyPickingAvailable}
+            dirty={dirty}
+            onPasteSecret={onPasteSecret}
             onChange={(next) => {
               setEntry(index, next);
             }}
@@ -676,15 +818,28 @@ function McpConfigEditor({
   discoveredTools,
   extensions,
   extensionsError,
+  availableSecretKeys,
+  keyPickingAvailable,
 }: {
   readonly initialEntries: readonly Record<string, unknown>[];
   readonly schema: JsonSchema;
   readonly discoveredTools: Readonly<Record<string, readonly string[]>>;
   readonly extensions: readonly Extension[];
   readonly extensionsError: string | undefined;
+  readonly availableSecretKeys: readonly string[];
+  readonly keyPickingAvailable: boolean;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+
+  // The exact env keys THIS editor generated through its own pastes. A paste's server
+  // half writes a fresh `!ENV ${KEY}` marker at the paste pointer; on success we resolve
+  // that pointer against the re-read preserved manifest and record the key here. This is
+  // the ONLY reliable signal that a key originated with this editor — the combined-op
+  // response carries a COUNT (`env_keys`), not the generated name — and it is the sole
+  // set the save-time orphan sweep may delete. A key picked, pre-existing, or created by
+  // another session is never recorded here, so it can never be swept.
+  const sessionGeneratedKeysRef = useRef<Set<string>>(new Set());
 
   // Two views over one working list. The FORM view drives `entries`; the JSON
   // view drives `text`. A view switch converts one into the other so neither
@@ -709,11 +864,57 @@ function McpConfigEditor({
     return 'error' in parsed ? `error:${text}` : JSON.stringify(parsed.entries);
   })();
 
-  const save = useMutation({
-    mutationFn: (mcp: unknown[]) => api.setMcpConfig(mcp),
-    onSuccess: async () => {
+  // The combined env+manifest op for a PASTED secret: the server writes the
+  // env value FIRST, then the `!ENV ${KEY}` manifest leaf at `manifest_pointer`
+  // (head `mcp`) SECOND — atomically, one reload/broadcast. The env moved and the
+  // marker landed in the manifest, so both the env config and both manifest views
+  // are re-read. The generated key rides back on the preserved re-read.
+  const secretEnv = useMutation({
+    mutationFn: (body: Parameters<typeof api.setMcpSecretEnv>[0]) => api.setMcpSecretEnv(body),
+    onSuccess: async (_result, variables) => {
+      await queryClient.invalidateQueries({ queryKey: envConfigKey });
+      await queryClient.invalidateQueries({ queryKey: preservedManifestKey });
       await queryClient.invalidateQueries({ queryKey: manifestKey });
       await queryClient.invalidateQueries({ queryKey: mcpStatusKey });
+      // Record the key the server just generated for THIS paste. After the preserved
+      // re-read above lands, the leaf at the paste pointer is the `!ENV ${KEY}` marker
+      // the server wrote; parse it back to the bare key. Only a key captured here is
+      // eligible for the save-time orphan sweep. A leaf that does not resolve to a marker
+      // records nothing — a safe miss that leaves an orphan rather than risking deletion
+      // of a key this editor did not generate.
+      const leaf = resolveManifestPointer(
+        queryClient.getQueryData(preservedManifestKey),
+        variables.manifest_pointer,
+      );
+      const generatedKey = parseEnvMarker(leaf);
+      if (generatedKey !== null) sessionGeneratedKeysRef.current.add(generatedKey);
+    },
+  });
+  const onPasteSecret = (manifestPointer: string, keyHint: string, secret: string): void => {
+    secretEnv.mutate({ value: secret, key_hint: keyHint, manifest_pointer: manifestPointer });
+  };
+
+  const save = useMutation({
+    mutationFn: async ({ mcp, orphanedKeys }: { mcp: unknown[]; orphanedKeys: string[] }) => {
+      // MANIFEST-FIRST for the orphan cleanup: the marker is dropped from the
+      // manifest before its generated env key is deleted, so the window can only ever
+      // hold an inert orphan key — never a dangling `!ENV` reference the shared
+      // validator would refuse. The delete rides the env editor's blank-value path.
+      const result = await api.setMcpConfig(mcp);
+      for (const key of orphanedKeys) await api.setEnvConfig({ [key]: '' });
+      return result;
+    },
+    onSuccess: async (_result, { orphanedKeys }) => {
+      // A save moves BOTH manifest views: the editor's preserved read (its own
+      // seed) and the resolved read ManifestTab renders. Dropping either strands
+      // that surface on stale data.
+      await queryClient.invalidateQueries({ queryKey: preservedManifestKey });
+      await queryClient.invalidateQueries({ queryKey: manifestKey });
+      await queryClient.invalidateQueries({ queryKey: mcpStatusKey });
+      // The env config only moved when a generated secret key was cleaned up.
+      if (orphanedKeys.length > 0) {
+        await queryClient.invalidateQueries({ queryKey: envConfigKey });
+      }
     },
   });
 
@@ -752,10 +953,11 @@ function McpConfigEditor({
   };
 
   const isDirty = (): boolean => draftSignature !== baseline;
+  const dirty = isDirty();
 
   // Report to the enclosing tab guard so a switch/navigation/unload confirms before
   // the fleet-reloading config is dropped unsaved.
-  useRegisterDirty(isDirty());
+  useRegisterDirty(dirty);
 
   // Perform the actual switch, converting the working list across. A JSON→form
   // switch with an unparseable buffer stays in JSON and raises loudly rather
@@ -786,6 +988,18 @@ function McpConfigEditor({
     switchTo(next);
   };
 
+  // The generated secret keys this save strands. A key qualifies only when it is
+  // (a) referenced by an `!ENV ${KEY}` leaf in the server manifest but no longer by any
+  // leaf in the config being saved, AND (b) one this editor generated via its own paste.
+  // A key not generated here — picked, pre-existing, or created by another session — is
+  // never in the generated set, so it is NEVER deleted; at worst it is left as a harmless
+  // env orphan.
+  const orphanedKeysOf = (next: unknown[]): string[] => {
+    const before = collectEnvRefs(initialEntries);
+    const after = collectEnvRefs(next);
+    return [...before].filter((key) => !after.has(key) && sessionGeneratedKeysRef.current.has(key));
+  };
+
   const onSave = (): void => {
     if (view === 'json') {
       const parsed = parseEntries(text);
@@ -794,10 +1008,10 @@ function McpConfigEditor({
         return;
       }
       setParseError(undefined);
-      save.mutate(parsed.entries);
+      save.mutate({ mcp: parsed.entries, orphanedKeys: orphanedKeysOf(parsed.entries) });
       return;
     }
-    save.mutate(entries);
+    save.mutate({ mcp: entries, orphanedKeys: orphanedKeysOf(entries) });
   };
 
   return (
@@ -863,6 +1077,10 @@ function McpConfigEditor({
           discoveredTools={discoveredTools}
           extensions={extensions}
           extensionsError={extensionsError}
+          availableSecretKeys={availableSecretKeys}
+          keyPickingAvailable={keyPickingAvailable}
+          dirty={dirty}
+          onPasteSecret={onPasteSecret}
           onChange={setEntries}
         />
       ) : (
@@ -896,6 +1114,9 @@ function McpConfigEditor({
           honestly (nothing on a converged / lone-worker save). */}
       {save.isSuccess ? <FleetReport summary={summarizeFleetFanout(save.data.fanout)} /> : null}
       {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
+      {/* The combined op is server-gated by the shared X-band + dangling-`!ENV`
+          validator; a refusal (or any failure) surfaces loudly, never swallowed. */}
+      {secretEnv.isError ? <ErrorState message={errorMessage(secretEnv.error)} /> : null}
 
       <Dialog
         open={confirmTarget !== null}
@@ -933,9 +1154,13 @@ function McpConfigEditor({
 
 function McpConfigSection(): ReactNode {
   const api = useApi();
+  // The editor reads and round-trips the PRESERVED manifest (`!ENV ${KEY}` markers
+  // intact) — both the form view and the raw JSON view derive from these entries. A
+  // resolved read would inline plaintext secret values, and a raw round-trip of that
+  // would overwrite the references. ManifestTab keeps the resolved read.
   const manifest = useQuery({
-    queryKey: manifestKey,
-    queryFn: ({ signal }) => api.getManifest(signal),
+    queryKey: preservedManifestKey,
+    queryFn: ({ signal }) => api.getManifestPreserved(signal),
   });
   const schema = useQuery({
     queryKey: mcpConfigSchemaKey,
@@ -953,6 +1178,14 @@ function McpConfigSection(): ReactNode {
   const extensions = useQuery({
     queryKey: mcpExtensionsKey,
     queryFn: ({ signal }) => api.listExtensions(signal),
+  });
+  // The env config feeds SecretRefField's env-key picker (`secret_keys`) and gates
+  // whether picking is offered at all. A caller whose projection cannot reach the
+  // env route gets a failed query — the field FAILS CLOSED to paste-only rather than
+  // walling the editor. `secret_keys` also scopes the orphan-key cleanup on save.
+  const envConfig = useQuery({
+    queryKey: envConfigKey,
+    queryFn: ({ signal }) => api.getEnvConfig(signal),
   });
 
   if (manifest.isError || schema.isError) {
@@ -979,6 +1212,8 @@ function McpConfigSection(): ReactNode {
       discoveredTools={discoveredTools}
       extensions={extensions.data ?? []}
       extensionsError={extensionsError}
+      availableSecretKeys={envConfig.data?.secret_keys ?? []}
+      keyPickingAvailable={envConfig.isSuccess}
     />
   );
 }

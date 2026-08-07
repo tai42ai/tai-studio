@@ -367,6 +367,19 @@ function asLoginError(error: unknown): never {
   throw error;
 }
 
+/**
+ * Body for the combined env+manifest secret op (POST `/api/mcp-config/secret-env`).
+ * The server generates the env key from `value` (shaping the name from `key_hint`),
+ * then writes the env value and the literal `!ENV ${KEY}` manifest leaf at
+ * `manifest_pointer` atomically. `manifest_pointer`'s head segment MUST be `mcp`
+ * (the server refuses any other with a loud 400).
+ */
+export interface SetMcpSecretEnvBody {
+  readonly value: string;
+  readonly key_hint: string;
+  readonly manifest_pointer: string;
+}
+
 export function createApiClient(config: ApiConfig) {
   const req = <S extends Parameters<typeof apiRequest>[2]>(
     path: string,
@@ -591,6 +604,59 @@ export function createApiClient(config: ApiConfig) {
     setEnvConfig: (env: Record<string, string>) =>
       req('/api/config/env', s.reloadConfigResult, { method: 'POST', body: env }),
     getConfigMode: (signal?: AbortSignal) => req('/api/config/mode', s.configMode, { signal }),
+
+    // -- settings profiles ---------------------------------------------------
+    // The admin-only `/api/config/profiles/*` surface. Bodies/diff/versions carry
+    // REAL secret values (secret/fenced routes); masking is CLIENT-SIDE.
+    listSettingsProfiles: (signal?: AbortSignal) =>
+      req('/api/config/profiles', s.settingsProfileList, { signal }),
+    getSettingsProfile: (name: string, signal?: AbortSignal) =>
+      req(`/api/config/profiles/${encodeSegment(name)}`, s.settingsProfileBody, { signal }),
+    putSettingsProfile: (name: string, body: s.SettingsProfileBody) =>
+      req(`/api/config/profiles/${encodeSegment(name)}`, s.settingsProfileSaved, {
+        method: 'PUT',
+        body,
+      }),
+    deleteSettingsProfile: (name: string) =>
+      req(`/api/config/profiles/${encodeSegment(name)}`, s.settingsProfileDeleted, {
+        method: 'DELETE',
+      }),
+    // Diff of the SAVED profile vs the stored env — server-computed, no request body.
+    diffSettingsProfile: (name: string) =>
+      req(`/api/config/profiles/${encodeSegment(name)}/diff`, s.settingsProfileDiff, {
+        method: 'POST',
+      }),
+    // Apply the SAVED profile (full-replace of the profile-managed band). Fenced,
+    // destructive → the dedicated `profile_apply_response` report.
+    applySettingsProfile: (name: string) =>
+      req(`/api/config/profiles/${encodeSegment(name)}/apply`, s.profileApplyResponse, {
+        method: 'POST',
+      }),
+    listSettingsProfileVersions: (name: string, signal?: AbortSignal) =>
+      req(`/api/config/profiles/${encodeSegment(name)}/versions`, s.settingsProfileVersionList, {
+        signal,
+      }),
+    getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) =>
+      req(
+        `/api/config/profiles/${encodeSegment(name)}/versions/${encodeSegment(version)}`,
+        s.settingsProfileVersion,
+        { signal },
+      ),
+    rollbackSettingsProfile: (name: string, version: number) =>
+      req(`/api/config/profiles/${encodeSegment(name)}/rollback`, s.settingsProfileRollback, {
+        method: 'POST',
+        body: { version },
+      }),
+
+    // -- combined env+manifest op + preserved manifest -----------------------
+    // The SecretRefField server half: one atomic env-value + `!ENV` manifest
+    // write, returning the shared apply-result shape (reload + fleet fanout).
+    setMcpSecretEnv: (body: SetMcpSecretEnvBody) =>
+      req('/api/mcp-config/secret-env', s.reloadConfigResult, { method: 'POST', body }),
+    // The PRESERVED manifest (`!ENV` markers intact, no resolved secrets) — the
+    // McpTab editor/raw view reads this so round-trips never inline resolved values.
+    getManifestPreserved: (signal?: AbortSignal) =>
+      req('/api/manifest/preserved', s.manifestView, { signal }),
 
     // -- connectors ----------------------------------------------------------
     listProviders: (signal?: AbortSignal) =>

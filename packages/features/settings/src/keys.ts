@@ -42,3 +42,17 @@ export const templateNamesKey = ['auth-template-names'] as const;
 
 /** Key for the available backup sections (`{ name, secret }`). */
 export const backupSectionsKey = ['backup-sections'] as const;
+
+/** Key for the settings-profile list (names + descriptions only). */
+export const settingsProfilesKey = ['settings-profiles'] as const;
+
+/** Key for one settings profile's stored body (`{ description, env, secret_keys }`). */
+export const settingsProfileKey = (name: string) => ['settings-profiles', name] as const;
+
+/** Key for a settings profile's append-only version history (metadata rows). */
+export const settingsProfileVersionsKey = (name: string) =>
+  ['settings-profiles', name, 'versions'] as const;
+
+/** Key for one immutable settings-profile version (metadata + body). */
+export const settingsProfileVersionKey = (name: string, version: number) =>
+  ['settings-profiles', name, 'versions', version] as const;

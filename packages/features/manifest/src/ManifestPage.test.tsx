@@ -27,7 +27,10 @@ const MCP_SCHEMA = {
 
 function fullClient() {
   return {
+    // ManifestTab reads the RESOLVED manifest; the MCP config editor reads the
+    // reference-preserving one.
     getManifest: vi.fn().mockResolvedValue(MANIFEST),
+    getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
     getMcpStatus: vi.fn().mockResolvedValue({ bound: { srv: ['a'] }, failed: [] }),
     getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
     listExtensions: vi.fn().mockResolvedValue([]),
