@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 18 Studio screens (light + dark = 36 PNGs) into
+# pipeline. Regenerates ALL 19 Studio screens (light + dark = 38 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -324,6 +324,21 @@ grep -q "${DEMO_QUESTION}" <<<"${stream_dump}" \
   || die "the seeded audience-addressed question is not on the interactions stream — the scoped-interactions screen would be empty"
 if ! api "${BASE_URL}/api/notifications" | grep -q "nightly export finished"; then
   die "the seeded audience-addressed notification is not in the sink — the scoped-notifications screen would be empty"
+fi
+
+# --- 7d. Seed a settings profile (Profiles-tab screen) ----------------------
+# One named profile through the REAL profile PUT door (create-or-replace: a rerun
+# simply appends a version, so it is idempotent against the persisted store). A small
+# fixed env map with exactly ONE secret-marked key (UPSTREAM_API_TOKEN, listed in
+# secret_keys) so the profile is an honest secret holder. The profiles-tab shot
+# switches to the Profiles tab and waits on this profile's row.
+log "seeding the 'production' settings profile"
+profile_body='{"description":"Production fleet settings","env":{"LOG_LEVEL":"info","REQUEST_TIMEOUT_SECONDS":"30","UPSTREAM_API_TOKEN":"prod-upstream-secret-value"},"secret_keys":["UPSTREAM_API_TOKEN"]}'
+profile_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/config/profiles/production" -d "${profile_body}")"
+# Verify through the LIST route (the shot's own source): the profile name must be
+# present, else the Profiles tab would frame an empty table.
+if ! api "${BASE_URL}/api/config/profiles" | grep -q '"production"'; then
+  die "the seeded 'production' profile is not in the profiles list — the Profiles-tab screen would be empty (PUT reply: ${profile_resp})"
 fi
 
 # --- 8. Capture every screen (light + dark) ---------------------------------

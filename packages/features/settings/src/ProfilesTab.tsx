@@ -211,6 +211,16 @@ const sectionTitleStyle: CSSProperties = {
   color: 'var(--tai-color-text)',
 };
 
+/** The apply-pending line: an inline spinner beside the honest upper-bound copy. */
+const pendingStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--tai-space-2)',
+  margin: 0,
+  color: 'var(--tai-color-text-muted)',
+  fontSize: 'var(--tai-text-sm)',
+};
+
 // -- env editor rows ---------------------------------------------------------
 
 interface Row {
@@ -489,6 +499,13 @@ function ApplyProfileDialog({
             ) : null}
             {diffQuery.isSuccess ? <DiffCallouts diff={diffQuery.data} /> : null}
 
+            {apply.isPending ? (
+              <p role="status" style={pendingStyle}>
+                <Spinner label="Applying" />
+                {`Applying profile ${name} across the fleet - this can take up to 30 seconds.`}
+              </p>
+            ) : null}
+
             {apply.isError ? <ErrorState message={errorMessage(apply.error)} /> : null}
           </>
         )}
@@ -507,7 +524,6 @@ function ApplyProfileDialog({
                 apply.mutate();
               }}
             >
-              {apply.isPending ? <Spinner label="Applying" /> : null}
               Apply profile
             </Button>
           )}

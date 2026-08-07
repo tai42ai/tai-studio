@@ -110,6 +110,16 @@ const footerStyle: CSSProperties = {
   marginTop: 'var(--tai-space-4)',
 };
 
+/** The save-pending line: an inline spinner beside the honest upper-bound copy. */
+const pendingStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 'var(--tai-space-2)',
+  margin: 0,
+  color: 'var(--tai-color-text-muted)',
+  fontSize: 'var(--tai-text-sm)',
+};
+
 function nameLabel(key: string, index: number): string {
   return key.length > 0 ? `Name of variable ${key}` : `Name of new variable ${String(index + 1)}`;
 }
@@ -383,9 +393,14 @@ function EnvironmentEditor({
             disabled={!isValid || mutation.isPending}
             onClick={onSave}
           >
-            {mutation.isPending ? <Spinner label="Saving" /> : null}
             Save
           </Button>
+          {mutation.isPending ? (
+            <span role="status" style={pendingStyle}>
+              <Spinner label="Applying" />
+              Applying settings across the fleet - this can take up to 30 seconds.
+            </span>
+          ) : null}
         </div>
       )}
     </Card>

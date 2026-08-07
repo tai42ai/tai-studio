@@ -29,6 +29,9 @@
  *                  whereas the auto-form always renders, keeping this reproducible.
  *   - extensions — the extension catalog (`ask_external`).
  *   - settings   — the config workbench from `GET /api/config/*` (settings schema).
+ *   - profiles   — the Settings page's Profiles tab: the seeded `production` profile
+ *                  row (name + description) from `GET /api/config/profiles`. The action
+ *                  switches to the tab and waits on that row.
  *   - agents     — the registered `tools_agent` from `GET /api/agents`.
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
@@ -135,6 +138,24 @@ const AUTHED_PAGES = [
   },
   { name: 'extensions', path: '/extensions', wait: 'text=ask_external' },
   { name: 'settings', path: '/settings', wait: 'text=LoggingSettings' },
+  {
+    // The Settings page's Profiles tab. The Settings tab renders first (its
+    // `LoggingSettings` schema is the page's populated signal); the action then clicks
+    // the Profiles tab (role=tab, same pattern as mint-claim-link's "API keys" click)
+    // and waits on the seeded `production` profile's row so the shot frames the
+    // populated profiles table, never an empty tab. Deterministic — the row (name +
+    // description, one secret-marked env key) comes entirely from the pinned seed, so
+    // NO `nondeterministic` flag.
+    name: 'profiles',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Profiles' }).click();
+      await page
+        .locator('[data-testid="profile-row-production"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
   // The registered demo agent renders one row per agent (`data-testid`).
   { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },
   {
