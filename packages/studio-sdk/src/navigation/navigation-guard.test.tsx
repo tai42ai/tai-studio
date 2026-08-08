@@ -75,7 +75,7 @@ describe('useNavigationGuard — SDK navigation interception', () => {
       </NavigationProvider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'leave' }));
-    expect(nav.navigate).toHaveBeenCalledWith('settings', undefined);
+    expect(nav.navigate).toHaveBeenCalledWith('settings');
     expect(handler).not.toHaveBeenCalled();
   });
 
@@ -89,7 +89,7 @@ describe('useNavigationGuard — SDK navigation interception', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'leave' }));
     await waitFor(() => {
-      expect(nav.navigate).toHaveBeenCalledWith('settings', undefined);
+      expect(nav.navigate).toHaveBeenCalledWith('settings');
     });
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -119,7 +119,7 @@ describe('useNavigationGuard — SDK navigation interception', () => {
     await waitFor(() => {
       expect(nav.navigate).toHaveBeenCalledTimes(1);
     });
-    expect(nav.navigate).toHaveBeenCalledWith('settings', undefined);
+    expect(nav.navigate).toHaveBeenCalledWith('settings');
   });
 
   it('blocks the navigation when the guard vetoes', async () => {
@@ -422,7 +422,7 @@ describe('useNavigationGuard — browser back/forward (popstate)', () => {
     // An allowed guarded navigate advances committedRef to the shell-resolved target.
     await userEvent.click(screen.getByRole('button', { name: 'leave' }));
     await waitFor(() => {
-      expect(nav.navigate).toHaveBeenCalledWith('settings', undefined);
+      expect(nav.navigate).toHaveBeenCalledWith('settings');
     });
     const targetHref = nav.resolvePath('settings', undefined);
     // A subsequent Back is now canceled by restoring the NEW page, not the arm-time URL.

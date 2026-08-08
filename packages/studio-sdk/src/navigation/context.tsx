@@ -199,14 +199,18 @@ export function NavigationProvider({
   // Wrap the shell's transitions so an armed guard is consulted before they commit.
   // With no guard armed the call stays synchronous — identical to the raw shell value.
   const guarded = useMemo<NavigationContextValue>(() => {
-    const navigate: NavigationContextValue['navigate'] = (token, search) => {
+    // Forwarded as a REST tuple, so the shell's `navigate` is called with exactly
+    // the arguments the caller passed — a caller that wants the default history
+    // behaviour never turns into one that passed an explicit `undefined` for it.
+    const navigate: NavigationContextValue['navigate'] = (...args) => {
+      const [token, search] = args;
       if (!registry.hasArmedGuards()) {
-        value.navigate(token, search);
+        value.navigate(...args);
         return;
       }
       void registry.run().then((allowed) => {
         if (!allowed) return;
-        value.navigate(token, search);
+        value.navigate(...args);
         // Advance the committed entry to the resolved destination (the router may commit
         // async, so `window.location` would be stale). Its router state is unobservable
         // here, hence `state: null`.

@@ -97,6 +97,7 @@ const NAV_LABELS: Record<FeatureToken, string> = {
   extensions: 'Extensions',
   interactions: 'Interactions',
   notifications: 'Notifications',
+  conversations: 'Conversations',
   connectors: 'Connectors',
   hooks: 'Hooks',
   templates: 'Templates',

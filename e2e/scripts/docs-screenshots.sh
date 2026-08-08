@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 19 Studio screens (light + dark = 38 PNGs) into
+# pipeline. Regenerates ALL 20 Studio screens (light + dark = 40 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -14,8 +14,10 @@
 #      tai42-skeleton (e2e/docs-demo/manifest.yml) via e2e/boot/boot.sh, installing
 #      the agents / storage-local / toolbox / seeded-monitoring plugins into the
 #      skeleton venv;
-#   2. waits for /health, then seeds the demo accounts AND the scoped surfaces
-#      (an owned key plus its audience-addressed notification + pending question);
+#   2. waits for /health, then seeds the demo accounts, the scoped surfaces (an
+#      owned key plus its audience-addressed notification + pending question), the
+#      named settings profile the Profiles tab lists and the conversation route
+#      whose threads the Conversations screen reads;
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
 #   4. copies the five shell screens the tai-studio README embeds into
@@ -340,6 +342,94 @@ profile_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/
 if ! api "${BASE_URL}/api/config/profiles" | grep -q '"production"'; then
   die "the seeded 'production' profile is not in the profiles list — the Profiles-tab screen would be empty (PUT reply: ${profile_resp})"
 fi
+
+# --- 7e. Seed the conversation route + its threads (Conversations screen) ---
+# The Conversations shot deep-links a route's thread list beside one thread's transcript,
+# so both must hold real records: a route is created through the REAL management door and
+# four messages are then driven through the REAL authed api door, each running a turn whose
+# answer is stored and read back by the screen's own read doors.
+#
+# The target is a TOOL (`studio_demo_echo`) rather than an agent: a tool turn needs no LLM
+# credentials and answers identically every run, so the transcript is reproducible. The jq
+# `payload_expr` maps the inbound message onto the tool's `message` kwarg (the default
+# mapping also passes `sender`, which that tool does not take) and `reply_expr` maps the
+# echoed text onto the reply the visitor gets.
+log "seeding the conversation route + its threads"
+CONVERSATION_ROUTE="docs-demo-support"
+
+# Deterministic threads across reruns: the routing rows AND every conversation record live
+# in the conversations Redis (db 5), which the compose backend persists, so a rerun would
+# stack another pair of exchanges onto the same threads and the shot would read as a
+# duplicated conversation. Flush db 5 first — it holds ONLY conversation state — then seed
+# the route into it.
+docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T redis redis-cli -n 5 FLUSHDB >/dev/null \
+  || die "could not flush the conversations Redis (db 5) — the Conversations screen would not be deterministic"
+
+# The identity the demo key resolves to, read back from its own projection rather than
+# assumed: it is the route's `execution_key`, the identity every turn runs AS.
+DEMO_USER_ID="$(api "${BASE_URL}/api/auth/me" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["user_id"])' 2>/dev/null || true)"
+[[ -n "${DEMO_USER_ID}" ]] || die "could not resolve the demo key's own user_id — the conversation route has no execution key"
+
+# A support reply per inbound message, mapped from the echoed text, so the transcript reads
+# as a conversation and not as an echo of itself.
+CONVERSATION_REPLY_EXPR='if (.original | test("where|track"; "i")) then
+  "Your order shipped this morning — tracking is TAI42-99183, and it is due on Thursday."
+elif (.original | test("cancel|refund"; "i")) then
+  "That is cancelled now, and the refund is on its way: it lands back on your card in 3–5 working days."
+else
+  "Thanks for getting in touch — I have passed this to the team and someone will reply here shortly."
+end'
+
+# `door=api` demands an absolute https `callback_url`, but nothing is ever POSTed to it:
+# every message below waits for its turn inline, which suppresses the callback. The sink is
+# therefore a reserved `.invalid` host — a demo has no real answer sink, and naming a
+# reachable one would invite a delivery this run never intends to make.
+route_body="$(EXECUTION_KEY="${DEMO_USER_ID}" REPLY_EXPR="${CONVERSATION_REPLY_EXPR}" python3 -c '
+import json, os
+print(json.dumps({
+    "door": "api",
+    "target_kind": "tool",
+    "target_name": "studio_demo_echo",
+    "payload_expr": "{message: .message}",
+    "reply_expr": os.environ["REPLY_EXPR"],
+    "execution_key": os.environ["EXECUTION_KEY"],
+    "callback_url": "https://docs-demo.invalid/conversations/answers",
+}))')"
+route_resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/conversations/${CONVERSATION_ROUTE}" -d "${route_body}")"
+case "${route_resp}" in
+  *'"route_name"'*) : ;;
+  *) die "creating the demo conversation route failed: ${route_resp}" ;;
+esac
+
+# One message through the api door, printing the thread it opened. `wait_seconds` makes the
+# door wait for the turn and confirm the record DELIVERED inline (the callback is suppressed
+# on that path), so every row shows a settled "Delivered" state rather than a delivery still
+# chasing a sink that does not exist. A reply that did not arrive inline is a broken seed:
+# the shot would show a half-finished turn, so it dies here.
+send_conversation_message() {
+  local external_user_id="$1" text="$2" resp
+  resp="$(api -H "content-type: application/json" \
+    -X POST "${BASE_URL}/api/conversations/${CONVERSATION_ROUTE}/messages" \
+    -d "$(EXTERNAL_USER_ID="${external_user_id}" TEXT="${text}" python3 -c '
+import json, os
+print(json.dumps({"external_user_id": os.environ["EXTERNAL_USER_ID"], "text": os.environ["TEXT"], "wait_seconds": 30}))')")"
+  case "${resp}" in
+    *'"answer"'*) : ;;
+    *) die "the conversation message from ${external_user_id} was not answered inline: ${resp}" ;;
+  esac
+  printf '%s' "${resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"]["thread_id"])'
+}
+
+# Three addresses so the thread LIST is a list, and two exchanges on the one the shot opens
+# so its transcript reads as a conversation. Ada speaks last, so her thread is the newest —
+# the listing's own order — and it is her thread the capture deep-links.
+send_conversation_message "grace.hopper@demo.tai" "Do you ship to the Netherlands?" >/dev/null
+send_conversation_message "alan.turing@demo.tai" "Where has my parcel got to?" >/dev/null
+send_conversation_message "ada.lovelace@demo.tai" "Hi — where is my order? It should have arrived on Tuesday." >/dev/null
+CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks. Can you cancel it and refund me instead?")"
+export STUDIO_CONVERSATION_ROUTE="${CONVERSATION_ROUTE}"
+export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
 
 # --- 8. Capture every screen (light + dark) ---------------------------------
 log "capturing screenshots into ${OUT_DIR}"

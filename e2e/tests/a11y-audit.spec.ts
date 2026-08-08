@@ -42,6 +42,7 @@ const FEATURE_ROUTES = [
   '/scheduling',
   '/interactions',
   '/notifications',
+  '/conversations',
   '/marketplace',
   '/manifest',
   '/settings',

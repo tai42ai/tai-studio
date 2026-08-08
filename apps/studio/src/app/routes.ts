@@ -17,6 +17,7 @@ export const PATH: Record<RouteToken, string> = {
   extensions: '/extensions',
   interactions: '/interactions',
   notifications: '/notifications',
+  conversations: '/conversations',
   connectors: '/connectors',
   hooks: '/hooks',
   templates: '/templates',
@@ -44,7 +45,7 @@ export const DASHBOARD_TOKEN = 'observability' as const satisfies RouteToken;
 export const NAV_SECTIONS = [
   { label: 'Capabilities', tokens: ['tools', 'agents', 'presets', 'extensions', 'templates'] },
   { label: 'Integrations', tokens: ['connectors', 'hooks', 'storage'] },
-  { label: 'Activity', tokens: ['scheduling', 'interactions', 'notifications'] },
+  { label: 'Activity', tokens: ['scheduling', 'interactions', 'notifications', 'conversations'] },
   { label: 'Administration', tokens: ['marketplace', 'manifest', 'settings', 'system'] },
 ] as const satisfies readonly { readonly label: string; readonly tokens: readonly RouteToken[] }[];
 

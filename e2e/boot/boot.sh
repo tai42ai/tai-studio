@@ -62,6 +62,7 @@ CONNECTOR_STORE_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/1"
 INTERACTIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/2"
 TOOL_RUNS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/3"
 HOOKS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/4"
+CONVERSATIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/5"
 PG_HOST_PORT=55432
 
 # The one named "default" database every store binds to (TAI_DB_BINDING_* unset, so
@@ -244,6 +245,13 @@ export TAI_TOOL_RUNS_REDIS_URL="${TOOL_RUNS_REDIS_URL}"
 # workers) refuse with a loud 501. Point it at the compose Redis (db 4, isolated
 # from the stores above) so the hooks-page trigger-link flow works end to end.
 export HOOKS_REDIS_URL="${HOOKS_REDIS_URL}"
+
+# Conversation bridge: the routing rows and every conversation record live in this
+# Redis; with no url the manager is in-memory and every routing door refuses with a loud
+# 501, so the docs-demo manifest's conversations router would serve a Conversations screen
+# that can hold nothing. Point it at the compose Redis (db 5, isolated from the stores
+# above).
+export CONVERSATIONS_REDIS_URL="${CONVERSATIONS_REDIS_URL}"
 
 # Connectors engine: a throwaway HMAC/KEK so the connectors router boots and the
 # oauth/complete route can sign/verify state. The bridge origin (optional) and

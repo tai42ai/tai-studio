@@ -95,6 +95,7 @@ export type {
   RouteSearchByToken,
   PageProps,
   NavigationContextValue,
+  NavigateOptions,
   PluginSearch,
   NavigationGuardHandler,
 } from './navigation';
@@ -284,6 +285,7 @@ export {
   SchedulingIcon,
   InteractionsIcon,
   NotificationsIcon,
+  ConversationsIcon,
   MarketplaceIcon,
   ManifestIcon,
   SettingsIcon,

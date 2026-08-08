@@ -86,6 +86,33 @@ describe('shell navigation', () => {
     });
   });
 
+  // A page that rewrites its own URL — the conversations monitor repairing a
+  // `thread` with no `route` — must not leave the URL it rewrote one Back away,
+  // or Back returns to it, it rewrites again, and the page cannot be left.
+  it('replaces the history entry instead of pushing one when the caller asks', async () => {
+    server.use(
+      http.get('*/api/plugins', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/tools', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/tools/tags', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/conversations', () => HttpResponse.json({ data: { items: [], total: 0 } })),
+    );
+    const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-nav-replace' });
+    await screen.findByRole('link', { name: 'Tools' });
+    const depth = studio.router.history.length;
+
+    studio.navigation.navigate('conversations', { route: 'a' });
+    await waitFor(() => {
+      expect(studio.router.state.location.searchStr).toBe('?route=a');
+    });
+    expect(studio.router.history.length).toBe(depth + 1);
+
+    studio.navigation.navigate('conversations', { route: 'b' }, { replace: true });
+    await waitFor(() => {
+      expect(studio.router.state.location.searchStr).toBe('?route=b');
+    });
+    expect(studio.router.history.length).toBe(depth + 1);
+  });
+
   it('renders sidebar AppLinks with resolved hrefs and navigate drives the router', async () => {
     server.use(
       http.get('*/api/plugins', () => HttpResponse.json({ data: [] })),

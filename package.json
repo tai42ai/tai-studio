@@ -35,11 +35,9 @@
     "test": "pnpm -r test",
     "e2e": "pnpm --filter @tai42/e2e run e2e",
     "fixtures:refresh": "pnpm --filter @tai42/e2e run fixtures:refresh",
-    "changeset": "changeset",
     "prepare": "lefthook install"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^9.17.0",
     "eslint": "catalog:",
     "eslint-plugin-boundaries": "catalog:",

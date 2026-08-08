@@ -45,6 +45,9 @@
  *                  populated from `GET /api/system/kinds`.
  *   - users-admin — the accounts plugin's users-admin page (usr-* human accounts),
  *                  mounted via `studio_plugins`, populated by the runner's seed.
+ *   - conversations — the conversation monitor at its deepest level: a seeded route's
+ *                  thread list beside one thread's transcript, both populated by the
+ *                  real turns the runner drives through the authed api door.
  *   - hooks-trigger-link / -execution-key — the mint→QR dialog, and the register
  *                  form's execution-key picker.
  *   - login      — the credential screen, captured signed out.
@@ -98,6 +101,21 @@ const DEMO_KEY = process.env.STUDIO_API_KEY ?? 'sk-docs-demo-full-privilege-key'
  * else the entry would silently fall back to the full DEMO_KEY and mis-capture the
  * scoped view. The guard below turns that into a loud failure. */
 const OWNED_KEY = process.env.STUDIO_OWNED_KEY;
+
+/** The seeded conversation route and the thread inside it the Conversations shot
+ * deep-links to. Both exist only at runtime — the route is created and its threads are
+ * opened by real turns after boot — so the runner (docs-screenshots.sh) seeds them and
+ * exports them here; there is no static fallback. Unset, the shot would deep-link a
+ * route/thread that names nothing and capture an empty monitor, so it fails loudly. */
+const CONVERSATION_ROUTE = process.env.STUDIO_CONVERSATION_ROUTE;
+const CONVERSATION_THREAD = process.env.STUDIO_CONVERSATION_THREAD;
+if (!CONVERSATION_ROUTE || !CONVERSATION_THREAD) {
+  console.error(
+    'STUDIO_CONVERSATION_ROUTE and STUDIO_CONVERSATION_THREAD are required: the runner ' +
+      '(docs-screenshots.sh) seeds the conversation route and its threads, then exports both.',
+  );
+  process.exit(1);
+}
 
 /** When set (the automated CI pipeline sets it), skip the shots tagged
  * `nondeterministic` — the QR screens, whose QR encodes a freshly-minted random token
@@ -232,6 +250,30 @@ const AUTHED_PAGES = [
     name: 'users-admin',
     path: '/plugins/tai42_accounts_postgres/users',
     wait: 'text=ada.lovelace@demo.tai',
+  },
+  {
+    // The conversation monitor at its deepest level — the master/detail split the docs
+    // describe — reached by the deep link the page's own thread rows write: the seeded
+    // route's thread list on the leading edge, the seeded thread's transcript beside it.
+    // The wait is the threads TABLE, which renders only for a non-empty listing (an empty
+    // route renders "No threads yet" instead), and the action requires a rendered exchange
+    // so the detail pane is a real transcript rather than a skeleton or an empty state.
+    //
+    // Nondeterministic: both panes label their instants RELATIVELY ("now", "2 minutes
+    // ago") against the moment of capture, and the records are stamped server-side when
+    // the runner drives their turns — so the labels differ every run. Gated out of the
+    // automated pipeline (SKIP_NONDETERMINISTIC_SHOTS); recaptured on a manual full run
+    // when the monitor's UI changes.
+    name: 'conversations',
+    nondeterministic: true,
+    path: `/conversations?route=${encodeURIComponent(CONVERSATION_ROUTE)}&thread=${encodeURIComponent(CONVERSATION_THREAD)}`,
+    wait: '[data-testid="conversation-threads-table"]',
+    action: async (page) => {
+      await page
+        .locator('[data-testid="conversation-exchange"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
   },
   // --- Capability-scoped screens (authenticated as the seeded OWNED key) -------
   // These four carry `apiKey: OWNED_KEY`, so they render the scoped projection's

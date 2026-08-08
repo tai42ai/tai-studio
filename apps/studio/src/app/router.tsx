@@ -26,6 +26,7 @@ import { PresetsPage } from '@tai42/feature-presets';
 import { ExtensionsPage } from '@tai42/feature-extensions';
 import { InteractionsPage } from '@tai42/feature-interactions';
 import { NotificationsPage } from '@tai42/feature-notifications';
+import { ConversationsPage } from '@tai42/feature-conversations';
 import { ConnectorsPage } from '@tai42/feature-connectors';
 import { HooksPage } from '@tai42/feature-hooks';
 import { TemplatesPage } from '@tai42/feature-templates';
@@ -262,6 +263,18 @@ export function buildRouter(options: BuildRouterOptions) {
     component: (): ReactNode => <NotificationsPage search={{}} />,
   });
 
+  const conversationsRoute = createRoute({
+    getParentRoute: () => authedLayout,
+    path: '/conversations',
+    validateSearch: (search: Record<string, unknown>): RouteSearch<'conversations'> => ({
+      route: typeof search.route === 'string' ? search.route : undefined,
+      thread: typeof search.thread === 'string' ? search.thread : undefined,
+    }),
+    component: function ConversationsRoute(): ReactNode {
+      return <ConversationsPage search={useSearch({ from: '/authed/conversations' })} />;
+    },
+  });
+
   const connectorsRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/connectors',
@@ -364,6 +377,7 @@ export function buildRouter(options: BuildRouterOptions) {
       extensionsRoute,
       interactionsRoute,
       notificationsRoute,
+      conversationsRoute,
       connectorsRoute,
       hooksRoute,
       templatesRoute,

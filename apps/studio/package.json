@@ -28,6 +28,7 @@
     "@tai42/api-client": "workspace:*",
     "@tai42/feature-agents": "workspace:*",
     "@tai42/feature-connectors": "workspace:*",
+    "@tai42/feature-conversations": "workspace:*",
     "@tai42/feature-extensions": "workspace:*",
     "@tai42/feature-hooks": "workspace:*",
     "@tai42/feature-interactions": "workspace:*",

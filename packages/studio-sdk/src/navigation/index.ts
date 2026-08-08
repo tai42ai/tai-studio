@@ -14,6 +14,7 @@ export type {
   RouteSearchByToken,
   PageProps,
   NavigationContextValue,
+  NavigateOptions,
   PluginSearch,
   NavigationGuardHandler,
 } from './types';

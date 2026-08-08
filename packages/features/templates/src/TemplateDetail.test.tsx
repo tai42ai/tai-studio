@@ -70,7 +70,7 @@ describe('TemplateDetail — delete', () => {
     });
     // The provider forwards `navigate('templates')` to the shell as
     // `(token, search)` with search undefined (clearing `?template=`).
-    expect(navigate).toHaveBeenCalledWith('templates', undefined);
+    expect(navigate).toHaveBeenCalledWith('templates');
   });
 
   it('keeps a failed delete loud inside the dialog and does not navigate', async () => {

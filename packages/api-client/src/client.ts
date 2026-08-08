@@ -223,6 +223,20 @@ export interface StorageUploadBody {
   readonly content_base64?: string;
 }
 
+/**
+ * One transcript read (GET `/api/conversations/{route}/transcript` query params).
+ * `order` is not a default the caller may skip: `asc` reads the thread from its
+ * beginning and `desc` from its newest end, and which one a screen wants is a
+ * decision that screen must make.
+ */
+export interface ConversationTranscriptQuery {
+  readonly routeName: string;
+  readonly threadId: string;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly order: s.TranscriptOrder;
+}
+
 /** The observability-metrics window + bucket size (GET query params). */
 export interface MetricsQuery {
   readonly from?: string;
@@ -708,6 +722,44 @@ export function createApiClient(config: ApiConfig) {
     // -- channels --------------------------------------------------------------
     // The installed channel-plugin names (delivery media for ask_user questions).
     listChannels: (signal?: AbortSignal) => req('/api/channels', s.channels, { signal }),
+
+    // -- conversations ---------------------------------------------------------
+    // The stored routing rows, each with its `callback_secret` withheld — the
+    // conversation monitor's route picker.
+    listConversationRoutes: (signal?: AbortSignal) =>
+      req('/api/conversations', s.conversationRoutes, { signal }),
+    // One route's threads, newest activity first. Admin-only server-side: a
+    // listing spans every caller on the route, so a scoped session gets a 403.
+    listConversationThreads: (
+      routeName: string,
+      page: number,
+      pageSize: number,
+      signal?: AbortSignal,
+    ) =>
+      req(`/api/conversations/${encodeSegment(routeName)}/threads`, s.conversationThreadsPage, {
+        signal,
+        query: { page, pageSize },
+      }),
+    // One thread's transcript, caller-scoped, read in the asked-for direction.
+    // The `thread_id` rides the QUERY STRING, never the path: it embeds the api
+    // door's `{principal}/{end user}` address with the principal already
+    // percent-encoded, which a path segment would have to encode a second time
+    // and the server would then decode once too few. A query value is decoded
+    // exactly once whatever it holds, so it is passed through verbatim.
+    readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) =>
+      req(
+        `/api/conversations/${encodeSegment(query.routeName)}/transcript`,
+        s.conversationTranscriptPage,
+        {
+          signal,
+          query: {
+            thread_id: query.threadId,
+            page: query.page,
+            pageSize: query.pageSize,
+            order: query.order,
+          },
+        },
+      ),
 
     // -- notifications ---------------------------------------------------------
     // The internal notifications sink, newest-first — the messages the `notify_user`

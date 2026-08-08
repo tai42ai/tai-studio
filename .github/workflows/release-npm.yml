@@ -6,8 +6,9 @@ name: release-npm
 #   @tai42/api-client  — its sibling API client
 # Everything else in the workspace is a private package: the shell app and the
 # `packages/features/*` page surfaces are the Studio application itself, not a
-# consumable library. release.yml raises the version PR that bumps versions and
-# writes the changelog; pushing the resulting tag lands here.
+# consumable library. release-please.yml raises the version PR that bumps both
+# package versions and carries the release notes (`skip-changelog` — the notes go
+# on the GitHub Release, not into a file); merging it tags, and that tag lands here.
 #
 # Trigger: push of a v* tag whose version must equal BOTH package versions.
 #

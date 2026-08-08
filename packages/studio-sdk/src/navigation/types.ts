@@ -27,6 +27,10 @@ export interface RouteSearchByToken {
   extensions: Record<string, never>;
   interactions: Record<string, never>;
   notifications: Record<string, never>;
+  // The conversation monitor's drill state: `route` picks a conversation route,
+  // `thread` opens one of its transcripts. A `thread` with no `route` names
+  // nothing readable, and the page repairs it away.
+  conversations: { route?: string; thread?: string };
   connectors: { connection?: string };
   hooks: Record<string, never>;
   templates: { template?: string };
@@ -86,11 +90,27 @@ export interface PageProps<T extends RouteToken> {
 export type PluginSearch = Record<string, unknown>;
 
 /**
+ * How a token navigation enters session history.
+ *
+ * The default is a PUSH: a move the reader made, which Back must be able to undo.
+ * `replace` overwrites the current entry instead, and is for a transition the
+ * reader did NOT make — a page rewriting an unrenderable URL of its own accord.
+ * Pushing such a rewrite leaves the URL it rewrote sitting behind Back, where
+ * pressing Back rewrites it again and pushes again: a page no Back can leave.
+ */
+export interface NavigateOptions {
+  /** Overwrite the current history entry instead of pushing a new one. */
+  readonly replace?: boolean;
+}
+
+/**
  * The runtime navigation surface the shell provides through
- * {@link NavigationProvider}. `navigate` performs a client-side transition;
- * `resolvePath` produces the href a link should point at (so an AppLink is a real
- * anchor — middle-click / open-in-new-tab work — while still driving a
- * client-side transition on plain click).
+ * {@link NavigationProvider}. `navigate` performs a client-side transition, by
+ * default pushing a history entry — see {@link NavigateOptions} for the third
+ * argument that replaces one instead. `resolvePath` produces the href a link
+ * should point at (so an AppLink is a real anchor — middle-click /
+ * open-in-new-tab work — while still driving a client-side transition on plain
+ * click).
  *
  * `navigatePlugin`/`resolvePluginPath` are the plugin-page twins: they target a
  * runtime plugin path (`/plugins/{pluginId}/{pagePath}` plus an optional validated
@@ -98,7 +118,11 @@ export type PluginSearch = Record<string, unknown>;
  * plugin paths. Plugins reach these two via the {@link usePluginNavigation} hook.
  */
 export interface NavigationContextValue {
-  navigate: <T extends RouteToken>(token: T, search?: RouteSearch<T>) => void;
+  navigate: <T extends RouteToken>(
+    token: T,
+    search?: RouteSearch<T>,
+    options?: NavigateOptions,
+  ) => void;
   resolvePath: <T extends RouteToken>(token: T, search?: RouteSearch<T>) => string;
   navigatePlugin: (
     pluginId: string,

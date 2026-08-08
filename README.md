@@ -47,13 +47,12 @@ order. The build comes first because every package resolves the other
 `@tai42/*` packages through their built declarations, so the typechecked steps
 and the tests only resolve cross-package imports against a built workspace.
 
-Two further CI jobs gate a pull request:
+Two further checks gate a pull request:
 
-- **`changeset`** — `pnpm changeset status --since=origin/main`. A pull request
-  that changes a workspace package's code must carry a changeset, so the version
-  bumps and release notes stay honest. A docs-only or otherwise no-release change
-  satisfies it with an empty changeset (`pnpm changeset --empty`, committed on
-  the branch).
+- **`commitlint`** — every commit in the PR, and the PR title, must be a
+  [Conventional Commit](https://www.conventionalcommits.org). The type is what
+  picks the next version, so a PR that changes a package's code says which bump
+  it wants in its subject; nothing else is added to the branch.
 - **`e2e`** — `pnpm -r build`, then
   `pnpm --filter @tai42/e2e exec playwright install --with-deps` and `pnpm e2e`.
   Playwright drives the built Studio against a real `tai42-skeleton` backend, so
@@ -89,8 +88,9 @@ lower ever imports something higher).
   HTTP API. One schema per endpoint; every response is validated and every
   drift or failure throws. It holds no server state of its own.
 - **`packages/features/*`** — one package per page surface (tools, agents,
-  extensions, presets, templates, hooks, interactions, connectors, notifications,
-  settings, system, observability, scheduling, manifest, marketplace, storage).
+  extensions, presets, templates, hooks, interactions, connectors, conversations,
+  notifications, settings, system, observability, scheduling, manifest,
+  marketplace, storage).
   Each exports its page component and imports only `@tai42/studio-sdk`,
   `@tai42/api-client`, and TanStack Query.
 - **`e2e`** — Playwright specs that drive the built Studio against a real running

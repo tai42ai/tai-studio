@@ -203,6 +203,16 @@ export const NotificationsIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** Conversations: one speech bubble holding transcript lines. */
+export const ConversationsIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3.5V16h-1A2.5 2.5 0 0 1 4 13.5z" />
+    <path d="M8 7.5h8" />
+    <path d="M8 10.5h8" />
+    <path d="M8 13.5h4" />
+  </Icon>
+);
+
 /** Marketplace: a shopping bag. */
 export const MarketplaceIcon: IconComponent = (props) => (
   <Icon {...props}>
@@ -514,6 +524,7 @@ export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconCompon
   scheduling: SchedulingIcon,
   interactions: InteractionsIcon,
   notifications: NotificationsIcon,
+  conversations: ConversationsIcon,
   marketplace: MarketplaceIcon,
   manifest: ManifestIcon,
   settings: SettingsIcon,

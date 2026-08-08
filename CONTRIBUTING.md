@@ -72,13 +72,18 @@ pull request from this repo.
 Before any commit, run a secret scan over the tree (e.g. `detect-secrets scan`) —
 never commit a real `.env` or an API key.
 
-## Changesets
+## Commits and releases
 
-Every PR that changes a package's code adds a changeset so its version bump and
-release notes are recorded: run `pnpm changeset`, pick the affected packages and
-bump level, and commit the generated `.changeset/*.md` file. CI fails a PR that
-touches package code without one. A docs-only or otherwise no-release PR
-satisfies the check with an empty changeset: `pnpm changeset --empty`.
+Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org)
+— the `commitlint` check fails a PR that does not. The type picks the version
+bump: `fix:` a patch, `feat:` a minor, `feat!:` (or a `BREAKING CHANGE:` footer)
+a major; `chore:`, `docs:`, `test:`, `ci:`, `refactor:`, `perf:`, `build:` and
+`style:` release nothing.
+
+You add nothing else to the PR. On every push to `main`, release-please reads the
+merged commits and opens (or updates) a release PR carrying the next version;
+merging that PR tags `v<version>` and publishes the packages, with the notes
+generated onto the GitHub Release. There is no changelog file to edit.
 
 ## License
 

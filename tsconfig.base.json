@@ -38,6 +38,7 @@
       "@tai42/feature-extensions": ["packages/features/extensions/src/index.ts"],
       "@tai42/feature-interactions": ["packages/features/interactions/src/index.ts"],
       "@tai42/feature-connectors": ["packages/features/connectors/src/index.ts"],
+      "@tai42/feature-conversations": ["packages/features/conversations/src/index.ts"],
       "@tai42/feature-hooks": ["packages/features/hooks/src/index.ts"],
       "@tai42/feature-templates": ["packages/features/templates/src/index.ts"],
       "@tai42/feature-manifest": ["packages/features/manifest/src/index.ts"],

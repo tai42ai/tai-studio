@@ -6,7 +6,7 @@
 # which stays SEPARATE and untouched), this one loads EVERY UI-facing router plus
 # the real plugins so every Studio screen renders populated content — the agents
 # list, the observability dashboard, the manifest tab, the templates list, the
-# System health card, and the notifications inbox.
+# System health card, the notifications inbox, and the conversation monitor.
 #
 # The capability-scoped screens (the owned-key views of tools, interactions, and
 # notifications) authenticate as a SCOPED owned key the runner mints after boot;
@@ -48,6 +48,7 @@ routers_modules:
   - tai42_skeleton.routers.interactions
   - tai42_skeleton.routers.channels # /api/channels          (Interactions delivery channels)
   - tai42_skeleton.routers.notifications # /api/notifications      (Notifications inbox)
+  - tai42_skeleton.routers.conversations # /api/conversations*     (Conversations monitor)
   - tai42_skeleton.routers.tools
   - tai42_skeleton.routers.tool_meta # /api/tool-meta         (Tools page folder tree + overlay)
   - tai42_skeleton.routers.extensions

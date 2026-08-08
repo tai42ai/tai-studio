@@ -12,6 +12,7 @@
     { "path": "packages/features/extensions/tsconfig.build.json" },
     { "path": "packages/features/interactions/tsconfig.build.json" },
     { "path": "packages/features/notifications/tsconfig.build.json" },
+    { "path": "packages/features/conversations/tsconfig.build.json" },
     { "path": "packages/features/connectors/tsconfig.build.json" },
     { "path": "packages/features/hooks/tsconfig.build.json" },
     { "path": "packages/features/templates/tsconfig.build.json" },

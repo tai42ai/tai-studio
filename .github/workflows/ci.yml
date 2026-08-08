@@ -37,9 +37,8 @@ jobs:
       # BOTH halves. `pnpm -r` skips the workspace root, and every package's own
       # glob is scoped to that package's own source (the SDK's and the shell's
       # already cover their stylesheets), so without the root gate everything
-      # outside those globs — the workflows, the changesets, every package.json,
-      # the root configs and the repository's markdown — is format-checked by
-      # nothing in CI.
+      # outside those globs — the workflows, every package.json, the root configs
+      # and the repository's markdown — is format-checked by nothing in CI.
       - name: Format check (packages)
         run: pnpm -r format:check
       - name: Format check (root)

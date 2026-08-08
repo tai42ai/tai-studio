@@ -48,6 +48,29 @@ describe('navigation', () => {
     expect(nav.navigate).toHaveBeenCalledWith('tools', { tool: 'echo' });
   });
 
+  // A page rewriting its own URL asks for a REPLACE, and the provider must carry
+  // that through: pushed, the rewritten URL sits one Back away and is rewritten
+  // again, which is a page Back cannot leave.
+  it('useAppNavigate carries the history option through to the shell navigate', async () => {
+    const nav = makeNav();
+    function Go() {
+      const navigate = useAppNavigate();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            navigate('tools', { tool: 'echo' }, { replace: true });
+          }}
+        >
+          go
+        </button>
+      );
+    }
+    wrap(nav, <Go />);
+    await userEvent.click(screen.getByRole('button', { name: 'go' }));
+    expect(nav.navigate).toHaveBeenCalledWith('tools', { tool: 'echo' }, { replace: true });
+  });
+
   it('AppLink renders a real anchor with the resolved href', () => {
     const nav = makeNav();
     wrap(

@@ -34,6 +34,7 @@ export const TOKEN_REQUIREMENTS = {
   extensions: { anyOf: ['/api/extensions'] },
   interactions: { anyOf: ['/api/interactions'] },
   notifications: { anyOf: ['/api/notifications'] },
+  conversations: { anyOf: ['/api/conversations'] },
   connectors: { anyOf: ['/api/connectors'] },
   hooks: { anyOf: ['/api/hooks'] },
   templates: { anyOf: ['/api/templates'] },

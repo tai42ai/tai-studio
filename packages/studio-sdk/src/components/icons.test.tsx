@@ -27,6 +27,7 @@ const ROUTE_TOKENS = [
   'scheduling',
   'interactions',
   'notifications',
+  'conversations',
   'marketplace',
   'manifest',
   'settings',
@@ -46,7 +47,7 @@ afterEach(() => {
 });
 
 /**
- * The marks the design system PINS by name: the sixteen route marks plus the
+ * The marks the design system PINS by name: every route mark plus the
  * shell, theme, control and status sets. Deleting or renaming any of them breaks
  * a screen that names it, so the inventory is asserted explicitly rather than by
  * counting whatever the module happens to export.
@@ -64,6 +65,7 @@ const REQUIRED_ICONS = [
   'SchedulingIcon',
   'InteractionsIcon',
   'NotificationsIcon',
+  'ConversationsIcon',
   'MarketplaceIcon',
   'ManifestIcon',
   'SettingsIcon',
