@@ -275,9 +275,13 @@ describe('ThreadList', () => {
     // That control took its own notice with it, so focus is handed to the pane's
     // heading rather than dropped on `<body>`, and the outcome is announced.
     expect(screen.getByRole('heading', { level: 2, name: 'support' })).toHaveFocus();
-    expect(screen.getByTestId('conversation-thread-list-announcer')).toHaveTextContent(
-      'Back to the newest threads. 1 thread on screen, and the list is refreshing again.',
-    );
+    // The resume announcement is a state change committed the tick after the page
+    // is dropped, so it is awaited, not read at the same instant the page leaves.
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-thread-list-announcer')).toHaveTextContent(
+        'Back to the newest threads. 1 thread on screen, and the list is refreshing again.',
+      );
+    });
     before = listThreads.mock.calls.length;
     await act(async () => {
       await vi.advanceTimersByTimeAsync(THREADS_REFRESH_MS + 10);

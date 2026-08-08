@@ -234,9 +234,13 @@ describe('Transcript', () => {
     // That control took its own notice with it, so focus is handed to the pane's
     // heading rather than dropped on `<body>`, and the outcome is announced.
     expect(screen.getByRole('heading', { level: 2, name: '+15551234567' })).toHaveFocus();
-    expect(screen.getByTestId('conversation-transcript-announcer')).toHaveTextContent(
-      'Back at the newest page. 1 exchange on screen, and new messages arrive again.',
-    );
+    // The resume announcement is a state change committed the tick after the page
+    // is dropped, so it is awaited, not read at the same instant the page leaves.
+    await waitFor(() => {
+      expect(screen.getByTestId('conversation-transcript-announcer')).toHaveTextContent(
+        'Back at the newest page. 1 exchange on screen, and new messages arrive again.',
+      );
+    });
 
     const before = read.mock.calls.length;
     await act(async () => {
