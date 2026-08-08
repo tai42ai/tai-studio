@@ -197,6 +197,53 @@ describe('ProfilesTab — create & edit', () => {
     });
   });
 
+  it('creates a profile with TWO variables — each row keeps its own name/value (unique ids)', async () => {
+    // Regression: the editor's row-id counter must persist across renders (a
+    // ref-backed monotonic id). A render-recreated counter hands every added row the
+    // SAME id, and the id-keyed setKey/setValue then mutate all rows sharing it — so a
+    // 2nd variable overwrites the 1st, tripping the duplicate/blank guard and disabling
+    // Create. Adding two distinct vars must leave both intact with Create enabled.
+    const user = userEvent.setup();
+    const putSettingsProfile = vi.fn(() => Promise.resolve({ ok: true as const, version: 1 }));
+    renderWithProviders(<ProfilesTab readOnly={false} />, {
+      client: stubClient({ putSettingsProfile }),
+      projection: fullProjection(),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'New profile' }));
+    await user.type(await screen.findByLabelText('Profile name'), 'multi');
+
+    // First variable. Value before name — typing the key renames the value input's label.
+    await user.click(screen.getByRole('button', { name: 'Add variable' }));
+    await user.type(screen.getByLabelText('Value of new variable 1'), 'v-alpha');
+    await user.type(screen.getByLabelText('Name of new variable 1'), 'ALPHA');
+
+    // Second variable — with the bug this shares the first row's id and cross-mutates it.
+    await user.click(screen.getByRole('button', { name: 'Add variable' }));
+    await user.type(screen.getByLabelText('Value of new variable 2'), 'v-beta');
+    await user.type(screen.getByLabelText('Name of new variable 2'), 'BETA');
+
+    // Both rows retained their OWN name/value — no cross-mutation.
+    expect(screen.getByLabelText('Name of variable ALPHA')).toHaveValue('ALPHA');
+    expect(screen.getByLabelText('Value of variable ALPHA')).toHaveValue('v-alpha');
+    expect(screen.getByLabelText('Name of variable BETA')).toHaveValue('BETA');
+    expect(screen.getByLabelText('Value of variable BETA')).toHaveValue('v-beta');
+
+    // No false "names must be unique" — Create is enabled and PUTs both variables.
+    expect(screen.queryByText(/must be unique and non-empty/i)).not.toBeInTheDocument();
+    const create = screen.getByRole('button', { name: 'Create profile' });
+    expect(create).toBeEnabled();
+
+    await user.click(create);
+    await waitFor(() => {
+      expect(putSettingsProfile).toHaveBeenCalledWith('multi', {
+        description: '',
+        env: { ALPHA: 'v-alpha', BETA: 'v-beta' },
+        secret_keys: [],
+      });
+    });
+  });
+
   it('rejects a reserved “@”-prefixed profile name', async () => {
     const user = userEvent.setup();
     const putSettingsProfile = vi.fn(() => Promise.resolve({ ok: true as const, version: 1 }));

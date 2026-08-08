@@ -29,7 +29,7 @@
  * State follows the shared convention: <Spinner> while loading, a loud <ErrorState>
  * on any failure; every server-supplied string renders as escaped React text.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
@@ -636,8 +636,11 @@ function ProfileFormBody({
   const api = useApi();
   const editing = name !== null;
 
-  let seq = 0;
-  const nextId = (): string => `profile-row-${String(seq++)}`;
+  // A ref-backed monotonic counter: persists across renders so each added row gets a
+  // UNIQUE stable id (a render-recreated `let` would reset to 0 every render, handing
+  // every row the same id and cross-mutating them). Mirrors EnvironmentTab.
+  const idRef = useRef(0);
+  const nextId = (): string => `profile-row-${String(idRef.current++)}`;
   const [draftName, setDraftName] = useState(name ?? '');
   const [description, setDescription] = useState(initial.description);
   const [rows, setRows] = useState<Row[]>(() =>
