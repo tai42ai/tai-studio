@@ -89,7 +89,7 @@ describe('tool-extensions client transport', () => {
     expect(out.fanout.mode).toBe('local-only');
   });
 
-  it('setToolExtensions parses the multi-worker fanout, keeping a non-converged origin visible', async () => {
+  it('setToolExtensions parses the multi-worker fanout, keeping a non-converged worker visible', async () => {
     // A reachable multi-worker broadcast rides the fleet fanout; zod must parse (not
     // strip) it so the shared fleet-report handler can surface a stranded sibling.
     const { client } = harness(() =>
@@ -103,9 +103,9 @@ describe('tool-extensions client transport', () => {
             reachable: true,
             local_only: false,
             results: [
-              { origin: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+              { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
               {
-                origin: 'backend-b',
+                name: 'backend-b',
                 outcome: 'failed',
                 payload: null,
                 error: 'reload raised',
@@ -119,7 +119,7 @@ describe('tool-extensions client transport', () => {
     );
     const out = await client.setToolExtensions('shout', [['marka']]);
     expect(out.fanout.mode).toBe('fleet');
-    // Narrow past the local-only variant to reach the fleet report's origin list.
+    // Narrow past the local-only variant to reach the fleet report's worker list.
     if (out.fanout.mode !== 'local-only') {
       expect(out.fanout.results.map((entry) => entry.outcome)).toEqual(['applied', 'failed']);
     }

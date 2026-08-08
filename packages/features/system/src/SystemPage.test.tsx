@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -8,7 +8,13 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
-import { ApiError, type ApiClient, type MeProjection } from '@tai42/api-client';
+import {
+  ApiError,
+  type ApiClient,
+  type FleetResult,
+  type FleetWorker,
+  type MeProjection,
+} from '@tai42/api-client';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -123,35 +129,38 @@ const DEFAULT_KINDS = [
   { kind: 'config', state: 'default', plugin: null, detail: 'file' },
 ];
 
-/** A bus presence census of `serve` origins (the shape `GET /api/fleet/workers`
- * returns). The origin string doubles as the reload target and the row label. */
-function fleet(...origins: string[]): {
-  workers: { origin: string; kind: 'serve'; pid: number }[];
-} {
-  return { workers: origins.map((origin, index) => ({ origin, kind: 'serve', pid: 100 + index })) };
+/** One census row with sane `ready` defaults; `overrides` tunes a single field (a
+ * higher generation, a transient state, a `stale: true` decayed row, a `last_op`). */
+function worker(name: string, overrides: Partial<FleetWorker> = {}): FleetWorker {
+  return {
+    name,
+    kind: 'serve',
+    pid: 100,
+    generation: 1,
+    joined_at: '2026-08-08T00:00:00Z',
+    beat_at: '2026-08-08T00:00:05Z',
+    state: 'ready',
+    stale: false,
+    last_op: null,
+    ...overrides,
+  };
 }
 
-/** A CONVERGED fleet-reload report — every named origin applied. An empty list is
- * the trivially-converged case the assertion-only tests use. */
-function converged(...origins: string[]): {
-  op: string;
-  reachable: boolean;
-  local_only: boolean;
-  results: {
-    origin: string;
-    outcome: 'applied';
-    payload: null;
-    error: null;
-    detail: null;
-  }[];
-  error: null;
-} {
+/** A bus presence census (the shape `GET /api/fleet/workers` returns). A worker's NAME
+ * doubles as the reload target and the row label. */
+function fleet(...names: string[]): { workers: FleetWorker[] } {
+  return { workers: names.map((name, index) => worker(name, { pid: 100 + index })) };
+}
+
+/** A CONVERGED fleet-reload report — every named worker applied. An empty list is the
+ * trivially-converged case the assertion-only tests use. */
+function converged(...names: string[]): FleetResult {
   return {
     op: 'reload_config',
     reachable: true,
     local_only: false,
-    results: origins.map((origin) => ({
-      origin,
+    results: names.map((name) => ({
+      name,
       outcome: 'applied',
       payload: null,
       error: null,
@@ -305,6 +314,124 @@ describe('SystemPage', () => {
     expect(screen.getByText('w3')).toBeInTheDocument();
   });
 
+  it('renders the worker columns — name, kind, life, state, seen-since, last op', async () => {
+    const nowIso = new Date().toISOString();
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue({
+        workers: [
+          worker('serve-1', {
+            generation: 4,
+            beat_at: nowIso,
+            last_op: { op: 'reload_config', outcome: 'applied', at: '2026-08-08T00:00:05Z' },
+          }),
+        ],
+      }),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    const nameCell = await screen.findByText('serve-1');
+    const workersTable = nameCell.closest('table') as HTMLElement;
+    const headers = within(workersTable)
+      .getAllByRole('columnheader')
+      .map((cell) => cell.textContent);
+    // The select-all checkbox header carries no text; the rest name the columns.
+    expect(headers).toEqual(['', 'Name', 'Kind', 'Life', 'State', 'Seen', 'Last op']);
+
+    const row = nameCell.closest('tr') as HTMLElement;
+    // Life = the generation, a plain number.
+    expect(within(row).getByText('4')).toBeInTheDocument();
+    // A live ready worker reads a success-toned state badge.
+    expect(within(row).getByText('ready')).toHaveAttribute('data-variant', 'success');
+    // Seen-since is the relative last-beat label — a just-beaten worker reads "now".
+    expect(within(row).getByText('now')).toBeInTheDocument();
+    // The last-op cell reads `op · outcome`.
+    expect(within(row).getByText('reload_config · applied')).toBeInTheDocument();
+  });
+
+  it('reads the state badge tone from the server flags — transient states warn, a stale row reads stale', async () => {
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi.fn().mockResolvedValue({
+        workers: [
+          worker('serve-1', { state: 'resyncing' }),
+          worker('serve-2', { state: 'recycling' }),
+          // A decayed row: the server marks it stale even though it last wrote `ready`.
+          worker('backend-1', { kind: 'backend', state: 'ready', stale: true }),
+          // The converse: a `ready` row whose beat_at is months old but whose server
+          // `stale` flag is false — the client must trust the flag, not the age.
+          worker('serve-3', { state: 'ready', stale: false, beat_at: '2025-06-01T00:00:00Z' }),
+        ],
+      }),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    const resyncRow = (await screen.findByText('serve-1')).closest('tr') as HTMLElement;
+    expect(within(resyncRow).getByText('resyncing')).toHaveAttribute('data-variant', 'warning');
+
+    const recycleRow = screen.getByText('serve-2').closest('tr') as HTMLElement;
+    expect(within(recycleRow).getByText('recycling')).toHaveAttribute('data-variant', 'warning');
+
+    // The SERVER `stale` flag WINS over the written state: the row reads `stale`, never
+    // `ready`, and the UI never recomputes freshness from a client-side threshold.
+    const staleRow = screen.getByText('backend-1').closest('tr') as HTMLElement;
+    expect(within(staleRow).getByText('stale')).toHaveAttribute('data-variant', 'warning');
+    expect(within(staleRow).queryByText('ready')).not.toBeInTheDocument();
+
+    // An ancient beat_at with `stale: false` still reads `ready`: there is NO client-side
+    // freshness threshold that would re-mark a fresh-flagged row as stale.
+    const freshRow = screen.getByText('serve-3').closest('tr') as HTMLElement;
+    expect(within(freshRow).getByText('ready')).toHaveAttribute('data-variant', 'success');
+    expect(within(freshRow).queryByText('stale')).not.toBeInTheDocument();
+  });
+
+  it('shows an em-dash last-op cell when a worker has applied nothing', async () => {
+    const client = stubClient({
+      getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+      listFleetWorkers: vi
+        .fn()
+        .mockResolvedValue({ workers: [worker('serve-1', { last_op: null })] }),
+    });
+    renderWithProviders(<SystemPage search={{}} />, { client });
+
+    const row = (await screen.findByText('serve-1')).closest('tr') as HTMLElement;
+    expect(within(row).getByText('—')).toBeInTheDocument();
+  });
+
+  it('polls the census every 5 seconds while the page is visible', async () => {
+    vi.useFakeTimers();
+    try {
+      const listFleetWorkers = vi.fn().mockResolvedValue(fleet('serve-1'));
+      const client = stubClient({
+        getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
+        listFleetWorkers,
+      });
+      renderWithProviders(<SystemPage search={{}} />, { client });
+
+      // The initial census read — flush it without advancing the clock, so the poll
+      // interval is measured from t=0.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(listFleetWorkers).toHaveBeenCalledTimes(1);
+
+      // One tick short of 5s: the interval has NOT fired yet — the cadence is not faster.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4999);
+      });
+      expect(listFleetWorkers).toHaveBeenCalledTimes(1);
+
+      // Crossing the 5000ms boundary fires the next read — the cadence is exactly 5s
+      // (react-query pauses this on a hidden tab).
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(listFleetWorkers).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('shows the "No live workers" state for an empty fleet (a valid state, not an error)', async () => {
     const client = stubClient({
       getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
@@ -436,7 +563,7 @@ describe('SystemPage', () => {
     });
   });
 
-  it('renders the honest per-origin report when a reload does not fully converge', async () => {
+  it('renders the honest per-worker report when a reload does not fully converge', async () => {
     const client = stubClient({
       getBackendInfo: vi.fn().mockResolvedValue(PRESENT_BACKEND),
       listFleetWorkers: vi.fn().mockResolvedValue(fleet('w1', 'w2')),
@@ -445,9 +572,9 @@ describe('SystemPage', () => {
         reachable: true,
         local_only: false,
         results: [
-          { origin: 'w1', outcome: 'applied', payload: null, error: null, detail: null },
+          { name: 'w1', outcome: 'applied', payload: null, error: null, detail: null },
           {
-            origin: 'w2',
+            name: 'w2',
             outcome: 'timed_out',
             payload: null,
             error: null,

@@ -79,9 +79,7 @@ describe('McpTab', () => {
       op: 'reload_mcp',
       reachable: true,
       local_only: false,
-      results: [
-        { origin: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
-      ],
+      results: [{ name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null }],
       error: null,
     });
     const client = {
@@ -112,8 +110,8 @@ describe('McpTab', () => {
       reachable: true,
       local_only: false,
       results: [
-        { origin: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
-        { origin: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+        { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+        { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
       ],
       error: null,
     });

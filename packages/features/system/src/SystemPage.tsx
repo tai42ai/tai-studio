@@ -4,7 +4,7 @@
  * Health is a plain-text skeleton ops endpoint (`/health`) read through `useApi()`
  * and TanStack Query. The fleet section reads the backend
  * IDENTITY (`getBackendInfo`, distinct from the fleet) alongside the live bus
- * presence census (`listFleetWorkers` — every subscribed origin, ASGI +
+ * presence census (`listFleetWorkers` — every subscribed worker, ASGI +
  * backend-runtime) and the fleet soft-restart (`reloadFleetConfig`). The census and
  * reload run over the worker bus whether or not a task backend is registered, so
  * they render independently of the backend identity.
@@ -13,9 +13,9 @@
  * `<ErrorState>` (loud, always visible; a 401 is not special-cased), empty →
  * `<EmptyState>` — so a failed request is never a silent empty render. The census
  * door is deliberately honest: a 500 (the presence store failing) surfaces as a
- * loud error, never a fabricated empty fleet. A reload's per-origin fleet report is
+ * loud error, never a fabricated empty fleet. A reload's per-worker fleet report is
  * rendered honestly through the shared `<FleetReport>` — a `departed` / `timed_out`
- * / `failed` origin or an unreachable bus is a loud, visible state, never faked
+ * / `failed` worker or an unreachable bus is a loud, visible state, never faked
  * success. All server-supplied text renders as escaped React text (a `<Badge>`
  * label, a worker name), never through an HTML sink.
  */
@@ -25,7 +25,9 @@ import {
   summarizeFleetResult,
   type BackendInfo,
   type FleetResult,
+  type FleetWorker,
   type KindStatus,
+  type WorkerState,
 } from '@tai42/api-client';
 import {
   AppLink,
@@ -48,6 +50,7 @@ import {
   THead,
   TR,
   Table,
+  Tooltip,
   errorMessage,
   useApi,
   useCanWrite,
@@ -83,6 +86,63 @@ const readOnlyNoteStyle: CSSProperties = {
   color: 'var(--tai-color-text-muted)',
   fontSize: 'var(--tai-text-sm)',
 };
+
+/** The fleet census poll cadence. The transient `resyncing`/`recycling` states and a
+ * ticking seen-since are unobservable without it; react-query pauses the interval while
+ * the document is hidden (`refetchIntervalInBackground` defaults to `false`). */
+const FLEET_POLL_MS = 5000;
+
+const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+/** Largest-first, so the first unit whose span the gap reaches is the one used. */
+const RELATIVE_UNITS: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
+  ['year', 31_536_000],
+  ['month', 2_592_000],
+  ['week', 604_800],
+  ['day', 86_400],
+  ['hour', 3600],
+  ['minute', 60],
+];
+
+/** "3 minutes ago" / "now" for an ISO instant — the seen-since label. A value that does
+ * not parse renders verbatim rather than collapsing into a placeholder that hides bad
+ * data. `nowMs` is injectable so a render is deterministic under test. */
+function formatRelativeInstant(iso: string, nowMs: number = Date.now()): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return iso;
+  const deltaSeconds = (ms - nowMs) / 1000;
+  for (const [unit, span] of RELATIVE_UNITS) {
+    if (Math.abs(deltaSeconds) >= span) {
+      return RELATIVE_TIME.format(Math.round(deltaSeconds / span), unit);
+    }
+  }
+  return RELATIVE_TIME.format(0, 'second');
+}
+
+/** The full local rendering of an ISO instant — the seen-since / last-op tooltip. */
+function formatAbsoluteInstant(iso: string): string {
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return iso;
+  return new Date(ms).toLocaleString();
+}
+
+/** The badge tone per written lifecycle state: `ready` (converged) reads positive; the
+ * transient `resyncing`/`recycling` restart states read as warnings worth an operator's
+ * eye. A server-computed `stale` flag is handled separately and wins over these. */
+const WORKER_STATE_VARIANT: Record<WorkerState, string> = {
+  ready: 'success',
+  resyncing: 'warning',
+  recycling: 'warning',
+};
+
+/** The state a worker row advertises, rendered as a badge. The SERVER-computed `stale`
+ * flag WINS over the written state: a decayed row is quiet (reconnecting or dead,
+ * unknown until it returns or its TTL expires) whatever it last wrote, so it reads
+ * `stale`, never `ready`. The tone reinforces the label, never replaces it. */
+function workerStateBadge(worker: FleetWorker): { label: string; variant: string } {
+  if (worker.stale) return { label: 'stale', variant: 'warning' };
+  return { label: worker.state, variant: WORKER_STATE_VARIANT[worker.state] };
+}
 
 // -- Health ------------------------------------------------------------------
 
@@ -170,7 +230,7 @@ function BackendCard({ info }: { info: UseQueryResult<BackendInfo> }): ReactNode
 /** The reload-config confirmation. A self-contained dialog that owns its own
  * mutation and is mounted only while the operator is confirming, so any close
  * discards the mutation's error state — a reopened dialog always starts clean. On
- * success it invalidates the census and hands the per-origin fleet report back
+ * success it invalidates the census and hands the per-worker fleet report back
  * through `onReloaded` so the card can render it after this (now-unmounted) dialog
  * closes. */
 function ReloadConfigDialog({
@@ -223,6 +283,9 @@ function WorkersCard(): ReactNode {
   const workers = useQuery({
     queryKey: fleetWorkersKey,
     queryFn: ({ signal }) => api.listFleetWorkers(signal),
+    // Poll while the page is visible: the transient resyncing/recycling states and the
+    // ticking seen-since only surface under a poll (react-query pauses on a hidden tab).
+    refetchInterval: FLEET_POLL_MS,
   });
 
   // The census above is an unfenced read (never gated). The reload BELOW is the
@@ -238,33 +301,34 @@ function WorkersCard(): ReactNode {
 
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [confirming, setConfirming] = useState(false);
-  // The last successful reload's per-origin report, kept so it persists after the
+  // The last successful reload's per-worker report, kept so it persists after the
   // dialog closes; cleared when the operator opens a fresh reload.
   const [lastReloaded, setLastReloaded] = useState<FleetResult | null>(null);
 
-  const origins = workers.data?.workers ?? [];
-  // Derive the payload + count only from origins still served, so a selection left
-  // over from a since-refreshed fleet never reloads a worker that has left.
-  const selectedOrigins = origins.filter((origin) => selected.has(origin.origin));
-  const allSelected = origins.length > 0 && selectedOrigins.length === origins.length;
+  const rows = workers.data?.workers ?? [];
+  // Derive the payload + count only from workers still served, so a selection left
+  // over from a since-refreshed fleet never reloads a worker that has left. Reload
+  // targets are worker NAMES.
+  const selectedWorkers = rows.filter((worker) => selected.has(worker.name));
+  const allSelected = rows.length > 0 && selectedWorkers.length === rows.length;
   const targets: string[] | null =
-    selectedOrigins.length === 0 ? null : selectedOrigins.map((origin) => origin.origin);
+    selectedWorkers.length === 0 ? null : selectedWorkers.map((worker) => worker.name);
   const reloadLabel =
-    selectedOrigins.length === 0
+    selectedWorkers.length === 0
       ? 'Reload config (all)'
-      : `Reload config (${String(selectedOrigins.length)} selected)`;
+      : `Reload config (${String(selectedWorkers.length)} selected)`;
 
-  function toggle(origin: string, next: boolean): void {
+  function toggle(name: string, next: boolean): void {
     setSelected((current) => {
       const updated = new Set(current);
-      if (next) updated.add(origin);
-      else updated.delete(origin);
+      if (next) updated.add(name);
+      else updated.delete(name);
       return updated;
     });
   }
 
   function toggleAll(next: boolean): void {
-    setSelected(next ? new Set(origins.map((origin) => origin.origin)) : new Set());
+    setSelected(next ? new Set(rows.map((worker) => worker.name)) : new Set());
   }
 
   let body: ReactNode;
@@ -280,7 +344,7 @@ function WorkersCard(): ReactNode {
     body = (
       <ErrorState message={errorMessage(workers.error)} onRetry={() => void workers.refetch()} />
     );
-  } else if (origins.length === 0) {
+  } else if (rows.length === 0) {
     body = (
       <EmptyState
         title="No live workers"
@@ -300,30 +364,62 @@ function WorkersCard(): ReactNode {
                   aria-label="Select all workers"
                 />
               </TH>
-              <TH>Worker</TH>
+              <TH>Name</TH>
               <TH>Kind</TH>
+              <TH>Life</TH>
+              <TH>State</TH>
+              <TH>Seen</TH>
+              <TH>Last op</TH>
             </TR>
           </THead>
           <TBody>
-            {origins.map((origin) => (
-              <TR key={origin.origin}>
-                <TD>
-                  <Checkbox
-                    checked={selected.has(origin.origin)}
-                    onCheckedChange={(next) => {
-                      toggle(origin.origin, next);
-                    }}
-                    aria-label={`Select ${origin.origin}`}
-                  />
-                </TD>
-                <TD style={monoStyle}>{origin.origin}</TD>
-                <TD>
-                  <Badge variant={origin.kind === 'backend' ? 'primary' : 'neutral'}>
-                    {origin.kind}
-                  </Badge>
-                </TD>
-              </TR>
-            ))}
+            {rows.map((worker) => {
+              const stateBadge = workerStateBadge(worker);
+              return (
+                <TR key={worker.name}>
+                  <TD>
+                    <Checkbox
+                      checked={selected.has(worker.name)}
+                      onCheckedChange={(next) => {
+                        toggle(worker.name, next);
+                      }}
+                      aria-label={`Select ${worker.name}`}
+                    />
+                  </TD>
+                  <TD style={monoStyle}>{worker.name}</TD>
+                  <TD>
+                    <Badge variant={worker.kind === 'backend' ? 'primary' : 'neutral'}>
+                      {worker.kind}
+                    </Badge>
+                  </TD>
+                  {/* Life = the worker's generation, a plain monotonic life counter. */}
+                  <TD style={monoStyle}>{worker.generation}</TD>
+                  <TD>
+                    <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
+                  </TD>
+                  {/* Seen-since = the relative last-beat time; the tooltip carries the
+                      absolute last beat and the join instant. */}
+                  <TD>
+                    <Tooltip
+                      content={`Last beat ${formatAbsoluteInstant(worker.beat_at)} · joined ${formatAbsoluteInstant(worker.joined_at)}`}
+                    >
+                      <span>{formatRelativeInstant(worker.beat_at)}</span>
+                    </Tooltip>
+                  </TD>
+                  <TD>
+                    {worker.last_op !== null ? (
+                      <Tooltip content={formatAbsoluteInstant(worker.last_op.at)}>
+                        <span>
+                          {worker.last_op.op} · {worker.last_op.outcome}
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      '—'
+                    )}
+                  </TD>
+                </TR>
+              );
+            })}
           </TBody>
         </Table>
       </ScrollRegion>
@@ -331,16 +427,14 @@ function WorkersCard(): ReactNode {
   }
 
   // The reload report: `converged` shows a calm success note, while a degraded /
-  // unreachable broadcast renders the honest per-origin failure state — never faked
-  // success on a departed / timed_out / failed origin.
+  // unreachable broadcast renders the honest per-worker failure state — never faked
+  // success on a departed / timed_out / failed worker.
   const reloadSummary = lastReloaded !== null ? summarizeFleetResult(lastReloaded) : null;
 
   return (
     <Card>
       <div style={cardHeaderStyle}>
-        <h2 className="tai-card-title">
-          Workers{workers.data ? ` (${String(origins.length)})` : ''}
-        </h2>
+        <h2 className="tai-card-title">Workers{workers.data ? ` (${String(rows.length)})` : ''}</h2>
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
           <Button
             onClick={() => void workers.refetch()}

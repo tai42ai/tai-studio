@@ -63,7 +63,7 @@ export { summarizeFleetResult, summarizeFleetFanout, isFleetReportFailure } from
 export type {
   FleetReportSummary,
   FleetReportStatus,
-  FleetOriginFailure,
+  FleetWorkerFailure,
   FleetFailureOutcome,
 } from './fleet-report';
 export * as schemas from './schemas';
@@ -151,11 +151,13 @@ export type {
   StorageInfo,
   StorageResourceStat,
   BackendInfo,
-  OriginKind,
-  FleetOrigin,
+  WorkerKind,
+  WorkerState,
+  WorkerLastOp,
+  FleetWorker,
   FleetWorkers,
   FleetOutcome,
-  FleetOriginResult,
+  FleetWorkerResult,
   FleetResult,
   FleetReloadResult,
   FleetReportFanout,

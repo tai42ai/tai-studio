@@ -4,21 +4,21 @@
   "local_only": false,
   "results": [
     {
-      "origin": "serve-4f1c9a2b",
+      "name": "serve-1",
       "outcome": "applied",
       "payload": { "status": "ok", "env_keys": 5 },
       "error": null,
       "detail": null
     },
     {
-      "origin": "serve-7d3e5b8c",
+      "name": "serve-2",
       "outcome": "applied",
       "payload": { "status": "ok", "env_keys": 5 },
       "error": null,
       "detail": null
     },
     {
-      "origin": "backend-a9c2e1f4",
+      "name": "backend-1",
       "outcome": "timed_out",
       "payload": null,
       "error": null,

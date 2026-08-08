@@ -204,7 +204,7 @@
       "type": "object"
     },
     "output": null,
-    "description": "Re-register one app tool (e.g. kind \"flow\") from its current stored definition.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); each worker re-reads the definition itself, so the op carries only\nthe kind and name. The response embeds the per-origin fleet report."
+    "description": "Re-register one app tool (e.g. kind \"flow\") from its current stored definition.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); each worker re-reads the definition itself, so the op carries only\nthe kind and name. The response embeds the per-worker fleet report."
   },
   "remove_tool": {
     "input": {
@@ -235,7 +235,7 @@
       "type": "object"
     },
     "output": null,
-    "description": "Remove one app tool (e.g. kind \"flow\") from the live registry.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-origin fleet report."
+    "description": "Remove one app tool (e.g. kind \"flow\") from the live registry.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report."
   },
   "reload_config": {
     "input": {
@@ -259,6 +259,6 @@
       "type": "object"
     },
     "output": null,
-    "description": "Soft-restart: refresh env from the config manager, reset every settings cache,\nand re-initialize from the manifest — in-process, no pod restart. Applied on this\nworker (when it is a target) and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-origin fleet report.\n\nHeavy (a full re-init); meant for env/config saves, not tool edits. A convergence\nop: its whole purpose is aligning siblings to persisted state, so a failed local\nreload still broadcasts and then re-raises with the fleet report attached."
+    "description": "Soft-restart: refresh env from the config manager, reset every settings cache,\nand re-initialize from the manifest — in-process, no pod restart. Applied on this\nworker (when it is a target) and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report.\n\nHeavy (a full re-init); meant for env/config saves, not tool edits. A convergence\nop: its whole purpose is aligning siblings to persisted state, so a failed local\nreload still broadcasts and then re-raises with the fleet report attached."
   }
 }

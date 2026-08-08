@@ -158,7 +158,7 @@ describe('manifest / mcp client transport', () => {
           local_only: false,
           results: [
             {
-              origin: 'serve-a',
+              name: 'serve-a',
               outcome: 'applied',
               payload: { title: 'my server', status: 'ok' },
               error: null,

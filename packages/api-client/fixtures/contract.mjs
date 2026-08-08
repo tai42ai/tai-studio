@@ -335,7 +335,7 @@ export const MUTATION_FIXTURES = [
   // skeleton runs without — so all three are hand-authored rather than
   // auto-captured. Worker origins/kinds and class/module identity carry no secret;
   // each fixture pins its response shape. `fleet-workers` is the bus presence census
-  // (every subscribed origin); `fleet-reload-config` is the per-origin fleet report.
+  // (every subscribed worker); `fleet-reload-config` is the per-worker fleet report.
   {
     name: 'backend-info',
     path: '/api/backend',

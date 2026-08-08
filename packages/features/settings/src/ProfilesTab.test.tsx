@@ -74,14 +74,16 @@ function cleanDiff(): {
   };
 }
 
-/** The apply report — a self-deferred applier recycle line, empty refused, a lone-worker fanout. */
+/** The apply report — a recycled target with a joined fresh life on its slot name, a
+ * self-deferred applier line, empty refused, a lone-worker fanout. */
 function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
   return Promise.resolve({
     hot: ['APP_TITLE'],
     recycle: [
-      { origin: 'worker-a', kind: 'serve', status: 'self-deferred' },
-      { origin: 'worker-b', kind: 'serve', status: 'recycled' },
+      { name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
+      { name: 'serve-2', kind: 'serve', status: 'self-deferred', generation_before: 2 },
     ],
+    fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
     refused: [] as { key: string; reason: string }[],
     fanout: {
       mode: 'local-only' as const,
@@ -404,7 +406,7 @@ describe('ProfilesTab — diff preview', () => {
 // -- apply -------------------------------------------------------------------
 
 describe('ProfilesTab — apply', () => {
-  it('applies after review and renders the report (self-deferred recycle line)', async () => {
+  it('applies after review and renders the report (recycle lives + self-deferred line)', async () => {
     const user = userEvent.setup();
     const applySettingsProfile = vi.fn(() => applyReport());
     renderWithProviders(<ProfilesTab readOnly={false} />, {
@@ -427,8 +429,55 @@ describe('ProfilesTab — apply', () => {
     expect(applySettingsProfile).toHaveBeenCalledWith('prod');
     // Hot-swapped keys, and the applier's OWN self-deferred recycle line.
     expect(within(report).getByText('APP_TITLE')).toBeInTheDocument();
-    expect(within(report).getByTestId('apply-recycle')).toHaveTextContent('self-deferred');
-    expect(within(report).getByTestId('apply-recycle')).toHaveTextContent('worker-a');
+    const recycle = within(report).getByTestId('apply-recycle');
+    expect(recycle).toHaveTextContent('self-deferred');
+    expect(recycle).toHaveTextContent('serve-1');
+    // The recycled target's generation_before renders; a fresh life sharing its NAME is
+    // joined for display only as `life N to M` (never a successor claim).
+    expect(recycle).toHaveTextContent('life 4 to 5');
+    // serve-2 (the self-deferred applier) has no joined fresh life — its own life shows.
+    // Scope to serve-2's OWN row so the assertion can't pass on another row's text.
+    const serve2Row = within(recycle).getByText('serve-2').closest('li') as HTMLElement;
+    expect(within(serve2Row).getByText('life 2')).toBeInTheDocument();
+  });
+
+  it('renders a fresh life on a DIFFERENT name un-joined, on its own row (no successor claim)', async () => {
+    const user = userEvent.setup();
+    const applySettingsProfile = vi.fn(() =>
+      Promise.resolve({
+        hot: [],
+        recycle: [{ name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 3 }],
+        // The fresh life carries a DIFFERENT name than the recycled target: it is not
+        // joined onto that row, it renders on its own under Fresh lives.
+        fresh: [{ name: 'serve-9', kind: 'serve', generation: 1 }],
+        refused: [] as { key: string; reason: string }[],
+        fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
+      }),
+    );
+    renderWithProviders(<ProfilesTab readOnly={false} />, {
+      client: stubClient({
+        diffSettingsProfile: vi.fn(() => Promise.resolve(cleanDiff())),
+        applySettingsProfile,
+      }),
+      projection: fullProjection(),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Apply profile prod' }));
+    const apply = await screen.findByRole('button', { name: 'Apply profile' });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    await user.click(apply);
+
+    const report = await screen.findByTestId('apply-report');
+    // The recycled target shows its own life, NOT joined to the differently-named fresh life.
+    const recycle = within(report).getByTestId('apply-recycle');
+    expect(recycle).toHaveTextContent('life 3');
+    expect(recycle).not.toHaveTextContent('life 3 to');
+    // The fresh life renders on its own row under Fresh lives.
+    const fresh = within(report).getByTestId('apply-fresh');
+    expect(fresh).toHaveTextContent('serve-9');
+    expect(fresh).toHaveTextContent('life 1');
   });
 
   it('renders a populated refused section when the apply refuses', async () => {
@@ -437,6 +486,7 @@ describe('ProfilesTab — apply', () => {
       Promise.resolve({
         hot: [],
         recycle: [],
+        fresh: [],
         refused: [{ key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' }],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),

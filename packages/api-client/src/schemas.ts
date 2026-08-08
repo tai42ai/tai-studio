@@ -319,77 +319,117 @@ export type BackendInfo = z.infer<typeof backendInfo>;
 
 /** The two worker kinds that join the bus: an ASGI `serve` worker or a
  * `backend` runtime process. A drift throws `ApiSchemaError`. */
-export const originKind = z.enum(['serve', 'backend']);
-export type OriginKind = z.infer<typeof originKind>;
+export const workerKind = z.enum(['serve', 'backend']);
+export type WorkerKind = z.infer<typeof workerKind>;
+
+/** The lifecycle state a worker advertises in its presence value: `ready` once its
+ * resync has converged, `resyncing` while a boot/reconnect resync runs, `recycling`
+ * once it has begun a graceful self-exit. A drift throws `ApiSchemaError`. */
+export const workerState = z.enum(['ready', 'resyncing', 'recycling']);
+export type WorkerState = z.infer<typeof workerState>;
+
+/** The last op a worker applied, stamped onto its presence row after the terminal
+ * reply. `outcome` is the free op-outcome string; `at` is the ISO instant it landed. */
+export const workerLastOp = z.object({
+  op: z.string(),
+  outcome: z.string(),
+  at: z.string(),
+});
+export type WorkerLastOp = z.infer<typeof workerLastOp>;
 
 /**
- * One live worker on the bus — a presence-census entry. `origin` is the
- * `{kind}-{uuid}` identity used as a reload target; `kind` tells the two worker
- * kinds apart; `pid` is the process id the presence key carries.
+ * One live worker on the bus — a presence-census row. `name` is the stable slot
+ * (`{kind}-{n}`) that doubles as a reload target; `generation` is the monotonic life
+ * counter minted with the worker's claim; `kind` tells the two worker kinds apart;
+ * `pid` is the process id. `joined_at`/`beat_at` are ISO instants (first-seen and last
+ * heartbeat) for the cosmetic seen-since display; `state` is the advertised lifecycle
+ * state; `stale` is SERVER-computed from the row's remaining presence TTL against the
+ * bus cadence (a quiet row past the freshness bound — reconnecting or dead) and is the
+ * only freshness signal a client reads, never a client-side threshold; `last_op` is the
+ * worker's last applied op, or `null` before it has applied one.
  */
-export const fleetOrigin = z.object({
-  origin: z.string(),
-  kind: originKind,
+export const fleetWorker = z.object({
+  name: z.string(),
+  kind: workerKind,
   pid: z.number(),
+  generation: z.number(),
+  joined_at: z.string(),
+  beat_at: z.string(),
+  state: workerState,
+  stale: z.boolean(),
+  last_op: workerLastOp.nullable(),
 });
-export type FleetOrigin = z.infer<typeof fleetOrigin>;
+export type FleetWorker = z.infer<typeof fleetWorker>;
 
 /**
  * `GET /api/fleet/workers` — the live worker fleet from the bus presence census.
- * The census lists ALL subscribed origins (ASGI `serve` workers and backend-runtime
+ * The census lists ALL subscribed workers (ASGI `serve` workers and backend-runtime
  * processes alike), not only backend workers. A census read that fails surfaces as a
  * loud 500, never a fabricated empty fleet.
  */
-export const fleetWorkers = z.object({ workers: z.array(fleetOrigin) });
+export const fleetWorkers = z.object({ workers: z.array(fleetWorker) });
 export type FleetWorkers = z.infer<typeof fleetWorkers>;
 
 /**
- * One origin's outcome within a fleet broadcast. `applied`/`failed` are terminal
- * wire replies from a subscriber; `missing`/`departed`/`timed_out` are
- * publisher-computed from the presence census (a silent origin never sends them).
+ * One worker's outcome within a fleet broadcast. `applied`/`failed` are terminal wire
+ * replies from a subscriber; `missing`/`departed`/`timed_out` are publisher-computed
+ * from the presence census (a silent worker never sends them); `resyncing`/`recycling`/
+ * `stale` are the gap outcomes for a row that failed the ready+fresh gate — reported as
+ * its own actual condition rather than dropped (`resyncing` converges on its resync,
+ * `recycling` is departing, `stale` is a quiet row past the freshness bound carrying no
+ * convergence promise).
  */
-export const fleetOutcome = z.enum(['applied', 'failed', 'missing', 'departed', 'timed_out']);
+export const fleetOutcome = z.enum([
+  'applied',
+  'failed',
+  'missing',
+  'departed',
+  'timed_out',
+  'resyncing',
+  'recycling',
+  'stale',
+]);
 export type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 /**
- * One origin's result within a {@link fleetResult}. `payload` carries query-op data
+ * One worker's result within a {@link fleetResult}. `payload` carries query-op data
  * (opaque to the UI); `error` carries a failed apply's message; `detail` carries the
- * publisher's report text for a computed `missing`/`departed`/`timed_out`. A drift
- * throws `ApiSchemaError`.
+ * publisher's report text for a computed gap outcome (`missing`/`departed`/`timed_out`/
+ * `resyncing`/`recycling`/`stale`). A drift throws `ApiSchemaError`.
  */
-export const fleetOriginResult = z.object({
-  origin: z.string(),
+export const fleetWorkerResult = z.object({
+  name: z.string(),
   outcome: fleetOutcome,
   payload: jsonValue,
   error: z.string().nullable(),
   detail: z.string().nullable(),
 });
-export type FleetOriginResult = z.infer<typeof fleetOriginResult>;
+export type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
 
 /**
- * The awaited per-origin report of one fleet broadcast. Two honest shapes ride the
+ * The awaited per-worker report of one fleet broadcast. Two honest shapes ride the
  * same schema. Reachable (`reachable: true`): `results` holds one entry per expected
- * origin (the serving worker's own entry included), so an unconfirmed sibling is a
- * visible `failed`/`missing`/`departed`/`timed_out` entry, never a silent stale
- * worker. Bus-unreachable (`reachable: false`): the transport failed before any
- * origin could reply, so `results` is empty and only `error` is carried. This is the
- * bare body of `POST /api/fleet/reload-config` and the single-MCP reload; it is also
- * the body the mode-wrapped {@link fleetReportFanout} carries under its `fleet` /
- * `unreachable` modes.
+ * worker (the serving worker's own entry included) plus the gap rows, so an unconfirmed
+ * sibling is a visible `failed`/`missing`/`departed`/`timed_out`/`resyncing`/`recycling`/
+ * `stale` entry, never a silent stale worker. Bus-unreachable (`reachable: false`): the
+ * transport failed before any worker could reply, so `results` is empty and only `error`
+ * is carried. This is the bare body of `POST /api/fleet/reload-config` and the single-MCP
+ * reload; it is also the body the mode-wrapped {@link fleetReportFanout} carries under its
+ * `fleet` / `unreachable` modes.
  */
 export const fleetResult = z.object({
   op: z.string(),
   reachable: z.boolean(),
   local_only: z.boolean(),
-  results: z.array(fleetOriginResult),
+  results: z.array(fleetWorkerResult),
   error: z.string().nullable(),
 });
 export type FleetResult = z.infer<typeof fleetResult>;
 
 /**
- * `POST /api/fleet/reload-config` — soft-restart the fleet and report per-origin. The
+ * `POST /api/fleet/reload-config` — soft-restart the fleet and report per-worker. The
  * serving worker applies its own reload first, then broadcasts; the returned report
- * names every origin's outcome. A failed local apply does not abort the broadcast, so
+ * names every worker's outcome. A failed local apply does not abort the broadcast, so
  * the report is embedded even on the convergence-failure path.
  */
 export const fleetReloadResult = fleetResult;
@@ -403,7 +443,7 @@ export type FleetReloadResult = z.infer<typeof fleetReloadResult>;
  *   - `fleet` — a reachable multi-worker broadcast; carries the full {@link
  *     fleetResult} so an unconfirmed sibling is visible.
  *   - `unreachable` — the bus itself could not be reached; carries the
- *     bus-unreachable {@link fleetResult} (no origin list, only `error`).
+ *     bus-unreachable {@link fleetResult} (no worker list, only `error`).
  *
  * Every mutation whose response embeds this parses it EXPLICITLY: zod's default
  * unknown-key stripping would otherwise silently drop the field, hiding a failed
@@ -501,7 +541,7 @@ export const mcpStatus = z.object({
 
 /**
  * `POST /api/mcp-status/{title}/reload` — re-probe a single MCP server and broadcast
- * the reload to the fleet. The response is the bare per-origin {@link fleetResult}
+ * the reload to the fleet. The response is the bare per-worker {@link fleetResult}
  * (the serving worker's re-probe rides its own `results` entry as the payload); there
  * is no local/workers split. A drift throws `ApiSchemaError`.
  */
@@ -615,16 +655,28 @@ export type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
  * `POST /api/config/profiles/{name}/apply` — the dedicated `profile_apply_response`
  * (action=fenced, destructive). NAMES-ONLY (no env value in any
  * section): `hot` is the hot-swapped key names; `recycle` is the orchestrator's
- * per-origin section — the applier's OWN entry carries the `self-deferred` status
- * literal when the diff has serve-affecting recycle keys; `refused` is `[]` on
- * success by construction (populated `{key, reason}` only on a refusal), the
- * populated refusal surfaces being the diff preview and the refusal error report.
- * `fanout` is the mode-wrapped fleet broadcast, parsed EXPLICITLY so a failed
- * propagation reaches the shared fleet-report handler. A drift throws `ApiSchemaError`.
+ * per-worker section — one `{name, kind, status, generation_before}` row per recycled
+ * target, `generation_before` the life that was recycled, the applier's OWN row carrying
+ * the `self-deferred` status literal when the diff has serve-affecting recycle keys;
+ * `fresh` is the per-kind list of NEW ready lives observed since the pre-apply snapshot
+ * (each `{name, kind, generation}`), evidence of fresh capacity and never claimed as any
+ * target's successor; `refused` is `[]` on success by construction (populated
+ * `{key, reason}` only on a refusal), the populated refusal surfaces being the diff
+ * preview and the refusal error report. `fanout` is the mode-wrapped fleet broadcast,
+ * parsed EXPLICITLY so a failed propagation reaches the shared fleet-report handler. A
+ * drift throws `ApiSchemaError`.
  */
 export const profileApplyResponse = z.object({
   hot: z.array(z.string()),
-  recycle: z.array(z.object({ origin: z.string(), kind: z.string(), status: z.string() })),
+  recycle: z.array(
+    z.object({
+      name: z.string(),
+      kind: z.string(),
+      status: z.string(),
+      generation_before: z.number(),
+    }),
+  ),
+  fresh: z.array(z.object({ name: z.string(), kind: z.string(), generation: z.number() })),
   refused: z.array(z.object({ key: z.string(), reason: z.string() })),
   fanout: fleetReportFanout,
 });

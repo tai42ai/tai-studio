@@ -29,15 +29,15 @@ describe('FleetReport', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders a loud alert naming every non-converged origin and its outcome', () => {
+  it('renders a loud alert naming every non-converged worker and its outcome', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
       note: null,
       failures: [
-        { origin: 'serve-a', outcome: 'failed', message: 'reload raised' },
-        { origin: 'backend-b', outcome: 'timed_out', message: null },
-        { origin: 'serve-c', outcome: 'departed', message: null },
-        { origin: 'serve-d', outcome: 'missing', message: null },
+        { name: 'serve-a', outcome: 'failed', message: 'reload raised' },
+        { name: 'backend-b', outcome: 'timed_out', message: null },
+        { name: 'serve-c', outcome: 'departed', message: null },
+        { name: 'serve-d', outcome: 'missing', message: null },
       ],
       error: null,
     };
@@ -45,7 +45,7 @@ describe('FleetReport', () => {
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText(/4 workers did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText('serve-a')).toBeInTheDocument();
-    // The per-origin message (from error/detail) renders alongside the origin.
+    // The per-worker message (from error/detail) renders alongside the worker.
     expect(within(alert).getByText(/reload raised/)).toBeInTheDocument();
     expect(within(alert).getByText('backend-b')).toBeInTheDocument();
     expect(within(alert).getByText('serve-c')).toBeInTheDocument();
@@ -58,15 +58,39 @@ describe('FleetReport', () => {
     expect(within(alert).getByText(/alive but did not acknowledge in time/)).toBeInTheDocument();
   });
 
+  it('renders the per-worker gap outcomes (resyncing / recycling / stale) with their labels and tone', () => {
+    const summary: FleetReportSummary = {
+      status: 'degraded',
+      note: null,
+      failures: [
+        { name: 'serve-1', outcome: 'resyncing', message: null },
+        { name: 'backend-1', outcome: 'recycling', message: null },
+        { name: 'serve-2', outcome: 'stale', message: null },
+      ],
+      error: null,
+    };
+    render(<FleetReport summary={summary} />);
+    const alert = screen.getByRole('alert');
+    // Each gap outcome carries its own honest label; `stale` makes NO convergence promise.
+    expect(statusFor(alert, /^resyncing — will converge on resync$/)).toHaveClass(
+      'tai-status-warn',
+    );
+    expect(statusFor(alert, /^restarting$/)).toHaveClass('tai-status-warn');
+    expect(statusFor(alert, /^quiet — reconnecting or dead$/)).toHaveClass('tai-status-warn');
+    expect(within(alert).getByText('serve-1')).toBeInTheDocument();
+    expect(within(alert).getByText('backend-1')).toBeInTheDocument();
+    expect(within(alert).getByText('serve-2')).toBeInTheDocument();
+  });
+
   it('gives every state a mark AND a label, never color alone', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
       note: null,
       failures: [
-        { origin: 'serve-a', outcome: 'failed', message: null },
-        { origin: 'backend-b', outcome: 'timed_out', message: null },
-        { origin: 'serve-c', outcome: 'departed', message: null },
-        { origin: 'serve-d', outcome: 'missing', message: null },
+        { name: 'serve-a', outcome: 'failed', message: null },
+        { name: 'backend-b', outcome: 'timed_out', message: null },
+        { name: 'serve-c', outcome: 'departed', message: null },
+        { name: 'serve-d', outcome: 'missing', message: null },
       ],
       error: null,
     };
@@ -132,8 +156,8 @@ describe('FleetReport', () => {
       status: 'degraded',
       note: null,
       failures: [
-        { origin: 'serve-a', outcome: 'failed', message: 'reload raised' },
-        { origin: 'backend-b', outcome: 'timed_out', message: null },
+        { name: 'serve-a', outcome: 'failed', message: 'reload raised' },
+        { name: 'backend-b', outcome: 'timed_out', message: null },
       ],
       error: null,
     };
@@ -145,7 +169,7 @@ describe('FleetReport', () => {
     // The operator is already on the System page — no self-referential pointer.
     expect(within(alert).queryByText(/from the System page/)).not.toBeInTheDocument();
     expect(within(alert).getByText(/re-run the reload to converge them/)).toBeInTheDocument();
-    // The honest per-origin outcomes remain unchanged.
+    // The honest per-worker outcomes remain unchanged.
     expect(within(alert).getByText('serve-a')).toBeInTheDocument();
     expect(within(alert).getByText(/apply failed/)).toBeInTheDocument();
     expect(within(alert).getByText(/acknowledged but did not finish applying/)).toBeInTheDocument();
@@ -167,11 +191,11 @@ describe('FleetReport', () => {
     expect(within(alert).getByText('RedisConnectionError: connection refused')).toBeInTheDocument();
   });
 
-  it('keeps the alert, its mark and its per-origin labels', () => {
+  it('keeps the alert, its mark and its per-worker labels', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
       note: null,
-      failures: [{ origin: 'serve-a', outcome: 'failed', message: null }],
+      failures: [{ name: 'serve-a', outcome: 'failed', message: null }],
       error: null,
     };
     render(<FleetReport summary={summary} />);
@@ -189,10 +213,10 @@ describe('FleetReport', () => {
     // operator is being told something went wrong, and ONE unconverged worker is
     // the commonest degraded fleet there is. Both halves of the copy agree — the
     // headline's noun and the guidance line's subject and its pronoun.
-    const degraded = (origins: readonly string[]): FleetReportSummary => ({
+    const degraded = (names: readonly string[]): FleetReportSummary => ({
       status: 'degraded',
       note: null,
-      failures: origins.map((origin) => ({ origin, outcome: 'failed', message: null })),
+      failures: names.map((name) => ({ name, outcome: 'failed', message: null })),
       error: null,
     });
 
@@ -209,8 +233,8 @@ describe('FleetReport', () => {
     expect(within(alert).getByText(/to converge them\./)).toBeInTheDocument();
 
     // Neither reading may reach the screen as a parenthesised suffix.
-    for (const origins of [['serve-a'], ['serve-a', 'serve-b']]) {
-      rerender(<FleetReport summary={degraded(origins)} />);
+    for (const names of [['serve-a'], ['serve-a', 'serve-b']]) {
+      rerender(<FleetReport summary={degraded(names)} />);
       expect(screen.getByRole('alert').textContent).not.toContain('worker(s)');
     }
   });

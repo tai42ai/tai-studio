@@ -193,7 +193,7 @@ describe('ToolExtensionsCard', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['tools'] });
   });
 
-  it('renders the honest per-origin report from the apply result when the fleet does not converge', async () => {
+  it('renders the honest per-worker report from the apply result when the fleet does not converge', async () => {
     const user = userEvent.setup();
     // The save landed but a sibling failed to reload — the shared fleet-report handler
     // must surface it loudly, never fake a clean success.
@@ -206,9 +206,9 @@ describe('ToolExtensionsCard', () => {
         reachable: true,
         local_only: false,
         results: [
-          { origin: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+          { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
           {
-            origin: 'serve-b',
+            name: 'serve-b',
             outcome: 'failed',
             payload: null,
             error: 'reload raised',

@@ -142,15 +142,16 @@ describe('settings-profiles client transport', () => {
     expect(out.refused_keys).toEqual(['TAI_APP_PROVIDERS']);
   });
 
-  it('applySettingsProfile POSTs and parses the report — self-deferred recycle line, empty refused, fanout', async () => {
+  it('applySettingsProfile POSTs and parses the report — recycle lives, fresh lives, empty refused, fanout', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
           hot: ['APP_TITLE'],
           recycle: [
-            { origin: 'worker-a', kind: 'serve', status: 'self-deferred' },
-            { origin: 'worker-b', kind: 'serve', status: 'recycled' },
+            { name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
+            { name: 'serve-2', kind: 'serve', status: 'self-deferred', generation_before: 2 },
           ],
+          fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
           refused: [],
           fanout: {
             mode: 'local-only',
@@ -164,8 +165,17 @@ describe('settings-profiles client transport', () => {
     expect(captured[0]?.url).toBe('/api/config/profiles/prod/apply');
     expect(captured[0]?.body).toBeUndefined();
     expect(out.hot).toEqual(['APP_TITLE']);
-    // The applier's own recycle entry carries the pinned `self-deferred` literal.
-    expect(out.recycle[0]).toEqual({ origin: 'worker-a', kind: 'serve', status: 'self-deferred' });
+    // A recycled target carries its pre-apply life; the applier's own entry carries the
+    // pinned `self-deferred` literal plus its own generation.
+    expect(out.recycle[0]).toEqual({
+      name: 'serve-1',
+      kind: 'serve',
+      status: 'recycled',
+      generation_before: 4,
+    });
+    expect(out.recycle[1]?.status).toBe('self-deferred');
+    // `fresh` is the per-kind new ready lives observed since the pre-apply snapshot.
+    expect(out.fresh).toEqual([{ name: 'serve-1', kind: 'serve', generation: 5 }]);
     expect(out.refused).toEqual([]);
     expect(out.fanout.mode).toBe('local-only');
   });
@@ -176,6 +186,7 @@ describe('settings-profiles client transport', () => {
         data: {
           hot: [],
           recycle: [],
+          fresh: [],
           refused: [
             { key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' },
             { key: 'TAI_DEFAULT_REDIS_URL', reason: 'recycle_supported=false for this shape' },
@@ -186,7 +197,7 @@ describe('settings-profiles client transport', () => {
             reachable: true,
             local_only: false,
             results: [
-              { origin: 'worker-a', outcome: 'applied', payload: null, error: null, detail: null },
+              { name: 'serve-1', outcome: 'applied', payload: null, error: null, detail: null },
             ],
             error: null,
           },
@@ -268,7 +279,23 @@ describe('settings-profiles client transport', () => {
   });
 
   it('throws ApiSchemaError LOUDLY when the apply report drops the fanout field', async () => {
-    const { client } = harness(() => jsonResponse({ data: { hot: [], recycle: [], refused: [] } }));
+    const { client } = harness(() =>
+      jsonResponse({ data: { hot: [], recycle: [], fresh: [], refused: [] } }),
+    );
+    await expect(client.applySettingsProfile('prod')).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY when the apply report drops the fresh field', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          hot: [],
+          recycle: [],
+          refused: [],
+          fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+        },
+      }),
+    );
     await expect(client.applySettingsProfile('prod')).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });

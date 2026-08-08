@@ -21,8 +21,9 @@
  * Apply is destructive and fenced: it full-replaces the profile-managed env band and
  * reloads the fleet. The apply flow confirms behind a diff review, refuses to fire
  * when the diff carries boundary-refused keys, and renders the dedicated report —
- * the fleet fan-out (via {@link FleetReport}) plus the hot / recycle (per-origin,
- * the applier's own line carrying the `self-deferred` status) / refused sections.
+ * the fleet fan-out (via {@link FleetReport}) plus the hot / recycle (per-worker, each
+ * row carrying its `generation_before`, the applier's own line carrying the
+ * `self-deferred` status) / fresh-lives / refused sections.
  * "Revert last apply" applies the reserved `@previous` profile (each apply auto-saves
  * the replaced env there).
  *
@@ -345,10 +346,19 @@ function DiffDialog({
 /**
  * The dedicated apply report (names-only — no env value appears). The
  * fleet fan-out surfaces any failed propagation; `hot` names the in-place swaps;
- * `recycle` is the per-origin orchestration, the applier's own entry carrying the
- * `self-deferred` status; `refused` (empty on success) names any boundary refusal.
+ * `recycle` is the per-worker orchestration — each row its `name`, kind, status, and
+ * `generation_before`, the applier's own entry carrying the `self-deferred` status;
+ * `fresh` is the new ready lives observed since the pre-apply snapshot, evidence of
+ * capacity; `refused` (empty on success) names any boundary refusal.
+ *
+ * A fresh life sharing a recycled target's NAME is joined onto that row for display
+ * only (`life N to M`, N the recycled `generation_before`, M the fresh life's
+ * generation) — a convenience on a shared slot name, never a claim that the fresh life
+ * is that target's successor. Fresh lives on other names render on their own below.
  */
 function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode {
+  const recycledNames = new Set(report.recycle.map((entry) => entry.name));
+  const unjoinedFresh = report.fresh.filter((life) => !recycledNames.has(life.name));
   return (
     <div className="tai-stack" data-testid="apply-report">
       <FleetReport summary={summarizeFleetFanout(report.fanout)} />
@@ -374,23 +384,49 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
           <p style={noteStyle}>No process recycle was needed.</p>
         ) : (
           <ul style={rowListStyle} data-testid="apply-recycle">
-            {report.recycle.map((entry) => (
-              <li key={`${entry.origin}-${entry.kind}`} className="tai-row">
-                <span className="tai-mono">{entry.origin}</span>
-                <Badge variant="neutral">{entry.kind}</Badge>
-                <Badge variant={entry.status === 'self-deferred' ? 'warning' : 'primary'}>
-                  {entry.status}
-                </Badge>
-                {entry.status === 'self-deferred' ? (
+            {report.recycle.map((entry) => {
+              const joined = report.fresh.find((life) => life.name === entry.name);
+              return (
+                <li
+                  key={`${entry.name}-${entry.kind}-${String(entry.generation_before)}`}
+                  className="tai-row"
+                >
+                  <span className="tai-mono">{entry.name}</span>
+                  <Badge variant="neutral">{entry.kind}</Badge>
+                  <Badge variant={entry.status === 'self-deferred' ? 'warning' : 'primary'}>
+                    {entry.status}
+                  </Badge>
                   <span style={labelStyle}>
-                    this worker (the applier) recycles itself after replying
+                    {joined !== undefined
+                      ? `life ${String(entry.generation_before)} to ${String(joined.generation)}`
+                      : `life ${String(entry.generation_before)}`}
                   </span>
-                ) : null}
-              </li>
-            ))}
+                  {entry.status === 'self-deferred' ? (
+                    <span style={labelStyle}>
+                      this worker (the applier) recycles itself after replying
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+
+      {unjoinedFresh.length > 0 ? (
+        <section>
+          <h4 style={sectionTitleStyle}>Fresh lives</h4>
+          <ul style={rowListStyle} data-testid="apply-fresh">
+            {unjoinedFresh.map((life) => (
+              <li key={`${life.name}-${life.kind}-${String(life.generation)}`} className="tai-row">
+                <span className="tai-mono">{life.name}</span>
+                <Badge variant="neutral">{life.kind}</Badge>
+                <span style={labelStyle}>life {String(life.generation)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {report.refused.length > 0 ? (
         <div role="alert" style={dangerPanelStyle} data-testid="apply-refused">

@@ -67,13 +67,33 @@ describe('backend client transport', () => {
     expect(out.module).toBe('plugin.backend.celery');
   });
 
-  it('listFleetWorkers GETs the fleet route and parses the bus census (every origin kind)', async () => {
+  it('listFleetWorkers GETs the fleet route and parses the bus census (every worker kind)', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
           workers: [
-            { origin: 'serve-a1b2', kind: 'serve', pid: 101 },
-            { origin: 'backend-c3d4', kind: 'backend', pid: 202 },
+            {
+              name: 'serve-1',
+              kind: 'serve',
+              pid: 101,
+              generation: 3,
+              joined_at: '2026-08-08T00:00:00Z',
+              beat_at: '2026-08-08T00:00:05Z',
+              state: 'ready',
+              stale: false,
+              last_op: { op: 'reload_config', outcome: 'applied', at: '2026-08-08T00:00:05Z' },
+            },
+            {
+              name: 'backend-2',
+              kind: 'backend',
+              pid: 202,
+              generation: 1,
+              joined_at: '2026-08-08T00:00:01Z',
+              beat_at: '2026-08-08T00:00:06Z',
+              state: 'resyncing',
+              stale: false,
+              last_op: null,
+            },
           ],
         },
       }),
@@ -81,8 +101,18 @@ describe('backend client transport', () => {
     const out = await client.listFleetWorkers();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/fleet/workers');
-    expect(out.workers.map((worker) => worker.origin)).toEqual(['serve-a1b2', 'backend-c3d4']);
+    expect(out.workers.map((worker) => worker.name)).toEqual(['serve-1', 'backend-2']);
     expect(out.workers.map((worker) => worker.kind)).toEqual(['serve', 'backend']);
+    expect(out.workers.map((worker) => worker.generation)).toEqual([3, 1]);
+    expect(out.workers.map((worker) => worker.state)).toEqual(['ready', 'resyncing']);
+    // `stale` is read from the server flag, never recomputed from a client threshold.
+    expect(out.workers[0]?.stale).toBe(false);
+    expect(out.workers[0]?.last_op).toEqual({
+      op: 'reload_config',
+      outcome: 'applied',
+      at: '2026-08-08T00:00:05Z',
+    });
+    expect(out.workers[1]?.last_op).toBeNull();
   });
 
   it('listFleetWorkers throws LOUDLY on a 500 census failure (no silent empty fleet)', async () => {
@@ -99,7 +129,7 @@ describe('backend client transport', () => {
           local_only: false,
           results: [
             {
-              origin: 'serve-a1b2',
+              name: 'serve-1',
               outcome: 'applied',
               payload: { status: 'ok', env_keys: 3 },
               error: null,
@@ -118,7 +148,7 @@ describe('backend client transport', () => {
     expect(out.results[0]?.outcome).toBe('applied');
   });
 
-  it('reloadFleetConfig POSTs the selected targets and reports a non-converged origin honestly', async () => {
+  it('reloadFleetConfig POSTs the selected targets and reports a non-converged worker honestly', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
@@ -126,9 +156,9 @@ describe('backend client transport', () => {
           reachable: true,
           local_only: false,
           results: [
-            { origin: 'serve-a1b2', outcome: 'applied', payload: null, error: null, detail: null },
+            { name: 'serve-1', outcome: 'applied', payload: null, error: null, detail: null },
             {
-              origin: 'backend-c3d4',
+              name: 'backend-2',
               outcome: 'timed_out',
               payload: null,
               error: null,
@@ -139,8 +169,8 @@ describe('backend client transport', () => {
         },
       }),
     );
-    const out = await client.reloadFleetConfig(['serve-a1b2', 'backend-c3d4']);
-    expect(captured[0]?.body).toEqual({ targets: ['serve-a1b2', 'backend-c3d4'] });
+    const out = await client.reloadFleetConfig(['serve-1', 'backend-2']);
+    expect(captured[0]?.body).toEqual({ targets: ['serve-1', 'backend-2'] });
     expect(out.results.map((entry) => entry.outcome)).toEqual(['applied', 'timed_out']);
   });
 

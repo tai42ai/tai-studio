@@ -68,9 +68,7 @@ function degradedSave(): ReturnType<ApiClient['setEnvConfig']> {
       op: 'set_env',
       reachable: true,
       local_only: false,
-      results: [
-        { origin: 'worker-2', outcome: 'missing', payload: null, error: null, detail: null },
-      ],
+      results: [{ name: 'worker-2', outcome: 'missing', payload: null, error: null, detail: null }],
       error: null,
     },
   });

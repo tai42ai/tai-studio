@@ -19,16 +19,16 @@ import {
 
 const goodMessage = { type: OAUTH_MESSAGE_TYPE, code: 'the-code', state: 'the-state', error: null };
 
-/** A `fleet` fan-out with one applied and one stranded (`departed`) origin. */
+/** A `fleet` fan-out with one applied and one stranded (`departed`) worker. */
 const nonConvergedFanout = {
   mode: 'fleet',
   op: 'reload_config',
   reachable: true,
   local_only: false,
   results: [
-    { origin: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+    { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
     {
-      origin: 'serve-b',
+      name: 'serve-b',
       outcome: 'departed',
       payload: null,
       error: null,

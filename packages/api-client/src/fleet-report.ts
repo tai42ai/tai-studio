@@ -3,9 +3,9 @@
  * fleet broadcast. Every mutation surface (connector, backup, mcp-config, env,
  * extensions, single-MCP reload, fleet reload) routes its broadcast report through
  * this one function so a FAILED propagation is never invisible: an unconfirmed
- * sibling (`failed`/`missing`/`departed`/`timed_out`) or an unreachable bus becomes
- * an explicit summary the UI renders as a loud, user-visible state — never a faked
- * success on a departed/timed_out/failed origin.
+ * sibling (any non-`applied` outcome) or an unreachable bus becomes an explicit
+ * summary the UI renders as a loud, user-visible state — never a faked success on a
+ * worker that did not converge.
  *
  * A mutation embeds its broadcast in one of two shapes: the mode-wrapped
  * {@link FleetReportFanout} (`fanout` field) or the bare {@link FleetResult} (the
@@ -15,12 +15,12 @@
  */
 import type { FleetOutcome, FleetReportFanout, FleetResult } from './schemas';
 
-/** A per-origin propagation FAILURE: an origin that did not confirm `applied`. */
+/** A per-worker propagation FAILURE: a worker that did not confirm `applied`. */
 export type FleetFailureOutcome = Exclude<FleetOutcome, 'applied'>;
 
-/** One origin that failed to converge, with the report's message for it. */
-export interface FleetOriginFailure {
-  readonly origin: string;
+/** One worker that failed to converge, with the report's message for it. */
+export interface FleetWorkerFailure {
+  readonly name: string;
   readonly outcome: FleetFailureOutcome;
   /** The failed apply's `error`, or the publisher's computed-outcome `detail`. */
   readonly message: string | null;
@@ -28,10 +28,10 @@ export interface FleetOriginFailure {
 
 /**
  * The interpreted state of one broadcast.
- *   - `converged` — the bus was reached and every origin applied (or the change was
+ *   - `converged` — the bus was reached and every worker applied (or the change was
  *     local-only on a lone worker). The caller renders its own success; the report
  *     needs no loud state.
- *   - `degraded` — the bus was reached but one or more origins did not confirm; the
+ *   - `degraded` — the bus was reached but one or more workers did not confirm; the
  *     named `failures` are stale/unreached siblings the operator must see.
  *   - `unreachable` — the bus itself could not be reached, so no sibling was told;
  *     `error` carries the transport failure.
@@ -42,8 +42,8 @@ export interface FleetReportSummary {
   readonly status: FleetReportStatus;
   /** The single-worker `local-only` note, when the broadcast reached no sibling. */
   readonly note: string | null;
-  /** The origins that did not apply — empty unless `status` is `degraded`. */
-  readonly failures: readonly FleetOriginFailure[];
+  /** The workers that did not apply — empty unless `status` is `degraded`. */
+  readonly failures: readonly FleetWorkerFailure[];
   /** The bus-unreachable transport error — non-null only when `unreachable`. */
   readonly error: string | null;
 }
@@ -56,16 +56,16 @@ export function isFleetReportFailure(summary: FleetReportSummary | null): boolea
 /**
  * Interpret a bare {@link FleetResult} (the fleet-reload / single-MCP-reload body).
  * An unreachable bus is `unreachable`; a reachable report with any non-`applied`
- * origin is `degraded` (those origins named); otherwise `converged`.
+ * worker is `degraded` (those workers named); otherwise `converged`.
  */
 export function summarizeFleetResult(result: FleetResult): FleetReportSummary {
   if (!result.reachable) {
     return { status: 'unreachable', note: null, failures: [], error: result.error };
   }
-  const failures: FleetOriginFailure[] = result.results
+  const failures: FleetWorkerFailure[] = result.results
     .filter((entry) => entry.outcome !== 'applied')
     .map((entry) => ({
-      origin: entry.origin,
+      name: entry.name,
       outcome: entry.outcome as FleetFailureOutcome,
       message: entry.error ?? entry.detail ?? null,
     }));

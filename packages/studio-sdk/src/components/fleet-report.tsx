@@ -11,15 +11,16 @@
  * System page's own fleet-reload action) drops the "Change saved" framing — nothing
  * was saved, a reload was dispatched — and the self-referential System-page pointer.
  *
- * A `converged` summary (every origin applied, or a lone-worker local-only change)
+ * A `converged` summary (every worker applied, or a lone-worker local-only change)
  * renders NOTHING — the calling surface shows its own success. A `degraded` summary
  * (the bus was reached but a sibling did not confirm) or an `unreachable` summary (the
- * bus itself failed) renders a loud `role="alert"` panel naming the honest per-origin
- * outcomes: `failed` / `missing` / `departed` / `timed_out`, or the bus error. It
- * never fakes success on a stranded origin. Every server-supplied string (an origin
- * name, an error/detail message) renders as escaped React text, never an HTML sink.
+ * bus itself failed) renders a loud `role="alert"` panel naming the honest per-worker
+ * outcomes: `failed` / `missing` / `departed` / `timed_out` / `resyncing` / `recycling` /
+ * `stale`, or the bus error. It never fakes success on a stranded worker. Every
+ * server-supplied string (a worker name, an error/detail message) renders as escaped
+ * React text, never an HTML sink.
  *
- * Every state — the headline and each origin's outcome — is a `tai-status` line: an
+ * Every state — the headline and each worker's outcome — is a `tai-status` line: an
  * icon MARK plus a word LABEL, with the tone color only reinforcing them, so the
  * report is readable without color perception.
  */
@@ -28,12 +29,15 @@ import type { FleetReportSummary, FleetFailureOutcome } from '@tai42/api-client'
 
 import { AlertTriangleIcon, PendingIcon, XCircleIcon, type IconComponent } from './icons';
 
-/** Human labels for the per-origin non-applied outcomes. */
+/** Human labels for the per-worker non-applied outcomes. */
 const OUTCOME_LABEL: Record<FleetFailureOutcome, string> = {
   failed: 'apply failed',
   missing: 'alive but did not acknowledge in time',
   departed: 'left mid-broadcast',
   timed_out: 'acknowledged but did not finish applying',
+  resyncing: 'resyncing — will converge on resync',
+  recycling: 'restarting',
+  stale: 'quiet — reconnecting or dead',
 };
 
 interface StatusTone {
@@ -48,12 +52,18 @@ interface StatusTone {
  * raised. `departed` is a warning — the worker is gone, so nothing will converge it.
  * `missing` and `timed_out` are both UNRESOLVED (never acknowledged / acknowledged
  * but never finished), so they read as pending rather than as an outright failure.
+ * `resyncing` and `recycling` are transient restart-in-progress states, and `stale` is
+ * a quiet row past the freshness bound (reconnecting or dead, carrying no convergence
+ * promise) — all three read as warnings the operator should watch.
  */
 const OUTCOME_STATUS: Record<FleetFailureOutcome, StatusTone> = {
   failed: { tone: 'tai-status-err', Icon: XCircleIcon },
   missing: { tone: 'tai-status-pending', Icon: PendingIcon },
   departed: { tone: 'tai-status-warn', Icon: AlertTriangleIcon },
   timed_out: { tone: 'tai-status-pending', Icon: PendingIcon },
+  resyncing: { tone: 'tai-status-warn', Icon: AlertTriangleIcon },
+  recycling: { tone: 'tai-status-warn', Icon: AlertTriangleIcon },
+  stale: { tone: 'tai-status-warn', Icon: AlertTriangleIcon },
 };
 
 /**
@@ -92,7 +102,7 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
     );
   }
 
-  // degraded — the bus was reached but named origins did not converge. That is a
+  // degraded — the bus was reached but named workers did not converge. That is a
   // warning, not a failure, so it takes the warning surface: a warn-toned
   // headline inside an error-toned panel would state two different severities.
   //
@@ -118,8 +128,8 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
         {summary.failures.map((failure) => {
           const { tone, Icon } = OUTCOME_STATUS[failure.outcome];
           return (
-            <li key={failure.origin} className="tai-row">
-              <span className="tai-mono">{failure.origin}</span>
+            <li key={failure.name} className="tai-row">
+              <span className="tai-mono">{failure.name}</span>
               <span className={`tai-status ${tone}`}>
                 <Icon />
                 {OUTCOME_LABEL[failure.outcome]}

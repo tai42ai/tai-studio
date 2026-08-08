@@ -4,14 +4,14 @@
   "local_only": false,
   "results": [
     {
-      "origin": "serve-4f1c9a2b",
+      "name": "serve-1",
       "outcome": "applied",
       "payload": { "title": "github", "status": "ok", "tools": ["create_issue", "list_repos"] },
       "error": null,
       "detail": null
     },
     {
-      "origin": "serve-7d3e5b8c",
+      "name": "serve-2",
       "outcome": "applied",
       "payload": { "title": "github", "status": "ok", "tools": ["create_issue", "list_repos"] },
       "error": null,
