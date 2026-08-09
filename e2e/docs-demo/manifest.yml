@@ -29,13 +29,6 @@
 lifecycle_modules:
   - tai42_identity_redis
   - tai42_accounts_postgres
-  # tai42_connector.google.core.connector: the Google OAuth connector provider.
-  # Import registers one pure ProviderDescriptor on the connector registry (no
-  # engine, no side effects, no network — permissions.network=false), so GET
-  # /api/connectors/providers lists the Google provider and the Connectors screen
-  # renders a populated Providers section. Listing needs no OAuth client creds
-  # (only a live Connect flow would); its package is installed by the runner via
-  # EXTRA_PLUGINS (connector-google).
 
 # --- Default router set ------------------------------------------------------
 # Mount no default routers; `routers_modules` below already names every UI-facing

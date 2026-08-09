@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 22 Studio screens (light + dark = 44 PNGs) into
+# pipeline. Regenerates ALL 21 Studio screens (light + dark = 42 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -82,11 +82,8 @@ export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
 # accounts-postgres plugin's lifecycle module + login/users routers power the login
 # screen's password form and the users-admin page (its shipped studio/ dist mounts
-# that Studio page); connector-google contributes the Google provider descriptor the
-# manifest's lifecycle module imports (the Connectors screen's populated Providers
-# section — pure descriptor data, no OAuth creds needed to list); the rest back the
-# toolbox/agents/storage/monitoring surfaces.
-export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres ${PLUGINS_DIR}/connector-google"
+# that Studio page); the rest back the toolbox/agents/storage/monitoring surfaces.
+export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the first-owner bootstrap gate to a known token so the
 # runner can seed the owner deterministically, and tell boot.sh to apply the accounts
