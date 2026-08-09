@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 20 Studio screens (light + dark = 40 PNGs) into
+# pipeline. Regenerates ALL 22 Studio screens (light + dark = 44 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -82,8 +82,11 @@ export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
 # accounts-postgres plugin's lifecycle module + login/users routers power the login
 # screen's password form and the users-admin page (its shipped studio/ dist mounts
-# that Studio page); the rest back the toolbox/agents/storage/monitoring surfaces.
-export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
+# that Studio page); connector-google contributes the Google provider descriptor the
+# manifest's lifecycle module imports (the Connectors screen's populated Providers
+# section — pure descriptor data, no OAuth creds needed to list); the rest back the
+# toolbox/agents/storage/monitoring surfaces.
+export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres ${PLUGINS_DIR}/connector-google"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the first-owner bootstrap gate to a known token so the
 # runner can seed the owner deterministically, and tell boot.sh to apply the accounts
@@ -342,6 +345,38 @@ profile_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/
 if ! api "${BASE_URL}/api/config/profiles" | grep -q '"production"'; then
   die "the seeded 'production' profile is not in the profiles list — the Profiles-tab screen would be empty (PUT reply: ${profile_resp})"
 fi
+
+# --- 7d2. Seed the presets (Presets screen) ---------------------------------
+# Two named presets over the reference tool `studio_demo_echo` (base tool + fixed
+# `message` kwarg baked in) through the REAL create door, so the Presets screen's
+# list renders a populated, DETERMINISTIC table — the list columns (Name, Base tool,
+# Description, Active version, Tags, Combos) carry no timestamps, so no
+# `nondeterministic` flag. A preset's name IS a live tool name, so these two also
+# appear as tools in the tools/scoped-tools shots (an expected regen diff).
+#
+# Create is NOT idempotent (a duplicate name hits the store's name pre-check), so a
+# rerun against the persisted versioning store returns an already-exists error —
+# fine, the record persists. The LIST read below is the shot's own source and is the
+# authoritative post-condition: both names must be present or the table is short.
+log "seeding the demo presets (studio_demo_echo variants)"
+seed_preset() {
+  local name="$1" message="$2" description="$3"
+  api -H "content-type: application/json" -X POST "${BASE_URL}/api/presets" \
+    -d "$(NAME="${name}" MSG="${message}" DESC="${description}" python3 -c '
+import json, os
+print(json.dumps({
+    "name": os.environ["NAME"],
+    "base_tool": "studio_demo_echo",
+    "description": os.environ["DESC"],
+    "fixed_kwargs": {"message": os.environ["MSG"]},
+}))')" >/dev/null 2>&1 || true
+}
+seed_preset "morning_greeting" "Good morning — your daily summary is ready." "Posts the morning greeting."
+seed_preset "shift_handover"   "Shift complete. Handover notes are posted."   "Posts the end-of-shift note."
+for preset in morning_greeting shift_handover; do
+  api "${BASE_URL}/api/presets" | grep -q "\"${preset}\"" \
+    || die "the seeded preset '${preset}' is not in the presets list — the Presets screen would be short"
+done
 
 # --- 7e. Seed the conversation route + its threads (Conversations screen) ---
 # The Conversations shot deep-links a route's thread list beside one thread's transcript,

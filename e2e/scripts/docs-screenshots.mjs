@@ -33,6 +33,14 @@
  *                  row (name + description) from `GET /api/config/profiles`. The action
  *                  switches to the tab and waits on that row.
  *   - agents     — the registered `tools_agent` from `GET /api/agents`.
+ *   - presets    — the Presets list (`GET /api/presets`): the two seeded
+ *                  `studio_demo_echo` presets, the master pane rendered full-width (no
+ *                  selection). The version detail is NOT shot — its version panel stamps
+ *                  a server `created_at` that would churn every run.
+ *   - connectors — the Connectors Providers section (`GET /api/connectors/providers`):
+ *                  the Google provider from the imported connector-google descriptor. No
+ *                  connection is seeded (a real Connect runs an OAuth round-trip the
+ *                  hermetic capture never makes), so the Connections section is empty.
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
@@ -176,6 +184,36 @@ const AUTHED_PAGES = [
   },
   // The registered demo agent renders one row per agent (`data-testid`).
   { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },
+  {
+    // The Presets screen's list — the two seeded `studio_demo_echo` presets (name +
+    // fixed `message`), rendered by the presets router the docs-demo manifest mounts.
+    // With NO `?preset=` selection the list is the FULL-WIDTH master pane; the detail
+    // is deliberately not shot because its version-history panel renders each version's
+    // server-stamped `created_at` (a per-run churn). The list columns (Name, Base tool,
+    // Description, Active version, Tags, Combos) carry no timestamps, so this shot is
+    // deterministic — NO `nondeterministic` flag. Waits on the first seeded row, and
+    // the action requires the second so the frame is always the full seeded table.
+    name: 'presets',
+    path: '/presets',
+    wait: '[data-testid="preset-row-morning_greeting"]',
+    action: async (page) => {
+      await page
+        .locator('[data-testid="preset-row-shift_handover"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The Connectors screen's Providers section, populated by the Google provider the
+    // docs-demo manifest imports (connector-google's pure ProviderDescriptor — catalog
+    // data, no OAuth creds needed to LIST). The Connections section renders its "No
+    // connections yet" empty state: no connection is seeded, because completing one runs
+    // an OAuth round-trip the hermetic capture never makes. Deterministic — the provider
+    // descriptor is static and the page carries no timestamps. Waits on the Google
+    // provider card's name.
+    name: 'connectors',
+    path: '/connectors',
+    wait: 'text=Google',
+  },
   {
     name: 'dashboard',
     path: '/observability',
