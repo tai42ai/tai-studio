@@ -128,6 +128,56 @@ describe('MarketplacePage — plugin card version + recency', () => {
   });
 });
 
+describe('MarketplacePage — premium badge + mcp-server kind', () => {
+  it('renders the premium badge only when the row is premium', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row({ premium: true })])),
+    });
+    expect(await screen.findByText('Premium')).toBeInTheDocument();
+  });
+
+  it('shows no premium badge when the flag is false or absent', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row({ premium: false })])),
+    });
+    await screen.findByText('A box of tools.');
+    expect(screen.queryByText('Premium')).toBeNull();
+  });
+
+  it('shows no premium badge when the flag is absent (nullish wire shape)', async () => {
+    // premium is z.boolean().nullish(): an ABSENT flag is a real wire shape, distinct
+    // from an explicit false — the base row omits the key entirely. Neither may badge.
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    await screen.findByText('A box of tools.');
+    expect(screen.queryByText('Premium')).toBeNull();
+  });
+
+  it('renders a new mcp-server kind verbatim in the facet and the item badge', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(
+        pageOf([
+          row({
+            item: {
+              kind: 'mcp-server',
+              name: 'postgres',
+              description: 'A Postgres MCP server.',
+              tags: [],
+            },
+          }),
+        ]),
+        ['productivity'],
+        ['tool', 'agent', 'mcp-server'],
+      ),
+    });
+    // The facet chip is served vocabulary (no client enum); the item badge renders
+    // any string. Both surface the new kind with zero client-side kind logic.
+    expect(await screen.findByRole('button', { name: 'mcp-server' })).toBeInTheDocument();
+    expect(screen.getByText('mcp-server', { selector: '[data-variant]' })).toBeInTheDocument();
+  });
+});
+
 describe('MarketplacePage — browse tri-state', () => {
   it('shows no cards while the search is pending', () => {
     const client: StubApiClient = {

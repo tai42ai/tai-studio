@@ -24,8 +24,9 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { summarizeFleetFanout, summarizeFleetResult } from '@tai42/api-client';
-import type { ConnectorRef, Extension } from '@tai42/api-client';
+import type { ConnectorRef, Extension, McpEnvRef } from '@tai42/api-client';
 import {
+  AppLink,
   Badge,
   Button,
   Card,
@@ -61,8 +62,10 @@ import type { ReactNode } from 'react';
 
 import {
   envConfigKey,
+  installedMarketplacePluginsKey,
   manifestKey,
   mcpConfigSchemaKey,
+  mcpEnvRefsKey,
   mcpExtensionsKey,
   mcpStatusKey,
   preservedManifestKey,
@@ -519,6 +522,134 @@ function ToolListEditor({
 }
 
 /**
+ * The `!ENV` marker checklist for one MCP entry — NAMES and set/unset only, derived
+ * ENTIRELY from `get_mcp_env_refs` (no env value is ever fetched or rendered). A ref
+ * resolves (green) when the var is set OR carries a `:default`; a bare unset var is
+ * drift (red) — the marker would not resolve. "Set" links to the environment editor,
+ * the one door that reads and writes the values. Renders for installer-written AND
+ * hand-written marker-bearing entries alike (a platform surface, not an mcp-kind one).
+ */
+function EnvRefsChecklist({ refs }: { readonly refs: readonly McpEnvRef[] }): ReactNode {
+  if (refs.length === 0) return null;
+  return (
+    <div style={{ marginTop: 'var(--tai-space-3)' }}>
+      <span
+        style={{
+          display: 'block',
+          fontSize: 'var(--tai-text-sm)',
+          fontWeight: 600,
+          marginBottom: 'var(--tai-space-2)',
+        }}
+      >
+        Environment
+      </span>
+      <ul className="tai-stack tai-stack-2" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {refs.map((ref) => {
+          const resolves = ref.set || ref.has_default;
+          const state = ref.set ? 'set' : ref.has_default ? 'default' : 'unset';
+          return (
+            <li
+              key={ref.pointer}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--tai-space-2)',
+                minWidth: 0,
+              }}
+            >
+              <Badge variant={resolves ? 'success' : 'danger'}>{state}</Badge>
+              <code style={{ fontFamily: 'var(--tai-font-mono)' }}>{ref.var}</code>
+              {resolves ? null : (
+                <span className="tai-status-warn" style={{ fontSize: 'var(--tai-text-sm)' }}>
+                  the marker will not resolve
+                </span>
+              )}
+              <AppLink to="settings" aria-label={`Set ${ref.var} in the environment editor`}>
+                Set
+              </AppLink>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * A marketplace-installed MCP entry, rendered READ-ONLY. Its `title` matches an
+ * installed mcp-server item name (the installer refuses title collisions, so a
+ * match IS that install), so edit + delete are disabled — uninstalling the plugin
+ * is the only way to remove it. Distinct from `ManagedEntryCard`: an install has no
+ * `ConnectorRef`, and "uninstall to remove" is the honest recourse, not "disconnect".
+ */
+function InstalledEntryCard({
+  entry,
+  index,
+  installedRef,
+  refs,
+}: {
+  readonly entry: unknown;
+  readonly index: number;
+  readonly installedRef: string;
+  readonly refs: readonly McpEnvRef[];
+}): ReactNode {
+  const record = asRecord(entry);
+  const rawTitle = record.title;
+  const title =
+    typeof rawTitle === 'string' && rawTitle !== '' ? rawTitle : `Server ${String(index + 1)}`;
+  const include = stringArray(record.include);
+  return (
+    <Card style={{ background: 'var(--tai-color-surface)' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--tai-space-3)',
+          marginBottom: 'var(--tai-space-2)',
+        }}
+      >
+        <span style={{ fontWeight: 600, fontFamily: 'var(--tai-font-mono)' }}>{title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
+          <Badge variant="primary">Installed</Badge>
+          <Button
+            type="button"
+            variant="danger"
+            disabled
+            aria-label={`Remove server ${String(index + 1)}`}
+          >
+            Remove
+          </Button>
+        </div>
+      </div>
+      <p
+        role="note"
+        style={{ margin: 0, fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
+      >
+        Installed from {installedRef} — uninstall to remove
+      </p>
+      {include.length > 0 ? (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 'var(--tai-space-1)',
+            marginTop: 'var(--tai-space-2)',
+          }}
+        >
+          {include.map((tool) => (
+            <Badge key={tool} variant="neutral">
+              {tool}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
+      <EnvRefsChecklist refs={refs} />
+    </Card>
+  );
+}
+
+/**
  * A connector-owned MCP entry, rendered READ-ONLY. Its scopes, tokens, and URLs
  * are kept in sync by the connection that wrote it, so the editor surfaces the
  * provenance and disables removal — the only way to remove it is to disconnect.
@@ -603,6 +734,7 @@ function EditableEntryCard({
   availableSecretKeys,
   keyPickingAvailable,
   dirty,
+  refs,
   onPasteSecret,
   onChange,
   onRemove,
@@ -616,6 +748,7 @@ function EditableEntryCard({
   readonly availableSecretKeys: readonly string[];
   readonly keyPickingAvailable: boolean;
   readonly dirty: boolean;
+  readonly refs: readonly McpEnvRef[];
   readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
   readonly onChange: (next: unknown) => void;
   readonly onRemove: () => void;
@@ -721,12 +854,15 @@ function EditableEntryCard({
             onChange({ ...record, exclude: next });
           }}
         />
+        {/* Any `!ENV` markers this hand-written entry carries get the same names-only
+            checklist the installed entries render (a platform surface). */}
+        <EnvRefsChecklist refs={refs} />
       </div>
     </Card>
   );
 }
 
-/** The form-view list of entries: managed entries read-only, hand-authored editable. */
+/** The form-view list of entries: managed + installed entries read-only, hand-authored editable. */
 function EntryList({
   schema,
   entries,
@@ -736,6 +872,8 @@ function EntryList({
   availableSecretKeys,
   keyPickingAvailable,
   dirty,
+  installedMcpRefs,
+  refsByTitle,
   onPasteSecret,
   onChange,
 }: {
@@ -747,10 +885,24 @@ function EntryList({
   readonly availableSecretKeys: readonly string[];
   readonly keyPickingAvailable: boolean;
   readonly dirty: boolean;
+  // title → installed listing ref (`namespace/name`) for installer-written entries.
+  readonly installedMcpRefs: ReadonlyMap<string, string>;
+  // title → its `!ENV` marker refs, keyed off the SAVED manifest's entry titles.
+  readonly refsByTitle: ReadonlyMap<string, readonly McpEnvRef[]>;
   readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
   readonly onChange: (entries: unknown[]) => void;
 }): ReactNode {
   const formSchema = stripSchemaFields(schema, STRIPPED_FIELDS);
+  // The marker checklist reflects SAVED server state and is keyed by title (stable
+  // identity), so it survives a working-list reorder that would drift an index.
+  const refsFor = (entry: unknown): readonly McpEnvRef[] => {
+    const title = asRecord(entry).title;
+    return typeof title === 'string' ? (refsByTitle.get(title) ?? []) : [];
+  };
+  const installedRefFor = (entry: unknown): string | undefined => {
+    const title = asRecord(entry).title;
+    return typeof title === 'string' ? installedMcpRefs.get(title) : undefined;
+  };
   const setEntry = (index: number, next: unknown): void => {
     onChange(entries.map((entry, position) => (position === index ? next : entry)));
   };
@@ -781,6 +933,21 @@ function EntryList({
         if (managed !== null) {
           return <ManagedEntryCard key={index} entry={entry} index={index} managed={managed} />;
         }
+        // A title matching an installed mcp-server item name IS that install
+        // (the installer refuses title collisions): render it read-only so hand
+        // edits cannot clobber an entry the installer owns.
+        const installedRef = installedRefFor(entry);
+        if (installedRef !== undefined) {
+          return (
+            <InstalledEntryCard
+              key={index}
+              entry={entry}
+              index={index}
+              installedRef={installedRef}
+              refs={refsFor(entry)}
+            />
+          );
+        }
         return (
           <EditableEntryCard
             key={index}
@@ -793,6 +960,7 @@ function EntryList({
             availableSecretKeys={availableSecretKeys}
             keyPickingAvailable={keyPickingAvailable}
             dirty={dirty}
+            refs={refsFor(entry)}
             onPasteSecret={onPasteSecret}
             onChange={(next) => {
               setEntry(index, next);
@@ -820,6 +988,8 @@ function McpConfigEditor({
   extensionsError,
   availableSecretKeys,
   keyPickingAvailable,
+  installedMcpRefs,
+  refsByTitle,
 }: {
   readonly initialEntries: readonly Record<string, unknown>[];
   readonly schema: JsonSchema;
@@ -828,6 +998,8 @@ function McpConfigEditor({
   readonly extensionsError: string | undefined;
   readonly availableSecretKeys: readonly string[];
   readonly keyPickingAvailable: boolean;
+  readonly installedMcpRefs: ReadonlyMap<string, string>;
+  readonly refsByTitle: ReadonlyMap<string, readonly McpEnvRef[]>;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
@@ -1080,6 +1252,8 @@ function McpConfigEditor({
           availableSecretKeys={availableSecretKeys}
           keyPickingAvailable={keyPickingAvailable}
           dirty={dirty}
+          installedMcpRefs={installedMcpRefs}
+          refsByTitle={refsByTitle}
           onPasteSecret={onPasteSecret}
           onChange={setEntries}
         />
@@ -1187,6 +1361,18 @@ function McpConfigSection(): ReactNode {
     queryKey: envConfigKey,
     queryFn: ({ signal }) => api.getEnvConfig(signal),
   });
+  // Provenance + marker checklist are AUXILIARY reads: a failure degrades the two
+  // read-only surfaces (an installer-written entry falls back to editable, the
+  // checklist is absent) but never walls the editor. No env VALUE is ever fetched —
+  // the checklist is names + set/unset booleans only.
+  const installed = useQuery({
+    queryKey: installedMarketplacePluginsKey,
+    queryFn: ({ signal }) => api.listInstalledMarketplacePlugins(signal),
+  });
+  const envRefs = useQuery({
+    queryKey: mcpEnvRefsKey,
+    queryFn: ({ signal }) => api.getMcpEnvRefs(signal),
+  });
 
   if (manifest.isError || schema.isError) {
     const error = manifest.error ?? schema.error;
@@ -1205,15 +1391,37 @@ function McpConfigSection(): ReactNode {
   const discoveredTools = status.isSuccess ? status.data.bound : {};
   const extensionsError = extensions.isError ? errorMessage(extensions.error) : undefined;
 
+  const initialEntries = manifest.data.mcp;
+  // title → installed listing ref, from every installed plugin's mcp-server items.
+  const installedMcpRefs = new Map<string, string>();
+  for (const row of installed.data?.installed ?? []) {
+    for (const item of row.items) {
+      if (item.kind === 'mcp-server') installedMcpRefs.set(item.name, row.ref);
+    }
+  }
+  // title → its `!ENV` marker refs. The refs' `/mcp/<i>/...` pointer indexes the
+  // SAVED manifest, so map each ref's index back to that entry's title and group.
+  const refsByTitle = new Map<string, McpEnvRef[]>();
+  for (const ref of envRefs.data ?? []) {
+    const index = Number(ref.pointer.split('/')[2]);
+    const title = asRecord(initialEntries[index]).title;
+    if (typeof title !== 'string') continue;
+    const existing = refsByTitle.get(title);
+    if (existing === undefined) refsByTitle.set(title, [ref]);
+    else existing.push(ref);
+  }
+
   return (
     <McpConfigEditor
-      initialEntries={manifest.data.mcp}
+      initialEntries={initialEntries}
       schema={schema.data}
       discoveredTools={discoveredTools}
       extensions={extensions.data ?? []}
       extensionsError={extensionsError}
       availableSecretKeys={envConfig.data?.secret_keys ?? []}
       keyPickingAvailable={envConfig.isSuccess}
+      installedMcpRefs={installedMcpRefs}
+      refsByTitle={refsByTitle}
     />
   );
 }

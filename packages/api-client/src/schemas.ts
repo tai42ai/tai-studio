@@ -490,6 +490,25 @@ export const manifestView = z.object({
   mcp: z.array(manifestMcpEntry),
   user_tools: z.array(z.string()),
 });
+
+/**
+ * One `!ENV ${VAR[:default]}` marker the manifest's MCP section carries
+ * (`GET /api/manifest/mcp-env-refs`) — NAMES and BOOLEANS only, NEVER values.
+ * `pointer` is the RFC 6901 json-pointer of the leaf (`/mcp/<i>/config/...`);
+ * `has_default` is whether the marker carries a `:default`; `set` is whether the
+ * var resolves in the EFFECTIVE env (the resolution truth the install-time
+ * dangling refusal reads), so a var supplied by the deployment shows green, never
+ * a false red. The checklist derives from THIS alone — no env value is ever fetched.
+ */
+export const mcpEnvRef = z.object({
+  var: z.string(),
+  pointer: z.string(),
+  has_default: z.boolean(),
+  set: z.boolean(),
+});
+export type McpEnvRef = z.infer<typeof mcpEnvRef>;
+export const mcpEnvRefs = z.array(mcpEnvRef);
+export type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
 /**
  * The apply result every config-writer mutation returns (`POST /api/mcp-config`,
  * `POST /api/config/env`): the serving worker's local reload result (`status` +
@@ -1836,6 +1855,9 @@ export const marketplaceSearchRow = z.object({
   tags: z.array(z.string()),
   trust_tier: z.string(),
   pricing: z.string(),
+  // A display-only premium flag (D5: a badge, never a payment surface). Nullable
+  // + optional: an older registry omits it, and it is absent on non-premium rows.
+  premium: z.boolean().nullish(),
   latest_version: z.string().nullable(),
   downloads: z.number(),
   updated_at: z.string(),
@@ -1869,11 +1891,35 @@ export const marketplaceVersion = z.object({
 export type MarketplaceVersion = z.infer<typeof marketplaceVersion>;
 
 /**
- * The listing's latest published version as embedded in its detail: the version
- * plus the items that version contains.
+ * The listing's latest published version as embedded in its detail: the version,
+ * the items it contains, and a minimal typed passthrough of the published spec.
+ *
+ * `spec` is carried so the install dialog can read an mcp-server item's public
+ * `mcp.env` marker strings (`provides[].mcp.env`) and collect its required `!ENV`
+ * vars before install. Only that path is typed; everything else on the spec is
+ * `.passthrough()`-preserved but unmodelled (zod would otherwise strip the whole
+ * `spec` as an unknown key). Nullable + optional: a listing with nothing published
+ * carries no spec.
  */
 export const marketplaceLatestVersion = marketplaceVersion.extend({
   items: z.array(marketplaceItem),
+  spec: z
+    .object({
+      provides: z.array(
+        z
+          .object({
+            kind: z.string(),
+            name: z.string(),
+            mcp: z
+              .object({ env: z.record(z.string(), z.string()).nullish() })
+              .passthrough()
+              .nullish(),
+          })
+          .passthrough(),
+      ),
+    })
+    .passthrough()
+    .nullish(),
 });
 export type MarketplaceLatestVersion = z.infer<typeof marketplaceLatestVersion>;
 
@@ -1907,10 +1953,15 @@ export const marketplacePluginDetail = z.object({
   license: z.string().nullable(),
   homepage_url: z.string().nullable(),
   repository_url: z.string().nullable(),
+  // The marketplace-stored docs-site URL (R13: the store is the source, the UI a
+  // link). Nullable + optional: absent on a listing with no published docs.
+  docs_url: z.string().nullish(),
   categories: z.array(z.string()),
   tags: z.array(z.string()),
   trust_tier: z.string(),
   pricing: z.string(),
+  // A display-only premium flag (D5: a badge, never a payment surface).
+  premium: z.boolean().nullish(),
   downloads: z.number(),
   latest: marketplaceLatestVersion.nullable(),
   versions: z.array(marketplaceVersion),
@@ -1954,6 +2005,10 @@ export const marketplaceInstalledPlugin = z
     incompatible_newer: z.string().nullable(),
     missing_upstream: z.boolean(),
     compat: marketplaceInstalledCompat,
+    // The `{kind, name}` of every item this plugin's stored spec provides (local
+    // truth). The McpTab joins the mcp-server item names against the manifest's
+    // mcp-entry titles to render an installer-written entry read-only.
+    items: z.array(marketplaceItem.pick({ kind: true, name: true })),
   })
   .strict();
 export type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;

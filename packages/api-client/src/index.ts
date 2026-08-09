@@ -103,6 +103,8 @@ export type {
   ProviderCatalogResponse,
   ConnectorRef,
   ManifestMcpEntry,
+  McpEnvRef,
+  McpEnvRefs,
   ConnectionView,
   OAuthCompleteResult,
   StudioPluginManifest,

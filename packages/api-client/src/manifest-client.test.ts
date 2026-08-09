@@ -192,6 +192,51 @@ describe('manifest / mcp client transport', () => {
     expect(out.groups[0]?.fields[0]?.env_var).toBe('APP_TITLE');
   });
 
+  it('getMcpEnvRefs GETs /api/manifest/mcp-env-refs and parses the names-only rows', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: [
+          {
+            var: 'DATABASE_URL',
+            pointer: '/mcp/0/config/env/DATABASE_URL',
+            has_default: false,
+            set: false,
+          },
+          // The wire row carries a stray `value` — the names-only door must STRIP it,
+          // never surface a real env value on this read.
+          {
+            var: 'PORT',
+            pointer: '/mcp/0/config/env/PORT',
+            has_default: true,
+            set: true,
+            value: 'super-secret-value',
+          },
+        ],
+      }),
+    );
+    const out = await client.getMcpEnvRefs();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/manifest/mcp-env-refs');
+    expect(out[0]?.var).toBe('DATABASE_URL');
+    expect(out[0]?.set).toBe(false);
+    expect(out[1]?.has_default).toBe(true);
+    // Names + booleans ONLY: the stray value is gone from the parsed row.
+    expect(out[1]).not.toHaveProperty('value');
+  });
+
+  it('throws ApiSchemaError LOUDLY on a drifting env-ref row (missing set)', async () => {
+    // `set` is the resolution truth the install-time dangling refusal + checklist
+    // read; a row that dropped it is drift, never a silently-defaulted false.
+    const { client } = harness(() =>
+      jsonResponse({
+        data: [
+          { var: 'DATABASE_URL', pointer: '/mcp/0/config/env/DATABASE_URL', has_default: false },
+        ],
+      }),
+    );
+    await expect(client.getMcpEnvRefs()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
   it('surfaces a 4xx { error } from a bad mcp-config as a LOUD ApiError', async () => {
     const { client } = harness(() => jsonResponse({ error: 'invalid mcp entry' }, 400));
     await expect(client.setMcpConfig([{}])).rejects.toBeInstanceOf(ApiError);

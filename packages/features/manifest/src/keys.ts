@@ -34,6 +34,21 @@ export const subMcpAvailableToolsKey = ['sub-mcp-available-tools'] as const;
 export const mcpExtensionsKey = ['mcp-extensions'] as const;
 
 /**
+ * Key for the manifest MCP section's `!ENV` marker refs (`GET /api/manifest/mcp-env-refs`)
+ * — NAMES + set/unset booleans only, never values. Feeds the McpTab env-refs checklist.
+ */
+export const mcpEnvRefsKey = ['mcp-env-refs'] as const;
+
+/**
+ * Key for the installed marketplace inventory (`GET /api/marketplace/installed`). The
+ * McpTab joins each row's mcp-server item names against the manifest's mcp-entry titles
+ * to mark an installer-written entry read-only. Mirrors the SAME tuple VALUE the
+ * marketplace feature owns so React-Query shares the one cache entry (an install /
+ * uninstall there invalidates this read all the same).
+ */
+export const installedMarketplacePluginsKey = ['marketplace', 'installed'] as const;
+
+/**
  * Key for the deployment env map (`GET /api/config/env` → `{ env, secret_keys }`).
  * The AUTHORITATIVE owner is the settings feature (its EnvironmentTab holds the
  * query); the feature-layer import boundary forbids reaching across to it, so this

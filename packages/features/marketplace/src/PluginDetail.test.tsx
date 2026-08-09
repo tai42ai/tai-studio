@@ -75,6 +75,7 @@ function installedRow(
     incompatible_newer: null,
     missing_upstream: false,
     compat: { status: 'compatible', reason: null },
+    items: [],
     ...overrides,
   };
 }
@@ -282,6 +283,170 @@ describe('PluginDetail — advisories', () => {
 
     expect(await screen.findByText('Toolbox')).toBeInTheDocument();
     expect(await screen.findByText('boom: advisories')).toBeInTheDocument();
+  });
+});
+
+describe('PluginDetail — premium badge + docs link', () => {
+  it('renders the premium badge only when the detail is premium', async () => {
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
+      client: reads(detailFixture({ premium: true }), []),
+    });
+    expect(await screen.findByText('Premium')).toBeInTheDocument();
+  });
+
+  it('shows no premium badge when the flag is false or absent', async () => {
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
+      client: reads(detailFixture({ premium: false }), []),
+    });
+    await screen.findByText('Toolbox');
+    expect(screen.queryByText('Premium')).toBeNull();
+  });
+
+  it('shows no premium badge when the flag is absent (nullish wire shape)', async () => {
+    // premium is z.boolean().nullish(): an ABSENT flag is a real wire shape, distinct
+    // from an explicit false — detailFixture() omits the key entirely. No badge either way.
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
+      client: reads(detailFixture(), []),
+    });
+    await screen.findByText('Toolbox');
+    expect(screen.queryByText('Premium')).toBeNull();
+  });
+
+  it('renders the docs link when docs_url is set', async () => {
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
+      client: reads(detailFixture({ docs_url: 'https://docs.tai42.ai/toolbox' }), []),
+    });
+    const link = await screen.findByRole('link', { name: 'Docs' });
+    expect(link).toHaveAttribute('href', 'https://docs.tai42.ai/toolbox');
+  });
+
+  it('omits the docs link when docs_url is absent', async () => {
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, {
+      client: reads(detailFixture(), []),
+    });
+    await screen.findByText('Toolbox');
+    expect(screen.queryByRole('link', { name: 'Docs' })).toBeNull();
+  });
+});
+
+/** A detail whose latest version provides an mcp-server carrying a bare required
+ *  `!ENV ${DATABASE_URL}` marker and a defaulted `!ENV ${PORT:5432}` marker. */
+function mcpServerDetail(): MarketplacePluginDetail {
+  return detailFixture({
+    latest: {
+      version: '1.0.0',
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      items: [{ kind: 'mcp-server', name: 'postgres', description: 'PG.', tags: [] }],
+      spec: {
+        provides: [
+          {
+            kind: 'mcp-server',
+            name: 'postgres',
+            mcp: { env: { DATABASE_URL: '!ENV ${DATABASE_URL}', PORT: '!ENV ${PORT:5432}' } },
+          },
+        ],
+      },
+    },
+  });
+}
+
+describe('PluginDetail — mcp-server install env dialog', () => {
+  it('collects only bare-marker required vars (defaulted pre-satisfied) and marks them secret by default', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/postgres-mcp',
+      version: '1.0.0',
+      notes: [],
+      advisories: [],
+    });
+    const client: StubApiClient = {
+      ...reads(mcpServerDetail(), []),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/postgres-mcp" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // The bare marker is collected; the defaulted marker is pre-satisfied (no input).
+    expect(within(dialog).getByLabelText('DATABASE_URL')).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('PORT')).toBeNull();
+    // The secret toggle defaults ON.
+    expect(within(dialog).getByRole('checkbox', { name: 'Store as secret' })).toBeChecked();
+
+    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'tai42/postgres-mcp',
+        env: { DATABASE_URL: 'postgres://db' },
+        secret_keys: ['DATABASE_URL'],
+      });
+    });
+  });
+
+  it('drops a required var from secret_keys when its Store-as-secret toggle is turned OFF', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/postgres-mcp',
+      version: '1.0.0',
+      notes: [],
+      advisories: [],
+    });
+    const client: StubApiClient = {
+      ...reads(mcpServerDetail(), []),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/postgres-mcp" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
+    // Turn the default-ON secret toggle OFF (the inverse of the default-ON case): the
+    // value still installs, but it must NOT land in the secret band. A regression that
+    // ignored the toggle would still push DATABASE_URL into secret_keys.
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Store as secret' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'tai42/postgres-mcp',
+        env: { DATABASE_URL: 'postgres://db' },
+        secret_keys: [],
+      });
+    });
+  });
+
+  it('pre-satisfies a required var the deployment env already provides (one-click, no env dialog)', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/postgres-mcp',
+      version: '1.0.0',
+      notes: [],
+      advisories: [],
+    });
+    const client: StubApiClient = {
+      ...reads(mcpServerDetail(), []),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: { DATABASE_URL: 'x' }, secret_keys: [] }),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/postgres-mcp" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    // Wait for the plain one-click confirm — its body text is unique to that dialog,
+    // so it only renders once the deployment-env pre-satisfaction has resolved.
+    await screen.findByText(/pip-install the package and reload/);
+    expect(screen.queryByLabelText('DATABASE_URL')).toBeNull();
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Install' }),
+    );
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({ ref: 'tai42/postgres-mcp' });
+    });
   });
 });
 

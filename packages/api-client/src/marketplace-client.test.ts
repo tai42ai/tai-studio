@@ -79,6 +79,7 @@ const INSTALLED_ROW = {
     status: 'incompatible',
     reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
   },
+  items: [{ kind: 'mcp-server', name: 'postgres' }],
 };
 
 const ADVISORY = {
@@ -291,6 +292,27 @@ describe('marketplace client transport', () => {
     );
     await client.installMarketplacePlugin({ ref: 'tai42/toolbox' });
     expect(captured[0]?.body).toEqual({ ref: 'tai42/toolbox' });
+  });
+
+  it('installMarketplacePlugin carries env + secret_keys through to the request body', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { ref: 'tai42/postgres-mcp', version: '1.0.0', advisories: [], notes: [] },
+      }),
+    );
+    await client.installMarketplacePlugin({
+      ref: 'tai42/postgres-mcp',
+      env: { DATABASE_URL: 'postgres://db' },
+      secret_keys: ['DATABASE_URL'],
+    });
+    // The env values + secret marks ride the wire body, not just { ref }: the
+    // install-time env-collection dialog satisfies required `!ENV` markers here.
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.body).toEqual({
+      ref: 'tai42/postgres-mcp',
+      env: { DATABASE_URL: 'postgres://db' },
+      secret_keys: ['DATABASE_URL'],
+    });
   });
 
   it('uninstallMarketplacePlugin POSTs to /api/marketplace/uninstall and parses the receipt', async () => {

@@ -298,10 +298,19 @@ export interface MarketplaceSearchQuery {
   readonly page_size?: number;
 }
 
-/** Body for installing / updating a plugin. `ref` is `namespace/name`. */
+/**
+ * Body for installing / updating a plugin. `ref` is `namespace/name`.
+ *
+ * `env` / `secret_keys` satisfy an mcp-server entry's required `!ENV` markers in
+ * the same transaction that writes the entry: `env` supplies the values,
+ * `secret_keys` marks which land in the secret band. Both omitted for a plain
+ * install (no required markers).
+ */
 export interface MarketplaceInstallBody {
   readonly ref: string;
   readonly version?: string;
+  readonly env?: Record<string, string>;
+  readonly secret_keys?: string[];
 }
 
 /** Body for uninstalling a plugin. */
@@ -682,6 +691,10 @@ export function createApiClient(config: ApiConfig) {
     // McpTab editor/raw view reads this so round-trips never inline resolved values.
     getManifestPreserved: (signal?: AbortSignal) =>
       req('/api/manifest/preserved', s.manifestView, { signal }),
+    // The manifest MCP section's `!ENV ${VAR[:default]}` marker refs — NAMES and
+    // set/unset BOOLEANS only, never values. Drives the McpTab env-refs checklist.
+    getMcpEnvRefs: (signal?: AbortSignal) =>
+      req('/api/manifest/mcp-env-refs', s.mcpEnvRefs, { signal }),
 
     // -- connectors ----------------------------------------------------------
     listProviders: (signal?: AbortSignal) =>

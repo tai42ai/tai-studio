@@ -26,3 +26,11 @@ export const marketplaceKindsKey = ['marketplace', 'kinds'] as const;
 
 /** Key for the advisory state covering installed plugins. */
 export const marketplaceAdvisoriesKey = ['marketplace', 'advisories'] as const;
+
+/**
+ * Key for the deployment env map (`GET /api/config/env` → `{ env, secret_keys }`).
+ * The mcp-server install dialog reads its var NAMES only, to pre-satisfy a required
+ * `!ENV` marker the deployment already provides. Mirrors the SAME tuple VALUE the
+ * settings/manifest features own so React-Query shares the one cache entry.
+ */
+export const envConfigKey = ['env-config'] as const;

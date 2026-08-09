@@ -9,17 +9,20 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AppLink,
   ArrowLeftIcon,
   Badge,
   Button,
   Card,
   CheckCircleIcon,
+  Checkbox,
   ConfirmDialog,
   CopyField,
   EmptyState,
   ErrorState,
   ExternalLinkButton,
   FeatureDisabled,
+  Field,
   ScrollRegion,
   Skeleton,
   Stack,
@@ -30,6 +33,7 @@ import {
   TR,
   Table,
   TagChips,
+  TextInput,
   errorMessage,
   featureDisabledMessage,
   isFeatureDisabled,
@@ -45,7 +49,39 @@ import type {
 
 import { advisoriesForListing, severityVariant, WarningBlock } from './advisories';
 import { ListingIcon, listingTitle } from './display';
-import { marketplaceAdvisoriesKey, marketplaceInstalledKey, marketplacePluginKey } from './keys';
+import {
+  envConfigKey,
+  marketplaceAdvisoriesKey,
+  marketplaceInstalledKey,
+  marketplacePluginKey,
+} from './keys';
+
+// A manifest env leaf is `!ENV ${VAR}` or `!ENV ${VAR:default}` (the pyaml_env
+// marker). A REQUIRED var is the bare form with no `:default`.
+const ENV_MARKER = /^!ENV\s+\$\{([^}]+)\}$/;
+
+/**
+ * The bare-marker `!ENV` vars an mcp-server listing's PUBLIC spec requires: a
+ * `!ENV ${VAR}` leaf under a provides item's `mcp.env` with no `:default`.
+ * Defaulted markers (the server resolves the default) and literal values (not env
+ * refs) are skipped. Display-only — the install-time dangling-ref refusal is the
+ * real gate — so this only decides which inputs the install dialog collects.
+ */
+function requiredEnvVars(detail: MarketplacePluginDetail): string[] {
+  const vars = new Set<string>();
+  for (const item of detail.latest?.spec?.provides ?? []) {
+    const env = item.mcp?.env;
+    if (env === null || env === undefined) continue;
+    for (const value of Object.values(env)) {
+      const match = ENV_MARKER.exec(value);
+      if (match === null) continue;
+      const inner = match[1];
+      if (inner === undefined || inner.includes(':')) continue;
+      vars.add(inner);
+    }
+  }
+  return [...vars];
+}
 
 /** Which mutation dialog is open (each is mounted only while active). */
 type ActiveAction = 'install' | 'update' | 'uninstall';
@@ -120,19 +156,28 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
           <div className="tai-row">
             <Badge>{detail.trust_tier}</Badge>
             <Badge>{detail.pricing}</Badge>
+            {/* A display-only premium mark (D5) — a badge, never a payment surface. */}
+            {detail.premium === true ? <Badge variant="primary">Premium</Badge> : null}
             <span className="tai-muted">{detail.downloads} downloads</span>
             {detail.license !== null ? (
               <span className="tai-muted">License: {detail.license}</span>
             ) : null}
           </div>
           <TagChips tags={[...detail.categories, ...detail.tags]} />
-          {detail.homepage_url !== null || detail.repository_url !== null ? (
+          {detail.homepage_url !== null ||
+          detail.repository_url !== null ||
+          (detail.docs_url !== null && detail.docs_url !== undefined) ? (
             <div className="tai-row">
               {detail.homepage_url !== null ? (
                 <ExternalLinkButton url={detail.homepage_url}>Homepage</ExternalLinkButton>
               ) : null}
               {detail.repository_url !== null ? (
                 <ExternalLinkButton url={detail.repository_url}>Repository</ExternalLinkButton>
+              ) : null}
+              {/* The marketplace-stored docs-site link (R13), null-guarded like the
+                  other two. */}
+              {detail.docs_url !== null && detail.docs_url !== undefined ? (
+                <ExternalLinkButton url={detail.docs_url}>Docs</ExternalLinkButton>
               ) : null}
             </div>
           ) : null}
@@ -266,6 +311,17 @@ export function PluginDetail({
     queryFn: ({ signal }) => api.getMarketplaceAdvisories(signal),
     enabled: slash >= 0,
   });
+  // Bare `!ENV` markers the public spec requires — computed once the detail lands.
+  const bareEnvVars = detailQuery.data !== undefined ? requiredEnvVars(detailQuery.data) : [];
+  // The deployment env's var NAMES (never values), read only to PRE-SATISFY a
+  // required marker the deployment already provides — and only once the operator
+  // opens the install dialog for a listing that has required markers. On error the
+  // set is empty (fail-open: the var stays collectable, the server stays the gate).
+  const envConfigQuery = useQuery({
+    queryKey: envConfigKey,
+    queryFn: ({ signal }) => api.getEnvConfig(signal),
+    enabled: slash >= 0 && bareEnvVars.length > 0 && activeAction === 'install',
+  });
 
   const onInstallSuccess = (receipt: MarketplaceInstallResult, verb: string): void => {
     setActiveAction(null);
@@ -283,7 +339,10 @@ export function PluginDetail({
   };
 
   const installMutation = useMutation({
-    mutationFn: () => api.installMarketplacePlugin({ ref: refValue }),
+    // The env-collection dialog passes an mcp-server's required `!ENV` values +
+    // secret marks; a plain install passes an empty body ({ref} only).
+    mutationFn: (body: { env?: Record<string, string>; secret_keys?: string[] }) =>
+      api.installMarketplacePlugin({ ref: refValue, ...body }),
     onSuccess: (receipt) => {
       onInstallSuccess(receipt, 'Installed');
     },
@@ -354,6 +413,13 @@ export function PluginDetail({
     storeRefusal !== undefined ? featureDisabledMessage(storeRefusal) : null;
 
   const detail = detailQuery.data;
+  // The required markers still to collect: the bare `!ENV` vars minus any the
+  // deployment env already provides (pre-satisfied). Empty → a plain one-click
+  // install with no env dialog (R11 parity), non-empty → the env dialog collects them.
+  const presetEnvKeys = new Set(Object.keys(envConfigQuery.data?.env ?? {}));
+  const requiredEnvVarsToCollect = requiredEnvVars(detail).filter(
+    (name) => !presetEnvKeys.has(name),
+  );
   const matching =
     advisoriesQuery.data !== undefined
       ? advisoriesForListing(advisoriesQuery.data.advisories, refValue)
@@ -442,34 +508,50 @@ export function PluginDetail({
       <VersionsCard versions={detail.versions} />
 
       {activeAction === 'install' ? (
-        <ConfirmDialog
-          title="Install plugin"
-          confirmLabel="Install"
-          pendingLabel="Installing"
-          confirmVariant="primary"
-          isPending={installMutation.isPending}
-          // An OFF 501 `marketplace-not-configured` is a state, not an error: show
-          // the muted note in the dialog (blocking retry), never a loud red alert.
-          error={isFeatureDisabled(installMutation.error) ? null : installMutation.error}
-          disabledNote={
-            isFeatureDisabled(installMutation.error) ? (
-              <FeatureDisabled
-                feature="Marketplace installs"
-                message={featureDisabledMessage(installMutation.error)}
-              />
-            ) : undefined
-          }
-          onConfirm={() => {
-            installMutation.mutate();
-          }}
-          onClose={closeAction}
-        >
-          <p style={{ margin: 0 }}>
-            Install {refValue}
-            {detail.latest !== null ? ` v${detail.latest.version}` : ''}? The app will pip-install
-            the package and reload.
-          </p>
-        </ConfirmDialog>
+        requiredEnvVarsToCollect.length > 0 ? (
+          // Same Install button, kind-agnostic (R11): the env dialog is inserted
+          // only when the public spec's markers require values to be collected.
+          <InstallEnvDialog
+            refValue={refValue}
+            version={detail.latest?.version ?? null}
+            requiredVars={requiredEnvVarsToCollect}
+            isPending={installMutation.isPending}
+            error={installMutation.error}
+            onSubmit={(env, secretKeys) => {
+              installMutation.mutate({ env, secret_keys: secretKeys });
+            }}
+            onClose={closeAction}
+          />
+        ) : (
+          <ConfirmDialog
+            title="Install plugin"
+            confirmLabel="Install"
+            pendingLabel="Installing"
+            confirmVariant="primary"
+            isPending={installMutation.isPending}
+            // An OFF 501 `marketplace-not-configured` is a state, not an error: show
+            // the muted note in the dialog (blocking retry), never a loud red alert.
+            error={isFeatureDisabled(installMutation.error) ? null : installMutation.error}
+            disabledNote={
+              isFeatureDisabled(installMutation.error) ? (
+                <FeatureDisabled
+                  feature="Marketplace installs"
+                  message={featureDisabledMessage(installMutation.error)}
+                />
+              ) : undefined
+            }
+            onConfirm={() => {
+              installMutation.mutate({});
+            }}
+            onClose={closeAction}
+          >
+            <p style={{ margin: 0 }}>
+              Install {refValue}
+              {detail.latest !== null ? ` v${detail.latest.version}` : ''}? The app will pip-install
+              the package and reload.
+            </p>
+          </ConfirmDialog>
+        )
       ) : null}
       {activeAction === 'update' ? (
         <ConfirmDialog
@@ -495,6 +577,12 @@ export function PluginDetail({
           <p style={{ margin: 0 }}>
             Update {refValue} to the latest version? The app will pip-install the package and
             reload.
+          </p>
+          {/* An upgrade that adds a required mcp-server variable is loudly refused by
+              the server (no env dialog on update this mission); name the recourse. */}
+          <p className="tai-muted" style={{ margin: 0 }}>
+            If the update needs a new required variable, set it in the{' '}
+            <AppLink to="settings">environment editor</AppLink>, then retry.
           </p>
         </ConfirmDialog>
       ) : null}
@@ -527,6 +615,98 @@ function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
         Back to marketplace
       </Button>
     </div>
+  );
+}
+
+/**
+ * The install confirm for an mcp-server whose spec carries required `!ENV` markers:
+ * one input per required var, each with a "Store as secret" toggle DEFAULTING ON.
+ *
+ * Security: `read_env` returns real values on the wire (masking is display-side
+ * only), so an UNMARKED credential would render in cleartext in the env editor —
+ * defaulting the toggle on lands each collected value in `secret_keys`. A blank
+ * field is omitted (the deployment may already provide it); the server's
+ * install-time dangling-`!ENV` refusal is the real enforcement, surfaced loudly here.
+ */
+function InstallEnvDialog({
+  refValue,
+  version,
+  requiredVars,
+  isPending,
+  error,
+  onSubmit,
+  onClose,
+}: {
+  readonly refValue: string;
+  readonly version: string | null;
+  readonly requiredVars: readonly string[];
+  readonly isPending: boolean;
+  readonly error: Error | null;
+  readonly onSubmit: (env: Record<string, string>, secretKeys: string[]) => void;
+  readonly onClose: () => void;
+}): ReactNode {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [secret, setSecret] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(requiredVars.map((name) => [name, true])),
+  );
+  const disabled = isFeatureDisabled(error);
+  const submit = (): void => {
+    const env: Record<string, string> = {};
+    const secretKeys: string[] = [];
+    for (const name of requiredVars) {
+      const value = values[name] ?? '';
+      if (value === '') continue;
+      env[name] = value;
+      // Default-on: absent from the map (never toggled) still counts as secret.
+      if (secret[name] !== false) secretKeys.push(name);
+    }
+    onSubmit(env, secretKeys);
+  };
+  return (
+    <ConfirmDialog
+      title="Install plugin"
+      confirmLabel="Install"
+      pendingLabel="Installing"
+      confirmVariant="primary"
+      isPending={isPending}
+      // An OFF 501 `marketplace-not-configured` is a state, not an error.
+      error={disabled ? null : error}
+      disabledNote={
+        disabled ? (
+          <FeatureDisabled feature="Marketplace installs" message={featureDisabledMessage(error)} />
+        ) : undefined
+      }
+      onConfirm={submit}
+      onClose={onClose}
+    >
+      <div className="tai-stack tai-stack-3">
+        <p style={{ margin: 0 }}>
+          Install {refValue}
+          {version !== null ? ` v${version}` : ''}? This server needs the following settings. Leave
+          a field blank if the deployment already provides it.
+        </p>
+        {requiredVars.map((name) => (
+          <div key={name} className="tai-stack tai-stack-2">
+            <Field label={name}>
+              <TextInput
+                value={values[name] ?? ''}
+                onChange={(event) => {
+                  const next = event.currentTarget.value;
+                  setValues((prev) => ({ ...prev, [name]: next }));
+                }}
+              />
+            </Field>
+            <Checkbox
+              checked={secret[name] !== false}
+              onCheckedChange={(checked) => {
+                setSecret((prev) => ({ ...prev, [name]: checked }));
+              }}
+              label="Store as secret"
+            />
+          </div>
+        ))}
+      </div>
+    </ConfirmDialog>
   );
 }
 
