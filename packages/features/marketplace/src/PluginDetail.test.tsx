@@ -727,6 +727,255 @@ describe('PluginDetail — install snippet', () => {
   });
 });
 
+describe('PluginDetail — version status, links, and install-prompt edges', () => {
+  it('renders an unknown version status as a neutral badge', async () => {
+    const client = reads(
+      detailFixture({
+        versions: [
+          { version: '3.0.0', contract_range: null, status: 'archived', published_at: null },
+        ],
+      }),
+      [],
+    );
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+    // A status outside the mapped set falls through to the neutral tier.
+    expect(await screen.findByText('archived')).toHaveAttribute('data-variant', 'neutral');
+  });
+
+  it('omits the repository link when repository_url is null but keeps the others', async () => {
+    const client = reads(
+      detailFixture({ repository_url: null, homepage_url: 'https://tai42.ai/toolbox' }),
+      [],
+    );
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+    await screen.findByText('Toolbox');
+    // The link row still renders (homepage is set), but the null repository is dropped.
+    expect(screen.getByRole('link', { name: 'Homepage' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Repository' })).toBeNull();
+  });
+
+  it('omits the version from the install prompt when there is no published latest', async () => {
+    const user = userEvent.setup();
+    const client = reads(detailFixture({ latest: null, versions: [] }), []);
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // With no latest version the ` v…` suffix is dropped from the confirm body.
+    expect(dialog).toHaveTextContent(
+      'Install tai42/toolbox? The app will pip-install the package and reload.',
+    );
+  });
+});
+
+/** A detail whose spec mixes a bare marker with values that must NOT be collected:
+ *  a literal (not an env ref), a defaulted marker, an env-less item, and a
+ *  null-env item. Only the bare `!ENV ${DATABASE_URL}` should reach the dialog. */
+function mixedSpecDetail(): MarketplacePluginDetail {
+  return detailFixture({
+    latest: {
+      version: '1.0.0',
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [] }],
+      spec: {
+        provides: [
+          {
+            kind: 'mcp-server',
+            name: 'db',
+            mcp: {
+              env: {
+                DATABASE_URL: '!ENV ${DATABASE_URL}',
+                LITERAL: 'plain-value',
+                PORT: '!ENV ${PORT:5432}',
+              },
+            },
+          },
+          // An item with no mcp block at all (env is undefined).
+          { kind: 'tool', name: 'noenv', description: 'x', tags: [] },
+          // An mcp item whose env is explicitly null.
+          { kind: 'mcp-server', name: 'nullenv', mcp: { env: null } },
+        ],
+      },
+    },
+  });
+}
+
+/** A detail whose spec carries TWO bare required markers. */
+function twoMarkerDetail(): MarketplacePluginDetail {
+  return detailFixture({
+    latest: {
+      version: '1.0.0',
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [] }],
+      spec: {
+        provides: [
+          {
+            kind: 'mcp-server',
+            name: 'db',
+            mcp: { env: { DATABASE_URL: '!ENV ${DATABASE_URL}', API_KEY: '!ENV ${API_KEY}' } },
+          },
+        ],
+      },
+    },
+  });
+}
+
+describe('PluginDetail — env dialog var selection and store-off state', () => {
+  it('collects only the bare marker, skipping literals, defaulted markers, and env-less items', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      ...reads(mixedSpecDetail(), []),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      installMarketplacePlugin: vi.fn(),
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/db-mcp" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // Only the bare marker becomes an input; the literal, the defaulted marker, the
+    // env-less item, and the null-env item all contribute no field.
+    expect(within(dialog).getByLabelText('DATABASE_URL')).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('LITERAL')).toBeNull();
+    expect(within(dialog).queryByLabelText('PORT')).toBeNull();
+  });
+
+  it('omits a required var left blank from the install body', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/db-mcp',
+      version: '1.0.0',
+      notes: [],
+      advisories: [],
+    });
+    const client: StubApiClient = {
+      ...reads(twoMarkerDetail(), []),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/db-mcp" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // Fill one required var, leave the other blank: the blank one is omitted entirely
+    // (not sent as an empty string, not marked secret) — the deployment may provide it.
+    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'tai42/db-mcp',
+        env: { DATABASE_URL: 'postgres://db' },
+        secret_keys: ['DATABASE_URL'],
+      });
+    });
+  });
+
+  it('shows the muted OFF note inside the env dialog when the install store is not configured', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'marketplace-not-configured',
+        ),
+      );
+    const client: StubApiClient = {
+      ...reads(twoMarkerDetail(), []),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/db-mcp" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    // The 501 is a state, not an error: the muted note replaces any red alert in the
+    // env dialog, and the confirm is blocked from re-firing the certain refusal.
+    const note = await within(dialog).findByTestId('feature-disabled');
+    expect(note).toHaveTextContent(
+      'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'Install' })).toBeDisabled();
+  });
+});
+
+describe('PluginDetail — update store-off note and dialog cancels', () => {
+  it('shows the muted OFF note in the update dialog when the install store is not configured', async () => {
+    const user = userEvent.setup();
+    const updateMarketplacePlugin = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+          501,
+          'marketplace-not-configured',
+        ),
+      );
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow({ update_available: true, latest: '2.0.0' })]),
+      updateMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Update' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Update' }));
+
+    const note = await within(dialog).findByTestId('feature-disabled');
+    expect(note).toHaveTextContent(
+      'the marketplace install store is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
+    );
+    expect(within(dialog).queryByRole('alert')).toBeNull();
+  });
+
+  it('closes the update dialog on cancel without calling the client', async () => {
+    const user = userEvent.setup();
+    const updateMarketplacePlugin = vi.fn();
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow({ update_available: true, latest: '2.0.0' })]),
+      updateMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Update' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(updateMarketplacePlugin).not.toHaveBeenCalled();
+  });
+
+  it('closes the uninstall dialog on cancel without calling the client', async () => {
+    const user = userEvent.setup();
+    const uninstallMarketplacePlugin = vi.fn();
+    const client: StubApiClient = {
+      ...reads(detailFixture(), [installedRow()]),
+      uninstallMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Uninstall' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+    expect(uninstallMarketplacePlugin).not.toHaveBeenCalled();
+  });
+});
+
 /** The `<table>` whose header row carries `columnHeader`, failing loudly if absent. */
 function tableUnder(columnHeader: string): HTMLElement {
   const table = screen.getByRole('columnheader', { name: columnHeader }).closest('table');

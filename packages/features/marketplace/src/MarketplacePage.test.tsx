@@ -583,6 +583,85 @@ describe('MarketplacePage — background refetch', () => {
   });
 });
 
+describe('MarketplacePage — recency, sort selection, and cleared facets', () => {
+  it('renders an unparseable updated_at verbatim rather than swallowing it', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row({ updated_at: 'not-a-date' })])),
+    });
+    // A value Date cannot parse is shown as-is on the recency line.
+    expect(await screen.findByText(/Updated not-a-date/)).toBeInTheDocument();
+  });
+
+  it('commits an empty search as a cleared query on submit', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    await screen.findByText('A box of tools.');
+    // Submitting with a blank box drops `q` entirely (no empty-string query).
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    expect(navigate).toHaveBeenCalledWith('marketplace', {});
+  });
+
+  it('clears the category back to the default when All categories is chosen', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(
+      <MarketplacePage search={{ category: 'productivity' }} />,
+      { client: browseReads(pageOf([row()]), ['productivity', 'devtools']) },
+    );
+    await screen.findByText('A box of tools.');
+    await user.click(screen.getByRole('combobox', { name: 'Category' }));
+    await user.click(await screen.findByRole('option', { name: 'All categories' }));
+    expect(navigate).toHaveBeenCalledWith('marketplace', {});
+  });
+
+  it('shows the Name sort as selected and clears it back to the default', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<MarketplacePage search={{ sort: 'name' }} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    await screen.findByText('A box of tools.');
+    // A `name` sort resolves to the Name option, not the default sentinel.
+    const sortBox = screen.getByRole('combobox', { name: 'Sort' });
+    expect(sortBox).toHaveTextContent('Name');
+    await user.click(sortBox);
+    // Choosing the default option (Most downloaded, no query) drops `sort` entirely.
+    await user.click(await screen.findByRole('option', { name: 'Most downloaded' }));
+    expect(navigate).toHaveBeenCalledWith('marketplace', {});
+  });
+
+  it('shows Most downloaded as the selected sort when a query forces the download order', async () => {
+    renderWithProviders(<MarketplacePage search={{ q: 'uuid', sort: 'downloads' }} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    await screen.findByText('A box of tools.');
+    // With a query, an explicit `downloads` sort resolves to the Most downloaded option.
+    expect(screen.getByRole('combobox', { name: 'Sort' })).toHaveTextContent('Most downloaded');
+  });
+});
+
+describe('MarketplacePage — load-more pending label', () => {
+  it('shows a disabled Loading label while the next page is in flight', async () => {
+    const user = userEvent.setup();
+    const searchMarketplace = vi.fn((query?: MarketplaceSearchQuery) =>
+      query?.page === 2
+        ? pending<MarketplaceSearchPage>()
+        : Promise.resolve(pageOf([row()], { total: 2, page: 1, page_size: 1 })),
+    );
+    const client: StubApiClient = {
+      searchMarketplace,
+      listMarketplaceCategories: vi.fn().mockResolvedValue([]),
+      listMarketplaceKinds: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<MarketplacePage search={{}} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Load more' }));
+    // While page 2 is unresolved the control flips to a disabled pending label.
+    const loading = await screen.findByRole('button', { name: 'Loading…' });
+    expect(loading).toBeDisabled();
+  });
+});
+
 describe('MarketplacePage — tabs and drill-in', () => {
   it('switches to the installed tab', async () => {
     const user = userEvent.setup();
@@ -591,6 +670,23 @@ describe('MarketplacePage — tabs and drill-in', () => {
     });
     await user.click(await screen.findByRole('tab', { name: 'Installed' }));
     expect(navigate).toHaveBeenCalledWith('marketplace', { tab: 'installed' });
+  });
+
+  it('clears the tab param when switching back to the browse tab', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      ...browseReads(pageOf([row()])),
+      listInstalledMarketplacePlugins: vi
+        .fn()
+        .mockResolvedValue({ installed: [], quarantined: [] }),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue({ advisories: [], fetched_at: 'x' }),
+    };
+    const { navigate } = renderWithProviders(<MarketplacePage search={{ tab: 'installed' }} />, {
+      client,
+    });
+    // Browse is the default tab, so selecting it drops `tab` rather than pinning it.
+    await user.click(await screen.findByRole('tab', { name: 'Browse' }));
+    expect(navigate).toHaveBeenCalledWith('marketplace', {});
   });
 
   it('renders the installed tab content when the installed tab is active', async () => {
