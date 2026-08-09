@@ -11,6 +11,7 @@
 import type { ReactNode, RefObject } from 'react';
 import { AppLink, ArrowLeftIcon, Card, EmptyState, useBreakpoint } from '@tai42/studio-sdk';
 
+import { EntryGate } from './EntryGate';
 import { useSelectionFocus } from './focus';
 import { ThreadList, threadRowLabel } from './ThreadList';
 import { Transcript } from './Transcript';
@@ -42,6 +43,10 @@ export function RouteThreads({
           All routes
         </AppLink>
       </div>
+
+      {/* Route-level management, shown only for a gated-capable (web channel)
+          route; every other route renders nothing here. */}
+      <EntryGate route={route} />
 
       <div className="tai-split" data-pane={pane}>
         <div className="tai-split-list">

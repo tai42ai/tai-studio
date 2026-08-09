@@ -16,6 +16,14 @@ export function conversationThreadsKey(
   return ['conversations', 'threads', routeName, pageSize];
 }
 
+/** Key for one web route's entry-gate state (flag + live codes), keyed by the
+ * route's `our_identity`. */
+export function webEntryGateKey(
+  identity: string,
+): readonly ['conversations', 'entry-gate', string] {
+  return ['conversations', 'entry-gate', identity];
+}
+
 /** Key for one thread's transcript. */
 export function conversationTranscriptKey(
   routeName: string,

@@ -8,6 +8,7 @@
 export { ConversationsPage } from './ConversationsPage';
 export { RoutesTable } from './RoutesTable';
 export { RouteThreads } from './RouteThreads';
+export { EntryGate } from './EntryGate';
 export { ThreadList } from './ThreadList';
 export { Transcript } from './Transcript';
 export { Exchange } from './Exchange';

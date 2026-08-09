@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { countOf, formatAbsoluteEpoch, formatRelativeEpoch } from './format';
+import { countOf, formatAbsoluteEpoch, formatInstant, formatRelativeEpoch } from './format';
 
 const NOW_MS = 1_800_000_000_000;
 const NOW_S = NOW_MS / 1000;
@@ -44,6 +44,17 @@ describe('formatAbsoluteEpoch', () => {
 
   it('shows a non-finite value verbatim', () => {
     expect(formatAbsoluteEpoch(Number.NaN)).toBe('NaN');
+  });
+});
+
+describe('formatInstant', () => {
+  it('renders an ISO-8601 instant in the local rendering', () => {
+    const iso = '2026-08-01T09:00:00Z';
+    expect(formatInstant(iso)).toBe(new Date(iso).toLocaleString());
+  });
+
+  it('shows an unparseable value verbatim rather than swallowing it', () => {
+    expect(formatInstant('not-a-date')).toBe('not-a-date');
   });
 });
 

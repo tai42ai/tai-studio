@@ -54,3 +54,14 @@ export function formatAbsoluteEpoch(seconds: number): string {
   if (!Number.isFinite(seconds)) return String(seconds);
   return new Date(seconds * 1000).toLocaleString();
 }
+
+/**
+ * The full local rendering of an ISO-8601 instant — the gate doors carry ISO
+ * strings, not the epoch seconds the monitor's wire uses. An unparseable value
+ * shows verbatim rather than swallowed.
+ */
+export function formatInstant(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}
