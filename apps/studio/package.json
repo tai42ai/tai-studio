@@ -45,7 +45,7 @@
     "@tai42/feature-tools": "workspace:*",
     "@tai42/studio-sdk": "workspace:*",
     "@tanstack/react-query": "catalog:",
-    "@tanstack/react-router": "^1.95.1",
+    "@tanstack/react-router": "^1.170.21",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zustand": "^5.0.2"
