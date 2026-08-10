@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Completing sign-in…</title>
+  </head>
+  <body>
+    <!--
+      OAuth bridge landing page. The provider redirects the sign-in popup
+      here (the fixed redirect_uri). This page reads the originating deployment
+      origin from the signed `state`, then forwards the popup to that origin's
+      oauth-callback.html. It carries NO secrets and makes NO API calls.
+
+      The script is EXTERNAL on purpose: the page is served byte-constant with a
+      strict CSP (`script-src 'self'`), and no per-response nonce is injected
+      here, so an inline script would be blocked.
+    -->
+    <main id="status">Completing sign-in…</main>
+    <script src="/oauth-bridge.js"></script>
+  </body>
+</html>

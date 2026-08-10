@@ -1,0 +1,44 @@
+{
+  "summary": {
+    "totalRuns": 1284,
+    "totalCost": 42.17,
+    "totalTokens": 3819254,
+    "averageLatencyMs": 812,
+    "avgCostPerRun": 0.0328,
+    "avgTokensPerRun": 2974,
+    "timeToFirstTokenMs": null
+  },
+  "timeSeries": [
+    {
+      "bucket": "2026-07-04T00:00:00Z",
+      "runs": 512,
+      "cost": 17.02,
+      "avgLatencyMs": 790,
+      "totalTokens": 1502340
+    },
+    {
+      "bucket": "2026-07-05T00:00:00Z",
+      "runs": 772,
+      "cost": 25.15,
+      "avgLatencyMs": 829,
+      "totalTokens": 2316914
+    }
+  ],
+  "byModel": [
+    {
+      "model": "gpt-4o",
+      "calls": 940,
+      "cost": 33.8,
+      "totalTokens": 2801000,
+      "avgLatencyMs": 861
+    },
+    {
+      "model": "claude-3-5-sonnet",
+      "calls": 344,
+      "cost": 8.37,
+      "totalTokens": 1018254,
+      "avgLatencyMs": 678
+    }
+  ],
+  "granularity": "day"
+}

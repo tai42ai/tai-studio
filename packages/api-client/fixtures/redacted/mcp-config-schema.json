@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "title": "McpServerConfig",
+  "properties": {
+    "url": { "type": "string", "title": "URL" },
+    "headers": { "type": "object", "title": "Headers" }
+  },
+  "required": ["url"]
+}

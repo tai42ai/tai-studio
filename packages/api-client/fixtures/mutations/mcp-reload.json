@@ -1,0 +1,22 @@
+{
+  "op": "reload_mcp",
+  "reachable": true,
+  "local_only": false,
+  "results": [
+    {
+      "name": "serve-1",
+      "outcome": "applied",
+      "payload": { "title": "github", "status": "ok", "tools": ["create_issue", "list_repos"] },
+      "error": null,
+      "detail": null
+    },
+    {
+      "name": "serve-2",
+      "outcome": "applied",
+      "payload": { "title": "github", "status": "ok", "tools": ["create_issue", "list_repos"] },
+      "error": null,
+      "detail": null
+    }
+  ],
+  "error": null
+}

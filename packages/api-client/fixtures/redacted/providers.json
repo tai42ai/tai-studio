@@ -1,0 +1,31 @@
+{
+  "providers": [
+    {
+      "id": "github",
+      "display_name": "GitHub",
+      "description": "Connect a GitHub account to expose repository tools.",
+      "icon_url": "https://cdn.example.com/icons/github.svg",
+      "kind": "oauth",
+      "origin": "system",
+      "category": "developer",
+      "sub_services": [
+        {
+          "id": "issues",
+          "display_name": "Issues",
+          "description": "Read and write repository issues.",
+          "scopes": ["repo:issues"]
+        }
+      ],
+      "config_fields": [
+        {
+          "key": "GITHUB_TOKEN",
+          "label": "Personal access token",
+          "target": "env",
+          "required": true,
+          "secret": true
+        }
+      ]
+    }
+  ],
+  "categories": [{ "id": "developer", "display_name": "Developer tools", "sort_order": 1 }]
+}

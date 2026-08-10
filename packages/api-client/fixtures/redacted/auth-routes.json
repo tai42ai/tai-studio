@@ -1,0 +1,26 @@
+[
+  {
+    "path": "/api/tools",
+    "methods": ["GET"],
+    "mapped": "scope_readonly",
+    "tags": ["tools"],
+    "summary": "List the registered tools.",
+    "action": "read"
+  },
+  {
+    "path": "/api/health",
+    "methods": ["GET"],
+    "mapped": "public",
+    "tags": [],
+    "summary": "Liveness probe.",
+    "action": "read"
+  },
+  {
+    "path": "/api/backup/export",
+    "methods": ["POST"],
+    "mapped": null,
+    "tags": ["backup"],
+    "summary": "Export a full backup archive.",
+    "action": "fenced"
+  }
+]

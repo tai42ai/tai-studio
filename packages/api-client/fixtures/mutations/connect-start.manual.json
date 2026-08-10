@@ -1,0 +1,8 @@
+{
+  "connection_id": "conn_9f8e7d6c",
+  "added_manifest_entries": ["mcp:github", "mcp:github:issues"],
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

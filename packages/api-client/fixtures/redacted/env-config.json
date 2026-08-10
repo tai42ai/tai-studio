@@ -1,0 +1,8 @@
+{
+  "env": {
+    "OPENAI_API_KEY": "***",
+    "GITHUB_TOKEN": "***",
+    "DATABASE_URL": "***"
+  },
+  "secret_keys": ["OPENAI_API_KEY", "GITHUB_TOKEN", "DATABASE_URL"]
+}

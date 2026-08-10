@@ -1,0 +1,22 @@
+{
+  // Build config: the emitting composite project. `tsc -b tsconfig.build.json`
+  // compiles src to dist, excluding tests and the vitest setup so neither the
+  // composite build nor the published dist depends on the test toolchain.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    // The incremental build cache lives at the package root, NOT under dist:
+    // `files: ["dist"]` publishes everything in dist, so a cache written there
+    // would ship in the npm tarball. Kept out of dist, it never gets packed.
+    "tsBuildInfoFile": ".tsbuildinfo"
+  },
+  "include": ["src"],
+  // Two naming conventions carry the whole exclusion, so a new test-only module
+  // needs no edit here: a `*.test.*`/`*.spec.*` suite, or a `test-*` helper the
+  // suites import (these reach for `node:fs` and `node:path`, which the browser
+  // build has no types for).
+  "exclude": ["**/*.test.*", "**/*.spec.*", "**/test-*.ts", "**/test-*.tsx"],
+  "references": [{ "path": "../api-client/tsconfig.build.json" }]
+}

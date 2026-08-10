@@ -1,0 +1,37 @@
+{
+  "name": "@tai42/e2e",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Playwright end-to-end suites for the Studio.",
+  "license": "Apache-2.0",
+  "author": "tai42 <oss@tai42.ai>",
+  "homepage": "https://tai42.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tai42ai/tai-studio",
+    "directory": "e2e"
+  },
+  "bugs": {
+    "url": "https://github.com/tai42ai/tai-studio/issues"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  },
+  "scripts": {
+    "e2e": "playwright test",
+    "boot": "bash boot/boot.sh",
+    "build:reference-plugin": "node scripts/build-reference-plugin.mjs",
+    "fixtures:refresh": "node scripts/fixtures-refresh.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p reference-plugin/studio-src/tsconfig.json",
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier --check \"**/*.{ts,tsx}\""
+  }
+}

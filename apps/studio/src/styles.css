@@ -1,0 +1,40 @@
+/*
+ * The shell's canonical stylesheet. It loads FIRST — before any feature or
+ * SDK component renders — so the design-system token contract and the documented
+ * `@layer` order are established before anything can reference them.
+ *
+ * The shell consumes `@tai42/studio-sdk` through the server-injected import map,
+ * so the SDK module is EXTERNAL to this bundle and its barrel's side-effect CSS
+ * imports never reach the page. The three design-system stylesheets are therefore
+ * imported here, by the one host that owns the document: the token contract
+ * (which also emits the canonical layer order), the self-hosted webfonts, and the
+ * component + responsive layer every screen applies by class name.
+ *
+ * The DS ships precompiled with preflight DISABLED; the SHELL owns preflight and
+ * the Tailwind utility layer. `tokens.css` declares the cascade order
+ * `@layer theme, base, tai-tokens, tai-components, tai-utilities;` — the host
+ * reset sorts BEFORE the DS layers, so preflight cannot erase a component class,
+ * and Tailwind's `components`/`utilities` layers are declared by the import below
+ * and so sort AFTER them, keeping host utilities the final word (the layer-order
+ * pin, e2e).
+ */
+@import '@tai42/studio-sdk/tokens.css';
+@import '@tai42/studio-sdk/fonts.css';
+@import '@tai42/studio-sdk/components.css';
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tai-color-bg);
+  color: var(--tai-color-text);
+  font-family: var(--tai-font-sans);
+  font-size: var(--tai-text-md);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}

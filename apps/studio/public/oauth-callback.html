@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Completing sign-in…</title>
+  </head>
+  <body>
+    <!--
+      OAuth callback landing page, served on the ORIGINATING deployment
+      origin (the bridge forwards the popup here). It hands the raw code + state
+      back to the application window via postMessage — scoped to this exact
+      origin — and closes. It makes NO API call itself: the finalizing request to
+      /api/connectors/oauth/complete is authed and runs in the application window,
+      which holds the session token.
+
+      External script for the same CSP reason as oauth-bridge.html.
+    -->
+    <main id="status">Completing sign-in…</main>
+    <script src="/oauth-callback.js"></script>
+  </body>
+</html>

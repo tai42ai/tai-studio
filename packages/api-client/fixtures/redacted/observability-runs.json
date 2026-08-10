@@ -1,0 +1,34 @@
+{
+  "items": [
+    {
+      "id": "trace_9f8e7d6c",
+      "traceId": "trace_9f8e7d6c",
+      "createdAt": "2026-07-05T11:58:03Z",
+      "tags": ["chat", "prod"],
+      "status": "success",
+      "cost": 0.041,
+      "latencyMs": 843,
+      "totalTokens": 3120,
+      "model": "gpt-4o",
+      "inputPreview": "Summarize the status report",
+      "outputPreview": "The status report shows...",
+      "fetchError": null
+    },
+    {
+      "id": "trace_1a2b3c4d",
+      "traceId": "trace_1a2b3c4d",
+      "createdAt": null,
+      "tags": [],
+      "status": "success",
+      "cost": null,
+      "latencyMs": null,
+      "totalTokens": null,
+      "model": null,
+      "inputPreview": null,
+      "outputPreview": null,
+      "fetchError": "trace unavailable"
+    }
+  ],
+  "page": 1,
+  "nextPage": 2
+}

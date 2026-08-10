@@ -1,0 +1,4 @@
+{
+  "demo_forms": { "tools": ["studio_demo_form", "studio_demo_echo"], "transport": "http" },
+  "demo_echo": { "tools": ["studio_demo_echo"], "transport": "stdio" }
+}

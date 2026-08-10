@@ -1,0 +1,41 @@
+[
+  {
+    "name": "paris_weather",
+    "base_tool": "weather",
+    "description": "Paris weather",
+    "active_version": 1,
+    "extensions": [],
+    "output_schema": {
+      "type": "object",
+      "title": "Weather",
+      "properties": { "temperature_c": { "type": "number", "title": "Temperature (°C)" } },
+      "required": ["temperature_c"]
+    },
+    "conflicted": false,
+    "conflicted_reason": null
+  },
+  {
+    "name": "stale_preset",
+    "base_tool": "weather",
+    "description": "A preset whose name was taken by another tool at load",
+    "active_version": 2,
+    "extensions": [
+      [
+        "chain",
+        {
+          "name": "output_schema",
+          "config": {
+            "schema": {
+              "type": "object",
+              "title": "Weather",
+              "properties": { "temperature_c": { "type": "number" } }
+            }
+          }
+        }
+      ]
+    ],
+    "output_schema": null,
+    "conflicted": true,
+    "conflicted_reason": "name 'stale_preset' collided with an existing tool at startup"
+  }
+]

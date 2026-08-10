@@ -1,0 +1,125 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+
+import { Checkbox } from './checkbox';
+import { Field } from './field';
+
+describe('Checkbox', () => {
+  it('renders an accessible checkbox with its label as the name', () => {
+    render(<Checkbox label="Accept terms" />);
+    expect(screen.getByRole('checkbox', { name: 'Accept terms' })).toBeInTheDocument();
+  });
+
+  it('checking updates state and fires onCheckedChange(true)', async () => {
+    const user = userEvent.setup();
+    const onCheckedChange = vi.fn();
+    render(<Checkbox label="Accept terms" onCheckedChange={onCheckedChange} />);
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
+    expect(checkbox).not.toBeChecked();
+    await user.click(checkbox);
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
+    expect(checkbox).toBeChecked();
+  });
+
+  it('toggles when the associated label text is clicked', async () => {
+    const user = userEvent.setup();
+    const onCheckedChange = vi.fn();
+    render(<Checkbox label="Accept terms" onCheckedChange={onCheckedChange} />);
+    await user.click(screen.getByText('Accept terms'));
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
+  });
+
+  it('takes its accessible name from aria-label when it has no visible label', () => {
+    render(<Checkbox aria-label="Select worker-1" />);
+    expect(screen.getByRole('checkbox', { name: 'Select worker-1' })).toBeInTheDocument();
+  });
+
+  it('is a tai-checkbox whose data-state tracks the box, controlled or not', async () => {
+    const user = userEvent.setup();
+    render(<Checkbox label="Accept terms" />);
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
+    expect(checkbox).toHaveClass('tai-checkbox');
+    expect(checkbox).toHaveAttribute('data-state', 'unchecked');
+
+    await user.click(checkbox);
+    expect(checkbox).toHaveAttribute('data-state', 'checked');
+  });
+
+  it('reflects a controlled indeterminate box through data-state', () => {
+    // Radix drives `data-state` off the checked value it is given; the
+    // stylesheet paints the indeterminate ground from that same hook.
+    render(<Checkbox aria-label="Select all" checked={undefined} defaultChecked />);
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toHaveAttribute(
+      'data-state',
+      'checked',
+    );
+  });
+
+  it('draws the tick as an icon, never a Unicode glyph, and keeps the name', async () => {
+    const user = userEvent.setup();
+    render(<Checkbox label="Accept terms" />);
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
+    expect(checkbox.querySelector('svg')).toBeNull();
+
+    await user.click(checkbox);
+    expect(checkbox.querySelector('svg')).not.toBeNull();
+    // The mark is artwork only: it contributes no text, so the name is unchanged.
+    expect(checkbox.textContent).toBe('');
+    expect(screen.getByRole('checkbox', { name: 'Accept terms' })).toBeInTheDocument();
+  });
+
+  it('exposes the mixed state and gives it a mark of its own', () => {
+    // The sheet paints the checked and indeterminate grounds identically, so the
+    // MARK is the only thing that tells them apart. A box that drew the tick for
+    // both would render a partial selection as a complete one.
+    const mixed = render(<Checkbox label="All tools" checked="indeterminate" />);
+    const box = screen.getByRole('checkbox', { name: 'All tools' });
+    expect(box).toHaveAttribute('data-state', 'indeterminate');
+    expect(box).toHaveAttribute('aria-checked', 'mixed');
+    const mixedMark = box.querySelector('svg')?.innerHTML;
+    mixed.unmount();
+
+    render(<Checkbox label="All tools" checked />);
+    const checkedMark = screen
+      .getByRole('checkbox', { name: 'All tools' })
+      .querySelector('svg')?.innerHTML;
+    expect(mixedMark).toBeTruthy();
+    expect(mixedMark).not.toBe(checkedMark);
+  });
+
+  it('puts the label row on the shared choice class', () => {
+    render(<Checkbox label="Accept terms" />);
+    expect(screen.getByText('Accept terms').closest('label')).toHaveClass('tai-choice');
+  });
+
+  it('renders its content and keeps its accessible name', () => {
+    render(<Checkbox label="Accept terms" />);
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Accept terms' });
+    expect(checkbox).toHaveClass('tai-checkbox');
+    expect(screen.getByText('Accept terms')).toBeInTheDocument();
+  });
+
+  it('takes a visible label over a caller aria-label, inline or from a Field', () => {
+    // `aria-label` outranks a `<label for>`, so a box that emitted both would
+    // drop its own visible text out of the computed name (WCAG 2.5.3).
+    const inline = render(<Checkbox label="Accept terms" aria-label="Terms" />);
+    const box = screen.getByRole('checkbox');
+    expect(box).toHaveAccessibleName('Accept terms');
+    expect(box).not.toHaveAttribute('aria-label');
+    inline.unmount();
+
+    render(
+      <Field label="Accept terms">
+        <Checkbox aria-label="Terms" />
+      </Field>,
+    );
+    const fielded = screen.getByRole('checkbox');
+    expect(fielded).toHaveAccessibleName('Accept terms');
+    expect(fielded).not.toHaveAttribute('aria-label');
+  });
+});

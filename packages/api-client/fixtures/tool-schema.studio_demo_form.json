@@ -1,0 +1,34 @@
+{
+  "input": {
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Who to greet."
+      },
+      "count": {
+        "default": 1,
+        "type": "integer",
+        "description": "How many times to repeat the greeting; must be at least 1."
+      },
+      "mood": {
+        "default": "neutral",
+        "enum": ["happy", "neutral", "grumpy"],
+        "type": "string",
+        "description": "Tone of the greeting."
+      },
+      "loud": {
+        "default": false,
+        "type": "boolean",
+        "description": "When true, the greeting is upper-cased."
+      }
+    },
+    "required": ["name"],
+    "type": "object"
+  },
+  "output": {
+    "additionalProperties": true,
+    "type": "object"
+  },
+  "description": "Build a greeting from a typed set of fields.\n\nThe mix of a required string, a bounded integer, an enum, and a boolean is\nwhat the Studio's auto-form renders for a tool that ships no custom panel.\n\nArgs:\n    name: Who to greet.\n    count: How many times to repeat the greeting; must be at least 1.\n    mood: Tone of the greeting.\n    loud: When true, the greeting is upper-cased.\n\nReturns:\n    The rendered greeting and the echoed inputs."
+}

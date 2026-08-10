@@ -1,0 +1,142 @@
+# tai42-skeleton manifest for the DOCS-DEMO boot — the permanent Studio
+# screenshot pipeline (e2e/scripts/docs-screenshots.sh).
+#
+# NOT A PRODUCTION TEMPLATE. Like the e2e boot it pairs with a test-only API key
+# and loopback Redis/Postgres. Unlike the lean e2e manifest (e2e/boot/manifest.yml,
+# which stays SEPARATE and untouched), this one loads EVERY UI-facing router plus
+# the real plugins so every Studio screen renders populated content — the agents
+# list, the observability dashboard, the manifest tab, the templates list, the
+# System health card, the notifications inbox, and the conversation monitor.
+#
+# The capability-scoped screens (the owned-key views of tools, interactions, and
+# notifications) authenticate as a SCOPED owned key the runner mints after boot;
+# their audience-addressed inbox rows and that key are seeded by
+# docs-screenshots.sh, not declared here (a raw minted key exists only at runtime).
+
+# --- Lifecycle modules ------------------------------------------------------
+# The redis-backed api-key identity provider (see the e2e manifest for why the
+# PACKAGE form registers exactly once). boot.sh enables access control, so a
+# concrete identity provider MUST be loaded.
+#
+# tai42_accounts_postgres: the Postgres accounts provider (password login + opaque
+# tai-sess- sessions). Importing it registers "accounts-postgres" in BOTH the
+# accounts and identity registries, so ACCESS_CONTROL_AUTH_PROVIDERS may name it
+# and its /api/login + /api/auth/users routes have a live provider. Its own
+# accounts_* tables are applied to the compose Postgres by boot.sh
+# (APPLY_ACCOUNTS_DDL=1) and its demo users are seeded by the runner after boot,
+# so the login screen renders its password form and the users-admin page renders a
+# populated table.
+lifecycle_modules:
+  - tai42_identity_redis
+  - tai42_accounts_postgres
+
+# --- Default router set ------------------------------------------------------
+# Mount no default routers; `routers_modules` below already names every UI-facing
+# door the docs screenshots need. Pinning "none" keeps that curated surface exact
+# rather than layering the full built-in default set on top.
+default_routers: none
+
+# --- HTTP routers -----------------------------------------------------------
+# ORDER IS LOAD-BEARING: FastMCP matches custom routes in registration (import)
+# order, and the `plugins` SPA catch-all (`/{path}`) matches any path except
+# /api* and /mcp* — so EVERY other router precedes it and `plugins` closes the
+# list. `health` in particular MUST be registered before `plugins`, or the
+# catch-all serves index.html for /health and the System screen renders the SPA
+# document instead of its ops cards.
+routers_modules:
+  - tai42_skeleton.routers.health # /health + /ready       (System screen)
+  - tai42_skeleton.routers.interactions
+  - tai42_skeleton.routers.channels # /api/channels          (Interactions delivery channels)
+  - tai42_skeleton.routers.notifications # /api/notifications      (Notifications inbox)
+  - tai42_skeleton.routers.conversations # /api/conversations*     (Conversations monitor)
+  - tai42_skeleton.routers.tools
+  - tai42_skeleton.routers.tool_meta # /api/tool-meta         (Tools page folder tree + overlay)
+  - tai42_skeleton.routers.extensions
+  - tai42_skeleton.routers.tool_extensions
+  - tai42_skeleton.routers.presets
+  - tai42_skeleton.routers.sub_mcp
+  - tai42_skeleton.routers.config
+  - tai42_skeleton.routers.templates
+  - tai42_skeleton.routers.storage # /api/storage          (Templates page storage-provider gate)
+  - tai42_skeleton.routers.manifest
+  - tai42_skeleton.routers.connectors
+  - tai42_skeleton.routers.hooks
+  - tai42_skeleton.routers.tool_runs
+  - tai42_skeleton.routers.agents # /api/agents*           (Agents screen)
+  - tai42_skeleton.routers.observability # /api/observability/*   (Dashboard screen)
+  - tai42_skeleton.routers.backend # /api/backend -> present:false (honest System card)
+  # Accounts + kind-status surfaces (all BEFORE the SPA catch-all below):
+  #   api_keys     -> /api/auth/roles (the users-admin role picker) + /api/auth/keys
+  #   login        -> /api/login/methods aggregator + /api/auth/logout dispatcher
+  #                   (the login screen's metadata-driven password form)
+  #   system_kinds -> /api/system/kinds (the System screen's Plugin-kinds table)
+  #   routes_login -> the accounts plugin's own /api/login/{password,bootstrap,
+  #                   invite/accept} routes (public via the /api/login prefix)
+  #   routes_users -> the accounts plugin's authed /api/auth/users* admin API
+  #                   (the users-admin Studio page's data source)
+  - tai42_skeleton.routers.api_keys # /api/auth/roles + /api/auth/keys
+  - tai42_skeleton.routers.login # /api/login/methods    (Login screen)
+  - tai42_skeleton.routers.system_kinds # /api/system/kinds     (System screen kinds table)
+  - tai42_accounts_postgres.routes_login # /api/login/password + bootstrap + invite
+  - tai42_accounts_postgres.routes_users # /api/auth/users*      (Users-admin page)
+  - tai42_skeleton.routers.plugins # LAST — SPA catch-all
+
+# --- Tool extensions --------------------------------------------------------
+# `ask_external` wraps a callback_url-taking tool into an external human-in-the-
+# loop question (the extensions catalog screen).
+extensions_modules:
+  - tai42_skeleton.extensions.builtin.ask_external
+
+# --- Tools ------------------------------------------------------------------
+# The reference plugin's demo tools, plus the ask_user builtin.
+#
+# The management capabilities (config/manifest/templates/hooks/notify) are served
+# by the routers loaded above and project onto the MCP tool surface from the
+# operations registry — gated by the `api_tools` block, which defaults to enabled
+# — so they need no hand-written tool module.
+tools:
+  - title: reference-plugin-tools
+    module: reference_plugin.tools
+  - title: ask-user
+    module: tai42_skeleton.tools.builtin.interactions
+
+# --- Agents -----------------------------------------------------------------
+# Registers `tools_agent` (spec_runnable) so GET /api/agents populates the Agents
+# screen with a real agent row, and — because it is authorable — the authoring
+# section renders its compose affordance rather than the "no authorable agent
+# installed" state. Registration + listing need no LLM credentials (only running
+# an agent would; the capture never does).
+agents:
+  - title: demo-agents
+    module: tai42_agents.tools_agent
+    include:
+      - tools_agent
+
+# --- Storage ----------------------------------------------------------------
+# Local-filesystem storage backend so GET /api/templates lists the seeded
+# templates (root path is set by the runner via STORAGE_LOCAL_ROOT_PATH).
+storage_module: tai42_storage_local
+
+# --- Monitoring -------------------------------------------------------------
+# The self-contained docs-demo monitoring backend: it seeds a realistic
+# observability dataset at load, so the Dashboard renders real summary tiles, a
+# trend chart, and a by-model breakdown with no external service.
+monitoring_module: docs_demo_monitoring
+
+# --- Studio plugins ---------------------------------------------------------
+# reference_plugin contributes the "Reference" nav entry every signed-in shot
+# waits on; tai42_accounts_postgres contributes the users-admin page (nav entry
+# "Users", route /plugins/tai42_accounts_postgres/users) — its API routers above
+# register no Studio page, so it MUST be listed here for the page to mount.
+studio_plugins:
+  - reference_plugin
+  - tai42_accounts_postgres
+
+# --- Curated user tools -----------------------------------------------------
+# A non-empty user_tools set makes GET /api/manifest return a populated payload,
+# so the Manifest screen renders its JSON tree instead of the empty state. Names
+# match registered tools.
+user_tools:
+  - studio_demo_echo
+  - studio_demo_form
+  - ask_user

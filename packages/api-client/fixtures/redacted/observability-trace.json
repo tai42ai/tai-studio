@@ -1,0 +1,47 @@
+{
+  "traceId": "trace_9f8e7d6c",
+  "timestamp": "2026-07-05T11:58:03Z",
+  "tags": ["chat", "prod"],
+  "totalCost": 0.041,
+  "input": "Summarize the status report",
+  "output": "The status report shows...",
+  "metadata": { "user": "svc-dashboard" },
+  "availability": "full",
+  "fetchError": null,
+  "spans": [
+    {
+      "id": "span_root",
+      "parentId": null,
+      "traceId": "trace_9f8e7d6c",
+      "name": "agent-run",
+      "type": "chain",
+      "level": "DEFAULT",
+      "statusMessage": null,
+      "start": "2026-07-05T11:58:03Z",
+      "end": "2026-07-05T11:58:04Z",
+      "model": null,
+      "usage": null,
+      "metadata": null,
+      "input": "Summarize the status report",
+      "output": "The status report shows...",
+      "nodeId": "node_1"
+    },
+    {
+      "id": "span_llm",
+      "parentId": "span_root",
+      "traceId": "trace_9f8e7d6c",
+      "name": "openai-call",
+      "type": "generation",
+      "level": "DEFAULT",
+      "statusMessage": null,
+      "start": "2026-07-05T11:58:03Z",
+      "end": "2026-07-05T11:58:04Z",
+      "model": "gpt-4o",
+      "usage": { "input_tokens": 1200, "output_tokens": 1920 },
+      "metadata": null,
+      "input": [{ "role": "user", "content": "Summarize the status report" }],
+      "output": "The status report shows...",
+      "nodeId": null
+    }
+  ]
+}

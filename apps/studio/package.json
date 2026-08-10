@@ -1,0 +1,69 @@
+{
+  "name": "@tai42/studio-app",
+  "version": "0.2.0",
+  "private": true,
+  "description": "The Studio shell app: composes the feature packages into the web UI.",
+  "license": "Apache-2.0",
+  "author": "tai42 <oss@tai42.ai>",
+  "homepage": "https://tai42.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tai42ai/tai-studio",
+    "directory": "apps/studio"
+  },
+  "bugs": {
+    "url": "https://github.com/tai42ai/tai-studio/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && node scripts/build.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src bridge scripts --max-warnings 0",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"bridge/**/*.ts\" \"scripts/**/*.mjs\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tai42/api-client": "workspace:*",
+    "@tai42/feature-agents": "workspace:*",
+    "@tai42/feature-connectors": "workspace:*",
+    "@tai42/feature-conversations": "workspace:*",
+    "@tai42/feature-extensions": "workspace:*",
+    "@tai42/feature-hooks": "workspace:*",
+    "@tai42/feature-interactions": "workspace:*",
+    "@tai42/feature-manifest": "workspace:*",
+    "@tai42/feature-marketplace": "workspace:*",
+    "@tai42/feature-notifications": "workspace:*",
+    "@tai42/feature-observability": "workspace:*",
+    "@tai42/feature-presets": "workspace:*",
+    "@tai42/feature-scheduling": "workspace:*",
+    "@tai42/feature-settings": "workspace:*",
+    "@tai42/feature-storage": "workspace:*",
+    "@tai42/feature-system": "workspace:*",
+    "@tai42/feature-templates": "workspace:*",
+    "@tai42/feature-tools": "workspace:*",
+    "@tai42/studio-sdk": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "^1.95.1",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-boundaries": "catalog:",
+    "jsdom": "catalog:",
+    "msw": "^2.14.6",
+    "tailwindcss": "^4.0.0",
+    "vitest": "catalog:"
+  }
+}

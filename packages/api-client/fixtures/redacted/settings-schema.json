@@ -1,0 +1,35 @@
+{
+  "groups": [
+    {
+      "name": "Core",
+      "module": "tai42_skeleton.settings",
+      "qualname": "CoreSettings",
+      "fields": [
+        {
+          "name": "log_level",
+          "env_var": "LOG_LEVEL",
+          "type": "string",
+          "default": "INFO",
+          "required": false,
+          "secret": false,
+          "description": "Application log level.",
+          "nested_group": null,
+          "default_namespace_var": null,
+          "value": "INFO"
+        },
+        {
+          "name": "openai_api_key",
+          "env_var": "OPENAI_API_KEY",
+          "type": "string",
+          "default": null,
+          "required": true,
+          "secret": true,
+          "description": "OpenAI API key.",
+          "nested_group": null,
+          "default_namespace_var": null,
+          "value": "***"
+        }
+      ]
+    }
+  ]
+}

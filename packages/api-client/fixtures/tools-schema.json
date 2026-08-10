@@ -1,0 +1,264 @@
+{
+  "studio_demo_echo": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Text to echo."
+        },
+        "shout": {
+          "default": false,
+          "type": "boolean",
+          "description": "When true, the echoed text is upper-cased."
+        }
+      },
+      "required": ["message"],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "description": "Echo a message back, optionally upper-cased.\n\nArgs:\n    message: Text to echo.\n    shout: When true, the echoed text is upper-cased.\n\nReturns:\n    A payload with the original and transformed message."
+  },
+  "studio_demo_form": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Who to greet."
+        },
+        "count": {
+          "default": 1,
+          "type": "integer",
+          "description": "How many times to repeat the greeting; must be at least 1."
+        },
+        "mood": {
+          "default": "neutral",
+          "enum": ["happy", "neutral", "grumpy"],
+          "type": "string",
+          "description": "Tone of the greeting."
+        },
+        "loud": {
+          "default": false,
+          "type": "boolean",
+          "description": "When true, the greeting is upper-cased."
+        }
+      },
+      "required": ["name"],
+      "type": "object"
+    },
+    "output": {
+      "additionalProperties": true,
+      "type": "object"
+    },
+    "description": "Build a greeting from a typed set of fields.\n\nThe mix of a required string, a bounded integer, an enum, and a boolean is\nwhat the Studio's auto-form renders for a tool that ships no custom panel.\n\nArgs:\n    name: Who to greet.\n    count: How many times to repeat the greeting; must be at least 1.\n    mood: Tone of the greeting.\n    loud: When true, the greeting is upper-cased.\n\nReturns:\n    The rendered greeting and the echoed inputs."
+  },
+  "studio_demo_fail": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "default": "intentional failure",
+          "type": "string",
+          "description": "Message carried by the raised error."
+        }
+      },
+      "type": "object"
+    },
+    "output": null,
+    "description": "Always raise, so the Studio's error handling can be exercised.\n\nArgs:\n    reason: Message carried by the raised error."
+  },
+  "ask_user": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "The question shown to the human."
+        },
+        "answer_format": {
+          "default": "text",
+          "type": "string",
+          "description": "How the answer is collected and typed:\n- \"text\": free-form text, returned as a string.\n- \"confirm\": a yes/no choice, returned as a bool.\n- \"select\": one value from ``options``, the chosen string returned.\n- \"form\": a structured object validated against ``schema``, returned\n  as a dict.\n- \"external\": the human acts on an EXTERNAL surface (sign, approve,\n  pay) reached through ``link``, and the external system delivers the\n  answer through a public callback URL. Returns the callback payload."
+        },
+        "options": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The allowed values; required for \"select\"."
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A JSON schema describing the answer object; required for \"form\",\noptional for \"external\" (validates the callback payload)."
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "An optional thread key grouping related questions."
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Seconds to wait before raising; defaults to the configured\ninteractions timeout."
+        },
+        "link": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Required for \"external\", forbidden otherwise. A URL template\ncontaining the literal placeholder ``{callback_url}``, which is\nsubstituted with the public callback URL before the human visits it."
+        }
+      },
+      "required": ["question"],
+      "type": "object"
+    },
+    "output": null,
+    "description": "Ask a human a question mid-run and block until they answer.\n\nArgs:\n    question: The question shown to the human.\n    answer_format: How the answer is collected and typed:\n        - \"text\": free-form text, returned as a string.\n        - \"confirm\": a yes/no choice, returned as a bool.\n        - \"select\": one value from ``options``, the chosen string returned.\n        - \"form\": a structured object validated against ``schema``, returned\n          as a dict.\n        - \"external\": the human acts on an EXTERNAL surface (sign, approve,\n          pay) reached through ``link``, and the external system delivers the\n          answer through a public callback URL. Returns the callback payload.\n    options: The allowed values; required for \"select\".\n    schema: A JSON schema describing the answer object; required for \"form\",\n        optional for \"external\" (validates the callback payload).\n    group_id: An optional thread key grouping related questions.\n    timeout: Seconds to wait before raising; defaults to the configured\n        interactions timeout.\n    link: Required for \"external\", forbidden otherwise. A URL template\n        containing the literal placeholder ``{callback_url}``, which is\n        substituted with the public callback URL before the human visits it.\n\nReturns:\n    The typed answer (text -> str, confirm -> bool, select -> chosen value,\n    form -> validated dict, external -> the callback payload).\n\nRaises:\n    InteractionTimeoutError: No answer arrived before the timeout elapsed.\n    InteractionLimitError: Too many questions are already open (the\n        ``max_concurrent`` guard tripped).\n    ValueError: The ``answer_format`` or its argument combination is invalid.\n    RuntimeError: An ``external`` question was asked without\n        ``INTERACTIONS_PUBLIC_BASE_URL`` configured."
+  },
+  "run_tool": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Unique identifier of the tool to execute."
+        },
+        "arguments": {
+          "additionalProperties": true,
+          "type": "object",
+          "description": "Parameters matching the tool's signature."
+        }
+      },
+      "required": ["key", "arguments"],
+      "type": "object"
+    },
+    "output": null,
+    "description": "Invoke any registered tool by key with the given arguments.\n\nArgs:\n    key: Unique identifier of the tool to execute.\n    arguments: Parameters matching the tool's signature.\n\nReturns:\n    The result returned by the executed tool."
+  },
+  "reload_tool": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": ["kind", "name"],
+      "type": "object"
+    },
+    "output": null,
+    "description": "Re-register one app tool (e.g. kind \"flow\") from its current stored definition.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); each worker re-reads the definition itself, so the op carries only\nthe kind and name. The response embeds the per-worker fleet report."
+  },
+  "remove_tool": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "targets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": ["kind", "name"],
+      "type": "object"
+    },
+    "output": null,
+    "description": "Remove one app tool (e.g. kind \"flow\") from the live registry.\n\nApplied on this worker and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report."
+  },
+  "reload_config": {
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "targets": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "type": "object"
+    },
+    "output": null,
+    "description": "Soft-restart: refresh env from the config manager, reset every settings cache,\nand re-initialize from the manifest — in-process, no pod restart. Applied on this\nworker (when it is a target) and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report.\n\nHeavy (a full re-init); meant for env/config saves, not tool edits. A convergence\nop: its whole purpose is aligning siblings to persisted state, so a failed local\nreload still broadcasts and then re-raises with the fleet report attached."
+  }
+}

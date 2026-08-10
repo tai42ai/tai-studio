@@ -1,0 +1,16 @@
+{
+  "mcp": [
+    {
+      "title": "github_work_github__issues",
+      "transport": "stdio",
+      "command": "tai-mcp-github",
+      "managed": {
+        "connection_id": "conn_9f8e7d6c",
+        "provider_id": "github",
+        "sub_service": "issues"
+      }
+    },
+    { "title": "filesystem", "transport": "stdio", "command": "tai-mcp-fs" }
+  ],
+  "user_tools": ["studio_demo_echo", "studio_demo_form"]
+}

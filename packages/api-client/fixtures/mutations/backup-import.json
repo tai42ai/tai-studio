@@ -1,0 +1,28 @@
+{
+  "ok": false,
+  "sections": {
+    "env": {
+      "created": 2,
+      "updated": 1,
+      "skipped": 0,
+      "errors": [],
+      "fanout": {
+        "mode": "local-only",
+        "note": "no worker bus configured; only this worker reloaded"
+      }
+    },
+    "access_control": {
+      "created": 1,
+      "updated": 0,
+      "skipped": 1,
+      "errors": ["token 'svc-legacy': scope 'legacy-scope' does not exist or has no urls assigned"],
+      "new_api_keys": [
+        {
+          "user_id": "svc-ingest",
+          "description": "Ingestion service key",
+          "api_key": "example-key-redacted"
+        }
+      ]
+    }
+  }
+}

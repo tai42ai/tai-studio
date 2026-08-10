@@ -1,0 +1,11 @@
+{
+  "template": "Hello {{ name }}, welcome to {{ product }}.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": { "type": "string" },
+      "product": { "type": "string" }
+    },
+    "required": ["name", "product"]
+  }
+}

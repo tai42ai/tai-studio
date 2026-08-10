@@ -1,0 +1,148 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast gate: static checks + unit/component tests + build. Self-contained
+  # (no backend), so it needs no sibling checkouts.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build first: every package resolves the other @tai42/* packages through
+      # their built declarations, so the workspace must be built before the
+      # type-checked steps and the tests can resolve cross-package imports.
+      - name: Build
+        run: pnpm -r build
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Lint
+        run: pnpm -r lint
+      # BOTH halves. `pnpm -r` skips the workspace root, and every package's own
+      # glob is scoped to that package's own source (the SDK's and the shell's
+      # already cover their stylesheets), so without the root gate everything
+      # outside those globs — the workflows, every package.json, the root configs
+      # and the repository's markdown — is format-checked by nothing in CI.
+      - name: Format check (packages)
+        run: pnpm -r format:check
+      - name: Format check (root)
+        run: pnpm format:check
+      - name: Test
+        run: pnpm -r test --coverage
+
+  # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
+  # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
+  # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
+  # skeleton env": the monorepo's uv.lock resolves tai42-skeleton and every
+  # first-party dependency from the workspace itself. One sibling is cloned — the
+  # public ``tai42`` monorepo; the boot recipe pip-installs the reference plugin
+  # and ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) into that
+  # venv. The monorepo is public, so the cross-repo checkout reads it with the
+  # default GITHUB_TOKEN. This job is heavy (Docker + a full backend), so it is
+  # gated to pushes and same-repo, non-Dependabot pull requests; forks and
+  # Dependabot fall back to the ``check`` job only.
+  e2e:
+    if: (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tai-studio
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: tai-studio
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai42
+          path: tai42
+      # Both checkouts land in subdirectories, so the pinned packageManager must
+      # be read from the tai-studio manifest explicitly.
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+        with:
+          package_json_file: tai-studio/package.json
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: tai-studio/pnpm-lock.yaml
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: '0.11.26'
+          enable-cache: true
+      - run: uv python install 3.13
+      # Build the workspace venv (tai42/.venv) the boot recipe runs the backend
+      # from. The monorepo's uv.lock resolves tai42-skeleton and every first-party
+      # dependency from the workspace itself. The reference plugin and
+      # tai42/plugins/webhook-verifier-github are pip-installed into this venv by
+      # the boot recipe.
+      - name: Sync skeleton env
+        working-directory: tai42
+        run: uv sync --locked --package tai42-skeleton --extra dev
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+      # Build the workspace so the boot recipe's SPA + reference-plugin builds
+      # resolve every cross-package @tai42/* import from built declarations.
+      - name: Build workspace
+        run: pnpm -r build
+      - name: Install Playwright browsers
+        run: pnpm --filter @tai42/e2e exec playwright install --with-deps
+      - name: Playwright e2e
+        run: pnpm e2e
+
+  # Fleet e2e gate. On push:main and on pull_request, after this repo's own
+  # checks pass, dispatch the tai42 monorepo's fleet-e2e receiver for the tested
+  # sha; it runs the browser suite against the monorepo harness and posts a
+  # `fleet-e2e` commit status back, which branch protection requires. The
+  # dispatch token is a repo Actions secret AND a Dependabot secret
+  # so Dependabot PRs dispatch too; a fork PR has neither, so the guarded step
+  # skips and the required status stays unset for a maintainer to run.
+  trigger-e2e:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions: {}
+    env:
+      E2E_DISPATCH_TOKEN: ${{ secrets.TAI_E2E_DISPATCH_TOKEN }}
+    steps:
+      # Build the payload with jq so the branch name (untrusted) is JSON-escaped,
+      # never interpolated into a shell or into the payload text.
+      - name: Build dispatch payload
+        id: payload
+        if: env.E2E_DISPATCH_TOKEN != ''
+        env:
+          SRC_REPO: tai-studio
+          SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REF_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          LEGS: ''
+        run: |
+          set -euo pipefail
+          payload="$(jq -nc \
+            --arg repo "$SRC_REPO" \
+            --arg ref "$SHA" \
+            --arg ref_name "$REF_NAME" \
+            --arg legs "$LEGS" \
+            '{repo: $repo, ref: $ref, ref_name: $ref_name} + (if $legs == "" then {} else {legs: $legs} end)')"
+          echo "json=$payload" >> "$GITHUB_OUTPUT"
+      - name: Dispatch fleet-e2e
+        if: env.E2E_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.E2E_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai42
+          event-type: fleet-e2e
+          client-payload: ${{ steps.payload.outputs.json }}

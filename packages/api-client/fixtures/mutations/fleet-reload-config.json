@@ -1,0 +1,29 @@
+{
+  "op": "reload_config",
+  "reachable": true,
+  "local_only": false,
+  "results": [
+    {
+      "name": "serve-1",
+      "outcome": "applied",
+      "payload": { "status": "ok", "env_keys": 5 },
+      "error": null,
+      "detail": null
+    },
+    {
+      "name": "serve-2",
+      "outcome": "applied",
+      "payload": { "status": "ok", "env_keys": 5 },
+      "error": null,
+      "detail": null
+    },
+    {
+      "name": "backend-1",
+      "outcome": "timed_out",
+      "payload": null,
+      "error": null,
+      "detail": "no ack within the confirmation window"
+    }
+  ],
+  "error": null
+}

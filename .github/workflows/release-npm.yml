@@ -1,0 +1,96 @@
+name: release-npm
+
+# The only workflow that publishes to npm. It ships the Studio plugin surface —
+# and nothing else — on a version tag:
+#   @tai42/studio-sdk  — the plugin API + design system plugin UIs build on
+#   @tai42/api-client  — its sibling API client
+# Everything else in the workspace is a private package: the shell app and the
+# `packages/features/*` page surfaces are the Studio application itself, not a
+# consumable library. release-please.yml raises the version PR that bumps both
+# package versions and carries the release notes (`skip-changelog` — the notes go
+# on the GitHub Release, not into a file); merging it tags, and that tag lands here.
+#
+# Trigger: push of a v* tag whose version must equal BOTH package versions.
+#
+# Auth: first publish uses the NPM_TOKEN repo secret (granular, @tai42-scoped)
+# via NODE_AUTH_TOKEN. Once npm Trusted Publishing is configured for both
+# packages (GitHub Actions publisher: this repo + this workflow), the secret
+# can be deleted — `npm publish` then authenticates with the workflow's OIDC
+# token, which `id-token: write` already enables. --provenance links each
+# published version to this workflow run either way.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - name: Assert tag matches both package versions
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          for pkg in packages/studio-sdk packages/api-client; do
+            v=$(node -p "require('./${pkg}/package.json').version")
+            if [ "$v" != "$tag" ]; then
+              echo "::error::${pkg} version ${v} != tag ${tag}"; exit 1
+            fi
+          done
+      - run: pnpm install --frozen-lockfile
+      # The same gates ci.yml runs, re-verified against the tagged commit, so a
+      # published version only ever ships code that built, typechecked, linted and
+      # tested clean. Build covers the whole workspace: every package resolves the
+      # other @tai42/* packages through their built declarations.
+      - name: Build
+        run: pnpm -r build
+      - name: Typecheck
+        run: pnpm -r typecheck
+      - name: Lint
+        run: pnpm -r lint
+      - name: Test
+        run: pnpm -r test --coverage
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @tai42/studio-sdk publish --access public --provenance --no-git-checks
+          pnpm --filter @tai42/api-client publish --access public --provenance --no-git-checks
+
+  # Image refresh hook: a published Studio release pokes tai-distribution, whose
+  # refresh-studio-ref pipeline pins docker/STUDIO_REF to this commit and
+  # rebuilds the platform image. Fork runs carry no token and skip.
+  notify-distribution:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DIST_DISPATCH_TOKEN: ${{ secrets.TAI_DIST_DISPATCH_TOKEN }}
+    steps:
+      - name: Trigger the tai-distribution studio-ref refresh
+        if: env.DIST_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.DIST_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/tai-distribution
+          event-type: studio-release
+          client-payload: |
+            {
+              "sha": "${{ github.sha }}",
+              "tag": "${{ github.ref_name }}"
+            }
