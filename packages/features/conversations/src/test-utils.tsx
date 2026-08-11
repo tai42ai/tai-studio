@@ -205,6 +205,7 @@ export function makeMessage(overrides: Partial<ConversationMessage> = {}): Conve
     inbound_text: 'where is my request',
     answer_status: 'answered',
     answer: 'It completes tomorrow.',
+    origin: 'client',
     delivery_status: 'delivered',
     created_at: 1_800_000_000,
     updated_at: 1_800_000_001,

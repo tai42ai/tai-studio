@@ -11,9 +11,11 @@
 import type { ReactNode, RefObject } from 'react';
 import { AppLink, ArrowLeftIcon, Card, EmptyState, useBreakpoint } from '@tai42/studio-sdk';
 
+import { ComposeMessage } from './ComposeMessage';
 import { EntryGate } from './EntryGate';
 import { useSelectionFocus } from './focus';
 import { ThreadList, threadRowLabel } from './ThreadList';
+import { ThreadMode } from './ThreadMode';
 import { Transcript } from './Transcript';
 
 export function RouteThreads({
@@ -86,12 +88,14 @@ export function RouteThreads({
               />
             </Card>
           ) : (
-            <Transcript
-              key={thread}
-              route={route}
-              threadId={thread}
-              headingRef={focus.headingRef}
-            />
+            /* Keyed by thread so a switch resets each control's own state — the
+               mode read, the compose text and any in-flight write belong to the
+               thread they were opened on. */
+            <div key={thread} className="tai-stack tai-stack-3">
+              <ThreadMode route={route} threadId={thread} />
+              <Transcript route={route} threadId={thread} headingRef={focus.headingRef} />
+              <ComposeMessage route={route} threadId={thread} />
+            </div>
           )}
         </div>
       </div>

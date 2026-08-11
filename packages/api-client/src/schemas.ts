@@ -1007,6 +1007,14 @@ export type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStat
 export const conversationAnswerStatus = z.enum(['answered', 'error', 'silent']);
 export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
+/**
+ * Who authored a record's outgoing side. `client` is the ordinary turn the flow
+ * answered; `operator` is a message a human sent into the thread, whose text
+ * rides `answer` (its `inbound_text` is empty).
+ */
+export const conversationRecordOrigin = z.enum(['client', 'operator']);
+export type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
+
 /** A stored routing row as a read door returns it, its `callback_secret` withheld. */
 export const conversationRoute = z.object({
   route_name: z.string(),
@@ -1075,6 +1083,7 @@ export const conversationMessage = z.object({
   inbound_text: z.string(),
   answer_status: conversationAnswerStatus.nullable(),
   answer: z.string().nullable(),
+  origin: conversationRecordOrigin,
   delivery_status: conversationDeliveryStatus,
   created_at: z.number(),
   updated_at: z.number(),
@@ -1103,6 +1112,27 @@ export const conversationTranscriptPage = z.object({
   order: transcriptOrder,
 });
 export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
+
+/**
+ * Who answers a thread's incoming messages: `agent` lets the flow reply on its
+ * own; `manual` holds the flow back so a human answers. `source` says whether the
+ * setting is the thread's own (`thread`) or inherited from its route (`route`).
+ */
+export const conversationThreadMode = z.enum(['agent', 'manual']);
+export type ConversationThreadMode = z.infer<typeof conversationThreadMode>;
+
+export const conversationThreadModeState = z.object({
+  mode: conversationThreadMode,
+  source: z.enum(['thread', 'route']),
+});
+export type ConversationThreadModeState = z.infer<typeof conversationThreadModeState>;
+
+/** The receipt a thread-message write returns: the stored id and its thread. */
+export const conversationThreadMessageSent = z.object({
+  message_id: z.string(),
+  thread_id: z.string(),
+});
+export type ConversationThreadMessageSent = z.infer<typeof conversationThreadMessageSent>;
 
 // -- channel-web entry gate --------------------------------------------------
 // The web channel's entry gate: a web route can be gated so its chat page is

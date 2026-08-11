@@ -10,7 +10,7 @@ import { screen, within } from '@testing-library/react';
 import { Exchange } from './Exchange';
 import { makeMessage, renderWithProviders } from './test-utils';
 
-function bubble(speaker: 'visitor' | 'agent'): HTMLElement {
+function bubble(speaker: 'visitor' | 'agent' | 'operator'): HTMLElement {
   const node = document.querySelector<HTMLElement>(`[data-speaker="${speaker}"]`);
   if (node === null) throw new Error(`no ${speaker} bubble`);
   return node;
@@ -134,5 +134,34 @@ describe('Exchange', () => {
     );
 
     expect(screen.getByText('No provider message id')).toBeInTheDocument();
+  });
+
+  it('renders an operator record as ONE labelled bubble on the agent side, no visitor bubble', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          origin: 'operator',
+          inbound_text: '',
+          answer: 'On it — checking now.',
+        })}
+      />,
+      { client: {} },
+    );
+
+    expect(document.querySelector('[data-speaker="visitor"]')).toBeNull();
+    const operatorBubble = bubble('operator');
+    expect(within(operatorBubble).getByText('Operator')).toBeInTheDocument();
+    expect(within(operatorBubble).getByText('On it — checking now.')).toBeInTheDocument();
+    expect(document.querySelector('[data-speaker="agent"]')).toBeNull();
+  });
+
+  it('keeps the meta row on an operator record', () => {
+    renderWithProviders(
+      <Exchange record={makeMessage({ origin: 'operator', inbound_text: '', answer: 'Done.' })} />,
+      { client: {} },
+    );
+
+    expect(screen.getByText('Delivered')).toBeInTheDocument();
+    expect(screen.getByText('Answered')).toBeInTheDocument();
   });
 });

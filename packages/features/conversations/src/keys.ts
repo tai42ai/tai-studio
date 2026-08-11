@@ -32,3 +32,11 @@ export function conversationTranscriptKey(
 ): readonly ['conversations', 'transcript', string, string, number] {
   return ['conversations', 'transcript', routeName, threadId, pageSize];
 }
+
+/** Key for one thread's reply mode (agent vs. manual). */
+export function conversationThreadModeKey(
+  routeName: string,
+  threadId: string,
+): readonly ['conversations', 'thread-mode', string, string] {
+  return ['conversations', 'thread-mode', routeName, threadId];
+}
