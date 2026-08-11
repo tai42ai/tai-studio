@@ -372,3 +372,77 @@ describe('presetRenamed schema', () => {
     ).toThrow();
   });
 });
+
+describe('conversation record schema — origin', () => {
+  const base = {
+    message_id: 'm1',
+    route_name: 'chat',
+    door: 'channel',
+    thread_id: 'svc-chat/u1',
+    client_address: 'u1',
+    caller_principal: null,
+    inbound_text: 'where is my request',
+    answer_status: 'answered',
+    answer: 'It completes tomorrow.',
+    delivery_status: 'delivered',
+    created_at: 1_800_000_000,
+    updated_at: 1_800_000_001,
+  };
+
+  it('rejects a record that omits origin (no silent default)', () => {
+    expect(() => schemas.conversationMessage.parse(base)).toThrow();
+  });
+
+  it('carries an operator origin through', () => {
+    const parsed = schemas.conversationMessage.parse({
+      ...base,
+      origin: 'operator',
+      inbound_text: '',
+      answer: 'On it — checking now.',
+    });
+    expect(parsed.origin).toBe('operator');
+  });
+
+  it('rejects an unknown origin (no silent coerce)', () => {
+    expect(() => schemas.conversationMessage.parse({ ...base, origin: 'robot' })).toThrow();
+  });
+});
+
+describe('conversation thread mode schema', () => {
+  it('parses a thread-owned agent mode', () => {
+    expect(schemas.conversationThreadModeState.parse({ mode: 'agent', source: 'thread' })).toEqual({
+      mode: 'agent',
+      source: 'thread',
+    });
+  });
+
+  it('parses a route-inherited manual mode', () => {
+    expect(schemas.conversationThreadModeState.parse({ mode: 'manual', source: 'route' })).toEqual({
+      mode: 'manual',
+      source: 'route',
+    });
+  });
+
+  it('rejects an unknown mode or source', () => {
+    expect(() =>
+      schemas.conversationThreadModeState.parse({ mode: 'both', source: 'thread' }),
+    ).toThrow();
+    expect(() =>
+      schemas.conversationThreadModeState.parse({ mode: 'agent', source: 'nowhere' }),
+    ).toThrow();
+  });
+});
+
+describe('conversation thread message-sent schema', () => {
+  it('parses the write receipt', () => {
+    expect(
+      schemas.conversationThreadMessageSent.parse({ message_id: 'm9', thread_id: 'svc-chat/u1' }),
+    ).toEqual({ message_id: 'm9', thread_id: 'svc-chat/u1' });
+  });
+
+  it('rejects a receipt missing its message id', () => {
+    expect(() =>
+      schemas.conversationThreadMessageSent.parse({ thread_id: 'svc-chat/u1' }),
+    ).toThrow();
+  });
+});

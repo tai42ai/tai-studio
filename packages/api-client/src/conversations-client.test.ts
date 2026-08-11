@@ -20,6 +20,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 interface Captured {
   url: string;
   method: string;
+  body: unknown;
 }
 
 function urlString(url: RequestInfo | URL): string {
@@ -31,7 +32,12 @@ function urlString(url: RequestInfo | URL): string {
 function harness(responder: () => Response) {
   const captured: Captured[] = [];
   const fetchImpl = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
-    captured.push({ url: urlString(url), method: init?.method ?? 'GET' });
+    const rawBody = typeof init?.body === 'string' ? init.body : undefined;
+    captured.push({
+      url: urlString(url),
+      method: init?.method ?? 'GET',
+      body: rawBody === undefined ? undefined : JSON.parse(rawBody),
+    });
     return Promise.resolve(responder());
   });
   const config: ApiConfig = { getToken: () => 'k', fetch: fetchImpl };
@@ -71,6 +77,7 @@ const callerRecord = {
   inbound_text: 'where is my request',
   answer_status: 'answered',
   answer: 'It completes tomorrow.',
+  origin: 'client',
   delivery_status: 'delivered',
   created_at: 1_800_000_000,
   updated_at: 1_800_000_001,
@@ -287,5 +294,100 @@ describe('thread transcript transport', () => {
     await expect(client.readConversationTranscript(transcriptQuery)).rejects.toBeInstanceOf(
       ApiSchemaError,
     );
+  });
+
+  it('carries client and operator origins through', async () => {
+    const operatorRecord = {
+      ...callerRecord,
+      message_id: 'm2',
+      origin: 'operator',
+      inbound_text: '',
+      answer: 'On it — checking now.',
+    };
+    const { client } = harness(() =>
+      jsonResponse(transcriptPage([callerRecord, operatorRecord], 'desc')),
+    );
+    const out = await client.readConversationTranscript(transcriptQuery);
+    expect(out.items[0]?.origin).toBe('client');
+    expect(out.items[1]?.origin).toBe('operator');
+  });
+});
+
+describe('thread mode transport', () => {
+  it('GETs the mode door with the thread id as a QUERY value', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { mode: 'agent', source: 'route' } }),
+    );
+    const out = await client.getConversationThreadMode('chat', 'svc-chat/+15551234567');
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/chat/thread/mode?thread_id=svc-chat%2F%2B15551234567',
+    );
+    expect(out).toEqual({ mode: 'agent', source: 'route' });
+  });
+
+  it('PUTs the mode with the thread id in the BODY and parses the confirmed state', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { mode: 'manual', source: 'thread' } }),
+    );
+    const out = await client.setConversationThreadMode('chat', 'svc-chat/+15551234567', 'manual');
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.url).toBe('/api/conversations/chat/thread/mode');
+    expect(captured[0]?.body).toEqual({ thread_id: 'svc-chat/+15551234567', mode: 'manual' });
+    expect(out).toEqual({ mode: 'manual', source: 'thread' });
+  });
+
+  it('throws ApiSchemaError LOUDLY on an unknown mode value', async () => {
+    const { client } = harness(() => jsonResponse({ data: { mode: 'both', source: 'route' } }));
+    await expect(
+      client.getConversationThreadMode('chat', 'svc-chat/+15551234567'),
+    ).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('thread message send transport', () => {
+  it('POSTs the messages door with the thread id + text in the BODY', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { message_id: 'm9', thread_id: 'svc-chat/+15551234567' } }),
+    );
+    const out = await client.sendConversationThreadMessage('chat', {
+      thread_id: 'svc-chat/+15551234567',
+      text: 'On it.',
+    });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/conversations/chat/thread/messages');
+    expect(captured[0]?.body).toEqual({ thread_id: 'svc-chat/+15551234567', text: 'On it.' });
+    expect(out).toEqual({ message_id: 'm9', thread_id: 'svc-chat/+15551234567' });
+  });
+
+  it('carries an optional address override into the body', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { message_id: 'm9', thread_id: 'svc-chat/+15551234567' } }),
+    );
+    await client.sendConversationThreadMessage('chat', {
+      thread_id: 'svc-chat/+15551234567',
+      text: 'On it.',
+      address: '+15550000000',
+    });
+    expect(captured[0]?.body).toEqual({
+      thread_id: 'svc-chat/+15551234567',
+      text: 'On it.',
+      address: '+15550000000',
+    });
+  });
+
+  it('encodes a route name that is not URL-safe', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { message_id: 'm9', thread_id: 't' } }),
+    );
+    await client.sendConversationThreadMessage('a b/c', { thread_id: 't', text: 'hi' });
+    expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc/thread/messages');
+  });
+
+  it('throws ApiSchemaError LOUDLY on a receipt missing its message id', async () => {
+    const { client } = harness(() => jsonResponse({ data: { thread_id: 't' } }));
+    await expect(
+      client.sendConversationThreadMessage('chat', { thread_id: 't', text: 'hi' }),
+    ).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });

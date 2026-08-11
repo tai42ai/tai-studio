@@ -27,6 +27,8 @@ function fullClient() {
     listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
     listConversationThreads: vi.fn().mockResolvedValue(page([makeThread()])),
     readConversationTranscript: vi.fn().mockResolvedValue(transcriptPage([makeMessage()])),
+    // Read on every thread selection by the mode control the detail pane grafts on.
+    getConversationThreadMode: vi.fn().mockResolvedValue({ mode: 'agent', source: 'route' }),
   };
 }
 

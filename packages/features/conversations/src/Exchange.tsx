@@ -37,12 +37,22 @@ const bubbleStyle: CSSProperties = {
   maxWidth: '46rem',
 };
 
-/** The visitor speaks on the leading edge in the accent tint; the agent answers below it. */
-const SPEAKER_STYLE: Record<'visitor' | 'agent', CSSProperties> = {
+/**
+ * The visitor speaks on the leading edge in the accent tint; the agent answers
+ * below it. An operator answers on the agent's side too, set apart by an accent
+ * border so a human's message reads as distinct from the flow's.
+ */
+const SPEAKER_STYLE: Record<'visitor' | 'agent' | 'operator', CSSProperties> = {
   visitor: { ...bubbleStyle, background: 'var(--tai-color-accent-tint)' },
   agent: {
     ...bubbleStyle,
     background: 'var(--tai-color-surface-raised)',
+    marginInlineStart: 'auto',
+  },
+  operator: {
+    ...bubbleStyle,
+    background: 'var(--tai-color-surface-raised)',
+    border: '1px solid var(--tai-color-accent)',
     marginInlineStart: 'auto',
   },
 };
@@ -72,7 +82,7 @@ function Bubble({
   label,
   children,
 }: {
-  readonly speaker: 'visitor' | 'agent';
+  readonly speaker: 'visitor' | 'agent' | 'operator';
   readonly label: string;
   readonly children: ReactNode;
 }): ReactNode {
@@ -128,6 +138,9 @@ export function Exchange({
   readonly now?: number;
 }): ReactNode {
   const failed = isLoudDelivery(record.delivery_status);
+  // An operator record has no visitor side (its `inbound_text` is empty): the
+  // operator's message rides `answer`, shown as one bubble on the agent's side.
+  const operator = record.origin === 'operator';
   const style: CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
@@ -140,11 +153,13 @@ export function Exchange({
 
   return (
     <li style={style} data-testid="conversation-exchange" data-failed={failed ? '' : undefined}>
-      <Bubble speaker="visitor" label="Visitor">
-        <p style={verbatimStyle}>{record.inbound_text}</p>
-      </Bubble>
+      {operator ? null : (
+        <Bubble speaker="visitor" label="Visitor">
+          <p style={verbatimStyle}>{record.inbound_text}</p>
+        </Bubble>
+      )}
       {record.answer === null ? null : (
-        <Bubble speaker="agent" label="Agent">
+        <Bubble speaker={operator ? 'operator' : 'agent'} label={operator ? 'Operator' : 'Agent'}>
           <Markdown markdown={record.answer} />
         </Bubble>
       )}

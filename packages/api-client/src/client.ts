@@ -248,6 +248,19 @@ export interface ConversationTranscriptQuery {
   readonly order: s.TranscriptOrder;
 }
 
+/**
+ * Body for sending a message into a thread (POST
+ * `/api/conversations/{route}/thread/messages`). `thread_id` names the thread
+ * (an api-door address, passed as a value); `text` is the message. `address` is
+ * an optional override the server otherwise derives from the thread, omitted
+ * when undefined.
+ */
+export interface ConversationThreadMessageBody {
+  readonly thread_id: string;
+  readonly text: string;
+  readonly address?: string;
+}
+
 /** The observability-metrics window + bucket size (GET query params). */
 export interface MetricsQuery {
   readonly from?: string;
@@ -783,6 +796,33 @@ export function createApiClient(config: ApiConfig) {
             order: query.order,
           },
         },
+      ),
+    // Send a human message into a thread. The `thread_id` rides the BODY (a POST,
+    // never a path segment) — same encode-once reasoning as the transcript read.
+    sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) =>
+      req(
+        `/api/conversations/${encodeSegment(routeName)}/thread/messages`,
+        s.conversationThreadMessageSent,
+        { method: 'POST', body },
+      ),
+    // Read a thread's reply mode (`agent`/`manual`) and where it comes from. The
+    // `thread_id` rides the QUERY value, encoded once, as the transcript read does.
+    getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) =>
+      req(
+        `/api/conversations/${encodeSegment(routeName)}/thread/mode`,
+        s.conversationThreadModeState,
+        { signal, query: { thread_id: threadId } },
+      ),
+    // Flip a thread's reply mode. The `thread_id` rides the BODY (a PUT).
+    setConversationThreadMode: (
+      routeName: string,
+      threadId: string,
+      mode: s.ConversationThreadMode,
+    ) =>
+      req(
+        `/api/conversations/${encodeSegment(routeName)}/thread/mode`,
+        s.conversationThreadModeState,
+        { method: 'PUT', body: { thread_id: threadId, mode } },
       ),
 
     // -- channel-web entry gate ------------------------------------------------
