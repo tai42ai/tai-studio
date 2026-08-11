@@ -166,6 +166,128 @@ describe('ToolPicker', () => {
     expect(screen.getByText('scratch')).toBeInTheDocument();
   });
 
+  it('labels a mapped option "Display Name (raw)" (flat rendering)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: 'Beta Tool' }}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    // The mapped tool shows its human name with the raw name in parentheses; an
+    // unmapped tool shows the bare raw name.
+    expect(await screen.findByRole('option', { name: 'Beta Tool (beta)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'alpha' })).toBeInTheDocument();
+  });
+
+  it('labels a mapped option "Display Name (raw)" (grouped rendering)', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        tagsByTool={{ alpha: ['geo'], beta: ['geo'], gamma: ['scratch'] }}
+        displayNames={{ beta: 'Beta Tool' }}
+      />,
+    );
+
+    const tool = toolCombobox();
+    await user.click(tool);
+
+    expect(await screen.findByRole('option', { name: 'Beta Tool (beta)' })).toBeInTheDocument();
+  });
+
+  it('falls back to the bare raw name for an unmapped tool', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: 'Beta Tool' }}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'gamma' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /gamma \(/ })).toBeNull();
+  });
+
+  it('renders the bare raw name when the mapping equals the raw name', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: 'beta' }}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'beta' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'beta (beta)' })).toBeNull();
+  });
+
+  it('composes the display name and the agent suffix as "Display (raw) (agent)"', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: 'Beta Tool' }}
+        agentToolNames={new Set(['beta'])}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    expect(
+      await screen.findByRole('option', { name: 'Beta Tool (beta) (agent)' }),
+    ).toBeInTheDocument();
+  });
+
+  it('fires onChange with the raw name when a display-labeled option is chosen', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={onChange}
+        displayNames={{ beta: 'Beta Tool' }}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'Beta Tool (beta)' }));
+
+    expect(onChange).toHaveBeenCalledWith('beta');
+  });
+
+  it('renders a display name containing <script> as escaped TEXT, never an element (XSS pin)', async () => {
+    const user = userEvent.setup();
+    const payload = '<script>alert(1)</script>';
+    const { container } = render(
+      <ToolPicker
+        toolNames={['beta']}
+        value={null}
+        onChange={vi.fn()}
+        displayNames={{ beta: payload }}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+
+    expect(screen.getAllByText(`${payload} (beta)`).length).toBeGreaterThan(0);
+    expect(container.querySelector('script')).toBeNull();
+  });
+
   it('lays the filter and the picker out on the design-system stack, not an inline style', () => {
     render(
       <ToolPicker

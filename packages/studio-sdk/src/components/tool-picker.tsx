@@ -5,8 +5,8 @@
  * PRESENTATIONAL: the caller fetches the tool names (GET /api/tools) and owns the
  * selected value; this component fetches nothing.
  *
- * Three optional extensions, each inert unless supplied; the preset create flow
- * passes all three and the multi-tool picker the first two:
+ * Four optional extensions, each inert unless supplied; the preset create flow
+ * passes the first three and the multi-tool picker the first two:
  *  - `excludeNames` removes names from the options (e.g. a preset cannot be
  *    another preset's base, so the preset create flow excludes existing preset
  *    names). The server stays the authority — a slipped-through name is rejected
@@ -18,10 +18,15 @@
  *    tool with " (agent)" (in grouped and flat renderings alike) — a purely visual
  *    honesty cue; the value stays the bare name and no option is excluded, since an
  *    agent run tool is a legal preset base for an authored agent.
+ *  - `displayNames` (from the tool-meta overlay) overlays a human name onto the
+ *    LABEL: a mapped option reads `Display Name (raw_name)`, an unmapped name (or a
+ *    mapping equal to the raw name) reads the bare raw name. The value stays the raw
+ *    name and grouping/filtering/exclusion key off raw names alone, so a display
+ *    name is purely cosmetic.
  *
- * SAFETY: a tool name AND a tag are server-supplied, so every name/tag renders as
- * TEXT through the DS `Select` (React escapes it) — never an HTML sink. Pinned by
- * a test.
+ * SAFETY: a tool name, a tag, AND a display name are server-supplied, so every one
+ * renders as TEXT through the DS `Select` (React escapes it) — never an HTML sink.
+ * Pinned by a test.
  */
 import { useState } from 'react';
 
@@ -49,6 +54,13 @@ export interface ToolPickerProps {
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
   /** Tool names that are agent run tools; their option labels are suffixed " (agent)". */
   readonly agentToolNames?: ReadonlySet<string>;
+  /**
+   * Human display names keyed by raw tool name (from the tool-meta overlay). A
+   * mapped option's label reads `Display Name (raw_name)`; an unmapped name — or a
+   * mapping equal to the raw name — reads the bare raw name. The value `onChange`
+   * emits stays the raw name in every case.
+   */
+  readonly displayNames?: Readonly<Record<string, string>>;
 }
 
 const UNTAGGED = 'Untagged';
@@ -63,15 +75,25 @@ function groupFor(name: string, tagsByTool: Readonly<Record<string, readonly str
   return tags[0] ?? UNTAGGED;
 }
 
-/** The option label: the bare name, suffixed " (agent)" for an agent run tool. */
-function optionLabel(name: string, agentToolNames: ReadonlySet<string> | undefined): string {
-  return agentToolNames?.has(name) === true ? `${name} (agent)` : name;
+/**
+ * The option label: `Display Name (raw)` when a distinct display name maps the
+ * name, else the bare name; either way suffixed " (agent)" for an agent run tool.
+ */
+function optionLabel(
+  name: string,
+  displayNames: Readonly<Record<string, string>> | undefined,
+  agentToolNames: ReadonlySet<string> | undefined,
+): string {
+  const display = displayNames?.[name];
+  const base = display !== undefined && display !== name ? `${display} (${name})` : name;
+  return agentToolNames?.has(name) === true ? `${base} (agent)` : base;
 }
 
 /** Build the grouped option clusters (sorted group labels, "Untagged" last). */
 function buildGroups(
   names: readonly string[],
   tagsByTool: Readonly<Record<string, readonly string[]>>,
+  displayNames: Readonly<Record<string, string>> | undefined,
   agentToolNames: ReadonlySet<string> | undefined,
 ): SelectGroup[] {
   const byGroup = new Map<string, string[]>();
@@ -91,7 +113,7 @@ function buildGroups(
       label,
       options: groupNames.map((name) => ({
         value: name,
-        label: optionLabel(name, agentToolNames),
+        label: optionLabel(name, displayNames, agentToolNames),
       })),
     }));
 }
@@ -108,6 +130,7 @@ export function ToolPicker({
   excludeNames,
   tagsByTool,
   agentToolNames,
+  displayNames,
 }: ToolPickerProps) {
   const [tagFilter, setTagFilter] = useState<string>(ALL_TAGS);
 
@@ -130,7 +153,7 @@ export function ToolPicker({
   const toolSelect =
     tagsByTool !== undefined ? (
       <Select
-        groups={buildGroups(filtered, tagsByTool, agentToolNames)}
+        groups={buildGroups(filtered, tagsByTool, displayNames, agentToolNames)}
         value={value ?? ''}
         onValueChange={onChange}
         placeholder={placeholder}
@@ -144,7 +167,7 @@ export function ToolPicker({
         // a subsequent selection would otherwise trigger.
         options={filtered.map((name) => ({
           value: name,
-          label: optionLabel(name, agentToolNames),
+          label: optionLabel(name, displayNames, agentToolNames),
         }))}
         value={value ?? ''}
         onValueChange={onChange}
