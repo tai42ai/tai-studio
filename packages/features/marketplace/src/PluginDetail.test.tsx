@@ -47,7 +47,15 @@ function detailFixture(overrides: Partial<MarketplacePluginDetail> = {}): Market
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'tool', name: 'uuid', description: 'Generate a UUID.', tags: ['uuid'] }],
+      items: [
+        {
+          kind: 'tool',
+          name: 'uuid',
+          description: 'Generate a UUID.',
+          tags: ['uuid'],
+          group: 'utilities',
+        },
+      ],
     },
     versions: [
       {
@@ -175,6 +183,38 @@ describe('PluginDetail — content', () => {
     // versions table: a non-published status is styled loudly
     expect(screen.getByText('killed')).toBeInTheDocument();
     expect(screen.getByText('1.1.0')).toBeInTheDocument();
+  });
+
+  it('renders the item group in the items table, an em dash for an ungrouped item', async () => {
+    const client = reads(
+      detailFixture({
+        latest: {
+          version: '1.2.0',
+          contract_range: '>=1.0',
+          status: 'published',
+          published_at: '2026-07-01T00:00:00Z',
+          items: [
+            {
+              kind: 'tool',
+              name: 'uuid',
+              description: 'Generate a UUID.',
+              tags: [],
+              group: 'core',
+            },
+            { kind: 'agent', name: 'echo', description: 'Echo.', tags: [], group: null },
+          ],
+        },
+      }),
+      [],
+    );
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    const groupHeader = await screen.findByRole('columnheader', { name: 'Group' });
+    const table = groupHeader.closest('table');
+    if (table === null) throw new Error('no table above the Group column');
+    // The grouped item shows its group name; the ungrouped item shows an em dash.
+    expect(within(table).getByText('core')).toBeInTheDocument();
+    expect(within(table).getByText('—')).toBeInTheDocument();
   });
 
   it('renders exactly one h1 naming the plugin at the top of the detail view', async () => {
@@ -338,7 +378,7 @@ function mcpServerDetail(): MarketplacePluginDetail {
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'mcp-server', name: 'postgres', description: 'PG.', tags: [] }],
+      items: [{ kind: 'mcp-server', name: 'postgres', description: 'PG.', tags: [], group: null }],
       spec: {
         provides: [
           {
@@ -778,7 +818,7 @@ function mixedSpecDetail(): MarketplacePluginDetail {
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [] }],
+      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [], group: null }],
       spec: {
         provides: [
           {
@@ -810,7 +850,7 @@ function twoMarkerDetail(): MarketplacePluginDetail {
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [] }],
+      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [], group: null }],
       spec: {
         provides: [
           {

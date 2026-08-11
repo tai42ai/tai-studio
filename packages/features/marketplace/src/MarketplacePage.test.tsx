@@ -1,9 +1,9 @@
 /**
  * Behavioural tests for the marketplace browse page: the tri-state result set,
- * item rows grouped back under their listing, the URL-persisted facets (kind /
- * tag chips, category + sort selects, submit-applied text search), infinite
- * load-more with the computed has-next, the tab switch, and the drill-in that
- * replaces the browse chrome with the detail view.
+ * one listing card per row with its kind-summary badges, the URL-persisted facets
+ * (kind / tag chips, category + sort selects, submit-applied text search),
+ * infinite load-more with the computed has-next, the tab switch, and the drill-in
+ * that replaces the browse chrome with the detail view.
  */
 import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -22,7 +22,6 @@ import { renderWithLiveUrl, renderWithProviders, type StubApiClient } from './te
 
 function row(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRow {
   return {
-    item: { kind: 'tool', name: 'uuid', description: 'Generate a UUID.', tags: ['uuid'] },
     ref: 'tai42/toolbox',
     namespace: 'tai42',
     name: 'toolbox',
@@ -37,17 +36,19 @@ function row(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRo
     latest_version: '1.2.0',
     downloads: 1234,
     updated_at: '2026-07-01T00:00:00Z',
+    kinds: [{ kind: 'tool', count: 1, names: ['generate_uuid'] }],
+    groups: [],
     ...overrides,
   };
 }
 
 function pageOf(
-  items: MarketplaceSearchRow[],
+  listings: MarketplaceSearchRow[],
   meta: Partial<Pick<MarketplaceSearchPage, 'total' | 'page' | 'page_size'>> = {},
 ): MarketplaceSearchPage {
   return {
-    items,
-    total: meta.total ?? items.length,
+    listings,
+    total: meta.total ?? listings.length,
     page: meta.page ?? 1,
     page_size: meta.page_size ?? 20,
   };
@@ -154,24 +155,15 @@ describe('MarketplacePage — premium badge + mcp-server kind', () => {
     expect(screen.queryByText('Premium')).toBeNull();
   });
 
-  it('renders a new mcp-server kind verbatim in the facet and the item badge', async () => {
+  it('renders a new mcp-server kind verbatim in the facet and the kind-summary badge', async () => {
     renderWithProviders(<MarketplacePage search={{}} />, {
       client: browseReads(
-        pageOf([
-          row({
-            item: {
-              kind: 'mcp-server',
-              name: 'postgres',
-              description: 'A Postgres MCP server.',
-              tags: [],
-            },
-          }),
-        ]),
+        pageOf([row({ kinds: [{ kind: 'mcp-server', count: 1, names: ['postgres'] }] })]),
         ['productivity'],
         ['tool', 'agent', 'mcp-server'],
       ),
     });
-    // The facet chip is served vocabulary (no client enum); the item badge renders
+    // The facet chip is served vocabulary (no client enum); the kind badge renders
     // any string. Both surface the new kind with zero client-side kind logic.
     expect(await screen.findByRole('button', { name: 'mcp-server' })).toBeInTheDocument();
     expect(screen.getByText('mcp-server', { selector: '[data-variant]' })).toBeInTheDocument();
@@ -207,46 +199,81 @@ describe('MarketplacePage — browse tri-state', () => {
   });
 });
 
-describe('MarketplacePage — grouping', () => {
-  it('groups two item rows of one listing into a single plugin card', async () => {
-    const rows = [
-      row({
-        item: { kind: 'tool', name: 'uuid', description: 'Generate a UUID.', tags: ['uuid'] },
-      }),
-      row({
-        item: { kind: 'agent', name: 'summarizer', description: 'Summarize text.', tags: [] },
-      }),
-    ];
+describe('MarketplacePage — kind summary', () => {
+  it('renders one card per server row, each its own listing', async () => {
+    const rows = [row(), row({ ref: 'other/plugin', name: 'plugin', display_name: 'Other' })];
     renderWithProviders(<MarketplacePage search={{}} />, { client: browseReads(pageOf(rows)) });
 
-    expect(await screen.findByText('Generate a UUID.')).toBeInTheDocument();
-    expect(screen.getByText('Summarize text.')).toBeInTheDocument();
-    // one listing → one card → one title link and one downloads/recency stat line
-    expect(screen.getAllByRole('link', { name: 'Toolbox' })).toHaveLength(1);
-    expect(screen.getByText(/1234 downloads · Updated/)).toBeInTheDocument();
+    // one row → one card → one title link; two rows → two cards
+    expect(await screen.findByRole('link', { name: 'Toolbox' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Other' })).toBeInTheDocument();
     // a single page whose page*page_size >= total shows no load-more
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
   });
 
-  it('caps item rows per card and folds the rest into a detail link', async () => {
-    const rows = Array.from({ length: 6 }, (_, i) =>
-      row({
-        item: {
-          kind: 'tool',
-          name: `tool-${String(i)}`,
-          description: `Tool ${String(i)}.`,
-          tags: [],
-        },
-      }),
-    );
-    renderWithProviders(<MarketplacePage search={{}} />, { client: browseReads(pageOf(rows)) });
+  it('renders a kind badge per kind, suffixing a count above one', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(
+        pageOf([
+          row({
+            kinds: [
+              { kind: 'tool', count: 3, names: ['a', 'b', 'c'] },
+              { kind: 'agent', count: 1, names: ['d'] },
+            ],
+          }),
+        ]),
+      ),
+    });
 
-    expect(await screen.findByText('Tool 0.')).toBeInTheDocument();
-    expect(screen.getByText('Tool 3.')).toBeInTheDocument();
-    // beyond the cap of 4, later items are not rendered as rows
-    expect(screen.queryByText('Tool 4.')).toBeNull();
-    // the overflow leads to the plugin detail via a "+N more" link
-    expect(screen.getByRole('link', { name: '+2 more' })).toBeInTheDocument();
+    // count > 1 is suffixed `×{count}`; a single item shows the bare kind.
+    expect(await screen.findByText('tool ×3', { selector: '[data-variant]' })).toBeInTheDocument();
+    expect(screen.getByText('agent', { selector: '[data-variant]' })).toBeInTheDocument();
+  });
+
+  it('renders the kind badges in the row-served order', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(
+        pageOf([
+          row({
+            kinds: [
+              { kind: 'agent', count: 2, names: ['a', 'b'] },
+              { kind: 'tool', count: 5, names: ['c', 'd', 'e', 'f', 'g'] },
+            ],
+          }),
+        ]),
+      ),
+    });
+
+    await screen.findByText('A box of tools.');
+    const kindGroup = screen.getByRole('group', { name: 'Capabilities' });
+    const badgeOrder = within(kindGroup)
+      .getAllByText(/./, { selector: '[data-variant]' })
+      .map((badge) => badge.textContent);
+    expect(badgeOrder).toEqual(['agent ×2', 'tool ×5']);
+  });
+
+  it('renders groups first, then names a listed channel kind, over counted kinds', async () => {
+    renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(
+        pageOf([
+          row({
+            groups: [{ name: 'onboarding', count: 3 }],
+            kinds: [
+              { kind: 'channel', count: 1, names: ['slack'] },
+              { kind: 'tool', count: 2, names: ['a', 'b'] },
+            ],
+          }),
+        ]),
+      ),
+    });
+
+    await screen.findByText('A box of tools.');
+    const kindGroup = screen.getByRole('group', { name: 'Capabilities' });
+    const badgeOrder = within(kindGroup)
+      .getAllByText(/./, { selector: '[data-variant]' })
+      .map((badge) => badge.textContent);
+    // Group leads with its count, then the channel item's name, then the counted tool.
+    expect(badgeOrder).toEqual(['onboarding ×3', 'slack', 'tool ×2']);
   });
 });
 
@@ -321,14 +348,14 @@ describe('MarketplacePage — tag chips', () => {
     const first = renderWithProviders(<MarketplacePage search={{}} />, {
       client: browseReads(pageOf([row()])),
     });
-    await user.click(await screen.findByRole('button', { name: 'uuid' }));
-    expect(first.navigate).toHaveBeenCalledWith('marketplace', { tags: ['uuid'] });
+    await user.click(await screen.findByRole('button', { name: 'cli' }));
+    expect(first.navigate).toHaveBeenCalledWith('marketplace', { tags: ['cli'] });
     first.unmount();
 
-    const second = renderWithProviders(<MarketplacePage search={{ tags: ['uuid'] }} />, {
+    const second = renderWithProviders(<MarketplacePage search={{ tags: ['cli'] }} />, {
       client: browseReads(pageOf([row()])),
     });
-    await user.click(await screen.findByRole('button', { name: 'uuid' }));
+    await user.click(await screen.findByRole('button', { name: 'cli' }));
     expect(second.navigate).toHaveBeenCalledWith('marketplace', {});
   });
 });
@@ -482,7 +509,7 @@ describe('MarketplacePage — load more', () => {
     await user.click(loadMore);
 
     await waitFor(() => {
-      // Two cards → two title links (each single-item card, so no "+N more").
+      // Two rows → two cards → two title links.
       expect(screen.getAllByRole('link')).toHaveLength(2);
     });
     await waitFor(() => {
@@ -499,17 +526,11 @@ describe('MarketplacePage — load more', () => {
         return page2Calls === 1
           ? Promise.reject(new Error('boom: page 2'))
           : Promise.resolve(
-              pageOf(
-                [
-                  row({
-                    ref: 'other/plugin',
-                    name: 'plugin',
-                    display_name: 'Other',
-                    item: { kind: 'agent', name: 'sum', description: 'Summarize text.', tags: [] },
-                  }),
-                ],
-                { total: 2, page: 2, page_size: 1 },
-              ),
+              pageOf([row({ ref: 'other/plugin', name: 'plugin', display_name: 'Other' })], {
+                total: 2,
+                page: 2,
+                page_size: 1,
+              }),
             );
       }
       return Promise.resolve(pageOf([row()], { total: 2, page: 1, page_size: 1 }));
@@ -533,7 +554,7 @@ describe('MarketplacePage — load more', () => {
     // retrying recovers: the next page appends and the inline error clears
     await user.click(retry);
     await waitFor(() => {
-      expect(screen.getByText('Summarize text.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Other' })).toBeInTheDocument();
     });
     expect(screen.queryByRole('alert')).toBeNull();
   });

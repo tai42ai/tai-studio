@@ -213,6 +213,7 @@ function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): Re
             <THead>
               <TR>
                 <TH>Kind</TH>
+                <TH>Group</TH>
                 <TH>Name</TH>
                 <TH>Description</TH>
                 <TH>Tags</TH>
@@ -224,6 +225,8 @@ function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): Re
                   <TD>
                     <Badge>{item.kind}</Badge>
                   </TD>
+                  {/* The item's logical group, or an em dash when it is ungrouped. */}
+                  <TD>{item.group ?? '—'}</TD>
                   <TD>{item.name}</TD>
                   <TD>{item.description}</TD>
                   <TD>

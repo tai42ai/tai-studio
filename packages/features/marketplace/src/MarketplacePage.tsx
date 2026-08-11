@@ -2,9 +2,9 @@
  * The marketplace shell page. It owns the tab (browse / installed) and the
  * drill-in `plugin` search param: when a plugin is selected the detail view
  * replaces the browse chrome. Browse is a text search + facet chips (kind,
- * category, tags) + a sort control over an infinite-scrolling result set, with
- * the item-level rows grouped back under their listing. Every filter lives in the
- * URL; the page number does not (the infinite query owns it).
+ * category, tags) + a sort control over an infinite-scrolling set of listing
+ * cards, one card per listing row. Every filter lives in the URL; the page number
+ * does not (the infinite query owns it).
  */
 import { useState, type ReactNode } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
@@ -27,8 +27,9 @@ import {
   useAppNavigate,
   type PageProps,
 } from '@tai42/studio-sdk';
-import type { MarketplaceItem, MarketplaceSearchRow } from '@tai42/api-client';
+import type { MarketplaceSearchRow } from '@tai42/api-client';
 
+import { listingBadges } from './badges';
 import { ListingIcon, listingTitle } from './display';
 import { activeTab, mergeSearch, searchParams, type MarketplaceSearch } from './filters';
 import { marketplaceCategoriesKey, marketplaceKindsKey, marketplaceSearchKey } from './keys';
@@ -37,9 +38,6 @@ import { PluginDetail } from './PluginDetail';
 
 /** The Select sentinel for the cleared / default option (empty item values are invalid). */
 const NONE = '__none__';
-
-/** Item rows shown per card before the rest fold into the plugin detail link. */
-const CARD_ITEM_CAP = 4;
 
 /**
  * An ISO-8601 `updated_at` rendered as a plain date for the card's recency line.
@@ -120,41 +118,21 @@ function vocabularyWith(values: readonly string[], selected: readonly string[]):
   return [...set].sort((a, b) => a.localeCompare(b));
 }
 
-interface PluginGroup {
-  readonly ref: string;
-  readonly row: MarketplaceSearchRow;
-  readonly items: MarketplaceItem[];
-}
-
-/** Group the item-level rows back under their listing, preserving server order. */
-function groupRows(rows: readonly MarketplaceSearchRow[]): PluginGroup[] {
-  const groups: PluginGroup[] = [];
-  const indexByRef = new Map<string, number>();
-  for (const row of rows) {
-    let index = indexByRef.get(row.ref);
-    if (index === undefined) {
-      index = groups.length;
-      indexByRef.set(row.ref, index);
-      groups.push({ ref: row.ref, row, items: [] });
-    }
-    groups[index]?.items.push(row.item);
-  }
-  return groups;
-}
-
-/** One listing card: name, reference, description, badges, downloads, item rows. */
+/**
+ * One listing card: name, reference, description, badges, downloads, and a
+ * content-summary badge row. The badges are the catalog policy over the row's
+ * groups and ungrouped kinds — see `listingBadges`.
+ */
 function PluginCard({
-  group,
+  row,
   search,
 }: {
-  readonly group: PluginGroup;
+  readonly row: MarketplaceSearchRow;
   readonly search: MarketplaceSearch;
 }): ReactNode {
-  const { row } = group;
   const title = listingTitle(row.display_name, row.name);
-  const detailSearch = mergeSearch(search, { plugin: group.ref });
-  const shownItems = group.items.slice(0, CARD_ITEM_CAP);
-  const hiddenCount = group.items.length - shownItems.length;
+  const detailSearch = mergeSearch(search, { plugin: row.ref });
+  const badges = listingBadges(row);
   return (
     <Card interactive>
       <div style={{ display: 'flex', gap: 'var(--tai-space-3)', alignItems: 'flex-start' }}>
@@ -165,7 +143,7 @@ function PluginCard({
           <AppLink to="marketplace" search={detailSearch}>
             <strong>{title}</strong>
           </AppLink>
-          <code className="tai-mono tai-muted">{group.ref}</code>
+          <code className="tai-mono tai-muted">{row.ref}</code>
           <p style={{ margin: 0 }}>{row.description}</p>
           <div className="tai-row">
             <Badge>{row.trust_tier}</Badge>
@@ -181,56 +159,13 @@ function PluginCard({
           <span className="tai-muted">
             {row.downloads} downloads · Updated {formatUpdatedAt(row.updated_at)}
           </span>
-          {/* Each row stays one scannable line: a shrink-to-fit description that
-              ellipsizes rather than wrapping the card into paragraphs. */}
-          <ul
-            className="tai-stack tai-stack-2"
-            style={{ listStyle: 'none', margin: 0, padding: 0 }}
-          >
-            {shownItems.map((item) => (
-              <li
-                key={`${item.kind}/${item.name}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--tai-space-2)',
-                  minWidth: 0,
-                }}
-              >
-                <Badge>{item.kind}</Badge>
-                <strong
-                  style={{
-                    flex: '0 1 auto',
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item.name}
-                </strong>
-                <span
-                  className="tai-muted"
-                  style={{
-                    flex: '1 1 auto',
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {item.description}
-                </span>
-              </li>
-            ))}
-            {hiddenCount > 0 ? (
-              <li>
-                <AppLink to="marketplace" search={detailSearch}>
-                  +{hiddenCount} more
-                </AppLink>
-              </li>
-            ) : null}
-          </ul>
+          {badges.length > 0 ? (
+            <div role="group" aria-label="Capabilities" className="tai-row">
+              {badges.map((label, index) => (
+                <Badge key={`${String(index)}-${label}`}>{label}</Badge>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </Card>
@@ -396,11 +331,11 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
       last.page * last.page_size < last.total ? last.page + 1 : undefined,
   });
 
-  const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const rows = query.data?.pages.flatMap((page) => page.listings) ?? [];
   const selectedTags = search.tags ?? [];
 
   const tagVocab = vocabularyWith(
-    rows.flatMap((row) => row.item.tags),
+    rows.flatMap((row) => row.tags),
     selectedTags,
   );
   const selectedTagSet = new Set(selectedTags);
@@ -411,8 +346,6 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
       : [...selectedTags, tag];
     navigate('marketplace', mergeSearch(search, { tags: next.length > 0 ? next : undefined }));
   };
-
-  const groups = groupRows(rows);
 
   return (
     <Stack>
@@ -465,15 +398,15 @@ function BrowseSection({ search }: { readonly search: MarketplaceSearch }): Reac
               <Button onClick={() => void query.refetch()}>Retry</Button>
             </div>
           ) : null}
-          {groups.length === 0 ? (
+          {rows.length === 0 ? (
             <EmptyState
               title="No plugins match"
               description="No plugins match the current filters."
             />
           ) : (
             <>
-              {groups.map((group) => (
-                <PluginCard key={group.ref} group={group} search={search} />
+              {rows.map((row) => (
+                <PluginCard key={row.ref} row={row} search={search} />
               ))}
               {query.isFetchNextPageError ? (
                 <div

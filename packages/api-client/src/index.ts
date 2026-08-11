@@ -177,6 +177,8 @@ export type {
   RunSpan,
   RunTrace,
   MarketplaceItem,
+  MarketplaceSearchKind,
+  MarketplaceSearchGroup,
   MarketplaceSearchRow,
   MarketplaceSearchPage,
   MarketplaceVersion,

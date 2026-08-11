@@ -49,7 +49,6 @@ function harness(responder: () => Response) {
 }
 
 const SEARCH_ROW = {
-  item: { kind: 'tool', name: 'generate_uuid', description: 'Generate a UUID.', tags: ['uuid'] },
   ref: 'tai42/toolbox',
   namespace: 'tai42',
   name: 'toolbox',
@@ -64,6 +63,11 @@ const SEARCH_ROW = {
   latest_version: '0.1.0',
   downloads: 3,
   updated_at: '2026-07-12T00:00:00Z',
+  kinds: [
+    { kind: 'tool', count: 2, names: ['generate_uuid', 'hash_text'] },
+    { kind: 'agent', count: 1, names: ['echo'] },
+  ],
+  groups: [{ name: 'utilities', count: 2 }],
 };
 
 const INSTALLED_ROW = {
@@ -114,7 +118,13 @@ const PLUGIN_DETAIL = {
     status: 'published',
     published_at: '2026-07-12T00:00:00Z',
     items: [
-      { kind: 'tool', name: 'generate_uuid', description: 'Generate a UUID.', tags: ['uuid'] },
+      {
+        kind: 'tool',
+        name: 'generate_uuid',
+        description: 'Generate a UUID.',
+        tags: ['uuid'],
+        group: null,
+      },
     ],
   },
   versions: [
@@ -130,7 +140,7 @@ const PLUGIN_DETAIL = {
 describe('marketplace client transport', () => {
   it('searchMarketplace GETs /api/marketplace/search with every param and repeated tags', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { items: [SEARCH_ROW], total: 1, page: 2, page_size: 20 } }),
+      jsonResponse({ data: { listings: [SEARCH_ROW], total: 1, page: 2, page_size: 20 } }),
     );
     const out = await client.searchMarketplace({
       q: 'uuid',
@@ -149,13 +159,18 @@ describe('marketplace client transport', () => {
       '/api/marketplace/search?q=uuid&kind=tool&category=productivity&tags=hashing&tags=text' +
         '&namespace=tai42&tier=official&contract=0.1.0&sort=downloads&page=2&page_size=20',
     );
-    expect(out.items[0]?.ref).toBe('tai42/toolbox');
+    expect(out.listings[0]?.ref).toBe('tai42/toolbox');
+    expect(out.listings[0]?.kinds).toEqual([
+      { kind: 'tool', count: 2, names: ['generate_uuid', 'hash_text'] },
+      { kind: 'agent', count: 1, names: ['echo'] },
+    ]);
+    expect(out.listings[0]?.groups).toEqual([{ name: 'utilities', count: 2 }]);
     expect(out.total).toBe(1);
   });
 
   it('searchMarketplace() with no filters sends no query params', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { items: [], total: 0, page: 1, page_size: 20 } }),
+      jsonResponse({ data: { listings: [], total: 0, page: 1, page_size: 20 } }),
     );
     await client.searchMarketplace();
     expect(captured[0]?.url).toBe('/api/marketplace/search');
@@ -168,6 +183,7 @@ describe('marketplace client transport', () => {
     expect(captured[0]?.url).toBe('/api/marketplace/plugins/tai42/tool%20box');
     expect(out.namespace).toBe('tai42');
     expect(out.latest?.items[0]?.name).toBe('generate_uuid');
+    expect(out.latest?.items[0]?.group).toBeNull();
     expect(out.versions[0]?.version).toBe('0.1.0');
   });
 
@@ -205,6 +221,10 @@ describe('marketplace client transport', () => {
     expect(captured[0]?.url).toBe('/api/marketplace/installed');
     expect(out.installed[0]?.update_available).toBe(true);
     expect(out.installed[0]?.incompatible_newer).toBe('0.3.0');
+    expect(out.installed[0]?.items[0]).toEqual({
+      kind: 'mcp-server',
+      name: 'postgres',
+    });
     expect(out.installed[0]?.compat).toEqual({
       status: 'incompatible',
       reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
@@ -357,9 +377,9 @@ describe('marketplace client transport', () => {
     );
   });
 
-  it('throws ApiSchemaError LOUDLY on a drifting search response (items not an array)', async () => {
+  it('throws ApiSchemaError LOUDLY on a drifting search response (listings not an array)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { items: 'nope', total: 0, page: 1, page_size: 20 } }),
+      jsonResponse({ data: { listings: 'nope', total: 0, page: 1, page_size: 20 } }),
     );
     await expect(client.searchMarketplace()).rejects.toBeInstanceOf(ApiSchemaError);
   });

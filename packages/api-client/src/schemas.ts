@@ -1824,26 +1824,52 @@ export type RunTrace = z.infer<typeof runTrace>;
 // -- marketplace -------------------------------------------------------------
 
 /**
- * One contained item of a marketplace plugin (a searchable row): its kind
- * (tool / agent / extension / …), name, description, and free-form tags.
+ * One contained item of a marketplace plugin's published version: its kind
+ * (tool / agent / extension / …), name, description, free-form tags, and the
+ * logical group it belongs to (`null` when ungrouped).
  */
 export const marketplaceItem = z.object({
   kind: z.string(),
   name: z.string(),
   description: z.string(),
   tags: z.array(z.string()),
+  group: z.string().nullable(),
 });
 export type MarketplaceItem = z.infer<typeof marketplaceItem>;
 
 /**
- * One item-level search row (`GET /api/marketplace/search`): the contained item
- * plus the listing it belongs to. `ref` is the "namespace/name" install target
- * (install targets the LISTING), so every row carries enough to group under and
- * link to its plugin. `latest_version` is nullable defensively; the search
- * relation only emits listings with a published version.
+ * One kind summary of a search row: an item kind, how many UNGROUPED items of
+ * that kind the listing's latest published version carries, and their names.
+ * The registry orders the array count DESC then kind ASC, and each entry's
+ * `names` ASC; the UI renders in that order.
+ */
+export const marketplaceSearchKind = z.object({
+  kind: z.string(),
+  count: z.number(),
+  names: z.array(z.string()),
+});
+export type MarketplaceSearchKind = z.infer<typeof marketplaceSearchKind>;
+
+/**
+ * One logical group of a search row: the group name and how many items the
+ * listing's latest published version places in it. The registry orders the
+ * array count DESC then name ASC; the UI renders in that order.
+ */
+export const marketplaceSearchGroup = z.object({
+  name: z.string(),
+  count: z.number(),
+});
+export type MarketplaceSearchGroup = z.infer<typeof marketplaceSearchGroup>;
+
+/**
+ * One listing-level search row (`GET /api/marketplace/search`). `ref` is the
+ * "namespace/name" install target, so every row carries enough to link to its
+ * plugin. `latest_version` is nullable defensively; the search relation only
+ * emits listings with a published version. `kinds` summarizes that latest
+ * version's UNGROUPED items; `groups` summarizes its logical groups (`[]` when
+ * none). Both keys are always present.
  */
 export const marketplaceSearchRow = z.object({
-  item: marketplaceItem,
   ref: z.string(),
   namespace: z.string(),
   name: z.string(),
@@ -1861,15 +1887,17 @@ export const marketplaceSearchRow = z.object({
   latest_version: z.string().nullable(),
   downloads: z.number(),
   updated_at: z.string(),
+  kinds: z.array(marketplaceSearchKind),
+  groups: z.array(marketplaceSearchGroup),
 });
 export type MarketplaceSearchRow = z.infer<typeof marketplaceSearchRow>;
 
 /**
- * One page of search rows. The wire carries no next-page field — has-next is
+ * One page of listing rows. The wire carries no next-page field — has-next is
  * COMPUTED: `page * page_size < total`.
  */
 export const marketplaceSearchPage = z.object({
-  items: z.array(marketplaceSearchRow),
+  listings: z.array(marketplaceSearchRow),
   total: z.number(),
   page: z.number(),
   page_size: z.number(),
@@ -2005,9 +2033,9 @@ export const marketplaceInstalledPlugin = z
     incompatible_newer: z.string().nullable(),
     missing_upstream: z.boolean(),
     compat: marketplaceInstalledCompat,
-    // The `{kind, name}` of every item this plugin's stored spec provides (local
-    // truth). The McpTab joins the mcp-server item names against the manifest's
-    // mcp-entry titles to render an installer-written entry read-only.
+    // The `{kind, name}` of every item this plugin's stored spec provides
+    // (local truth). The McpTab joins the mcp-server item names against the
+    // manifest's mcp-entry titles to render an installer-written entry read-only.
     items: z.array(marketplaceItem.pick({ kind: true, name: true })),
   })
   .strict();
