@@ -12,7 +12,7 @@ import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { __resetContributions } from '@tai42/studio-sdk/testing';
+import { __resetContributions, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { ApiError, type MeProjection, type ToolTagEntry } from '@tai42/api-client';
 
 import { ToolsPage } from './ToolsPage';
@@ -774,6 +774,40 @@ describe('ToolsPage — overlay edit affordance', () => {
     });
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: toolMetaKey });
+    });
+  });
+
+  it('reloads the SDK display-name overlay on a successful edit', async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    const upsertToolMeta = vi.fn().mockResolvedValue({
+      tool_name: 'echo',
+      display_name: 'Echo Tool',
+      folder_id: null,
+      tags: [],
+      hidden: null,
+    });
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi.fn().mockResolvedValue([]),
+      listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+      upsertToolMeta,
+    };
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{}} reload={reload}>
+        <ToolsPage search={{}} />
+      </StaticToolDisplayNamesProvider>,
+      { client, projection: fullProjection() },
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Edit tool echo' }));
+    await screen.findByText('Edit echo');
+    await user.click(screen.getByRole('radio', { name: 'Hidden' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    // The edit may have changed a display name, so the app-level overlay refreshes.
+    await waitFor(() => {
+      expect(reload).toHaveBeenCalledTimes(1);
     });
   });
 

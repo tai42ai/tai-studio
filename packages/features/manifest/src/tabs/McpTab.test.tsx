@@ -3,6 +3,8 @@ import { QueryClient } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
+
 import { renderWithProviders } from '../test-utils';
 import { McpTab } from './McpTab';
 
@@ -451,6 +453,28 @@ describe('McpTab', () => {
         { title: 'srv', config: { command: 'run' }, include: ['a:chain'] },
       ]);
     });
+  });
+
+  it('labels a discovered-tool option "Display (raw)" from the tool-meta overlay', async () => {
+    const user = userEvent.setup();
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{ a: 'Alpha' }}>
+        <McpTab />
+      </StaticToolDisplayNamesProvider>,
+      { client },
+    );
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.click(screen.getByRole('combobox', { name: 'Included tools: choose a tool' }));
+    expect(await screen.findByRole('option', { name: 'Alpha (a)' })).toBeInTheDocument();
+    // A discovered tool absent from the overlay keeps its bare raw name.
+    expect(screen.getByRole('option', { name: 'b' })).toBeInTheDocument();
   });
 
   it('keeps the draft and surfaces a conflict when the server config moves under unsaved edits', async () => {

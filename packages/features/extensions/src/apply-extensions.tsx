@@ -45,6 +45,7 @@ import {
   hiddenToolNames,
   toolsListKey,
   useApi,
+  useToolDisplayNames,
 } from '@tai42/studio-sdk';
 
 import {
@@ -365,6 +366,7 @@ function ToolExtensionsEditor({
 
 export function ApplyExtensionsPanel(): ReactNode {
   const api = useApi();
+  const displayNames = useToolDisplayNames();
 
   const toolsQuery = useQuery({
     queryKey: applyToolsKey,
@@ -449,6 +451,7 @@ export function ApplyExtensionsPanel(): ReactNode {
               disabled={toolsQuery.isPending || presetsQuery.isPending}
               placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
               excludeNames={excludeToolNames}
+              displayNames={displayNames}
             />
           </Field>
         )}

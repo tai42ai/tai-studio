@@ -71,6 +71,16 @@ export {
   useFeatureOffMessage,
 } from './hooks/useSystemKinds';
 export type { SystemKindsState } from './hooks/useSystemKinds';
+export {
+  ToolDisplayNamesProvider,
+  useToolDisplayNames,
+  useReloadToolDisplayNames,
+  toolDisplayLabel,
+} from './hooks/useToolDisplayNames';
+export type {
+  ToolDisplayNamesState,
+  ToolDisplayNamesContextValue,
+} from './hooks/useToolDisplayNames';
 export { ThemeProvider, useTheme } from './hooks/useTheme';
 export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
 export { useBreakpoint } from './hooks/useBreakpoint';

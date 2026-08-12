@@ -234,6 +234,19 @@ describe('ToolPicker', () => {
     expect(screen.queryByRole('option', { name: 'beta (beta)' })).toBeNull();
   });
 
+  it('renders the bare raw name when the mapping is an empty string', async () => {
+    const user = userEvent.setup();
+    render(
+      <ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} displayNames={{ beta: '' }} />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    // An empty display name is not a label: the option reads the bare raw name, never
+    // the " (beta)" a naive `${display} (raw)` would emit.
+    expect(await screen.findByRole('option', { name: 'beta' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: ' (beta)' })).toBeNull();
+  });
+
   it('composes the display name and the agent suffix as "Display (raw) (agent)"', async () => {
     const user = userEvent.setup();
     render(

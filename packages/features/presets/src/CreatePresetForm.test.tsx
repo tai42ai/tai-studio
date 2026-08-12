@@ -9,6 +9,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { toolsListKey } from '@tai42/studio-sdk';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { ApiError } from '@tai42/api-client';
 
 import { CreatePresetForm } from './CreatePresetForm';
@@ -491,6 +492,20 @@ describe('CreatePresetForm', () => {
     expect(await screen.findByRole('option', { name: 'writer_agent (agent)' })).toBeInTheDocument();
     // A non-agent tool keeps its bare label.
     expect(screen.getByRole('option', { name: 'weather' })).toBeInTheDocument();
+  });
+
+  it('labels a base-picker option "Display (raw)" from the tool-meta overlay', async () => {
+    const user = userEvent.setup();
+    const client = baseClient({ listTools: vi.fn().mockResolvedValue(['weather']) });
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{ weather: 'Weather' }}>
+        <CreatePresetForm onClose={vi.fn()} />
+      </StaticToolDisplayNamesProvider>,
+      { client },
+    );
+
+    await user.click(await screen.findByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'Weather (weather)' })).toBeInTheDocument();
   });
 
   it('renders a 400 base-is-a-preset message verbatim', async () => {

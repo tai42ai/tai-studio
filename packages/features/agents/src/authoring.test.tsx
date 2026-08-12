@@ -19,6 +19,7 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { ApiError, type CreatePresetBody, type PresetDetail } from '@tai42/api-client';
 import { toolsListKey } from '@tai42/studio-sdk';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 
 import { AgentsPage } from './agents';
 import { ComposeAgentDialog } from './authoring';
@@ -210,6 +211,26 @@ describe('ComposeAgentDialog', () => {
     const body = createPreset.mock.lastCall?.[0];
     expect(body).toBeDefined();
     expect(body?.fixed_kwargs).not.toHaveProperty('user_message');
+  });
+
+  it('labels a tool option "Display (raw)" and shows the bare display name on its chip', async () => {
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{ echo: 'Echo' }}>
+        <ComposeAgentDialog agents={[authorableAgent()]} onClose={vi.fn()} />
+      </StaticToolDisplayNamesProvider>,
+      composeClient(),
+    );
+
+    await pickBaseAgent();
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Add a tool' }));
+    // The option carries the human name with the raw name in parentheses.
+    await userEvent.click(await screen.findByRole('option', { name: 'Echo (echo)' }));
+
+    // The chip is a COMPACT surface: it shows the bare display name, not `Display (raw)`.
+    const chip = screen.getByText('Echo', { selector: 'span' }).closest('.tai-chip');
+    expect(chip).toHaveClass('tai-chip-static');
+    expect(screen.queryByText('Echo (echo)', { selector: 'span' })).toBeNull();
   });
 
   it('HIDES the tags input when the tool_meta kind is OFF, and still composes', async () => {

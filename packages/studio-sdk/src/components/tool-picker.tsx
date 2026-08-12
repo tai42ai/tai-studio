@@ -6,7 +6,7 @@
  * selected value; this component fetches nothing.
  *
  * Four optional extensions, each inert unless supplied; the preset create flow
- * passes the first three and the multi-tool picker the first two:
+ * passes all four and the multi-tool picker every one but `agentToolNames`:
  *  - `excludeNames` removes names from the options (e.g. a preset cannot be
  *    another preset's base, so the preset create flow excludes existing preset
  *    names). The server stays the authority — a slipped-through name is rejected
@@ -30,6 +30,7 @@
  */
 import { useState } from 'react';
 
+import { toolDisplayLabel } from '../hooks/useToolDisplayNames';
 import { Field } from './field';
 import { Select, type SelectGroup } from './select';
 
@@ -63,6 +64,7 @@ export interface ToolPickerProps {
   readonly displayNames?: Readonly<Record<string, string>>;
 }
 
+const NO_DISPLAY_NAMES: Readonly<Record<string, string>> = {};
 const UNTAGGED = 'Untagged';
 // Radix `Select.Item` forbids an empty-string value, so the "no filter" choice
 // uses a sentinel rather than ''. A tool literally tagged this string would just
@@ -76,16 +78,15 @@ function groupFor(name: string, tagsByTool: Readonly<Record<string, readonly str
 }
 
 /**
- * The option label: `Display Name (raw)` when a distinct display name maps the
- * name, else the bare name; either way suffixed " (agent)" for an agent run tool.
+ * The option label: `Display Name (raw)` when a distinct non-empty display name maps
+ * the name, else the bare name; either way suffixed " (agent)" for an agent run tool.
  */
 function optionLabel(
   name: string,
   displayNames: Readonly<Record<string, string>> | undefined,
   agentToolNames: ReadonlySet<string> | undefined,
 ): string {
-  const display = displayNames?.[name];
-  const base = display !== undefined && display !== name ? `${display} (${name})` : name;
+  const base = toolDisplayLabel(displayNames ?? NO_DISPLAY_NAMES, name);
   return agentToolNames?.has(name) === true ? `${base} (agent)` : base;
 }
 

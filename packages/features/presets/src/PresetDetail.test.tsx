@@ -9,6 +9,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { toolsListKey } from '@tai42/studio-sdk';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { ApiError } from '@tai42/api-client';
 
 import { PresetDetail } from './PresetDetail';
@@ -146,6 +147,57 @@ describe('PresetDetail', () => {
     // The overlay map behind the detail grid + list is refetched on success.
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: presetToolMetaKey });
+    });
+  });
+
+  it('reloads the SDK display-name overlay on a successful details edit', async () => {
+    const user = userEvent.setup();
+    const reload = vi.fn();
+    const upsertToolMeta = vi.fn().mockResolvedValue({
+      tool_name: 'paris_weather',
+      display_name: 'Paris Weather',
+      folder_id: null,
+      tags: ['geo'],
+      hidden: null,
+    });
+    const client: StubApiClient = {
+      getPreset: vi.fn().mockResolvedValue(detail),
+      listPresetVersions: vi.fn().mockResolvedValue(versions),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          {
+            tool_name: 'paris_weather',
+            display_name: null,
+            folder_id: null,
+            tags: ['geo'],
+            hidden: null,
+          },
+        ],
+      }),
+      upsertToolMeta,
+    };
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{}} reload={reload}>
+        <PresetDetail name="paris_weather" />
+      </StaticToolDisplayNamesProvider>,
+      { client },
+    );
+
+    const edit = await screen.findByRole('button', { name: 'Edit details for paris_weather' });
+    await waitFor(() => {
+      expect(edit).toBeEnabled();
+    });
+    await user.click(edit);
+
+    const nameInput = screen.getByLabelText('Display name');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Paris Weather');
+    await user.click(screen.getByRole('button', { name: 'Save details' }));
+
+    // The edit may have changed the display name, so the app-level overlay refreshes.
+    await waitFor(() => {
+      expect(reload).toHaveBeenCalledTimes(1);
     });
   });
 

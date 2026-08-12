@@ -7,7 +7,8 @@
  *
  * Provider order (outermost→inner): ThemeProvider ▸ AuthProvider ▸
  * QueryClientProvider ▸ ApiProvider ▸ UnauthorizedProvider ▸ CapabilityProvider ▸
- * NavigationProvider ▸ RouterProvider.
+ * SystemKindsProvider ▸ ToolDisplayNamesProvider ▸ NavigationProvider ▸
+ * RouterProvider.
  */
 import { useEffect, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -20,6 +21,7 @@ import {
   NavigationProvider,
   SystemKindsProvider,
   ThemeProvider,
+  ToolDisplayNamesProvider,
   UnauthorizedProvider,
   useAuth,
   type AuthState,
@@ -206,9 +208,16 @@ export function createStudio(deps: StudioDeps): Studio {
                       it runs a plain fetch state machine that the query-cache wipe on
                       auth flips never drops, and it fails open (not-off) rather than
                       blocking the shell. */}
+                  {/* ToolDisplayNamesProvider reads the tool-meta overlay (`GET
+                      /api/tool-meta`) once per auth flip, so every tool picker labels
+                      raw names with their human display names from one shared read. It
+                      too runs a plain fetch state machine and fails open (empty map ⇒
+                      bare raw names) rather than blocking the shell. */}
                   <CapabilityProvider>
                     <SystemKindsProvider>
-                      <Inner />
+                      <ToolDisplayNamesProvider>
+                        <Inner />
+                      </ToolDisplayNamesProvider>
                     </SystemKindsProvider>
                   </CapabilityProvider>
                 </UnauthorizedProvider>

@@ -41,6 +41,7 @@ import {
   toolsListKey,
   useApi,
   useFeatureOff,
+  useToolDisplayNames,
   validateAgainstSchema,
   type JsonSchema,
   type SchemaEditorChange,
@@ -146,6 +147,7 @@ export function ComposeAgentDialog({
   // proactively off the system kind-status table; the post-create `isFeatureDisabled`
   // swallow below stays as the backstop for a stale table.
   const toolMetaOff = useFeatureOff('tool_meta');
+  const displayNames = useToolDisplayNames();
 
   const toolsQuery = useQuery({ queryKey: authoredToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: authoredToolTagsKey, queryFn: () => api.listToolTags() });
@@ -470,6 +472,7 @@ export function ComposeAgentDialog({
                     <MultiToolPicker
                       toolNames={visibleToolNames}
                       tagsByTool={tagsByTool}
+                      displayNames={displayNames}
                       value={toolNames}
                       onChange={setToolNames}
                       disabled={toolsQuery.isPending}
@@ -529,6 +532,7 @@ export function ComposeAgentDialog({
                     <SubAgentComposer
                       toolNames={visibleToolNames}
                       tagsByTool={tagsByTool}
+                      displayNames={displayNames}
                       presetRecords={usablePresets}
                       value={subagents}
                       onChange={setSubagents}

@@ -22,6 +22,8 @@ import {
   type PresetRecord,
 } from '@tai42/api-client';
 
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
+
 import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';
 
@@ -472,5 +474,20 @@ describe('ApplyExtensionsPanel — hidden-tool exclusion', () => {
     expect(screen.getByRole('option', { name: 'open_tool' })).toBeInTheDocument();
     // The effective-hidden `secret` is absent from the picker.
     expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
+  });
+});
+
+describe('ApplyExtensionsPanel — display names', () => {
+  it('labels a picker option "Display (raw)" from the tool-meta overlay', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{ shout: 'Shout' }}>
+        <ApplyExtensionsPanel />
+      </StaticToolDisplayNamesProvider>,
+      { client: makeClient({ listTools: vi.fn().mockResolvedValue(['shout']) }) },
+    );
+
+    await user.click(await screen.findByRole('combobox'));
+    expect(await screen.findByRole('option', { name: 'Shout (shout)' })).toBeInTheDocument();
   });
 });

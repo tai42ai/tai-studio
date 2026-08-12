@@ -81,6 +81,10 @@ const defaultHandlers = [
   // DB-backed feature states on mount; an empty table (no kind OFF) is the default,
   // and the strict `onUnhandledRequest` guard would fail without an answer here.
   http.get('*/api/system/kinds', () => HttpResponse.json({ data: [] })),
+  // Every authenticated render also mounts the ToolDisplayNamesProvider, which reads
+  // the tool-meta overlay on mount; an empty overlay (no display names) is the
+  // default, and the strict `onUnhandledRequest` guard would fail without it.
+  http.get('*/api/tool-meta', () => HttpResponse.json({ data: { folders: [], meta: [] } })),
 ];
 
 /** The msw server; tests register per-case handlers with `server.use(...)`. */
