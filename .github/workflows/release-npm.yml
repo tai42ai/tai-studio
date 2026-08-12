@@ -94,3 +94,27 @@ jobs:
               "sha": "${{ github.sha }}",
               "tag": "${{ github.ref_name }}"
             }
+
+  # Plugin rebuild hook: a published Studio release pokes babelfish, whose
+  # sdk-update lane repins packages/flows to this version and rebuilds the studio
+  # plugin bundle. Fork runs carry no token and skip.
+  notify-babelfish:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BABELFISH_DISPATCH_TOKEN: ${{ secrets.TAI_BABELFISH_DISPATCH_TOKEN }}
+    steps:
+      - name: Trigger the babelfish sdk-update rebuild
+        if: env.BABELFISH_DISPATCH_TOKEN != ''
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ env.BABELFISH_DISPATCH_TOKEN }}
+          repository: ${{ github.repository_owner }}/babelfish
+          event-type: sdk-release
+          client-payload: |
+            {
+              "sha": "${{ github.sha }}",
+              "tag": "${{ github.ref_name }}"
+            }
