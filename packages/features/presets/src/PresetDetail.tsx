@@ -45,6 +45,7 @@ import {
   toolsListKey,
   useApi,
   useAppNavigate,
+  useReloadToolDisplayNames,
   type OverlayDetails,
 } from '@tai42/studio-sdk';
 
@@ -260,14 +261,17 @@ function EditOverlayDialog({
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  const reloadDisplayNames = useReloadToolDisplayNames();
   const [value, setValue] = useState<OverlayDetails>(initial);
 
   const save = useMutation({
     mutationFn: () => api.upsertToolMeta(toolName, overlayDetailsPatch(value)),
     onSuccess: () => {
       // The overlay row changed — refetch the tool_meta map behind the detail grid
-      // and the list's display-name/tags cells.
+      // and the list's display-name/tags cells, and refresh the SDK-level overlay so
+      // every tool picker across the app re-labels alongside this surface.
       void queryClient.invalidateQueries({ queryKey: presetToolMetaKey });
+      reloadDisplayNames();
       onClose();
     },
   });

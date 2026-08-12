@@ -51,6 +51,7 @@ import {
   useBreakpoint,
   useCanWrite,
   useCapabilities,
+  useReloadToolDisplayNames,
   type CapabilityState,
   type ExplorerColumn,
   type ExplorerEmptyStates,
@@ -311,6 +312,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
   const { state } = useCapabilities();
   const navigate = useAppNavigate();
   const { isSinglePane } = useBreakpoint();
+  const reloadDisplayNames = useReloadToolDisplayNames();
 
   // The tool being edited, plus the folder tree snapshot the dialog opened with.
   const [editing, setEditing] = useState<{ view: ToolView; folders: readonly Folder[] } | null>(
@@ -322,6 +324,9 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
       api.upsertToolMeta(name, patch),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: toolMetaKey });
+      // The edit may have changed a display name; refresh the SDK-level overlay so
+      // every tool picker across the app re-labels alongside this list.
+      reloadDisplayNames();
       setEditing(null);
     },
   });

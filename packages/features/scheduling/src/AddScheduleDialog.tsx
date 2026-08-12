@@ -30,6 +30,7 @@ import {
   errorMessage,
   hiddenToolNames,
   useApi,
+  useToolDisplayNames,
 } from '@tai42/studio-sdk';
 
 import { scheduleToolMetaKey, scheduleToolTagsKey, scheduleToolsKey, schedulesKey } from './keys';
@@ -66,6 +67,7 @@ function parseKwargs(
 export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  const displayNames = useToolDisplayNames();
 
   const toolsQuery = useQuery({ queryKey: scheduleToolsKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: scheduleToolTagsKey, queryFn: () => api.listToolTags() });
@@ -178,6 +180,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
               disabled={toolsQuery.isPending}
               placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
               excludeNames={excludeToolNames}
+              displayNames={displayNames}
             />
           </Field>
         )}

@@ -13,7 +13,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError } from '@tai42/api-client';
-import { deferred } from '@tai42/studio-sdk/testing';
+import { deferred, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 
 import { AddScheduleDialog } from './AddScheduleDialog';
 import { makeClient, renderWithProviders } from './test-utils';
@@ -311,6 +311,25 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
     expect(screen.getByRole('option', { name: 'open_task' })).toBeInTheDocument();
     // The effective-hidden `secret_task` is absent from the picker.
     expect(screen.queryByRole('option', { name: 'secret_task' })).toBeNull();
+  });
+});
+
+describe('AddScheduleDialog — display names', () => {
+  it('labels a picker option "Display (raw)" from the tool-meta overlay', async () => {
+    const user = userEvent.setup();
+    const client = makeClient({ listTools: vi.fn().mockResolvedValue(['sync_schedule_task']) });
+    renderWithProviders(
+      <StaticToolDisplayNamesProvider names={{ sync_schedule_task: 'Nightly Sync' }}>
+        <AddScheduleDialog onClose={vi.fn()} />
+      </StaticToolDisplayNamesProvider>,
+      { client },
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('combobox'));
+    expect(
+      await screen.findByRole('option', { name: 'Nightly Sync (sync_schedule_task)' }),
+    ).toBeInTheDocument();
   });
 });
 

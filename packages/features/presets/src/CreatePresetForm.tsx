@@ -49,6 +49,7 @@ import {
   useApi,
   useAppNavigate,
   useFeatureOff,
+  useToolDisplayNames,
   type SchemaEditorChange,
 } from '@tai42/studio-sdk';
 
@@ -82,6 +83,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   // proactively off the system kind-status table; the post-create `isFeatureDisabled`
   // swallow below stays as the backstop for a stale table.
   const toolMetaOff = useFeatureOff('tool_meta');
+  const displayNames = useToolDisplayNames();
 
   const toolsQuery = useQuery({ queryKey: presetToolsKey, queryFn: () => api.listTools() });
   const presetsQuery = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
@@ -349,6 +351,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
               excludeNames={excludeNames}
               tagsByTool={tagsByTool}
               agentToolNames={agentToolNames}
+              displayNames={displayNames}
             />
           </Field>
         )}

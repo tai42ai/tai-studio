@@ -10,6 +10,7 @@ import { SubAgentCard } from './SubAgentCard';
 export function SubAgentComposer({
   toolNames,
   tagsByTool,
+  displayNames,
   presetRecords,
   value,
   onChange,
@@ -17,6 +18,7 @@ export function SubAgentComposer({
 }: {
   readonly toolNames: readonly string[];
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
+  readonly displayNames?: Readonly<Record<string, string>>;
   readonly presetRecords: readonly PresetRecord[];
   readonly value: readonly InlineSubAgentSpec[];
   readonly onChange: (next: InlineSubAgentSpec[]) => void;
@@ -32,6 +34,7 @@ export function SubAgentComposer({
           index={index}
           toolNames={toolNames}
           tagsByTool={tagsByTool}
+          displayNames={displayNames}
           presetRecords={presetRecords}
           disabled={disabled}
           onChange={(next) => {

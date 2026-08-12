@@ -15,6 +15,7 @@ export function SubAgentCard({
   spec,
   toolNames,
   tagsByTool,
+  displayNames,
   presetRecords,
   onChange,
   onRemove,
@@ -24,6 +25,7 @@ export function SubAgentCard({
   readonly spec: InlineSubAgentSpec;
   readonly toolNames: readonly string[];
   readonly tagsByTool?: Readonly<Record<string, readonly string[]>>;
+  readonly displayNames?: Readonly<Record<string, string>>;
   readonly presetRecords: readonly PresetRecord[];
   readonly onChange: (next: InlineSubAgentSpec) => void;
   readonly onRemove: () => void;
@@ -71,6 +73,7 @@ export function SubAgentCard({
           <MultiToolPicker
             toolNames={toolNames}
             tagsByTool={tagsByTool}
+            displayNames={displayNames}
             value={spec.tool_names}
             onChange={(next) => {
               onChange({ ...spec, tool_names: next });

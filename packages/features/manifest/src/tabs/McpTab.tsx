@@ -55,6 +55,7 @@ import {
   errorMessage,
   useApi,
   useRegisterDirty,
+  useToolDisplayNames,
 } from '@tai42/studio-sdk';
 import type { JsonSchema, RecordEntryContext, RecordEntryRenderer } from '@tai42/studio-sdk';
 import { useRef, useState } from 'react';
@@ -384,6 +385,9 @@ function ToolListEditor({
 }): ReactNode {
   const [base, setBase] = useState<string | null>(null);
   const [exts, setExts] = useState<readonly string[]>([]);
+  // A discovered MCP tool may carry no overlay row yet, so the picker falls back to
+  // the bare raw name; a mapped one shows its human display name.
+  const displayNames = useToolDisplayNames();
 
   const token =
     base === null || base === ''
@@ -466,6 +470,7 @@ function ToolListEditor({
           placeholder="Choose a tool…"
           aria-label={`${legend}: choose a tool`}
           idPrefix={`${idPrefix}-tool`}
+          displayNames={displayNames}
         />
       )}
 

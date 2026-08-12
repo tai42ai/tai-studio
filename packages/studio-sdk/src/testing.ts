@@ -2,6 +2,8 @@
 export { __resetContributions } from './plugin/registry';
 /** Test-only plugin host-state reset, cleared between cases beside the registry reset. */
 export { __resetPluginHostState } from './plugin/host-state';
+/** Test-only injector: serves a fixed tool display-name map without a live fetch. */
+export { StaticToolDisplayNamesProvider } from './hooks/useToolDisplayNames';
 
 /**
  * Every `ResizeObserver` the stub has handed out and not yet had disconnected,
