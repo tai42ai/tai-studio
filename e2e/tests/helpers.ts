@@ -67,6 +67,41 @@ export async function expectPluginErrorCard(page: Page, contains: RegExp): Promi
 }
 
 /**
+ * Open the tools list's row for `name`, paging the explorer forward until it is on
+ * screen. The explorer paginates CLIENT-SIDE (24 entries per page by default) and
+ * this boot projects well over a page of tools. Paging is local state — never a
+ * route change or a reload — so a just-registered plugin panel stays in module
+ * state.
+ */
+export async function openToolRow(page: Page, name: string): Promise<void> {
+  const link = page.getByRole('link', { name: `Open tool ${name}`, exact: true });
+  const pager = page.getByRole('navigation', { name: 'Tools pagination' });
+  const next = pager.getByRole('button', { name: 'Next page' });
+  const previous = pager.getByRole('button', { name: 'Previous page' });
+  // The pager renders for any non-empty list, so this also gates on the list itself
+  // having painted.
+  await expect(next, 'the tools explorer never painted a non-empty list').toBeVisible();
+  // Late tag and folder reads can refile entries after the first paint, shifting rows
+  // across pages, so a sweep that ended without the target is rewound and repeated once.
+  for (let sweep = 0; sweep < 2; sweep += 1) {
+    if (sweep > 0) {
+      while ((await previous.getAttribute('aria-disabled')) !== 'true') await previous.click();
+    }
+    for (;;) {
+      if ((await link.count()) > 0) {
+        await link.click();
+        return;
+      }
+      // The last page marks Next `aria-disabled` rather than dropping it from the tab
+      // order, and its click handler is inert there — so that attribute is the bound.
+      if ((await next.getAttribute('aria-disabled')) === 'true') break;
+      await next.click();
+    }
+  }
+  throw new Error(`no "Open tool ${name}" row on any page of the tools explorer`);
+}
+
+/**
  * Read the authed interactions SSE stream in the browser and resolve the
  * `interaction_id` of the pending question whose text equals `question`. Matching
  * on a UNIQUE question makes this robust against any stale backlog. Runs in-page so
