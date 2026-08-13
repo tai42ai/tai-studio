@@ -51,6 +51,8 @@ const record = {
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
 };
 
 describe('preset client transport', () => {

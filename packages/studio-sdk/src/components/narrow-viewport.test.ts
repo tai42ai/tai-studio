@@ -386,6 +386,7 @@ const CONTAINER_STRIPS = [
   '.tai-segmented',
   '.tai-explorer-controls',
   '.tai-explorer-folder',
+  '.tai-explorer-pagination',
 ];
 
 /**

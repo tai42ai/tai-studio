@@ -244,6 +244,8 @@ describe('ToolExtensionsCard', () => {
         output_schema: null,
         conflicted: false,
         conflicted_reason: null,
+        uses: [],
+        used_by: [],
       },
     ];
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {
@@ -331,6 +333,8 @@ describe('ToolExtensionsCard', () => {
         output_schema: null,
         conflicted: true,
         conflicted_reason: 'name collided with an existing tool at startup',
+        uses: [],
+        used_by: [],
       },
     ];
     renderWithProviders(<ToolExtensionsCard tool="shout" />, {

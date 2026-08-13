@@ -2081,11 +2081,46 @@
     flex-wrap: wrap;
   }
 
-  /* -- Card grids ------------------------------------------------------------------- */
+  /* The paged-view footer: range text on the leading edge, the per-page select and
+     prev/next controls on the trailing edge. Wraps on a narrow surface so it never
+     widens the page. */
+  .tai-explorer-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tai-space-3);
+    flex-wrap: wrap;
+  }
+
+  /* -- Card grids -------------------------------------------------------------------
+     `grid-auto-rows: 1fr` makes every row of the track the same height, and the
+     child chain below stretches each card to fill its cell, so a row's cards stay
+     level however much text each carries. */
   .tai-grid-cards {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
     gap: var(--tai-space-4);
+  }
+
+  .tai-grid-cards > [role='listitem'] {
+    display: flex;
+    min-width: 0;
+  }
+
+  .tai-grid-cards > [role='listitem'] > .tai-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Card description clamp so grid rows stay uniform: two lines, then ellipsis. */
+  .tai-clamp-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
   }
 
   /* -- Responsive bands ---------------------------------------------------------------

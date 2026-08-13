@@ -12,7 +12,9 @@
       "required": ["temperature_c"]
     },
     "conflicted": false,
-    "conflicted_reason": null
+    "conflicted_reason": null,
+    "uses": [],
+    "used_by": []
   },
   {
     "name": "stale_preset",
@@ -36,6 +38,8 @@
     ],
     "output_schema": null,
     "conflicted": true,
-    "conflicted_reason": "name 'stale_preset' collided with an existing tool at startup"
+    "conflicted_reason": "name 'stale_preset' collided with an existing tool at startup",
+    "uses": [],
+    "used_by": []
   }
 ]
