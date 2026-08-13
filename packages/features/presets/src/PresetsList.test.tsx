@@ -19,6 +19,8 @@ const normal = {
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
 };
 
 const conflicted = {
@@ -30,6 +32,8 @@ const conflicted = {
   output_schema: null,
   conflicted: true,
   conflicted_reason: 'name collided with an existing tool at startup',
+  uses: [],
+  used_by: [],
 };
 
 /** One tool_meta overlay row (display name + user tags), keyed by tool name. */

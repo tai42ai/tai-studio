@@ -17,6 +17,8 @@ const record = {
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
 };
 
 describe('presetRecord — single-tier store-backed row', () => {
@@ -76,6 +78,26 @@ describe('presetRecord — single-tier store-backed row', () => {
 
   it('throws loudly when extensions is a flat string list, not a combos list', () => {
     expect(() => schemas.presetRecord.parse({ ...record, extensions: ['chain'] })).toThrow();
+  });
+
+  it('parses the sorted uses / used_by cross-reference lists', () => {
+    const parsed = schemas.presetRecord.parse({
+      ...record,
+      uses: ['paris_weather'],
+      used_by: ['berlin_weather', 'london_weather'],
+    });
+    expect(parsed.uses).toEqual(['paris_weather']);
+    expect(parsed.used_by).toEqual(['berlin_weather', 'london_weather']);
+  });
+
+  it('throws loudly when uses is absent (the backend always emits it)', () => {
+    const { uses: _omitted, ...withoutUses } = record;
+    expect(() => schemas.presetRecord.parse(withoutUses)).toThrow();
+  });
+
+  it('throws loudly when used_by is absent (the backend always emits it)', () => {
+    const { used_by: _omitted, ...withoutUsedBy } = record;
+    expect(() => schemas.presetRecord.parse(withoutUsedBy)).toThrow();
   });
 });
 

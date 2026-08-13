@@ -48,6 +48,8 @@ const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => ({
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
   fixed_kwargs: {},
   ...over,
 });

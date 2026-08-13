@@ -12,14 +12,15 @@
  * {@link matchesSelectedTags}, {@link UNTAGGED_TOKEN}) so every consuming screen
  * shares one vocabulary/untagged-sentinel/OR-match rule rather than copying it.
  */
-import type { MouseEvent, ReactNode } from 'react';
+import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react';
 
 import { EntityCardGrid } from './entity-card-grid';
 import { childFolders, FolderBreadcrumb, FolderRow, type Folder } from './folder-nav';
 import { SearchIcon } from './icons';
 import { TextInput } from './inputs';
-import { Card, EmptyState } from './primitives';
+import { Button, Card, EmptyState } from './primitives';
 import { ScrollRegion } from './scroll-region';
+import { Select } from './select';
 import { Table, TBody, TD, TH, THead, TR } from './table';
 import { useViewMode, ViewToggle } from './view-toggle';
 
@@ -262,6 +263,49 @@ function FolderEntry({
   );
 }
 
+/** The page-size choices, and the default. */
+const PAGE_SIZES = [12, 24, 48, 96] as const;
+const DEFAULT_PAGE_SIZE = 24;
+
+const PAGE_SIZE_STORAGE_PREFIX = 'tai-studio.page-size.';
+
+function readStoredPageSize(surface: string): number {
+  try {
+    const raw = globalThis.localStorage.getItem(PAGE_SIZE_STORAGE_PREFIX + surface);
+    const parsed = raw === null ? Number.NaN : Number(raw);
+    if ((PAGE_SIZES as readonly number[]).includes(parsed)) return parsed;
+  } catch {
+    // No storage (private mode / non-browser) — fall back to the default.
+  }
+  return DEFAULT_PAGE_SIZE;
+}
+
+/**
+ * The persisted page size for one `surface`, mirroring {@link useViewMode}: an
+ * invalid or absent stored value degrades to the default, and a storage failure
+ * degrades to in-memory only — never a thrown boot.
+ */
+function usePageSize(surface: string): readonly [number, (size: number) => void] {
+  const [size, setSizeState] = useState<number>(() => readStoredPageSize(surface));
+  const setSize = useCallback(
+    (next: number) => {
+      setSizeState(next);
+      try {
+        globalThis.localStorage.setItem(PAGE_SIZE_STORAGE_PREFIX + surface, String(next));
+      } catch {
+        // Storage unavailable — the choice still applies for this session.
+      }
+    },
+    [surface],
+  );
+  return [size, setSize];
+}
+
+/** One page entry: a subfolder (sorted first) or a filtered item, in one array. */
+type ExplorerEntry<T> =
+  | { readonly kind: 'folder'; readonly folder: Folder }
+  | { readonly kind: 'item'; readonly item: T };
+
 export function ExplorerView<T>({
   items,
   getItemKey,
@@ -282,6 +326,17 @@ export function ExplorerView<T>({
   emptyStates,
 }: ExplorerViewProps<T>): ReactNode {
   const [viewMode, setViewMode] = useViewMode(viewSurface);
+  const [pageSize, setPageSize] = usePageSize(viewSurface);
+  const [page, setPage] = useState(1);
+
+  const query = search ? search.value.trim() : '';
+  const tagKey = tags !== undefined ? tags.selected.join(' ') : '';
+
+  // A new filter view starts on its first page; the clamp below then handles a
+  // set that shrinks under the current page without a reset.
+  useEffect(() => {
+    setPage(1);
+  }, [currentFolderId, query, tagKey, pageSize]);
 
   if (viewSurface === '') throw new Error('ExplorerView requires a non-empty viewSurface key.');
   if (columns.length === 0) throw new Error('ExplorerView requires at least one column.');
@@ -295,7 +350,6 @@ export function ExplorerView<T>({
   const inFolder = items.filter((item) => getFolderId(item) === currentFolderId);
 
   const selectedSet = tags !== undefined ? new Set(tags.selected) : undefined;
-  const query = search ? search.value.trim() : '';
   const filtered = inFolder.filter((item) => {
     if (tags !== undefined && selectedSet !== undefined && selectedSet.size > 0) {
       if (!matchesSelectedTags(tags.getTags(item), selectedSet)) return false;
@@ -348,91 +402,171 @@ export function ExplorerView<T>({
 
   const hasEntries = subfolders.length > 0 || filtered.length > 0;
 
+  // Subfolders (sorted first) then filtered items, as ONE entries array both views
+  // slice by page — so a page can straddle the folder→item boundary.
+  const entries: ExplorerEntry<T>[] = [
+    ...subfolders.map((folder) => ({ kind: 'folder', folder }) as const),
+    ...filtered.map((item) => ({ kind: 'item', item }) as const),
+  ];
+  const pageCount = Math.max(1, Math.ceil(entries.length / pageSize));
+  const effectivePage = Math.min(page, pageCount);
+  // Reconcile the stored page to the clamp so a set that shrinks below the page
+  // and then regrows (no reset dep changed) stays on the clamped page instead of
+  // jumping back to the stale one. Guarded, so this render-time set never loops.
+  if (page !== effectivePage) setPage(effectivePage);
+  const pageStart = (effectivePage - 1) * pageSize;
+  const pageEntries = entries.slice(pageStart, pageStart + pageSize);
+
+  const footer =
+    entries.length > 0 ? (
+      <nav className="tai-explorer-pagination" aria-label={`${label} pagination`}>
+        <span className="tai-muted">{`${String(pageStart + 1)}–${String(Math.min(pageStart + pageSize, entries.length))} of ${String(entries.length)}`}</span>
+        <div className="tai-row">
+          <Select
+            aria-label="Items per page"
+            value={String(pageSize)}
+            onValueChange={(value) => {
+              setPageSize(Number(value));
+            }}
+            options={PAGE_SIZES.map((size) => ({
+              value: String(size),
+              label: `${String(size)} per page`,
+            }))}
+          />
+          {/* aria-disabled, never the disabled attribute: a button removed from
+              the tab order at the bound drops focus to the body (WCAG 2.4.3).
+              The click guard makes activation at the bound an inert no-op. */}
+          <Button
+            variant="ghost"
+            aria-label="Previous page"
+            aria-disabled={effectivePage <= 1}
+            onClick={() => {
+              if (effectivePage <= 1) return;
+              setPage(effectivePage - 1);
+            }}
+          >
+            Prev
+          </Button>
+          <Button
+            variant="ghost"
+            aria-label="Next page"
+            aria-disabled={effectivePage >= pageCount}
+            onClick={() => {
+              if (effectivePage >= pageCount) return;
+              setPage(effectivePage + 1);
+            }}
+          >
+            Next
+          </Button>
+          <span className="tai-muted">{`Page ${String(effectivePage)} of ${String(pageCount)}`}</span>
+        </div>
+      </nav>
+    ) : null;
+
   let body: ReactNode;
   if (!hasEntries) {
     // The current folder renders nothing. A filter emptied it (`inFolder` non-empty)
-    // → "no match"; otherwise the folder is genuinely empty.
+    // → "no match"; otherwise the folder is genuinely empty. The ladder decides on
+    // the full, unsliced sets, never on a page.
     body = (
       <EmptyState {...(inFolder.length > 0 ? emptyStates.noMatch : emptyStates.emptyFolder)} />
     );
   } else if (viewMode === 'cards') {
     body = (
-      <EntityCardGrid aria-label={label}>
-        {subfolders.map((folder) => (
-          <div role="listitem" key={`folder:${folder.id}`}>
-            <Card interactive>
-              <FolderEntry
-                folder={folder}
-                onNavigate={onNavigate}
-                renderFolderActions={renderFolderActions}
-              />
-            </Card>
-          </div>
-        ))}
-        {filtered.map((item) => (
-          <div role="listitem" key={`item:${getItemKey(item)}`} {...openProps(item)}>
-            {renderCard(item)}
-          </div>
-        ))}
-      </EntityCardGrid>
+      <>
+        <EntityCardGrid aria-label={label}>
+          {pageEntries.map((entry) =>
+            entry.kind === 'folder' ? (
+              <div role="listitem" key={`folder:${entry.folder.id}`}>
+                <Card interactive>
+                  <FolderEntry
+                    folder={entry.folder}
+                    onNavigate={onNavigate}
+                    renderFolderActions={renderFolderActions}
+                  />
+                </Card>
+              </div>
+            ) : (
+              <div
+                role="listitem"
+                key={`item:${getItemKey(entry.item)}`}
+                {...openProps(entry.item)}
+              >
+                {renderCard(entry.item)}
+              </div>
+            ),
+          )}
+        </EntityCardGrid>
+        {footer}
+      </>
     );
   } else {
     // Folder rows share the item table, spanning every column, sorted above items —
     // so a folder-with-only-subfolders is folder ROWS, never a header-only table.
     // A too-wide table scrolls inside its own box rather than widening the page.
     body = (
-      <ScrollRegion label={label}>
-        <Table>
-          <THead>
-            <TR>
-              {columns.map((column) => (
-                <TH key={column.key} numeric={column.numeric}>
-                  {column.header}
-                </TH>
-              ))}
-            </TR>
-          </THead>
-          <TBody>
-            {subfolders.map((folder) => (
-              <TR key={`folder:${folder.id}`}>
-                <TD colSpan={columns.length}>
-                  <FolderEntry
-                    folder={folder}
-                    onNavigate={onNavigate}
-                    renderFolderActions={renderFolderActions}
-                  />
-                </TD>
+      <>
+        <ScrollRegion label={label}>
+          <Table>
+            <THead>
+              <TR>
+                {columns.map((column) => (
+                  <TH key={column.key} numeric={column.numeric}>
+                    {column.header}
+                  </TH>
+                ))}
               </TR>
-            ))}
-            {filtered.map((item) => (
-              <TR key={`item:${getItemKey(item)}`} {...openProps(item)}>
-                {renderRow(item)}
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      </ScrollRegion>
+            </THead>
+            <TBody>
+              {pageEntries.map((entry) =>
+                entry.kind === 'folder' ? (
+                  <TR key={`folder:${entry.folder.id}`}>
+                    <TD colSpan={columns.length}>
+                      <FolderEntry
+                        folder={entry.folder}
+                        onNavigate={onNavigate}
+                        renderFolderActions={renderFolderActions}
+                      />
+                    </TD>
+                  </TR>
+                ) : (
+                  <TR key={`item:${getItemKey(entry.item)}`} {...openProps(entry.item)}>
+                    {renderRow(entry.item)}
+                  </TR>
+                ),
+              )}
+            </TBody>
+          </Table>
+        </ScrollRegion>
+        {footer}
+      </>
     );
   }
+
+  // Every surface label is a regular English plural (Tools/Templates/Resources/
+  // Flows), so a count of one drops the trailing "s".
+  const countLabel =
+    items.length === 1 ? label.toLowerCase().replace(/s$/, '') : label.toLowerCase();
 
   return (
     <div className="tai-explorer">
       <div className="tai-explorer-controls">
-        {search !== undefined ? (
-          <span className="tai-row">
-            <SearchIcon />
-            <TextInput
-              value={search.value}
-              aria-label={search.label}
-              placeholder={search.placeholder}
-              onChange={(event) => {
-                search.onChange(event.target.value);
-              }}
-            />
-          </span>
-        ) : (
-          <span />
-        )}
+        <div className="tai-row">
+          {search !== undefined ? (
+            <span className="tai-row">
+              <SearchIcon />
+              <TextInput
+                value={search.value}
+                aria-label={search.label}
+                placeholder={search.placeholder}
+                onChange={(event) => {
+                  search.onChange(event.target.value);
+                }}
+              />
+            </span>
+          ) : null}
+          <span className="tai-muted">{`${String(items.length)} ${countLabel}`}</span>
+        </div>
         <ViewToggle value={viewMode} onValueChange={setViewMode} aria-label={`${label} view`} />
       </div>
 

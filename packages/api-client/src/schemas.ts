@@ -127,6 +127,10 @@ export const presetRecord = z.object({
   // foreign tool at boot), or `null` when the row is not conflicted. Rendered
   // verbatim; nothing is coerced.
   conflicted_reason: z.string().nullable(),
+  // Sorted preset-name cross-references: `uses` names the presets this one
+  // composes as tools; `used_by` names the presets that compose this one.
+  uses: z.array(z.string()),
+  used_by: z.array(z.string()),
 });
 export type PresetRecord = z.infer<typeof presetRecord>;
 

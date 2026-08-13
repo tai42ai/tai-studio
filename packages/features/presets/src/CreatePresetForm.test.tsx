@@ -25,6 +25,8 @@ const record = {
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
 };
 
 function baseClient(overrides: StubApiClient = {}): StubApiClient {

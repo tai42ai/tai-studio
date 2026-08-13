@@ -27,8 +27,8 @@
 # Redis/Postgres.
 #
 # Prerequisites:
-#   - a Linux-like host: the runner uses curl + setsid + pkill (boot.sh also uses
-#     shasum). curl and setsid are required — a missing one surfaces as a failed
+#   - a Unix host (macOS or Linux): the runner uses curl + pkill (boot.sh also
+#     uses shasum). curl is required — its absence surfaces as a failed
 #     boot/readiness (a loud non-zero exit), not a captured shot.
 #   - docker (boot.sh brings up its own loopback Redis + Postgres compose)
 #   - pnpm + uv on PATH; the e2e workspace installed (pnpm -w install)
@@ -46,6 +46,49 @@ set -euo pipefail
 log() { printf '\033[1;35m[docs-shots]\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[1;31m[docs-shots] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 count_pngs() { find "$1" -maxdepth 1 -name '*.png' | wc -l | tr -d ' '; }
+
+# Launch "$@" in the background as its own process-group leader, so a later
+# `kill -- -PID` reaps the whole group. Job control (set -m) makes the backgrounded
+# job a group leader; the assignment persists after set +m. The leader PID lands in
+# SPAWNED_PID. Redirections belong on the CALL — they apply to the whole function
+# body, hence to the backgrounded child (and absorb job-control chatter).
+spawn_group() {
+  set -m
+  "$@" &
+  SPAWNED_PID=$!
+  set +m
+}
+
+# Portable stand-in for GNU `timeout(1)` (absent on macOS): run "$@" and, if it has
+# not finished after the first argument's seconds, kill it. Returns the command's own
+# exit status, or 124 when the watchdog fired — mirroring timeout so a caller can tell
+# a timeout apart from the command's own non-zero exit. The command runs as its own
+# process-group leader (spawn_group), so the kill takes any children with it and the
+# grandchildren never hold a caller's captured stdout open past the kill.
+run_with_timeout() {
+  local secs="$1"; shift
+  spawn_group "$@"
+  local cmd_pid="${SPAWNED_PID}"
+  # Watchdog: SIGTERM the command's whole group once its window elapses, or exit the
+  # moment it finishes first. Its own output goes nowhere.
+  (
+    waited=0
+    while (( waited < secs )); do
+      kill -0 "${cmd_pid}" 2>/dev/null || exit 0
+      sleep 1
+      waited=$(( waited + 1 ))
+    done
+    kill -TERM -- -"${cmd_pid}" 2>/dev/null || true
+  ) >/dev/null 2>&1 &
+  local watch_pid=$!
+  local status=0
+  wait "${cmd_pid}" 2>/dev/null || status=$?
+  kill "${watch_pid}" 2>/dev/null || true
+  wait "${watch_pid}" 2>/dev/null || true
+  # A watchdog SIGTERM surfaces as 143 (128+15); report 124 as timeout does.
+  [[ "${status}" -eq 143 ]] && status=124
+  return "${status}"
+}
 
 # --- 1. Resolve paths -------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -114,16 +157,17 @@ fi
 
 # --- 4. Boot the docs-demo skeleton -----------------------------------------
 log "booting docs-demo skeleton (manifest: ${MANIFEST_PATH})"
-BOOT_LOG="$(mktemp -t docs-shots-boot.XXXXXX.log)"
-setsid bash "${E2E_DIR}/boot/boot.sh" >"${BOOT_LOG}" 2>&1 </dev/null &
-BOOT_PID=$!
+BOOT_LOG="$(mktemp "${TMPDIR:-/tmp}/docs-shots-boot.XXXXXX")"
+# Boot in its own process group so teardown reaps the whole group in one kill.
+spawn_group bash "${E2E_DIR}/boot/boot.sh" >"${BOOT_LOG}" 2>&1 </dev/null
+BOOT_PID="${SPAWNED_PID}"
 
 teardown() {
   if [[ "${KEEP_UP:-0}" == "1" ]]; then
     log "KEEP_UP=1 — leaving the skeleton running on ${BASE_URL} (pid ${BOOT_PID})"
     return
   fi
-  # setsid made BOOT_PID a process-group leader; kill the whole group.
+  # Job control made BOOT_PID a process-group leader; kill the whole group.
   kill -- -"${BOOT_PID}" 2>/dev/null || true
   pkill -f "tai serve .*--port ${STUDIO_PORT}" 2>/dev/null || true
 }
@@ -179,7 +223,8 @@ seed_user() {
   local email="$1" role="$2" mode="${3:-invite}" resp token
   resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/auth/users" \
     -d "{\"email\":\"${email}\",\"role\":\"${role}\"}")"
-  token="$(printf '%s' "${resp}" | grep -oP '"invite_token":\s*"\K[^"]+' || true)"
+  # invite_token lives under data; a 409 rerun carries no data, so empty falls through.
+  token="$(printf '%s' "${resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("data", {}).get("invite_token", ""))' || true)"
   if [[ -z "${token}" ]]; then
     case "${resp}" in
       *'already registered'*) log "  ${email}: already seeded"; return 0 ;;
@@ -221,11 +266,10 @@ log "seeding the scoped owned key + audience-addressed inbox rows"
 OWNED_KEY_ID="svc-demo-owned"
 
 # The owner identity: the seeded editor (grace). Read her user_id back from the
-# accounts API — robust across reruns (the row persists in the compose Postgres) and
-# adjacent to her email in each serialized record, so a scoped \K lookbehind isolates
-# exactly her id.
+# accounts API — robust across reruns (the row persists in the compose Postgres) by
+# matching her email in the data.users listing. Empty on no match → the die below fires.
 OWNER_USER_ID="$(api "${BASE_URL}/api/auth/users" \
-  | grep -oP '"user_id":\s*"\K[^"]+(?=",\s*"email":\s*"grace\.hopper@demo\.tai")' || true)"
+  | python3 -c 'import json,sys; users=json.load(sys.stdin)["data"]["users"]; print(next((u["user_id"] for u in users if u["email"]=="grace.hopper@demo.tai"), ""))' || true)"
 [[ -n "${OWNER_USER_ID}" ]] || die "could not resolve the seeded editor's user_id — the scoped owner is unknown"
 
 # The jq fence: the owned key reaches only these route prefixes, so its projection
@@ -293,7 +337,7 @@ case "${notify_resp}" in
 esac
 
 # A PENDING audience-addressed question. `ask_user` BLOCKS until answered/timeout, so
-# fire it in the background (its own session group via setsid) with a long timeout:
+# fire it in the background (its own process group) with a long timeout:
 # the question persists to the interactions store immediately, then the call parks
 # there and the EXIT teardown reaps it. The scoped-interactions shot waits on this text.
 #
@@ -315,13 +359,13 @@ print(json.dumps({"tool_name": "ask_user", "arguments": {
         {"kind": "link", "url": os.environ["MEDIA_LINK"], "caption": "Release notes"},
     ],
 }}))')"
-setsid bash -c "curl -s -m 3600 -H 'x-api-key: ${DEMO_KEY}' -H 'content-type: application/json' \
-  -X POST '${BASE_URL}/api/run-tool' -d '${ask_body}' >/dev/null 2>&1" &
+spawn_group bash -c "curl -s -m 3600 -H 'x-api-key: ${DEMO_KEY}' -H 'content-type: application/json' \
+  -X POST '${BASE_URL}/api/run-tool' -d '${ask_body}'" >/dev/null 2>&1
 
 # Confirm both inbox rows are readable before capture (a bounded stream read for the
 # pending question, whose backlog frame carries it; a direct read for the notification).
 sleep 2
-stream_dump="$(timeout 5 curl -sN -H "x-api-key: ${DEMO_KEY}" "${BASE_URL}/api/interactions/stream" || true)"
+stream_dump="$(run_with_timeout 5 curl -sN -H "x-api-key: ${DEMO_KEY}" "${BASE_URL}/api/interactions/stream" || true)"
 grep -q "${DEMO_QUESTION}" <<<"${stream_dump}" \
   || die "the seeded audience-addressed question is not on the interactions stream — the scoped-interactions screen would be empty"
 if ! api "${BASE_URL}/api/notifications" | grep -q "nightly export finished"; then

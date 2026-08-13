@@ -31,6 +31,8 @@ const detail = {
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
   fixed_kwargs: { city: 'Paris' },
 };
 

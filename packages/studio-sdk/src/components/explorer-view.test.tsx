@@ -11,6 +11,7 @@ import {
   matchesSelectedTags,
   type ExplorerColumn,
   type ExplorerEmptyStates,
+  type ExplorerSearch,
   type ExplorerTags,
   type ExplorerViewProps,
   type Folder,
@@ -531,5 +532,350 @@ describe('ExplorerView onOpenItem', () => {
     const row = screen.getByRole('button', { name: 'edit alpha' }).closest('tr');
     if (row === null) throw new Error('item row not rendered');
     expect(row).not.toHaveStyle({ cursor: 'pointer' });
+  });
+});
+
+describe('ExplorerView pagination and count', () => {
+  const PAGE_SIZE_KEY = (surface: string): string => `tai-studio.page-size.${surface}`;
+
+  function items(count: number, folderId: string | null = null): Row[] {
+    return Array.from({ length: count }, (_, index) => ({
+      id: `${folderId ?? 'root'}-${String(index)}`,
+      name: `${folderId ?? 'root'}-row-${String(index).padStart(2, '0')}`,
+      folderId,
+      tags: [],
+    }));
+  }
+
+  function renderPaged(overrides: Partial<ExplorerViewProps<Row>> & { viewSurface: string }) {
+    return render(
+      <ExplorerView<Row>
+        items={items(0)}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={[]}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+        {...overrides}
+      />,
+    );
+  }
+
+  it('renders the count summary as the total across folders, distinct from the footer N', () => {
+    renderPaged({
+      viewSurface: 'count-summary',
+      items: [...items(10, null), ...items(10, 'w')],
+      folders: [{ id: 'w', name: 'Weather', parentId: null }],
+      currentFolderId: null,
+    });
+    // The count summary is items.length across every folder.
+    expect(screen.getByText('20 rows')).toBeInTheDocument();
+    // The footer N is the current view only: one folder row plus the ten root items.
+    const nav = screen.getByRole('navigation', { name: 'Rows pagination' });
+    expect(within(nav).getByText('1–11 of 11')).toBeInTheDocument();
+  });
+
+  it('names the footer nav and marks prev/next aria-disabled (not removed from the tab order) at the bounds', async () => {
+    renderPaged({ viewSurface: 'footer-a11y', items: items(3) });
+    const nav = screen.getByRole('navigation', { name: 'Rows pagination' });
+    expect(within(nav).getByRole('combobox', { name: 'Items per page' })).toBeInTheDocument();
+    // A single page: both step controls sit at a bound. They stay focusable
+    // (aria-disabled) rather than dropping out of the tab order (disabled attr).
+    const prev = within(nav).getByRole('button', { name: 'Previous page' });
+    const next = within(nav).getByRole('button', { name: 'Next page' });
+    expect(prev).toHaveAttribute('aria-disabled', 'true');
+    expect(next).toHaveAttribute('aria-disabled', 'true');
+    expect(prev).not.toBeDisabled();
+    expect(next).not.toBeDisabled();
+    expect(within(nav).getByText('1–3 of 3')).toBeInTheDocument();
+    expect(within(nav).getByText('Page 1 of 1')).toBeInTheDocument();
+    // Activation at the bound is an inert no-op — the page does not move.
+    await userEvent.click(next);
+    await userEvent.click(prev);
+    expect(within(nav).getByText('Page 1 of 1')).toBeInTheDocument();
+  });
+
+  it('keeps Next focused after activation lands the view on the last page', async () => {
+    const surface = 'focus-at-bound';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    renderPaged({ viewSurface: surface, items: items(15) });
+    const next = screen.getByRole('button', { name: 'Next page' });
+    expect(next).not.toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(next);
+    // The click landed on the last page; the button is now at the bound but must
+    // keep focus rather than the browser dropping it to the body (WCAG 2.4.3).
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    expect(next).toHaveAttribute('aria-disabled', 'true');
+    expect(next).toHaveFocus();
+    // A further activation at the bound does not advance past the last page.
+    await userEvent.click(next);
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+  });
+
+  it('slices the combined folder→item sequence by page in the list view', async () => {
+    const surface = 'slice-list';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    const folders: Folder[] = Array.from({ length: 10 }, (_, index) => ({
+      id: `f${String(index).padStart(2, '0')}`,
+      name: `folder-${String(index).padStart(2, '0')}`,
+      parentId: null,
+    }));
+    renderPaged({ viewSurface: surface, items: items(5), folders });
+    // 10 folders + 5 items = 15 entries; page 1 is the 10 folders then the first 2 items.
+    expect(screen.getByRole('button', { name: 'folder-00' })).toBeInTheDocument();
+    expect(screen.getByText('root-row-00')).toBeInTheDocument();
+    expect(screen.getByText('root-row-01')).toBeInTheDocument();
+    expect(screen.queryByText('root-row-02')).not.toBeInTheDocument();
+    expect(screen.getByText('1–12 of 15')).toBeInTheDocument();
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    // Page 2 is the remaining three items; no folder rows survive onto it.
+    expect(screen.queryByRole('button', { name: 'folder-00' })).not.toBeInTheDocument();
+    expect(screen.queryByText('root-row-01')).not.toBeInTheDocument();
+    expect(screen.getByText('root-row-02')).toBeInTheDocument();
+    expect(screen.getByText('root-row-04')).toBeInTheDocument();
+    expect(screen.getByText('13–15 of 15')).toBeInTheDocument();
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+  });
+
+  it('renders the correct second-page subset in the card view too', async () => {
+    const surface = 'slice-cards';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    renderPaged({ viewSurface: surface, items: items(20) });
+    await userEvent.click(screen.getByRole('radio', { name: 'Card view' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    const grid = screen.getByRole('list', { name: 'Rows' });
+    expect(within(grid).getByText('root-row-12')).toBeInTheDocument();
+    expect(within(grid).getByText('root-row-19')).toBeInTheDocument();
+    expect(within(grid).queryByText('root-row-11')).not.toBeInTheDocument();
+    expect(screen.getByText('13–20 of 20')).toBeInTheDocument();
+  });
+
+  it('resets to page 1 when the current folder changes', async () => {
+    const surface = 'reset-folder';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    const folders: Folder[] = [
+      { id: 'a', name: 'A', parentId: null },
+      { id: 'b', name: 'B', parentId: null },
+    ];
+    const both = [...items(15, 'a'), ...items(15, 'b')];
+    const { rerender } = renderPaged({
+      viewSurface: surface,
+      items: both,
+      folders,
+      currentFolderId: 'a',
+    });
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    rerender(
+      <ExplorerView<Row>
+        items={both}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={folders}
+        currentFolderId="b"
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={surface}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+      />,
+    );
+    // Folder B also has two pages; the reset lands on its first, not its second.
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    expect(screen.getByText('b-row-00')).toBeInTheDocument();
+  });
+
+  it('resets to page 1 when the trimmed query changes', async () => {
+    const surface = 'reset-query';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    const search: ExplorerSearch<Row> = {
+      value: '',
+      onChange: vi.fn(),
+      matches: (row, query) => row.name.includes(query),
+      label: 'Search rows',
+    };
+    const { rerender } = renderPaged({ viewSurface: surface, items: items(15), search });
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    rerender(
+      <ExplorerView<Row>
+        items={items(15)}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={[]}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={surface}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+        search={{ ...search, value: 'root-row' }}
+      />,
+    );
+    // The query still matches all fifteen, so there are two pages — and the reset
+    // put us on the first of them.
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+  });
+
+  it('resets to page 1 when the tag selection changes', async () => {
+    const surface = 'reset-tags';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    const tagged: Row[] = items(15).map((row) => ({ ...row, tags: ['keep'] }));
+    const tags = (selected: readonly string[]): ExplorerTags<Row> => ({
+      getTags: (row) => row.tags,
+      selected,
+      onChange: vi.fn(),
+      untaggedLabel: 'Untagged',
+      filterLabel: 'Filter rows by tag',
+    });
+    const { rerender } = renderPaged({ viewSurface: surface, items: tagged, tags: tags([]) });
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    rerender(
+      <ExplorerView<Row>
+        items={tagged}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={[]}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={surface}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+        tags={tags(['keep'])}
+      />,
+    );
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+  });
+
+  it('resets to page 1 when the page size changes', async () => {
+    const surface = 'reset-page-size';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    renderPaged({ viewSurface: surface, items: items(15) });
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox', { name: 'Items per page' }));
+    await userEvent.click(await screen.findByRole('option', { name: '24 per page' }));
+    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
+    expect(screen.getByText('1–15 of 15')).toBeInTheDocument();
+  });
+
+  it('clamps to the last page when the entry set shrinks below the current page', async () => {
+    const surface = 'clamp';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    const { rerender } = renderPaged({ viewSurface: surface, items: items(15) });
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    // Fewer items, none of the reset deps changed: the clamp alone brings the page
+    // back into range.
+    rerender(
+      <ExplorerView<Row>
+        items={items(5)}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={[]}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={surface}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+      />,
+    );
+    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
+    expect(screen.getByText('1–5 of 5')).toBeInTheDocument();
+    expect(screen.getByText('root-row-00')).toBeInTheDocument();
+  });
+
+  it('stays on the clamped page after the entry set shrinks below it and then regrows', async () => {
+    const surface = 'shrink-grow';
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY(surface), '12');
+    const tree = (count: number) => (
+      <ExplorerView<Row>
+        items={items(count)}
+        getItemKey={(row) => row.id}
+        getFolderId={(row) => row.folderId}
+        folders={[]}
+        currentFolderId={null}
+        onNavigate={vi.fn()}
+        rootLabel="All rows"
+        viewSurface={surface}
+        label="Rows"
+        columns={COLUMNS}
+        renderRow={(row) => <TD>{row.name}</TD>}
+        renderCard={(row) => <Card interactive>{row.name}</Card>}
+        emptyStates={EMPTY_STATES}
+      />
+    );
+    const { rerender } = render(tree(15));
+    // On page 2 of 2.
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
+    // Shrink to a single page: the clamp reconciles the stored page to 1.
+    rerender(tree(5));
+    expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
+    // Grow back to two pages with no reset dep changed: the reconciled page holds
+    // at 1 rather than jumping back to the stale page 2.
+    rerender(tree(15));
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    expect(screen.getByText('root-row-00')).toBeInTheDocument();
+  });
+
+  it('renders the count summary in the singular at a count of one', () => {
+    renderPaged({ viewSurface: 'count-singular', items: items(1) });
+    expect(screen.getByText('1 row')).toBeInTheDocument();
+  });
+
+  it('persists the page size per surface in localStorage', () => {
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY('persist'), '48');
+    renderPaged({ viewSurface: 'persist', items: items(60) });
+    expect(screen.getByRole('combobox', { name: 'Items per page' })).toHaveTextContent(
+      '48 per page',
+    );
+    expect(screen.getByText('1–48 of 60')).toBeInTheDocument();
+  });
+
+  it('falls back to the default page size on an invalid stored value', () => {
+    globalThis.localStorage.setItem(PAGE_SIZE_KEY('bad-value'), '999');
+    renderPaged({ viewSurface: 'bad-value', items: items(60) });
+    expect(screen.getByRole('combobox', { name: 'Items per page' })).toHaveTextContent(
+      '24 per page',
+    );
+    expect(screen.getByText('1–24 of 60')).toBeInTheDocument();
+  });
+
+  it('falls back to the default page size when the storage read throws', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    try {
+      renderPaged({ viewSurface: 'throwing', items: items(60) });
+      expect(screen.getByRole('combobox', { name: 'Items per page' })).toHaveTextContent(
+        '24 per page',
+      );
+    } finally {
+      getItem.mockRestore();
+    }
   });
 });

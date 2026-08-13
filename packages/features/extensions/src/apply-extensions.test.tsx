@@ -42,6 +42,8 @@ const parisPreset: PresetRecord = {
   output_schema: null,
   conflicted: false,
   conflicted_reason: null,
+  uses: [],
+  used_by: [],
 };
 
 /** Build a stub client; every method the panel might call has a safe default. */
@@ -333,6 +335,8 @@ describe('ApplyExtensionsPanel — origin branch', () => {
       output_schema: null,
       conflicted: true,
       conflicted_reason: 'name collided with an existing tool at startup',
+      uses: [],
+      used_by: [],
     };
     const getToolExtensions = vi
       .fn()

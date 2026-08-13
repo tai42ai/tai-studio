@@ -30,6 +30,8 @@ function record(name: string): PresetRecord {
     output_schema: null,
     conflicted: false,
     conflicted_reason: null,
+    uses: [],
+    used_by: [],
   };
 }
 

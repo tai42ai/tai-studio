@@ -143,7 +143,13 @@ async function pickFirstExecutionKey(page, scope) {
  * shot. `action`, when present, drives the page into its captured state.
  */
 const AUTHED_PAGES = [
-  { name: 'tools', path: '/tools', wait: 'text=studio_demo_echo' },
+  // The ExplorerView count summary ("N tools") proves the catalog rendered populated.
+  // A specific tool NAME is not used as the marker: the explorer paginates at 24/page
+  // (the default) and the demo registers more than a page of tools, so any one tool can
+  // sit past page 1 and time out. The count summary lives in the controls header,
+  // outside the paged body, and the [1-9] floor keeps the check strict (an empty catalog
+  // renders no count at all, so a broken/empty screen still fails loudly).
+  { name: 'tools', path: '/tools', wait: 'text=/[1-9]\\d* tools\\b/' },
   {
     name: 'tool-run',
     path: '/tools?tool=studio_demo_form',
@@ -305,12 +311,15 @@ const AUTHED_PAGES = [
   {
     // The scoped tools page: the catalog is filtered to the projection's tools, and
     // the nav itself is trimmed to the covered tokens — this one shot demonstrates
-    // both, so no separate scoped-nav shot is taken. Waits on a tool the owned key's
-    // projection covers (present in both the full and the scoped catalog).
+    // both, so no separate scoped-nav shot is taken. Waits on the ExplorerView count
+    // summary ("N tools") rather than a tool name: the explorer paginates at 24/page
+    // and this projection covers the full registry (its tool-runs door widens it), so a
+    // named tool can sit past page 1. The count summary sits outside the paged body, and
+    // the [1-9] floor keeps the check strict (an empty projection renders no count).
     name: 'scoped-tools',
     path: '/tools',
     apiKey: OWNED_KEY,
-    wait: 'text=studio_demo_echo',
+    wait: 'text=/[1-9]\\d* tools\\b/',
   },
   {
     // The scoped interactions inbox: the server stream is audience-filtered to the
