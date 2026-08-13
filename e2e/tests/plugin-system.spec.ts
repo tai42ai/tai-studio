@@ -12,7 +12,7 @@
  * three directions (lower, higher, equal) against this same live boot.
  */
 import { test, expect } from '@playwright/test';
-import { loginViaUi, seedCredential, expectPluginErrorCard } from './helpers';
+import { loginViaUi, seedCredential, expectPluginErrorCard, openToolRow } from './helpers';
 
 const REGISTRY_PATH = '/api/plugins';
 const BUNDLE_GLOB = '**/api/plugins/reference_plugin/studio/*.js';
@@ -41,7 +41,7 @@ test('post-login the reference plugin is discovered, its page and tool panel ren
   // reload) so the just-registered panel is in module state. The registered TOOL
   // PANEL replaces the auto-form for studio_demo_echo, driving it through the host's
   // ApiProvider singleton (useApi().runTool).
-  await page.getByRole('link', { name: /Open tool studio_demo_echo/ }).click();
+  await openToolRow(page, 'studio_demo_echo');
   const panel = page.getByTestId('reference-echo-panel');
   await expect(panel).toBeVisible();
   await page.getByTestId('echo-message').fill('live e2e');
@@ -73,7 +73,7 @@ test('the reference plugin names its result pane after the tool, never the SDK d
     .getByRole('link', { name: 'Tools' })
     .click();
   await page.waitForURL('**/tools');
-  await page.getByRole('link', { name: /Open tool studio_demo_echo/ }).click();
+  await openToolRow(page, 'studio_demo_echo');
   await expect(page.getByTestId('reference-echo-panel')).toBeVisible();
 
   await page.getByTestId('echo-message').fill('x'.repeat(400));
