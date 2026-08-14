@@ -330,7 +330,7 @@ export function ExplorerView<T>({
   const [page, setPage] = useState(1);
 
   const query = search ? search.value.trim() : '';
-  const tagKey = tags !== undefined ? tags.selected.join(' ') : '';
+  const tagKey = tags !== undefined ? tags.selected.join('\0') : '';
 
   // A new filter view starts on its first page; the clamp below then handles a
   // set that shrinks under the current page without a reset.
