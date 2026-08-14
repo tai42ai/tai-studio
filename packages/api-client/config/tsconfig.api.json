@@ -1,0 +1,7 @@
+{
+  // Compiler config for api-extractor only. It analyses the built .d.ts surface,
+  // so `include` points at dist rather than src. This package has no @tai42/*
+  // imports in its own surface, so no cross-package path alias is needed here.
+  "extends": "../tsconfig.json",
+  "include": ["../dist"]
+}

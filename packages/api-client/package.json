@@ -22,6 +22,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "7.58.12",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
@@ -53,6 +54,8 @@
     "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit -p tsconfig.json",
     "lint": "eslint src --max-warnings 0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "api:check": "api-extractor run --config config/api-extractor.json",
+    "api:update": "api-extractor run --local --config config/api-extractor.json"
   }
 }

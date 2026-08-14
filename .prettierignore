@@ -6,6 +6,10 @@ playwright-report/
 test-results/
 pnpm-lock.yaml
 
+# Generated API surface reports (api-extractor output; "Do not edit").
+packages/studio-sdk/etc/
+packages/api-client/etc/
+
 # The reference plugin's COMPILED bundle + generated manifest (emitted by
 # build:reference-plugin, shipped inside the Python package).
 e2e/reference-plugin/src/reference_plugin/studio/
