@@ -85,6 +85,18 @@ merged commits and opens (or updates) a release PR carrying the next version;
 merging that PR tags `v<version>` and publishes the packages, with the notes
 generated onto the GitHub Release. There is no changelog file to edit.
 
+Before it publishes, the release diffs the committed API reports
+(`packages/*/etc/*.api.md` — `@tai42/studio-sdk`'s three entry points and
+`@tai42/api-client`) against the previous release tag and fails when the surface
+change outruns the version bump it rides; a breaking surface change must ride a
+breaking-marked commit, so a major at `>=1.0`. CI verifies the committed reports
+match the built surface on every pull request and push to `main`, and a change
+that moves a published
+surface regenerates its report with the package's `api:update` script. The gate's
+mode is configuration: `label-honesty` allows a `0.x` package the minor-breaking
+slot; `strict` removes it, so a breaking change then requires the `1.0`
+graduation.
+
 ## License
 
 By contributing you agree your contributions are licensed under Apache-2.0.
