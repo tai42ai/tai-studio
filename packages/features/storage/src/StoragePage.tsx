@@ -542,15 +542,18 @@ function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNod
     const el = containerRef.current;
     if (el === null) throw new Error('Storage browser container ref did not attach.');
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Enter' && isSearchInput(event.target)) {
-        commitFilter(commitState.current.query);
-      }
+      if (event.key !== 'Enter' || !isSearchInput(event.target)) return;
+      const { query: q, initialFilter: committed } = commitState.current;
+      // A redundant Enter (the draft already the committed value) must not push a
+      // history entry.
+      if (q.trim() !== committed.trim()) commitFilter(q);
     };
     const onFocusOut = (event: FocusEvent): void => {
       const { query: q, initialFilter: committed } = commitState.current;
       // An untouched blur (tabbing through) must not push a redundant history entry
-      // for the value already committed to the URL.
-      if (isSearchInput(event.target) && q.trim() !== committed) commitFilter(q);
+      // for the value already committed to the URL — trimmed both sides, so a padded
+      // deep-link never self-commits without a real edit.
+      if (isSearchInput(event.target) && q.trim() !== committed.trim()) commitFilter(q);
     };
     el.addEventListener('keydown', onKeyDown);
     el.addEventListener('focusout', onFocusOut);
