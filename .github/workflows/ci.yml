@@ -30,10 +30,21 @@ jobs:
       # type-checked steps and the tests can resolve cross-package imports.
       - name: Build
         run: pnpm -r build
+      # Each published package's surface must match its committed api-extractor
+      # reports (packages/studio-sdk/etc/*.api.md and packages/api-client/etc/*.api.md).
+      # A drift here means the author has to regenerate with `pnpm --filter <pkg>
+      # api:update` so the review sees the surface change.
+      - name: API report
+        run: pnpm --filter @tai42/studio-sdk --filter @tai42/api-client run api:check
       - name: Typecheck
         run: pnpm -r typecheck
       - name: Lint
         run: pnpm -r lint
+      # `pnpm -r lint` lints each package's own source; the repo-root scripts/
+      # (the release API-diff gate) belongs to no package, so it is linted here
+      # against the same flat config, or nothing in CI would lint it.
+      - name: Lint (root scripts)
+        run: pnpm exec eslint scripts --max-warnings 0
       # BOTH halves. `pnpm -r` skips the workspace root, and every package's own
       # glob is scoped to that package's own source (the SDK's and the shell's
       # already cover their stylesheets), so without the root gate everything
@@ -45,6 +56,10 @@ jobs:
         run: pnpm format:check
       - name: Test
         run: pnpm -r test --coverage
+      # The repo-root gate script's own unit tests (node's built-in runner); it is
+      # outside every package, so `pnpm -r test` does not reach it.
+      - name: Test (gate script)
+        run: node --test 'scripts/**/*.test.mjs'
 
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)

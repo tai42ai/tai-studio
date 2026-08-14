@@ -34,6 +34,10 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        # Full history + tags: the API-diff gate reads the committed report at the
+        # previous released tag to classify the surface change.
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
       - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
@@ -61,8 +65,21 @@ jobs:
         run: pnpm -r typecheck
       - name: Lint
         run: pnpm -r lint
+      - name: Lint (root scripts)
+        run: pnpm exec eslint scripts --max-warnings 0
       - name: Test
         run: pnpm -r test --coverage
+      - name: Test (gate script)
+        run: node --test 'scripts/**/*.test.mjs'
+      # The committed surface reports of both published packages must match the
+      # tagged build...
+      - name: API report
+        run: pnpm --filter @tai42/studio-sdk --filter @tai42/api-client run api:check
+      # ...and label-honesty: a breaking surface change may not publish under a
+      # bump the release label could not have produced. Runs before Publish so a
+      # dishonest release never reaches npm.
+      - name: API-diff gate
+        run: node scripts/api-gate.mjs --version "${GITHUB_REF_NAME#v}"
       - name: Publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

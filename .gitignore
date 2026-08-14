@@ -7,6 +7,9 @@ test-results/
 *.tsbuildinfo
 .turbo/
 .pnpm-store/
+# api-extractor scratch: the candidate report it diffs against etc/ on each run.
+packages/studio-sdk/temp/
+packages/api-client/temp/
 .DS_Store
 .idea/
 

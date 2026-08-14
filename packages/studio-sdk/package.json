@@ -68,13 +68,16 @@
     "typecheck": "tsc -b tsconfig.build.json && tsc --noEmit -p tsconfig.json",
     "lint": "eslint src scripts --max-warnings 0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.mjs\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "api:check": "api-extractor run --config config/api-extractor.index.json && api-extractor run --config config/api-extractor.host.json && api-extractor run --config config/api-extractor.testing.json",
+    "api:update": "api-extractor run --local --config config/api-extractor.index.json && api-extractor run --local --config config/api-extractor.host.json && api-extractor run --local --config config/api-extractor.testing.json"
   },
   "peerDependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "7.58.12",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@testing-library/user-event": "catalog:",

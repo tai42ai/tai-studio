@@ -1,0 +1,48 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+
+  // Shared settings for the per-entry-point configs (index, host, testing). Each
+  // concrete config extends this and sets only its own entry point + report name.
+  // Only the API report is produced; the rollup, doc model and tsdoc metadata are
+  // off — the committed report is the surface contract this package gates on.
+
+  "projectFolder": "..",
+
+  // The committed reports are gated by scripts/api-gate.mjs, whose fence parser
+  // anchors on "\n"; api-extractor defaults to CRLF, so the reports must be
+  // written LF (pinned again in .gitattributes for checkout stability).
+  "newlineKind": "lf",
+
+  "compiler": {
+    "tsconfigFilePath": "<projectFolder>/config/tsconfig.api.json"
+  },
+
+  "apiReport": {
+    "enabled": true,
+    "reportFolder": "<projectFolder>/etc/",
+    "reportTempFolder": "<projectFolder>/temp/",
+    "includeForgottenExports": true
+  },
+
+  "docModel": { "enabled": false },
+  "dtsRollup": { "enabled": false },
+  "tsdocMetadata": { "enabled": false },
+
+  "messages": {
+    "compilerMessageReporting": {
+      "default": { "logLevel": "warning" }
+    },
+    "extractorMessageReporting": {
+      "default": { "logLevel": "warning" },
+      // The declarations import React/Radix/api-client types; those packages have
+      // no bundled .d.ts here and are legitimately external references.
+      "ae-forgotten-export": { "logLevel": "none" },
+      "ae-unresolved-link": { "logLevel": "none" },
+      // The package tags no release levels; its whole exported surface is public.
+      "ae-missing-release-tag": { "logLevel": "none" }
+    },
+    "tsdocMessageReporting": {
+      "default": { "logLevel": "none" }
+    }
+  }
+}
