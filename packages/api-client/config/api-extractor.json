@@ -38,7 +38,9 @@
     "extractorMessageReporting": {
       "default": { "logLevel": "warning" },
       // Internal types the index does not re-export are legitimately non-public.
-      "ae-forgotten-export": { "logLevel": "none" },
+      // addToApiReportFile:false keeps the warning footer — which embeds absolute
+      // source paths that differ per checkout — out of the committed report.
+      "ae-forgotten-export": { "logLevel": "none", "addToApiReportFile": false },
       "ae-unresolved-link": { "logLevel": "none" },
       // The package tags no release levels; its whole exported surface is public.
       "ae-missing-release-tag": { "logLevel": "none" }

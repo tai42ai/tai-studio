@@ -275,4 +275,14 @@ for (const { dir, name } of REAL_REPORTS) {
     assert.ok(entries.size > 0, `report ${name} parsed to zero symbols`);
     assert.deepEqual(classify(name, entries, parseReport(name, source)), []);
   });
+
+  // api-extractor's forgotten-export warning footer embeds absolute source paths
+  // that differ per checkout, so a committed footer makes api:check fail on every
+  // other machine. addToApiReportFile:false must keep it out — no report line may
+  // begin with an absolute-path comment.
+  test(`real report ${name} carries no absolute-path comment`, () => {
+    const source = readFileSync(resolve(REPO_ROOT, dir, name), 'utf8');
+    const offenders = source.split('\n').filter((line) => /^\/\/ \//.test(line));
+    assert.deepEqual(offenders, [], `report ${name} has absolute-path comment lines`);
+  });
 }

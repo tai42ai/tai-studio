@@ -187,8 +187,6 @@ export const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     type: "stream.error";
 }>]>;
 
-// Warning: (ae-forgotten-export) The symbol "agentSummary" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export type AgentSummary = z.infer<typeof agentSummary>;
 
@@ -1437,8 +1435,6 @@ const conversationTranscriptPage: z.ZodObject<{
 
 // @public
 export interface ConversationTranscriptQuery {
-    // Warning: (ae-forgotten-export) The symbol "s" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly order: s.TranscriptOrder;
     // (undocumented)
@@ -11542,10 +11538,6 @@ export type WorkerState = z.infer<typeof workerState>;
 
 // @public
 const workerState: z.ZodEnum<["ready", "resyncing", "recycling"]>;
-
-// Warnings were encountered during analysis:
-//
-// src/client.ts:692:60 - (ae-forgotten-export) The symbol "SetMcpSecretEnvBody" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

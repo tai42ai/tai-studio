@@ -64,8 +64,6 @@ const addUrlToScopeResult: z.ZodObject<{
     scope_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "agentEventSchema" needs to be exported by the entry point index.d.ts
-//
 // @public
 type AgentEvent = z.infer<typeof agentEventSchema>;
 
@@ -234,16 +232,12 @@ const allToolSchemas: z.ZodRecord<z.ZodString, z.ZodObject<{
     output: Record<string, unknown> | null;
 }>>;
 
-// Warning: (ae-forgotten-export) The symbol "answerFormat" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type AnswerFormat = z.infer<typeof answerFormat>;
 
 // @public (undocumented)
 const answerFormat: z.ZodEnum<["text", "confirm", "select", "form", "external"]>;
 
-// Warning: (ae-forgotten-export) The symbol "createApiClient" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export type ApiClient = ReturnType<typeof createApiClient>;
 
@@ -1911,8 +1905,6 @@ export const ArrowLeftIcon: IconComponent;
 // @public
 export const ArrowUpIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "authCapabilities" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type AuthCapabilities = z.infer<typeof authCapabilities>;
 
@@ -1948,8 +1940,6 @@ export function AuthProvider(input: {
     children: ReactNode;
 }): FunctionComponentElement<ProviderProps<AuthState | null>>;
 
-// Warning: (ae-forgotten-export) The symbol "authRoute" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type AuthRoute = z.infer<typeof authRoute>;
 
@@ -2015,8 +2005,6 @@ export interface AuthState {
     readonly token: string | null;
 }
 
-// Warning: (ae-forgotten-export) The symbol "backendInfo" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type BackendInfo = z.infer<typeof backendInfo>;
 
@@ -2035,8 +2023,6 @@ const backendInfo: z.ZodObject<{
     backend: string | null;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "backupDocument" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type BackupDocument = z.infer<typeof backupDocument>;
 
@@ -2058,8 +2044,6 @@ const backupDocument: z.ZodObject<{
     errors?: Record<string, string> | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "backupImportReport" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type BackupImportReport = z.infer<typeof backupImportReport>;
 
@@ -2407,8 +2391,6 @@ export interface BreakpointState {
 // @public
 export function buildTagVocabulary<T>(items: readonly T[], getTags: (item: T) => readonly string[], selectedTags: readonly string[], untaggedLabel: string): TagVocabularyEntry[];
 
-// Warning: (ae-forgotten-export) The symbol "ButtonActionProps" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function Button(props: ButtonActionProps | LinkButtonProps): JSX.Element;
 
@@ -2418,8 +2400,6 @@ interface ButtonActionProps extends ButtonProps {
     readonly href?: undefined;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ButtonVariantProps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface ButtonProps extends ButtonVariantProps, ButtonHTMLAttributes<HTMLButtonElement> {
     readonly ref?: Ref<HTMLButtonElement>;
@@ -2460,8 +2440,6 @@ export type CapabilityState = {
 // @public (undocumented)
 export function Card(input: CardProps): JSX.Element;
 
-// Warning: (ae-forgotten-export) The symbol "SurfaceProps" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export interface CardProps extends SurfaceProps {
     // (undocumented)
@@ -2470,8 +2448,6 @@ export interface CardProps extends SurfaceProps {
     readonly ref?: Ref<HTMLDivElement>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "channels" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type Channels = z.infer<typeof channels>;
 
@@ -2531,8 +2507,6 @@ interface ClaimLinkBody {
     readonly ttl_seconds?: number | null;
 }
 
-// Warning: (ae-forgotten-export) The symbol "claimLinkCreated" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ClaimLinkCreated = z.infer<typeof claimLinkCreated>;
 
@@ -2710,8 +2684,6 @@ const connectionsList: z.ZodObject<{
     unhealthy?: number | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "connectionView" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConnectionView = z.infer<typeof connectionView>;
 
@@ -2751,8 +2723,6 @@ const connectionView: z.ZodObject<{
     unreachable_sub_services?: string[] | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "connectorCategoryView" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConnectorCategoryView = z.infer<typeof connectorCategoryView>;
 
@@ -2771,8 +2741,6 @@ const connectorCategoryView: z.ZodObject<{
     sort_order: number;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "connectorRef" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConnectorRef = z.infer<typeof connectorRef>;
 
@@ -2800,32 +2768,24 @@ interface ControlRefProps<T> {
     readonly ref?: Ref<T>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "conversationAnswerStatus" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
 // @public
 const conversationAnswerStatus: z.ZodEnum<["answered", "error", "silent"]>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationDeliveryStatus" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
 const conversationDeliveryStatus: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationDoor" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationDoor = z.infer<typeof conversationDoor>;
 
 // @public
 const conversationDoor: z.ZodEnum<["api", "channel"]>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationMessage" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationMessage = z.infer<typeof conversationMessage>;
 
@@ -2895,16 +2855,12 @@ const conversationMessage: z.ZodObject<{
     attempts?: number | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationRecordOrigin" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
 // @public
 const conversationRecordOrigin: z.ZodEnum<["client", "operator"]>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationRoute" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationRoute = z.infer<typeof conversationRoute>;
 
@@ -2947,8 +2903,6 @@ const conversationRoute: z.ZodObject<{
     execution_key_fingerprint: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationRoutes" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationRoutes = z.infer<typeof conversationRoutes>;
 
@@ -3027,16 +2981,12 @@ const conversationRoutes: z.ZodObject<{
 // @public
 export const ConversationsIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "conversationTargetKind" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 // @public
 const conversationTargetKind: z.ZodEnum<["agent", "tool"]>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationThread" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationThread = z.infer<typeof conversationThread>;
 
@@ -3071,8 +3021,6 @@ interface ConversationThreadMessageBody {
     readonly thread_id: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "conversationThreadMessageSent" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationThreadMessageSent = z.infer<typeof conversationThreadMessageSent>;
 
@@ -3088,16 +3036,12 @@ const conversationThreadMessageSent: z.ZodObject<{
     message_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationThreadMode" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationThreadMode = z.infer<typeof conversationThreadMode>;
 
 // @public
 const conversationThreadMode: z.ZodEnum<["agent", "manual"]>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationThreadModeState" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationThreadModeState = z.infer<typeof conversationThreadModeState>;
 
@@ -3113,8 +3057,6 @@ const conversationThreadModeState: z.ZodObject<{
     source: "thread" | "route";
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationThreadsPage" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
 
@@ -3169,8 +3111,6 @@ const conversationThreadsPage: z.ZodObject<{
     next_page: number | null;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "conversationTranscriptPage" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
 
@@ -3305,8 +3245,6 @@ const conversationTranscriptPage: z.ZodObject<{
 
 // @public
 interface ConversationTranscriptQuery {
-    // Warning: (ae-forgotten-export) The symbol "s" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly order: s.TranscriptOrder;
     // (undocumented)
@@ -3346,8 +3284,6 @@ export function coversRoute(projection: MeProjection, path: string, method: stri
 // @public
 export function coversWrite(state: CapabilityState, path: string, method: string): boolean;
 
-// Warning: (ae-forgotten-export) The symbol "ApiConfig" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 function createApiClient(config: ApiConfig): {
     readonly baseUrl: string;
@@ -4993,8 +4929,6 @@ interface CreatePresetBody {
 // @public
 export const DashboardIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "dashboardMetrics" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type DashboardMetrics = z.infer<typeof dashboardMetrics>;
 
@@ -5467,8 +5401,6 @@ const envConfig: z.ZodObject<{
     secret_keys: string[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "ErrorBoundaryState" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     // (undocumented)
@@ -5598,8 +5530,6 @@ export interface ExplorerViewProps<T> {
     readonly viewSurface: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "extension" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type Extension = z.infer<typeof extension>;
 
@@ -5620,7 +5550,6 @@ export function ExtensionComboBuilder(input: ExtensionComboBuilderProps): ReactN
 
 // @public (undocumented)
 export interface ExtensionComboBuilderProps {
-    // Warning: (ae-forgotten-export) The symbol "Extension" needs to be exported by the entry point index.d.ts
     readonly available: readonly Extension[];
     readonly availableReady?: boolean;
     // (undocumented)
@@ -5744,21 +5673,15 @@ export interface FieldProps {
 // @public
 export const FilterIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "FleetOutcome" needs to be exported by the entry point index.d.ts
-//
 // @public
 type FleetFailureOutcome = Exclude<FleetOutcome, 'applied'>;
 
-// Warning: (ae-forgotten-export) The symbol "fleetOutcome" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 // @public
 const fleetOutcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
 
-// Warning: (ae-forgotten-export) The symbol "fleetReloadResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetReloadResult = z.infer<typeof fleetReloadResult>;
 
@@ -5816,8 +5739,6 @@ const fleetReloadResult: z.ZodObject<{
 // @public (undocumented)
 export function FleetReport(input: FleetReportProps): ReactNode;
 
-// Warning: (ae-forgotten-export) The symbol "fleetReportFanout" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetReportFanout = z.infer<typeof fleetReportFanout>;
 
@@ -5940,8 +5861,6 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
 // @public
 export interface FleetReportProps {
     readonly action?: 'save' | 'reload';
-    // Warning: (ae-forgotten-export) The symbol "FleetReportSummary" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly summary: FleetReportSummary | null;
 }
@@ -5952,17 +5871,12 @@ type FleetReportStatus = 'converged' | 'degraded' | 'unreachable';
 // @public (undocumented)
 interface FleetReportSummary {
     readonly error: string | null;
-    // Warning: (ae-forgotten-export) The symbol "FleetWorkerFailure" needs to be exported by the entry point index.d.ts
     readonly failures: readonly FleetWorkerFailure[];
     readonly note: string | null;
-    // Warning: (ae-forgotten-export) The symbol "FleetReportStatus" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly status: FleetReportStatus;
 }
 
-// Warning: (ae-forgotten-export) The symbol "fleetResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetResult = z.infer<typeof fleetResult>;
 
@@ -6017,8 +5931,6 @@ const fleetResult: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "fleetWorker" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetWorker = z.infer<typeof fleetWorker>;
 
@@ -6080,14 +5992,10 @@ interface FleetWorkerFailure {
     readonly message: string | null;
     // (undocumented)
     readonly name: string;
-    // Warning: (ae-forgotten-export) The symbol "FleetFailureOutcome" needs to be exported by the entry point index.d.ts
-    //
     // (undocumented)
     readonly outcome: FleetFailureOutcome;
 }
 
-// Warning: (ae-forgotten-export) The symbol "fleetWorkerResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
 
@@ -6112,8 +6020,6 @@ const fleetWorkerResult: z.ZodObject<{
     payload?: unknown;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "fleetWorkers" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FleetWorkers = z.infer<typeof fleetWorkers>;
 
@@ -6262,8 +6168,6 @@ export interface FolderPickerProps {
     readonly value: string | null;
 }
 
-// Warning: (ae-forgotten-export) The symbol "folderRecord" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type FolderRecord = z.infer<typeof folderRecord>;
 
@@ -6316,8 +6220,6 @@ export interface FormDialogProps {
     readonly title: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "grantLevel" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type GrantLevel = z.infer<typeof grantLevel>;
 
@@ -6342,14 +6244,9 @@ export function GuardedTabs(input: {
 // @public
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
-// Warning: (ae-forgotten-export) The symbol "ToolTagEntry" needs to be exported by the entry point index.d.ts
-// Warning: (ae-forgotten-export) The symbol "ToolMetaRecord" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function hiddenToolNames(tagEntries: readonly ToolTagEntry[], overlayRows: readonly ToolMetaRecord[]): Set<string>;
 
-// Warning: (ae-forgotten-export) The symbol "hookList" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type HookList = z.infer<typeof hookList>;
 
@@ -6446,8 +6343,6 @@ const hookList: z.ZodObject<{
     trigger_auth?: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service"> | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "hookParams" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type HookParams = z.infer<typeof hookParams>;
 
@@ -6526,8 +6421,6 @@ export type IconComponent = (props: IconProps) => ReactElement;
 // @public
 export type IconProps = SVGProps<SVGSVGElement>;
 
-// Warning: (ae-forgotten-export) The symbol "interaction" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type Interaction = z.infer<typeof interaction>;
 
@@ -6579,8 +6472,6 @@ const interaction: z.ZodObject<{
     media?: unknown[] | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "interactionAnswered" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type InteractionAnswered = z.infer<typeof interactionAnswered>;
 
@@ -6596,8 +6487,6 @@ const interactionAnswered: z.ZodObject<{
     interaction_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "interactionMediaItem" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 
@@ -6740,8 +6629,6 @@ export interface JsonTreeProps {
 // @public
 const jsonValue: z.ZodType<unknown>;
 
-// Warning: (ae-forgotten-export) The symbol "kindStatus" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type KindStatus = z.infer<typeof kindStatus>;
 
@@ -6802,8 +6689,6 @@ export interface LinkButtonProps extends ButtonVariantProps, AnchorHTMLAttribute
 // @public
 export function lintSchemaText(text: string, requireTitle: boolean): SchemaLintResult;
 
-// Warning: (ae-forgotten-export) The symbol "loginFormField" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type LoginFormField = z.infer<typeof loginFormField>;
 
@@ -6825,8 +6710,6 @@ const loginFormField: z.ZodObject<{
     autocomplete?: string | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "loginMethod" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type LoginMethod = z.infer<typeof loginMethod>;
 
@@ -6897,8 +6780,6 @@ const loginMethod: z.ZodDiscriminatedUnion<"shape", [z.ZodObject<{
     icon?: string | undefined;
 }>]>;
 
-// Warning: (ae-forgotten-export) The symbol "loginMethods" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type LoginMethods = z.infer<typeof loginMethods>;
 
@@ -7014,8 +6895,6 @@ const loginMethods: z.ZodObject<{
     bootstrap: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "loginResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type LoginResult = z.infer<typeof loginResult>;
 
@@ -7031,8 +6910,6 @@ const loginResult: z.ZodObject<{
     user_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "logoutResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type LogoutResult = z.infer<typeof logoutResult>;
 
@@ -7048,8 +6925,6 @@ const logoutResult: z.ZodObject<{
 // @public
 export const ManifestIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "manifestMcpEntry" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ManifestMcpEntry = z.infer<typeof manifestMcpEntry>;
 
@@ -7265,8 +7140,6 @@ const marketplaceAdvisories: z.ZodObject<{
     fetched_at: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceAdvisory" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceAdvisory = z.infer<typeof marketplaceAdvisory>;
 
@@ -7315,8 +7188,6 @@ interface MarketplaceInstallBody {
     readonly version?: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceInstalled" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceInstalled = z.infer<typeof marketplaceInstalled>;
 
@@ -7447,8 +7318,6 @@ const marketplaceInstalled: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceInstalledCompat" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceInstalledCompat = z.infer<typeof marketplaceInstalledCompat>;
 
@@ -7464,8 +7333,6 @@ const marketplaceInstalledCompat: z.ZodObject<{
     reason: string | null;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceInstalledPlugin" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
 
@@ -7538,8 +7405,6 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     };
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceInstallResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceInstallResult = z.infer<typeof marketplaceInstallResult>;
 
@@ -7601,8 +7466,6 @@ const marketplaceInstallResult: z.ZodObject<{
     notes: string[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceItem" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceItem = z.infer<typeof marketplaceItem>;
 
@@ -7630,8 +7493,6 @@ const marketplaceItem: z.ZodObject<{
 // @public
 const marketplaceKinds: z.ZodArray<z.ZodString, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceLatestVersion" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceLatestVersion = z.infer<typeof marketplaceLatestVersion>;
 
@@ -7850,8 +7711,6 @@ const marketplaceLatestVersion: z.ZodObject<{
     }, z.ZodTypeAny, "passthrough"> | null | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplacePluginDetail" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplacePluginDetail = z.infer<typeof marketplacePluginDetail>;
 
@@ -8245,8 +8104,6 @@ const marketplacePluginDetail: z.ZodObject<{
     docs_url?: string | null | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceQuarantinedPlugin" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceQuarantinedPlugin = z.infer<typeof marketplaceQuarantinedPlugin>;
 
@@ -8262,8 +8119,6 @@ const marketplaceQuarantinedPlugin: z.ZodObject<{
     reason: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceSearchGroup" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceSearchGroup = z.infer<typeof marketplaceSearchGroup>;
 
@@ -8279,8 +8134,6 @@ const marketplaceSearchGroup: z.ZodObject<{
     count: number;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceSearchKind" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceSearchKind = z.infer<typeof marketplaceSearchKind>;
 
@@ -8299,8 +8152,6 @@ const marketplaceSearchKind: z.ZodObject<{
     names: string[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceSearchPage" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceSearchPage = z.infer<typeof marketplaceSearchPage>;
 
@@ -8485,8 +8336,6 @@ interface MarketplaceSearchQuery {
     readonly tier?: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceSearchRow" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceSearchRow = z.infer<typeof marketplaceSearchRow>;
 
@@ -8588,8 +8437,6 @@ interface MarketplaceUninstallBody {
     readonly ref: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceUninstallResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResult>;
 
@@ -8608,8 +8455,6 @@ const marketplaceUninstallResult: z.ZodObject<{
     uninstalled: true;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceUpgradeAllResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
 
@@ -8642,8 +8487,6 @@ const marketplaceUpgradeAllResult: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceUpgradeAllRow" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
 
@@ -8662,8 +8505,6 @@ const marketplaceUpgradeAllRow: z.ZodObject<{
     ref: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "marketplaceVersion" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MarketplaceVersion = z.infer<typeof marketplaceVersion>;
 
@@ -8688,8 +8529,6 @@ const marketplaceVersion: z.ZodObject<{
 // @public
 export function matchesSelectedTags(itemTags: readonly string[], selected: ReadonlySet<string>): boolean;
 
-// Warning: (ae-forgotten-export) The symbol "mcpEnvRef" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type McpEnvRef = z.infer<typeof mcpEnvRef>;
 
@@ -8711,8 +8550,6 @@ const mcpEnvRef: z.ZodObject<{
     has_default: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "mcpEnvRefs" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
 
@@ -8734,8 +8571,6 @@ const mcpEnvRefs: z.ZodArray<z.ZodObject<{
     has_default: boolean;
 }>, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "mcpReloadResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type McpReloadResult = z.infer<typeof mcpReloadResult>;
 
@@ -8817,8 +8652,6 @@ const mcpStatus: z.ZodObject<{
     bound: Record<string, string[]>;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "mediaKind" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MediaKind = z.infer<typeof mediaKind>;
 
@@ -8828,8 +8661,6 @@ const mediaKind: z.ZodEnum<["image", "link"]>;
 // @public
 export const MenuIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "meProjection" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type MeProjection = z.infer<typeof meProjection>;
 
@@ -9008,13 +8839,9 @@ const notification: z.ZodObject<{
     recipient: string | null;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "notification" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type Notification_2 = z.infer<typeof notification>;
 
-// Warning: (ae-forgotten-export) The symbol "notifications" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type Notifications = z.infer<typeof notifications>;
 
@@ -9058,8 +8885,6 @@ export const NotificationsIcon: IconComponent;
 // @public (undocumented)
 export function NumberInput(input: NumberInputProps): JSX.Element;
 
-// Warning: (ae-forgotten-export) The symbol "ControlRefProps" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export type NumberInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & ControlRefProps<HTMLInputElement>;
 
@@ -9069,8 +8894,6 @@ export interface NumericColumnProps {
     readonly numeric?: boolean;
 }
 
-// Warning: (ae-forgotten-export) The symbol "oauthCompleteResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type OAuthCompleteResult = z.infer<typeof oauthCompleteResult>;
 
@@ -9354,8 +9177,6 @@ export interface PageHeaderProps {
     readonly titleRef?: Ref<HTMLHeadingElement>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "LayoutElementProps" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export interface PageLayoutProps extends LayoutElementProps {
     // (undocumented)
@@ -9581,8 +9402,6 @@ const patchSubServicesResult: z.ZodObject<{
     consent_required: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "patternEntry" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PatternEntry = z.infer<typeof patternEntry>;
 
@@ -9658,8 +9477,6 @@ export interface PluginPageProps {
 // @public
 export type PluginSearch = Record<string, unknown>;
 
-// Warning: (ae-forgotten-export) The symbol "policyBody" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PolicyBody = z.infer<typeof policyBody>;
 
@@ -9696,8 +9513,6 @@ const policyRollback: z.ZodObject<{
     user_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "policyVersion" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PolicyVersion = z.infer<typeof policyVersion>;
 
@@ -9803,8 +9618,6 @@ const policyVersionList: z.ZodArray<z.ZodObject<{
     is_current: boolean;
 }>, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "presetBody" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetBody = z.infer<typeof presetBody>;
 
@@ -9856,8 +9669,6 @@ const presetDeleted: z.ZodObject<{
     deleted: true;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "presetDetail" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetDetail = z.infer<typeof presetDetail>;
 
@@ -9916,8 +9727,6 @@ const presetDetail: z.ZodObject<{
     fixed_kwargs: Record<string, unknown>;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "presetExtensionElement" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetExtensionElement = z.infer<typeof presetExtensionElement>;
 
@@ -9996,8 +9805,6 @@ const presetList: z.ZodArray<z.ZodObject<{
     used_by: string[];
 }>, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "presetRecord" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetRecord = z.infer<typeof presetRecord>;
 
@@ -10052,8 +9859,6 @@ const presetRecord: z.ZodObject<{
     used_by: string[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "presetReferees" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetReferees = z.infer<typeof presetReferees>;
 
@@ -10069,8 +9874,6 @@ const presetReferees: z.ZodObject<{
     referees: string[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "presetRenamed" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetRenamed = z.infer<typeof presetRenamed>;
 
@@ -10104,8 +9907,6 @@ const presetRollback: z.ZodObject<{
 // @public
 export const PresetsIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "presetValidation" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetValidation = z.infer<typeof presetValidation>;
 
@@ -10121,8 +9922,6 @@ const presetValidation: z.ZodObject<{
     valid: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "presetVersion" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetVersion = z.infer<typeof presetVersion>;
 
@@ -10270,8 +10069,6 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
     is_current: boolean;
 }>, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "presetVersionTags" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type PresetVersionTags = z.infer<typeof presetVersionTags>;
 
@@ -10290,8 +10087,6 @@ const presetVersionTags: z.ZodObject<{
     version: number;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "profileApplyResponse" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
@@ -10565,8 +10360,6 @@ export interface ProseScrollLabels {
     readonly table?: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "providers" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ProviderCatalogResponse = z.infer<typeof providers>;
 
@@ -10729,8 +10522,6 @@ const providers: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "providerView" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ProviderView = z.infer<typeof providerView>;
 
@@ -10908,8 +10699,6 @@ export interface RegisteredSettingsTab extends SettingsTabContribution {
     readonly pluginId: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "reloadConfigResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
 
@@ -11163,8 +10952,6 @@ const revokeApiKeyResult: z.ZodObject<{
     user_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "roleAuditEvent" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RoleAuditEvent = z.infer<typeof roleAuditEvent>;
 
@@ -11214,8 +11001,6 @@ const roleAuditEvent: z.ZodObject<{
     is_current: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "roleBody" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RoleBody = z.infer<typeof roleBody>;
 
@@ -11276,8 +11061,6 @@ const roleDeleted: z.ZodObject<{
     deleted: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "roleGrants" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RoleGrants = z.infer<typeof roleGrants>;
 
@@ -11325,8 +11108,6 @@ interface RoleUpdateBody {
     readonly grants?: Record<string, s.GrantLevel>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "roleVersion" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RoleVersion = z.infer<typeof roleVersion>;
 
@@ -11401,8 +11182,6 @@ const roleVersion: z.ZodObject<{
     is_current: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "roleVersions" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RoleVersions = z.infer<typeof roleVersions>;
 
@@ -11583,16 +11362,12 @@ const roleVersions: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "routeAction" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RouteAction = z.infer<typeof routeAction>;
 
 // @public
 const routeAction: z.ZodEnum<["read", "write", "fenced", "secret"]>;
 
-// Warning: (ae-forgotten-export) The symbol "routeEntry" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RouteEntry = z.infer<typeof routeEntry>;
 
@@ -11693,8 +11468,6 @@ export interface RouteSearchByToken {
 // @public
 export type RouteToken = keyof RouteSearchByToken;
 
-// Warning: (ae-forgotten-export) The symbol "run" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type Run = z.infer<typeof run>;
 
@@ -11820,8 +11593,6 @@ const runsPage: z.ZodObject<{
     nextPage: number | null;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "runSpan" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RunSpan = z.infer<typeof runSpan>;
 
@@ -11919,8 +11690,6 @@ interface RunToolArgs {
 // @public (undocumented)
 const runToolResult: z.ZodType<unknown, z.ZodTypeDef, unknown>;
 
-// Warning: (ae-forgotten-export) The symbol "runTrace" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type RunTrace = z.infer<typeof runTrace>;
 
@@ -12405,8 +12174,6 @@ interface SavePresetVersionBody {
     readonly output_schema?: Record<string, unknown> | null;
 }
 
-// Warning: (ae-forgotten-export) The symbol "scheduleItem" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ScheduleItem = z.infer<typeof scheduleItem>;
 
@@ -12557,8 +12324,6 @@ export interface SecretRefFieldProps {
     readonly value: SecretRef | undefined;
 }
 
-// Warning: (ae-forgotten-export) The symbol "SelectArgs" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 export function Select(props: SelectArgs): JSX.Element;
 
@@ -12577,8 +12342,6 @@ export interface SelectGroup {
     readonly options: readonly SelectOption[];
 }
 
-// Warning: (ae-forgotten-export) The symbol "SelectSharedProps" needs to be exported by the entry point index.d.ts
-//
 // @public
 export interface SelectGroupsProps extends SelectSharedProps {
     // (undocumented)
@@ -12646,8 +12409,6 @@ interface SetMcpSecretEnvBody_2 {
 // @public
 export const SettingsIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileBody" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileBody = z.infer<typeof settingsProfileBody>;
 
@@ -12675,8 +12436,6 @@ const settingsProfileDeleted: z.ZodObject<{
     ok: true;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileDiff" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
 
@@ -12733,8 +12492,6 @@ const settingsProfileList: z.ZodArray<z.ZodObject<{
     description: string;
 }>, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileRollback" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileRollback = z.infer<typeof settingsProfileRollback>;
 
@@ -12750,8 +12507,6 @@ const settingsProfileRollback: z.ZodObject<{
     ok: true;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileSaved" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileSaved = z.infer<typeof settingsProfileSaved>;
 
@@ -12767,8 +12522,6 @@ const settingsProfileSaved: z.ZodObject<{
     version?: number | undefined;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileSummary" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileSummary = z.infer<typeof settingsProfileSummary>;
 
@@ -12784,8 +12537,6 @@ const settingsProfileSummary: z.ZodObject<{
     description: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileVersion" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileVersion = z.infer<typeof settingsProfileVersion>;
 
@@ -12849,8 +12600,6 @@ const settingsProfileVersionList: z.ZodArray<z.ZodObject<{
     is_current: boolean;
 }>, "many">;
 
-// Warning: (ae-forgotten-export) The symbol "settingsProfileVersionMeta" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsProfileVersionMeta = z.infer<typeof settingsProfileVersionMeta>;
 
@@ -12872,8 +12621,6 @@ const settingsProfileVersionMeta: z.ZodObject<{
     is_current: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "settingsSchema" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SettingsSchema = z.infer<typeof settingsSchema>;
 
@@ -13275,8 +13022,6 @@ const storageDirDeleted: z.ZodObject<{
 // @public
 export const StorageIcon: IconComponent;
 
-// Warning: (ae-forgotten-export) The symbol "storageInfo" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type StorageInfo = z.infer<typeof storageInfo>;
 
@@ -13316,8 +13061,6 @@ const storageResourceList: z.ZodObject<{
     resources: string[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "storageResourceStat" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type StorageResourceStat = z.infer<typeof storageResourceStat>;
 
@@ -13355,8 +13098,6 @@ interface StorageUploadBody {
     readonly id: string;
 }
 
-// Warning: (ae-forgotten-export) The symbol "Interaction" needs to be exported by the entry point index.d.ts
-//
 // @public
 export type StreamInteraction = Interaction & {
     readonly answered: boolean;
@@ -13374,8 +13115,6 @@ export interface StructuredOutputProps {
 // @public
 export const STUDIO_PLUGIN_API_VERSION = 1;
 
-// Warning: (ae-forgotten-export) The symbol "studioPluginManifest" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type StudioPluginManifest = z.infer<typeof studioPluginManifest>;
 
@@ -13492,8 +13231,6 @@ const subMcpCreated: z.ZodObject<{
     slug: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "subMcpEntry" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
@@ -13528,8 +13265,6 @@ const subMcpList: z.ZodRecord<z.ZodString, z.ZodObject<{
     transport: string;
 }>>;
 
-// Warning: (ae-forgotten-export) The symbol "subMcpMount" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type SubMcpMount = z.infer<typeof subMcpMount>;
 
@@ -13822,8 +13557,6 @@ export const TOKEN_NAMES: readonly ["--tai-color-bg", "--tai-color-surface", "--
 // @public (undocumented)
 export type TokenName = (typeof TOKEN_NAMES)[number];
 
-// Warning: (ae-forgotten-export) The symbol "tokensPayload" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TokensPayload = z.infer<typeof tokensPayload>;
 
@@ -13883,8 +13616,6 @@ export type ToolDisplayNamesState = {
     readonly error: unknown;
 };
 
-// Warning: (ae-forgotten-export) The symbol "toolExtensions" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolExtensions = z.infer<typeof toolExtensions>;
 
@@ -13930,8 +13661,6 @@ const toolExtensions: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "toolExtensionsApplyResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult>;
 
@@ -14121,8 +13850,6 @@ const toolExtensionsApplyResult: z.ZodObject<{
     };
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "toolMediaResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolMediaResult = z.infer<typeof toolMediaResult>;
 
@@ -14161,8 +13888,6 @@ const toolMetaDeleted: z.ZodObject<{
     deleted: true;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "toolMetaOverlay" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolMetaOverlay = z.infer<typeof toolMetaOverlay>;
 
@@ -14240,8 +13965,6 @@ interface ToolMetaPatch {
     readonly tags?: readonly string[];
 }
 
-// Warning: (ae-forgotten-export) The symbol "toolMetaRecord" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolMetaRecord = z.infer<typeof toolMetaRecord>;
 
@@ -14367,8 +14090,6 @@ const toolRunSubmitResult: z.ZodObject<{
     run_id: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "toolSchema" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolSchema = z.infer<typeof toolSchema>;
 
@@ -14393,8 +14114,6 @@ export const ToolsIcon: IconComponent;
 // @public
 export const toolsListKey: readonly ["tools"];
 
-// Warning: (ae-forgotten-export) The symbol "toolTagEntry" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ToolTagEntry = z.infer<typeof toolTagEntry>;
 
@@ -14475,16 +14194,12 @@ const topicVerifierSet: z.ZodObject<{
 // @public (undocumented)
 export function TR(input: TableRowProps): JSX.Element;
 
-// Warning: (ae-forgotten-export) The symbol "transcriptOrder" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TranscriptOrder = z.infer<typeof transcriptOrder>;
 
 // @public
 const transcriptOrder: z.ZodEnum<["asc", "desc"]>;
 
-// Warning: (ae-forgotten-export) The symbol "triggerAuth" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TriggerAuth = z.infer<typeof triggerAuth>;
 
@@ -14507,8 +14222,6 @@ interface TriggerLinkCreateBody {
     readonly ttl_seconds: number | null;
 }
 
-// Warning: (ae-forgotten-export) The symbol "triggerLinkCreated" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TriggerLinkCreated = z.infer<typeof triggerLinkCreated>;
 
@@ -14533,8 +14246,6 @@ const triggerLinkCreated: z.ZodObject<{
     trigger_path: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "triggerLinkDeleted" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TriggerLinkDeleted = z.infer<typeof triggerLinkDeleted>;
 
@@ -14550,8 +14261,6 @@ const triggerLinkDeleted: z.ZodObject<{
     removed: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "triggerLinkList" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TriggerLinkList = z.infer<typeof triggerLinkList>;
 
@@ -14617,8 +14326,6 @@ const triggerLinkList: z.ZodObject<{
     total: number;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "triggerLinkRecord" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type TriggerLinkRecord = z.infer<typeof triggerLinkRecord>;
 
@@ -14753,8 +14460,6 @@ export function useToolDisplayNames(): Readonly<Record<string, string>>;
 // @public
 export function useViewMode(surface: string, fallback?: ViewMode): readonly [ViewMode, (mode: ViewMode) => void];
 
-// Warning: (ae-forgotten-export) The symbol "ValidateOptions" needs to be exported by the entry point index.d.ts
-//
 // @public
 export function validateAgainstSchema(schema: JsonSchema, value: unknown, options?: ValidateOptions): SchemaFormErrors;
 
@@ -14770,8 +14475,6 @@ interface ValidateConditionBody {
     readonly sample_context?: Record<string, unknown>;
 }
 
-// Warning: (ae-forgotten-export) The symbol "validateConditionResult" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type ValidateConditionResult = z.infer<typeof validateConditionResult>;
 
@@ -14862,8 +14565,6 @@ export interface ViewToggleProps {
     readonly value: ViewMode;
 }
 
-// Warning: (ae-forgotten-export) The symbol "webEntryCode" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WebEntryCode = z.infer<typeof webEntryCode>;
 
@@ -14893,8 +14594,6 @@ interface WebEntryCodeMintBody {
     readonly label: string | null;
 }
 
-// Warning: (ae-forgotten-export) The symbol "webEntryCodeMinted" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WebEntryCodeMinted = z.infer<typeof webEntryCodeMinted>;
 
@@ -14913,8 +14612,6 @@ const webEntryCodeMinted: z.ZodObject<{
     expires_at: string | null;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "webEntryCodeRevoked" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WebEntryCodeRevoked = z.infer<typeof webEntryCodeRevoked>;
 
@@ -14927,8 +14624,6 @@ const webEntryCodeRevoked: z.ZodObject<{
     status: "revoked";
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "webEntryGate" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WebEntryGate = z.infer<typeof webEntryGate>;
 
@@ -14969,8 +14664,6 @@ const webEntryGate: z.ZodObject<{
     }[];
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "webEntryGateState" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WebEntryGateState = z.infer<typeof webEntryGateState>;
 
@@ -14983,16 +14676,12 @@ const webEntryGateState: z.ZodObject<{
     enabled: boolean;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "workerKind" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WorkerKind = z.infer<typeof workerKind>;
 
 // @public
 const workerKind: z.ZodEnum<["serve", "backend"]>;
 
-// Warning: (ae-forgotten-export) The symbol "workerLastOp" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WorkerLastOp = z.infer<typeof workerLastOp>;
 
@@ -15011,8 +14700,6 @@ const workerLastOp: z.ZodObject<{
     outcome: string;
 }>;
 
-// Warning: (ae-forgotten-export) The symbol "workerState" needs to be exported by the entry point index.d.ts
-//
 // @public (undocumented)
 type WorkerState = z.infer<typeof workerState>;
 
@@ -15021,44 +14708,6 @@ const workerState: z.ZodEnum<["ready", "resyncing", "recycling"]>;
 
 // @public
 export const XCircleIcon: IconComponent;
-
-// Warnings were encountered during analysis:
-//
-// /Users/cain/tai42/tai-studio/packages/api-client/src/agents.ts:131:29 - (ae-forgotten-export) The symbol "AgentEvent" needs to be exported by the entry point index.d.ts
-// /Users/cain/tai42/tai-studio/packages/api-client/src/agents.ts:132:30 - (ae-forgotten-export) The symbol "UnknownAgentEvent" needs to be exported by the entry point index.d.ts
-// /Users/cain/tai42/tai-studio/packages/api-client/src/client.ts:692:60 - (ae-forgotten-export) The symbol "SetMcpSecretEnvBody_2" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:12727 - (ae-forgotten-export) The symbol "RunToolArgs" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:12952 - (ae-forgotten-export) The symbol "SubmitToolRunArgs" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:13888 - (ae-forgotten-export) The symbol "CreatePresetBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:15951 - (ae-forgotten-export) The symbol "SavePresetVersionBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:17430 - (ae-forgotten-export) The symbol "ValidatePresetBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:17866 - (ae-forgotten-export) The symbol "ToolMetaPatch" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:19670 - (ae-forgotten-export) The symbol "StorageUploadBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:21359 - (ae-forgotten-export) The symbol "PresetExtensionElement" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:34579 - (ae-forgotten-export) The symbol "StartConnectArgs" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:41775 - (ae-forgotten-export) The symbol "ConversationTranscriptQuery" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:43267 - (ae-forgotten-export) The symbol "ConversationThreadMessageBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:43709 - (ae-forgotten-export) The symbol "ConversationThreadMode" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:44072 - (ae-forgotten-export) The symbol "WebEntryCodeMintBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:45290 - (ae-forgotten-export) The symbol "ParsedAgentEvent" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:45926 - (ae-forgotten-export) The symbol "HookParams" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:46944 - (ae-forgotten-export) The symbol "TopicVerifierBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:46944 - (ae-forgotten-export) The symbol "TriggerLinkCreateBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:48821 - (ae-forgotten-export) The symbol "AddUrlToScopeBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:49533 - (ae-forgotten-export) The symbol "PinRoutePublicBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:50109 - (ae-forgotten-export) The symbol "RoleCreateBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:50485 - (ae-forgotten-export) The symbol "RoleUpdateBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:52667 - (ae-forgotten-export) The symbol "ApiKeyBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:52667 - (ae-forgotten-export) The symbol "ClaimLinkBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:54837 - (ae-forgotten-export) The symbol "ValidateConditionBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:58414 - (ae-forgotten-export) The symbol "MetricsQuery" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:59142 - (ae-forgotten-export) The symbol "RunsQuery" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:61541 - (ae-forgotten-export) The symbol "MarketplaceSearchQuery" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:67231 - (ae-forgotten-export) The symbol "MarketplaceInstallBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:67231 - (ae-forgotten-export) The symbol "MarketplaceUninstallBody" needs to be exported by the entry point index.d.ts
-// src/hooks/useApi.ts:28:69628 - (ae-forgotten-export) The symbol "SseFrame" needs to be exported by the entry point index.d.ts
-// src/hooks/useCapabilities.ts:36:33 - (ae-forgotten-export) The symbol "MeProjection" needs to be exported by the entry point index.d.ts
-// src/hooks/useSystemKinds.tsx:34:33 - (ae-forgotten-export) The symbol "KindStatus" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

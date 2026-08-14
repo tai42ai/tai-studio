@@ -6,16 +6,12 @@
 
 import type { ComponentType } from 'react';
 
-// Warning: (ae-forgotten-export) The symbol "PluginContributions" needs to be exported by the entry point host.d.ts
-//
 // @public
 export function getContributions(): PluginContributions;
 
 // @public
 export function getPluginHostState(): PluginLoaderState;
 
-// Warning: (ae-forgotten-export) The symbol "PluginEntry" needs to be exported by the entry point host.d.ts
-//
 // @public
 export function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void>;
 
@@ -23,9 +19,7 @@ export function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void>;
 interface NavEntryContribution {
     readonly icon?: ComponentType;
     readonly path: string;
-    // Warning: (ae-forgotten-export) The symbol "RequiredCapabilities" needs to be exported by the entry point host.d.ts
     readonly requiredCapabilities?: RequiredCapabilities;
-    // Warning: (ae-forgotten-export) The symbol "NavEntrySection" needs to be exported by the entry point host.d.ts
     readonly section?: NavEntrySection;
     // (undocumented)
     readonly title: string;
@@ -36,11 +30,8 @@ type NavEntrySection = 'Capabilities' | 'Integrations' | 'Activity' | 'Administr
 
 // @public (undocumented)
 interface PageContribution {
-    // Warning: (ae-forgotten-export) The symbol "PluginPageProps" needs to be exported by the entry point host.d.ts
-    //
     // (undocumented)
     readonly component: ComponentType<PluginPageProps>;
-    // Warning: (ae-forgotten-export) The symbol "PluginPageParamsSchema" needs to be exported by the entry point host.d.ts
     readonly params?: PluginPageParamsSchema;
     readonly path: string;
     readonly requiredCapabilities?: RequiredCapabilities;
@@ -50,28 +41,18 @@ interface PageContribution {
 
 // @public
 interface PluginContext {
-    // Warning: (ae-forgotten-export) The symbol "NavEntryContribution" needs to be exported by the entry point host.d.ts
     registerNavEntry(contribution: NavEntryContribution): void;
-    // Warning: (ae-forgotten-export) The symbol "PageContribution" needs to be exported by the entry point host.d.ts
     registerPage(contribution: PageContribution): void;
-    // Warning: (ae-forgotten-export) The symbol "SettingsTabContribution" needs to be exported by the entry point host.d.ts
     registerSettingsTab(contribution: SettingsTabContribution): void;
-    // Warning: (ae-forgotten-export) The symbol "ToolPanelContribution" needs to be exported by the entry point host.d.ts
     registerToolPanel(contribution: ToolPanelContribution): void;
 }
 
 // @public
 interface PluginContributions {
-    // Warning: (ae-forgotten-export) The symbol "RegisteredNavEntry" needs to be exported by the entry point host.d.ts
-    //
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
-    // Warning: (ae-forgotten-export) The symbol "RegisteredPage" needs to be exported by the entry point host.d.ts
-    //
     // (undocumented)
     readonly pages: readonly RegisteredPage[];
-    // Warning: (ae-forgotten-export) The symbol "RegisteredSettingsTab" needs to be exported by the entry point host.d.ts
-    //
     // (undocumented)
     readonly settingsTabs: readonly RegisteredSettingsTab[];
     // (undocumented)
@@ -84,8 +65,6 @@ export interface PluginContributionsSnapshot {
     readonly status: PluginLoaderState['status'];
 }
 
-// Warning: (ae-forgotten-export) The symbol "PluginContext" needs to be exported by the entry point host.d.ts
-//
 // @public
 type PluginEntry = (context: PluginContext) => void | Promise<void>;
 
@@ -140,8 +119,6 @@ export function setPluginHostState(state: PluginLoaderState): void;
 
 // @public (undocumented)
 interface SettingsTabContribution {
-    // Warning: (ae-forgotten-export) The symbol "SettingsTabProps" needs to be exported by the entry point host.d.ts
-    //
     // (undocumented)
     readonly component: ComponentType<SettingsTabProps>;
     // (undocumented)
@@ -162,8 +139,6 @@ export function subscribePluginHost(listener: () => void): () => void;
 
 // @public (undocumented)
 interface ToolPanelContribution {
-    // Warning: (ae-forgotten-export) The symbol "ToolPanelProps" needs to be exported by the entry point host.d.ts
-    //
     // (undocumented)
     readonly component: ComponentType<ToolPanelProps>;
     // (undocumented)
