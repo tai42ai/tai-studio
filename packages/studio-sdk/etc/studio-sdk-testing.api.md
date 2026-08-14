@@ -33,8 +33,6 @@ export function installJsdomStubs(): void;
 // @public
 export function setElementOverflow(element: HTMLElement, overflowing: boolean): void;
 
-// Warning: (ae-forgotten-export) The symbol "ToolDisplayNamesContextValue" needs to be exported by the entry point testing.d.ts
-//
 // @public
 export function StaticToolDisplayNamesProvider(input: {
     readonly names: Readonly<Record<string, string>>;
@@ -45,8 +43,6 @@ export function StaticToolDisplayNamesProvider(input: {
 // @public (undocumented)
 interface ToolDisplayNamesContextValue {
     readonly reload: () => void;
-    // Warning: (ae-forgotten-export) The symbol "ToolDisplayNamesState" needs to be exported by the entry point testing.d.ts
-    //
     // (undocumented)
     readonly state: ToolDisplayNamesState;
 }
