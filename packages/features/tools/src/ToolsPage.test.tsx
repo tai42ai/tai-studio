@@ -60,6 +60,7 @@ function detailClient(names: readonly string[] = ['echo']): StubApiClient {
 interface ToolsSearch {
   readonly tool?: string;
   readonly tags?: string[];
+  readonly q?: string;
 }
 
 /**
@@ -79,7 +80,7 @@ function renderToolsHarness(
     return <ToolsPage search={search} />;
   }
   const navigate = vi.fn((_token: string, next?: ToolsSearch) => {
-    setSearch?.({ tool: next?.tool, tags: next?.tags });
+    setSearch?.({ tool: next?.tool, tags: next?.tags, q: next?.q });
   });
   return renderWithProviders(<Harness />, { client, navigate, projection });
 }
@@ -861,5 +862,113 @@ describe('ToolsPage — overlay edit affordance', () => {
 
     expect(await screen.findByRole('link', { name: 'Open tool echo' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit tool echo' })).toBeNull();
+  });
+});
+
+describe('ToolsPage — search', () => {
+  it('seeds the box from ?q= and filters the list by a name substring', async () => {
+    renderWithProviders(<ToolsPage search={{ q: 'alph' }} />, { client: taggedClient() });
+
+    expect(await screen.findByRole('textbox', { name: 'Filter tools' })).toHaveValue('alph');
+    expect(screen.getByRole('link', { name: 'Open tool alpha' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool beta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool gamma' })).not.toBeInTheDocument();
+  });
+
+  it('leaves every tool listed with an empty box when ?q= is absent', async () => {
+    renderWithProviders(<ToolsPage search={{}} />, { client: taggedClient() });
+
+    expect(await screen.findByRole('textbox', { name: 'Filter tools' })).toHaveValue('');
+    for (const name of toolNames) {
+      expect(screen.getByRole('link', { name: `Open tool ${name}` })).toBeInTheDocument();
+    }
+  });
+
+  it('narrows the list live while typing but does not touch the URL until a commit', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ToolsPage search={{}} />, { client: taggedClient() });
+
+    await user.type(await screen.findByRole('textbox', { name: 'Filter tools' }), 'alph');
+    expect(screen.getByRole('link', { name: 'Open tool alpha' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool beta' })).not.toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('commits the trimmed query to ?q= on Enter, preserving the active tags', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ToolsPage search={{ tags: ['x'] }} />, {
+      client: taggedClient(),
+    });
+
+    await user.type(await screen.findByRole('textbox', { name: 'Filter tools' }), 'alph{Enter}');
+    expect(navigate).toHaveBeenCalledWith('tools', { tool: undefined, tags: ['x'], q: 'alph' });
+  });
+
+  it('ANDs ?q= with ?tags= — only a tool passing BOTH survives', async () => {
+    renderWithProviders(<ToolsPage search={{ tags: ['x'], q: 'alpha' }} />, {
+      client: taggedClient(),
+    });
+
+    // alpha carries x AND its name matches; beta carries x but fails the search;
+    // gamma matches neither; solo is untagged.
+    expect(await screen.findByRole('link', { name: 'Open tool alpha' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool beta' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool gamma' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open tool solo' })).not.toBeInTheDocument();
+  });
+
+  it('preserves the active ?q= when a tag chip is toggled', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ToolsPage search={{ q: 'a' }} />, {
+      client: taggedClient(),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'x (2)' }));
+    expect(navigate).toHaveBeenCalledWith('tools', { tool: undefined, tags: ['x'], q: 'a' });
+  });
+
+  it('carries a typed uncommitted draft into a tag-toggle navigation (no click-through drop)', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ToolsPage search={{}} />, { client: taggedClient() });
+
+    // Type a draft but do NOT commit it (no Enter); the box blur fires on the chip click.
+    await user.type(await screen.findByRole('textbox', { name: 'Filter tools' }), 'alph');
+    await user.click(screen.getByRole('button', { name: 'x (2)' }));
+
+    // The tag navigation carries the LIVE draft, so the click cannot drop the filter.
+    expect(navigate).toHaveBeenLastCalledWith('tools', {
+      tool: undefined,
+      tags: ['x'],
+      q: 'alph',
+    });
+  });
+
+  it('does NOT push a redundant history entry when Enter repeats the committed query', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ToolsPage search={{ q: 'alph' }} />, {
+      client: taggedClient(),
+    });
+
+    const box = await screen.findByRole('textbox', { name: 'Filter tools' });
+    await user.click(box);
+    await user.keyboard('{Enter}');
+
+    // The box already shows the committed value, so a bare Enter commits nothing.
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('does NOT self-commit a padded deep-link on an untouched tab-through blur', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ToolsPage search={{ q: ' alph ' }} />, {
+      client: taggedClient(),
+    });
+
+    const box = await screen.findByRole('textbox', { name: 'Filter tools' });
+    expect(box).toHaveValue(' alph ');
+    // Tabbing through the untouched padded box is not a user edit — no navigation.
+    await user.click(box);
+    await user.tab();
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

@@ -29,7 +29,7 @@
  * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
  * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
@@ -75,6 +75,22 @@ const MAX_VISIBLE_TAG_CHIPS = 8;
 /** The explorer's list/card view-mode persistence key. */
 const TOOLS_VIEW_SURFACE = 'tools';
 
+/** The search box's accessible name; the commit listener keys the search input on it. */
+const SEARCH_LABEL = 'Filter tools';
+
+/** True when a delegated keydown/blur originated on the explorer's search input. */
+function isSearchInput(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.getAttribute('aria-label') === SEARCH_LABEL;
+}
+
+/** Case-insensitive substring over a tool's real name and display label. */
+function toolMatches(view: ToolView, query: string): boolean {
+  const needle = query.toLowerCase();
+  return (
+    view.name.toLowerCase().includes(needle) || view.displayName.toLowerCase().includes(needle)
+  );
+}
+
 /** The tools table's single column; folder rows span it. */
 const COLUMNS: ExplorerColumn[] = [{ key: 'name', header: 'Name' }];
 
@@ -85,18 +101,20 @@ const TOOL_META_WRITE_ROUTE = '/api/tool-meta/tools';
 const spacerStyle = { marginLeft: 'auto' };
 
 /** One tool row: its display label as an `AppLink` setting `?tool=` (preserving the
- * active `?tags=`), the real name shown secondary+mono when a display name overrides
- * it, and — for writers — an edit affordance opening the overlay dialog. */
+ * active `?tags=` and `?q=`), the real name shown secondary+mono when a display name
+ * overrides it, and — for writers — an edit affordance opening the overlay dialog. */
 function ToolItem({
   view,
   selected,
   preserveTags,
+  preserveQuery,
   canWrite,
   onEdit,
 }: {
   readonly view: ToolView;
   readonly selected: boolean;
   readonly preserveTags: readonly string[];
+  readonly preserveQuery: string | undefined;
   readonly canWrite: boolean;
   readonly onEdit: (view: ToolView) => void;
 }): ReactNode {
@@ -104,7 +122,11 @@ function ToolItem({
     <div className="tai-row">
       <AppLink
         to="tools"
-        search={{ tool: view.name, tags: preserveTags.length > 0 ? [...preserveTags] : undefined }}
+        search={{
+          tool: view.name,
+          tags: preserveTags.length > 0 ? [...preserveTags] : undefined,
+          q: preserveQuery,
+        }}
         aria-label={`Open tool ${view.name}`}
         aria-current={selected ? 'page' : undefined}
         className="tai-nav-item"
@@ -144,11 +166,14 @@ function projectedTools(views: readonly ToolView[], state: CapabilityState): Too
 function ToolList({
   selected,
   selectedTags,
+  committedQuery,
   metaWriteDisabled,
   onEdit,
 }: {
   readonly selected: string | undefined;
   readonly selectedTags: readonly string[];
+  /** The committed `?q=` value from the URL (`''` when the param is absent). */
+  readonly committedQuery: string;
   readonly metaWriteDisabled: boolean;
   readonly onEdit: (view: ToolView, folders: readonly Folder[]) => void;
 }): ReactNode {
@@ -162,144 +187,225 @@ function ToolList({
   const { state } = useCapabilities();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
+  // The live search box holds a local draft; the committed `?q=` is written only on an
+  // explicit commit (Enter / an edited blur), never per keystroke. Re-seed the draft
+  // from the committed value DURING RENDER (React's adjust-state-on-prop-change pattern)
+  // so a query arriving from the URL (deep-link, back/forward) overwrites the box.
+  const [query, setQuery] = useState(committedQuery);
+  const [seed, setSeed] = useState(committedQuery);
+  if (seed !== committedQuery) {
+    setSeed(committedQuery);
+    setQuery(committedQuery);
+  }
+
   const toolsQuery = useQuery({ queryKey: toolsListKey, queryFn: () => api.listTools() });
   const tagsQuery = useQuery({ queryKey: toolTagsKey, queryFn: () => api.listToolTags() });
   const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
 
+  // Commit the trimmed draft to `?q=`, preserving the active tool + tags; an empty
+  // draft clears the param so the URL and box cannot drift.
+  const commitQuery = useCallback(
+    (value: string): void => {
+      const next = value.trim();
+      navigate('tools', {
+        tool: selected,
+        tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
+        q: next === '' ? undefined : next,
+      });
+    },
+    [navigate, selected, selectedTags],
+  );
+
+  // The SDK search input is controlled (value/onChange only), so the URL commit is
+  // delegated on the container: Enter or an edited blur of the search box writes the
+  // URL. The ref holds the latest draft so the listeners bind once, not per keystroke.
+  const commitState = useRef({ query, committedQuery });
+  commitState.current = { query, committedQuery };
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el === null) throw new Error('Tools list container ref did not attach.');
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter' || !isSearchInput(event.target)) return;
+      const { query: draft, committedQuery: committed } = commitState.current;
+      // A redundant Enter (the draft already the committed value) must not push a
+      // history entry.
+      if (draft.trim() !== committed.trim()) commitQuery(draft);
+    };
+    const onFocusOut = (event: FocusEvent): void => {
+      const { query: draft, committedQuery: committed } = commitState.current;
+      // An untouched blur (tabbing through) must not push a redundant history entry for
+      // the value already committed to the URL — trimmed both sides, so a padded
+      // deep-link never self-commits without a real edit.
+      if (isSearchInput(event.target) && draft.trim() !== committed.trim()) commitQuery(draft);
+    };
+    el.addEventListener('keydown', onKeyDown);
+    el.addEventListener('focusout', onFocusOut);
+    return () => {
+      el.removeEventListener('keydown', onKeyDown);
+      el.removeEventListener('focusout', onFocusOut);
+    };
+  }, [commitQuery]);
+
+  // The live trimmed draft carried into every intra-page navigation (undefined when
+  // empty): a click during an uncommitted edit cannot drop the filter, since the draft
+  // re-renders each keystroke so this value and the click's navigation always agree.
+  const preserveQuery = query.trim() === '' ? undefined : query.trim();
+
+  let body: ReactNode;
   if (toolsQuery.isPending) {
-    return (
+    body = (
       <div className="tai-stack tai-stack-2">
         <Skeleton height={32} />
         <Skeleton height={32} />
         <Skeleton height={32} />
       </div>
     );
-  }
-  if (toolsQuery.isError) {
-    return (
+  } else if (toolsQuery.isError) {
+    body = (
       <ErrorState
         message={errorMessage(toolsQuery.error)}
         onRetry={() => void toolsQuery.refetch()}
       />
     );
-  }
-
-  const overlayRows = metaQuery.data?.meta ?? [];
-  const folders: Folder[] = toFolders(metaQuery.data?.folders ?? []);
-  const allViews = projectedTools(
-    buildToolViews(toolsQuery.data, tagsQuery.data ?? [], overlayRows),
-    state,
-  );
-  if (allViews.length === 0) {
-    return (
-      <EmptyState
-        title="No tools available"
-        description="Tools arrive as marketplace plugins — install one to run it here."
-        action={
-          <AppLink to="marketplace" search={{ kind: 'tool' }} className="tai-btn tai-btn-secondary">
-            Browse marketplace
-          </AppLink>
-        }
-      />
+  } else {
+    const overlayRows = metaQuery.data?.meta ?? [];
+    const folders: Folder[] = toFolders(metaQuery.data?.folders ?? []);
+    const allViews = projectedTools(
+      buildToolViews(toolsQuery.data, tagsQuery.data ?? [], overlayRows),
+      state,
     );
-  }
+    if (allViews.length === 0) {
+      body = (
+        <EmptyState
+          title="No tools available"
+          description="Tools arrive as marketplace plugins — install one to run it here."
+          action={
+            <AppLink
+              to="marketplace"
+              search={{ kind: 'tool' }}
+              className="tai-btn tai-btn-secondary"
+            >
+              Browse marketplace
+            </AppLink>
+          }
+        />
+      );
+    } else {
+      // A tags OR overlay read failure must not take down browsing: the merged view still
+      // renders (from whatever loaded), under a loud notice, with the tag chips suppressed
+      // — no filter built from partial data.
+      const sideReadError = tagsQuery.isError
+        ? tagsQuery.error
+        : metaQuery.isError
+          ? metaQuery.error
+          : null;
 
-  // A tags OR overlay read failure must not take down browsing: the merged view still
-  // renders (from whatever loaded), under a loud notice, with the tag chips suppressed
-  // — no filter built from partial data.
-  const sideReadError = tagsQuery.isError
-    ? tagsQuery.error
-    : metaQuery.isError
-      ? metaQuery.error
-      : null;
+      // A tool whose effective visibility is hidden is excluded outright — unhiding is a
+      // CLI/API operation (`tai tool-meta … --visibility shown`), never a screen affordance.
+      const visibleViews = allViews.filter((view) => !view.hidden);
 
-  // A tool whose effective visibility is hidden is excluded outright — unhiding is a
-  // CLI/API operation (`tai tool-meta … --visibility shown`), never a screen affordance.
-  const visibleViews = allViews.filter((view) => !view.hidden);
+      // `empty` fires only when nothing is filed AND no folder exists — here, with a
+      // non-empty catalog (the truly-empty catalog is handled above), that means every
+      // installed tool is hidden, so the copy names that rather than the install prompt.
+      const emptyStates: ExplorerEmptyStates = {
+        empty: {
+          title: 'No visible tools',
+          description: 'Every installed tool is hidden. Unhide one with the tai tool-meta command.',
+        },
+        emptyFolder: {
+          title: 'This folder is empty',
+          description: 'No tools or subfolders are filed here.',
+        },
+        noMatch: {
+          title: 'No tools match',
+          description: 'No tool matches the search or the selected tags.',
+        },
+      };
 
-  // `empty` fires only when nothing is filed AND no folder exists — here, with a
-  // non-empty catalog (the truly-empty catalog early-returns above), that means every
-  // installed tool is hidden, so the copy names that rather than the install prompt.
-  const emptyStates: ExplorerEmptyStates = {
-    empty: {
-      title: 'No visible tools',
-      description: 'Every installed tool is hidden. Unhide one with the tai tool-meta command.',
-    },
-    emptyFolder: {
-      title: 'This folder is empty',
-      description: 'No tools or subfolders are filed here.',
-    },
-    noMatch: {
-      title: 'No tools match',
-      description: 'No tool carries any of the selected tags.',
-    },
-  };
-
-  const renderTool = (view: ToolView): ReactNode => (
-    <ToolItem
-      view={view}
-      selected={view.name === selected}
-      preserveTags={selectedTags}
-      canWrite={canWrite}
-      onEdit={(edited) => {
-        onEdit(edited, folders);
-      }}
-    />
-  );
-
-  return (
-    <div className="tai-stack">
-      {sideReadError !== null ? (
-        <ErrorState
-          message={errorMessage(sideReadError)}
-          onRetry={() => {
-            if (tagsQuery.isError) void tagsQuery.refetch();
-            if (metaQuery.isError) void metaQuery.refetch();
+      const renderTool = (view: ToolView): ReactNode => (
+        <ToolItem
+          view={view}
+          selected={view.name === selected}
+          preserveTags={selectedTags}
+          preserveQuery={preserveQuery}
+          canWrite={canWrite}
+          onEdit={(edited) => {
+            onEdit(edited, folders);
           }}
         />
-      ) : null}
+      );
 
-      <ExplorerView<ToolView>
-        items={visibleViews}
-        getItemKey={(view) => view.name}
-        getFolderId={(view) => view.folderId}
-        folders={folders}
-        currentFolderId={currentFolderId}
-        onNavigate={setCurrentFolderId}
-        rootLabel="All tools"
-        viewSurface={TOOLS_VIEW_SURFACE}
-        label="Tools"
-        columns={COLUMNS}
-        renderRow={(view) => <TD>{renderTool(view)}</TD>}
-        renderCard={(view) => <Card interactive>{renderTool(view)}</Card>}
-        // Open == select in this master/detail; a click anywhere on the row/card
-        // selects the tool, mirroring the row's name-link navigation exactly (the SDK
-        // yields to that link and the Edit button, so neither double-fires).
-        onOpenItem={(view) => {
-          navigate('tools', {
-            tool: view.name,
-            tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
-          });
-        }}
-        tags={
-          sideReadError !== null
-            ? undefined
-            : {
-                getTags: (view) => view.tags,
-                selected: selectedTags,
-                onChange: (next) => {
-                  navigate('tools', {
-                    tool: selected,
-                    tags: next.length > 0 ? [...next] : undefined,
-                  });
-                },
-                untaggedLabel: UNTAGGED_LABEL,
-                filterLabel: 'Filter tools by tag',
-                maxVisibleTags: MAX_VISIBLE_TAG_CHIPS,
-              }
-        }
-        emptyStates={emptyStates}
-      />
+      body = (
+        <>
+          {sideReadError !== null ? (
+            <ErrorState
+              message={errorMessage(sideReadError)}
+              onRetry={() => {
+                if (tagsQuery.isError) void tagsQuery.refetch();
+                if (metaQuery.isError) void metaQuery.refetch();
+              }}
+            />
+          ) : null}
+
+          <ExplorerView<ToolView>
+            items={visibleViews}
+            getItemKey={(view) => view.name}
+            getFolderId={(view) => view.folderId}
+            folders={folders}
+            currentFolderId={currentFolderId}
+            onNavigate={setCurrentFolderId}
+            rootLabel="All tools"
+            viewSurface={TOOLS_VIEW_SURFACE}
+            label="Tools"
+            columns={COLUMNS}
+            renderRow={(view) => <TD>{renderTool(view)}</TD>}
+            renderCard={(view) => <Card interactive>{renderTool(view)}</Card>}
+            // Open == select in this master/detail; a click anywhere on the row/card
+            // selects the tool, mirroring the row's name-link navigation exactly (the SDK
+            // yields to that link and the Edit button, so neither double-fires).
+            onOpenItem={(view) => {
+              navigate('tools', {
+                tool: view.name,
+                tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
+                q: preserveQuery,
+              });
+            }}
+            search={{
+              value: query,
+              onChange: setQuery,
+              matches: toolMatches,
+              label: SEARCH_LABEL,
+              placeholder: 'Filter by name',
+            }}
+            tags={
+              sideReadError !== null
+                ? undefined
+                : {
+                    getTags: (view) => view.tags,
+                    selected: selectedTags,
+                    onChange: (next) => {
+                      navigate('tools', {
+                        tool: selected,
+                        tags: next.length > 0 ? [...next] : undefined,
+                        q: preserveQuery,
+                      });
+                    },
+                    untaggedLabel: UNTAGGED_LABEL,
+                    filterLabel: 'Filter tools by tag',
+                    maxVisibleTags: MAX_VISIBLE_TAG_CHIPS,
+                  }
+            }
+            emptyStates={emptyStates}
+          />
+        </>
+      );
+    }
+  }
+
+  return (
+    <div className="tai-stack" ref={containerRef}>
+      {body}
     </div>
   );
 }
@@ -369,6 +475,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
     navigate('tools', {
       tool: undefined,
       tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
+      q: search.q?.trim() ? search.q.trim() : undefined,
     });
   };
 
@@ -383,6 +490,7 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
             <ToolList
               selected={selected}
               selectedTags={selectedTags}
+              committedQuery={search.q ?? ''}
               metaWriteDisabled={metaWriteDisabled}
               onEdit={(view, folders) => {
                 setEditing({ view, folders });

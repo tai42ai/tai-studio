@@ -308,6 +308,39 @@ describe('StoragePage', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('does not push a redundant history entry when Enter repeats the committed filter', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+    });
+    renderPage(<StoragePage search={{ filter: 'a.tx' }} />, { client, navigate });
+
+    const input = await screen.findByRole('textbox', { name: 'Filter resources' });
+    await user.click(input);
+    await user.keyboard('{Enter}');
+    // The box already shows the committed value, so a bare Enter commits nothing.
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('does not self-commit a padded deep-link filter on an untouched tab-through blur', async () => {
+    const user = userEvent.setup();
+    const navigate = vi.fn();
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
+    });
+    renderPage(<StoragePage search={{ filter: ' a.tx ' }} />, { client, navigate });
+
+    const input = await screen.findByRole('textbox', { name: 'Filter resources' });
+    expect(input).toHaveValue(' a.tx ');
+    // Tabbing through the untouched padded box is not a user edit — no navigation.
+    await user.click(input);
+    await user.tab();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('keeps the keyboard caret in the filter input when Enter commits (WCAG 2.4.3)', async () => {
     const user = userEvent.setup();
     const client = stubClient({

@@ -15,6 +15,7 @@ import { renderWithProviders, type StubApiClient } from './test-utils';
 
 interface TemplatesSearch {
   readonly template?: string;
+  readonly q?: string;
 }
 
 /**
@@ -30,7 +31,7 @@ function renderTemplatesHarness(client: StubApiClient, initial: TemplatesSearch 
     return <TemplatesPage search={search} />;
   }
   const navigate = vi.fn((_token: string, next?: TemplatesSearch) => {
-    setSearch?.({ template: next?.template });
+    setSearch?.({ template: next?.template, q: next?.q });
   });
   return renderWithProviders(<Harness />, { client, navigate });
 }
@@ -170,6 +171,93 @@ describe('TemplatesPage — explorer open + list retry', () => {
     // The retry refetches; the second call resolves and the list recovers.
     expect(await screen.findByRole('link', { name: 'Open template a.md' })).toBeInTheDocument();
     expect(listTemplates).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('TemplatesPage — search', () => {
+  function listClient(): StubApiClient {
+    return { listTemplates: vi.fn().mockResolvedValue(['a.md', 'b.md']) };
+  }
+
+  it('seeds the box from ?q= and filters the list by a key substring', async () => {
+    renderWithProviders(<TemplatesPage search={{ q: 'a.md' }} />, { client: listClient() });
+
+    expect(await screen.findByRole('textbox', { name: 'Filter templates' })).toHaveValue('a.md');
+    expect(screen.getByRole('link', { name: 'Open template a.md' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open template b.md' })).not.toBeInTheDocument();
+  });
+
+  it('lists every template with an empty box when ?q= is absent', async () => {
+    renderWithProviders(<TemplatesPage search={{}} />, { client: listClient() });
+
+    expect(await screen.findByRole('textbox', { name: 'Filter templates' })).toHaveValue('');
+    expect(screen.getByRole('link', { name: 'Open template a.md' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open template b.md' })).toBeInTheDocument();
+  });
+
+  it('narrows the list live while typing but does not touch the URL until a commit', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<TemplatesPage search={{}} />, {
+      client: listClient(),
+    });
+
+    await user.type(await screen.findByRole('textbox', { name: 'Filter templates' }), 'b.m');
+    expect(screen.getByRole('link', { name: 'Open template b.md' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open template a.md' })).not.toBeInTheDocument();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('commits the trimmed query to ?q= on Enter', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<TemplatesPage search={{}} />, {
+      client: listClient(),
+    });
+
+    await user.type(await screen.findByRole('textbox', { name: 'Filter templates' }), 'b.m{Enter}');
+    expect(navigate).toHaveBeenCalledWith('templates', { template: undefined, q: 'b.m' });
+  });
+
+  it('carries a typed uncommitted draft into a template-open navigation (no click-through drop)', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<TemplatesPage search={{}} />, {
+      client: listClient(),
+    });
+
+    // Type a draft but do NOT commit it (no Enter); the box blur fires on the link click.
+    await user.type(await screen.findByRole('textbox', { name: 'Filter templates' }), 'b.m');
+    await user.click(screen.getByRole('link', { name: 'Open template b.md' }));
+
+    // The open navigation carries the LIVE draft, so the click cannot drop the filter.
+    expect(navigate).toHaveBeenLastCalledWith('templates', { template: 'b.md', q: 'b.m' });
+  });
+
+  it('does NOT push a redundant history entry when Enter repeats the committed query', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<TemplatesPage search={{ q: 'a.md' }} />, {
+      client: listClient(),
+    });
+
+    const box = await screen.findByRole('textbox', { name: 'Filter templates' });
+    await user.click(box);
+    await user.keyboard('{Enter}');
+
+    // The box already shows the committed value, so a bare Enter commits nothing.
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('does NOT self-commit a padded deep-link on an untouched tab-through blur', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<TemplatesPage search={{ q: ' abc ' }} />, {
+      client: listClient(),
+    });
+
+    const box = await screen.findByRole('textbox', { name: 'Filter templates' });
+    expect(box).toHaveValue(' abc ');
+    // Tabbing through the untouched padded box is not a user edit — no navigation.
+    await user.click(box);
+    await user.tab();
+
+    expect(navigate).not.toHaveBeenCalled();
   });
 });
 

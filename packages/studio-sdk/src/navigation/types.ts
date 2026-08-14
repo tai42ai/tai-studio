@@ -21,7 +21,7 @@
  */
 export interface RouteSearchByToken {
   login: Record<string, never>;
-  tools: { tool?: string; tags?: string[] };
+  tools: { tool?: string; tags?: string[]; q?: string };
   agents: Record<string, never>;
   presets: { preset?: string };
   extensions: Record<string, never>;
@@ -33,7 +33,7 @@ export interface RouteSearchByToken {
   conversations: { route?: string; thread?: string };
   connectors: { connection?: string };
   hooks: Record<string, never>;
-  templates: { template?: string };
+  templates: { template?: string; q?: string };
   storage: { filter?: string };
   manifest: Record<string, never>;
   settings: Record<string, never>;

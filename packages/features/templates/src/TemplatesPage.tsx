@@ -54,19 +54,35 @@ const EMPTY_STATES: ExplorerEmptyStates = {
   },
 };
 
+/** The search box's accessible name; the commit listener keys the search input on it. */
+const SEARCH_LABEL = 'Filter templates';
+
+/** True when a delegated keydown/blur originated on the explorer's search input. */
+function isSearchInput(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && target.getAttribute('aria-label') === SEARCH_LABEL;
+}
+
+/** Case-insensitive substring over a template's full path-shaped key. */
+function templateMatches(key: string, query: string): boolean {
+  return key.toLowerCase().includes(query.toLowerCase());
+}
+
 /** One template row/card body: its final-segment label as an `AppLink` setting
- *  `?template=` to the FULL key (the breadcrumb carries the folder path). */
+ *  `?template=` to the FULL key (the breadcrumb carries the folder path), preserving
+ *  the active `?q=`. */
 function TemplateLink({
   templateKey,
   selected,
+  preserveQuery,
 }: {
   readonly templateKey: string;
   readonly selected: boolean;
+  readonly preserveQuery: string | undefined;
 }): ReactNode {
   return (
     <AppLink
       to="templates"
-      search={{ template: templateKey }}
+      search={{ template: templateKey, q: preserveQuery }}
       aria-label={`Open template ${templateKey}`}
       aria-current={selected ? 'page' : undefined}
       className="tai-nav-item"
@@ -76,56 +92,135 @@ function TemplateLink({
   );
 }
 
-function TemplateList({ selected }: { selected: string | undefined }): ReactNode {
+function TemplateList({
+  selected,
+  committedQuery,
+}: {
+  readonly selected: string | undefined;
+  /** The committed `?q=` value from the URL (`''` when the param is absent). */
+  readonly committedQuery: string;
+}): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const query = useQuery({ queryKey: templatesListKey, queryFn: () => api.listTemplates() });
 
-  if (query.isPending) {
-    return (
+  // The live search box holds a local draft; the committed `?q=` is written only on an
+  // explicit commit (Enter / an edited blur), never per keystroke. Re-seed the draft
+  // from the committed value DURING RENDER (React's adjust-state-on-prop-change pattern)
+  // so a query arriving from the URL (deep-link, back/forward) overwrites the box.
+  const [query, setQuery] = useState(committedQuery);
+  const [seed, setSeed] = useState(committedQuery);
+  if (seed !== committedQuery) {
+    setSeed(committedQuery);
+    setQuery(committedQuery);
+  }
+
+  const listQuery = useQuery({ queryKey: templatesListKey, queryFn: () => api.listTemplates() });
+
+  // Commit the trimmed draft to `?q=`, preserving the selected template; an empty draft
+  // clears the param so the URL and box cannot drift.
+  const commitQuery = useCallback(
+    (value: string): void => {
+      const next = value.trim();
+      navigate('templates', { template: selected, q: next === '' ? undefined : next });
+    },
+    [navigate, selected],
+  );
+
+  // The SDK search input is controlled (value/onChange only), so the URL commit is
+  // delegated on the container: Enter or an edited blur of the search box writes the
+  // URL. The ref holds the latest draft so the listeners bind once, not per keystroke.
+  const commitState = useRef({ query, committedQuery });
+  commitState.current = { query, committedQuery };
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el === null) throw new Error('Template list container ref did not attach.');
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter' || !isSearchInput(event.target)) return;
+      const { query: draft, committedQuery: committed } = commitState.current;
+      // A redundant Enter (the draft already the committed value) must not push a
+      // history entry.
+      if (draft.trim() !== committed.trim()) commitQuery(draft);
+    };
+    const onFocusOut = (event: FocusEvent): void => {
+      const { query: draft, committedQuery: committed } = commitState.current;
+      // An untouched blur (tabbing through) must not push a redundant history entry for
+      // the value already committed to the URL — trimmed both sides, so a padded
+      // deep-link never self-commits without a real edit.
+      if (isSearchInput(event.target) && draft.trim() !== committed.trim()) commitQuery(draft);
+    };
+    el.addEventListener('keydown', onKeyDown);
+    el.addEventListener('focusout', onFocusOut);
+    return () => {
+      el.removeEventListener('keydown', onKeyDown);
+      el.removeEventListener('focusout', onFocusOut);
+    };
+  }, [commitQuery]);
+
+  // The live trimmed draft carried into every intra-page navigation (undefined when
+  // empty): a click during an uncommitted edit cannot drop the filter, since the draft
+  // re-renders each keystroke so this value and the click's navigation always agree.
+  const preserveQuery = query.trim() === '' ? undefined : query.trim();
+
+  const renderLink = (key: string): ReactNode => (
+    <TemplateLink templateKey={key} selected={key === selected} preserveQuery={preserveQuery} />
+  );
+
+  let body: ReactNode;
+  if (listQuery.isPending) {
+    body = (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
         <Skeleton height={32} />
         <Skeleton height={32} />
         <Skeleton height={32} />
       </div>
     );
-  }
-  if (query.isError) {
-    return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
+  } else if (listQuery.isError) {
+    body = (
+      <ErrorState
+        message={errorMessage(listQuery.error)}
+        onRetry={() => void listQuery.refetch()}
+      />
+    );
+  } else {
+    // Template keys are path-shaped, so they fold into virtual folders exactly as
+    // storage/tools resources do — a `''` folder never appears (malformed keys file
+    // literally at the root) and a name that is both a file and a folder shows as both.
+    const keys = listQuery.data;
+    body = (
+      <ExplorerView<string>
+        items={keys}
+        getItemKey={(key) => key}
+        getFolderId={templateFolderId}
+        folders={deriveTemplateFolders(keys)}
+        currentFolderId={currentFolderId}
+        onNavigate={setCurrentFolderId}
+        rootLabel="All templates"
+        viewSurface={TEMPLATES_VIEW_SURFACE}
+        label="Templates"
+        columns={COLUMNS}
+        renderRow={(key) => <TD className="tai-table-id">{renderLink(key)}</TD>}
+        renderCard={(key) => <Card interactive>{renderLink(key)}</Card>}
+        // Open == select in this master/detail; a click anywhere on the row/card sets
+        // `?template=`, mirroring the name link (the SDK yields to that link so neither
+        // double-fires).
+        onOpenItem={(key) => {
+          navigate('templates', { template: key, q: preserveQuery });
+        }}
+        search={{
+          value: query,
+          onChange: setQuery,
+          matches: templateMatches,
+          label: SEARCH_LABEL,
+          placeholder: 'Filter by key',
+        }}
+        emptyStates={EMPTY_STATES}
+      />
+    );
   }
 
-  // Template keys are path-shaped, so they fold into virtual folders exactly as
-  // storage/tools resources do — a `''` folder never appears (malformed keys file
-  // literally at the root) and a name that is both a file and a folder shows as both.
-  const keys = query.data;
-  const renderLink = (key: string): ReactNode => (
-    <TemplateLink templateKey={key} selected={key === selected} />
-  );
-
-  return (
-    <ExplorerView<string>
-      items={keys}
-      getItemKey={(key) => key}
-      getFolderId={templateFolderId}
-      folders={deriveTemplateFolders(keys)}
-      currentFolderId={currentFolderId}
-      onNavigate={setCurrentFolderId}
-      rootLabel="All templates"
-      viewSurface={TEMPLATES_VIEW_SURFACE}
-      label="Templates"
-      columns={COLUMNS}
-      renderRow={(key) => <TD className="tai-table-id">{renderLink(key)}</TD>}
-      renderCard={(key) => <Card interactive>{renderLink(key)}</Card>}
-      // Open == select in this master/detail; a click anywhere on the row/card sets
-      // `?template=`, mirroring the name link (the SDK yields to that link so neither
-      // double-fires).
-      onOpenItem={(key) => {
-        navigate('templates', { template: key });
-      }}
-      emptyStates={EMPTY_STATES}
-    />
-  );
+  return <div ref={containerRef}>{body}</div>;
 }
 
 export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
@@ -248,7 +343,7 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
               <Card>
                 <h2 className="tai-card-title">All templates</h2>
-                <TemplateList selected={selected} />
+                <TemplateList selected={selected} committedQuery={search.q ?? ''} />
               </Card>
               <UploadTemplateForm />
             </div>
@@ -256,7 +351,11 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
 
           <div className="tai-split-detail">
             {isSinglePane && selected !== undefined ? (
-              <AppLink to="templates" search={{}} className="tai-btn tai-btn-ghost">
+              <AppLink
+                to="templates"
+                search={{ q: search.q?.trim() ? search.q.trim() : undefined }}
+                className="tai-btn tai-btn-ghost"
+              >
                 <ArrowLeftIcon />
                 Back
               </AppLink>

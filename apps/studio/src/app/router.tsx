@@ -222,6 +222,7 @@ export function buildRouter(options: BuildRouterOptions) {
     validateSearch: (search: Record<string, unknown>): RouteSearch<'tools'> => ({
       tool: typeof search.tool === 'string' ? search.tool : undefined,
       tags: parseTags(search.tags),
+      q: typeof search.q === 'string' ? search.q : undefined,
     }),
     component: function ToolsRoute(): ReactNode {
       return <ToolsPage search={useSearch({ from: '/authed/tools' })} />;
@@ -297,6 +298,7 @@ export function buildRouter(options: BuildRouterOptions) {
     path: '/templates',
     validateSearch: (search: Record<string, unknown>): RouteSearch<'templates'> => ({
       template: typeof search.template === 'string' ? search.template : undefined,
+      q: typeof search.q === 'string' ? search.q : undefined,
     }),
     component: function TemplatesRoute(): ReactNode {
       return <TemplatesPage search={useSearch({ from: '/authed/templates' })} />;
