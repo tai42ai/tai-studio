@@ -34,7 +34,7 @@ export interface RouteSearchByToken {
   connectors: { connection?: string };
   hooks: Record<string, never>;
   templates: { template?: string; q?: string };
-  storage: { filter?: string };
+  storage: { q?: string };
   manifest: Record<string, never>;
   settings: Record<string, never>;
   system: Record<string, never>;

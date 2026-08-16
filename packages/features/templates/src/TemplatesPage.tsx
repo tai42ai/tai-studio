@@ -23,9 +23,11 @@ import {
   useApi,
   useAppNavigate,
   useBreakpoint,
+  useSearchCommit,
   type ExplorerColumn,
   type ExplorerEmptyStates,
   type PageProps,
+  type RouteSearch,
 } from '@tai42/studio-sdk';
 
 import { TemplateDetail } from './TemplateDetail';
@@ -56,11 +58,6 @@ const EMPTY_STATES: ExplorerEmptyStates = {
 
 /** The search box's accessible name; the commit listener keys the search input on it. */
 const SEARCH_LABEL = 'Filter templates';
-
-/** True when a delegated keydown/blur originated on the explorer's search input. */
-function isSearchInput(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && target.getAttribute('aria-label') === SEARCH_LABEL;
-}
 
 /** Case-insensitive substring over a template's full path-shaped key. */
 function templateMatches(key: string, query: string): boolean {
@@ -117,46 +114,22 @@ function TemplateList({
 
   const listQuery = useQuery({ queryKey: templatesListKey, queryFn: () => api.listTemplates() });
 
-  // Commit the trimmed draft to `?q=`, preserving the selected template; an empty draft
-  // clears the param so the URL and box cannot drift.
-  const commitQuery = useCallback(
-    (value: string): void => {
-      const next = value.trim();
-      navigate('templates', { template: selected, q: next === '' ? undefined : next });
-    },
-    [navigate, selected],
-  );
-
-  // The SDK search input is controlled (value/onChange only), so the URL commit is
-  // delegated on the container: Enter or an edited blur of the search box writes the
-  // URL. The ref holds the latest draft so the listeners bind once, not per keystroke.
-  const commitState = useRef({ query, committedQuery });
-  commitState.current = { query, committedQuery };
+  // Compose the full `templates` search from the next query, preserving the selected
+  // template.
   const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (el === null) throw new Error('Template list container ref did not attach.');
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Enter' || !isSearchInput(event.target)) return;
-      const { query: draft, committedQuery: committed } = commitState.current;
-      // A redundant Enter (the draft already the committed value) must not push a
-      // history entry.
-      if (draft.trim() !== committed.trim()) commitQuery(draft);
-    };
-    const onFocusOut = (event: FocusEvent): void => {
-      const { query: draft, committedQuery: committed } = commitState.current;
-      // An untouched blur (tabbing through) must not push a redundant history entry for
-      // the value already committed to the URL — trimmed both sides, so a padded
-      // deep-link never self-commits without a real edit.
-      if (isSearchInput(event.target) && draft.trim() !== committed.trim()) commitQuery(draft);
-    };
-    el.addEventListener('keydown', onKeyDown);
-    el.addEventListener('focusout', onFocusOut);
-    return () => {
-      el.removeEventListener('keydown', onKeyDown);
-      el.removeEventListener('focusout', onFocusOut);
-    };
-  }, [commitQuery]);
+  const buildSearch = useCallback(
+    (q: string | undefined): RouteSearch<'templates'> => ({ template: selected, q }),
+    [selected],
+  );
+  useSearchCommit({
+    token: 'templates',
+    containerRef,
+    searchLabel: SEARCH_LABEL,
+    committedValue: committedQuery,
+    draft: query,
+    buildSearch,
+    containerMissingError: 'Template list container ref did not attach.',
+  });
 
   // The live trimmed draft carried into every intra-page navigation (undefined when
   // empty): a click during an uncommitted edit cannot drop the filter, since the draft

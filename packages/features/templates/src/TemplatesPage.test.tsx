@@ -214,7 +214,11 @@ describe('TemplatesPage — search', () => {
     });
 
     await user.type(await screen.findByRole('textbox', { name: 'Filter templates' }), 'b.m{Enter}');
-    expect(navigate).toHaveBeenCalledWith('templates', { template: undefined, q: 'b.m' });
+    expect(navigate).toHaveBeenCalledWith(
+      'templates',
+      { template: undefined, q: 'b.m' },
+      { replace: true },
+    );
   });
 
   it('carries a typed uncommitted draft into a template-open navigation (no click-through drop)', async () => {

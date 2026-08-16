@@ -901,7 +901,11 @@ describe('ToolsPage — search', () => {
     });
 
     await user.type(await screen.findByRole('textbox', { name: 'Filter tools' }), 'alph{Enter}');
-    expect(navigate).toHaveBeenCalledWith('tools', { tool: undefined, tags: ['x'], q: 'alph' });
+    expect(navigate).toHaveBeenCalledWith(
+      'tools',
+      { tool: undefined, tags: ['x'], q: 'alph' },
+      { replace: true },
+    );
   });
 
   it('ANDs ?q= with ?tags= — only a tool passing BOTH survives', async () => {

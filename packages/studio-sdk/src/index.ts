@@ -97,9 +97,11 @@ export {
   usePluginNavigation,
   useNavigationGuard,
   useNavigationGate,
+  useSearchCommit,
 } from './navigation';
 export type {
   AppLinkProps,
+  SearchCommitParams,
   RouteToken,
   RouteSearch,
   RouteSearchByToken,

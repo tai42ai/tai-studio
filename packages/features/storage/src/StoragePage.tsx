@@ -17,7 +17,6 @@
  */
 import {
   useCallback,
-  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -47,11 +46,12 @@ import {
   downloadBlob,
   errorMessage,
   useApi,
-  useAppNavigate,
+  useSearchCommit,
   type ExplorerColumn,
   type ExplorerEmptyStates,
   type Folder,
   type PageProps,
+  type RouteSearch,
 } from '@tai42/studio-sdk';
 
 import { deriveFolders, parentPrefix } from './folders';
@@ -64,11 +64,6 @@ const STORAGE_VIEW_SURFACE = 'studio-storage';
 
 /** The filter box's accessible name; the commit listener keys the search input on it. */
 const SEARCH_LABEL = 'Filter resources';
-
-/** True when a delegated blur/keydown originated on the explorer's filter input. */
-function isSearchInput(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && target.getAttribute('aria-label') === SEARCH_LABEL;
-}
 
 /** The resource table's columns; folder rows span both. */
 const COLUMNS: ExplorerColumn[] = [
@@ -498,7 +493,6 @@ function ResourceActions({
 /** The resource browser, rendered only when a provider is present. */
 function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNode {
   const api = useApi();
-  const navigate = useAppNavigate();
   const resources = useQuery({
     queryKey: storageResourcesKey,
     queryFn: ({ signal }) => api.listStorageResources(signal),
@@ -512,7 +506,7 @@ function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNod
 
   const [query, setQuery] = useState(initialFilter);
   const [seed, setSeed] = useState(initialFilter);
-  // Re-seed the live filter from the committed `?filter=` DURING RENDER (React's
+  // Re-seed the live filter from the committed `?q=` DURING RENDER (React's
   // adjust-state-on-prop-change pattern): a filter arriving from the URL
   // (deep-link, browser back/forward) overwrites the box so it never states a
   // filter the list is not showing.
@@ -521,47 +515,17 @@ function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNod
     setQuery(initialFilter);
   }
 
-  // Write the live filter to `?filter=` — never per keystroke (the shell navigate
-  // has no replace; per-keystroke writes would spam history), only on an explicit
-  // commit. A cleared box commits `undefined` so the URL and box cannot drift.
-  const commitFilter = useCallback(
-    (value: string): void => {
-      const next = value.trim();
-      navigate('storage', { filter: next === '' ? undefined : next });
-    },
-    [navigate],
-  );
-
-  // The SDK search input is controlled (value/onChange only), so the URL commit is
-  // delegated on the container: Enter or an edited blur of the filter box writes the
-  // URL. The ref holds the latest value so the listeners bind once, not per keystroke.
-  const commitState = useRef({ query, initialFilter });
-  commitState.current = { query, initialFilter };
   const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (el === null) throw new Error('Storage browser container ref did not attach.');
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Enter' || !isSearchInput(event.target)) return;
-      const { query: q, initialFilter: committed } = commitState.current;
-      // A redundant Enter (the draft already the committed value) must not push a
-      // history entry.
-      if (q.trim() !== committed.trim()) commitFilter(q);
-    };
-    const onFocusOut = (event: FocusEvent): void => {
-      const { query: q, initialFilter: committed } = commitState.current;
-      // An untouched blur (tabbing through) must not push a redundant history entry
-      // for the value already committed to the URL — trimmed both sides, so a padded
-      // deep-link never self-commits without a real edit.
-      if (isSearchInput(event.target) && q.trim() !== committed.trim()) commitFilter(q);
-    };
-    el.addEventListener('keydown', onKeyDown);
-    el.addEventListener('focusout', onFocusOut);
-    return () => {
-      el.removeEventListener('keydown', onKeyDown);
-      el.removeEventListener('focusout', onFocusOut);
-    };
-  }, [commitFilter]);
+  const buildSearch = useCallback((q: string | undefined): RouteSearch<'storage'> => ({ q }), []);
+  useSearchCommit({
+    token: 'storage',
+    containerRef,
+    searchLabel: SEARCH_LABEL,
+    committedValue: initialFilter,
+    draft: query,
+    buildSearch,
+    containerMissingError: 'Storage browser container ref did not attach.',
+  });
 
   const download = useMutation({
     mutationFn: async (id: string) => {
@@ -776,7 +740,7 @@ export function StoragePage({ search }: PageProps<'storage'>): ReactNode {
             <dd style={{ margin: 0, ...monoStyle }}>{info.data.module}</dd>
           </dl>
         </Card>
-        <ResourceBrowser initialFilter={search.filter ?? ''} />
+        <ResourceBrowser initialFilter={search.q ?? ''} />
       </>
     );
   }

@@ -8,6 +8,8 @@ export {
   useNavigationGate,
 } from './context';
 export type { AppLinkProps } from './context';
+export { useSearchCommit } from './use-search-commit';
+export type { SearchCommitParams } from './use-search-commit';
 export type {
   RouteToken,
   RouteSearch,
