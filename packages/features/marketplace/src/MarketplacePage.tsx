@@ -91,7 +91,11 @@ function SearchBar({ search }: { readonly search: MarketplaceSearch }): ReactNod
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        navigate('marketplace', mergeSearch(search, { q: draft.trim() || undefined }));
+        // A search commit REPLACES the current history entry: refining the query is
+        // not a place Back should step back through one commit at a time.
+        navigate('marketplace', mergeSearch(search, { q: draft.trim() || undefined }), {
+          replace: true,
+        });
       }}
       className="tai-row"
       style={{ alignItems: 'flex-end' }}

@@ -183,7 +183,7 @@ describe('StoragePage', () => {
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: list,
     });
-    renderPage(<StoragePage search={{ filter: 'alpha' }} />, { client });
+    renderPage(<StoragePage search={{ q: 'alpha' }} />, { client });
 
     const table = await screen.findByRole('table');
     expect(within(table).getByText('alpha.txt')).toBeInTheDocument();
@@ -218,7 +218,7 @@ describe('StoragePage', () => {
     await screen.findByRole('table');
     expect(screen.getByRole('textbox', { name: 'Filter resources' })).toHaveValue('');
 
-    rerender(<StoragePage search={{ filter: 'zulu' }} />);
+    rerender(<StoragePage search={{ q: 'zulu' }} />);
     expect(screen.getByRole('textbox', { name: 'Filter resources' })).toHaveValue('zulu');
     const table = screen.getByRole('table');
     expect(within(table).getByText('zulu.log')).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe('StoragePage', () => {
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['alpha.txt', 'beta.txt'] }),
     });
-    renderPage(<StoragePage search={{ filter: 'zzz' }} />, { client });
+    renderPage(<StoragePage search={{ q: 'zzz' }} />, { client });
 
     expect(await screen.findByText('No matching resources')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
@@ -257,7 +257,7 @@ describe('StoragePage', () => {
 
     await screen.findByRole('table');
     await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'a.tx{Enter}');
-    expect(navigate).toHaveBeenCalledWith('storage', { filter: 'a.tx' });
+    expect(navigate).toHaveBeenCalledWith('storage', { q: 'a.tx' }, { replace: true });
   });
 
   it('commits the filter to the URL on an edited blur', async () => {
@@ -272,7 +272,7 @@ describe('StoragePage', () => {
     await screen.findByRole('table');
     await user.type(screen.getByRole('textbox', { name: 'Filter resources' }), 'a.tx');
     await user.tab();
-    expect(navigate).toHaveBeenCalledWith('storage', { filter: 'a.tx' });
+    expect(navigate).toHaveBeenCalledWith('storage', { q: 'a.tx' }, { replace: true });
   });
 
   it('clears the filter param when the box is emptied and committed', async () => {
@@ -282,14 +282,14 @@ describe('StoragePage', () => {
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt', 'zulu.log'] }),
     });
-    renderPage(<StoragePage search={{ filter: 'zulu' }} />, { client, navigate });
+    renderPage(<StoragePage search={{ q: 'zulu' }} />, { client, navigate });
 
     await screen.findByRole('table');
     const input = screen.getByRole('textbox', { name: 'Filter resources' });
     await user.clear(input);
     await user.keyboard('{Enter}');
     // Emptying and committing must clear the param so the URL and box cannot drift.
-    expect(navigate).toHaveBeenCalledWith('storage', { filter: undefined });
+    expect(navigate).toHaveBeenCalledWith('storage', { q: undefined }, { replace: true });
   });
 
   it('does not navigate while the filter is only being typed', async () => {
@@ -315,7 +315,7 @@ describe('StoragePage', () => {
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
     });
-    renderPage(<StoragePage search={{ filter: 'a.tx' }} />, { client, navigate });
+    renderPage(<StoragePage search={{ q: 'a.tx' }} />, { client, navigate });
 
     const input = await screen.findByRole('textbox', { name: 'Filter resources' });
     await user.click(input);
@@ -331,7 +331,7 @@ describe('StoragePage', () => {
       getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
       listStorageResources: vi.fn().mockResolvedValue({ resources: ['a.txt'] }),
     });
-    renderPage(<StoragePage search={{ filter: ' a.tx ' }} />, { client, navigate });
+    renderPage(<StoragePage search={{ q: ' a.tx ' }} />, { client, navigate });
 
     const input = await screen.findByRole('textbox', { name: 'Filter resources' });
     expect(input).toHaveValue(' a.tx ');

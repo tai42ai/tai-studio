@@ -309,7 +309,7 @@ export function buildRouter(options: BuildRouterOptions) {
     getParentRoute: () => authedLayout,
     path: '/storage',
     validateSearch: (search: Record<string, unknown>): RouteSearch<'storage'> => ({
-      filter: typeof search.filter === 'string' ? search.filter : undefined,
+      q: typeof search.q === 'string' ? search.q : undefined,
     }),
     component: function StorageRoute(): ReactNode {
       return <StoragePage search={useSearch({ from: '/authed/storage' })} />;

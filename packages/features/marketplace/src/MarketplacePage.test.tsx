@@ -437,7 +437,7 @@ describe('MarketplacePage — text search', () => {
     expect(navigate).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    expect(navigate).toHaveBeenCalledWith('marketplace', { q: 'uuid' });
+    expect(navigate).toHaveBeenCalledWith('marketplace', { q: 'uuid' }, { replace: true });
   });
 
   it('keeps the keyboard caret in the search box when submit commits (WCAG 2.4.3)', async () => {
@@ -621,7 +621,7 @@ describe('MarketplacePage — recency, sort selection, and cleared facets', () =
     await screen.findByText('A box of tools.');
     // Submitting with a blank box drops `q` entirely (no empty-string query).
     await user.click(screen.getByRole('button', { name: 'Search' }));
-    expect(navigate).toHaveBeenCalledWith('marketplace', {});
+    expect(navigate).toHaveBeenCalledWith('marketplace', {}, { replace: true });
   });
 
   it('clears the category back to the default when All categories is chosen', async () => {

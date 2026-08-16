@@ -52,11 +52,13 @@ import {
   useCanWrite,
   useCapabilities,
   useReloadToolDisplayNames,
+  useSearchCommit,
   type CapabilityState,
   type ExplorerColumn,
   type ExplorerEmptyStates,
   type Folder,
   type PageProps,
+  type RouteSearch,
 } from '@tai42/studio-sdk';
 import type { ToolMetaPatch } from '@tai42/api-client';
 
@@ -77,11 +79,6 @@ const TOOLS_VIEW_SURFACE = 'tools';
 
 /** The search box's accessible name; the commit listener keys the search input on it. */
 const SEARCH_LABEL = 'Filter tools';
-
-/** True when a delegated keydown/blur originated on the explorer's search input. */
-function isSearchInput(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && target.getAttribute('aria-label') === SEARCH_LABEL;
-}
 
 /** Case-insensitive substring over a tool's real name and display label. */
 function toolMatches(view: ToolView, query: string): boolean {
@@ -202,50 +199,26 @@ function ToolList({
   const tagsQuery = useQuery({ queryKey: toolTagsKey, queryFn: () => api.listToolTags() });
   const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
 
-  // Commit the trimmed draft to `?q=`, preserving the active tool + tags; an empty
-  // draft clears the param so the URL and box cannot drift.
-  const commitQuery = useCallback(
-    (value: string): void => {
-      const next = value.trim();
-      navigate('tools', {
-        tool: selected,
-        tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
-        q: next === '' ? undefined : next,
-      });
-    },
-    [navigate, selected, selectedTags],
-  );
-
-  // The SDK search input is controlled (value/onChange only), so the URL commit is
-  // delegated on the container: Enter or an edited blur of the search box writes the
-  // URL. The ref holds the latest draft so the listeners bind once, not per keystroke.
-  const commitState = useRef({ query, committedQuery });
-  commitState.current = { query, committedQuery };
+  // Compose the full `tools` search from the next query, preserving the active tool +
+  // tags.
   const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = containerRef.current;
-    if (el === null) throw new Error('Tools list container ref did not attach.');
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key !== 'Enter' || !isSearchInput(event.target)) return;
-      const { query: draft, committedQuery: committed } = commitState.current;
-      // A redundant Enter (the draft already the committed value) must not push a
-      // history entry.
-      if (draft.trim() !== committed.trim()) commitQuery(draft);
-    };
-    const onFocusOut = (event: FocusEvent): void => {
-      const { query: draft, committedQuery: committed } = commitState.current;
-      // An untouched blur (tabbing through) must not push a redundant history entry for
-      // the value already committed to the URL — trimmed both sides, so a padded
-      // deep-link never self-commits without a real edit.
-      if (isSearchInput(event.target) && draft.trim() !== committed.trim()) commitQuery(draft);
-    };
-    el.addEventListener('keydown', onKeyDown);
-    el.addEventListener('focusout', onFocusOut);
-    return () => {
-      el.removeEventListener('keydown', onKeyDown);
-      el.removeEventListener('focusout', onFocusOut);
-    };
-  }, [commitQuery]);
+  const buildSearch = useCallback(
+    (q: string | undefined): RouteSearch<'tools'> => ({
+      tool: selected,
+      tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
+      q,
+    }),
+    [selected, selectedTags],
+  );
+  useSearchCommit({
+    token: 'tools',
+    containerRef,
+    searchLabel: SEARCH_LABEL,
+    committedValue: committedQuery,
+    draft: query,
+    buildSearch,
+    containerMissingError: 'Tools list container ref did not attach.',
+  });
 
   // The live trimmed draft carried into every intra-page navigation (undefined when
   // empty): a click during an uncommitted edit cannot drop the filter, since the draft

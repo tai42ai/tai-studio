@@ -24,6 +24,7 @@ import type { ReactElement } from 'react';
 import { ReactNode } from 'react';
 import type { Ref } from 'react';
 import type { RefCallback } from 'react';
+import { RefObject } from 'react';
 import { SetMcpSecretEnvBody } from 'packages/api-client/src/client';
 import { SettingsProfileBody as SettingsProfileBody_2 } from 'packages/api-client/src/schemas';
 import type { SVGProps } from 'react';
@@ -11448,7 +11449,7 @@ export interface RouteSearchByToken {
     settings: Record<string, never>;
     // (undocumented)
     storage: {
-        filter?: string;
+        q?: string;
     };
     // (undocumented)
     system: Record<string, never>;
@@ -12295,6 +12296,24 @@ export interface ScrollRegionProps {
     readonly ref?: Ref<HTMLDivElement>;
     // (undocumented)
     readonly style?: CSSProperties;
+}
+
+// @public
+export interface SearchCommitParams<T extends RouteToken> {
+    // (undocumented)
+    readonly buildSearch: (query: string | undefined) => RouteSearch<T>;
+    // (undocumented)
+    readonly committedValue: string;
+    // (undocumented)
+    readonly containerMissingError: string;
+    // (undocumented)
+    readonly containerRef: RefObject<HTMLElement | null>;
+    // (undocumented)
+    readonly draft: string;
+    // (undocumented)
+    readonly searchLabel: string;
+    // (undocumented)
+    readonly token: T;
 }
 
 // @public
@@ -14447,6 +14466,9 @@ export function useReloadToolDisplayNames(): () => void;
 
 // @public
 export function useResolvePath(): NavigationContextValue['resolvePath'];
+
+// @public
+export function useSearchCommit<T extends RouteToken>(input: SearchCommitParams<T>): void;
 
 // @public
 export function useSystemKinds(): SystemKindsState;
