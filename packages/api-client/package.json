@@ -1,6 +1,6 @@
 {
   "name": "@tai42/api-client",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "description": "Typed client for the tai42-skeleton HTTP API.",
   "license": "Apache-2.0",
   "author": "tai42 <oss@tai42.ai>",
