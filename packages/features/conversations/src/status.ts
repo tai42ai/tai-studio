@@ -8,6 +8,17 @@
  */
 import type { ConversationAnswerStatus, ConversationDeliveryStatus } from '@tai42/api-client';
 
+/** The delivery statuses in send-machine order — the status filter's option order. */
+export const DELIVERY_STATUSES: readonly ConversationDeliveryStatus[] = [
+  'accepted',
+  'pending_delivery',
+  'provisional',
+  'delivered',
+  'failed',
+  'shed',
+  'silent',
+];
+
 export const DELIVERY_VARIANT: Record<ConversationDeliveryStatus, string> = {
   accepted: 'neutral',
   pending_delivery: 'neutral',

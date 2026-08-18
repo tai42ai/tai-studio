@@ -58,10 +58,15 @@ export type ToolMediaResult = z.infer<typeof toolMediaResult>;
  * FastMCP `meta` under `tai42/hidden`; a tool that never declared it is not hidden).
  * The tool_meta overlay's tri-state override is merged on top client-side; this read
  * exposes only the declaration.
+ *
+ * `badges` are the tool's plugin-DECLARED capability labels — purely INFORMATIONAL
+ * (e.g. `network`, `filesystem`), never a gate the server enforces. The overlay's
+ * own badges are merged on top client-side; this read exposes only the declaration.
  */
 export const toolTagEntry = z.object({
   name: z.string(),
   tags: z.array(z.string()),
+  badges: z.array(z.string()),
   hidden: z.boolean(),
 });
 export const toolTags = z.array(toolTagEntry);
@@ -238,7 +243,9 @@ export type FolderRecord = z.infer<typeof folderRecord>;
  * The organizational overlay for one tool, keyed by `tool_name`. `display_name`
  * overrides the rendered label (`display_name ?? name`); `folder_id` places the tool
  * in a folder (`null` = unfiled); `tags` is the user's editable categorization,
- * merged with the tool's read-only native tags by the UI; `hidden` is TRI-STATE —
+ * merged with the tool's read-only native tags by the UI; `badges` is the operator's
+ * editable capability-label overlay, merged with the tool's read-only plugin-declared
+ * badges by the UI (INFORMATIONAL, never an enforced gate); `hidden` is TRI-STATE —
  * `null` = defer to the plugin declaration, `true` = force hidden, `false` = force
  * visible. A drift throws `ApiSchemaError`.
  */
@@ -247,6 +254,7 @@ export const toolMetaRecord = z.object({
   display_name: z.string().nullable(),
   folder_id: z.string().nullable(),
   tags: z.array(z.string()),
+  badges: z.array(z.string()),
   hidden: z.boolean().nullable(),
 });
 export type ToolMetaRecord = z.infer<typeof toolMetaRecord>;
@@ -1056,12 +1064,18 @@ export const conversationThread = z.object({
 });
 export type ConversationThread = z.infer<typeof conversationThread>;
 
-/** The page window both thread read doors carry; `next_page` is null on the last. */
+/**
+ * The page window every conversation read door carries; `next_page` is null on the
+ * last page. `truncated` is TRUE when the door had more matches than it would scan
+ * or return under its filter/search cap — the UI must surface that LOUDLY, never a
+ * silent cut — and false whenever the window is exhaustive.
+ */
 const conversationPageWindow = {
   total: z.number(),
   page: z.number(),
   page_size: z.number(),
   next_page: z.number().nullable(),
+  truncated: z.boolean(),
 };
 
 export const conversationThreadsPage = z.object({
@@ -1116,6 +1130,19 @@ export const conversationTranscriptPage = z.object({
   order: transcriptOrder,
 });
 export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
+
+/**
+ * A route-scoped message search (`GET /api/conversations/{route}/messages/search?q`):
+ * every record on the route whose text matches `q`, across threads, newest first.
+ * The record shape is the transcript's exactly, so a hit renders with the same
+ * projection. `truncated` says the match set outran the door's scan cap — surfaced
+ * loudly, never a silent cut.
+ */
+export const conversationMessageSearchPage = z.object({
+  items: z.array(conversationMessage),
+  ...conversationPageWindow,
+});
+export type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPage>;
 
 /**
  * Who answers a thread's incoming messages: `agent` lets the flow reply on its

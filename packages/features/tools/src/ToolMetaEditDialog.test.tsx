@@ -24,6 +24,9 @@ function toolView(overrides: Partial<ToolView> = {}): ToolView {
     nativeTags: [],
     overlayTags: [],
     tags: [],
+    nativeBadges: [],
+    overlayBadges: [],
+    badges: [],
     folderId: null,
     hidden: false,
     overlayHidden: null,
@@ -77,8 +80,8 @@ describe('ToolMetaEditDialog — visibility prefill', () => {
   });
 });
 
-describe('ToolMetaEditDialog — save emits a four-field merge-patch', () => {
-  it('re-sends every field it owns unchanged (all four present)', async () => {
+describe('ToolMetaEditDialog — save emits a five-field merge-patch', () => {
+  it('re-sends every field it owns unchanged (all five present)', async () => {
     const user = userEvent.setup();
     const { onSubmit } = renderDialog(
       toolView({
@@ -87,6 +90,8 @@ describe('ToolMetaEditDialog — save emits a four-field merge-patch', () => {
         hasCustomName: true,
         overlayTags: ['geo'],
         tags: ['geo'],
+        overlayBadges: ['network'],
+        badges: ['network'],
         overlayHidden: true,
         hidden: true,
       }),
@@ -97,6 +102,7 @@ describe('ToolMetaEditDialog — save emits a four-field merge-patch', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       display_name: 'Paris',
       tags: ['geo'],
+      badges: ['network'],
       folder_id: null,
       hidden: true,
     });
@@ -146,9 +152,28 @@ describe('ToolMetaEditDialog — save emits a four-field merge-patch', () => {
     expect(onSubmit).toHaveBeenCalledWith({
       display_name: 'Paris',
       tags: ['geo'],
+      badges: [],
       folder_id: null,
       hidden: null,
     });
+  });
+
+  it('carries a newly added overlay badge in the patch', async () => {
+    const user = userEvent.setup();
+    const { onSubmit } = renderDialog(toolView());
+
+    await user.type(screen.getByRole('textbox', { name: 'Badges' }), 'network');
+    await user.click(screen.getByRole('button', { name: 'Add badge' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ badges: ['network'] }));
+  });
+
+  it('shows the declared (read-only) native badges beside the editable input', () => {
+    renderDialog(toolView({ nativeBadges: ['filesystem'], badges: ['filesystem'] }));
+
+    expect(screen.getByText('Declared badges (read-only)')).toBeInTheDocument();
+    expect(screen.getByText('filesystem')).toBeInTheDocument();
   });
 });
 

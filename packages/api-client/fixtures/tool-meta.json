@@ -13,6 +13,7 @@
       "display_name": "Paris weather",
       "folder_id": "22222222-2222-4222-8222-222222222222",
       "tags": ["favorite"],
+      "badges": ["network"],
       "hidden": null
     },
     {
@@ -20,6 +21,7 @@
       "display_name": null,
       "folder_id": null,
       "tags": [],
+      "badges": [],
       "hidden": true
     }
   ]

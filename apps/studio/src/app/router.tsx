@@ -19,6 +19,7 @@ import {
   useSearch,
   type RouterHistory,
 } from '@tanstack/react-router';
+import { schemas } from '@tai42/api-client';
 import type { AuthState, RouteSearch } from '@tai42/studio-sdk';
 import { ToolsPage } from '@tai42/feature-tools';
 import { AgentsPage } from '@tai42/feature-agents';
@@ -270,6 +271,12 @@ export function buildRouter(options: BuildRouterOptions) {
     validateSearch: (search: Record<string, unknown>): RouteSearch<'conversations'> => ({
       route: typeof search.route === 'string' ? search.route : undefined,
       thread: typeof search.thread === 'string' ? search.thread : undefined,
+      // Derived from the delivery-status SCHEMA (the single typed source), so a new
+      // backend status widens this shared URL parameter automatically — never a stale
+      // hand-copied literal list that would silently drop it.
+      status: parseEnum(search.status, schemas.conversationDeliveryStatus.options),
+      address: typeof search.address === 'string' ? search.address : undefined,
+      q: typeof search.q === 'string' ? search.q : undefined,
     }),
     component: function ConversationsRoute(): ReactNode {
       return <ConversationsPage search={useSearch({ from: '/authed/conversations' })} />;

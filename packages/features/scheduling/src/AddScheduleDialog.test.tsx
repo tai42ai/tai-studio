@@ -333,6 +333,46 @@ describe('AddScheduleDialog — display names', () => {
   });
 });
 
+describe('AddScheduleDialog — declared badges', () => {
+  it('shows the SELECTED tool declared badges (native ∪ overlay) as read-only chips', async () => {
+    // `network` is plugin-declared; `audited` is an operator overlay badge. The picker
+    // shows their merged, deduped, sorted union beneath the chosen tool.
+    const user = userEvent.setup();
+    const client = makeClient({
+      listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+      listToolTags: vi
+        .fn()
+        .mockResolvedValue([
+          { name: 'sync_schedule_task', tags: [], badges: ['network'], hidden: false },
+        ]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          {
+            tool_name: 'sync_schedule_task',
+            display_name: null,
+            folder_id: null,
+            tags: [],
+            badges: ['audited'],
+            hidden: null,
+          },
+        ],
+      }),
+    });
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+    const dialog = await screen.findByRole('dialog');
+    // No selection yet → no chips.
+    expect(within(dialog).queryByTestId('tool-picker-badges')).toBeNull();
+
+    await pickTool(user, dialog, 'sync_schedule_task');
+
+    const badges = await within(dialog).findByTestId('tool-picker-badges');
+    expect(badges).toHaveTextContent('network');
+    expect(badges).toHaveTextContent('audited');
+  });
+});
+
 describe('AddScheduleDialog — close paths', () => {
   it('calls onClose when Cancel is clicked', async () => {
     const user = userEvent.setup();

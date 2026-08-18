@@ -386,4 +386,54 @@ describe('ToolPicker', () => {
     // `label` renders a Field, and the field's visible label is the name.
     expect(screen.getByRole('combobox')).toHaveAccessibleName('Base tool label');
   });
+
+  it('renders the SELECTED tool declared badges as read-only chips', () => {
+    render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value="beta"
+        onChange={vi.fn()}
+        badgesByTool={{ beta: ['network', 'audited'] }}
+      />,
+    );
+    const badges = screen.getByTestId('tool-picker-badges');
+    expect(badges).toHaveTextContent('network');
+    expect(badges).toHaveTextContent('audited');
+  });
+
+  it('shows no badge chips when nothing is selected or the tool declares none', () => {
+    const { rerender } = render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value={null}
+        onChange={vi.fn()}
+        badgesByTool={{ beta: ['network'] }}
+      />,
+    );
+    expect(screen.queryByTestId('tool-picker-badges')).toBeNull();
+
+    rerender(
+      <ToolPicker
+        toolNames={TOOLS}
+        value="alpha"
+        onChange={vi.fn()}
+        badgesByTool={{ beta: ['network'] }}
+      />,
+    );
+    expect(screen.queryByTestId('tool-picker-badges')).toBeNull();
+  });
+
+  it('renders a badge containing <script> as escaped TEXT, never an element (XSS pin)', () => {
+    const payload = '<script>alert(1)</script>';
+    const { container } = render(
+      <ToolPicker
+        toolNames={TOOLS}
+        value="beta"
+        onChange={vi.fn()}
+        badgesByTool={{ beta: [payload] }}
+      />,
+    );
+    expect(screen.getByTestId('tool-picker-badges')).toHaveTextContent(payload);
+    expect(container.querySelector('script')).toBeNull();
+  });
 });

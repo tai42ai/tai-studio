@@ -45,6 +45,7 @@ import {
   featureDisabledMessage,
   hiddenToolNames,
   isFeatureDisabled,
+  toolBadgesByName,
   toolsListKey,
   useApi,
   useAppNavigate,
@@ -158,6 +159,14 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
     }
     return map;
   }, [tagsQuery.data, toolMetaQuery.data]);
+
+  // The declared badges the picker shows beneath the SELECTED base — native ∪ overlay,
+  // the same union the tools screen renders. Informational only; the server never
+  // gates on them. A failed tags/meta read leaves the map empty (no chips shown).
+  const badgesByTool = useMemo(
+    () => toolBadgesByName(tagsQuery.data ?? [], toolMetaQuery.data?.meta ?? []),
+    [tagsQuery.data, toolMetaQuery.data],
+  );
 
   const schemaQuery = useQuery({
     queryKey: presetSchemaKey(base ?? ''),
@@ -352,6 +361,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
               tagsByTool={tagsByTool}
               agentToolNames={agentToolNames}
               displayNames={displayNames}
+              badgesByTool={badgesByTool}
             />
           </Field>
         )}

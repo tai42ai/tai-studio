@@ -47,6 +47,13 @@ export interface TagsInputProps {
    * Forwarded to the input as a native attribute — see the docblock below.
    */
   readonly 'aria-label'?: string;
+  /**
+   * The noun for the placeholder + the Add/Remove control names ("tag" by default).
+   * Set it (e.g. "badge") so a second editor on the same surface reads and, above
+   * all, has DISTINCT accessible control names — two "Add tag" buttons would be
+   * ambiguous to a name-based query and a screen reader alike.
+   */
+  readonly itemNoun?: string;
 }
 
 /**
@@ -69,6 +76,7 @@ export function TagsInput({
   onChange,
   disabled,
   'aria-label': ariaLabel,
+  itemNoun = 'tag',
 }: TagsInputProps): ReactNode {
   const [draft, setDraft] = useState('');
 
@@ -103,13 +111,13 @@ export function TagsInput({
                 add();
               }
             }}
-            placeholder="Add a tag…"
+            placeholder={`Add a ${itemNoun}…`}
             aria-label={ariaLabel}
             disabled={disabled}
           />
         </div>
         <Button type="button" onClick={add} disabled={disabled}>
-          Add tag
+          Add {itemNoun}
         </Button>
       </div>
       {value.length > 0 ? (
@@ -120,7 +128,7 @@ export function TagsInput({
               <button
                 type="button"
                 className="tai-icon-btn"
-                aria-label={`Remove tag ${tag}`}
+                aria-label={`Remove ${itemNoun} ${tag}`}
                 onClick={() => {
                   remove(tag);
                 }}

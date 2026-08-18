@@ -10,10 +10,14 @@
  */
 import type { ReactNode, RefObject } from 'react';
 import { AppLink, ArrowLeftIcon, Card, EmptyState, useBreakpoint } from '@tai42/studio-sdk';
+import type { ConversationDeliveryStatus } from '@tai42/api-client';
 
 import { ComposeMessage } from './ComposeMessage';
+import { ConversationFilters } from './ConversationFilters';
 import { EntryGate } from './EntryGate';
 import { useSelectionFocus } from './focus';
+import { MessageSearch } from './MessageSearch';
+import type { ConversationsSearch } from './search';
 import { ThreadList, threadRowLabel } from './ThreadList';
 import { ThreadMode } from './ThreadMode';
 import { Transcript } from './Transcript';
@@ -21,10 +25,19 @@ import { Transcript } from './Transcript';
 export function RouteThreads({
   route,
   thread,
+  status,
+  address,
+  q,
+  search,
   headingRef,
 }: {
   readonly route: string;
   readonly thread: string | undefined;
+  readonly status: ConversationDeliveryStatus | undefined;
+  readonly address: string | undefined;
+  readonly q: string | undefined;
+  /** The sanitized page search, for the filter bar's merge-edits. */
+  readonly search: ConversationsSearch;
   /** The threads pane's heading — the route drill's focus target. */
   readonly headingRef: RefObject<HTMLHeadingElement | null>;
 }): ReactNode {
@@ -50,6 +63,8 @@ export function RouteThreads({
           route; every other route renders nothing here. */}
       <EntryGate route={route} />
 
+      <ConversationFilters search={search} />
+
       <div className="tai-split" data-pane={pane}>
         <div className="tai-split-list">
           <Card>
@@ -60,6 +75,8 @@ export function RouteThreads({
               key={route}
               route={route}
               selected={thread}
+              status={status}
+              address={address}
               listRef={focus.listRef}
               headingRef={headingRef}
             />
@@ -81,19 +98,25 @@ export function RouteThreads({
             </div>
           ) : null}
           {thread === undefined ? (
-            <Card>
-              <EmptyState
-                title="No thread selected"
-                description="Choose a thread to read its transcript."
-              />
-            </Card>
+            q !== undefined ? (
+              /* No thread picked but a needle is set: the same `q` searches the
+                 whole route instead of one thread's transcript. */
+              <MessageSearch key={`search:${q}`} route={route} q={q} />
+            ) : (
+              <Card>
+                <EmptyState
+                  title="No thread selected"
+                  description="Choose a thread to read its transcript, or search message text above."
+                />
+              </Card>
+            )
           ) : (
             /* Keyed by thread so a switch resets each control's own state — the
                mode read, the compose text and any in-flight write belong to the
                thread they were opened on. */
             <div key={thread} className="tai-stack tai-stack-3">
               <ThreadMode route={route} threadId={thread} />
-              <Transcript route={route} threadId={thread} headingRef={focus.headingRef} />
+              <Transcript route={route} threadId={thread} q={q} headingRef={focus.headingRef} />
               <ComposeMessage route={route} threadId={thread} />
             </div>
           )}

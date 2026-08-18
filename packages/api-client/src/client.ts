@@ -213,12 +213,14 @@ export interface ValidatePresetBody {
  * untouched — there is no full-row replace, so a display-name+tags editor sends
  * ONLY those two keys with no risk to `folder_id`/`hidden`. At least one field must
  * be present. A blank/whitespace-only `display_name` is rejected by the API (422) —
- * callers map an emptied label to `null`, never `""`.
+ * callers map an emptied label to `null`, never `""`. A present `badges` array
+ * replaces the whole overlay set (INFORMATIONAL labels, never an enforced gate).
  */
 export interface ToolMetaPatch {
   readonly display_name?: string | null;
   readonly folder_id?: string | null;
   readonly tags?: readonly string[];
+  readonly badges?: readonly string[];
   readonly hidden?: boolean | null;
 }
 
@@ -235,10 +237,22 @@ export interface StorageUploadBody {
 }
 
 /**
+ * The thread-list filter set (GET `/api/conversations/{route}/threads` query
+ * params, alongside `page`/`pageSize`). `status` narrows to threads whose newest
+ * record sits in one delivery state; `address` is a SUBSTRING match over the
+ * client address. Both omitted when undefined — an unfiltered listing.
+ */
+export interface ConversationThreadFilters {
+  readonly status?: s.ConversationDeliveryStatus;
+  readonly address?: string;
+}
+
+/**
  * One transcript read (GET `/api/conversations/{route}/transcript` query params).
  * `order` is not a default the caller may skip: `asc` reads the thread from its
  * beginning and `desc` from its newest end, and which one a screen wants is a
- * decision that screen must make.
+ * decision that screen must make. `q` narrows the page to records whose text
+ * matches it (a SUBSTRING), omitted for an unfiltered read.
  */
 export interface ConversationTranscriptQuery {
   readonly routeName: string;
@@ -246,6 +260,20 @@ export interface ConversationTranscriptQuery {
   readonly page: number;
   readonly pageSize: number;
   readonly order: s.TranscriptOrder;
+  readonly q?: string;
+}
+
+/**
+ * A route-scoped message search (GET
+ * `/api/conversations/{route}/messages/search` query params). `q` is the required
+ * needle — a substring over record text, across every thread on the route; `page`
+ * is supplied per-request by the infinite query.
+ */
+export interface ConversationMessageSearchQuery {
+  readonly routeName: string;
+  readonly q: string;
+  readonly page: number;
+  readonly pageSize: number;
 }
 
 /**
@@ -790,11 +818,12 @@ export function createApiClient(config: ApiConfig) {
       routeName: string,
       page: number,
       pageSize: number,
+      filters: ConversationThreadFilters = {},
       signal?: AbortSignal,
     ) =>
       req(`/api/conversations/${encodeSegment(routeName)}/threads`, s.conversationThreadsPage, {
         signal,
-        query: { page, pageSize },
+        query: { page, pageSize, status: filters.status, address: filters.address },
       }),
     // One thread's transcript, caller-scoped, read in the asked-for direction.
     // The `thread_id` rides the QUERY STRING, never the path: it embeds the api
@@ -813,8 +842,18 @@ export function createApiClient(config: ApiConfig) {
             page: query.page,
             pageSize: query.pageSize,
             order: query.order,
+            q: query.q,
           },
         },
+      ),
+    // Search every record on a route by text, across threads, newest first. The
+    // needle rides the QUERY (`q`); paging is the infinite query's own window. The
+    // page's `truncated` flag says the match set outran the door's scan cap.
+    searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) =>
+      req(
+        `/api/conversations/${encodeSegment(query.routeName)}/messages/search`,
+        s.conversationMessageSearchPage,
+        { signal, query: { q: query.q, page: query.page, pageSize: query.pageSize } },
       ),
     // Send a human message into a thread. The `thread_id` rides the BODY (a POST,
     // never a path segment) — same encode-once reasoning as the transcript read.

@@ -43,6 +43,7 @@ import {
   errorMessage,
   extensionElementName,
   hiddenToolNames,
+  toolBadgesByName,
   toolsListKey,
   useApi,
   useToolDisplayNames,
@@ -403,6 +404,14 @@ export function ApplyExtensionsPanel(): ReactNode {
   );
   const excludeToolNames = useMemo(() => [...hiddenNames], [hiddenNames]);
 
+  // The declared badges the picker shows beneath the SELECTED tool — native ∪ overlay,
+  // the same union the tools screen renders. Informational only; a failed tags/meta
+  // read leaves the map empty (no chips shown).
+  const badgesByTool = useMemo(
+    () => toolBadgesByName(tagsQuery.data ?? [], metaQuery.data?.meta ?? []),
+    [tagsQuery.data, metaQuery.data],
+  );
+
   const presetRow = selected === null ? undefined : presetsByName.get(selected);
   // A non-conflicted preset row owns its extensions through the presets API; a
   // conflicted row is excluded (it is either a foreign live tool the manifest
@@ -452,6 +461,7 @@ export function ApplyExtensionsPanel(): ReactNode {
               placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
               excludeNames={excludeToolNames}
               displayNames={displayNames}
+              badgesByTool={badgesByTool}
             />
           </Field>
         )}

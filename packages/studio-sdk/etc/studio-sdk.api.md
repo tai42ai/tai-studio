@@ -304,6 +304,7 @@ finished_at?: string | undefined;
 readonly listToolTags: (signal?: AbortSignal) => Promise<{
 name: string;
 tags: string[];
+badges: string[];
 hidden: boolean;
 }[]>;
 readonly listPresets: (signal?: AbortSignal) => Promise<{
@@ -435,6 +436,7 @@ parent_id: string | null;
 meta: {
 tool_name: string;
 tags: string[];
+badges: string[];
 hidden: boolean | null;
 display_name: string | null;
 folder_id: string | null;
@@ -443,6 +445,7 @@ folder_id: string | null;
 readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
 tool_name: string;
 tags: string[];
+badges: string[];
 hidden: boolean | null;
 display_name: string | null;
 folder_id: string | null;
@@ -1132,7 +1135,7 @@ execution_key_fingerprint: string;
 }[];
 total: number;
 }>;
-readonly listConversationThreads: (routeName: string, page: number, pageSize: number, signal?: AbortSignal) => Promise<{
+readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
 items: {
 thread_id: string;
 client_address: string;
@@ -1144,6 +1147,7 @@ total: number;
 page: number;
 page_size: number;
 next_page: number | null;
+truncated: boolean;
 }>;
 readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
 items: {
@@ -1172,7 +1176,37 @@ total: number;
 page: number;
 page_size: number;
 next_page: number | null;
+truncated: boolean;
 order: "asc" | "desc";
+}>;
+readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
+items: {
+created_at: number;
+origin: "client" | "operator";
+route_name: string;
+door: "channel" | "api";
+thread_id: string;
+client_address: string;
+message_id: string;
+caller_principal: string | null;
+inbound_text: string;
+answer_status: "error" | "silent" | "answered" | null;
+answer: string | null;
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+updated_at: number;
+error?: string | null | undefined;
+channel?: string | null | undefined;
+our_identity?: string | null | undefined;
+callback_url?: string | null | undefined;
+provider_message_id?: string | null | undefined;
+outbound_message_ids?: string[] | undefined;
+attempts?: number | undefined;
+}[];
+total: number;
+page: number;
+page_size: number;
+next_page: number | null;
+truncated: boolean;
 }>;
 readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
 thread_id: string;
@@ -2431,6 +2465,9 @@ export interface BadgeProps {
 }
 
 // @public
+export const BADGES_NOTE = "Declared capability labels \u2014 informational only. They describe what the tool touches; the server never enforces them.";
+
+// @public
 export function baseNameOf(name: string): string;
 
 // @public (undocumented)
@@ -2912,6 +2949,150 @@ const conversationMessage: z.ZodObject<{
 }>;
 
 // @public (undocumented)
+type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPage>;
+
+// @public
+const conversationMessageSearchPage: z.ZodObject<{
+    total: z.ZodNumber;
+    page: z.ZodNumber;
+    page_size: z.ZodNumber;
+    next_page: z.ZodNullable<z.ZodNumber>;
+    truncated: z.ZodBoolean;
+    items: z.ZodArray<z.ZodObject<{
+        message_id: z.ZodString;
+        route_name: z.ZodString;
+        door: z.ZodEnum<["api", "channel"]>;
+        thread_id: z.ZodString;
+        client_address: z.ZodString;
+        caller_principal: z.ZodNullable<z.ZodString>;
+        inbound_text: z.ZodString;
+        answer_status: z.ZodNullable<z.ZodEnum<["answered", "error", "silent"]>>;
+        answer: z.ZodNullable<z.ZodString>;
+        origin: z.ZodEnum<["client", "operator"]>;
+        delivery_status: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
+        created_at: z.ZodNumber;
+        updated_at: z.ZodNumber;
+        channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        attempts: z.ZodOptional<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        created_at: number;
+        origin: "client" | "operator";
+        route_name: string;
+        door: "channel" | "api";
+        thread_id: string;
+        client_address: string;
+        message_id: string;
+        caller_principal: string | null;
+        inbound_text: string;
+        answer_status: "error" | "silent" | "answered" | null;
+        answer: string | null;
+        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+        updated_at: number;
+        error?: string | null | undefined;
+        channel?: string | null | undefined;
+        our_identity?: string | null | undefined;
+        callback_url?: string | null | undefined;
+        provider_message_id?: string | null | undefined;
+        outbound_message_ids?: string[] | undefined;
+        attempts?: number | undefined;
+    }, {
+        created_at: number;
+        origin: "client" | "operator";
+        route_name: string;
+        door: "channel" | "api";
+        thread_id: string;
+        client_address: string;
+        message_id: string;
+        caller_principal: string | null;
+        inbound_text: string;
+        answer_status: "error" | "silent" | "answered" | null;
+        answer: string | null;
+        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+        updated_at: number;
+        error?: string | null | undefined;
+        channel?: string | null | undefined;
+        our_identity?: string | null | undefined;
+        callback_url?: string | null | undefined;
+        provider_message_id?: string | null | undefined;
+        outbound_message_ids?: string[] | undefined;
+        attempts?: number | undefined;
+    }>, "many">;
+}, "strip", z.ZodTypeAny, {
+    items: {
+        created_at: number;
+        origin: "client" | "operator";
+        route_name: string;
+        door: "channel" | "api";
+        thread_id: string;
+        client_address: string;
+        message_id: string;
+        caller_principal: string | null;
+        inbound_text: string;
+        answer_status: "error" | "silent" | "answered" | null;
+        answer: string | null;
+        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+        updated_at: number;
+        error?: string | null | undefined;
+        channel?: string | null | undefined;
+        our_identity?: string | null | undefined;
+        callback_url?: string | null | undefined;
+        provider_message_id?: string | null | undefined;
+        outbound_message_ids?: string[] | undefined;
+        attempts?: number | undefined;
+    }[];
+    total: number;
+    page: number;
+    page_size: number;
+    next_page: number | null;
+    truncated: boolean;
+}, {
+    items: {
+        created_at: number;
+        origin: "client" | "operator";
+        route_name: string;
+        door: "channel" | "api";
+        thread_id: string;
+        client_address: string;
+        message_id: string;
+        caller_principal: string | null;
+        inbound_text: string;
+        answer_status: "error" | "silent" | "answered" | null;
+        answer: string | null;
+        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+        updated_at: number;
+        error?: string | null | undefined;
+        channel?: string | null | undefined;
+        our_identity?: string | null | undefined;
+        callback_url?: string | null | undefined;
+        provider_message_id?: string | null | undefined;
+        outbound_message_ids?: string[] | undefined;
+        attempts?: number | undefined;
+    }[];
+    total: number;
+    page: number;
+    page_size: number;
+    next_page: number | null;
+    truncated: boolean;
+}>;
+
+// @public
+interface ConversationMessageSearchQuery {
+    // (undocumented)
+    readonly page: number;
+    // (undocumented)
+    readonly pageSize: number;
+    // (undocumented)
+    readonly q: string;
+    // (undocumented)
+    readonly routeName: string;
+}
+
+// @public (undocumented)
 type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
 // @public
@@ -3068,6 +3249,14 @@ const conversationThread: z.ZodObject<{
 }>;
 
 // @public
+interface ConversationThreadFilters {
+    // (undocumented)
+    readonly address?: string;
+    // (undocumented)
+    readonly status?: s.ConversationDeliveryStatus;
+}
+
+// @public
 interface ConversationThreadMessageBody {
     // (undocumented)
     readonly address?: string;
@@ -3122,6 +3311,7 @@ const conversationThreadsPage: z.ZodObject<{
     page: z.ZodNumber;
     page_size: z.ZodNumber;
     next_page: z.ZodNullable<z.ZodNumber>;
+    truncated: z.ZodBoolean;
     items: z.ZodArray<z.ZodObject<{
         thread_id: z.ZodString;
         client_address: z.ZodString;
@@ -3153,6 +3343,7 @@ const conversationThreadsPage: z.ZodObject<{
     page: number;
     page_size: number;
     next_page: number | null;
+    truncated: boolean;
 }, {
     items: {
         thread_id: string;
@@ -3165,6 +3356,7 @@ const conversationThreadsPage: z.ZodObject<{
     page: number;
     page_size: number;
     next_page: number | null;
+    truncated: boolean;
 }>;
 
 // @public (undocumented)
@@ -3177,6 +3369,7 @@ const conversationTranscriptPage: z.ZodObject<{
     page: z.ZodNumber;
     page_size: z.ZodNumber;
     next_page: z.ZodNullable<z.ZodNumber>;
+    truncated: z.ZodBoolean;
     items: z.ZodArray<z.ZodObject<{
         message_id: z.ZodString;
         route_name: z.ZodString;
@@ -3268,6 +3461,7 @@ const conversationTranscriptPage: z.ZodObject<{
     page: number;
     page_size: number;
     next_page: number | null;
+    truncated: boolean;
     order: "asc" | "desc";
 }, {
     items: {
@@ -3296,6 +3490,7 @@ const conversationTranscriptPage: z.ZodObject<{
     page: number;
     page_size: number;
     next_page: number | null;
+    truncated: boolean;
     order: "asc" | "desc";
 }>;
 
@@ -3307,6 +3502,8 @@ interface ConversationTranscriptQuery {
     readonly page: number;
     // (undocumented)
     readonly pageSize: number;
+    // (undocumented)
+    readonly q?: string;
     // (undocumented)
     readonly routeName: string;
     // (undocumented)
@@ -3377,6 +3574,7 @@ function createApiClient(config: ApiConfig): {
     readonly listToolTags: (signal?: AbortSignal) => Promise<{
         name: string;
         tags: string[];
+        badges: string[];
         hidden: boolean;
     }[]>;
     readonly listPresets: (signal?: AbortSignal) => Promise<{
@@ -3508,6 +3706,7 @@ function createApiClient(config: ApiConfig): {
         meta: {
             tool_name: string;
             tags: string[];
+            badges: string[];
             hidden: boolean | null;
             display_name: string | null;
             folder_id: string | null;
@@ -3516,6 +3715,7 @@ function createApiClient(config: ApiConfig): {
     readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
         tool_name: string;
         tags: string[];
+        badges: string[];
         hidden: boolean | null;
         display_name: string | null;
         folder_id: string | null;
@@ -4205,7 +4405,7 @@ function createApiClient(config: ApiConfig): {
         }[];
         total: number;
     }>;
-    readonly listConversationThreads: (routeName: string, page: number, pageSize: number, signal?: AbortSignal) => Promise<{
+    readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
         items: {
             thread_id: string;
             client_address: string;
@@ -4217,6 +4417,7 @@ function createApiClient(config: ApiConfig): {
         page: number;
         page_size: number;
         next_page: number | null;
+        truncated: boolean;
     }>;
     readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
         items: {
@@ -4245,7 +4446,37 @@ function createApiClient(config: ApiConfig): {
         page: number;
         page_size: number;
         next_page: number | null;
+        truncated: boolean;
         order: "asc" | "desc";
+    }>;
+    readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
+        items: {
+            created_at: number;
+            origin: "client" | "operator";
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            message_id: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            updated_at: number;
+            error?: string | null | undefined;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
     }>;
     readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
         thread_id: string;
@@ -9510,6 +9741,9 @@ const meProjection: z.ZodObject<{
 }>;
 
 // @public
+export function mergeToolBadges(nativeBadges: readonly string[], overlayBadges: readonly string[]): readonly string[];
+
+// @public
 interface MetricsQuery {
     // (undocumented)
     readonly from?: string;
@@ -12162,6 +12396,9 @@ export interface RouteSearchByToken {
     conversations: {
         route?: string;
         thread?: string;
+        status?: ConversationDeliveryStatus;
+        address?: string;
+        q?: string;
     };
     // (undocumented)
     extensions: Record<string, never>;
@@ -12760,6 +12997,8 @@ declare namespace s {
         TranscriptOrder,
         conversationTranscriptPage,
         ConversationTranscriptPage,
+        conversationMessageSearchPage,
+        ConversationMessageSearchPage,
         conversationThreadMode,
         ConversationThreadMode,
         conversationThreadModeState,
@@ -14217,6 +14456,7 @@ export interface TagsInputProps {
     readonly 'aria-label'?: string;
     // (undocumented)
     readonly disabled?: boolean;
+    readonly itemNoun?: string;
     // (undocumented)
     readonly onChange: (next: string[]) => void;
     // (undocumented)
@@ -14389,6 +14629,9 @@ const tokensPayload: z.ZodArray<z.ZodObject<{
 
 // @public
 export const tokensPayloadKey: readonly ["auth-tokens-payload"];
+
+// @public
+export function toolBadgesByName(tagEntries: readonly ToolTagEntry[], overlayRows: readonly ToolMetaRecord[]): Readonly<Record<string, readonly string[]>>;
 
 // @public
 export function toolDisplayLabel(names: Readonly<Record<string, string>>, rawName: string): string;
@@ -14711,16 +14954,19 @@ const toolMetaOverlay: z.ZodObject<{
         display_name: z.ZodNullable<z.ZodString>;
         folder_id: z.ZodNullable<z.ZodString>;
         tags: z.ZodArray<z.ZodString, "many">;
+        badges: z.ZodArray<z.ZodString, "many">;
         hidden: z.ZodNullable<z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
         tool_name: string;
         tags: string[];
+        badges: string[];
         hidden: boolean | null;
         display_name: string | null;
         folder_id: string | null;
     }, {
         tool_name: string;
         tags: string[];
+        badges: string[];
         hidden: boolean | null;
         display_name: string | null;
         folder_id: string | null;
@@ -14734,6 +14980,7 @@ const toolMetaOverlay: z.ZodObject<{
     meta: {
         tool_name: string;
         tags: string[];
+        badges: string[];
         hidden: boolean | null;
         display_name: string | null;
         folder_id: string | null;
@@ -14747,6 +14994,7 @@ const toolMetaOverlay: z.ZodObject<{
     meta: {
         tool_name: string;
         tags: string[];
+        badges: string[];
         hidden: boolean | null;
         display_name: string | null;
         folder_id: string | null;
@@ -14755,6 +15003,8 @@ const toolMetaOverlay: z.ZodObject<{
 
 // @public
 interface ToolMetaPatch {
+    // (undocumented)
+    readonly badges?: readonly string[];
     // (undocumented)
     readonly display_name?: string | null;
     // (undocumented)
@@ -14774,16 +15024,19 @@ const toolMetaRecord: z.ZodObject<{
     display_name: z.ZodNullable<z.ZodString>;
     folder_id: z.ZodNullable<z.ZodString>;
     tags: z.ZodArray<z.ZodString, "many">;
+    badges: z.ZodArray<z.ZodString, "many">;
     hidden: z.ZodNullable<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     tool_name: string;
     tags: string[];
+    badges: string[];
     hidden: boolean | null;
     display_name: string | null;
     folder_id: string | null;
 }, {
     tool_name: string;
     tags: string[];
+    badges: string[];
     hidden: boolean | null;
     display_name: string | null;
     folder_id: string | null;
@@ -14814,6 +15067,7 @@ export function ToolPicker(input: ToolPickerProps): JSX.Element;
 export interface ToolPickerProps {
     readonly 'aria-label'?: string;
     readonly agentToolNames?: ReadonlySet<string>;
+    readonly badgesByTool?: Readonly<Record<string, readonly string[]>>;
     // (undocumented)
     readonly disabled?: boolean;
     readonly displayNames?: Readonly<Record<string, string>>;
@@ -14921,14 +15175,17 @@ type ToolTagEntry = z.infer<typeof toolTagEntry>;
 const toolTagEntry: z.ZodObject<{
     name: z.ZodString;
     tags: z.ZodArray<z.ZodString, "many">;
+    badges: z.ZodArray<z.ZodString, "many">;
     hidden: z.ZodBoolean;
 }, "strip", z.ZodTypeAny, {
     name: string;
     tags: string[];
+    badges: string[];
     hidden: boolean;
 }, {
     name: string;
     tags: string[];
+    badges: string[];
     hidden: boolean;
 }>;
 
@@ -14936,14 +15193,17 @@ const toolTagEntry: z.ZodObject<{
 const toolTags: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     tags: z.ZodArray<z.ZodString, "many">;
+    badges: z.ZodArray<z.ZodString, "many">;
     hidden: z.ZodBoolean;
 }, "strip", z.ZodTypeAny, {
     name: string;
     tags: string[];
+    badges: string[];
     hidden: boolean;
 }, {
     name: string;
     tags: string[];
+    badges: string[];
     hidden: boolean;
 }>, "many">;
 

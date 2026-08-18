@@ -134,7 +134,14 @@ describe('conversation threads transport', () => {
   it('GETs the route threads door with the paging window', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { items: [thread], total: 1, page: 1, page_size: 25, next_page: null },
+        data: {
+          items: [thread],
+          total: 1,
+          page: 1,
+          page_size: 25,
+          next_page: null,
+          truncated: false,
+        },
       }),
     );
     const out = await client.listConversationThreads('chat', 1, 25);
@@ -142,11 +149,59 @@ describe('conversation threads transport', () => {
     expect(captured[0]?.url).toBe('/api/conversations/chat/threads?page=1&pageSize=25');
     expect(out.items[0]?.thread_id).toBe('svc-chat/+15551234567');
     expect(out.next_page).toBeNull();
+    expect(out.truncated).toBe(false);
+  });
+
+  it('carries the status + address filters as query params', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          items: [thread],
+          total: 1,
+          page: 1,
+          page_size: 25,
+          next_page: null,
+          truncated: false,
+        },
+      }),
+    );
+    await client.listConversationThreads('chat', 1, 25, { status: 'failed', address: '+1555' });
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/chat/threads?page=1&pageSize=25&status=failed&address=%2B1555',
+    );
+  });
+
+  it('omits an unset filter (no empty query param)', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { items: [], total: 0, page: 1, page_size: 25, next_page: null, truncated: false },
+      }),
+    );
+    await client.listConversationThreads('chat', 1, 25, { address: 'ana' });
+    expect(captured[0]?.url).toBe('/api/conversations/chat/threads?page=1&pageSize=25&address=ana');
+  });
+
+  it('surfaces the truncated flag when the door capped the listing', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          items: [thread],
+          total: 1,
+          page: 1,
+          page_size: 25,
+          next_page: null,
+          truncated: true,
+        },
+      }),
+    );
+    expect((await client.listConversationThreads('chat', 1, 25)).truncated).toBe(true);
   });
 
   it('encodes a route name that is not URL-safe', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { items: [], total: 0, page: 1, page_size: 25, next_page: null } }),
+      jsonResponse({
+        data: { items: [], total: 0, page: 1, page_size: 25, next_page: null, truncated: false },
+      }),
     );
     await client.listConversationThreads('a b/c', 1, 25);
     expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc/threads?page=1&pageSize=25');
@@ -154,7 +209,16 @@ describe('conversation threads transport', () => {
 
   it('carries next_page through for a long route', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { items: [thread], total: 90, page: 1, page_size: 25, next_page: 2 } }),
+      jsonResponse({
+        data: {
+          items: [thread],
+          total: 90,
+          page: 1,
+          page_size: 25,
+          next_page: 2,
+          truncated: false,
+        },
+      }),
     );
     expect((await client.listConversationThreads('chat', 1, 25)).next_page).toBe(2);
   });
@@ -163,7 +227,25 @@ describe('conversation threads transport', () => {
     const { message_count: _dropped, ...broken } = thread;
     const { client } = harness(() =>
       jsonResponse({
-        data: { items: [broken], total: 1, page: 1, page_size: 25, next_page: null },
+        data: {
+          items: [broken],
+          total: 1,
+          page: 1,
+          page_size: 25,
+          next_page: null,
+          truncated: false,
+        },
+      }),
+    );
+    await expect(client.listConversationThreads('chat', 1, 25)).rejects.toBeInstanceOf(
+      ApiSchemaError,
+    );
+  });
+
+  it('throws ApiSchemaError LOUDLY when the truncated flag is absent (no silent default)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { items: [thread], total: 1, page: 1, page_size: 25, next_page: null },
       }),
     );
     await expect(client.listConversationThreads('chat', 1, 25)).rejects.toBeInstanceOf(
@@ -179,7 +261,15 @@ function transcriptPage(
   nextPage: number | null = null,
 ) {
   return {
-    data: { items, total: items.length, page: 1, page_size: 50, next_page: nextPage, order },
+    data: {
+      items,
+      total: items.length,
+      page: 1,
+      page_size: 50,
+      next_page: nextPage,
+      truncated: false,
+      order,
+    },
   };
 }
 
@@ -220,6 +310,33 @@ describe('thread transcript transport', () => {
     const { client, captured } = harness(() => jsonResponse(transcriptPage([])));
     await client.readConversationTranscript({ ...transcriptQuery, routeName: 'a b/c' });
     expect(captured[0]?.url).toContain('/api/conversations/a%20b%2Fc/transcript?');
+  });
+
+  it('carries the text filter `q` when one is given, and omits it otherwise', async () => {
+    const { client, captured } = harness(() => jsonResponse(transcriptPage([callerRecord])));
+    await client.readConversationTranscript({ ...transcriptQuery, order: 'asc', q: 'widget' });
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/chat/transcript?thread_id=svc-chat%2F%2B15551234567&page=1&pageSize=50&order=asc&q=widget',
+    );
+    await client.readConversationTranscript(transcriptQuery);
+    expect(captured[1]?.url).not.toContain('q=');
+  });
+
+  it('surfaces the truncated flag when the door capped the page', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          items: [callerRecord],
+          total: 1,
+          page: 1,
+          page_size: 50,
+          next_page: null,
+          truncated: true,
+          order: 'desc',
+        },
+      }),
+    );
+    expect((await client.readConversationTranscript(transcriptQuery)).truncated).toBe(true);
   });
 
   it('carries the order and next_page back for a paged thread', async () => {
@@ -287,6 +404,7 @@ describe('thread transcript transport', () => {
           page: 1,
           page_size: 50,
           next_page: null,
+          truncated: false,
           order: 'sideways',
         },
       }),
@@ -310,6 +428,60 @@ describe('thread transcript transport', () => {
     const out = await client.readConversationTranscript(transcriptQuery);
     expect(out.items[0]?.origin).toBe('client');
     expect(out.items[1]?.origin).toBe('operator');
+  });
+});
+
+describe('route message search transport', () => {
+  function searchPage(items: unknown[], nextPage: number | null = null, truncated = false) {
+    return {
+      data: { items, total: items.length, page: 1, page_size: 25, next_page: nextPage, truncated },
+    };
+  }
+
+  it('GETs the search door with the needle + paging window', async () => {
+    const { client, captured } = harness(() => jsonResponse(searchPage([adminRecord])));
+    const out = await client.searchConversationMessages({
+      routeName: 'chat',
+      q: 'widget',
+      page: 1,
+      pageSize: 25,
+    });
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/chat/messages/search?q=widget&page=1&pageSize=25',
+    );
+    expect(out.items[0]?.message_id).toBe('m1');
+  });
+
+  it('encodes a route name that is not URL-safe', async () => {
+    const { client, captured } = harness(() => jsonResponse(searchPage([])));
+    await client.searchConversationMessages({ routeName: 'a b/c', q: 'x', page: 1, pageSize: 25 });
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/a%20b%2Fc/messages/search?q=x&page=1&pageSize=25',
+    );
+  });
+
+  it('carries next_page and the truncated flag back', async () => {
+    const { client } = harness(() => jsonResponse(searchPage([adminRecord], 2, true)));
+    const out = await client.searchConversationMessages({
+      routeName: 'chat',
+      q: 'widget',
+      page: 1,
+      pageSize: 25,
+    });
+    expect(out.next_page).toBe(2);
+    expect(out.truncated).toBe(true);
+  });
+
+  it('throws ApiSchemaError LOUDLY when the truncated flag is absent', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { items: [adminRecord], total: 1, page: 1, page_size: 25, next_page: null },
+      }),
+    );
+    await expect(
+      client.searchConversationMessages({ routeName: 'chat', q: 'x', page: 1, pageSize: 25 }),
+    ).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });
 

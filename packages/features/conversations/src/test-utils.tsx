@@ -214,8 +214,20 @@ export function makeMessage(overrides: Partial<ConversationMessage> = {}): Conve
 }
 
 /** One page of results, shaped as the paged read doors return it. */
-export function page<T>(items: T[], nextPage: number | null = null, pageNumber = 1) {
-  return { items, total: items.length, page: pageNumber, page_size: 50, next_page: nextPage };
+export function page<T>(
+  items: T[],
+  nextPage: number | null = null,
+  pageNumber = 1,
+  truncated = false,
+) {
+  return {
+    items,
+    total: items.length,
+    page: pageNumber,
+    page_size: 50,
+    next_page: nextPage,
+    truncated,
+  };
 }
 
 /**
@@ -229,7 +241,13 @@ export function transcriptPage<T>(
     nextPage = null,
     pageNumber = 1,
     order = 'desc',
-  }: { nextPage?: number | null; pageNumber?: number; order?: 'asc' | 'desc' } = {},
+    truncated = false,
+  }: {
+    nextPage?: number | null;
+    pageNumber?: number;
+    order?: 'asc' | 'desc';
+    truncated?: boolean;
+  } = {},
 ) {
-  return { ...page(items, nextPage, pageNumber), order };
+  return { ...page(items, nextPage, pageNumber, truncated), order };
 }

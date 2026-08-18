@@ -23,16 +23,25 @@
  *    mapping equal to the raw name) reads the bare raw name. The value stays the raw
  *    name and grouping/filtering/exclusion key off raw names alone, so a display
  *    name is purely cosmetic.
+ *  - `badgesByTool` (native ∪ overlay, from the tool-meta merge) surfaces the
+ *    SELECTED tool's DECLARED capability badges as read-only chips beneath the
+ *    select. Badges are INFORMATIONAL — the tooltip says so — never a gate, so they
+ *    change nothing about which options select or how they group.
  *
- * SAFETY: a tool name, a tag, AND a display name are server-supplied, so every one
- * renders as TEXT through the DS `Select` (React escapes it) — never an HTML sink.
- * Pinned by a test.
+ * SAFETY: a tool name, a tag, a display name, AND a badge are server-supplied, so
+ * every one renders as TEXT (React escapes it) — never an HTML sink. Pinned by a test.
  */
 import { useState } from 'react';
 
 import { toolDisplayLabel } from '../hooks/useToolDisplayNames';
+import { Badge } from './badge';
 import { Field } from './field';
 import { Select, type SelectGroup } from './select';
+import { Tooltip } from './tooltip';
+
+/** The shared informational note every badge surface carries: declared, never enforced. */
+export const BADGES_NOTE =
+  'Declared capability labels — informational only. They describe what the tool touches; the server never enforces them.';
 
 export interface ToolPickerProps {
   readonly toolNames: readonly string[];
@@ -62,6 +71,12 @@ export interface ToolPickerProps {
    * emits stays the raw name in every case.
    */
   readonly displayNames?: Readonly<Record<string, string>>;
+  /**
+   * Per-tool DECLARED capability badges (native ∪ overlay). When present, the
+   * selected tool's badges render as read-only chips beneath the select — purely
+   * informational, never affecting which options show or how they group.
+   */
+  readonly badgesByTool?: Readonly<Record<string, readonly string[]>>;
 }
 
 const NO_DISPLAY_NAMES: Readonly<Record<string, string>> = {};
@@ -132,6 +147,7 @@ export function ToolPicker({
   tagsByTool,
   agentToolNames,
   displayNames,
+  badgesByTool,
 }: ToolPickerProps) {
   const [tagFilter, setTagFilter] = useState<string>(ALL_TAGS);
 
@@ -194,6 +210,21 @@ export function ToolPicker({
         </Field>
       ) : null}
       {label !== undefined ? <Field label={label}>{toolSelect}</Field> : toolSelect}
+      {value !== null && badgesByTool !== undefined && (badgesByTool[value]?.length ?? 0) > 0 ? (
+        <Tooltip content={BADGES_NOTE}>
+          <span
+            className="tai-row"
+            data-testid={`${idPrefix}-badges`}
+            style={{ gap: 'var(--tai-space-1)' }}
+          >
+            {(badgesByTool[value] ?? []).map((badge) => (
+              <Badge key={badge} variant="neutral">
+                {badge}
+              </Badge>
+            ))}
+          </span>
+        </Tooltip>
+      ) : null}
     </div>
   );
 }

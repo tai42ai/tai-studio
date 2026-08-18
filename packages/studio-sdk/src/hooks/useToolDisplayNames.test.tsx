@@ -18,6 +18,7 @@ function row(over: Partial<ToolMetaRecord> = {}): ToolMetaRecord {
     display_name: null,
     folder_id: null,
     tags: [],
+    badges: [],
     hidden: null,
     ...over,
   };

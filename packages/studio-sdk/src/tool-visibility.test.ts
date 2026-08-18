@@ -6,12 +6,12 @@ import { effectiveHidden, hiddenToolNames } from './tool-visibility';
 
 /** A native tag entry with the given plugin-declared visibility. */
 function tag(name: string, hidden: boolean, tags: string[] = []): ToolTagEntry {
-  return { name, tags, hidden };
+  return { name, tags, badges: [], hidden };
 }
 
 /** An overlay row carrying only the tri-state `hidden` opinion under test. */
 function overlay(toolName: string, hidden: boolean | null): ToolMetaRecord {
-  return { tool_name: toolName, display_name: null, folder_id: null, tags: [], hidden };
+  return { tool_name: toolName, display_name: null, folder_id: null, tags: [], badges: [], hidden };
 }
 
 describe('effectiveHidden', () => {

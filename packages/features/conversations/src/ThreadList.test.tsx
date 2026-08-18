@@ -9,17 +9,23 @@ import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { ApiError, type ConversationDeliveryStatus } from '@tai42/api-client';
 
 import { RELATIVE_TICK_MS } from './clock';
 import { ThreadList, THREADS_MAX_PAGES, THREADS_PAGE_SIZE, THREADS_REFRESH_MS } from './ThreadList';
 import { makeThread, page, renderWithProviders } from './test-utils';
 
-function renderList(listConversationThreads: unknown, selected?: string) {
+function renderList(
+  listConversationThreads: unknown,
+  selected?: string,
+  filters?: { status?: ConversationDeliveryStatus; address?: string },
+) {
   return renderWithProviders(
     <ThreadList
       route="chat"
       selected={selected}
+      status={filters?.status}
+      address={filters?.address}
       listRef={createRef<HTMLDivElement>()}
       headingRef={createRef<HTMLHeadingElement>()}
     />,
@@ -147,7 +153,13 @@ describe('ThreadList', () => {
     await user.click(await screen.findByRole('button', { name: 'Load more threads' }));
 
     expect(await screen.findByText('+15559')).toBeInTheDocument();
-    expect(listThreads).toHaveBeenLastCalledWith('chat', 2, THREADS_PAGE_SIZE, expect.anything());
+    expect(listThreads).toHaveBeenLastCalledWith(
+      'chat',
+      2,
+      THREADS_PAGE_SIZE,
+      { status: undefined, address: undefined },
+      expect.anything(),
+    );
     expect(screen.queryByRole('button', { name: 'Load more threads' })).toBeNull();
   });
 
@@ -498,5 +510,33 @@ describe('ThreadList', () => {
 
     await user.click(within(alert).getByRole('button', { name: 'Retry' }));
     expect(await screen.findByText('+15558')).toBeInTheDocument();
+  });
+});
+
+describe('ThreadList — filters', () => {
+  it('forwards the status + address filters to the read', async () => {
+    const listThreads = vi.fn().mockResolvedValue(page([makeThread()]));
+    renderList(listThreads, undefined, { status: 'failed', address: 'ana' });
+
+    await screen.findByTestId('conversation-threads-table');
+    expect(listThreads).toHaveBeenCalledWith(
+      'chat',
+      1,
+      THREADS_PAGE_SIZE,
+      { status: 'failed', address: 'ana' },
+      expect.anything(),
+    );
+  });
+
+  it('shows the filtered empty copy when a filter matches nothing', async () => {
+    renderList(vi.fn().mockResolvedValue(page([])), undefined, { status: 'failed' });
+    expect(await screen.findByText('No matching threads')).toBeInTheDocument();
+  });
+
+  it('surfaces a LOUD partial-set notice when the listing is truncated', async () => {
+    renderList(vi.fn().mockResolvedValue(page([makeThread()], null, 1, true)));
+    expect(await screen.findByTestId('conversation-truncated')).toHaveTextContent(
+      'Showing a partial set',
+    );
   });
 });

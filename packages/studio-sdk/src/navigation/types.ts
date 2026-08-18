@@ -12,6 +12,7 @@
  * supplies the runtime resolution via {@link NavigationContextValue}; features
  * consume it type-safely.
  */
+import type { ConversationDeliveryStatus } from '@tai42/api-client';
 
 /**
  * Every top-level route the shell owns, mapped to its typed search parameters.
@@ -27,10 +28,18 @@ export interface RouteSearchByToken {
   extensions: Record<string, never>;
   interactions: Record<string, never>;
   notifications: Record<string, never>;
-  // The conversation monitor's drill state: `route` picks a conversation route,
-  // `thread` opens one of its transcripts. A `thread` with no `route` names
-  // nothing readable, and the page repairs it away.
-  conversations: { route?: string; thread?: string };
+  // The conversation monitor's drill state + thread-list filters: `route` picks a
+  // conversation route, `thread` opens one of its transcripts. `status`/`address`
+  // narrow the thread list; `q` searches record text (the open thread's transcript,
+  // else the route's messages). A `thread` or a filter with no `route` names nothing
+  // readable, and the page repairs it away.
+  conversations: {
+    route?: string;
+    thread?: string;
+    status?: ConversationDeliveryStatus;
+    address?: string;
+    q?: string;
+  };
   connectors: { connection?: string };
   hooks: Record<string, never>;
   templates: { template?: string; q?: string };

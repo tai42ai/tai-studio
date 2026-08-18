@@ -234,10 +234,10 @@ describe('ToolsPage — responsive master/detail', () => {
 
 const toolNames = ['alpha', 'beta', 'gamma', 'solo'];
 const toolTags: ToolTagEntry[] = [
-  { name: 'alpha', tags: ['x', 'y'], hidden: false },
-  { name: 'beta', tags: ['x'], hidden: false },
-  { name: 'gamma', tags: ['y'], hidden: false },
-  { name: 'solo', tags: [], hidden: false },
+  { name: 'alpha', tags: ['x', 'y'], badges: [], hidden: false },
+  { name: 'beta', tags: ['x'], badges: [], hidden: false },
+  { name: 'gamma', tags: ['y'], badges: [], hidden: false },
+  { name: 'solo', tags: [], badges: [], hidden: false },
 ];
 
 function taggedClient(overrides: StubApiClient = {}): StubApiClient {
@@ -352,6 +352,7 @@ describe('ToolsPage — tag chip overflow', () => {
   const manyTags: ToolTagEntry[] = manyNames.map((name, i) => ({
     name,
     tags: [`t${String(i)}`],
+    badges: [],
     hidden: false,
   }));
   function manyTagsClient(): StubApiClient {
@@ -512,6 +513,34 @@ describe('ToolsPage — tool_meta overlay merge', () => {
     expect(screen.getByRole('button', { name: 'native (1)' })).toBeInTheDocument();
     // echo carries both tags, and the flat explorer lists it once.
     expect(screen.getAllByRole('link', { name: 'Open tool echo' })).toHaveLength(1);
+  });
+
+  it('renders a tool row with its merged declared badges as chips', async () => {
+    const client: StubApiClient = {
+      listTools: vi.fn().mockResolvedValue(['echo']),
+      listToolTags: vi
+        .fn()
+        .mockResolvedValue([{ name: 'echo', tags: [], badges: ['network'], hidden: false }]),
+      listToolMeta: vi.fn().mockResolvedValue({
+        folders: [],
+        meta: [
+          {
+            tool_name: 'echo',
+            display_name: null,
+            folder_id: null,
+            tags: [],
+            badges: ['audited'],
+            hidden: null,
+          },
+        ],
+      }),
+    };
+    renderWithProviders(<ToolsPage search={{}} />, { client });
+
+    const badges = await screen.findByTestId('tool-badges');
+    // Native ∪ overlay, deduped + sorted — both declared sources, on the row.
+    expect(badges).toHaveTextContent('audited');
+    expect(badges).toHaveTextContent('network');
   });
 
   it('survives an overlay-read failure: the flat list stays under a loud strip', async () => {
@@ -770,6 +799,7 @@ describe('ToolsPage — overlay edit affordance', () => {
     expect(upsertToolMeta).toHaveBeenCalledWith('echo', {
       display_name: null,
       tags: [],
+      badges: [],
       folder_id: null,
       hidden: true,
     });
