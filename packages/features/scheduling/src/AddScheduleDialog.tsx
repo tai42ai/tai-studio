@@ -29,6 +29,7 @@ import {
   ToolPicker,
   errorMessage,
   hiddenToolNames,
+  toolBadgesByName,
   useApi,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
@@ -82,6 +83,14 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     [tagsQuery.data, metaQuery.data],
   );
   const excludeToolNames = useMemo(() => [...hiddenNames], [hiddenNames]);
+
+  // The declared badges the picker shows beneath the SELECTED tool — native ∪ overlay,
+  // the same union the tools screen renders. Informational only; a failed tags/meta
+  // read leaves the map empty (no chips shown).
+  const badgesByTool = useMemo(
+    () => toolBadgesByName(tagsQuery.data ?? [], metaQuery.data?.meta ?? []),
+    [tagsQuery.data, metaQuery.data],
+  );
 
   const [name, setName] = useState('');
   const [tool, setTool] = useState<string | null>(null);
@@ -181,6 +190,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
               placeholder={toolsQuery.isPending ? 'Loading tools…' : 'Select a tool…'}
               excludeNames={excludeToolNames}
               displayNames={displayNames}
+              badgesByTool={badgesByTool}
             />
           </Field>
         )}

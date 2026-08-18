@@ -21,8 +21,7 @@ import {
   useApi,
 } from '@tai42/studio-sdk';
 
-import { conversationTranscriptKey } from './keys';
-import { TRANSCRIPT_PAGE_SIZE } from './Transcript';
+import { conversationTranscriptPrefix } from './keys';
 
 const formStyle: CSSProperties = {
   display: 'flex',
@@ -47,7 +46,7 @@ export function ComposeMessage({
     onSuccess: () => {
       setText('');
       void queryClient.invalidateQueries({
-        queryKey: conversationTranscriptKey(route, threadId, TRANSCRIPT_PAGE_SIZE),
+        queryKey: conversationTranscriptPrefix(route, threadId),
       });
     },
   });

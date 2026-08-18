@@ -11,7 +11,11 @@
  * unhiding a plugin-hidden tool is ruled behavior. Selecting Default writes `null`
  * WITHOUT deleting the row.
  *
- * On save the dialog sends ONE merge-patch carrying all four fields it owns — this is
+ * Badges follow the tags pattern: the tool's read-only plugin-DECLARED badges render
+ * beside an editable overlay-badges input. Badges are INFORMATIONAL — declared labels
+ * the server never enforces — which the field copy states outright.
+ *
+ * On save the dialog sends ONE merge-patch carrying all five fields it owns — this is
  * the surface that owns them, so re-sending them clobbers nothing.
  */
 import { useState, type ReactNode } from 'react';
@@ -23,6 +27,7 @@ import {
   FolderPicker,
   OverlayDetailsFields,
   RadioGroup,
+  TagsInput,
   featureDisabledMessage,
   isFeatureDisabled,
   overlayDetailsPatch,
@@ -30,6 +35,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { ToolMetaPatch } from '@tai42/api-client';
 
+import { BADGES_INFORMATIONAL_NOTE, ToolBadges } from './badges';
 import type { ToolView } from './toolView';
 
 /** The three visibility choices, mapping to the overlay's tri-state `hidden`. */
@@ -121,12 +127,14 @@ function EditForm({
 }): ReactNode {
   const [displayName, setDisplayName] = useState(tool.overlayDisplayName ?? '');
   const [tags, setTags] = useState<readonly string[]>(tool.overlayTags);
+  const [badges, setBadges] = useState<readonly string[]>(tool.overlayBadges);
   const [folderId, setFolderId] = useState<string | null>(tool.folderId);
   const [visibility, setVisibility] = useState<Visibility>(hiddenToVisibility(tool.overlayHidden));
 
   const submit = (): void => {
     onSubmit({
       ...overlayDetailsPatch({ displayName, tags }),
+      badges: [...badges],
       folder_id: folderId,
       hidden: visibilityToHidden(visibility),
     });
@@ -144,6 +152,23 @@ function EditForm({
         nativeTags={tool.nativeTags}
         disabled={saving}
       />
+      <Field label="Badges" description={BADGES_INFORMATIONAL_NOTE} group>
+        <div className="tai-stack tai-stack-2">
+          {tool.nativeBadges.length > 0 ? (
+            <div className="tai-stack tai-stack-2">
+              <span className="tai-muted">Declared badges (read-only)</span>
+              <ToolBadges badges={tool.nativeBadges} />
+            </div>
+          ) : null}
+          <TagsInput
+            value={badges}
+            onChange={setBadges}
+            disabled={saving}
+            aria-label="Badges"
+            itemNoun="badge"
+          />
+        </div>
+      </Field>
       <Field label="Folder" description="Where this tool is filed." group>
         <FolderPicker
           value={folderId}

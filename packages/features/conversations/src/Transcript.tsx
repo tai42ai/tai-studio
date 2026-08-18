@@ -30,7 +30,7 @@ import { useFocusHandoff } from './focus';
 import { conversationTranscriptKey } from './keys';
 import { useLiveRegion, useStandingNotice } from './live-region';
 import { boundedRefresh, dedupeBy, trimToNewestPage, withinRefreshWindow } from './paging';
-import { ReadFailure, StaleRead, staleReadMessage } from './read-states';
+import { ReadFailure, StaleRead, staleReadMessage, TruncatedNotice } from './read-states';
 
 /**
  * Exchanges per request. Large on purpose: an ordinary thread arrives in one page,
@@ -51,16 +51,19 @@ const PAUSED_NOTICE = `New messages stop arriving past ${String(TRANSCRIPT_MAX_P
 export function Transcript({
   route,
   threadId,
+  q,
   headingRef,
 }: {
   readonly route: string;
   readonly threadId: string;
+  /** The record-text filter from the URL, or `undefined` for the whole transcript. */
+  readonly q: string | undefined;
   readonly headingRef: RefObject<HTMLHeadingElement | null>;
 }): ReactNode {
   const api = useApi();
   const now = useNow(RELATIVE_TICK_MS);
   const queryClient = useQueryClient();
-  const queryKey = conversationTranscriptKey(route, threadId, TRANSCRIPT_PAGE_SIZE);
+  const queryKey = conversationTranscriptKey(route, threadId, TRANSCRIPT_PAGE_SIZE, q);
   const query = useInfiniteQuery({
     queryKey,
     queryFn: ({ pageParam, signal }) =>
@@ -71,6 +74,7 @@ export function Transcript({
           page: pageParam,
           pageSize: TRANSCRIPT_PAGE_SIZE,
           order: 'desc',
+          q,
         },
         signal,
       ),
@@ -90,6 +94,8 @@ export function Transcript({
     (record) => record.message_id,
   ).reverse();
   const paused = !withinRefreshWindow(query.data?.pages.length, TRANSCRIPT_MAX_PAGES);
+  // Any capped page means the filtered read is partial — surfaced, never a silent cut.
+  const truncated = query.data?.pages.some((page) => page.truncated) ?? false;
   // The thread id is the addressable identity; the address it belongs to is the
   // friendlier name, and every record in a thread carries the same one.
   const heading = items[0]?.client_address ?? threadId;
@@ -162,12 +168,18 @@ export function Transcript({
       />
     );
   } else if (items.length === 0) {
-    body = (
-      <EmptyState
-        title="Nothing in this thread"
-        description="The thread is indexed but holds no readable exchange."
-      />
-    );
+    body =
+      q !== undefined ? (
+        <EmptyState
+          title="No matching messages"
+          description="No exchange in this thread matches the current text filter."
+        />
+      ) : (
+        <EmptyState
+          title="Nothing in this thread"
+          description="The thread is indexed but holds no readable exchange."
+        />
+      );
   } else {
     body = (
       <div className="tai-stack tai-stack-3">
@@ -248,6 +260,7 @@ export function Transcript({
         <h2 className="tai-card-title" tabIndex={-1} ref={headingRef}>
           {heading}
         </h2>
+        {truncated ? <TruncatedNotice noun="messages" /> : null}
         {body}
         {tailStatus}
         {region}

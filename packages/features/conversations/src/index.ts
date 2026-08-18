@@ -14,5 +14,7 @@ export { ThreadMode } from './ThreadMode';
 export { Transcript } from './Transcript';
 export { ComposeMessage } from './ComposeMessage';
 export { Exchange } from './Exchange';
-export { sanitizeSearch } from './search';
+export { ConversationFilters } from './ConversationFilters';
+export { MessageSearch } from './MessageSearch';
+export { sanitizeSearch, threadFilters, textQuery, mergeSearch } from './search';
 export type { ConversationsSearch } from './search';

@@ -10,8 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { ApiError } from '@tai42/api-client';
 
 import { ComposeMessage } from './ComposeMessage';
-import { conversationTranscriptKey } from './keys';
-import { TRANSCRIPT_PAGE_SIZE } from './Transcript';
+import { conversationTranscriptPrefix } from './keys';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 function renderCompose(client: StubApiClient) {
@@ -41,7 +40,7 @@ describe('ComposeMessage', () => {
       expect(box).toHaveValue('');
     });
     expect(invalidate).toHaveBeenCalledWith({
-      queryKey: conversationTranscriptKey('chat', 'svc-chat/u1', TRANSCRIPT_PAGE_SIZE),
+      queryKey: conversationTranscriptPrefix('chat', 'svc-chat/u1'),
     });
   });
 

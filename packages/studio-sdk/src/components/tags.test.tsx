@@ -63,6 +63,23 @@ describe('TagsInput', () => {
     expect(onChange).toHaveBeenCalledWith(['alpha']);
   });
 
+  it('names the Add/Remove controls after itemNoun so a second editor stays distinct', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <Field label="Badges">
+        <TagsInput value={['alpha']} onChange={onChange} itemNoun="badge" />
+      </Field>,
+    );
+
+    await user.type(screen.getByLabelText('Badges'), 'network');
+    await user.click(screen.getByRole('button', { name: 'Add badge' }));
+    expect(onChange).toHaveBeenCalledWith(['alpha', 'network']);
+
+    expect(screen.getByRole('button', { name: 'Remove badge alpha' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add tag' })).toBeNull();
+  });
+
   it('commits the draft on Enter and on comma', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

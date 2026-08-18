@@ -18,11 +18,12 @@ import {
 } from './Transcript';
 import { makeMessage, renderWithProviders, transcriptPage } from './test-utils';
 
-function renderTranscript(readConversationTranscript: unknown) {
+function renderTranscript(readConversationTranscript: unknown, q?: string) {
   return renderWithProviders(
     <Transcript
       route="chat"
       threadId="svc-chat/+15551234567"
+      q={q}
       headingRef={createRef<HTMLHeadingElement>()}
     />,
     { client: { readConversationTranscript } as never },
@@ -543,6 +544,34 @@ describe('Transcript', () => {
     expect(stale).not.toHaveAttribute('role');
     expect(screen.getByTestId('conversation-transcript-announcer')).toHaveTextContent(
       'Stopped updating: reader exploded',
+    );
+  });
+});
+
+describe('Transcript — text filter', () => {
+  it('forwards the q filter to the transcript read', async () => {
+    const read = vi.fn().mockResolvedValue(transcriptPage([makeMessage()]));
+    renderTranscript(read, 'widget');
+
+    await screen.findByTestId('conversation-transcript');
+    expect(read).toHaveBeenCalledWith(
+      expect.objectContaining({ q: 'widget', order: 'desc' }),
+      expect.anything(),
+    );
+  });
+
+  it('shows the filtered empty copy when nothing matches the needle', async () => {
+    renderTranscript(vi.fn().mockResolvedValue(transcriptPage([])), 'widget');
+    expect(await screen.findByText('No matching messages')).toBeInTheDocument();
+  });
+
+  it('surfaces a LOUD partial-set notice when the page is truncated', async () => {
+    renderTranscript(
+      vi.fn().mockResolvedValue(transcriptPage([makeMessage()], { truncated: true })),
+      'widget',
+    );
+    expect(await screen.findByTestId('conversation-truncated')).toHaveTextContent(
+      'Showing a partial set',
     );
   });
 });

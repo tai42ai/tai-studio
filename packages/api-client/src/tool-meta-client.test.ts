@@ -56,12 +56,14 @@ describe('tool_meta schemas', () => {
           display_name: 'Paris',
           folder_id: 'f2',
           tags: ['geo'],
+          badges: ['network'],
           hidden: null,
         },
       ],
     });
     expect(parsed.folders[1]?.parent_id).toBe('f1');
     expect(parsed.meta[0]?.hidden).toBeNull();
+    expect(parsed.meta[0]?.badges).toEqual(['network']);
   });
 
   it('accepts the tri-state hidden (null / true / false)', () => {
@@ -71,6 +73,7 @@ describe('tool_meta schemas', () => {
         display_name: null,
         folder_id: null,
         tags: [],
+        badges: [],
         hidden,
       });
       expect(parsed.hidden).toBe(hidden);
@@ -80,6 +83,18 @@ describe('tool_meta schemas', () => {
   it('throws loudly when a required overlay field is absent (no silent default)', () => {
     expect(() =>
       schemas.toolMetaRecord.parse({ tool_name: 't', display_name: null, folder_id: null }),
+    ).toThrow();
+  });
+
+  it('throws loudly when the overlay badges are absent (no silent default)', () => {
+    expect(() =>
+      schemas.toolMetaRecord.parse({
+        tool_name: 't',
+        display_name: null,
+        folder_id: null,
+        tags: [],
+        hidden: null,
+      }),
     ).toThrow();
   });
 
@@ -94,6 +109,7 @@ describe('tool_meta client transport', () => {
     display_name: 'Paris',
     folder_id: null,
     tags: ['geo'],
+    badges: ['network'],
     hidden: null,
   };
 
@@ -114,6 +130,12 @@ describe('tool_meta client transport', () => {
     expect(captured[0]?.url).toBe('/api/tool-meta/tools/paris_weather');
     // No `folder_id` / `hidden` keys — absent means untouched by the merge-patch API.
     expect(captured[0]?.body).toEqual({ display_name: 'Paris', tags: ['geo'] });
+  });
+
+  it('upsertToolMeta writes the overlay badges when they are given', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: row }));
+    await client.upsertToolMeta('paris_weather', { badges: ['network', 'filesystem'] });
+    expect(captured[0]?.body).toEqual({ badges: ['network', 'filesystem'] });
   });
 
   it('upsertToolMeta carries a present-null through the body (an explicit clear)', async () => {

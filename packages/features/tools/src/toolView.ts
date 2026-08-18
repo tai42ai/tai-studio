@@ -7,13 +7,15 @@
  *  - label   = overlay `display_name` else the real name (`display_name ?? name`);
  *  - tags    = the UNION of native + overlay tags, deduped and sorted (merged
  *              everywhere; only the edit dialog shows the two apart);
+ *  - badges  = the UNION of native + overlay badges, deduped and sorted — the
+ *              tool's DECLARED, informational capability labels, never a gate;
  *  - hidden  = the overlay's tri-state OVERRIDE: `overlay.hidden` when it has an
  *              opinion (`true`/`false`), else the plugin's own declaration — so an
  *              overlay `false` unhides a plugin-hidden tool and `null` defers;
  *  - folder  = overlay `folder_id` else unfiled (`null`).
  */
 import type { FolderRecord, ToolMetaRecord, ToolTagEntry } from '@tai42/api-client';
-import { effectiveHidden, type Folder } from '@tai42/studio-sdk';
+import { effectiveHidden, mergeToolBadges, type Folder } from '@tai42/studio-sdk';
 
 export interface ToolView {
   readonly name: string;
@@ -26,6 +28,10 @@ export interface ToolView {
   readonly overlayTags: readonly string[];
   /** Native ∪ overlay, deduped + sorted — the tags every non-edit surface groups by. */
   readonly tags: readonly string[];
+  readonly nativeBadges: readonly string[];
+  readonly overlayBadges: readonly string[];
+  /** Native ∪ overlay, deduped + sorted — the declared badges every surface shows. */
+  readonly badges: readonly string[];
   readonly folderId: string | null;
   /** The EFFECTIVE visibility after the tri-state override. */
   readonly hidden: boolean;
@@ -49,6 +55,10 @@ export function buildToolViews(
     const overlayTags = overlay?.tags ?? [];
     const tags = [...new Set([...nativeTags, ...overlayTags])].sort((a, b) => a.localeCompare(b));
 
+    const nativeBadges = native?.badges ?? [];
+    const overlayBadges = overlay?.badges ?? [];
+    const badges = mergeToolBadges(nativeBadges, overlayBadges);
+
     const overlayDisplayName = overlay?.display_name ?? null;
     const declaredHidden = native?.hidden ?? false;
     const overlayHidden = overlay?.hidden ?? null;
@@ -61,6 +71,9 @@ export function buildToolViews(
       nativeTags,
       overlayTags,
       tags,
+      nativeBadges,
+      overlayBadges,
+      badges,
       folderId: overlay?.folder_id ?? null,
       hidden: effectiveHidden(overlayHidden, declaredHidden),
       overlayHidden,

@@ -62,6 +62,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { ToolMetaPatch } from '@tai42/api-client';
 
+import { ToolBadges } from './badges';
 import { RunPanel } from './RunPanel';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 import { ToolMetaEditDialog } from './ToolMetaEditDialog';
@@ -131,6 +132,7 @@ function ToolItem({
         <span className={view.hasCustomName ? undefined : 'tai-mono'}>{view.displayName}</span>
         {view.hasCustomName ? <span className="tai-muted tai-mono">{view.name}</span> : null}
       </AppLink>
+      <ToolBadges badges={view.badges} />
       {canWrite ? (
         <>
           <div style={spacerStyle} />

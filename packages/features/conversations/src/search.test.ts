@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { sanitizeSearch } from './search';
+import { mergeSearch, sanitizeSearch, textQuery, threadFilters } from './search';
 
 describe('sanitizeSearch', () => {
   it('returns the same reference for a legal search', () => {
@@ -16,6 +16,23 @@ describe('sanitizeSearch', () => {
     expect(sanitizeSearch(routeOnly)).toBe(routeOnly);
     const both = { route: 'chat', thread: 't1' };
     expect(sanitizeSearch(both)).toBe(both);
+    const filtered = { route: 'chat', status: 'failed' as const, address: 'ana', q: 'widget' };
+    expect(sanitizeSearch(filtered)).toBe(filtered);
+  });
+
+  it('keeps the filters when a route scopes them', () => {
+    const filtered = { route: 'chat', status: 'delivered' as const, address: '+1555', q: 'widget' };
+    expect(sanitizeSearch(filtered)).toEqual(filtered);
+  });
+
+  it('drops every filter that names no route, in ONE pass', () => {
+    const once = sanitizeSearch({ status: 'failed', address: 'ana', q: 'widget' });
+    expect(once).toEqual({});
+    expect(sanitizeSearch(once)).toBe(once);
+  });
+
+  it('reads a blank address / q as absent', () => {
+    expect(sanitizeSearch({ route: 'chat', address: '  ', q: '' })).toEqual({ route: 'chat' });
   });
 
   it('drops a thread that names no route', () => {
@@ -45,5 +62,37 @@ describe('sanitizeSearch', () => {
   it('keeps a value whose spaces are part of the name', () => {
     const spaced = { route: 'a b', thread: ' t 1 ' };
     expect(sanitizeSearch(spaced)).toBe(spaced);
+  });
+});
+
+describe('threadFilters', () => {
+  it('projects status + address onto the api-client query shape', () => {
+    expect(threadFilters({ route: 'chat', status: 'failed', address: 'ana' })).toEqual({
+      status: 'failed',
+      address: 'ana',
+    });
+  });
+
+  it('reads a blank address as absent', () => {
+    expect(threadFilters({ route: 'chat', address: '   ' })).toEqual({
+      status: undefined,
+      address: undefined,
+    });
+  });
+});
+
+describe('textQuery', () => {
+  it('returns the needle when set, undefined when blank/absent', () => {
+    expect(textQuery({ route: 'chat', q: 'widget' })).toBe('widget');
+    expect(textQuery({ route: 'chat', q: '   ' })).toBeUndefined();
+    expect(textQuery({ route: 'chat' })).toBeUndefined();
+  });
+});
+
+describe('mergeSearch', () => {
+  it('merges a partial edit and drops keys set to undefined', () => {
+    expect(
+      mergeSearch({ route: 'chat', status: 'failed' }, { status: undefined, q: 'hi' }),
+    ).toEqual({ route: 'chat', q: 'hi' });
   });
 });

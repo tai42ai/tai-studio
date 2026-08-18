@@ -22,7 +22,7 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
   const navigate = useAppNavigate();
   const cleaned = sanitizeSearch(search);
   const repaired = cleaned !== search;
-  const { route, thread } = cleaned;
+  const { route, thread, status, address, q } = cleaned;
   const focus = useSelectionFocus(route, routeRowLabel);
 
   // An illegal pair can only arrive from the URL (a shared or hand-edited link).
@@ -34,8 +34,9 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
   // make. Pushing it would leave the illegal URL behind Back, where Back repairs
   // and pushes again — a page that cannot be left backwards.
   useEffect(() => {
-    if (repaired) navigate('conversations', { route, thread }, { replace: true });
-  }, [repaired, route, thread, navigate]);
+    if (repaired)
+      navigate('conversations', { route, thread, status, address, q }, { replace: true });
+  }, [repaired, route, thread, status, address, q, navigate]);
 
   return (
     <Stack gap={6}>
@@ -47,7 +48,15 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
       {route === undefined ? (
         <RoutesTable listRef={focus.listRef} />
       ) : (
-        <RouteThreads route={route} thread={thread} headingRef={focus.headingRef} />
+        <RouteThreads
+          route={route}
+          thread={thread}
+          status={status}
+          address={address}
+          q={q}
+          search={cleaned}
+          headingRef={focus.headingRef}
+        />
       )}
     </Stack>
   );

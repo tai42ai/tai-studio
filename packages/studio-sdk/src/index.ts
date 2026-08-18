@@ -129,6 +129,9 @@ export { comboElementNames, extensionElementName } from './extension-combos';
 // -- Tool-visibility tri-state -----------------------------------------------
 export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 
+// -- Tool declared-badge merge (native ∪ overlay) ----------------------------
+export { mergeToolBadges, toolBadgesByName } from './tool-badges';
+
 // -- Design system -----------------------------------------------------------
 export { Button, Card, Skeleton, EmptyState, ErrorState, Spinner } from './components/primitives';
 export type {
@@ -256,7 +259,7 @@ export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';
 // hands back the parsed URL, so a caller that needs the URL does not re-parse it.
 export { safeHttpUrl } from './components/primitives';
 export type { ExternalLinkButtonProps } from './components/external-link';
-export { ToolPicker } from './components/tool-picker';
+export { ToolPicker, BADGES_NOTE } from './components/tool-picker';
 export type { ToolPickerProps } from './components/tool-picker';
 export { ExtensionPicker } from './components/extension-picker';
 export type { ExtensionPickerProps } from './components/extension-picker';

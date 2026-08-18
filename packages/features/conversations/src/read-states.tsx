@@ -118,3 +118,20 @@ export function StaleRead({ error, onRetry }: StaleReadProps): ReactNode {
     </div>
   );
 }
+
+/**
+ * The door capped what it scanned or returned under its filter/search cap, so what
+ * is on screen is a PARTIAL match set. A cut must never be silent: this states it
+ * plainly and stays put (`role="status"`), and tells the reader the one thing that
+ * fixes it — a narrower filter. Rendered only when the page's `truncated` is true.
+ */
+export function TruncatedNotice({ noun }: { readonly noun: string }): ReactNode {
+  return (
+    <div className="tai-row" role="status" data-testid="conversation-truncated">
+      <span style={staleRowStyle}>
+        Showing a partial set — too many {noun} matched to list them all. Narrow the filter to see
+        the rest.
+      </span>
+    </div>
+  );
+}

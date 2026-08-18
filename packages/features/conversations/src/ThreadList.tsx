@@ -37,7 +37,7 @@ import {
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { ConversationThread } from '@tai42/api-client';
+import type { ConversationDeliveryStatus, ConversationThread } from '@tai42/api-client';
 
 import { useNow, RELATIVE_TICK_MS } from './clock';
 import { useFocusHandoff } from './focus';
@@ -45,7 +45,7 @@ import { countOf, formatAbsoluteEpoch, formatRelativeEpoch } from './format';
 import { conversationThreadsKey } from './keys';
 import { useLiveRegion, useStandingNotice } from './live-region';
 import { boundedRefresh, dedupeBy, trimToNewestPage, withinRefreshWindow } from './paging';
-import { ReadFailure, StaleRead, staleReadMessage } from './read-states';
+import { ReadFailure, StaleRead, staleReadMessage, TruncatedNotice } from './read-states';
 import { DELIVERY_LABEL, DELIVERY_VARIANT } from './status';
 
 /** Threads per request. The server caps a page at 200 whatever is asked for. */
@@ -112,22 +112,28 @@ function ThreadRow({
 export function ThreadList({
   route,
   selected,
+  status,
+  address,
   listRef,
   headingRef,
 }: {
   readonly route: string;
   readonly selected: string | undefined;
+  /** The delivery-status filter from the URL, or `undefined` for every status. */
+  readonly status: ConversationDeliveryStatus | undefined;
+  /** The address substring filter from the URL, or `undefined` for every address. */
+  readonly address: string | undefined;
   readonly listRef: RefObject<HTMLDivElement | null>;
   readonly headingRef: RefObject<HTMLHeadingElement | null>;
 }): ReactNode {
   const api = useApi();
   const now = useNow(RELATIVE_TICK_MS);
   const queryClient = useQueryClient();
-  const queryKey = conversationThreadsKey(route, THREADS_PAGE_SIZE);
+  const queryKey = conversationThreadsKey(route, THREADS_PAGE_SIZE, status, address);
   const query = useInfiniteQuery({
     queryKey,
     queryFn: ({ pageParam, signal }) =>
-      api.listConversationThreads(route, pageParam, THREADS_PAGE_SIZE, signal),
+      api.listConversationThreads(route, pageParam, THREADS_PAGE_SIZE, { status, address }, signal),
     initialPageParam: 1,
     getNextPageParam: (last) => last.next_page ?? undefined,
     ...boundedRefresh(THREADS_MAX_PAGES, THREADS_REFRESH_MS),
@@ -140,6 +146,9 @@ export function ThreadList({
     (thread) => thread.thread_id,
   );
   const paused = !withinRefreshWindow(query.data?.pages.length, THREADS_MAX_PAGES);
+  // Any capped page means the listing is partial — surfaced loudly, never a silent cut.
+  const truncated = query.data?.pages.some((page) => page.truncated) ?? false;
+  const filtered = status !== undefined || address !== undefined;
 
   // The two controls that do not survive being used, and where focus goes when
   // each of them is gone: the route heading, this pane's own top.
@@ -206,7 +215,12 @@ export function ThreadList({
       />
     );
   } else if (items.length === 0) {
-    body = (
+    body = filtered ? (
+      <EmptyState
+        title="No matching threads"
+        description="No thread on this route matches the current status or address filter."
+      />
+    ) : (
       <EmptyState
         title="No threads yet"
         description="Threads appear here once this route has answered its first message."
@@ -267,9 +281,9 @@ export function ThreadList({
   // paused this far down, or refreshing and failing. Paused wins — nothing is
   // being read at all in that state, and the one control clears both. Neither
   // notice is a live region of its own; both are spoken by the standing one.
-  let status: ReactNode = null;
+  let refreshNotice: ReactNode = null;
   if (paused) {
-    status = (
+    refreshNotice = (
       <div className="tai-row" data-testid="conversation-threads-paused">
         <span className="tai-muted" style={{ fontSize: 'var(--tai-text-xs)' }}>
           {PAUSED_NOTICE}
@@ -287,7 +301,7 @@ export function ThreadList({
       </div>
     );
   } else if (query.isRefetchError) {
-    status = <StaleRead error={query.error} onRetry={() => void query.refetch()} />;
+    refreshNotice = <StaleRead error={query.error} onRetry={() => void query.refetch()} />;
   }
 
   return (
@@ -302,8 +316,9 @@ export function ThreadList({
       <h2 className="tai-section-title" tabIndex={-1} ref={headingRef}>
         {route}
       </h2>
+      {truncated ? <TruncatedNotice noun="threads" /> : null}
       {body}
-      {status}
+      {refreshNotice}
       {region}
     </div>
   );

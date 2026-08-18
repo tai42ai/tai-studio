@@ -130,21 +130,34 @@ describe('presetVersion — immutable version row', () => {
 });
 
 describe('toolTags — additive per-tool native surface', () => {
-  it('parses an array of {name, tags, hidden} entries', () => {
+  it('parses an array of {name, tags, badges, hidden} entries', () => {
     const parsed = schemas.toolTags.parse([
-      { name: 'echo', tags: [], hidden: false },
-      { name: 'flow_step', tags: ['babelfish'], hidden: true },
+      { name: 'echo', tags: [], badges: [], hidden: false },
+      { name: 'flow_step', tags: ['babelfish'], badges: ['network'], hidden: true },
     ]);
     expect(parsed[1]?.tags).toEqual(['babelfish']);
+    expect(parsed[1]?.badges).toEqual(['network']);
     expect(parsed[1]?.hidden).toBe(true);
   });
 
   it('throws loudly on a non-string tag (no coercion)', () => {
-    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [1], hidden: false }])).toThrow();
+    expect(() =>
+      schemas.toolTags.parse([{ name: 'echo', tags: [1], badges: [], hidden: false }]),
+    ).toThrow();
+  });
+
+  it('throws loudly on a non-string badge (no coercion)', () => {
+    expect(() =>
+      schemas.toolTags.parse([{ name: 'echo', tags: [], badges: [2], hidden: false }]),
+    ).toThrow();
   });
 
   it('throws loudly when the declared-visibility flag is absent (no silent default)', () => {
-    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [] }])).toThrow();
+    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [], badges: [] }])).toThrow();
+  });
+
+  it('throws loudly when the declared badges are absent (no silent default)', () => {
+    expect(() => schemas.toolTags.parse([{ name: 'echo', tags: [], hidden: false }])).toThrow();
   });
 });
 
