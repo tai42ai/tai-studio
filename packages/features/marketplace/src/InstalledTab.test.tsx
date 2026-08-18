@@ -35,6 +35,7 @@ function installedRow(overrides: Partial<MarketplaceInstalledPlugin>): Marketpla
     missing_upstream: false,
     compat: { status: 'compatible', reason: null },
     items: [],
+    route_mounts: {},
     ...overrides,
   };
 }

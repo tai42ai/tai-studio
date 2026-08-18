@@ -15,6 +15,19 @@ export function marketplacePluginKey(ref: string): readonly ['marketplace', 'plu
   return ['marketplace', 'plugin', ref];
 }
 
+/**
+ * Key for one install preview, by its ref, target version, and the serialized
+ * base-override map. The mount key changes as the operator remaps a base, so each
+ * remap is a distinct cache entry and the preview refetches for it.
+ */
+export function marketplacePreviewKey(
+  ref: string,
+  version: string | null,
+  mounts: string,
+): readonly ['marketplace', 'preview', string, string | null, string] {
+  return ['marketplace', 'preview', ref, version, mounts];
+}
+
 /** Key for the installed-plugins list (the local attribution store). */
 export const marketplaceInstalledKey = ['marketplace', 'installed'] as const;
 

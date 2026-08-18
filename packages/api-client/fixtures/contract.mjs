@@ -142,6 +142,18 @@ export const MUTATION_FIXTURES = [
     schema: 'interactionAnswered',
   },
   {
+    name: 'marketplace-install',
+    path: '/api/marketplace/install',
+    file: 'mutations/marketplace-install.json',
+    schema: 'marketplaceInstallResult',
+  },
+  {
+    name: 'marketplace-install-preview',
+    path: '/api/marketplace/install/preview',
+    file: 'mutations/marketplace-install-preview.json',
+    schema: 'marketplaceInstallPreview',
+  },
+  {
     name: 'connect-start.oauth',
     path: '/api/connectors/connections/start',
     file: 'mutations/connect-start.oauth.json',

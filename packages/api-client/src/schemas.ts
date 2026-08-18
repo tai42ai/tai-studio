@@ -1858,9 +1858,42 @@ export type RunTrace = z.infer<typeof runTrace>;
 // -- marketplace -------------------------------------------------------------
 
 /**
+ * The CLOSED HTTP-method enum fixed by the contract's RouteMethod, the one source
+ * for every route-method field (declaration and install/preview responses alike):
+ * a wire method the contract does not define fails loudly as drift rather than
+ * passing through silently.
+ */
+export const routeMethod = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+export type RouteMethod = z.infer<typeof routeMethod>;
+
+/**
+ * One HTTP route an item declares in its `tai-plugin.yml`: a `path` relative to
+ * the item's mount base, the `methods` it answers, and whether it is served
+ * `public` (without authentication). The absolute path an operator sees is
+ * resolved from the base at install time.
+ */
+export const marketplaceRouteDecl = z.object({
+  path: z.string(),
+  methods: z.array(routeMethod),
+  public: z.boolean(),
+});
+export type MarketplaceRouteDecl = z.infer<typeof marketplaceRouteDecl>;
+
+/**
+ * A route-carrying item's declared mount: the default `base` prefix the routes
+ * hang off (an operator may remap it at install) and the `paths` it registers.
+ */
+export const marketplaceRoutesDecl = z.object({
+  base: z.string(),
+  paths: z.array(marketplaceRouteDecl),
+});
+export type MarketplaceRoutesDecl = z.infer<typeof marketplaceRoutesDecl>;
+
+/**
  * One contained item of a marketplace plugin's published version: its kind
  * (tool / agent / extension / …), name, description, free-form tags, and the
- * logical group it belongs to (`null` when ungrouped).
+ * logical group it belongs to (`null` when ungrouped). `routes` is present only
+ * on a route-carrying item (a router or channel); absent/null on every other.
  */
 export const marketplaceItem = z.object({
   kind: z.string(),
@@ -1868,6 +1901,7 @@ export const marketplaceItem = z.object({
   description: z.string(),
   tags: z.array(z.string()),
   group: z.string().nullable(),
+  routes: marketplaceRoutesDecl.nullish(),
 });
 export type MarketplaceItem = z.infer<typeof marketplaceItem>;
 
@@ -2071,6 +2105,10 @@ export const marketplaceInstalledPlugin = z
     // (local truth). The McpTab joins the mcp-server item names against the
     // manifest's mcp-entry titles to render an installer-written entry read-only.
     items: z.array(marketplaceItem.pick({ kind: true, name: true })),
+    // The persisted `{item_name: base}` mount this plugin is installed at (local
+    // truth; `{}` means every item at its declared base). Studio seeds the update
+    // flow and renders routes at the ACTUAL mounted base from this.
+    route_mounts: z.record(z.string(), z.string()),
   })
   .strict();
 export type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
@@ -2131,20 +2169,96 @@ export const marketplaceCategories = z.array(z.string());
 export const marketplaceKinds = z.array(z.string());
 
 /**
+ * One route the install / update actually mounted: the item that owns it, the
+ * absolute `full_path` it now answers, the `methods`, and whether it is served
+ * `public`. The receipt lists these so the operator sees what was opened where.
+ */
+export const marketplaceMountedRoute = z.object({
+  item: z.string(),
+  full_path: z.string(),
+  methods: z.array(routeMethod),
+  public: z.boolean(),
+});
+export type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
+
+/**
  * The receipt of an install / update: what landed and at which version.
  * `notes` (env-selected items naming their activating env var) and any
- * non-critical `advisories` ride BOTH the install and update receipts. The wire
- * also carries `package`, `reload`, and `pip_output`, which the receipt does not
- * model — zod's default strip drops them; the UI renders the receipt, not the
- * raw install log.
+ * non-critical `advisories` ride BOTH the install and update receipts.
+ * `routes` is the mounted-route list — empty for a plugin that registers none.
+ * The wire also carries `package`, `reload`, and `pip_output`, which the receipt
+ * does not model — zod's default strip drops them; the UI renders the receipt,
+ * not the raw install log.
  */
 export const marketplaceInstallResult = z.object({
   ref: z.string(),
   version: z.string(),
   notes: z.array(z.string()),
   advisories: z.array(marketplaceAdvisory),
+  routes: z.array(marketplaceMountedRoute),
 });
 export type MarketplaceInstallResult = z.infer<typeof marketplaceInstallResult>;
+
+/** One resolved route in an install preview: the declared `path`, its resolved
+ * absolute `full_path`, the `methods`, and whether it is `public`. */
+export const marketplacePreviewRoute = z.object({
+  path: z.string(),
+  full_path: z.string(),
+  methods: z.array(routeMethod),
+  public: z.boolean(),
+});
+export type MarketplacePreviewRoute = z.infer<typeof marketplacePreviewRoute>;
+
+/** One route-carrying item in an install preview: its resolved `base` (the
+ * override or the default), the `default_base` it declares, and the routes that
+ * mount under it. */
+export const marketplacePreviewItem = z.object({
+  item: z.string(),
+  kind: z.string(),
+  base: z.string(),
+  default_base: z.string(),
+  routes: z.array(marketplacePreviewRoute),
+});
+export type MarketplacePreviewItem = z.infer<typeof marketplacePreviewItem>;
+
+/** One collision the preview found: a route whose resolved shape+method clashes
+ * with an already-owned route. `conflict_owner` is `core` or `plugin:<ref>`; the
+ * remedy is to remap the item's base. */
+export const marketplacePreviewCollision = z.object({
+  item: z.string(),
+  full_path: z.string(),
+  methods: z.array(routeMethod),
+  conflict_owner: z.string(),
+  conflict_path: z.string(),
+});
+export type MarketplacePreviewCollision = z.infer<typeof marketplacePreviewCollision>;
+
+/** One public route the operator is asked to accept: served WITHOUT
+ * authentication once installed. */
+export const marketplacePreviewPublicRoute = z.object({
+  item: z.string(),
+  full_path: z.string(),
+  methods: z.array(routeMethod),
+});
+export type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPublicRoute>;
+
+/**
+ * The install preview (`POST /api/marketplace/install/preview`): the resolved
+ * routes per item with any base overrides applied, the collisions against the
+ * live registry, the public routes requiring acceptance, and whether acceptance
+ * is required at all. `new_public_routes` narrows to rows not already approved
+ * (the update case); on a fresh install it equals `public_routes`.
+ */
+export const marketplaceInstallPreview = z.object({
+  ref: z.string(),
+  version: z.string(),
+  items: z.array(marketplacePreviewItem),
+  collisions: z.array(marketplacePreviewCollision),
+  public_routes: z.array(marketplacePreviewPublicRoute),
+  new_public_routes: z.array(marketplacePreviewPublicRoute),
+  requires_public_acceptance: z.boolean(),
+});
+export type MarketplaceInstallPreview = z.infer<typeof marketplaceInstallPreview>;
 
 /**
  * The receipt of an uninstall. `notes` carries operator warnings (e.g. a config

@@ -15,14 +15,12 @@ import {
   Button,
   Card,
   CheckCircleIcon,
-  Checkbox,
   ConfirmDialog,
   CopyField,
   EmptyState,
   ErrorState,
   ExternalLinkButton,
   FeatureDisabled,
-  Field,
   ScrollRegion,
   Skeleton,
   Stack,
@@ -33,7 +31,6 @@ import {
   TR,
   Table,
   TagChips,
-  TextInput,
   errorMessage,
   featureDisabledMessage,
   isFeatureDisabled,
@@ -41,6 +38,7 @@ import {
   useProseScrollRegions,
 } from '@tai42/studio-sdk';
 import type {
+  MarketplaceInstallBody,
   MarketplaceInstallResult,
   MarketplaceInstalled,
   MarketplacePluginDetail,
@@ -49,6 +47,13 @@ import type {
 
 import { advisoriesForListing, severityVariant, WarningBlock } from './advisories';
 import { ListingIcon, listingTitle } from './display';
+import {
+  MountInstallDialog,
+  collectEnv,
+  EnvVarFields,
+  routeItemsOf,
+  type RouteItem,
+} from './install-dialog';
 import {
   envConfigKey,
   marketplaceAdvisoriesKey,
@@ -93,6 +98,9 @@ interface ActionResult {
   readonly version: string | null;
   readonly notes: readonly string[];
   readonly advisories: MarketplaceInstallResult['advisories'];
+  // The routes the install/update mounted — what was opened where. Empty for an
+  // uninstall and for a plugin that registers none.
+  readonly routes: MarketplaceInstallResult['routes'];
 }
 
 /**
@@ -242,6 +250,72 @@ function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): Re
   );
 }
 
+/**
+ * The routes the plugin's route-carrying items declare, at their DEFAULT bases:
+ * the absolute path each route mounts at (`/api/<base><path>`), its methods, and
+ * whether it is served public. An operator sees where the plugin would open its
+ * surface before opening the install dialog to remap it. Renders nothing when the
+ * plugin declares no routes.
+ */
+function RoutesCard({
+  routeItems,
+  mounts,
+}: {
+  readonly routeItems: readonly RouteItem[];
+  // The installed row's `{item_name: base}` mounts, so an INSTALLED plugin renders
+  // at its ACTUAL mounted base; absent (not installed / query not ready) each item
+  // falls back to its declared default.
+  readonly mounts?: Record<string, string>;
+}): ReactNode {
+  if (routeItems.length === 0) return null;
+  return (
+    <Card>
+      <h2 className="tai-card-title" style={{ marginBottom: 'var(--tai-space-3)' }}>
+        Routes
+      </h2>
+      <div className="tai-stack">
+        {routeItems.map((item) => {
+          const base = mounts?.[item.name] ?? item.routes.base;
+          return (
+            <div key={item.name} className="tai-stack tai-stack-2">
+              <div className="tai-row">
+                <Badge>{item.kind}</Badge>
+                <strong>{item.name}</strong>
+                <code className="tai-mono tai-muted">/api/{base}</code>
+              </div>
+              <ScrollRegion label={`${item.name} routes`}>
+                <Table>
+                  <THead>
+                    <TR>
+                      <TH>Path</TH>
+                      <TH>Methods</TH>
+                      <TH>Public</TH>
+                    </TR>
+                  </THead>
+                  <TBody>
+                    {item.routes.paths.map((route) => (
+                      <TR key={`${route.path}/${route.methods.join(',')}`}>
+                        <TD>
+                          <code className="tai-mono">
+                            /api/{base}
+                            {route.path}
+                          </code>
+                        </TD>
+                        <TD>{route.methods.join(', ')}</TD>
+                        <TD>{route.public ? <Badge variant="warning">public</Badge> : '—'}</TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </ScrollRegion>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 /** The version history, latest first as the wire orders it. */
 function VersionsCard({
   versions,
@@ -334,6 +408,7 @@ export function PluginDetail({
       version: receipt.version,
       notes: receipt.notes,
       advisories: receipt.advisories,
+      routes: receipt.routes,
     });
     // The app pip-installed/uninstalled a plugin and reloaded: tools, agents,
     // extensions, channels, the manifest — ANY server-derived cache — may now be
@@ -341,17 +416,19 @@ export function PluginDetail({
     void queryClient.invalidateQueries();
   };
 
+  // The install/update body minus the ref the mutation supplies: the env dialog
+  // adds an mcp-server's `!ENV` values + secret marks, the mount dialog adds the
+  // chosen route bases + public-route consent; a plain install/update sends none.
   const installMutation = useMutation({
-    // The env-collection dialog passes an mcp-server's required `!ENV` values +
-    // secret marks; a plain install passes an empty body ({ref} only).
-    mutationFn: (body: { env?: Record<string, string>; secret_keys?: string[] }) =>
+    mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
       api.installMarketplacePlugin({ ref: refValue, ...body }),
     onSuccess: (receipt) => {
       onInstallSuccess(receipt, 'Installed');
     },
   });
   const updateMutation = useMutation({
-    mutationFn: () => api.updateMarketplacePlugin({ ref: refValue }),
+    mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
+      api.updateMarketplacePlugin({ ref: refValue, ...body }),
     onSuccess: (receipt) => {
       onInstallSuccess(receipt, 'Updated');
     },
@@ -366,6 +443,7 @@ export function PluginDetail({
         version: null,
         notes: receipt.notes,
         advisories: [],
+        routes: [],
       });
       void queryClient.invalidateQueries();
     },
@@ -423,6 +501,18 @@ export function PluginDetail({
   const requiredEnvVarsToCollect = requiredEnvVars(detail).filter(
     (name) => !presetEnvKeys.has(name),
   );
+  // The route-carrying items of the latest version — a channel or router that
+  // declares HTTP routes. When present, install/update runs through the mount
+  // dialog so the operator sees, remaps, and accepts the resulting paths.
+  const routeItems = routeItemsOf(detail.latest?.items ?? []);
+  const version = detail.latest?.version ?? null;
+  // The stored `{item_name: base}` mounts of this plugin's installed row (absent
+  // until the installed query lands, or when not installed). Threaded into the
+  // routes card (render at the ACTUAL base) and the update dialog (seed the base
+  // inputs from the CURRENT mount, not the declared default).
+  const installedMounts = installedQuery.data?.installed.find(
+    (row) => row.ref === refValue,
+  )?.route_mounts;
   const matching =
     advisoriesQuery.data !== undefined
       ? advisoriesForListing(advisoriesQuery.data.advisories, refValue)
@@ -485,6 +575,20 @@ export function PluginDetail({
                 ))}
               </div>
             ) : null}
+            {result.routes.length > 0 ? (
+              <div className="tai-stack tai-stack-2">
+                <span className="tai-muted">Mounted routes</span>
+                <ul style={{ margin: 0, paddingLeft: 'var(--tai-space-4)' }}>
+                  {result.routes.map((route) => (
+                    <li key={`${route.item}/${route.full_path}/${route.methods.join(',')}`}>
+                      <code className="tai-mono">{route.full_path}</code>{' '}
+                      <span className="tai-muted">{route.methods.join(', ')}</span>{' '}
+                      {route.public ? <Badge variant="warning">public</Badge> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
         </Card>
       ) : null}
@@ -508,10 +612,23 @@ export function PluginDetail({
       ) : null}
 
       <ItemsCard detail={detail} />
+      <RoutesCard routeItems={routeItems} mounts={installedMounts} />
       <VersionsCard versions={detail.versions} />
 
       {activeAction === 'install' ? (
-        requiredEnvVarsToCollect.length > 0 ? (
+        routeItems.length > 0 ? (
+          // Route-carrying plugins mount through the preview dialog, which also
+          // collects any required mcp-server env in the same flow.
+          <MountInstallDialog
+            refValue={refValue}
+            version={version}
+            verb="Install"
+            routeItems={routeItems}
+            requiredEnvVars={requiredEnvVarsToCollect}
+            onSubmit={(extras) => installMutation.mutateAsync(extras).then(() => undefined)}
+            onClose={closeAction}
+          />
+        ) : requiredEnvVarsToCollect.length > 0 ? (
           // Same Install button, kind-agnostic: the env dialog is inserted
           // only when the public spec's markers require values to be collected.
           <InstallEnvDialog
@@ -556,7 +673,21 @@ export function PluginDetail({
           </ConfirmDialog>
         )
       ) : null}
-      {activeAction === 'update' ? (
+      {activeAction === 'update' && routeItems.length > 0 ? (
+        // Route-carrying plugins update through the same mount dialog: the
+        // preview surfaces any new collision or newly-public route to accept.
+        <MountInstallDialog
+          refValue={refValue}
+          version={version}
+          verb="Update"
+          routeItems={routeItems}
+          storedMounts={installedMounts}
+          requiredEnvVars={[]}
+          onSubmit={(extras) => updateMutation.mutateAsync(extras).then(() => undefined)}
+          onClose={closeAction}
+        />
+      ) : null}
+      {activeAction === 'update' && routeItems.length === 0 ? (
         <ConfirmDialog
           title="Update plugin"
           confirmLabel="Update"
@@ -573,7 +704,7 @@ export function PluginDetail({
             ) : undefined
           }
           onConfirm={() => {
-            updateMutation.mutate();
+            updateMutation.mutate({});
           }}
           onClose={closeAction}
         >
@@ -654,15 +785,7 @@ function InstallEnvDialog({
   );
   const disabled = isFeatureDisabled(error);
   const submit = (): void => {
-    const env: Record<string, string> = {};
-    const secretKeys: string[] = [];
-    for (const name of requiredVars) {
-      const value = values[name] ?? '';
-      if (value === '') continue;
-      env[name] = value;
-      // Default-on: absent from the map (never toggled) still counts as secret.
-      if (secret[name] !== false) secretKeys.push(name);
-    }
+    const { env, secretKeys } = collectEnv(requiredVars, values, secret);
     onSubmit(env, secretKeys);
   };
   return (
@@ -688,26 +811,17 @@ function InstallEnvDialog({
           {version !== null ? ` v${version}` : ''}? This server needs the following settings. Leave
           a field blank if the deployment already provides it.
         </p>
-        {requiredVars.map((name) => (
-          <div key={name} className="tai-stack tai-stack-2">
-            <Field label={name}>
-              <TextInput
-                value={values[name] ?? ''}
-                onChange={(event) => {
-                  const next = event.currentTarget.value;
-                  setValues((prev) => ({ ...prev, [name]: next }));
-                }}
-              />
-            </Field>
-            <Checkbox
-              checked={secret[name] !== false}
-              onCheckedChange={(checked) => {
-                setSecret((prev) => ({ ...prev, [name]: checked }));
-              }}
-              label="Store as secret"
-            />
-          </div>
-        ))}
+        <EnvVarFields
+          requiredVars={requiredVars}
+          values={values}
+          secret={secret}
+          onChangeValue={(name, value) => {
+            setValues((prev) => ({ ...prev, [name]: value }));
+          }}
+          onToggleSecret={(name, checked) => {
+            setSecret((prev) => ({ ...prev, [name]: checked }));
+          }}
+        />
       </div>
     </ConfirmDialog>
   );

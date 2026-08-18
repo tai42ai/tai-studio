@@ -49,6 +49,11 @@
  *                  populated from `GET /api/system/kinds`.
  *   - users-admin — the accounts plugin's users-admin page (usr-* human accounts),
  *                  mounted via `studio_plugins`, populated by the runner's seed.
+ *   - marketplace-install — the Marketplace detail page's route-mounting install
+ *                  dialog for the seeded generic plugin (acme/alerts-relay): the
+ *                  resolved routes, the per-item base-prefix remap input, and the
+ *                  public-route acceptance checkbox, all from the minimal seeded
+ *                  registry the runner boots (MARKETPLACE_URL).
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
@@ -278,6 +283,40 @@ const AUTHED_PAGES = [
     name: 'users-admin',
     path: '/plugins/tai42_accounts_postgres/users',
     wait: 'text=ada.lovelace@demo.tai',
+  },
+  {
+    // The Marketplace detail page's route-mounting install dialog for the seeded
+    // generic route-carrying plugin (acme/alerts-relay), reached by deep-linking the
+    // detail route then clicking Install. The dialog frames the whole flow the docs
+    // describe: the resolved routes list, the per-item base-prefix input (remap), and
+    // the public-route acceptance checkbox. The minimal seeded registry the runner
+    // boots (MARKETPLACE_URL) answers the detail + preview deterministically — one
+    // published version, fixed routes, no advisories — so the routes and the
+    // public-acceptance gate render on every run (NO `nondeterministic` flag).
+    //
+    // The Install action opens a modal dialog, which makes the background nav inert
+    // (aria-hidden), so the plugin-sidebar wait is meaningless here — skip it; the
+    // dialog's own waits are the stable signal.
+    name: 'marketplace-install',
+    path: '/marketplace?plugin=acme/alerts-relay',
+    // The detail page's Install button proves the listing loaded populated.
+    wait: 'button:has-text("Install")',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Install', exact: true }).click();
+      const dialog = page.getByRole('dialog');
+      // The per-item base input (prefix remap) and a resolved public route path
+      // prove the preview resolved; the checkbox is the public-approval gate — the
+      // three surfaces the shot must frame.
+      await dialog.getByLabel('relay base').waitFor({ state: 'visible', timeout: 8000 });
+      await dialog
+        .getByText('/api/alerts/relay/inbound')
+        .first()
+        .waitFor({ state: 'visible', timeout: 8000 });
+      await dialog
+        .getByText('I accept these routes are served without authentication')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
   },
   {
     // The conversation monitor at its deepest level — the master/detail split the docs

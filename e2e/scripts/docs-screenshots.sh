@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 21 Studio screens (light + dark = 42 PNGs) into
+# pipeline. Regenerates ALL 22 Studio screens (light + dark = 44 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -10,10 +10,12 @@
 #   cd tai-studio && bash e2e/scripts/docs-screenshots.sh
 #
 # What it does, end to end:
-#   1. builds the Studio SPA + reference-plugin bundle and boots a DOCS-DEMO
-#      tai42-skeleton (e2e/docs-demo/manifest.yml) via e2e/boot/boot.sh, installing
-#      the agents / storage-local / toolbox / seeded-monitoring plugins into the
-#      skeleton venv;
+#   1. builds the Studio SPA + reference-plugin bundle, boots the minimal
+#      marketplace registry (e2e/docs-demo/marketplace-registry.py, one seeded
+#      generic route-carrying plugin) and points MARKETPLACE_URL at it, then boots a
+#      DOCS-DEMO tai42-skeleton (e2e/docs-demo/manifest.yml) via e2e/boot/boot.sh,
+#      installing the agents / storage-local / toolbox / seeded-monitoring plugins
+#      into the skeleton venv;
 #   2. waits for /health, then seeds the demo accounts, the scoped surfaces (an
 #      owned key plus its audience-addressed notification + pending question), the
 #      named settings profile the Profiles tab lists and the conversation route
@@ -111,6 +113,8 @@ BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
 OUT_DIR="${OUT_DIR:-${TAI_DOCS_DIR}/images/studio}"
 DEMO_KEY="sk-docs-demo-full-privilege-key"  # exported as STUDIO_API_KEY; docs-screenshots.mjs reads it from there
 PROM_DIR="${TMPDIR:-/tmp}/tai-docs-demo-prometheus"
+REGISTRY_PORT="${MARKETPLACE_REGISTRY_PORT:-8799}"
+REGISTRY_URL="http://127.0.0.1:${REGISTRY_PORT}"
 
 [[ -d "${E2E_DIR}/node_modules/@playwright/test" ]] || \
   die "Playwright is not installed in e2e/ — run: pnpm -w install"
@@ -143,6 +147,14 @@ export STORAGE_LOCAL_ROOT_PATH="${E2E_DIR}/docs-demo/templates"
 export STORAGE_LOCAL_CREATE_DIRS="false"
 # Prometheus multiproc dir (absolute — the validator rejects relative paths).
 export PROMETHEUS_MULTIPROC_DIR="${PROM_DIR}"
+# Marketplace registry: point the skeleton's outbound RegistryClient at the minimal
+# seeded registry this runner boots below (one generic route-carrying plugin), so the
+# Marketplace detail page and its install dialog render real routes + preview. The
+# skeleton reads MARKETPLACE_URL from its environment, so it MUST be exported before
+# the skeleton launches. Turn the background advisory poll OFF — nothing is installed,
+# so it would only be a no-op background task against the fixture.
+export MARKETPLACE_URL="${REGISTRY_URL}"
+export MARKETPLACE_ADVISORIES_POLL="false"
 
 # --- 3. Pre-flight: STUDIO_PORT must be free --------------------------------
 # A server already answering on STUDIO_PORT — a leftover KEEP_UP session, or a
@@ -154,6 +166,22 @@ export PROMETHEUS_MULTIPROC_DIR="${PROM_DIR}"
 if curl -s -m 2 "${BASE_URL}/health" >/dev/null 2>&1; then
   die "a server is already listening on ${BASE_URL} — it would be captured instead of a fresh skeleton. Stop it first (e.g. 'pkill -f \"tai serve\"') and rerun."
 fi
+# The registry port must be free too — a leftover fixture would serve a stale seed.
+if curl -s -m 2 "${REGISTRY_URL}/healthz" >/dev/null 2>&1; then
+  die "a server is already listening on ${REGISTRY_URL} — stop it first and rerun."
+fi
+
+# --- 3b. Boot the minimal marketplace registry ------------------------------
+# A stdlib-only fixture serving the registry public read API with ONE generic
+# route-carrying plugin (acme/alerts-relay), so the Marketplace detail page and its
+# install dialog render real routes + preview. Booted BEFORE the skeleton so
+# MARKETPLACE_URL (exported above) is live in the skeleton's environment; reaped by
+# teardown alongside the skeleton.
+log "booting the minimal marketplace registry (${REGISTRY_URL})"
+REGISTRY_LOG="$(mktemp "${TMPDIR:-/tmp}/docs-shots-registry.XXXXXX")"
+MARKETPLACE_REGISTRY_PORT="${REGISTRY_PORT}" spawn_group \
+  python3 "${E2E_DIR}/docs-demo/marketplace-registry.py" >"${REGISTRY_LOG}" 2>&1 </dev/null
+REGISTRY_PID="${SPAWNED_PID}"
 
 # --- 4. Boot the docs-demo skeleton -----------------------------------------
 log "booting docs-demo skeleton (manifest: ${MANIFEST_PATH})"
@@ -163,6 +191,9 @@ spawn_group bash "${E2E_DIR}/boot/boot.sh" >"${BOOT_LOG}" 2>&1 </dev/null
 BOOT_PID="${SPAWNED_PID}"
 
 teardown() {
+  # The registry fixture is reaped even under KEEP_UP — it is capture-only scaffolding,
+  # not part of the skeleton a debugger keeps up.
+  kill -- -"${REGISTRY_PID}" 2>/dev/null || true
   if [[ "${KEEP_UP:-0}" == "1" ]]; then
     log "KEEP_UP=1 — leaving the skeleton running on ${BASE_URL} (pid ${BOOT_PID})"
     return
@@ -172,6 +203,18 @@ teardown() {
   pkill -f "tai serve .*--port ${STUDIO_PORT}" 2>/dev/null || true
 }
 trap teardown EXIT
+
+# Registry readiness: fail loudly if the fixture never bound, rather than capturing
+# an install dialog that meets a dead upstream.
+registry_ready=0
+for _ in $(seq 1 30); do
+  if [[ "$(curl -s -m 2 "${REGISTRY_URL}/healthz" 2>/dev/null || true)" == *'"OK"'* ]]; then
+    registry_ready=1; break
+  fi
+  sleep 1
+done
+[[ "${registry_ready}" == 1 ]] || { tail -40 "${REGISTRY_LOG}" >&2; die "the marketplace registry never answered ${REGISTRY_URL}/healthz"; }
+log "marketplace registry is up"
 
 # --- 5. Wait for readiness --------------------------------------------------
 # /health returning the literal OK proves BOTH the server is up AND the health
@@ -526,5 +569,5 @@ log "refreshed ${README_SHOTS_DIR} (5 shell screens × 2 themes)"
 # Success: drop the boot log. On any failure path execution exits before this line
 # (via die, or set -e on the capture/refresh steps), so the log survives on disk
 # for post-mortem (the readiness dies also tail it first).
-rm -f "${BOOT_LOG}"
+rm -f "${BOOT_LOG}" "${REGISTRY_LOG}"
 log "done — $(count_pngs "${OUT_DIR}") PNGs in ${OUT_DIR}, $(count_pngs "${README_SHOTS_DIR}") in ${README_SHOTS_DIR}"

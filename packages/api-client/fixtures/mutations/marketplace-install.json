@@ -1,0 +1,20 @@
+{
+  "ref": "acme/relay",
+  "version": "1.0.0",
+  "notes": ["Selected as the relay provider via RELAY_TOKEN."],
+  "advisories": [],
+  "routes": [
+    {
+      "item": "relay",
+      "full_path": "/api/channels/relay/inbound",
+      "methods": ["POST"],
+      "public": true
+    },
+    {
+      "item": "relay",
+      "full_path": "/api/channels/relay/status",
+      "methods": ["GET"],
+      "public": false
+    }
+  ]
+}
