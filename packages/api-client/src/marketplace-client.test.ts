@@ -84,6 +84,7 @@ const INSTALLED_ROW = {
     reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
   },
   items: [{ kind: 'mcp-server', name: 'postgres' }],
+  route_mounts: { relay: 'channels/relay-2' },
 };
 
 const ADVISORY = {
@@ -229,6 +230,7 @@ describe('marketplace client transport', () => {
       status: 'incompatible',
       reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
     });
+    expect(out.installed[0]?.route_mounts).toEqual({ relay: 'channels/relay-2' });
     expect(out.quarantined[0]?.name).toBe('tai42-broken');
   });
 
@@ -281,7 +283,7 @@ describe('marketplace client transport', () => {
     await expect(client.upgradeAllMarketplacePlugins()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
-  it('installMarketplacePlugin POSTs the body and parses the receipt (notes + advisories)', async () => {
+  it('installMarketplacePlugin POSTs the body and parses the receipt (notes + advisories + routes)', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
@@ -290,6 +292,14 @@ describe('marketplace client transport', () => {
           package: 'tai42-toolbox',
           advisories: [ADVISORY],
           notes: ['config provider selected via TAI_CONFIG_MODE'],
+          routes: [
+            {
+              item: 'relay',
+              full_path: '/api/channels/relay/inbound',
+              methods: ['POST'],
+              public: true,
+            },
+          ],
           reload: { ok: true },
           pip_output: 'Successfully installed tai42-toolbox-0.1.0',
         },
@@ -301,6 +311,9 @@ describe('marketplace client transport', () => {
     expect(captured[0]?.body).toEqual({ ref: 'tai42/toolbox', version: '0.1.0' });
     expect(out.notes).toEqual(['config provider selected via TAI_CONFIG_MODE']);
     expect(out.advisories[0]?.id).toBe(7);
+    // The mounted-route receipt is modelled: what was opened, where, and whether public.
+    expect(out.routes[0]?.full_path).toBe('/api/channels/relay/inbound');
+    expect(out.routes[0]?.public).toBe(true);
     // The un-modelled wire fields are stripped, not surfaced on the receipt.
     expect(out).not.toHaveProperty('package');
     expect(out).not.toHaveProperty('pip_output');
@@ -308,7 +321,9 @@ describe('marketplace client transport', () => {
 
   it('installMarketplacePlugin omits version from the body when not given', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { ref: 'tai42/toolbox', version: '0.1.0', advisories: [], notes: [] } }),
+      jsonResponse({
+        data: { ref: 'tai42/toolbox', version: '0.1.0', advisories: [], notes: [], routes: [] },
+      }),
     );
     await client.installMarketplacePlugin({ ref: 'tai42/toolbox' });
     expect(captured[0]?.body).toEqual({ ref: 'tai42/toolbox' });
@@ -317,7 +332,13 @@ describe('marketplace client transport', () => {
   it('installMarketplacePlugin carries env + secret_keys through to the request body', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { ref: 'tai42/postgres-mcp', version: '1.0.0', advisories: [], notes: [] },
+        data: {
+          ref: 'tai42/postgres-mcp',
+          version: '1.0.0',
+          advisories: [],
+          notes: [],
+          routes: [],
+        },
       }),
     );
     await client.installMarketplacePlugin({
@@ -335,6 +356,102 @@ describe('marketplace client transport', () => {
     });
   });
 
+  it('installMarketplacePlugin carries route_mounts + accept_public_routes through to the request body', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { ref: 'acme/relay', version: '1.0.0', advisories: [], notes: [], routes: [] },
+      }),
+    );
+    await client.installMarketplacePlugin({
+      ref: 'acme/relay',
+      route_mounts: { relay: 'channels/relay-2' },
+      accept_public_routes: true,
+    });
+    // The chosen mount bases and the public-route consent ride the wire body: the
+    // install dialog remaps a base and accepts the routes served without auth here.
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.body).toEqual({
+      ref: 'acme/relay',
+      route_mounts: { relay: 'channels/relay-2' },
+      accept_public_routes: true,
+    });
+  });
+
+  it('previewMarketplaceInstall POSTs the body and parses the resolved routes, collisions, and public rows', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          ref: 'acme/relay',
+          version: '1.0.0',
+          items: [
+            {
+              item: 'relay',
+              kind: 'channel',
+              base: 'channels/relay-2',
+              default_base: 'channels/relay',
+              routes: [
+                {
+                  path: '/inbound',
+                  full_path: '/api/channels/relay-2/inbound',
+                  methods: ['POST'],
+                  public: true,
+                },
+              ],
+            },
+          ],
+          collisions: [
+            {
+              item: 'relay',
+              full_path: '/api/channels/relay-2/inbound',
+              methods: ['POST'],
+              conflict_owner: 'plugin:acme/other',
+              conflict_path: '/api/channels/relay-2/inbound',
+            },
+          ],
+          public_routes: [
+            { item: 'relay', full_path: '/api/channels/relay-2/inbound', methods: ['POST'] },
+          ],
+          new_public_routes: [
+            { item: 'relay', full_path: '/api/channels/relay-2/inbound', methods: ['POST'] },
+          ],
+          requires_public_acceptance: true,
+        },
+      }),
+    );
+    const out = await client.previewMarketplaceInstall({
+      ref: 'acme/relay',
+      route_mounts: { relay: 'channels/relay-2' },
+    });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/marketplace/install/preview');
+    expect(captured[0]?.body).toEqual({
+      ref: 'acme/relay',
+      route_mounts: { relay: 'channels/relay-2' },
+    });
+    expect(out.items[0]?.routes[0]?.full_path).toBe('/api/channels/relay-2/inbound');
+    expect(out.collisions[0]?.conflict_owner).toBe('plugin:acme/other');
+    expect(out.requires_public_acceptance).toBe(true);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a drifting preview response (items not an array)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ref: 'acme/relay',
+          version: '1.0.0',
+          items: 'nope',
+          collisions: [],
+          public_routes: [],
+          new_public_routes: [],
+          requires_public_acceptance: false,
+        },
+      }),
+    );
+    await expect(client.previewMarketplaceInstall({ ref: 'acme/relay' })).rejects.toBeInstanceOf(
+      ApiSchemaError,
+    );
+  });
+
   it('uninstallMarketplacePlugin POSTs to /api/marketplace/uninstall and parses the receipt', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
@@ -350,7 +467,9 @@ describe('marketplace client transport', () => {
 
   it('updateMarketplacePlugin POSTs to /api/marketplace/update and parses the receipt', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { ref: 'tai42/toolbox', version: '0.2.0', advisories: [], notes: [] } }),
+      jsonResponse({
+        data: { ref: 'tai42/toolbox', version: '0.2.0', advisories: [], notes: [], routes: [] },
+      }),
     );
     const out = await client.updateMarketplacePlugin({ ref: 'tai42/toolbox' });
     expect(captured[0]?.method).toBe('POST');

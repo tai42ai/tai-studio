@@ -318,12 +318,31 @@ export interface MarketplaceSearchQuery {
  * the same transaction that writes the entry: `env` supplies the values,
  * `secret_keys` marks which land in the secret band. Both omitted for a plain
  * install (no required markers).
+ *
+ * `route_mounts` maps a route-carrying item name to the base prefix its routes
+ * mount under (the default or the operator's remap); `accept_public_routes`
+ * explicitly consents to the routes served without authentication. Omitted for a
+ * plugin that registers no routes.
  */
 export interface MarketplaceInstallBody {
   readonly ref: string;
   readonly version?: string;
   readonly env?: Record<string, string>;
   readonly secret_keys?: string[];
+  readonly route_mounts?: Record<string, string>;
+  readonly accept_public_routes?: boolean;
+}
+
+/**
+ * Body for previewing an install / update (`POST /api/marketplace/install/preview`):
+ * resolves the spec and computes the routes, collisions, and public rows WITHOUT
+ * side effects. `route_mounts` applies base overrides so the operator sees the
+ * effect of a remap before committing.
+ */
+export interface MarketplaceInstallPreviewBody {
+  readonly ref: string;
+  readonly version?: string;
+  readonly route_mounts?: Record<string, string>;
 }
 
 /** Body for uninstalling a plugin. */
@@ -1167,6 +1186,15 @@ export function createApiClient(config: ApiConfig) {
       req('/api/marketplace/kinds', s.marketplaceKinds, { signal }),
     listInstalledMarketplacePlugins: (signal?: AbortSignal) =>
       req('/api/marketplace/installed', s.marketplaceInstalled, { signal }),
+    // Preview resolves the spec and computes routes/collisions/public rows with
+    // NO side effects, so the install dialog can show absolute paths, block on a
+    // collision, and surface the public routes before the operator commits.
+    previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) =>
+      req('/api/marketplace/install/preview', s.marketplaceInstallPreview, {
+        method: 'POST',
+        body,
+        signal,
+      }),
     installMarketplacePlugin: (body: MarketplaceInstallBody) =>
       req('/api/marketplace/install', s.marketplaceInstallResult, { method: 'POST', body }),
     uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) =>

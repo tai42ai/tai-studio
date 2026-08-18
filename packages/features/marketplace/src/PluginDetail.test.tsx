@@ -15,6 +15,7 @@ import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/test
 import {
   ApiError,
   type MarketplaceAdvisory,
+  type MarketplaceInstallPreview,
   type MarketplaceInstallResult,
   type MarketplaceInstalled,
   type MarketplaceInstalledPlugin,
@@ -84,6 +85,7 @@ function installedRow(
     missing_upstream: false,
     compat: { status: 'compatible', reason: null },
     items: [],
+    route_mounts: {},
     ...overrides,
   };
 }
@@ -400,6 +402,7 @@ describe('PluginDetail — mcp-server install env dialog', () => {
       version: '1.0.0',
       notes: [],
       advisories: [],
+      routes: [],
     });
     const client: StubApiClient = {
       ...reads(mcpServerDetail(), []),
@@ -435,6 +438,7 @@ describe('PluginDetail — mcp-server install env dialog', () => {
       version: '1.0.0',
       notes: [],
       advisories: [],
+      routes: [],
     });
     const client: StubApiClient = {
       ...reads(mcpServerDetail(), []),
@@ -468,6 +472,7 @@ describe('PluginDetail — mcp-server install env dialog', () => {
       version: '1.0.0',
       notes: [],
       advisories: [],
+      routes: [],
     });
     const client: StubApiClient = {
       ...reads(mcpServerDetail(), []),
@@ -561,6 +566,7 @@ describe('PluginDetail — install flow', () => {
       version: '1.2.0',
       notes: ['Selected as the OPENAI provider via OPENAI_API_KEY.'],
       advisories: [advisory({ id: 9, severity: 'medium', summary: 'Minor issue.' })],
+      routes: [],
     });
     const client: StubApiClient = { ...reads(detailFixture(), []), installMarketplacePlugin };
     const { navigate: _n, queryClient } = renderWithProviders(
@@ -685,9 +691,13 @@ describe('PluginDetail — install flow', () => {
 describe('PluginDetail — update and uninstall flows', () => {
   it('updates behind a confirm dialog with the correct body', async () => {
     const user = userEvent.setup();
-    const updateMarketplacePlugin = vi
-      .fn()
-      .mockResolvedValue({ ref: 'tai42/toolbox', version: '2.0.0', notes: [], advisories: [] });
+    const updateMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/toolbox',
+      version: '2.0.0',
+      notes: [],
+      advisories: [],
+      routes: [],
+    });
     const client: StubApiClient = {
       ...reads(detailFixture(), [installedRow({ update_available: true, latest: '2.0.0' })]),
       updateMarketplacePlugin,
@@ -890,6 +900,7 @@ describe('PluginDetail — env dialog var selection and store-off state', () => 
       version: '1.0.0',
       notes: [],
       advisories: [],
+      routes: [],
     });
     const client: StubApiClient = {
       ...reads(twoMarkerDetail(), []),
@@ -1138,5 +1149,182 @@ describe('PluginDetail — panes that scroll are keyboard targets', () => {
     expect(within(prose).getByRole('table')).toBe(readmeTable);
     expect(screen.getByRole('region', { name: 'Options' })).toBe(region);
     expect(region).toHaveFocus();
+  });
+});
+
+/** A detail whose latest version provides a route-carrying channel item. */
+function routeDetail(): MarketplacePluginDetail {
+  return detailFixture({
+    latest: {
+      version: '1.2.0',
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      items: [
+        {
+          kind: 'channel',
+          name: 'web',
+          description: 'A relay channel.',
+          tags: [],
+          group: null,
+          routes: {
+            base: 'channels/web',
+            paths: [
+              { path: '/inbound', methods: ['POST'], public: true },
+              { path: '/status', methods: ['GET'], public: false },
+            ],
+          },
+        },
+      ],
+    },
+  });
+}
+
+function previewFixture(
+  overrides: Partial<MarketplaceInstallPreview> = {},
+): MarketplaceInstallPreview {
+  return {
+    ref: 'tai42/toolbox',
+    version: '1.2.0',
+    items: [
+      {
+        item: 'web',
+        kind: 'channel',
+        base: 'channels/web',
+        default_base: 'channels/web',
+        routes: [
+          {
+            path: '/inbound',
+            full_path: '/api/channels/web/inbound',
+            methods: ['POST'],
+            public: true,
+          },
+        ],
+      },
+    ],
+    collisions: [],
+    public_routes: [],
+    new_public_routes: [],
+    requires_public_acceptance: false,
+    ...overrides,
+  };
+}
+
+describe('PluginDetail — route surface and mounting', () => {
+  it('renders the declared routes at their default bases with a public badge', async () => {
+    const client = reads(routeDetail(), []);
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    const routesHeading = await screen.findByRole('heading', { name: 'Routes' });
+    const card = routesHeading.closest('.tai-card');
+    if (card === null) throw new Error('no Routes card');
+    expect(within(card as HTMLElement).getByText('/api/channels/web/inbound')).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText('/api/channels/web/status')).toBeInTheDocument();
+    // The public route wears the warn badge; the authed one shows an em dash.
+    expect(within(card as HTMLElement).getByText('public')).toBeInTheDocument();
+  });
+
+  it('installs a route plugin through the mount dialog and shows the mounted routes on the receipt', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/toolbox',
+      version: '1.2.0',
+      notes: [],
+      advisories: [],
+      routes: [
+        {
+          item: 'web',
+          full_path: '/api/channels/web/inbound',
+          methods: ['POST'],
+          public: true,
+        },
+      ],
+    });
+    const client: StubApiClient = {
+      ...reads(routeDetail(), []),
+      previewMarketplaceInstall: vi.fn().mockResolvedValue(previewFixture()),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // The preview resolved the absolute path inside the dialog.
+    await within(dialog).findByText('/api/channels/web/inbound');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'tai42/toolbox',
+        route_mounts: { web: 'channels/web' },
+        accept_public_routes: false,
+      });
+    });
+    const status = await screen.findByRole('status');
+    expect(status).toHaveTextContent('Mounted routes');
+    expect(status).toHaveTextContent('/api/channels/web/inbound');
+  });
+
+  it('updates a route plugin: the input prefills the non-default stored base and an edit-free update preserves it', async () => {
+    const user = userEvent.setup();
+    const updateMarketplacePlugin = vi.fn().mockResolvedValue({
+      ref: 'tai42/toolbox',
+      version: '2.0.0',
+      notes: [],
+      advisories: [],
+      routes: [],
+    });
+    const client: StubApiClient = {
+      ...reads(routeDetail(), [
+        // Installed at a NON-default base — the picture the reset bug corrupted.
+        installedRow({
+          update_available: true,
+          latest: '2.0.0',
+          route_mounts: { web: 'channels/relay-2' },
+        }),
+      ]),
+      previewMarketplaceInstall: vi.fn().mockResolvedValue(previewFixture()),
+      updateMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Update' }));
+    const dialog = await screen.findByRole('dialog');
+    await within(dialog).findByText('/api/channels/web/inbound');
+    // A base input seeds from the stored mount, not the declared default, so an
+    // item installed at a non-default base shows that base on reopen.
+    const baseInput = within(dialog).getByLabelText<HTMLInputElement>('web base');
+    expect(baseInput.value).toBe('channels/relay-2');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Update' }));
+
+    // An edit-free update omits untouched items from route_mounts, so the server's
+    // stored-mount precedence preserves the non-default base 'channels/relay-2'.
+    await waitFor(() => {
+      expect(updateMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'tai42/toolbox',
+        route_mounts: {},
+        accept_public_routes: false,
+      });
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('Updated tai42/toolbox 2.0.0');
+  });
+
+  it('renders an installed plugin’s routes at the ACTUAL mounted base, not the declared default', async () => {
+    const client = reads(routeDetail(), [
+      installedRow({ route_mounts: { web: 'channels/relay-2' } }),
+    ]);
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    const routesHeading = await screen.findByRole('heading', { name: 'Routes' });
+    const card = routesHeading.closest('.tai-card');
+    if (card === null) throw new Error('no Routes card');
+    // The stored mount, not the declared 'channels/web'.
+    await waitFor(() => {
+      expect(
+        within(card as HTMLElement).getByText('/api/channels/relay-2/inbound'),
+      ).toBeInTheDocument();
+    });
+    expect(within(card as HTMLElement).queryByText('/api/channels/web/inbound')).toBeNull();
   });
 });

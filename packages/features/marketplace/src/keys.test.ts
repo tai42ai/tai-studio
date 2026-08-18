@@ -11,6 +11,7 @@ import {
   marketplaceInstalledKey,
   marketplaceKindsKey,
   marketplacePluginKey,
+  marketplacePreviewKey,
   marketplaceSearchKey,
 } from './keys';
 
@@ -25,6 +26,24 @@ describe('marketplace query keys', () => {
       'marketplace',
       'plugin',
       'tai42/toolbox',
+    ]);
+  });
+
+  it('keys an install preview on its ref, version, and serialized mount map', () => {
+    expect(marketplacePreviewKey('tai42/toolbox', '1.2.0', '{"web":"channels/web"}')).toEqual([
+      'marketplace',
+      'preview',
+      'tai42/toolbox',
+      '1.2.0',
+      '{"web":"channels/web"}',
+    ]);
+    // A null target version is a distinct entry, never coalesced to a string.
+    expect(marketplacePreviewKey('tai42/toolbox', null, '{}')).toEqual([
+      'marketplace',
+      'preview',
+      'tai42/toolbox',
+      null,
+      '{}',
     ]);
   });
 

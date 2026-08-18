@@ -1,0 +1,42 @@
+{
+  "ref": "acme/relay",
+  "version": "1.0.0",
+  "items": [
+    {
+      "item": "relay",
+      "kind": "channel",
+      "base": "channels/relay",
+      "default_base": "channels/relay",
+      "routes": [
+        {
+          "path": "/inbound",
+          "full_path": "/api/channels/relay/inbound",
+          "methods": ["POST"],
+          "public": true
+        },
+        {
+          "path": "/status",
+          "full_path": "/api/channels/relay/status",
+          "methods": ["GET"],
+          "public": false
+        }
+      ]
+    }
+  ],
+  "collisions": [],
+  "public_routes": [
+    {
+      "item": "relay",
+      "full_path": "/api/channels/relay/inbound",
+      "methods": ["POST"]
+    }
+  ],
+  "new_public_routes": [
+    {
+      "item": "relay",
+      "full_path": "/api/channels/relay/inbound",
+      "methods": ["POST"]
+    }
+  ],
+  "requires_public_acceptance": true
+}

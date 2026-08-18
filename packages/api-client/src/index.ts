@@ -31,6 +31,7 @@ export type {
   RunsQuery,
   MarketplaceSearchQuery,
   MarketplaceInstallBody,
+  MarketplaceInstallPreviewBody,
   MarketplaceUninstallBody,
 } from './client';
 export type { ApiConfig, RequestOptions } from './http';
@@ -182,6 +183,8 @@ export type {
   RunSpan,
   RunTrace,
   MarketplaceItem,
+  MarketplaceRouteDecl,
+  MarketplaceRoutesDecl,
   MarketplaceSearchKind,
   MarketplaceSearchGroup,
   MarketplaceSearchRow,
@@ -197,5 +200,11 @@ export type {
   MarketplaceUpgradeAllRow,
   MarketplaceUpgradeAllResult,
   MarketplaceInstallResult,
+  MarketplaceMountedRoute,
+  MarketplacePreviewRoute,
+  MarketplacePreviewItem,
+  MarketplacePreviewCollision,
+  MarketplacePreviewPublicRoute,
+  MarketplaceInstallPreview,
   MarketplaceUninstallResult,
 } from './schemas';
