@@ -75,8 +75,8 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     text: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     type: "reasoning_step";
-    text: string;
     final: boolean;
+    text: string;
 }, {
     type: "reasoning_step";
     text: string;
@@ -89,16 +89,16 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     call_id: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     type: "tool_call_step";
+    final: boolean;
     tool: string;
     args: Record<string, unknown>;
-    final: boolean;
     call_id: string;
 }, {
     type: "tool_call_step";
     tool: string;
     call_id: string;
-    args?: Record<string, unknown> | undefined;
     final?: boolean | undefined;
+    args?: Record<string, unknown> | undefined;
 }>, z.ZodObject<{
     type: z.ZodLiteral<"tool_result_step">;
     final: z.ZodDefault<z.ZodBoolean>;
@@ -108,8 +108,8 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     is_error: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     type: "tool_result_step";
-    tool: string;
     final: boolean;
+    tool: string;
     call_id: string;
     is_error: boolean;
     result?: unknown;
@@ -117,8 +117,8 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     type: "tool_result_step";
     tool: string;
     call_id: string;
-    result?: unknown;
     final?: boolean | undefined;
+    result?: unknown;
     is_error?: boolean | undefined;
 }>, z.ZodObject<{
     type: z.ZodLiteral<"message_delta">;
@@ -126,8 +126,8 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     text: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     type: "message_delta";
-    text: string;
     final: boolean;
+    text: string;
 }, {
     type: "message_delta";
     text: string;
@@ -138,8 +138,8 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     text: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     type: "message_final";
-    text: string;
     final: boolean;
+    text: string;
 }, {
     type: "message_final";
     text: string;
@@ -153,18 +153,18 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     model: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     type: "run_usage";
-    model: string | null;
     final: boolean;
     input_tokens: number | null;
     output_tokens: number | null;
     total_tokens: number | null;
+    model: string | null;
 }, {
     type: "run_usage";
-    model?: string | null | undefined;
     final?: boolean | undefined;
     input_tokens?: number | null | undefined;
     output_tokens?: number | null | undefined;
     total_tokens?: number | null | undefined;
+    model?: string | null | undefined;
 }>, z.ZodObject<{
     type: z.ZodLiteral<"structured_final">;
     final: z.ZodDefault<z.ZodBoolean>;
@@ -185,16 +185,16 @@ const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
     reason: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     type: "interrupt_final";
-    reason: string | null;
     final: boolean;
     interrupt_id: string;
+    reason: string | null;
     payload?: unknown;
 }, {
     type: "interrupt_final";
     interrupt_id: string;
+    final?: boolean | undefined;
     payload?: unknown;
     reason?: string | null | undefined;
-    final?: boolean | undefined;
 }>, z.ZodObject<{
     type: z.ZodLiteral<"stream.end">;
 }, "strip", z.ZodTypeAny, {
@@ -224,13 +224,13 @@ const allToolSchemas: z.ZodRecord<z.ZodString, z.ZodObject<{
     output: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     description: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
+    description: string | null;
     input: Record<string, unknown>;
     output: Record<string, unknown> | null;
-    description: string | null;
 }, {
+    description: string | null;
     input: Record<string, unknown>;
     output: Record<string, unknown> | null;
-    description: string | null;
 }>>;
 
 // @public (undocumented)
@@ -272,22 +272,22 @@ export const ApiProvider: Provider<    {
 readonly baseUrl: string;
 readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
 readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
+description: string | null;
 input: Record<string, unknown>;
 output: Record<string, unknown> | null;
-description: string | null;
 }>;
 readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
+description: string | null;
 input: Record<string, unknown>;
 output: Record<string, unknown> | null;
-description: string | null;
 }>>;
 readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
 readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
 run_id: string;
 }>;
 readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
-status: "failed" | "running" | "succeeded" | "lost";
 tool_name: string;
+status: "running" | "succeeded" | "failed" | "lost";
 run_id: string;
 started_at: string;
 error?: string | undefined;
@@ -295,8 +295,8 @@ result?: unknown;
 finished_at?: string | undefined;
 }>;
 readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
-status: "failed" | "running" | "succeeded" | "lost";
 tool_name: string;
+status: "running" | "succeeded" | "failed" | "lost";
 run_id: string;
 started_at: string;
 finished_at?: string | undefined;
@@ -307,8 +307,8 @@ tags: string[];
 hidden: boolean;
 }[]>;
 readonly listPresets: (signal?: AbortSignal) => Promise<{
-description: string;
 name: string;
+description: string;
 base_tool: string;
 active_version: number;
 extensions: (string | {
@@ -322,8 +322,8 @@ uses: string[];
 used_by: string[];
 }[]>;
 readonly createPreset: (body: CreatePresetBody) => Promise<{
-description: string;
 name: string;
+description: string;
 base_tool: string;
 active_version: number;
 extensions: (string | {
@@ -337,8 +337,8 @@ uses: string[];
 used_by: string[];
 }>;
 readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
-description: string;
 name: string;
+description: string;
 base_tool: string;
 active_version: number;
 extensions: (string | {
@@ -418,8 +418,8 @@ name: string;
 referees: string[];
 }>;
 readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-valid: boolean;
 error: string | null;
+valid: boolean;
 }>;
 readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
 name: string;
@@ -433,23 +433,23 @@ id: string;
 parent_id: string | null;
 }[];
 meta: {
+tool_name: string;
 tags: string[];
 hidden: boolean | null;
-tool_name: string;
 display_name: string | null;
 folder_id: string | null;
 }[];
 }>;
 readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
+tool_name: string;
 tags: string[];
 hidden: boolean | null;
-tool_name: string;
 display_name: string | null;
 folder_id: string | null;
 }>;
 readonly deleteToolMeta: (toolName: string) => Promise<{
-deleted: true;
 tool_name: string;
+deleted: true;
 }>;
 readonly createFolder: (name: string, parentId?: string | null) => Promise<{
 name: string;
@@ -523,9 +523,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -556,9 +556,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -569,9 +569,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -631,9 +631,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -644,9 +644,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -666,9 +666,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -702,9 +702,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -715,9 +715,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -729,8 +729,8 @@ config_mode: string;
 read_only: boolean;
 }>;
 readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
-description: string;
 name: string;
+description: string;
 }[]>;
 readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
 description: string;
@@ -765,9 +765,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -778,9 +778,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -788,8 +788,8 @@ mode: "unreachable";
 };
 hot: string[];
 recycle: {
-status: string;
 name: string;
+status: string;
 kind: string;
 generation_before: number;
 }[];
@@ -836,9 +836,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -849,9 +849,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -898,8 +898,8 @@ display_name: string;
 scopes: string[];
 }[];
 config_fields: {
-required: boolean;
 key: string;
+required: boolean;
 label: string;
 target: "env" | "header";
 secret: boolean;
@@ -953,9 +953,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -966,9 +966,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -987,9 +987,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1000,9 +1000,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1027,9 +1027,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1040,9 +1040,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1067,9 +1067,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1080,9 +1080,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1090,8 +1090,8 @@ mode: "unreachable";
 } | null;
 return_url: string;
 } | {
-kind: "failed";
 reason: string;
+kind: "failed";
 } | {
 message: string;
 kind: "cancelled";
@@ -1121,7 +1121,7 @@ items: {
 channel: string | null;
 route_name: string;
 door: "channel" | "api";
-target_kind: "agent" | "tool";
+target_kind: "tool" | "agent";
 target_name: string;
 payload_expr: string | null;
 reply_expr: string | null;
@@ -1216,8 +1216,8 @@ recipient: string | null;
 }>;
 readonly listAgents: (signal?: AbortSignal) => Promise<{
 items: {
-description: string;
 name: string;
+description: string;
 tool_name: string;
 input_schema: Record<string, unknown>;
 spec_runnable: boolean;
@@ -1226,8 +1226,8 @@ total: number;
 }>;
 readonly listSpecRunnableAgents: (signal?: AbortSignal) => Promise<{
 items: {
-description: string;
 name: string;
+description: string;
 tool_name: string;
 input_schema: Record<string, unknown>;
 spec_runnable: boolean;
@@ -1306,10 +1306,10 @@ name: string;
 module: string;
 qualname: string;
 fields: {
-type: string;
-description: string | null;
-required: boolean;
 name: string;
+description: string | null;
+type: string;
+required: boolean;
 secret: boolean;
 env_var: string;
 nested_group: string | null;
@@ -1349,8 +1349,8 @@ readonly unpinPublicRoute: (url: string) => Promise<{
 url: string;
 }>;
 readonly listRoles: (signal?: AbortSignal) => Promise<{
-description: string;
 name: string;
+description: string;
 scopes: string[];
 condition: string | null;
 condition_id: string | null;
@@ -1360,8 +1360,8 @@ grants: Record<string, "none" | "read" | "write">;
 condition_kwargs?: unknown;
 }[]>;
 readonly createRole: (body: RoleCreateBody) => Promise<{
-description: string;
 name: string;
+description: string;
 scopes: string[];
 condition: string | null;
 condition_id: string | null;
@@ -1371,8 +1371,8 @@ grants: Record<string, "none" | "read" | "write">;
 condition_kwargs?: unknown;
 }>;
 readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
-description: string;
 name: string;
+description: string;
 scopes: string[];
 condition: string | null;
 condition_id: string | null;
@@ -1390,8 +1390,8 @@ versions: {
 tags: string[];
 version: number;
 body: {
-description: string;
 name: string;
+description: string;
 scopes: string[];
 condition: string | null;
 condition_id: string | null;
@@ -1417,8 +1417,8 @@ is_current: boolean;
 }[];
 }>;
 readonly rollbackRole: (name: string, version: number) => Promise<{
-description: string;
 name: string;
+description: string;
 scopes: string[];
 condition: string | null;
 condition_id: string | null;
@@ -1521,8 +1521,8 @@ readonly logout: () => Promise<{
 revoked: boolean;
 }>;
 readonly validateCondition: (body: ValidateConditionBody) => Promise<{
-ok: boolean;
 result: boolean | null;
+ok: boolean;
 }>;
 readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
 tags: string[];
@@ -1565,9 +1565,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1578,9 +1578,9 @@ op: string;
 reachable: boolean;
 local_only: boolean;
 results: {
-name: string;
 error: string | null;
-outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
 detail: string | null;
 payload?: unknown;
 }[];
@@ -1630,10 +1630,10 @@ cost: number;
 avgLatencyMs: number;
 }[];
 byModel: {
+model: string;
 totalTokens: number;
 cost: number;
 avgLatencyMs: number;
-model: string;
 calls: number;
 }[];
 granularity: "hour" | "day" | "week";
@@ -1641,11 +1641,11 @@ granularity: "hour" | "day" | "week";
 readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
 items: {
 status: "error" | "success";
+model: string | null;
 tags: string[];
 id: string;
 totalTokens: number | null;
 cost: number | null;
-model: string | null;
 traceId: string;
 createdAt: string | null;
 latencyMs: number | null;
@@ -1664,10 +1664,10 @@ fetchError: string | null;
 timestamp: string | null;
 availability: "partial" | "unavailable" | "full";
 spans: {
-type: string | null;
 name: string | null;
-id: string;
+type: string | null;
 model: string | null;
+id: string;
 traceId: string | null;
 parentId: string | null;
 level: string | null;
@@ -1693,8 +1693,8 @@ total: number;
 page: number;
 page_size: number;
 listings: {
-description: string;
 name: string;
+description: string;
 tags: string[];
 display_name: string | null;
 icon_url: string | null;
@@ -1720,8 +1720,8 @@ premium?: boolean | null | undefined;
 }[];
 }>;
 readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
-description: string;
 name: string;
+description: string;
 tags: string[];
 display_name: string | null;
 icon_url: string | null;
@@ -1743,10 +1743,9 @@ homepage_url: string | null;
 repository_url: string | null;
 latest: {
 status: string;
-version: string;
 items: {
-description: string;
 name: string;
+description: string;
 tags: string[];
 kind: string;
 group: string | null;
@@ -1759,6 +1758,7 @@ methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
 }[];
 } | null | undefined;
 }[];
+version: string;
 contract_range: string | null;
 published_at: string | null;
 spec?: objectOutputType<    {
@@ -1802,11 +1802,11 @@ readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
 readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
 readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
 installed: {
-version: string;
 items: {
 name: string;
 kind: string;
 }[];
+version: string;
 source: string;
 ref: string;
 latest: string | null;
@@ -1826,7 +1826,6 @@ reason: string;
 }[];
 }>;
 readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
-version: string;
 items: {
 kind: string;
 routes: {
@@ -1839,6 +1838,7 @@ base: string;
 item: string;
 default_base: string;
 }[];
+version: string;
 ref: string;
 collisions: {
 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
@@ -2144,15 +2144,15 @@ const backupImportReport: z.ZodObject<{
                 error: z.ZodNullable<z.ZodString>;
                 detail: z.ZodNullable<z.ZodString>;
             }, "strip", z.ZodTypeAny, {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }, {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }>, "many">;
@@ -2165,9 +2165,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2178,9 +2178,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2196,15 +2196,15 @@ const backupImportReport: z.ZodObject<{
                 error: z.ZodNullable<z.ZodString>;
                 detail: z.ZodNullable<z.ZodString>;
             }, "strip", z.ZodTypeAny, {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }, {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }>, "many">;
@@ -2217,9 +2217,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2230,9 +2230,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2252,9 +2252,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2265,9 +2265,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2292,9 +2292,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2305,9 +2305,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2335,9 +2335,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2348,9 +2348,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2378,9 +2378,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2391,9 +2391,9 @@ const backupImportReport: z.ZodObject<{
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -2623,14 +2623,14 @@ const configFieldView: z.ZodObject<{
     required: z.ZodBoolean;
     secret: z.ZodBoolean;
 }, "strip", z.ZodTypeAny, {
-    required: boolean;
     key: string;
+    required: boolean;
     label: string;
     target: "env" | "header";
     secret: boolean;
 }, {
-    required: boolean;
     key: string;
+    required: boolean;
     label: string;
     target: "env" | "header";
     secret: boolean;
@@ -2937,7 +2937,7 @@ const conversationRoute: z.ZodObject<{
     channel: string | null;
     route_name: string;
     door: "channel" | "api";
-    target_kind: "agent" | "tool";
+    target_kind: "tool" | "agent";
     target_name: string;
     payload_expr: string | null;
     reply_expr: string | null;
@@ -2949,7 +2949,7 @@ const conversationRoute: z.ZodObject<{
     channel: string | null;
     route_name: string;
     door: "channel" | "api";
-    target_kind: "agent" | "tool";
+    target_kind: "tool" | "agent";
     target_name: string;
     payload_expr: string | null;
     reply_expr: string | null;
@@ -2980,7 +2980,7 @@ const conversationRoutes: z.ZodObject<{
         channel: string | null;
         route_name: string;
         door: "channel" | "api";
-        target_kind: "agent" | "tool";
+        target_kind: "tool" | "agent";
         target_name: string;
         payload_expr: string | null;
         reply_expr: string | null;
@@ -2992,7 +2992,7 @@ const conversationRoutes: z.ZodObject<{
         channel: string | null;
         route_name: string;
         door: "channel" | "api";
-        target_kind: "agent" | "tool";
+        target_kind: "tool" | "agent";
         target_name: string;
         payload_expr: string | null;
         reply_expr: string | null;
@@ -3007,7 +3007,7 @@ const conversationRoutes: z.ZodObject<{
         channel: string | null;
         route_name: string;
         door: "channel" | "api";
-        target_kind: "agent" | "tool";
+        target_kind: "tool" | "agent";
         target_name: string;
         payload_expr: string | null;
         reply_expr: string | null;
@@ -3022,7 +3022,7 @@ const conversationRoutes: z.ZodObject<{
         channel: string | null;
         route_name: string;
         door: "channel" | "api";
-        target_kind: "agent" | "tool";
+        target_kind: "tool" | "agent";
         target_name: string;
         payload_expr: string | null;
         reply_expr: string | null;
@@ -3345,22 +3345,22 @@ function createApiClient(config: ApiConfig): {
     readonly baseUrl: string;
     readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
     readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
+        description: string | null;
         input: Record<string, unknown>;
         output: Record<string, unknown> | null;
-        description: string | null;
     }>;
     readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
+        description: string | null;
         input: Record<string, unknown>;
         output: Record<string, unknown> | null;
-        description: string | null;
     }>>;
     readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
     readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
         run_id: string;
     }>;
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
-        status: "failed" | "running" | "succeeded" | "lost";
         tool_name: string;
+        status: "running" | "succeeded" | "failed" | "lost";
         run_id: string;
         started_at: string;
         error?: string | undefined;
@@ -3368,8 +3368,8 @@ function createApiClient(config: ApiConfig): {
         finished_at?: string | undefined;
     }>;
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
-        status: "failed" | "running" | "succeeded" | "lost";
         tool_name: string;
+        status: "running" | "succeeded" | "failed" | "lost";
         run_id: string;
         started_at: string;
         finished_at?: string | undefined;
@@ -3380,8 +3380,8 @@ function createApiClient(config: ApiConfig): {
         hidden: boolean;
     }[]>;
     readonly listPresets: (signal?: AbortSignal) => Promise<{
-        description: string;
         name: string;
+        description: string;
         base_tool: string;
         active_version: number;
         extensions: (string | {
@@ -3395,8 +3395,8 @@ function createApiClient(config: ApiConfig): {
         used_by: string[];
     }[]>;
     readonly createPreset: (body: CreatePresetBody) => Promise<{
-        description: string;
         name: string;
+        description: string;
         base_tool: string;
         active_version: number;
         extensions: (string | {
@@ -3410,8 +3410,8 @@ function createApiClient(config: ApiConfig): {
         used_by: string[];
     }>;
     readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
-        description: string;
         name: string;
+        description: string;
         base_tool: string;
         active_version: number;
         extensions: (string | {
@@ -3491,8 +3491,8 @@ function createApiClient(config: ApiConfig): {
         referees: string[];
     }>;
     readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-        valid: boolean;
         error: string | null;
+        valid: boolean;
     }>;
     readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
         name: string;
@@ -3506,23 +3506,23 @@ function createApiClient(config: ApiConfig): {
             parent_id: string | null;
         }[];
         meta: {
+            tool_name: string;
             tags: string[];
             hidden: boolean | null;
-            tool_name: string;
             display_name: string | null;
             folder_id: string | null;
         }[];
     }>;
     readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
+        tool_name: string;
         tags: string[];
         hidden: boolean | null;
-        tool_name: string;
         display_name: string | null;
         folder_id: string | null;
     }>;
     readonly deleteToolMeta: (toolName: string) => Promise<{
-        deleted: true;
         tool_name: string;
+        deleted: true;
     }>;
     readonly createFolder: (name: string, parentId?: string | null) => Promise<{
         name: string;
@@ -3596,9 +3596,9 @@ function createApiClient(config: ApiConfig): {
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -3629,9 +3629,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3642,9 +3642,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3704,9 +3704,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3717,9 +3717,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3739,9 +3739,9 @@ function createApiClient(config: ApiConfig): {
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -3775,9 +3775,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3788,9 +3788,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3802,8 +3802,8 @@ function createApiClient(config: ApiConfig): {
         read_only: boolean;
     }>;
     readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
-        description: string;
         name: string;
+        description: string;
     }[]>;
     readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
         description: string;
@@ -3838,9 +3838,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3851,9 +3851,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3861,8 +3861,8 @@ function createApiClient(config: ApiConfig): {
         };
         hot: string[];
         recycle: {
-            status: string;
             name: string;
+            status: string;
             kind: string;
             generation_before: number;
         }[];
@@ -3909,9 +3909,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3922,9 +3922,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -3971,8 +3971,8 @@ function createApiClient(config: ApiConfig): {
                 scopes: string[];
             }[];
             config_fields: {
-                required: boolean;
                 key: string;
+                required: boolean;
                 label: string;
                 target: "env" | "header";
                 secret: boolean;
@@ -4026,9 +4026,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4039,9 +4039,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4060,9 +4060,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4073,9 +4073,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4100,9 +4100,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4113,9 +4113,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4140,9 +4140,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4153,9 +4153,9 @@ function createApiClient(config: ApiConfig): {
             reachable: boolean;
             local_only: boolean;
             results: {
-                name: string;
                 error: string | null;
-                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                 detail: string | null;
                 payload?: unknown;
             }[];
@@ -4163,8 +4163,8 @@ function createApiClient(config: ApiConfig): {
         } | null;
         return_url: string;
     } | {
-        kind: "failed";
         reason: string;
+        kind: "failed";
     } | {
         message: string;
         kind: "cancelled";
@@ -4194,7 +4194,7 @@ function createApiClient(config: ApiConfig): {
             channel: string | null;
             route_name: string;
             door: "channel" | "api";
-            target_kind: "agent" | "tool";
+            target_kind: "tool" | "agent";
             target_name: string;
             payload_expr: string | null;
             reply_expr: string | null;
@@ -4289,8 +4289,8 @@ function createApiClient(config: ApiConfig): {
     }>;
     readonly listAgents: (signal?: AbortSignal) => Promise<{
         items: {
-            description: string;
             name: string;
+            description: string;
             tool_name: string;
             input_schema: Record<string, unknown>;
             spec_runnable: boolean;
@@ -4299,8 +4299,8 @@ function createApiClient(config: ApiConfig): {
     }>;
     readonly listSpecRunnableAgents: (signal?: AbortSignal) => Promise<{
         items: {
-            description: string;
             name: string;
+            description: string;
             tool_name: string;
             input_schema: Record<string, unknown>;
             spec_runnable: boolean;
@@ -4379,10 +4379,10 @@ function createApiClient(config: ApiConfig): {
             module: string;
             qualname: string;
             fields: {
-                type: string;
-                description: string | null;
-                required: boolean;
                 name: string;
+                description: string | null;
+                type: string;
+                required: boolean;
                 secret: boolean;
                 env_var: string;
                 nested_group: string | null;
@@ -4422,8 +4422,8 @@ function createApiClient(config: ApiConfig): {
         url: string;
     }>;
     readonly listRoles: (signal?: AbortSignal) => Promise<{
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -4433,8 +4433,8 @@ function createApiClient(config: ApiConfig): {
         condition_kwargs?: unknown;
     }[]>;
     readonly createRole: (body: RoleCreateBody) => Promise<{
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -4444,8 +4444,8 @@ function createApiClient(config: ApiConfig): {
         condition_kwargs?: unknown;
     }>;
     readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -4463,8 +4463,8 @@ function createApiClient(config: ApiConfig): {
             tags: string[];
             version: number;
             body: {
-                description: string;
                 name: string;
+                description: string;
                 scopes: string[];
                 condition: string | null;
                 condition_id: string | null;
@@ -4490,8 +4490,8 @@ function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly rollbackRole: (name: string, version: number) => Promise<{
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -4594,8 +4594,8 @@ function createApiClient(config: ApiConfig): {
         revoked: boolean;
     }>;
     readonly validateCondition: (body: ValidateConditionBody) => Promise<{
-        ok: boolean;
         result: boolean | null;
+        ok: boolean;
     }>;
     readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
         tags: string[];
@@ -4638,9 +4638,9 @@ function createApiClient(config: ApiConfig): {
                 reachable: boolean;
                 local_only: boolean;
                 results: {
-                    name: string;
                     error: string | null;
-                    outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                    name: string;
+                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                     detail: string | null;
                     payload?: unknown;
                 }[];
@@ -4651,9 +4651,9 @@ function createApiClient(config: ApiConfig): {
                 reachable: boolean;
                 local_only: boolean;
                 results: {
-                    name: string;
                     error: string | null;
-                    outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+                    name: string;
+                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
                     detail: string | null;
                     payload?: unknown;
                 }[];
@@ -4703,10 +4703,10 @@ function createApiClient(config: ApiConfig): {
             avgLatencyMs: number;
         }[];
         byModel: {
+            model: string;
             totalTokens: number;
             cost: number;
             avgLatencyMs: number;
-            model: string;
             calls: number;
         }[];
         granularity: "hour" | "day" | "week";
@@ -4714,11 +4714,11 @@ function createApiClient(config: ApiConfig): {
     readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
         items: {
             status: "error" | "success";
+            model: string | null;
             tags: string[];
             id: string;
             totalTokens: number | null;
             cost: number | null;
-            model: string | null;
             traceId: string;
             createdAt: string | null;
             latencyMs: number | null;
@@ -4737,10 +4737,10 @@ function createApiClient(config: ApiConfig): {
         timestamp: string | null;
         availability: "partial" | "unavailable" | "full";
         spans: {
-            type: string | null;
             name: string | null;
-            id: string;
+            type: string | null;
             model: string | null;
+            id: string;
             traceId: string | null;
             parentId: string | null;
             level: string | null;
@@ -4766,8 +4766,8 @@ function createApiClient(config: ApiConfig): {
         page: number;
         page_size: number;
         listings: {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             display_name: string | null;
             icon_url: string | null;
@@ -4793,8 +4793,8 @@ function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         display_name: string | null;
         icon_url: string | null;
@@ -4816,10 +4816,9 @@ function createApiClient(config: ApiConfig): {
         repository_url: string | null;
         latest: {
             status: string;
-            version: string;
             items: {
-                description: string;
                 name: string;
+                description: string;
                 tags: string[];
                 kind: string;
                 group: string | null;
@@ -4832,6 +4831,7 @@ function createApiClient(config: ApiConfig): {
                     }[];
                 } | null | undefined;
             }[];
+            version: string;
             contract_range: string | null;
             published_at: string | null;
             spec?: objectOutputType<    {
@@ -4875,11 +4875,11 @@ function createApiClient(config: ApiConfig): {
     readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
     readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
         installed: {
-            version: string;
             items: {
                 name: string;
                 kind: string;
             }[];
+            version: string;
             source: string;
             ref: string;
             latest: string | null;
@@ -4899,7 +4899,6 @@ function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
-        version: string;
         items: {
             kind: string;
             routes: {
@@ -4912,6 +4911,7 @@ function createApiClient(config: ApiConfig): {
             item: string;
             default_base: string;
         }[];
+        version: string;
         ref: string;
         collisions: {
             methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
@@ -5096,16 +5096,16 @@ const dashboardMetrics: z.ZodObject<{
         totalTokens: z.ZodNumber;
         avgLatencyMs: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
+        model: string;
         totalTokens: number;
         cost: number;
         avgLatencyMs: number;
-        model: string;
         calls: number;
     }, {
+        model: string;
         totalTokens: number;
         cost: number;
         avgLatencyMs: number;
-        model: string;
         calls: number;
     }>, "many">;
     granularity: z.ZodEnum<["hour", "day", "week"]>;
@@ -5127,10 +5127,10 @@ const dashboardMetrics: z.ZodObject<{
         avgLatencyMs: number;
     }[];
     byModel: {
+        model: string;
         totalTokens: number;
         cost: number;
         avgLatencyMs: number;
-        model: string;
         calls: number;
     }[];
     granularity: "hour" | "day" | "week";
@@ -5152,10 +5152,10 @@ const dashboardMetrics: z.ZodObject<{
         avgLatencyMs: number;
     }[];
     byModel: {
+        model: string;
         totalTokens: number;
         cost: number;
         avgLatencyMs: number;
-        model: string;
         calls: number;
     }[];
     granularity: "hour" | "day" | "week";
@@ -5253,15 +5253,15 @@ const disconnectResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -5274,9 +5274,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5287,9 +5287,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5305,15 +5305,15 @@ const disconnectResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -5326,9 +5326,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5339,9 +5339,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5358,9 +5358,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5371,9 +5371,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5393,9 +5393,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5406,9 +5406,9 @@ const disconnectResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -5808,15 +5808,15 @@ const fleetReloadResult: z.ZodObject<{
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }>, "many">;
@@ -5827,9 +5827,9 @@ const fleetReloadResult: z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -5839,9 +5839,9 @@ const fleetReloadResult: z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -5874,15 +5874,15 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }>, "many">;
@@ -5895,9 +5895,9 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -5908,9 +5908,9 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -5926,15 +5926,15 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }>, "many">;
@@ -5947,9 +5947,9 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -5960,9 +5960,9 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -6003,15 +6003,15 @@ const fleetResult: z.ZodObject<{
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }>, "many">;
@@ -6022,9 +6022,9 @@ const fleetResult: z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -6034,9 +6034,9 @@ const fleetResult: z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -6118,15 +6118,15 @@ const fleetWorkerResult: z.ZodObject<{
     error: z.ZodNullable<z.ZodString>;
     detail: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    name: string;
     error: string | null;
-    outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+    name: string;
+    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
     detail: string | null;
     payload?: unknown;
 }, {
-    name: string;
     error: string | null;
-    outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+    name: string;
+    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
     detail: string | null;
     payload?: unknown;
 }>;
@@ -7372,11 +7372,11 @@ const marketplaceInstalled: z.ZodObject<{
         }>, "many">;
         route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
     }, "strict", z.ZodTypeAny, {
-        version: string;
         items: {
             name: string;
             kind: string;
         }[];
+        version: string;
         source: string;
         ref: string;
         latest: string | null;
@@ -7390,11 +7390,11 @@ const marketplaceInstalled: z.ZodObject<{
         };
         route_mounts: Record<string, string>;
     }, {
-        version: string;
         items: {
             name: string;
             kind: string;
         }[];
+        version: string;
         source: string;
         ref: string;
         latest: string | null;
@@ -7420,11 +7420,11 @@ const marketplaceInstalled: z.ZodObject<{
     }>, "many">;
 }, "strict", z.ZodTypeAny, {
     installed: {
-        version: string;
         items: {
             name: string;
             kind: string;
         }[];
+        version: string;
         source: string;
         ref: string;
         latest: string | null;
@@ -7444,11 +7444,11 @@ const marketplaceInstalled: z.ZodObject<{
     }[];
 }, {
     installed: {
-        version: string;
         items: {
             name: string;
             kind: string;
         }[];
+        version: string;
         source: string;
         ref: string;
         latest: string | null;
@@ -7551,11 +7551,11 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     }>, "many">;
     route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
 }, "strict", z.ZodTypeAny, {
-    version: string;
     items: {
         name: string;
         kind: string;
     }[];
+    version: string;
     source: string;
     ref: string;
     latest: string | null;
@@ -7569,11 +7569,11 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     };
     route_mounts: Record<string, string>;
 }, {
-    version: string;
     items: {
         name: string;
         kind: string;
     }[];
+    version: string;
     source: string;
     ref: string;
     latest: string | null;
@@ -7686,7 +7686,6 @@ const marketplaceInstallPreview: z.ZodObject<{
     }>, "many">;
     requires_public_acceptance: z.ZodBoolean;
 }, "strip", z.ZodTypeAny, {
-    version: string;
     items: {
         kind: string;
         routes: {
@@ -7699,6 +7698,7 @@ const marketplaceInstallPreview: z.ZodObject<{
         item: string;
         default_base: string;
     }[];
+    version: string;
     ref: string;
     collisions: {
         methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
@@ -7719,7 +7719,6 @@ const marketplaceInstallPreview: z.ZodObject<{
     }[];
     requires_public_acceptance: boolean;
 }, {
-    version: string;
     items: {
         kind: string;
         routes: {
@@ -7732,6 +7731,7 @@ const marketplaceInstallPreview: z.ZodObject<{
         item: string;
         default_base: string;
     }[];
+    version: string;
     ref: string;
     collisions: {
         methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
@@ -7893,8 +7893,8 @@ const marketplaceItem: z.ZodObject<{
         }[];
     }>>>;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     tags: string[];
     kind: string;
     group: string | null;
@@ -7907,8 +7907,8 @@ const marketplaceItem: z.ZodObject<{
         }[];
     } | null | undefined;
 }, {
-    description: string;
     name: string;
+    description: string;
     tags: string[];
     kind: string;
     group: string | null;
@@ -7972,8 +7972,8 @@ const marketplaceLatestVersion: z.ZodObject<{
             }[];
         }>>>;
     }, "strip", z.ZodTypeAny, {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         kind: string;
         group: string | null;
@@ -7986,8 +7986,8 @@ const marketplaceLatestVersion: z.ZodObject<{
             }[];
         } | null | undefined;
     }, {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         kind: string;
         group: string | null;
@@ -8099,10 +8099,9 @@ const marketplaceLatestVersion: z.ZodObject<{
     }, z.ZodTypeAny, "passthrough">>>>;
 }, "strip", z.ZodTypeAny, {
     status: string;
-    version: string;
     items: {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         kind: string;
         group: string | null;
@@ -8115,6 +8114,7 @@ const marketplaceLatestVersion: z.ZodObject<{
             }[];
         } | null | undefined;
     }[];
+    version: string;
     contract_range: string | null;
     published_at: string | null;
     spec?: z.objectOutputType<{
@@ -8152,10 +8152,9 @@ const marketplaceLatestVersion: z.ZodObject<{
     }, z.ZodTypeAny, "passthrough"> | null | undefined;
 }, {
     status: string;
-    version: string;
     items: {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         kind: string;
         group: string | null;
@@ -8168,6 +8167,7 @@ const marketplaceLatestVersion: z.ZodObject<{
             }[];
         } | null | undefined;
     }[];
+    version: string;
     contract_range: string | null;
     published_at: string | null;
     spec?: z.objectInputType<{
@@ -8291,8 +8291,8 @@ const marketplacePluginDetail: z.ZodObject<{
                 }[];
             }>>>;
         }, "strip", z.ZodTypeAny, {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             kind: string;
             group: string | null;
@@ -8305,8 +8305,8 @@ const marketplacePluginDetail: z.ZodObject<{
                 }[];
             } | null | undefined;
         }, {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             kind: string;
             group: string | null;
@@ -8418,10 +8418,9 @@ const marketplacePluginDetail: z.ZodObject<{
         }, z.ZodTypeAny, "passthrough">>>>;
     }, "strip", z.ZodTypeAny, {
         status: string;
-        version: string;
         items: {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             kind: string;
             group: string | null;
@@ -8434,6 +8433,7 @@ const marketplacePluginDetail: z.ZodObject<{
                 }[];
             } | null | undefined;
         }[];
+        version: string;
         contract_range: string | null;
         published_at: string | null;
         spec?: z.objectOutputType<{
@@ -8471,10 +8471,9 @@ const marketplacePluginDetail: z.ZodObject<{
         }, z.ZodTypeAny, "passthrough"> | null | undefined;
     }, {
         status: string;
-        version: string;
         items: {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             kind: string;
             group: string | null;
@@ -8487,6 +8486,7 @@ const marketplacePluginDetail: z.ZodObject<{
                 }[];
             } | null | undefined;
         }[];
+        version: string;
         contract_range: string | null;
         published_at: string | null;
         spec?: z.objectInputType<{
@@ -8540,8 +8540,8 @@ const marketplacePluginDetail: z.ZodObject<{
         published_at: string | null;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     tags: string[];
     display_name: string | null;
     icon_url: string | null;
@@ -8563,10 +8563,9 @@ const marketplacePluginDetail: z.ZodObject<{
     repository_url: string | null;
     latest: {
         status: string;
-        version: string;
         items: {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             kind: string;
             group: string | null;
@@ -8579,6 +8578,7 @@ const marketplacePluginDetail: z.ZodObject<{
                 }[];
             } | null | undefined;
         }[];
+        version: string;
         contract_range: string | null;
         published_at: string | null;
         spec?: z.objectOutputType<{
@@ -8618,8 +8618,8 @@ const marketplacePluginDetail: z.ZodObject<{
     premium?: boolean | null | undefined;
     docs_url?: string | null | undefined;
 }, {
-    description: string;
     name: string;
+    description: string;
     tags: string[];
     display_name: string | null;
     icon_url: string | null;
@@ -8641,10 +8641,9 @@ const marketplacePluginDetail: z.ZodObject<{
     repository_url: string | null;
     latest: {
         status: string;
-        version: string;
         items: {
-            description: string;
             name: string;
+            description: string;
             tags: string[];
             kind: string;
             group: string | null;
@@ -8657,6 +8656,7 @@ const marketplacePluginDetail: z.ZodObject<{
                 }[];
             } | null | undefined;
         }[];
+        version: string;
         contract_range: string | null;
         published_at: string | null;
         spec?: z.objectInputType<{
@@ -8955,8 +8955,8 @@ const marketplaceSearchPage: z.ZodObject<{
             count: number;
         }>, "many">;
     }, "strip", z.ZodTypeAny, {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         display_name: string | null;
         icon_url: string | null;
@@ -8980,8 +8980,8 @@ const marketplaceSearchPage: z.ZodObject<{
         }[];
         premium?: boolean | null | undefined;
     }, {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         display_name: string | null;
         icon_url: string | null;
@@ -9013,8 +9013,8 @@ const marketplaceSearchPage: z.ZodObject<{
     page: number;
     page_size: number;
     listings: {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         display_name: string | null;
         icon_url: string | null;
@@ -9043,8 +9043,8 @@ const marketplaceSearchPage: z.ZodObject<{
     page: number;
     page_size: number;
     listings: {
-        description: string;
         name: string;
+        description: string;
         tags: string[];
         display_name: string | null;
         icon_url: string | null;
@@ -9138,8 +9138,8 @@ const marketplaceSearchRow: z.ZodObject<{
         count: number;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     tags: string[];
     display_name: string | null;
     icon_url: string | null;
@@ -9163,8 +9163,8 @@ const marketplaceSearchRow: z.ZodObject<{
     }[];
     premium?: boolean | null | undefined;
 }, {
-    description: string;
     name: string;
+    description: string;
     tags: string[];
     display_name: string | null;
     icon_url: string | null;
@@ -9344,15 +9344,15 @@ const mcpReloadResult: z.ZodObject<{
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }, {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }>, "many">;
@@ -9363,9 +9363,9 @@ const mcpReloadResult: z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -9375,9 +9375,9 @@ const mcpReloadResult: z.ZodObject<{
     reachable: boolean;
     local_only: boolean;
     results: {
-        name: string;
         error: string | null;
-        outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+        name: string;
+        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
         detail: string | null;
         payload?: unknown;
     }[];
@@ -9680,15 +9680,15 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -9701,9 +9701,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9714,9 +9714,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9732,15 +9732,15 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -9753,9 +9753,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9766,9 +9766,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9786,9 +9786,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9799,9 +9799,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9820,9 +9820,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9833,9 +9833,9 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -9846,11 +9846,11 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
     kind: z.ZodLiteral<"failed">;
     reason: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    kind: "failed";
     reason: string;
+    kind: "failed";
 }, {
-    kind: "failed";
     reason: string;
+    kind: "failed";
 }>, z.ZodObject<{
     kind: z.ZodLiteral<"cancelled">;
     message: z.ZodString;
@@ -9988,15 +9988,15 @@ const patchSubServicesResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -10009,9 +10009,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10022,9 +10022,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10040,15 +10040,15 @@ const patchSubServicesResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -10061,9 +10061,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10074,9 +10074,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10093,9 +10093,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10106,9 +10106,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10131,9 +10131,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10144,9 +10144,9 @@ const patchSubServicesResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10454,8 +10454,8 @@ const presetDetail: z.ZodObject<{
 } & {
     fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     base_tool: string;
     active_version: number;
     extensions: (string | {
@@ -10469,8 +10469,8 @@ const presetDetail: z.ZodObject<{
     used_by: string[];
     fixed_kwargs: Record<string, unknown>;
 }, {
-    description: string;
     name: string;
+    description: string;
     base_tool: string;
     active_version: number;
     extensions: (string | {
@@ -10534,8 +10534,8 @@ const presetList: z.ZodArray<z.ZodObject<{
     uses: z.ZodArray<z.ZodString, "many">;
     used_by: z.ZodArray<z.ZodString, "many">;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     base_tool: string;
     active_version: number;
     extensions: (string | {
@@ -10548,8 +10548,8 @@ const presetList: z.ZodArray<z.ZodObject<{
     uses: string[];
     used_by: string[];
 }, {
-    description: string;
     name: string;
+    description: string;
     base_tool: string;
     active_version: number;
     extensions: (string | {
@@ -10588,8 +10588,8 @@ const presetRecord: z.ZodObject<{
     uses: z.ZodArray<z.ZodString, "many">;
     used_by: z.ZodArray<z.ZodString, "many">;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     base_tool: string;
     active_version: number;
     extensions: (string | {
@@ -10602,8 +10602,8 @@ const presetRecord: z.ZodObject<{
     uses: string[];
     used_by: string[];
 }, {
-    description: string;
     name: string;
+    description: string;
     base_tool: string;
     active_version: number;
     extensions: (string | {
@@ -10673,11 +10673,11 @@ const presetValidation: z.ZodObject<{
     valid: z.ZodBoolean;
     error: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    valid: boolean;
     error: string | null;
+    valid: boolean;
 }, {
-    valid: boolean;
     error: string | null;
+    valid: boolean;
 }>;
 
 // @public (undocumented)
@@ -10857,13 +10857,13 @@ const profileApplyResponse: z.ZodObject<{
         status: z.ZodString;
         generation_before: z.ZodNumber;
     }, "strip", z.ZodTypeAny, {
-        status: string;
         name: string;
+        status: string;
         kind: string;
         generation_before: number;
     }, {
-        status: string;
         name: string;
+        status: string;
         kind: string;
         generation_before: number;
     }>, "many">;
@@ -10910,15 +10910,15 @@ const profileApplyResponse: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -10931,9 +10931,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10944,9 +10944,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10962,15 +10962,15 @@ const profileApplyResponse: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -10983,9 +10983,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -10996,9 +10996,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11014,9 +11014,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11027,9 +11027,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11037,8 +11037,8 @@ const profileApplyResponse: z.ZodObject<{
     };
     hot: string[];
     recycle: {
-        status: string;
         name: string;
+        status: string;
         kind: string;
         generation_before: number;
     }[];
@@ -11061,9 +11061,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11074,9 +11074,9 @@ const profileApplyResponse: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11084,8 +11084,8 @@ const profileApplyResponse: z.ZodObject<{
     };
     hot: string[];
     recycle: {
-        status: string;
         name: string;
+        status: string;
         kind: string;
         generation_before: number;
     }[];
@@ -11154,14 +11154,14 @@ const providers: z.ZodObject<{
             required: z.ZodBoolean;
             secret: z.ZodBoolean;
         }, "strip", z.ZodTypeAny, {
-            required: boolean;
             key: string;
+            required: boolean;
             label: string;
             target: "env" | "header";
             secret: boolean;
         }, {
-            required: boolean;
             key: string;
+            required: boolean;
             label: string;
             target: "env" | "header";
             secret: boolean;
@@ -11181,8 +11181,8 @@ const providers: z.ZodObject<{
             scopes: string[];
         }[];
         config_fields: {
-            required: boolean;
             key: string;
+            required: boolean;
             label: string;
             target: "env" | "header";
             secret: boolean;
@@ -11202,8 +11202,8 @@ const providers: z.ZodObject<{
             scopes: string[];
         }[];
         config_fields: {
-            required: boolean;
             key: string;
+            required: boolean;
             label: string;
             target: "env" | "header";
             secret: boolean;
@@ -11238,8 +11238,8 @@ const providers: z.ZodObject<{
             scopes: string[];
         }[];
         config_fields: {
-            required: boolean;
             key: string;
+            required: boolean;
             label: string;
             target: "env" | "header";
             secret: boolean;
@@ -11266,8 +11266,8 @@ const providers: z.ZodObject<{
             scopes: string[];
         }[];
         config_fields: {
-            required: boolean;
             key: string;
+            required: boolean;
             label: string;
             target: "env" | "header";
             secret: boolean;
@@ -11315,14 +11315,14 @@ const providerView: z.ZodObject<{
         required: z.ZodBoolean;
         secret: z.ZodBoolean;
     }, "strip", z.ZodTypeAny, {
-        required: boolean;
         key: string;
+        required: boolean;
         label: string;
         target: "env" | "header";
         secret: boolean;
     }, {
-        required: boolean;
         key: string;
+        required: boolean;
         label: string;
         target: "env" | "header";
         secret: boolean;
@@ -11342,8 +11342,8 @@ const providerView: z.ZodObject<{
         scopes: string[];
     }[];
     config_fields: {
-        required: boolean;
         key: string;
+        required: boolean;
         label: string;
         target: "env" | "header";
         secret: boolean;
@@ -11363,8 +11363,8 @@ const providerView: z.ZodObject<{
         scopes: string[];
     }[];
     config_fields: {
-        required: boolean;
         key: string;
+        required: boolean;
         label: string;
         target: "env" | "header";
         secret: boolean;
@@ -11484,15 +11484,15 @@ const reloadConfigResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -11505,9 +11505,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11518,9 +11518,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11536,15 +11536,15 @@ const reloadConfigResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -11557,9 +11557,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11570,9 +11570,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11590,9 +11590,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11603,9 +11603,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11623,9 +11623,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11636,9 +11636,9 @@ const reloadConfigResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -11774,8 +11774,8 @@ const roleBody: z.ZodObject<{
     allow_all: z.ZodBoolean;
     grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     scopes: string[];
     condition: string | null;
     condition_id: string | null;
@@ -11784,8 +11784,8 @@ const roleBody: z.ZodObject<{
     grants: Record<string, "none" | "read" | "write">;
     condition_kwargs?: unknown;
 }, {
-    description: string;
     name: string;
+    description: string;
     scopes: string[];
     condition: string | null;
     condition_id: string | null;
@@ -11837,8 +11837,8 @@ const roleList: z.ZodArray<z.ZodObject<{
     allow_all: z.ZodBoolean;
     grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
     scopes: string[];
     condition: string | null;
     condition_id: string | null;
@@ -11847,8 +11847,8 @@ const roleList: z.ZodArray<z.ZodObject<{
     grants: Record<string, "none" | "read" | "write">;
     condition_kwargs?: unknown;
 }, {
-    description: string;
     name: string;
+    description: string;
     scopes: string[];
     condition: string | null;
     condition_id: string | null;
@@ -11883,8 +11883,8 @@ const roleVersion: z.ZodObject<{
         allow_all: z.ZodBoolean;
         grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
     }, "strip", z.ZodTypeAny, {
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -11893,8 +11893,8 @@ const roleVersion: z.ZodObject<{
         grants: Record<string, "none" | "read" | "write">;
         condition_kwargs?: unknown;
     }, {
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -11910,8 +11910,8 @@ const roleVersion: z.ZodObject<{
     tags: string[];
     version: number;
     body: {
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -11926,8 +11926,8 @@ const roleVersion: z.ZodObject<{
     tags: string[];
     version: number;
     body: {
-        description: string;
         name: string;
+        description: string;
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
@@ -11958,8 +11958,8 @@ const roleVersions: z.ZodObject<{
             allow_all: z.ZodBoolean;
             grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
         }, "strip", z.ZodTypeAny, {
-            description: string;
             name: string;
+            description: string;
             scopes: string[];
             condition: string | null;
             condition_id: string | null;
@@ -11968,8 +11968,8 @@ const roleVersions: z.ZodObject<{
             grants: Record<string, "none" | "read" | "write">;
             condition_kwargs?: unknown;
         }, {
-            description: string;
             name: string;
+            description: string;
             scopes: string[];
             condition: string | null;
             condition_id: string | null;
@@ -11985,8 +11985,8 @@ const roleVersions: z.ZodObject<{
         tags: string[];
         version: number;
         body: {
-            description: string;
             name: string;
+            description: string;
             scopes: string[];
             condition: string | null;
             condition_id: string | null;
@@ -12001,8 +12001,8 @@ const roleVersions: z.ZodObject<{
         tags: string[];
         version: number;
         body: {
-            description: string;
             name: string;
+            description: string;
             scopes: string[];
             condition: string | null;
             condition_id: string | null;
@@ -12063,8 +12063,8 @@ const roleVersions: z.ZodObject<{
         tags: string[];
         version: number;
         body: {
-            description: string;
             name: string;
+            description: string;
             scopes: string[];
             condition: string | null;
             condition_id: string | null;
@@ -12093,8 +12093,8 @@ const roleVersions: z.ZodObject<{
         tags: string[];
         version: number;
         body: {
-            description: string;
             name: string;
+            description: string;
             scopes: string[];
             condition: string | null;
             condition_id: string | null;
@@ -12251,11 +12251,11 @@ const run: z.ZodObject<{
     fetchError: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     status: "error" | "success";
+    model: string | null;
     tags: string[];
     id: string;
     totalTokens: number | null;
     cost: number | null;
-    model: string | null;
     traceId: string;
     createdAt: string | null;
     latencyMs: number | null;
@@ -12264,11 +12264,11 @@ const run: z.ZodObject<{
     outputPreview?: unknown;
 }, {
     status: "error" | "success";
+    model: string | null;
     tags: string[];
     id: string;
     totalTokens: number | null;
     cost: number | null;
-    model: string | null;
     traceId: string;
     createdAt: string | null;
     latencyMs: number | null;
@@ -12294,11 +12294,11 @@ const runsPage: z.ZodObject<{
         fetchError: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         status: "error" | "success";
+        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
         cost: number | null;
-        model: string | null;
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
@@ -12307,11 +12307,11 @@ const runsPage: z.ZodObject<{
         outputPreview?: unknown;
     }, {
         status: "error" | "success";
+        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
         cost: number | null;
-        model: string | null;
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
@@ -12324,11 +12324,11 @@ const runsPage: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     items: {
         status: "error" | "success";
+        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
         cost: number | null;
-        model: string | null;
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
@@ -12341,11 +12341,11 @@ const runsPage: z.ZodObject<{
 }, {
     items: {
         status: "error" | "success";
+        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
         cost: number | null;
-        model: string | null;
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
@@ -12378,10 +12378,10 @@ const runSpan: z.ZodObject<{
     output: z.ZodType<unknown, z.ZodTypeDef, unknown>;
     nodeId: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    type: string | null;
     name: string | null;
-    id: string;
+    type: string | null;
     model: string | null;
+    id: string;
     traceId: string | null;
     parentId: string | null;
     level: string | null;
@@ -12394,10 +12394,10 @@ const runSpan: z.ZodObject<{
     usage?: unknown;
     metadata?: unknown;
 }, {
-    type: string | null;
     name: string | null;
-    id: string;
+    type: string | null;
     model: string | null;
+    id: string;
     traceId: string | null;
     parentId: string | null;
     level: string | null;
@@ -12485,10 +12485,10 @@ const runTrace: z.ZodObject<{
         output: z.ZodType<unknown, z.ZodTypeDef, unknown>;
         nodeId: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        type: string | null;
         name: string | null;
-        id: string;
+        type: string | null;
         model: string | null;
+        id: string;
         traceId: string | null;
         parentId: string | null;
         level: string | null;
@@ -12501,10 +12501,10 @@ const runTrace: z.ZodObject<{
         usage?: unknown;
         metadata?: unknown;
     }, {
-        type: string | null;
         name: string | null;
-        id: string;
+        type: string | null;
         model: string | null;
+        id: string;
         traceId: string | null;
         parentId: string | null;
         level: string | null;
@@ -12525,10 +12525,10 @@ const runTrace: z.ZodObject<{
     timestamp: string | null;
     availability: "partial" | "unavailable" | "full";
     spans: {
-        type: string | null;
         name: string | null;
-        id: string;
+        type: string | null;
         model: string | null;
+        id: string;
         traceId: string | null;
         parentId: string | null;
         level: string | null;
@@ -12552,10 +12552,10 @@ const runTrace: z.ZodObject<{
     timestamp: string | null;
     availability: "partial" | "unavailable" | "full";
     spans: {
-        type: string | null;
         name: string | null;
-        id: string;
+        type: string | null;
         model: string | null;
+        id: string;
         traceId: string | null;
         parentId: string | null;
         level: string | null;
@@ -13285,11 +13285,11 @@ const settingsProfileList: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
 }, {
-    description: string;
     name: string;
+    description: string;
 }>, "many">;
 
 // @public (undocumented)
@@ -13330,11 +13330,11 @@ const settingsProfileSummary: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    description: string;
     name: string;
+    description: string;
 }, {
-    description: string;
     name: string;
+    description: string;
 }>;
 
 // @public (undocumented)
@@ -13442,10 +13442,10 @@ const settingsSchema: z.ZodObject<{
             default_namespace_var: z.ZodNullable<z.ZodString>;
             value: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
         }, "strip", z.ZodTypeAny, {
-            type: string;
-            description: string | null;
-            required: boolean;
             name: string;
+            description: string | null;
+            type: string;
+            required: boolean;
             secret: boolean;
             env_var: string;
             nested_group: string | null;
@@ -13453,10 +13453,10 @@ const settingsSchema: z.ZodObject<{
             value?: unknown;
             default?: unknown;
         }, {
-            type: string;
-            description: string | null;
-            required: boolean;
             name: string;
+            description: string | null;
+            type: string;
+            required: boolean;
             secret: boolean;
             env_var: string;
             nested_group: string | null;
@@ -13469,10 +13469,10 @@ const settingsSchema: z.ZodObject<{
         module: string;
         qualname: string;
         fields: {
-            type: string;
-            description: string | null;
-            required: boolean;
             name: string;
+            description: string | null;
+            type: string;
+            required: boolean;
             secret: boolean;
             env_var: string;
             nested_group: string | null;
@@ -13485,10 +13485,10 @@ const settingsSchema: z.ZodObject<{
         module: string;
         qualname: string;
         fields: {
-            type: string;
-            description: string | null;
-            required: boolean;
             name: string;
+            description: string | null;
+            type: string;
+            required: boolean;
             secret: boolean;
             env_var: string;
             nested_group: string | null;
@@ -13503,10 +13503,10 @@ const settingsSchema: z.ZodObject<{
         module: string;
         qualname: string;
         fields: {
-            type: string;
-            description: string | null;
-            required: boolean;
             name: string;
+            description: string | null;
+            type: string;
+            required: boolean;
             secret: boolean;
             env_var: string;
             nested_group: string | null;
@@ -13521,10 +13521,10 @@ const settingsSchema: z.ZodObject<{
         module: string;
         qualname: string;
         fields: {
-            type: string;
-            description: string | null;
-            required: boolean;
             name: string;
+            description: string | null;
+            type: string;
+            required: boolean;
             secret: boolean;
             env_var: string;
             nested_group: string | null;
@@ -13645,15 +13645,15 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -13666,9 +13666,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13679,9 +13679,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13697,15 +13697,15 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -13718,9 +13718,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13731,9 +13731,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13750,9 +13750,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13763,9 +13763,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13783,9 +13783,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -13796,9 +13796,9 @@ const startConnectResult: z.ZodUnion<[z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14488,15 +14488,15 @@ const toolExtensionsApplyResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -14509,9 +14509,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14522,9 +14522,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14540,15 +14540,15 @@ const toolExtensionsApplyResult: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }, {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }>, "many">;
@@ -14561,9 +14561,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14574,9 +14574,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14594,9 +14594,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14607,9 +14607,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14627,9 +14627,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14640,9 +14640,9 @@ const toolExtensionsApplyResult: z.ZodObject<{
         reachable: boolean;
         local_only: boolean;
         results: {
-            name: string;
             error: string | null;
-            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
             detail: string | null;
             payload?: unknown;
         }[];
@@ -14659,20 +14659,20 @@ const toolMediaResult: z.ZodEffects<z.ZodObject<{
     data: z.ZodString;
     mimeType: z.ZodString;
 }, "strip", z.ZodTypeAny, {
-    type: "image" | "audio";
     data: string;
+    type: "image" | "audio";
     mimeType: string;
 }, {
-    type: "image" | "audio";
     data: string;
+    type: "image" | "audio";
     mimeType: string;
 }>, {
-    type: "image" | "audio";
     data: string;
+    type: "image" | "audio";
     mimeType: string;
 }, {
-    type: "image" | "audio";
     data: string;
+    type: "image" | "audio";
     mimeType: string;
 }>;
 
@@ -14681,11 +14681,11 @@ const toolMetaDeleted: z.ZodObject<{
     tool_name: z.ZodString;
     deleted: z.ZodLiteral<true>;
 }, "strip", z.ZodTypeAny, {
-    deleted: true;
     tool_name: string;
+    deleted: true;
 }, {
-    deleted: true;
     tool_name: string;
+    deleted: true;
 }>;
 
 // @public (undocumented)
@@ -14713,15 +14713,15 @@ const toolMetaOverlay: z.ZodObject<{
         tags: z.ZodArray<z.ZodString, "many">;
         hidden: z.ZodNullable<z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
+        tool_name: string;
         tags: string[];
         hidden: boolean | null;
-        tool_name: string;
         display_name: string | null;
         folder_id: string | null;
     }, {
+        tool_name: string;
         tags: string[];
         hidden: boolean | null;
-        tool_name: string;
         display_name: string | null;
         folder_id: string | null;
     }>, "many">;
@@ -14732,9 +14732,9 @@ const toolMetaOverlay: z.ZodObject<{
         parent_id: string | null;
     }[];
     meta: {
+        tool_name: string;
         tags: string[];
         hidden: boolean | null;
-        tool_name: string;
         display_name: string | null;
         folder_id: string | null;
     }[];
@@ -14745,9 +14745,9 @@ const toolMetaOverlay: z.ZodObject<{
         parent_id: string | null;
     }[];
     meta: {
+        tool_name: string;
         tags: string[];
         hidden: boolean | null;
-        tool_name: string;
         display_name: string | null;
         folder_id: string | null;
     }[];
@@ -14776,15 +14776,15 @@ const toolMetaRecord: z.ZodObject<{
     tags: z.ZodArray<z.ZodString, "many">;
     hidden: z.ZodNullable<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
+    tool_name: string;
     tags: string[];
     hidden: boolean | null;
-    tool_name: string;
     display_name: string | null;
     folder_id: string | null;
 }, {
+    tool_name: string;
     tags: string[];
     hidden: boolean | null;
-    tool_name: string;
     display_name: string | null;
     folder_id: string | null;
 }>;
@@ -14841,14 +14841,14 @@ const toolRunList: z.ZodArray<z.ZodObject<{
     started_at: z.ZodString;
     finished_at: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    status: "failed" | "running" | "succeeded" | "lost";
     tool_name: string;
+    status: "running" | "succeeded" | "failed" | "lost";
     run_id: string;
     started_at: string;
     finished_at?: string | undefined;
 }, {
-    status: "failed" | "running" | "succeeded" | "lost";
     tool_name: string;
+    status: "running" | "succeeded" | "failed" | "lost";
     run_id: string;
     started_at: string;
     finished_at?: string | undefined;
@@ -14864,16 +14864,16 @@ const toolRunRecord: z.ZodObject<{
     result: z.ZodOptional<z.ZodUnknown>;
     error: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    status: "failed" | "running" | "succeeded" | "lost";
     tool_name: string;
+    status: "running" | "succeeded" | "failed" | "lost";
     run_id: string;
     started_at: string;
     error?: string | undefined;
     result?: unknown;
     finished_at?: string | undefined;
 }, {
-    status: "failed" | "running" | "succeeded" | "lost";
     tool_name: string;
+    status: "running" | "succeeded" | "failed" | "lost";
     run_id: string;
     started_at: string;
     error?: string | undefined;
@@ -14899,13 +14899,13 @@ const toolSchema: z.ZodObject<{
     output: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     description: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
+    description: string | null;
     input: Record<string, unknown>;
     output: Record<string, unknown> | null;
-    description: string | null;
 }, {
+    description: string | null;
     input: Record<string, unknown>;
     output: Record<string, unknown> | null;
-    description: string | null;
 }>;
 
 // @public
@@ -15286,11 +15286,11 @@ const validateConditionResult: z.ZodObject<{
     ok: z.ZodBoolean;
     result: z.ZodNullable<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
-    ok: boolean;
     result: boolean | null;
+    ok: boolean;
 }, {
-    ok: boolean;
     result: boolean | null;
+    ok: boolean;
 }>;
 
 // @public
