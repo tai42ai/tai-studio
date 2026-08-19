@@ -10,7 +10,19 @@
     // The incremental build cache lives at the package root, NOT under dist:
     // `files: ["dist"]` publishes everything in dist, so a cache written there
     // would ship in the npm tarball. Kept out of dist, it never gets packed.
-    "tsBuildInfoFile": ".tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo",
+    // Resolve the sibling to its BUILT declarations for the emitting build only
+    // (the referenced project is built first). The base config aliases it to
+    // source for dev/typecheck; here that would bake `../api-client/src/*.ts`
+    // paths into the emitted .d.ts for symbols api-client does not re-export
+    // from its index, which api-extractor then rejects (ae-wrong-input-file-type,
+    // it expects .d.ts inputs). Pointing at dist keeps those references on the
+    // built surface. This replaces the inherited `paths`, so re-list the only
+    // other alias the SDK's own source uses (its self-import).
+    "paths": {
+      "@tai42/studio-sdk": ["./src/index.ts"],
+      "@tai42/api-client": ["../api-client/dist/index.d.ts"]
+    }
   },
   "include": ["src"],
   // Two naming conventions carry the whole exclusion, so a new test-only module

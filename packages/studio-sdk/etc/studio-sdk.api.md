@@ -25,8 +25,6 @@ import { ReactNode } from 'react';
 import type { Ref } from 'react';
 import type { RefCallback } from 'react';
 import { RefObject } from 'react';
-import { SetMcpSecretEnvBody } from 'packages/api-client/src/client';
-import { SettingsProfileBody as SettingsProfileBody_2 } from 'packages/api-client/src/schemas';
 import type { SVGProps } from 'react';
 import type { TdHTMLAttributes } from 'react';
 import type { TextareaHTMLAttributes } from 'react';
@@ -740,7 +738,7 @@ description: string;
 env: Record<string, string>;
 secret_keys: string[];
 }>;
-readonly putSettingsProfile: (name: string, body: SettingsProfileBody_2) => Promise<{
+readonly putSettingsProfile: (name: string, body: SettingsProfileBody) => Promise<{
 ok: true;
 version?: number | undefined;
 }>;
@@ -4097,7 +4095,7 @@ function createApiClient(config: ApiConfig): {
         version: number;
         ok: true;
     }>;
-    readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody_2) => Promise<{
+    readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
         status: string;
         env_keys: number;
         fanout: {
@@ -13436,7 +13434,7 @@ const serverDateTime: z.ZodObject<{
 }, z.ZodTypeAny, "passthrough">>;
 
 // @public
-interface SetMcpSecretEnvBody_2 {
+interface SetMcpSecretEnvBody {
     // (undocumented)
     readonly key_hint: string;
     // (undocumented)
