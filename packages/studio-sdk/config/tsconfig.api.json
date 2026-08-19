@@ -4,11 +4,11 @@
   // The alias only covers symbols the sibling RE-EXPORTS from its built index
   // (dist/index.d.ts); a symbol used from the sibling but not re-exported there
   // resolves to that sibling's source and shows up with a source path in the
-  // report. baseUrl is pinned to this folder so the alias below is unambiguous
-  // regardless of the inherited base config.
+  // report. No baseUrl (deprecated in TS6): the alias below resolves relative to
+  // this config's folder, so it stays unambiguous regardless of the inherited
+  // base config.
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@tai42/api-client": ["../../api-client/dist/index.d.ts"]
     },
