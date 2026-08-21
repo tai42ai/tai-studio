@@ -1949,8 +1949,12 @@ export type MarketplaceRoutesDecl = z.infer<typeof marketplaceRoutesDecl>;
  * (tool / agent / extension / …), name, description, free-form tags, and the
  * logical group it belongs to (`null` when ungrouped). `routes` is present only
  * on a route-carrying item (a router or channel); absent/null on every other.
- * `required_env` is the env vars the item needs before install (empty for an item
- * that needs none) — a descriptor connector lists its OAuth client id/secret here.
+ * `required_env` is the env vars the item needs before install — but the REGISTRY's
+ * plugin-detail body does NOT carry it per item: required-env is server-computed
+ * (`required_env_for_spec`) and rides the install PREVIEW, never the listing detail,
+ * so the registry OMITS it here and it parses as `undefined`. Optional (not
+ * defaulted) so the type mirrors the wire; the authority the install dialog collects
+ * from is the preview's `required_env`/`missing_env`, never this field.
  */
 export const marketplaceItem = z.object({
   kind: z.string(),
@@ -1959,7 +1963,7 @@ export const marketplaceItem = z.object({
   tags: z.array(z.string()),
   group: z.string().nullable(),
   routes: marketplaceRoutesDecl.nullish(),
-  required_env: z.array(marketplaceRequiredEnvVar),
+  required_env: z.array(marketplaceRequiredEnvVar).optional(),
 });
 export type MarketplaceItem = z.infer<typeof marketplaceItem>;
 
@@ -2046,14 +2050,15 @@ export const marketplaceVersion = z.object({
 export type MarketplaceVersion = z.infer<typeof marketplaceVersion>;
 
 /**
- * The listing's latest published version as embedded in its detail: the version,
- * how it is `delivery`-ed (`package` / `descriptor`, a per-version property), and
- * the items it contains — each item carrying its own `required_env`. The install
- * dialog reads `delivery` for its badge and seeds env toggles from the items'
- * `required_env`; the vars to collect come from the install preview's `missing_env`.
+ * The listing's latest published version as embedded in its detail: the version
+ * (with the `marketplaceVersion` lifecycle fields) and the items it contains. The
+ * registry's detail body carries NO per-version `delivery` field — delivery is
+ * server-computed from whether the spec names a package, and the detail surface
+ * derives it from the listing's `package` (null ⇒ `descriptor`, else `package`).
+ * Env to collect comes from the install preview (`required_env` / `missing_env`),
+ * never from these items.
  */
 export const marketplaceLatestVersion = marketplaceVersion.extend({
-  delivery: marketplaceDelivery,
   items: z.array(marketplaceItem),
 });
 export type MarketplaceLatestVersion = z.infer<typeof marketplaceLatestVersion>;
