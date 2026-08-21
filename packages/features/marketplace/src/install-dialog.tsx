@@ -325,13 +325,19 @@ export function MountInstallDialog({
   const requiresAccept = preview?.requires_public_acceptance ?? false;
   // The env to collect is the preview's server-computed missing set — only on
   // INSTALL: an update that would add a required var is refused server-side, so the
-  // update flow never collects env. Each var's effective secret band is the derived
-  // mark OR an operator override.
+  // update flow never collects env. Each var's effective secret band is the SERVER's
+  // per-var `required_env[].secret` from this same preview (the authority; the
+  // registry's plugin-detail body carries no per-item required-env), OR the
+  // `requiredEnvSecret` prop, OR an operator override.
   const envToCollect = verb === 'Install' ? (preview?.missing_env ?? []) : [];
+  const previewEnvSecret: Record<string, boolean> = {};
+  for (const req of preview?.required_env ?? []) previewEnvSecret[req.name] = req.secret;
   const envSecretMap = Object.fromEntries(
     envToCollect.map((name) => [
       name,
-      requiredEnvSecret?.[name] === true || envSecretOverride[name] === true,
+      previewEnvSecret[name] === true ||
+        requiredEnvSecret?.[name] === true ||
+        envSecretOverride[name] === true,
     ]),
   );
   // Submit is blocked until a clean preview exists with no collision and any

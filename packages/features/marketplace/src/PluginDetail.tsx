@@ -38,6 +38,7 @@ import {
   useProseScrollRegions,
 } from '@tai42/studio-sdk';
 import type {
+  MarketplaceDelivery,
   MarketplaceInstallBody,
   MarketplaceInstallResult,
   MarketplaceInstalled,
@@ -76,7 +77,9 @@ interface RequiredEnvEntry {
 function requiredEnvIndex(detail: MarketplacePluginDetail): Map<string, RequiredEnvEntry> {
   const index = new Map<string, RequiredEnvEntry>();
   for (const item of detail.latest?.items ?? []) {
-    for (const req of item.required_env) {
+    // The registry omits per-item required_env (undefined); only a fixture/preview
+    // that declares it drives these pre-dialog hints.
+    for (const req of item.required_env ?? []) {
       const entry = index.get(req.name);
       if (entry === undefined) {
         index.set(req.name, { secret: req.secret, items: [item.name] });
@@ -89,6 +92,18 @@ function requiredEnvIndex(detail: MarketplacePluginDetail): Map<string, Required
     }
   }
   return index;
+}
+
+/**
+ * How the listing's latest version is delivered, derived exactly the way the server
+ * derives it — from whether the spec names a package. The registry's plugin-detail
+ * body carries no `delivery` field (that is server-computed and rides the installed
+ * rows and the install preview), so the detail surface reads it off the listing's
+ * `package`: `null` (a descriptor listing that names none) ⇒ `descriptor`, else
+ * `package`.
+ */
+function deliveryOf(detail: MarketplacePluginDetail): MarketplaceDelivery {
+  return detail.package === null ? 'descriptor' : 'package';
 }
 
 /** Which mutation dialog is open (each is mounted only while active). */
@@ -169,8 +184,9 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
             <Badge>{detail.trust_tier}</Badge>
             <Badge>{detail.pricing}</Badge>
             {/* How the plugin is delivered: a pip-installed `package` or a
-                declarative `descriptor` (nothing installed but the manifest entry). */}
-            {detail.latest !== null ? <Badge>{detail.latest.delivery}</Badge> : null}
+                declarative `descriptor` (nothing installed but the manifest entry),
+                derived from the listing's package the way the server derives it. */}
+            {detail.latest !== null ? <Badge>{deliveryOf(detail)}</Badge> : null}
             {/* A display-only premium mark — a badge, never a payment surface. */}
             {detail.premium === true ? <Badge variant="primary">Premium</Badge> : null}
             <span className="tai-muted">{detail.downloads} downloads</span>
@@ -490,10 +506,11 @@ export function PluginDetail({
     storeRefusal !== undefined ? featureDisabledMessage(storeRefusal) : null;
 
   const detail = detailQuery.data;
-  // The env picture the detail's items declare: which vars need collecting AT ALL
-  // (per-var secret-ness + the item that needs each). A non-empty index routes the
-  // install through an env-collecting dialog; the SPECIFIC vars still to collect are
-  // the install preview's server-computed `missing_env`, resolved inside that dialog.
+  // The env picture the detail's items declare: per-var secret-ness + the item that
+  // needs each. This is a SUPPLEMENTARY fallback only — the registry's plugin-detail
+  // body carries no per-item required_env, so in production this index is empty. What
+  // actually routes the install to the env dialog, and the vars to collect, and their
+  // secret band, all come from the install PREVIEW (the server authority), not here.
   const envIndex = requiredEnvIndex(detail);
   const requiredEnvSecret: Record<string, boolean> = {};
   const requiredEnvHints: Record<string, string> = {};
@@ -632,59 +649,25 @@ export function PluginDetail({
             onSubmit={(extras) => installMutation.mutateAsync(extras).then(() => undefined)}
             onClose={closeAction}
           />
-        ) : envIndex.size > 0 ? (
-          // Same Install button, kind-agnostic: the env dialog is inserted only
-          // when the spec's items declare install-time env; it previews to learn
-          // which of those vars the deployment does not already provide.
-          <InstallEnvDialog
+        ) : (
+          // A non-route plugin: whether it needs install-time env is the install
+          // PREVIEW's call, not the detail's (the registry omits per-item
+          // required_env). This previews with no env and routes on the result — the
+          // env dialog when it reports required/missing env, the plain confirm when
+          // clean.
+          <NonRouteInstallDialog
             refValue={refValue}
-            version={detail.latest?.version ?? null}
+            version={version}
+            detail={detail}
             requiredEnvSecret={requiredEnvSecret}
             envHints={requiredEnvHints}
             isPending={installMutation.isPending}
             error={installMutation.error}
-            onSubmit={(env, secretKeys) => {
-              // Every var pre-satisfied → a plain install body; otherwise carry the
-              // collected values and their secret marks.
-              installMutation.mutate(
-                Object.keys(env).length > 0 ? { env, secret_keys: secretKeys } : {},
-              );
+            onInstall={(body) => {
+              installMutation.mutate(body);
             }}
             onClose={closeAction}
           />
-        ) : (
-          <ConfirmDialog
-            title="Install plugin"
-            confirmLabel="Install"
-            pendingLabel="Installing"
-            confirmVariant="primary"
-            isPending={installMutation.isPending}
-            // An OFF 501 `marketplace-not-configured` is a state, not an error: show
-            // the muted note in the dialog (blocking retry), never a loud red alert.
-            error={isFeatureDisabled(installMutation.error) ? null : installMutation.error}
-            disabledNote={
-              isFeatureDisabled(installMutation.error) ? (
-                <FeatureDisabled
-                  feature="Marketplace installs"
-                  message={featureDisabledMessage(installMutation.error)}
-                />
-              ) : undefined
-            }
-            onConfirm={() => {
-              installMutation.mutate({});
-            }}
-            onClose={closeAction}
-          >
-            <p style={{ margin: 0 }}>
-              Install {refValue}
-              {detail.latest !== null ? ` v${detail.latest.version}` : ''}?{' '}
-              {/* A descriptor plugin installs nothing but its manifest entry; a
-                  packaged plugin is pip-installed. */}
-              {detail.latest?.delivery === 'descriptor'
-                ? 'The app will register this plugin and reload.'
-                : 'The app will pip-install the package and reload.'}
-            </p>
-          </ConfirmDialog>
         )
       ) : null}
       {activeAction === 'update' && routeItems.length > 0 ? (
@@ -725,7 +708,7 @@ export function PluginDetail({
             Update {refValue} to the latest version?{' '}
             {/* A descriptor plugin installs nothing but its manifest entry; a
                 packaged plugin is pip-installed. */}
-            {detail.latest?.delivery === 'descriptor'
+            {deliveryOf(detail) === 'descriptor'
               ? 'The app will re-fetch the descriptor and reload.'
               : 'The app will pip-install the package and reload.'}
           </p>
@@ -770,6 +753,121 @@ function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
 }
 
 /**
+ * The install dialog for a NON-route plugin. Whether the plugin needs install-time
+ * env is the install PREVIEW's call — the server authority — because the registry's
+ * plugin-detail body carries no per-item required_env, so a detail-derived index is
+ * always empty in production. This previews with no env and routes on the result:
+ *
+ *  - a preview that names required or missing env opens the env-collecting dialog;
+ *  - a clean no-env preview (and the brief pending window before it lands) shows the
+ *    plain one-click confirm — the path a route-less, env-less plugin must take;
+ *  - a preview that FAILS opens the env dialog too, where its own (cache-shared)
+ *    preview surfaces the failure (the muted OFF note, or a loud block) rather than
+ *    letting an unverified install commit with an empty body.
+ */
+function NonRouteInstallDialog({
+  refValue,
+  version,
+  detail,
+  requiredEnvSecret,
+  envHints,
+  isPending,
+  error,
+  onInstall,
+  onClose,
+}: {
+  readonly refValue: string;
+  readonly version: string | null;
+  readonly detail: MarketplacePluginDetail;
+  readonly requiredEnvSecret: Record<string, boolean>;
+  readonly envHints: Record<string, string>;
+  readonly isPending: boolean;
+  readonly error: Error | null;
+  readonly onInstall: (body: Omit<MarketplaceInstallBody, 'ref'>) => void;
+  readonly onClose: () => void;
+}): ReactNode {
+  const api = useApi();
+  // The env-less install preview: `required_env` (every var the spec needs) and
+  // `missing_env` (those the deployment does not already provide). No mounts — env is
+  // mount-independent — so this shares its cache key with the env dialog's own preview.
+  const previewQuery = useQuery({
+    queryKey: marketplacePreviewKey(refValue, version, ''),
+    queryFn: ({ signal }) =>
+      api.previewMarketplaceInstall({ ref: refValue, version: version ?? undefined }, signal),
+  });
+  const preview = previewQuery.data;
+  // Env is needed only when the SERVER's dry-run says so. A resolved preview that
+  // names required or missing env routes to the env-collecting dialog; everything
+  // else — the pending window, a clean no-env preview, and a FAILED dry-run — stays
+  // on the plain confirm (a failed dry-run blocks it there, rather than switching
+  // dialog types on a transient error and churning the modal).
+  const needsEnv =
+    preview !== undefined && (preview.required_env.length > 0 || preview.missing_env.length > 0);
+
+  if (needsEnv) {
+    return (
+      <InstallEnvDialog
+        refValue={refValue}
+        version={version}
+        requiredEnvSecret={requiredEnvSecret}
+        envHints={envHints}
+        isPending={isPending}
+        error={error}
+        onSubmit={(env, secretKeys) => {
+          // Every var pre-satisfied → a plain install body; otherwise carry the
+          // collected values and their secret marks.
+          onInstall(Object.keys(env).length > 0 ? { env, secret_keys: secretKeys } : {});
+        }}
+        onClose={onClose}
+      />
+    );
+  }
+
+  // The env picture is unverified until the dry-run resolves, so the plain confirm
+  // never commits an empty body prematurely: an OFF 501 on the preview or the install
+  // shows the muted note (a state, not an error); a non-OFF preview failure blocks
+  // loudly; and the PENDING window blocks too (a skeleton in the confirm's disabled
+  // slot, which disables the button), so an env-requiring plugin cannot be installed
+  // with `{}` in the beat before its preview lands.
+  const offError = [previewQuery.error, error].find(isFeatureDisabled) ?? null;
+  const previewLoud = isFeatureDisabled(previewQuery.error) ? null : previewQuery.error;
+  const disabledNote =
+    offError !== null ? (
+      <FeatureDisabled feature="Marketplace installs" message={featureDisabledMessage(offError)} />
+    ) : previewLoud !== null ? (
+      <ErrorState message={errorMessage(previewLoud)} />
+    ) : previewQuery.isPending ? (
+      <Skeleton height={48} />
+    ) : undefined;
+
+  return (
+    <ConfirmDialog
+      title="Install plugin"
+      confirmLabel="Install"
+      pendingLabel="Installing"
+      confirmVariant="primary"
+      isPending={isPending}
+      error={disabledNote !== undefined || isFeatureDisabled(error) ? null : error}
+      disabledNote={disabledNote}
+      onConfirm={() => {
+        onInstall({});
+      }}
+      onClose={onClose}
+    >
+      <p style={{ margin: 0 }}>
+        Install {refValue}
+        {detail.latest !== null ? ` v${detail.latest.version}` : ''}?{' '}
+        {/* A descriptor plugin installs nothing but its manifest entry; a
+            packaged plugin is pip-installed. */}
+        {deliveryOf(detail) === 'descriptor'
+          ? 'The app will register this plugin and reload.'
+          : 'The app will pip-install the package and reload.'}
+      </p>
+    </ConfirmDialog>
+  );
+}
+
+/**
  * The install confirm for a plugin whose items declare install-time env: it
  * previews to learn the server-computed `missing_env` — the vars the deployment
  * does not already provide — and collects one value per missing var. Each toggle is
@@ -809,12 +907,28 @@ function InstallEnvDialog({
       api.previewMarketplaceInstall({ ref: refValue, version: version ?? undefined }, signal),
   });
   const missingVars = previewQuery.data?.missing_env ?? [];
+  // The server's per-var secret-ness from THIS preview — the authority. The
+  // registry's plugin-detail body carries no per-item required-env, so a non-route
+  // env plugin's secret band comes from here, not the detail-derived
+  // `requiredEnvSecret` prop (a supplementary fallback), or an operator override.
+  const previewEnvSecret: Record<string, boolean> = {};
+  for (const req of previewQuery.data?.required_env ?? []) previewEnvSecret[req.name] = req.secret;
   const [values, setValues] = useState<Record<string, string>>({});
   const [secretOverride, setSecretOverride] = useState<Record<string, boolean>>({});
   const secretMap = Object.fromEntries(
     missingVars.map((name) => [
       name,
-      requiredEnvSecret[name] === true || secretOverride[name] === true,
+      previewEnvSecret[name] === true ||
+        requiredEnvSecret[name] === true ||
+        secretOverride[name] === true,
+    ]),
+  );
+  // A var the server marks secret is LOCKED on (the server masks it regardless), so
+  // the lock merges the preview's authority with the detail-derived prop.
+  const lockedSecret = Object.fromEntries(
+    missingVars.map((name) => [
+      name,
+      previewEnvSecret[name] === true || requiredEnvSecret[name] === true,
     ]),
   );
 
@@ -863,7 +977,7 @@ function InstallEnvDialog({
             requiredVars={missingVars}
             values={values}
             secret={secretMap}
-            requiredSecret={requiredEnvSecret}
+            requiredSecret={lockedSecret}
             hints={envHints}
             onChangeValue={(name, value) => {
               setValues((prev) => ({ ...prev, [name]: value }));

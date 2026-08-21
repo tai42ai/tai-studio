@@ -120,7 +120,14 @@ const PLUGIN_DETAIL = {
     contract_range: '>=0.1,<0.2',
     status: 'published',
     published_at: '2026-07-12T00:00:00Z',
-    delivery: 'package',
+    // The registry's plugin-detail `latest` carries NO per-version `delivery` and
+    // its items carry NO `required_env`: delivery is derived from the listing's
+    // package, and required-env rides the install preview (see the real-shape
+    // pin below). Extra registry keys (artifact_ref/sha256/tag/spec) ride through
+    // and are stripped by the non-strict schema.
+    artifact_ref: 'https://wheels.example/tai42_toolbox-0.1.0-py3-none-any.whl',
+    sha256: 'deadbeef',
+    tag: null,
     items: [
       {
         kind: 'tool',
@@ -128,9 +135,15 @@ const PLUGIN_DETAIL = {
         description: 'Generate a UUID.',
         tags: ['uuid'],
         group: null,
-        required_env: [],
+        module: 'tai42_toolbox.tools',
+        routes: null,
       },
     ],
+    spec: {
+      name: 'toolbox',
+      package: 'tai42-toolbox',
+      provides: [{ kind: 'tool', name: 'generate_uuid' }],
+    },
   },
   versions: [
     {
@@ -189,9 +202,14 @@ describe('marketplace client transport', () => {
     expect(out.namespace).toBe('tai42');
     expect(out.latest?.items[0]?.name).toBe('generate_uuid');
     expect(out.latest?.items[0]?.group).toBeNull();
-    // `delivery` rides inside `latest`; each item carries its own `required_env`.
-    expect(out.latest?.delivery).toBe('package');
-    expect(out.latest?.items[0]?.required_env).toEqual([]);
+    // The registry detail carries NO per-version `delivery`: it is not in the schema
+    // and the extra registry keys (delivery is not even sent; artifact_ref/sha256/
+    // tag/spec/module ARE) ride through and are stripped by the non-strict schema.
+    expect((out.latest as unknown as Record<string, unknown>).delivery).toBeUndefined();
+    expect((out.latest as unknown as Record<string, unknown>).spec).toBeUndefined();
+    // The registry item carries no `required_env` — it parses as `undefined`
+    // (required-env is server-computed and rides the install preview, not the detail).
+    expect(out.latest?.items[0]?.required_env).toBeUndefined();
     expect(out.versions[0]?.version).toBe('0.1.0');
   });
 
@@ -522,5 +540,134 @@ describe('marketplace client transport', () => {
       jsonResponse({ data: { listings: 'nope', total: 0, page: 1, page_size: 20 } }),
     );
     await expect(client.searchMarketplace()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+// The exact bodies the RUNNING skeleton serves, copied verbatim from a live
+// browser e2e trace (the marketplace arc installing tai42/e2e-beta 0.1.0). These
+// pin the studio schemas to the TRUE server shape — not to a hand-written fixture
+// that could drift with the schema — so a schema that stops matching what the
+// server really sends fails HERE, in a unit test, instead of only in the live UI.
+describe('marketplace client — real skeleton response shapes', () => {
+  // GET /api/marketplace/installed after the UI install of the packaged beta plugin.
+  const REAL_INSTALLED = {
+    installed: [
+      {
+        ref: 'tai42/e2e-beta',
+        version: '0.1.0',
+        source: 'pypi',
+        delivery: 'package',
+        installed_at: '2026-08-21T19:29:07.379310+00:00',
+        latest: '0.1.0',
+        update_available: false,
+        incompatible_newer: null,
+        missing_upstream: false,
+        compat: { status: 'compatible', reason: null },
+        items: [
+          { kind: 'tool', name: 'e2e_market_beta_probe' },
+          { kind: 'extension', name: 'beta_marker' },
+        ],
+        route_mounts: {},
+      },
+    ],
+    quarantined: [],
+  };
+
+  // GET /api/marketplace/plugins/tai42/e2e-beta — a registry passthrough. Its
+  // `latest` carries a full `spec` plus artifact_ref/sha256/tag and per-item
+  // module/routes, and carries NEITHER a per-version `delivery` NOR any per-item
+  // `required_env` (both are server-computed and ride the installed rows / install
+  // preview, never this detail body).
+  const REAL_DETAIL = {
+    namespace: 'tai42',
+    name: 'e2e-beta',
+    display_name: null,
+    package: 'tai-e2e-market-beta',
+    source: 'pypi',
+    repository_url: null,
+    homepage_url: null,
+    license: 'Apache-2.0',
+    description:
+      'Installable marketplace fixture plugin: a probe tool plus a wrapper tool extension.',
+    readme_md: '<h1>TAI42 Toolbox</h1>',
+    categories: ['productivity'],
+    tags: ['probe', 'beta'],
+    pricing: 'free',
+    premium: false,
+    status: 'active',
+    created_at: '2026-08-21T19:23:14.758740Z',
+    updated_at: '2026-08-21T19:23:14.758740Z',
+    trust_tier: 'official',
+    ref: 'tai42/e2e-beta',
+    icon_url: null,
+    downloads: 0,
+    latest: {
+      version: '0.1.0',
+      contract_range: '<4,>=3.0',
+      artifact_ref: 'http://127.0.0.1/wheels/tai_e2e_market_beta-0.1.0-py3-none-any.whl',
+      sha256: '3faece31fa35783d57b56bcdaded8018034ea85462a26ae26c57872e611aa7a9',
+      tag: null,
+      status: 'published',
+      published_at: '2026-08-21T19:23:14.764438Z',
+      spec: { name: 'e2e-beta', package: 'tai-e2e-market-beta', provides: [] },
+      items: [
+        {
+          kind: 'tool',
+          name: 'e2e_market_beta_probe',
+          module: 'tai_e2e_market_beta.tools',
+          description: 'Return a fixed marker payload identifying the beta fixture.',
+          tags: ['probe'],
+          group: 'probe-suite',
+          routes: null,
+        },
+        {
+          kind: 'extension',
+          name: 'beta_marker',
+          module: 'tai_e2e_market_beta.extensions',
+          description: 'Branch a tool into a variant that stamps a beta marker onto its result.',
+          tags: ['beta'],
+          group: 'probe-suite',
+          routes: null,
+        },
+      ],
+    },
+    versions: [
+      {
+        version: '0.1.0',
+        contract_range: '<4,>=3.0',
+        status: 'published',
+        published_at: '2026-08-21T19:23:14.764438Z',
+      },
+    ],
+  };
+
+  it('parses the real /api/marketplace/installed body so the Installed badge renders', async () => {
+    const { client } = harness(() => jsonResponse({ data: REAL_INSTALLED }));
+    const out = await client.listInstalledMarketplacePlugins();
+    const row = out.installed[0];
+    expect(row?.ref).toBe('tai42/e2e-beta');
+    expect(row?.version).toBe('0.1.0');
+    expect(row?.delivery).toBe('package');
+    expect(row?.source).toBe('pypi');
+    expect(row?.compat).toEqual({ status: 'compatible', reason: null });
+    expect(row?.items).toEqual([
+      { kind: 'tool', name: 'e2e_market_beta_probe' },
+      { kind: 'extension', name: 'beta_marker' },
+    ]);
+    expect(out.quarantined).toEqual([]);
+  });
+
+  it('parses the real /api/marketplace/plugins detail body (no latest.delivery, items without required_env)', async () => {
+    const { client } = harness(() => jsonResponse({ data: REAL_DETAIL }));
+    const out = await client.getMarketplacePlugin('tai42', 'e2e-beta');
+    expect(out.package).toBe('tai-e2e-market-beta');
+    expect(out.latest?.version).toBe('0.1.0');
+    // The wire never sends these on the detail; the non-strict schema strips the
+    // extra registry keys and the item's required_env DEFAULTS to [].
+    expect((out.latest as unknown as Record<string, unknown>).delivery).toBeUndefined();
+    expect((out.latest as unknown as Record<string, unknown>).spec).toBeUndefined();
+    expect(out.latest?.items[0]?.name).toBe('e2e_market_beta_probe');
+    expect(out.latest?.items[0]?.required_env).toBeUndefined();
+    expect(out.latest?.items[1]?.required_env).toBeUndefined();
   });
 });
