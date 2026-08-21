@@ -1,6 +1,6 @@
 {
   "name": "@tai42/studio-sdk",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "description": "The Studio plugin contract, shared UI components, and hooks that every feature builds on.",
   "license": "Apache-2.0",
   "author": "tai42 <oss@tai42.ai>",
