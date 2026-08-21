@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { MarketplaceSearchRow } from '@tai42/api-client';
 
-import { listingBadges } from './badges';
+import { listingBadges, sourceLabel } from './badges';
 
 function row(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRow {
   return {
@@ -30,6 +30,14 @@ function row(overrides: Partial<MarketplaceSearchRow> = {}): MarketplaceSearchRo
     ...overrides,
   };
 }
+
+describe('sourceLabel', () => {
+  it('reads `spec` as "descriptor" and passes every other source through', () => {
+    expect(sourceLabel('spec')).toBe('descriptor');
+    expect(sourceLabel('pypi')).toBe('pypi');
+    expect(sourceLabel('github')).toBe('github');
+  });
+});
 
 describe('listingBadges', () => {
   it('shows a single-member group as its bare name', () => {

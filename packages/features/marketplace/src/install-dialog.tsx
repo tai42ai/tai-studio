@@ -2,7 +2,7 @@
  * The route-mounting install / update flow: a base prefix per route-carrying
  * item, a live preview of the resulting absolute paths, loud collision blocking,
  * and explicit acceptance of the routes served without authentication — composed
- * with the mcp-server env collection into one install dialog.
+ * with the preview's missing-env collection into one install dialog.
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -70,8 +70,14 @@ export function useDebouncedValue<T>(value: T, delayMs: number): T {
 
 /**
  * The env value + secret-key split from the collected inputs: a blank field is
- * omitted (the deployment may already provide it); a filled field is marked
- * secret unless its toggle was turned off.
+ * omitted (the deployment may already provide it); a filled field is marked secret
+ * only when its toggle is ON.
+ *
+ * The toggle state is SEEDED from the server's per-var `required_env[].secret`, so
+ * secret-ness comes from that authority, not a blanket default: a `secret: true`
+ * var (an OAuth client secret) is masked, a `secret: false` var (a client id) is
+ * not unless the operator turns it on. Keying off `=== true` honors an off toggle
+ * and never force-masks — an un-seeded var stays out of the secret band.
  */
 export function collectEnv(
   requiredVars: readonly string[],
@@ -84,47 +90,61 @@ export function collectEnv(
     const value = values[name] ?? '';
     if (value === '') continue;
     env[name] = value;
-    // Default-on: absent from the map (never toggled) still counts as secret.
-    if (secret[name] !== false) secretKeys.push(name);
+    if (secret[name] === true) secretKeys.push(name);
   }
   return { env, secretKeys };
 }
 
-/** One input + secret toggle per required `!ENV` var, fully controlled. */
+/**
+ * One input + secret toggle per required env var, fully controlled. `requiredSecret`
+ * is the server's per-var secret-ness: a `true` var (an OAuth client secret) is
+ * LOCKED on — the server masks it regardless, so an off toggle would lie — while a
+ * `false` var starts off and stays free. `hints` names the item that needs each var.
+ */
 export function EnvVarFields({
   requiredVars,
   values,
   secret,
+  requiredSecret,
+  hints,
   onChangeValue,
   onToggleSecret,
 }: {
   readonly requiredVars: readonly string[];
   readonly values: Record<string, string>;
   readonly secret: Record<string, boolean>;
+  readonly requiredSecret?: Record<string, boolean>;
+  readonly hints?: Record<string, string>;
   readonly onChangeValue: (name: string, value: string) => void;
   readonly onToggleSecret: (name: string, checked: boolean) => void;
 }): ReactNode {
   return (
     <>
-      {requiredVars.map((name) => (
-        <div key={name} className="tai-stack tai-stack-2">
-          <Field label={name}>
-            <TextInput
-              value={values[name] ?? ''}
-              onChange={(event) => {
-                onChangeValue(name, event.currentTarget.value);
+      {requiredVars.map((name) => {
+        const locked = requiredSecret?.[name] === true;
+        const hint = hints?.[name];
+        return (
+          <div key={name} className="tai-stack tai-stack-2">
+            <Field label={name}>
+              <TextInput
+                value={values[name] ?? ''}
+                onChange={(event) => {
+                  onChangeValue(name, event.currentTarget.value);
+                }}
+              />
+            </Field>
+            {hint !== undefined ? <span className="tai-muted">Required by {hint}</span> : null}
+            <Checkbox
+              checked={secret[name] === true}
+              disabled={locked}
+              onCheckedChange={(checked) => {
+                onToggleSecret(name, checked);
               }}
+              label="Store as secret"
             />
-          </Field>
-          <Checkbox
-            checked={secret[name] !== false}
-            onCheckedChange={(checked) => {
-              onToggleSecret(name, checked);
-            }}
-            label="Store as secret"
-          />
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </>
   );
 }
@@ -227,8 +247,8 @@ function PublicAcceptance({
 /**
  * The route-mounting install / update dialog. It previews the resolved routes on
  * open and on every (debounced) base edit, blocks submit on a collision or an
- * unaccepted public route, and — on install — collects any required mcp-server
- * env vars in the same flow. The parent owns the mutation; `onSubmit` returns its
+ * unaccepted public route, and — on install — collects the preview's missing env
+ * vars in the same flow. The parent owns the mutation; `onSubmit` returns its
  * promise so the dialog closes on success and surfaces a failure loudly.
  */
 export function MountInstallDialog({
@@ -237,7 +257,8 @@ export function MountInstallDialog({
   verb,
   routeItems,
   storedMounts,
-  requiredEnvVars,
+  requiredEnvSecret,
+  envHints,
   onSubmit,
   onClose,
 }: {
@@ -249,7 +270,11 @@ export function MountInstallDialog({
   // each base input seeds from (declared default only for an item with no stored
   // mount). Absent on INSTALL, where every input seeds from the declared default.
   readonly storedMounts?: Record<string, string>;
-  readonly requiredEnvVars: readonly string[];
+  // The server's per-var secret-ness for the whole spec: a toggle for a var with
+  // `true` is locked on. The vars to COLLECT come from the preview's `missing_env`.
+  readonly requiredEnvSecret?: Record<string, boolean>;
+  // Per-var "which item needs it" hint.
+  readonly envHints?: Record<string, string>;
   readonly onSubmit: (extras: InstallExtras) => Promise<void>;
   readonly onClose: () => void;
 }): ReactNode {
@@ -268,9 +293,10 @@ export function MountInstallDialog({
   const [bases, setBases] = useState<Record<string, string>>(seededBases);
   const [accepted, setAccepted] = useState(false);
   const [envValues, setEnvValues] = useState<Record<string, string>>({});
-  const [envSecret, setEnvSecret] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(requiredEnvVars.map((name) => [name, true])),
-  );
+  // Only OPERATOR overrides live in state; each toggle's baseline is the derived
+  // `requiredEnvSecret`, so a var starts secret iff the server marks it so — no
+  // async seed to miss when the preview lands.
+  const [envSecretOverride, setEnvSecretOverride] = useState<Record<string, boolean>>({});
 
   // The serialized map is the debounce + cache key: a stable string that only
   // changes when a base actually changes, so identity churn never refetches.
@@ -297,6 +323,17 @@ export function MountInstallDialog({
   const collisions = preview?.collisions ?? [];
   const publicRows = preview?.new_public_routes ?? [];
   const requiresAccept = preview?.requires_public_acceptance ?? false;
+  // The env to collect is the preview's server-computed missing set — only on
+  // INSTALL: an update that would add a required var is refused server-side, so the
+  // update flow never collects env. Each var's effective secret band is the derived
+  // mark OR an operator override.
+  const envToCollect = verb === 'Install' ? (preview?.missing_env ?? []) : [];
+  const envSecretMap = Object.fromEntries(
+    envToCollect.map((name) => [
+      name,
+      requiredEnvSecret?.[name] === true || envSecretOverride[name] === true,
+    ]),
+  );
   // Submit is blocked until a clean preview exists with no collision and any
   // required public acceptance given. A preview error blocks too — an unverified
   // mount must never be committed.
@@ -318,8 +355,8 @@ export function MountInstallDialog({
           )
         : bases;
     const extras: InstallExtras = { route_mounts, accept_public_routes: accepted };
-    if (requiredEnvVars.length > 0) {
-      const { env, secretKeys } = collectEnv(requiredEnvVars, envValues, envSecret);
+    if (envToCollect.length > 0) {
+      const { env, secretKeys } = collectEnv(envToCollect, envValues, envSecretMap);
       if (Object.keys(env).length > 0) {
         extras.env = env;
         extras.secret_keys = secretKeys;
@@ -364,16 +401,18 @@ export function MountInstallDialog({
         {requiresAccept ? (
           <PublicAcceptance rows={publicRows} accepted={accepted} onAccept={setAccepted} />
         ) : null}
-        {requiredEnvVars.length > 0 ? (
+        {envToCollect.length > 0 ? (
           <EnvVarFields
-            requiredVars={requiredEnvVars}
+            requiredVars={envToCollect}
             values={envValues}
-            secret={envSecret}
+            secret={envSecretMap}
+            requiredSecret={requiredEnvSecret}
+            hints={envHints}
             onChangeValue={(name, value) => {
               setEnvValues((prev) => ({ ...prev, [name]: value }));
             }}
             onToggleSecret={(name, checked) => {
-              setEnvSecret((prev) => ({ ...prev, [name]: checked }));
+              setEnvSecretOverride((prev) => ({ ...prev, [name]: checked }));
             }}
           />
         ) : null}

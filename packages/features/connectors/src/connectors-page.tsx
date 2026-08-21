@@ -130,16 +130,16 @@ function ProviderCard({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
           {/* The provider mark is decorative — the display name beside it is the
-              accessible name, so the icon carries an empty alt rather than a duplicate. */}
-          {provider.icon_url !== '' ? (
-            <img
-              src={provider.icon_url}
-              alt=""
-              width={28}
-              height={28}
-              style={{ borderRadius: 'var(--tai-radius-sm)', flexShrink: 0 }}
-            />
-          ) : null}
+              accessible name, so the icon carries an empty alt rather than a
+              duplicate. `icon_url` is a required URL (the api-client schema parses
+              it with `z.string().url()`), so it renders unconditionally. */}
+          <img
+            src={provider.icon_url}
+            alt=""
+            width={28}
+            height={28}
+            style={{ borderRadius: 'var(--tai-radius-sm)', flexShrink: 0 }}
+          />
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
               <strong>{provider.display_name}</strong>

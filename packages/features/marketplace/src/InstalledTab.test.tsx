@@ -27,7 +27,8 @@ function installedRow(overrides: Partial<MarketplaceInstalledPlugin>): Marketpla
   return {
     ref: 'tai42/toolbox',
     version: '1.0.0',
-    source: 'marketplace',
+    source: 'github',
+    delivery: 'package',
     installed_at: '2026-07-01T00:00:00Z',
     latest: null,
     update_available: false,
@@ -131,6 +132,35 @@ describe('InstalledTab — status badges', () => {
     expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
     expect(screen.getByText('Up to date')).toBeInTheDocument();
     expect(screen.getByText('Not in the registry')).toBeInTheDocument();
+  });
+});
+
+describe('InstalledTab — source and delivery', () => {
+  it('labels a descriptor row: source `spec` reads "descriptor" and delivery is "descriptor"', async () => {
+    const client: StubApiClient = {
+      listInstalledMarketplacePlugins: vi
+        .fn()
+        .mockResolvedValue(
+          installedList([
+            installedRow({ ref: 'iota/relay', source: 'spec', delivery: 'descriptor' }),
+            installedRow({ ref: 'acme/toolbox', source: 'github', delivery: 'package' }),
+          ]),
+        ),
+      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
+    };
+    renderWithProviders(<InstalledTab search={{}} />, { client });
+
+    const descriptorRow = (await screen.findByText('iota/relay')).closest('tr');
+    if (descriptorRow === null) throw new Error('no descriptor row');
+    // `spec` never shows raw — it reads as "descriptor" in the source cell, and the
+    // delivery cell says "descriptor" too (the plugin names no package).
+    expect(within(descriptorRow).queryByText('spec')).toBeNull();
+    expect(within(descriptorRow).getAllByText('descriptor')).toHaveLength(2);
+
+    const packageRow = (await screen.findByText('acme/toolbox')).closest('tr');
+    if (packageRow === null) throw new Error('no package row');
+    expect(within(packageRow).getByText('github')).toBeInTheDocument();
+    expect(within(packageRow).getByText('package')).toBeInTheDocument();
   });
 });
 

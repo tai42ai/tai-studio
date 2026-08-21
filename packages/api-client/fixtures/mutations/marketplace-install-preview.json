@@ -38,5 +38,11 @@
       "methods": ["POST"]
     }
   ],
-  "requires_public_acceptance": true
+  "requires_public_acceptance": true,
+  "required_env": [
+    { "name": "ACME_CLIENT_ID", "secret": false },
+    { "name": "ACME_CLIENT_SECRET", "secret": true }
+  ],
+  "missing_env": ["ACME_CLIENT_SECRET"],
+  "delivery": "descriptor"
 }

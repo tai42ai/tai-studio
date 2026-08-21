@@ -74,6 +74,7 @@ const INSTALLED_ROW = {
   ref: 'tai42/toolbox',
   version: '0.1.0',
   source: 'github',
+  delivery: 'package',
   installed_at: '2026-07-12T00:00:00Z',
   latest: '0.2.0',
   update_available: true,
@@ -113,11 +114,13 @@ const PLUGIN_DETAIL = {
   trust_tier: 'official',
   pricing: 'free',
   downloads: 3,
+  source: 'github',
   latest: {
     version: '0.1.0',
     contract_range: '>=0.1,<0.2',
     status: 'published',
     published_at: '2026-07-12T00:00:00Z',
+    delivery: 'package',
     items: [
       {
         kind: 'tool',
@@ -125,6 +128,7 @@ const PLUGIN_DETAIL = {
         description: 'Generate a UUID.',
         tags: ['uuid'],
         group: null,
+        required_env: [],
       },
     ],
   },
@@ -185,6 +189,9 @@ describe('marketplace client transport', () => {
     expect(out.namespace).toBe('tai42');
     expect(out.latest?.items[0]?.name).toBe('generate_uuid');
     expect(out.latest?.items[0]?.group).toBeNull();
+    // `delivery` rides inside `latest`; each item carries its own `required_env`.
+    expect(out.latest?.delivery).toBe('package');
+    expect(out.latest?.items[0]?.required_env).toEqual([]);
     expect(out.versions[0]?.version).toBe('0.1.0');
   });
 
@@ -415,6 +422,12 @@ describe('marketplace client transport', () => {
             { item: 'relay', full_path: '/api/channels/relay-2/inbound', methods: ['POST'] },
           ],
           requires_public_acceptance: true,
+          required_env: [
+            { name: 'ACME_CLIENT_ID', secret: false },
+            { name: 'ACME_CLIENT_SECRET', secret: true },
+          ],
+          missing_env: ['ACME_CLIENT_SECRET'],
+          delivery: 'descriptor',
         },
       }),
     );
@@ -431,6 +444,14 @@ describe('marketplace client transport', () => {
     expect(out.items[0]?.routes[0]?.full_path).toBe('/api/channels/relay-2/inbound');
     expect(out.collisions[0]?.conflict_owner).toBe('plugin:acme/other');
     expect(out.requires_public_acceptance).toBe(true);
+    // The server-computed env picture rides the preview: the derived secret-ness of
+    // every required var, the bare missing names, and how the plugin is delivered.
+    expect(out.required_env).toEqual([
+      { name: 'ACME_CLIENT_ID', secret: false },
+      { name: 'ACME_CLIENT_SECRET', secret: true },
+    ]);
+    expect(out.missing_env).toEqual(['ACME_CLIENT_SECRET']);
+    expect(out.delivery).toBe('descriptor');
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting preview response (items not an array)', async () => {

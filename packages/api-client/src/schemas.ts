@@ -758,7 +758,10 @@ export const providerView = z.object({
   id: z.string(),
   display_name: z.string(),
   description: z.string(),
-  icon_url: z.string(),
+  // Required and a real URL: the contract's `ProviderDescriptor.icon_url` runs
+  // `check_web_url(schemes=("https",))`, which rejects an empty/relative value, so
+  // an empty or malformed one here is drift and fails the parse loudly.
+  icon_url: z.string().url(),
   kind: z.enum(['oauth', 'none']),
   origin: z.enum(['system', 'community']),
   category: z.string(),
@@ -1894,6 +1897,31 @@ export const routeMethod = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 export type RouteMethod = z.infer<typeof routeMethod>;
 
 /**
+ * How the plugin is delivered, derived server-side from whether its spec names a
+ * package: `package` is pip-installed, `descriptor` (marketplace `source` `spec`)
+ * installs nothing but the manifest entry. A CLOSED enum, so a wire value the
+ * server does not derive fails loudly as drift.
+ */
+export const marketplaceDelivery = z.enum(['package', 'descriptor']);
+export type MarketplaceDelivery = z.infer<typeof marketplaceDelivery>;
+
+/**
+ * The install-provenance vocabulary a listing/version resolves from: a pip index
+ * (`pypi`), a git tag (`github`), or a descriptor yml (`spec`). CLOSED, so a wire
+ * value outside it fails as drift.
+ */
+export const marketplaceSource = z.enum(['pypi', 'github', 'spec']);
+export type MarketplaceSource = z.infer<typeof marketplaceSource>;
+
+/**
+ * One env var an item requires before install: its `name` and whether its value is
+ * a `secret` (an OAuth client secret is; a client id or a plain marker var is not).
+ * The install dialog seeds each toggle from `secret` and collects the missing ones.
+ */
+export const marketplaceRequiredEnvVar = z.object({ name: z.string(), secret: z.boolean() });
+export type MarketplaceRequiredEnvVar = z.infer<typeof marketplaceRequiredEnvVar>;
+
+/**
  * One HTTP route an item declares in its `tai-plugin.yml`: a `path` relative to
  * the item's mount base, the `methods` it answers, and whether it is served
  * `public` (without authentication). The absolute path an operator sees is
@@ -1921,6 +1949,8 @@ export type MarketplaceRoutesDecl = z.infer<typeof marketplaceRoutesDecl>;
  * (tool / agent / extension / …), name, description, free-form tags, and the
  * logical group it belongs to (`null` when ungrouped). `routes` is present only
  * on a route-carrying item (a router or channel); absent/null on every other.
+ * `required_env` is the env vars the item needs before install (empty for an item
+ * that needs none) — a descriptor connector lists its OAuth client id/secret here.
  */
 export const marketplaceItem = z.object({
   kind: z.string(),
@@ -1929,6 +1959,7 @@ export const marketplaceItem = z.object({
   tags: z.array(z.string()),
   group: z.string().nullable(),
   routes: marketplaceRoutesDecl.nullish(),
+  required_env: z.array(marketplaceRequiredEnvVar),
 });
 export type MarketplaceItem = z.infer<typeof marketplaceItem>;
 
@@ -1970,7 +2001,8 @@ export const marketplaceSearchRow = z.object({
   name: z.string(),
   display_name: z.string().nullable(),
   icon_url: z.string().nullable(),
-  package: z.string(),
+  // Null for a descriptor listing (`source` `spec`): it names no package.
+  package: z.string().nullable(),
   description: z.string(),
   categories: z.array(z.string()),
   tags: z.array(z.string()),
@@ -2015,34 +2047,14 @@ export type MarketplaceVersion = z.infer<typeof marketplaceVersion>;
 
 /**
  * The listing's latest published version as embedded in its detail: the version,
- * the items it contains, and a minimal typed passthrough of the published spec.
- *
- * `spec` is carried so the install dialog can read an mcp-server item's public
- * `mcp.env` marker strings (`provides[].mcp.env`) and collect its required `!ENV`
- * vars before install. Only that path is typed; everything else on the spec is
- * `.passthrough()`-preserved but unmodelled (zod would otherwise strip the whole
- * `spec` as an unknown key). Nullable + optional: a listing with nothing published
- * carries no spec.
+ * how it is `delivery`-ed (`package` / `descriptor`, a per-version property), and
+ * the items it contains — each item carrying its own `required_env`. The install
+ * dialog reads `delivery` for its badge and seeds env toggles from the items'
+ * `required_env`; the vars to collect come from the install preview's `missing_env`.
  */
 export const marketplaceLatestVersion = marketplaceVersion.extend({
+  delivery: marketplaceDelivery,
   items: z.array(marketplaceItem),
-  spec: z
-    .object({
-      provides: z.array(
-        z
-          .object({
-            kind: z.string(),
-            name: z.string(),
-            mcp: z
-              .object({ env: z.record(z.string(), z.string()).nullish() })
-              .passthrough()
-              .nullish(),
-          })
-          .passthrough(),
-      ),
-    })
-    .passthrough()
-    .nullish(),
 });
 export type MarketplaceLatestVersion = z.infer<typeof marketplaceLatestVersion>;
 
@@ -2070,7 +2082,11 @@ export const marketplacePluginDetail = z.object({
   name: z.string(),
   display_name: z.string().nullable(),
   icon_url: z.string().nullable(),
-  package: z.string(),
+  // Null for a descriptor listing (`source` `spec`): it names no package.
+  package: z.string().nullable(),
+  // The install-provenance vocabulary (`pypi` / `github` / `spec`). Nullish: an
+  // older registry omits it, and a listing with nothing published carries none.
+  source: marketplaceSource.nullish(),
   description: z.string(),
   readme_md: z.string().nullable(),
   license: z.string().nullable(),
@@ -2122,6 +2138,9 @@ export const marketplaceInstalledPlugin = z
     ref: z.string(),
     version: z.string(),
     source: z.string(),
+    // How the row was delivered: `package` for a pip-installed plugin, `descriptor`
+    // for a descriptor-only plugin whose stored spec names no package.
+    delivery: marketplaceDelivery,
     installed_at: z.string(),
     latest: z.string().nullable(),
     update_available: z.boolean(),
@@ -2275,6 +2294,11 @@ export type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPub
  * live registry, the public routes requiring acceptance, and whether acceptance
  * is required at all. `new_public_routes` narrows to rows not already approved
  * (the update case); on a fresh install it equals `public_routes`.
+ *
+ * `required_env` is every env var the spec requires with its derived secret-ness;
+ * `missing_env` is the bare names not already present in the env store union
+ * process env (server-computed — the ONE authority the dialog collects), and
+ * `delivery` is the one word the surface shows (`package` / `descriptor`).
  */
 export const marketplaceInstallPreview = z.object({
   ref: z.string(),
@@ -2284,6 +2308,9 @@ export const marketplaceInstallPreview = z.object({
   public_routes: z.array(marketplacePreviewPublicRoute),
   new_public_routes: z.array(marketplacePreviewPublicRoute),
   requires_public_acceptance: z.boolean(),
+  required_env: z.array(marketplaceRequiredEnvVar),
+  missing_env: z.array(z.string()),
+  delivery: marketplaceDelivery,
 });
 export type MarketplaceInstallPreview = z.infer<typeof marketplaceInstallPreview>;
 

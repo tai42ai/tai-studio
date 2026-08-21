@@ -80,7 +80,7 @@ export function provider(overrides: Partial<ProviderView> = {}): ProviderView {
     id: 'github',
     display_name: 'GitHub',
     description: 'Connect your GitHub account.',
-    icon_url: '',
+    icon_url: 'https://cdn.example/gh.png',
     kind: 'oauth',
     origin: 'system',
     category: 'dev',

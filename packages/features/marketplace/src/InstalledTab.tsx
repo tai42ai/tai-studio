@@ -39,6 +39,7 @@ import type {
 } from '@tai42/api-client';
 
 import { severityVariant, WarningBlock } from './advisories';
+import { sourceLabel } from './badges';
 import { mergeSearch, type MarketplaceSearch } from './filters';
 import { marketplaceAdvisoriesKey, marketplaceInstalledKey } from './keys';
 
@@ -236,6 +237,7 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
                   <TH>Plugin</TH>
                   <TH>Installed version</TH>
                   <TH>Source</TH>
+                  <TH>Delivery</TH>
                   <TH>Installed at</TH>
                   <TH>Status</TH>
                 </TR>
@@ -249,7 +251,11 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
                       </AppLink>
                     </TD>
                     <TD>{row.version}</TD>
-                    <TD>{row.source}</TD>
+                    {/* `spec` (a descriptor plugin) reads as "descriptor". */}
+                    <TD>{sourceLabel(row.source)}</TD>
+                    {/* How it was delivered: a pip `package`, or a `descriptor`
+                        whose spec names no package. */}
+                    <TD>{row.delivery}</TD>
                     <TD>{row.installed_at}</TD>
                     <TD>
                       <StatusBadge row={row} />

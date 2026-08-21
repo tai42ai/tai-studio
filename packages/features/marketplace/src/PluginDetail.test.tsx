@@ -48,6 +48,7 @@ function detailFixture(overrides: Partial<MarketplacePluginDetail> = {}): Market
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
+      delivery: 'package',
       items: [
         {
           kind: 'tool',
@@ -55,6 +56,7 @@ function detailFixture(overrides: Partial<MarketplacePluginDetail> = {}): Market
           description: 'Generate a UUID.',
           tags: ['uuid'],
           group: 'utilities',
+          required_env: [],
         },
       ],
     },
@@ -77,7 +79,8 @@ function installedRow(
   return {
     ref: 'tai42/toolbox',
     version: '1.2.0',
-    source: 'marketplace',
+    source: 'github',
+    delivery: 'package',
     installed_at: '2026-07-01T00:00:00Z',
     latest: null,
     update_available: false,
@@ -187,6 +190,55 @@ describe('PluginDetail — content', () => {
     expect(screen.getByText('1.1.0')).toBeInTheDocument();
   });
 
+  it('shows the delivery badge and the package name for a packaged listing', async () => {
+    const client = reads(detailFixture(), []);
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    const title = await screen.findByRole('heading', { name: 'Toolbox' });
+    const cardEl = title.closest('.tai-card');
+    if (cardEl === null) throw new Error('no listing card');
+    const card = cardEl as HTMLElement;
+    expect(within(card).getByText('package')).toBeInTheDocument();
+    expect(within(card).getByText('tai42-toolbox')).toBeInTheDocument();
+  });
+
+  it('a descriptor listing badges "descriptor", shows an em dash for its null package, and offers no copy control', async () => {
+    const client = reads(
+      detailFixture({
+        package: null,
+        latest: {
+          version: '1.2.0',
+          contract_range: '>=1.0',
+          status: 'published',
+          published_at: '2026-07-01T00:00:00Z',
+          delivery: 'descriptor',
+          items: [
+            {
+              kind: 'connector',
+              name: 'relay',
+              description: 'A hosted connector.',
+              tags: [],
+              group: null,
+              required_env: [],
+            },
+          ],
+        },
+      }),
+      [],
+    );
+    renderWithProviders(<PluginDetail refValue="tai42/toolbox" onBack={noop} />, { client });
+
+    const title = await screen.findByRole('heading', { name: 'Toolbox' });
+    const cardEl = title.closest('.tai-card');
+    if (cardEl === null) throw new Error('no listing card');
+    const card = cardEl as HTMLElement;
+    expect(within(card).getByText('descriptor')).toBeInTheDocument();
+    // The package slot shows an em dash rather than a name.
+    expect(within(card).getByText('—')).toBeInTheDocument();
+    // A descriptor names no package, so the "Copy package" control is absent.
+    expect(screen.queryByText('Package')).toBeNull();
+  });
+
   it('renders the item group in the items table, an em dash for an ungrouped item', async () => {
     const client = reads(
       detailFixture({
@@ -195,6 +247,7 @@ describe('PluginDetail — content', () => {
           contract_range: '>=1.0',
           status: 'published',
           published_at: '2026-07-01T00:00:00Z',
+          delivery: 'package',
           items: [
             {
               kind: 'tool',
@@ -202,8 +255,16 @@ describe('PluginDetail — content', () => {
               description: 'Generate a UUID.',
               tags: [],
               group: 'core',
+              required_env: [],
             },
-            { kind: 'agent', name: 'echo', description: 'Echo.', tags: [], group: null },
+            {
+              kind: 'agent',
+              name: 'echo',
+              description: 'Echo.',
+              tags: [],
+              group: null,
+              required_env: [],
+            },
           ],
         },
       }),
@@ -371,89 +432,106 @@ describe('PluginDetail — premium badge + docs link', () => {
   });
 });
 
-/** A detail whose latest version provides an mcp-server carrying a bare required
- *  `!ENV ${DATABASE_URL}` marker and a defaulted `!ENV ${PORT:5432}` marker. */
+/** An mcp-server listing whose item declares one required marker var. A marker is
+ *  derived `secret: false` (only an OAuth client secret is secret), so its toggle
+ *  starts off. */
 function mcpServerDetail(): MarketplacePluginDetail {
   return detailFixture({
+    package: 'tai42-postgres-mcp',
     latest: {
       version: '1.0.0',
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'mcp-server', name: 'postgres', description: 'PG.', tags: [], group: null }],
-      spec: {
-        provides: [
-          {
-            kind: 'mcp-server',
-            name: 'postgres',
-            mcp: { env: { DATABASE_URL: '!ENV ${DATABASE_URL}', PORT: '!ENV ${PORT:5432}' } },
-          },
-        ],
-      },
+      delivery: 'package',
+      items: [
+        {
+          kind: 'mcp-server',
+          name: 'postgres',
+          description: 'PG.',
+          tags: [],
+          group: null,
+          required_env: [{ name: 'DATABASE_URL', secret: false }],
+        },
+      ],
     },
   });
 }
 
-describe('PluginDetail — mcp-server install env dialog', () => {
-  it('collects only bare-marker required vars (defaulted pre-satisfied) and marks them secret by default', async () => {
-    const user = userEvent.setup();
-    const installMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/postgres-mcp',
+/** A descriptor connector whose item declares an OAuth client id (not secret) and
+ *  client secret (secret, so its toggle is locked on). */
+function connectorDetail(): MarketplacePluginDetail {
+  return detailFixture({
+    namespace: 'iota',
+    name: 'relay',
+    package: null,
+    latest: {
       version: '1.0.0',
-      notes: [],
-      advisories: [],
-      routes: [],
-    });
-    const client: StubApiClient = {
-      ...reads(mcpServerDetail(), []),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
-      installMarketplacePlugin,
-    };
-    renderWithProviders(<PluginDetail refValue="tai42/postgres-mcp" onBack={noop} />, { client });
-
-    await user.click(await screen.findByRole('button', { name: 'Install' }));
-    const dialog = await screen.findByRole('dialog');
-    // The bare marker is collected; the defaulted marker is pre-satisfied (no input).
-    expect(within(dialog).getByLabelText('DATABASE_URL')).toBeInTheDocument();
-    expect(within(dialog).queryByLabelText('PORT')).toBeNull();
-    // The secret toggle defaults ON.
-    expect(within(dialog).getByRole('checkbox', { name: 'Store as secret' })).toBeChecked();
-
-    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
-    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
-
-    await waitFor(() => {
-      expect(installMarketplacePlugin).toHaveBeenCalledWith({
-        ref: 'tai42/postgres-mcp',
-        env: { DATABASE_URL: 'postgres://db' },
-        secret_keys: ['DATABASE_URL'],
-      });
-    });
+      contract_range: '>=1.0',
+      status: 'published',
+      published_at: '2026-07-01T00:00:00Z',
+      delivery: 'descriptor',
+      items: [
+        {
+          kind: 'connector',
+          name: 'relay',
+          description: 'A hosted connector.',
+          tags: [],
+          group: null,
+          required_env: [
+            { name: 'IOTA_CLIENT_ID', secret: false },
+            { name: 'IOTA_CLIENT_SECRET', secret: true },
+          ],
+        },
+      ],
+    },
   });
+}
 
-  it('drops a required var from secret_keys when its Store-as-secret toggle is turned OFF', async () => {
+/** An install preview carrying only the env picture the env dialog reads. */
+function envPreview(missing: string[]): MarketplaceInstallPreview {
+  return {
+    ref: 'iota/relay',
+    version: '1.0.0',
+    items: [],
+    collisions: [],
+    public_routes: [],
+    new_public_routes: [],
+    requires_public_acceptance: false,
+    required_env: [],
+    missing_env: missing,
+    delivery: 'descriptor',
+  };
+}
+
+const installReceipt = (ref: string): MarketplaceInstallResult => ({
+  ref,
+  version: '1.0.0',
+  notes: [],
+  advisories: [],
+  routes: [],
+});
+
+describe('PluginDetail — install env dialog', () => {
+  it('collects the preview’s missing var; an mcp-server marker (secret:false) is NOT masked by default', async () => {
     const user = userEvent.setup();
-    const installMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/postgres-mcp',
-      version: '1.0.0',
-      notes: [],
-      advisories: [],
-      routes: [],
-    });
+    const installMarketplacePlugin = vi
+      .fn()
+      .mockResolvedValue(installReceipt('tai42/postgres-mcp'));
     const client: StubApiClient = {
       ...reads(mcpServerDetail(), []),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview(['DATABASE_URL'])),
       installMarketplacePlugin,
     };
     renderWithProviders(<PluginDetail refValue="tai42/postgres-mcp" onBack={noop} />, { client });
 
     await user.click(await screen.findByRole('button', { name: 'Install' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
-    // Turn the default-ON secret toggle OFF (the inverse of the default-ON case): the
-    // value still installs, but it must NOT land in the secret band. A regression that
-    // ignored the toggle would still push DATABASE_URL into secret_keys.
-    await user.click(within(dialog).getByRole('checkbox', { name: 'Store as secret' }));
+    const field = await screen.findByLabelText('DATABASE_URL');
+    const dialog = screen.getByRole('dialog');
+    // A marker var is derived secret:false, so its toggle starts OFF.
+    expect(within(dialog).getByRole('checkbox', { name: 'Store as secret' })).not.toBeChecked();
+
+    await user.type(field, 'postgres://db');
     await user.click(within(dialog).getByRole('button', { name: 'Install' }));
 
     await waitFor(() => {
@@ -465,32 +543,108 @@ describe('PluginDetail — mcp-server install env dialog', () => {
     });
   });
 
-  it('pre-satisfies a required var the deployment env already provides (one-click, no env dialog)', async () => {
+  it('masks a marker var once its Store-as-secret toggle is turned ON', async () => {
     const user = userEvent.setup();
-    const installMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/postgres-mcp',
-      version: '1.0.0',
-      notes: [],
-      advisories: [],
-      routes: [],
-    });
+    const installMarketplacePlugin = vi
+      .fn()
+      .mockResolvedValue(installReceipt('tai42/postgres-mcp'));
     const client: StubApiClient = {
       ...reads(mcpServerDetail(), []),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: { DATABASE_URL: 'x' }, secret_keys: [] }),
+      previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview(['DATABASE_URL'])),
       installMarketplacePlugin,
     };
     renderWithProviders(<PluginDetail refValue="tai42/postgres-mcp" onBack={noop} />, { client });
 
     await user.click(await screen.findByRole('button', { name: 'Install' }));
-    // Wait for the plain one-click confirm — its body text is unique to that dialog,
-    // so it only renders once the deployment-env pre-satisfaction has resolved.
-    await screen.findByText(/pip-install the package and reload/);
-    expect(screen.queryByLabelText('DATABASE_URL')).toBeNull();
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Install' }),
-    );
+    const field = await screen.findByLabelText('DATABASE_URL');
+    const dialog = screen.getByRole('dialog');
+    await user.type(field, 'postgres://db');
+    // Turn the (off-by-default) marker toggle ON: the operator opts the value into the
+    // secret band; it must now ride in secret_keys.
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Store as secret' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
     await waitFor(() => {
-      expect(installMarketplacePlugin).toHaveBeenCalledWith({ ref: 'tai42/postgres-mcp' });
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'tai42/postgres-mcp',
+        env: { DATABASE_URL: 'postgres://db' },
+        secret_keys: ['DATABASE_URL'],
+      });
+    });
+  });
+
+  it('a connector: the client secret is locked ON, the client id is not force-masked', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue(installReceipt('iota/relay'));
+    const client: StubApiClient = {
+      ...reads(connectorDetail(), []),
+      previewMarketplaceInstall: vi
+        .fn()
+        .mockResolvedValue(envPreview(['IOTA_CLIENT_ID', 'IOTA_CLIENT_SECRET'])),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const idField = await screen.findByLabelText('IOTA_CLIENT_ID');
+    const dialog = screen.getByRole('dialog');
+    // Generic copy: no mcp-server-only wording.
+    expect(within(dialog).getByText(/needs these values to install/)).toBeInTheDocument();
+    const toggles = within(dialog).getAllByRole('checkbox', { name: 'Store as secret' });
+    // The client id (secret:false) starts OFF and is free; the client secret
+    // (secret:true) is ON and LOCKED — the server masks it regardless.
+    expect(toggles[0]).not.toBeChecked();
+    expect(toggles[0]).toBeEnabled();
+    expect(toggles[1]).toBeChecked();
+    expect(toggles[1]).toBeDisabled();
+
+    await user.type(idField, 'client-id');
+    await user.type(within(dialog).getByLabelText('IOTA_CLIENT_SECRET'), 'shh');
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({
+        ref: 'iota/relay',
+        env: { IOTA_CLIENT_ID: 'client-id', IOTA_CLIENT_SECRET: 'shh' },
+        // The client id is NOT force-masked; only the derived-secret client secret is.
+        secret_keys: ['IOTA_CLIENT_SECRET'],
+      });
+    });
+  });
+
+  it('names which item needs each var', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = {
+      ...reads(connectorDetail(), []),
+      previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview(['IOTA_CLIENT_ID'])),
+      installMarketplacePlugin: vi.fn(),
+    };
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    await screen.findByLabelText('IOTA_CLIENT_ID');
+    expect(screen.getByText('Required by relay')).toBeInTheDocument();
+  });
+
+  it('every var pre-satisfied (empty missing_env): a one-click install with no fields', async () => {
+    const user = userEvent.setup();
+    const installMarketplacePlugin = vi.fn().mockResolvedValue(installReceipt('iota/relay'));
+    const client: StubApiClient = {
+      ...reads(connectorDetail(), []),
+      previewMarketplaceInstall: vi.fn().mockResolvedValue(envPreview([])),
+      installMarketplacePlugin,
+    };
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // No field to fill — the deployment already provides every required var.
+    await waitFor(() => {
+      expect(within(dialog).queryByLabelText('IOTA_CLIENT_ID')).toBeNull();
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
+    await waitFor(() => {
+      expect(installMarketplacePlugin).toHaveBeenCalledWith({ ref: 'iota/relay' });
     });
   });
 });
@@ -714,6 +868,41 @@ describe('PluginDetail — update and uninstall flows', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Updated tai42/toolbox 2.0.0');
   });
 
+  it('the update confirm names re-fetching the descriptor, not pip, for a descriptor plugin', async () => {
+    const user = userEvent.setup();
+    const client = reads(
+      detailFixture({
+        package: null,
+        latest: {
+          version: '2.0.0',
+          contract_range: '>=1.0',
+          status: 'published',
+          published_at: '2026-07-01T00:00:00Z',
+          delivery: 'descriptor',
+          // No routes and no required_env → the plain update confirm path.
+          items: [
+            {
+              kind: 'connector',
+              name: 'relay',
+              description: 'A hosted connector.',
+              tags: [],
+              group: null,
+              required_env: [],
+            },
+          ],
+        },
+      }),
+      [installedRow({ delivery: 'descriptor', update_available: true, latest: '2.0.0' })],
+    );
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Update' }));
+    const dialog = await screen.findByRole('dialog');
+    // A descriptor names no package, so the update copy must not promise a pip install.
+    expect(dialog).toHaveTextContent('The app will re-fetch the descriptor and reload.');
+    expect(dialog).not.toHaveTextContent('pip-install');
+  });
+
   it('uninstalls behind a confirm dialog with the correct body', async () => {
     const user = userEvent.setup();
     const uninstallMarketplacePlugin = vi
@@ -816,118 +1005,78 @@ describe('PluginDetail — version status, links, and install-prompt edges', () 
       'Install tai42/toolbox? The app will pip-install the package and reload.',
     );
   });
+
+  it('the plain confirm names registration, not pip, for a descriptor plugin', async () => {
+    const user = userEvent.setup();
+    const client = reads(
+      detailFixture({
+        package: null,
+        latest: {
+          version: '1.2.0',
+          contract_range: '>=1.0',
+          status: 'published',
+          published_at: '2026-07-01T00:00:00Z',
+          delivery: 'descriptor',
+          // No routes and no required_env → the plain one-click confirm path.
+          items: [
+            {
+              kind: 'connector',
+              name: 'relay',
+              description: 'A hosted connector.',
+              tags: [],
+              group: null,
+              required_env: [],
+            },
+          ],
+        },
+      }),
+      [],
+    );
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Install' }));
+    const dialog = await screen.findByRole('dialog');
+    // A descriptor installs no package, so the copy must not promise a pip install.
+    expect(dialog).toHaveTextContent('The app will register this plugin and reload.');
+    expect(dialog).not.toHaveTextContent('pip-install');
+  });
 });
 
-/** A detail whose spec mixes a bare marker with values that must NOT be collected:
- *  a literal (not an env ref), a defaulted marker, an env-less item, and a
- *  null-env item. Only the bare `!ENV ${DATABASE_URL}` should reach the dialog. */
-function mixedSpecDetail(): MarketplacePluginDetail {
-  return detailFixture({
-    latest: {
-      version: '1.0.0',
-      contract_range: '>=1.0',
-      status: 'published',
-      published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [], group: null }],
-      spec: {
-        provides: [
-          {
-            kind: 'mcp-server',
-            name: 'db',
-            mcp: {
-              env: {
-                DATABASE_URL: '!ENV ${DATABASE_URL}',
-                LITERAL: 'plain-value',
-                PORT: '!ENV ${PORT:5432}',
-              },
-            },
-          },
-          // An item with no mcp block at all (env is undefined).
-          { kind: 'tool', name: 'noenv', description: 'x', tags: [] },
-          // An mcp item whose env is explicitly null.
-          { kind: 'mcp-server', name: 'nullenv', mcp: { env: null } },
-        ],
-      },
-    },
-  });
-}
-
-/** A detail whose spec carries TWO bare required markers. */
-function twoMarkerDetail(): MarketplacePluginDetail {
-  return detailFixture({
-    latest: {
-      version: '1.0.0',
-      contract_range: '>=1.0',
-      status: 'published',
-      published_at: '2026-07-01T00:00:00Z',
-      items: [{ kind: 'mcp-server', name: 'db', description: 'DB.', tags: [], group: null }],
-      spec: {
-        provides: [
-          {
-            kind: 'mcp-server',
-            name: 'db',
-            mcp: { env: { DATABASE_URL: '!ENV ${DATABASE_URL}', API_KEY: '!ENV ${API_KEY}' } },
-          },
-        ],
-      },
-    },
-  });
-}
-
 describe('PluginDetail — env dialog var selection and store-off state', () => {
-  it('collects only the bare marker, skipping literals, defaulted markers, and env-less items', async () => {
-    const user = userEvent.setup();
-    const client: StubApiClient = {
-      ...reads(mixedSpecDetail(), []),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
-      installMarketplacePlugin: vi.fn(),
-    };
-    renderWithProviders(<PluginDetail refValue="tai42/db-mcp" onBack={noop} />, { client });
-
-    await user.click(await screen.findByRole('button', { name: 'Install' }));
-    const dialog = await screen.findByRole('dialog');
-    // Only the bare marker becomes an input; the literal, the defaulted marker, the
-    // env-less item, and the null-env item all contribute no field.
-    expect(within(dialog).getByLabelText('DATABASE_URL')).toBeInTheDocument();
-    expect(within(dialog).queryByLabelText('LITERAL')).toBeNull();
-    expect(within(dialog).queryByLabelText('PORT')).toBeNull();
-  });
-
   it('omits a required var left blank from the install body', async () => {
     const user = userEvent.setup();
-    const installMarketplacePlugin = vi.fn().mockResolvedValue({
-      ref: 'tai42/db-mcp',
-      version: '1.0.0',
-      notes: [],
-      advisories: [],
-      routes: [],
-    });
+    const installMarketplacePlugin = vi.fn().mockResolvedValue(installReceipt('iota/relay'));
     const client: StubApiClient = {
-      ...reads(twoMarkerDetail(), []),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      ...reads(connectorDetail(), []),
+      previewMarketplaceInstall: vi
+        .fn()
+        .mockResolvedValue(envPreview(['IOTA_CLIENT_ID', 'IOTA_CLIENT_SECRET'])),
       installMarketplacePlugin,
     };
-    renderWithProviders(<PluginDetail refValue="tai42/db-mcp" onBack={noop} />, { client });
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
 
     await user.click(await screen.findByRole('button', { name: 'Install' }));
-    const dialog = await screen.findByRole('dialog');
+    const idField = await screen.findByLabelText('IOTA_CLIENT_ID');
+    const dialog = screen.getByRole('dialog');
     // Fill one required var, leave the other blank: the blank one is omitted entirely
     // (not sent as an empty string, not marked secret) — the deployment may provide it.
-    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
+    await user.type(idField, 'client-id');
     await user.click(within(dialog).getByRole('button', { name: 'Install' }));
 
     await waitFor(() => {
       expect(installMarketplacePlugin).toHaveBeenCalledWith({
-        ref: 'tai42/db-mcp',
-        env: { DATABASE_URL: 'postgres://db' },
-        secret_keys: ['DATABASE_URL'],
+        ref: 'iota/relay',
+        env: { IOTA_CLIENT_ID: 'client-id' },
+        secret_keys: [],
       });
     });
   });
 
   it('shows the muted OFF note inside the env dialog when the install store is not configured', async () => {
     const user = userEvent.setup();
-    const installMarketplacePlugin = vi
+    // Preview is the install's dry-run and refuses with the same reason when the
+    // store is off; the env dialog surfaces THAT as the muted note.
+    const previewMarketplaceInstall = vi
       .fn()
       .mockRejectedValue(
         new ApiError(
@@ -937,16 +1086,14 @@ describe('PluginDetail — env dialog var selection and store-off state', () => 
         ),
       );
     const client: StubApiClient = {
-      ...reads(twoMarkerDetail(), []),
-      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
-      installMarketplacePlugin,
+      ...reads(connectorDetail(), []),
+      previewMarketplaceInstall,
+      installMarketplacePlugin: vi.fn(),
     };
-    renderWithProviders(<PluginDetail refValue="tai42/db-mcp" onBack={noop} />, { client });
+    renderWithProviders(<PluginDetail refValue="iota/relay" onBack={noop} />, { client });
 
     await user.click(await screen.findByRole('button', { name: 'Install' }));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('DATABASE_URL'), 'postgres://db');
-    await user.click(within(dialog).getByRole('button', { name: 'Install' }));
 
     // The 501 is a state, not an error: the muted note replaces any red alert in the
     // env dialog, and the confirm is blocked from re-firing the certain refusal.
@@ -1160,6 +1307,7 @@ function routeDetail(): MarketplacePluginDetail {
       contract_range: '>=1.0',
       status: 'published',
       published_at: '2026-07-01T00:00:00Z',
+      delivery: 'package',
       items: [
         {
           kind: 'channel',
@@ -1167,6 +1315,7 @@ function routeDetail(): MarketplacePluginDetail {
           description: 'A relay channel.',
           tags: [],
           group: null,
+          required_env: [],
           routes: {
             base: 'channels/web',
             paths: [
@@ -1206,6 +1355,9 @@ function previewFixture(
     public_routes: [],
     new_public_routes: [],
     requires_public_acceptance: false,
+    required_env: [],
+    missing_env: [],
+    delivery: 'package',
     ...overrides,
   };
 }

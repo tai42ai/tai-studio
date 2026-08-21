@@ -2,9 +2,9 @@
  * Tests for the route-mounting install dialog and its helpers: the preview fires
  * on open and on a (debounced) base remap, the resolved paths render live, a
  * collision blocks submit loudly, a public route must be accepted before submit,
- * a preview failure blocks, and the mcp-server env is collected in the same flow.
- * The pure helpers (`collectEnv`, `routeItemsOf`, `useDebouncedValue`) are covered
- * directly.
+ * a preview failure blocks, and the preview's missing env is collected in the same
+ * flow. The pure helpers (`collectEnv`, `routeItemsOf`, `useDebouncedValue`) are
+ * covered directly.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook, screen, waitFor, within } from '@testing-library/react';
@@ -71,6 +71,9 @@ function previewFixture(
     public_routes: [],
     new_public_routes: [],
     requires_public_acceptance: false,
+    required_env: [],
+    missing_env: [],
+    delivery: 'package',
     ...overrides,
   };
 }
@@ -81,15 +84,30 @@ function pending<T>(): Promise<T> {
 }
 
 describe('collectEnv', () => {
-  it('omits a blank var and marks a filled var secret unless toggled off', () => {
+  it('omits a blank var and masks a filled var only when its toggle is on', () => {
     const { env, secretKeys } = collectEnv(
       ['A', 'B', 'C'],
       { A: 'a', B: '', C: 'c' },
       { A: true, C: false },
     );
-    // B is blank → omitted entirely; A defaults secret; C's toggle is off.
+    // B is blank → omitted entirely; A's toggle is on → masked; C's toggle is off.
     expect(env).toEqual({ A: 'a', C: 'c' });
     expect(secretKeys).toEqual(['A']);
+  });
+
+  it('masks only a var whose toggle is explicitly on: an off OR unset var stays out of secret_keys', () => {
+    // Secret-ness is carried by the seeded state: a client secret is `true` (masked),
+    // a client id is `false` (not masked). A var ABSENT from the map — the marker
+    // below — is masked ONLY if turned on, so it too stays out of secret_keys.
+    const { env, secretKeys } = collectEnv(
+      ['CLIENT_ID', 'CLIENT_SECRET', 'MARKER'],
+      { CLIENT_ID: 'id', CLIENT_SECRET: 'sh', MARKER: 'm' },
+      { CLIENT_ID: false, CLIENT_SECRET: true },
+    );
+    expect(env).toEqual({ CLIENT_ID: 'id', CLIENT_SECRET: 'sh', MARKER: 'm' });
+    // Only the client secret is masked; a var absent from the secret map (MARKER) is
+    // not masked unless its toggle is on.
+    expect(secretKeys).toEqual(['CLIENT_SECRET']);
   });
 });
 
@@ -138,7 +156,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={vi.fn().mockResolvedValue(undefined)}
         onClose={noop}
       />,
@@ -163,7 +180,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={vi.fn().mockResolvedValue(undefined)}
         onClose={noop}
       />,
@@ -187,7 +203,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={onSubmit}
         onClose={noop}
       />,
@@ -214,7 +229,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={vi.fn().mockResolvedValue(undefined)}
         onClose={noop}
       />,
@@ -257,7 +271,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={onSubmit}
         onClose={noop}
       />,
@@ -292,7 +305,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={onSubmit}
         onClose={noop}
       />,
@@ -327,7 +339,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={vi.fn().mockResolvedValue(undefined)}
         onClose={noop}
       />,
@@ -338,11 +349,14 @@ describe('MountInstallDialog — preview and mounting', () => {
     expect(within(dialog).getByRole('button', { name: 'Install' })).toBeDisabled();
   });
 
-  it('collects the mcp-server env in the same flow and carries it in the body', async () => {
+  it("collects the preview's missing env in the same flow and carries it in the body", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     const client: StubApiClient = {
-      previewMarketplaceInstall: vi.fn().mockResolvedValue(previewFixture()),
+      // The preview names the missing var; its derived secret-ness seeds the toggle.
+      previewMarketplaceInstall: vi
+        .fn()
+        .mockResolvedValue(previewFixture({ missing_env: ['DATABASE_URL'] })),
     };
     renderWithProviders(
       <MountInstallDialog
@@ -350,7 +364,7 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Install"
         routeItems={routeItems()}
-        requiredEnvVars={['DATABASE_URL']}
+        requiredEnvSecret={{ DATABASE_URL: true }}
         onSubmit={onSubmit}
         onClose={noop}
       />,
@@ -358,7 +372,7 @@ describe('MountInstallDialog — preview and mounting', () => {
     );
 
     await screen.findByText('/api/channels/web/inbound');
-    await user.type(screen.getByLabelText('DATABASE_URL'), 'postgres://db');
+    await user.type(await screen.findByLabelText('DATABASE_URL'), 'postgres://db');
     await user.click(screen.getByRole('button', { name: 'Install' }));
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith({
@@ -366,6 +380,40 @@ describe('MountInstallDialog — preview and mounting', () => {
         accept_public_routes: false,
         env: { DATABASE_URL: 'postgres://db' },
         secret_keys: ['DATABASE_URL'],
+      });
+    });
+  });
+
+  it('does not collect env on an UPDATE even when the preview reports a missing var', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const client: StubApiClient = {
+      previewMarketplaceInstall: vi
+        .fn()
+        .mockResolvedValue(previewFixture({ missing_env: ['DATABASE_URL'] })),
+    };
+    renderWithProviders(
+      <MountInstallDialog
+        refValue="acme/relay"
+        version="1.0.0"
+        verb="Update"
+        routeItems={routeItems()}
+        requiredEnvSecret={{ DATABASE_URL: true }}
+        onSubmit={onSubmit}
+        onClose={noop}
+      />,
+      { client },
+    );
+
+    await screen.findByText('/api/channels/web/inbound');
+    // The server refuses a new required var on update, so the update flow shows no
+    // env field and sends no env in the body.
+    expect(screen.queryByLabelText('DATABASE_URL')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Update' }));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({
+        route_mounts: {},
+        accept_public_routes: false,
       });
     });
   });
@@ -383,7 +431,6 @@ describe('MountInstallDialog — preview and mounting', () => {
         version="1.0.0"
         verb="Update"
         routeItems={routeItems()}
-        requiredEnvVars={[]}
         onSubmit={onSubmit}
         onClose={onClose}
       />,
@@ -409,7 +456,6 @@ describe('MountInstallDialog — update seeds from and preserves the stored moun
         routeItems={routeItems()}
         // Installed at a NON-default base.
         storedMounts={{ web: 'channels/relay-2' }}
-        requiredEnvVars={[]}
         onSubmit={vi.fn().mockResolvedValue(undefined)}
         onClose={noop}
       />,
@@ -434,7 +480,6 @@ describe('MountInstallDialog — update seeds from and preserves the stored moun
         verb="Update"
         routeItems={routeItems()}
         storedMounts={{ web: 'channels/relay-2' }}
-        requiredEnvVars={[]}
         onSubmit={onSubmit}
         onClose={noop}
       />,
@@ -476,7 +521,6 @@ describe('MountInstallDialog — update seeds from and preserves the stored moun
         verb="Update"
         routeItems={twoItems}
         storedMounts={{ web: 'channels/relay-2', api: 'routers/api-2' }}
-        requiredEnvVars={[]}
         onSubmit={onSubmit}
         onClose={noop}
       />,
