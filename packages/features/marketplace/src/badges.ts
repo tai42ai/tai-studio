@@ -21,6 +21,15 @@ function countLabel(label: string, count: number): string {
 }
 
 /**
+ * The label for an install-provenance `source`: a descriptor plugin resolves from
+ * `spec` (a `tai-plugin.yml`, no package), which reads as "descriptor" on every
+ * surface; every other source (`pypi`, `github`, …) shows as given.
+ */
+export function sourceLabel(source: string): string {
+  return source === 'spec' ? 'descriptor' : source;
+}
+
+/**
  * The ordered badge labels for one search row under the catalog policy: groups
  * first (`{name}` / `{name} ×{count}`), then ungrouped kinds — a LISTED kind as
  * each of its item names, a HIDDEN kind omitted, any other kind as a counted kind

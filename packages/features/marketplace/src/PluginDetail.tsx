@@ -55,37 +55,40 @@ import {
   type RouteItem,
 } from './install-dialog';
 import {
-  envConfigKey,
   marketplaceAdvisoriesKey,
   marketplaceInstalledKey,
   marketplacePluginKey,
+  marketplacePreviewKey,
 } from './keys';
 
-// A manifest env leaf is `!ENV ${VAR}` or `!ENV ${VAR:default}` (the pyaml_env
-// marker). A REQUIRED var is the bare form with no `:default`.
-const ENV_MARKER = /^!ENV\s+\$\{([^}]+)\}$/;
-
 /**
- * The bare-marker `!ENV` vars an mcp-server listing's PUBLIC spec requires: a
- * `!ENV ${VAR}` leaf under a provides item's `mcp.env` with no `:default`.
- * Defaulted markers (the server resolves the default) and literal values (not env
- * refs) are skipped. Display-only — the install-time dangling-ref refusal is the
- * real gate — so this only decides which inputs the install dialog collects.
+ * The env picture a listing's items declare, folded across the detail: each
+ * required var's derived `secret`-ness (an OAuth client secret is; a client id or a
+ * plain marker var is not) and the item(s) that need it. The install dialog seeds
+ * its toggles from `secret` and shows the hint; the vars to COLLECT come from the
+ * install preview's server-computed `missing_env`, never re-derived here.
  */
-function requiredEnvVars(detail: MarketplacePluginDetail): string[] {
-  const vars = new Set<string>();
-  for (const item of detail.latest?.spec?.provides ?? []) {
-    const env = item.mcp?.env;
-    if (env === null || env === undefined) continue;
-    for (const value of Object.values(env)) {
-      const match = ENV_MARKER.exec(value);
-      if (match === null) continue;
-      const inner = match[1];
-      if (inner === undefined || inner.includes(':')) continue;
-      vars.add(inner);
+interface RequiredEnvEntry {
+  readonly secret: boolean;
+  readonly items: string[];
+}
+
+function requiredEnvIndex(detail: MarketplacePluginDetail): Map<string, RequiredEnvEntry> {
+  const index = new Map<string, RequiredEnvEntry>();
+  for (const item of detail.latest?.items ?? []) {
+    for (const req of item.required_env) {
+      const entry = index.get(req.name);
+      if (entry === undefined) {
+        index.set(req.name, { secret: req.secret, items: [item.name] });
+      } else {
+        index.set(req.name, {
+          secret: entry.secret || req.secret,
+          items: [...entry.items, item.name],
+        });
+      }
     }
   }
-  return [...vars];
+  return index;
 }
 
 /** Which mutation dialog is open (each is mounted only while active). */
@@ -159,11 +162,15 @@ function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): Rea
           <h2 className="tai-card-title" style={{ wordBreak: 'break-word' }}>
             {title}
           </h2>
-          <code className="tai-mono tai-muted">{detail.package}</code>
+          {/* A descriptor listing names no package; show an em dash in its place. */}
+          <code className="tai-mono tai-muted">{detail.package ?? '—'}</code>
           <p style={{ margin: 0 }}>{detail.description}</p>
           <div className="tai-row">
             <Badge>{detail.trust_tier}</Badge>
             <Badge>{detail.pricing}</Badge>
+            {/* How the plugin is delivered: a pip-installed `package` or a
+                declarative `descriptor` (nothing installed but the manifest entry). */}
+            {detail.latest !== null ? <Badge>{detail.latest.delivery}</Badge> : null}
             {/* A display-only premium mark — a badge, never a payment surface. */}
             {detail.premium === true ? <Badge variant="primary">Premium</Badge> : null}
             <span className="tai-muted">{detail.downloads} downloads</span>
@@ -388,18 +395,6 @@ export function PluginDetail({
     queryFn: ({ signal }) => api.getMarketplaceAdvisories(signal),
     enabled: slash >= 0,
   });
-  // Bare `!ENV` markers the public spec requires — computed once the detail lands.
-  const bareEnvVars = detailQuery.data !== undefined ? requiredEnvVars(detailQuery.data) : [];
-  // The deployment env's var NAMES (never values), read only to PRE-SATISFY a
-  // required marker the deployment already provides — and only once the operator
-  // opens the install dialog for a listing that has required markers. On error the
-  // set is empty (fail-open: the var stays collectable, the server stays the gate).
-  const envConfigQuery = useQuery({
-    queryKey: envConfigKey,
-    queryFn: ({ signal }) => api.getEnvConfig(signal),
-    enabled: slash >= 0 && bareEnvVars.length > 0 && activeAction === 'install',
-  });
-
   const onInstallSuccess = (receipt: MarketplaceInstallResult, verb: string): void => {
     setActiveAction(null);
     setResult({
@@ -417,8 +412,9 @@ export function PluginDetail({
   };
 
   // The install/update body minus the ref the mutation supplies: the env dialog
-  // adds an mcp-server's `!ENV` values + secret marks, the mount dialog adds the
-  // chosen route bases + public-route consent; a plain install/update sends none.
+  // adds the preview's missing_env values + their secret marks (seeded from the
+  // detail's required_env), the mount dialog adds the chosen route bases +
+  // public-route consent; a plain install/update sends none.
   const installMutation = useMutation({
     mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
       api.installMarketplacePlugin({ ref: refValue, ...body }),
@@ -494,13 +490,17 @@ export function PluginDetail({
     storeRefusal !== undefined ? featureDisabledMessage(storeRefusal) : null;
 
   const detail = detailQuery.data;
-  // The required markers still to collect: the bare `!ENV` vars minus any the
-  // deployment env already provides (pre-satisfied). Empty → a plain one-click
-  // install with no env dialog, non-empty → the env dialog collects them.
-  const presetEnvKeys = new Set(Object.keys(envConfigQuery.data?.env ?? {}));
-  const requiredEnvVarsToCollect = requiredEnvVars(detail).filter(
-    (name) => !presetEnvKeys.has(name),
-  );
+  // The env picture the detail's items declare: which vars need collecting AT ALL
+  // (per-var secret-ness + the item that needs each). A non-empty index routes the
+  // install through an env-collecting dialog; the SPECIFIC vars still to collect are
+  // the install preview's server-computed `missing_env`, resolved inside that dialog.
+  const envIndex = requiredEnvIndex(detail);
+  const requiredEnvSecret: Record<string, boolean> = {};
+  const requiredEnvHints: Record<string, string> = {};
+  for (const [envName, entry] of envIndex) {
+    requiredEnvSecret[envName] = entry.secret;
+    requiredEnvHints[envName] = entry.items.join(', ');
+  }
   // The route-carrying items of the latest version — a channel or router that
   // declares HTTP routes. When present, install/update runs through the mount
   // dialog so the operator sees, remaps, and accepts the resulting paths.
@@ -544,9 +544,12 @@ export function PluginDetail({
         }}
       />
 
-      <Card>
-        <CopyField label="Package" value={detail.package} idPrefix="install-package" />
-      </Card>
+      {/* A descriptor listing names no package, so there is nothing to copy. */}
+      {detail.package !== null ? (
+        <Card>
+          <CopyField label="Package" value={detail.package} idPrefix="install-package" />
+        </Card>
+      ) : null}
 
       {result !== null ? (
         <Card>
@@ -618,27 +621,34 @@ export function PluginDetail({
       {activeAction === 'install' ? (
         routeItems.length > 0 ? (
           // Route-carrying plugins mount through the preview dialog, which also
-          // collects any required mcp-server env in the same flow.
+          // collects the preview's missing env in the same flow.
           <MountInstallDialog
             refValue={refValue}
             version={version}
             verb="Install"
             routeItems={routeItems}
-            requiredEnvVars={requiredEnvVarsToCollect}
+            requiredEnvSecret={requiredEnvSecret}
+            envHints={requiredEnvHints}
             onSubmit={(extras) => installMutation.mutateAsync(extras).then(() => undefined)}
             onClose={closeAction}
           />
-        ) : requiredEnvVarsToCollect.length > 0 ? (
-          // Same Install button, kind-agnostic: the env dialog is inserted
-          // only when the public spec's markers require values to be collected.
+        ) : envIndex.size > 0 ? (
+          // Same Install button, kind-agnostic: the env dialog is inserted only
+          // when the spec's items declare install-time env; it previews to learn
+          // which of those vars the deployment does not already provide.
           <InstallEnvDialog
             refValue={refValue}
             version={detail.latest?.version ?? null}
-            requiredVars={requiredEnvVarsToCollect}
+            requiredEnvSecret={requiredEnvSecret}
+            envHints={requiredEnvHints}
             isPending={installMutation.isPending}
             error={installMutation.error}
             onSubmit={(env, secretKeys) => {
-              installMutation.mutate({ env, secret_keys: secretKeys });
+              // Every var pre-satisfied → a plain install body; otherwise carry the
+              // collected values and their secret marks.
+              installMutation.mutate(
+                Object.keys(env).length > 0 ? { env, secret_keys: secretKeys } : {},
+              );
             }}
             onClose={closeAction}
           />
@@ -667,8 +677,12 @@ export function PluginDetail({
           >
             <p style={{ margin: 0 }}>
               Install {refValue}
-              {detail.latest !== null ? ` v${detail.latest.version}` : ''}? The app will pip-install
-              the package and reload.
+              {detail.latest !== null ? ` v${detail.latest.version}` : ''}?{' '}
+              {/* A descriptor plugin installs nothing but its manifest entry; a
+                  packaged plugin is pip-installed. */}
+              {detail.latest?.delivery === 'descriptor'
+                ? 'The app will register this plugin and reload.'
+                : 'The app will pip-install the package and reload.'}
             </p>
           </ConfirmDialog>
         )
@@ -682,7 +696,6 @@ export function PluginDetail({
           verb="Update"
           routeItems={routeItems}
           storedMounts={installedMounts}
-          requiredEnvVars={[]}
           onSubmit={(extras) => updateMutation.mutateAsync(extras).then(() => undefined)}
           onClose={closeAction}
         />
@@ -709,11 +722,15 @@ export function PluginDetail({
           onClose={closeAction}
         >
           <p style={{ margin: 0 }}>
-            Update {refValue} to the latest version? The app will pip-install the package and
-            reload.
+            Update {refValue} to the latest version?{' '}
+            {/* A descriptor plugin installs nothing but its manifest entry; a
+                packaged plugin is pip-installed. */}
+            {detail.latest?.delivery === 'descriptor'
+              ? 'The app will re-fetch the descriptor and reload.'
+              : 'The app will pip-install the package and reload.'}
           </p>
-          {/* An upgrade that adds a required mcp-server variable is loudly refused by
-              the server (no env dialog on update); name the recourse. */}
+          {/* An upgrade that adds a required variable is loudly refused by the server
+              (no env dialog on update); name the recourse. */}
           <p className="tai-muted" style={{ margin: 0 }}>
             If the update needs a new required variable, set it in the{' '}
             <AppLink to="settings">environment editor</AppLink>, then retry.
@@ -753,19 +770,21 @@ function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
 }
 
 /**
- * The install confirm for an mcp-server whose spec carries required `!ENV` markers:
- * one input per required var, each with a "Store as secret" toggle DEFAULTING ON.
- *
- * Security: `read_env` returns real values on the wire (masking is display-side
- * only), so an UNMARKED credential would render in cleartext in the env editor —
- * defaulting the toggle on lands each collected value in `secret_keys`. A blank
- * field is omitted (the deployment may already provide it); the server's
- * install-time dangling-`!ENV` refusal is the real enforcement, surfaced loudly here.
+ * The install confirm for a plugin whose items declare install-time env: it
+ * previews to learn the server-computed `missing_env` — the vars the deployment
+ * does not already provide — and collects one value per missing var. Each toggle is
+ * SEEDED from `requiredEnvSecret`: a `true` var (an OAuth client secret) is locked
+ * on (the server masks it regardless, so an off toggle would lie), a `false` var (a
+ * client id / plain marker) starts off and stays free. A blank field is omitted
+ * (the deployment may still provide it); the server's install-time env refusal is
+ * the real enforcement, surfaced loudly here. When `missing_env` is empty (every
+ * var pre-satisfied) the dialog is a plain one-click confirm.
  */
 function InstallEnvDialog({
   refValue,
   version,
-  requiredVars,
+  requiredEnvSecret,
+  envHints,
   isPending,
   error,
   onSubmit,
@@ -773,19 +792,41 @@ function InstallEnvDialog({
 }: {
   readonly refValue: string;
   readonly version: string | null;
-  readonly requiredVars: readonly string[];
+  readonly requiredEnvSecret: Record<string, boolean>;
+  readonly envHints: Record<string, string>;
   readonly isPending: boolean;
   readonly error: Error | null;
   readonly onSubmit: (env: Record<string, string>, secretKeys: string[]) => void;
   readonly onClose: () => void;
 }): ReactNode {
+  const api = useApi();
+  // The install preview names `missing_env` server-side (required − env store −
+  // process env). No mounts: env is mount-independent, so this shares nothing with
+  // the route dialog's per-mount preview.
+  const previewQuery = useQuery({
+    queryKey: marketplacePreviewKey(refValue, version, ''),
+    queryFn: ({ signal }) =>
+      api.previewMarketplaceInstall({ ref: refValue, version: version ?? undefined }, signal),
+  });
+  const missingVars = previewQuery.data?.missing_env ?? [];
   const [values, setValues] = useState<Record<string, string>>({});
-  const [secret, setSecret] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(requiredVars.map((name) => [name, true])),
+  const [secretOverride, setSecretOverride] = useState<Record<string, boolean>>({});
+  const secretMap = Object.fromEntries(
+    missingVars.map((name) => [
+      name,
+      requiredEnvSecret[name] === true || secretOverride[name] === true,
+    ]),
   );
-  const disabled = isFeatureDisabled(error);
+
+  // An OFF 501 `marketplace-not-configured` on either the preview or the install is
+  // a state, not an error: the muted note replaces a loud alert and blocks the
+  // confirm. A non-OFF preview failure blocks too — the missing set is unknown.
+  const offError = [previewQuery.error, error].find(isFeatureDisabled) ?? null;
+  const previewBlocked = previewQuery.isPending || previewQuery.isError;
+  const loudError = offError !== null ? null : (error ?? previewQuery.error);
+
   const submit = (): void => {
-    const { env, secretKeys } = collectEnv(requiredVars, values, secret);
+    const { env, secretKeys } = collectEnv(missingVars, values, secretMap);
     onSubmit(env, secretKeys);
   };
   return (
@@ -794,12 +835,16 @@ function InstallEnvDialog({
       confirmLabel="Install"
       pendingLabel="Installing"
       confirmVariant="primary"
-      isPending={isPending}
-      // An OFF 501 `marketplace-not-configured` is a state, not an error.
-      error={disabled ? null : error}
+      isPending={isPending || previewQuery.isPending}
+      error={loudError}
       disabledNote={
-        disabled ? (
-          <FeatureDisabled feature="Marketplace installs" message={featureDisabledMessage(error)} />
+        offError !== null ? (
+          <FeatureDisabled
+            feature="Marketplace installs"
+            message={featureDisabledMessage(offError)}
+          />
+        ) : previewBlocked ? (
+          <Skeleton height={48} />
         ) : undefined
       }
       onConfirm={submit}
@@ -808,20 +853,26 @@ function InstallEnvDialog({
       <div className="tai-stack tai-stack-3">
         <p style={{ margin: 0 }}>
           Install {refValue}
-          {version !== null ? ` v${version}` : ''}? This server needs the following settings. Leave
-          a field blank if the deployment already provides it.
+          {version !== null ? ` v${version}` : ''}?
+          {missingVars.length > 0
+            ? ' This plugin needs these values to install. Leave a field blank if the deployment already provides it.'
+            : ''}
         </p>
-        <EnvVarFields
-          requiredVars={requiredVars}
-          values={values}
-          secret={secret}
-          onChangeValue={(name, value) => {
-            setValues((prev) => ({ ...prev, [name]: value }));
-          }}
-          onToggleSecret={(name, checked) => {
-            setSecret((prev) => ({ ...prev, [name]: checked }));
-          }}
-        />
+        {missingVars.length > 0 ? (
+          <EnvVarFields
+            requiredVars={missingVars}
+            values={values}
+            secret={secretMap}
+            requiredSecret={requiredEnvSecret}
+            hints={envHints}
+            onChangeValue={(name, value) => {
+              setValues((prev) => ({ ...prev, [name]: value }));
+            }}
+            onToggleSecret={(name, checked) => {
+              setSecretOverride((prev) => ({ ...prev, [name]: checked }));
+            }}
+          />
+        ) : null}
       </div>
     </ConfirmDialog>
   );
