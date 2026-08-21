@@ -62,6 +62,11 @@ function normalizeHref(href: string): string {
  * reads the same string as the host `settings`. Only the `//` form means the same
  * thing to both.
  *
+ * An absolute http(s) URL carrying `user:pass@` userinfo is rejected too: `.href`
+ * re-serialization preserves the userinfo (unlike host tricks), so
+ * `https://trusted.com@evil.com` would render as trusted.com yet navigate to
+ * evil.com.
+ *
  * Callers render the returned string rather than their input, so the URL that was
  * judged is always the URL that is navigated.
  */
@@ -69,7 +74,12 @@ export function safeHttpUrl(href: string): string | undefined {
   const normalized = normalizeHref(href);
   if (!/^https?:\/\//i.test(normalized)) return undefined;
   try {
-    return new URL(normalized).href;
+    const url = new URL(normalized);
+    // Userinfo is rejected because `.href` re-serialization preserves
+    // `user:pass@` (unlike host tricks), so `https://trusted.com@evil.com`
+    // would render as trusted.com yet navigate to evil.com.
+    if (url.username !== '' || url.password !== '') return undefined;
+    return url.href;
   } catch {
     return undefined;
   }

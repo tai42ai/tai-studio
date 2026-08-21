@@ -18,6 +18,23 @@ describe('the link-safety pair on the published surface', () => {
     expect(barrel.safeHttpUrl('javascript:alert(1)')).toBeUndefined();
     expect(barrel.isSafeHttpUrl('javascript:alert(1)')).toBe(false);
   });
+
+  it('rejects userinfo, which `.href` would preserve into a host-confusing anchor', () => {
+    // `https://trusted.com@evil.com` reads as trusted.com but navigates to
+    // evil.com; re-serialization keeps the `user:pass@`, so the anchor lies.
+    expect(barrel.safeHttpUrl('https://evil.com@real.com')).toBeUndefined();
+    expect(barrel.safeHttpUrl('https://trusted.com@evil.com')).toBeUndefined();
+    expect(barrel.safeHttpUrl('https://user:pass@evil.com')).toBeUndefined();
+    expect(barrel.isSafeHttpUrl('https://trusted.com@evil.com')).toBe(false);
+  });
+
+  it('round-trips a credential-free URL through query, fragment, and port', () => {
+    expect(barrel.safeHttpUrl('https://example.com/a')).toBe('https://example.com/a');
+    expect(barrel.safeHttpUrl('https://example.com:8443/a?x=1#frag')).toBe(
+      'https://example.com:8443/a?x=1#frag',
+    );
+    expect(barrel.isSafeHttpUrl('https://example.com/a')).toBe(true);
+  });
 });
 
 describe('Button', () => {

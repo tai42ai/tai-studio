@@ -218,6 +218,22 @@ describe('Markdown — link safety', () => {
     expect(container.querySelector('a')).toBeNull();
     expect(screen.getByText('home')).toBeInTheDocument();
   });
+
+  it('neutralizes a userinfo authority whose label spells a trusted host', () => {
+    // `trusted.com@evil.com` parses with host `evil.com` — a link-spoof: the
+    // label reads as the trusted host, the navigation lands on the attacker's.
+    const { container } = render(
+      <Markdown markdown="[trusted.com](https://trusted.com@evil.com)" />,
+    );
+    expect(container.querySelector('a')).toBeNull();
+    expect(screen.getByText('trusted.com')).toBeInTheDocument();
+  });
+
+  it('neutralizes a bare `user@` authority with no password', () => {
+    const { container } = render(<Markdown markdown="[home](https://alice@evil.com)" />);
+    expect(container.querySelector('a')).toBeNull();
+    expect(screen.getByText('home')).toBeInTheDocument();
+  });
 });
 
 describe('Markdown — no HTML sink (XSS pins)', () => {
