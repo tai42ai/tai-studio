@@ -4,7 +4,6 @@
 
 ```ts
 
-import { objectInputType } from 'zod';
 import { objectOutputType } from 'zod';
 import { z } from 'zod';
 import { ZodArray } from 'zod';
@@ -3078,9 +3077,9 @@ export function createApiClient(config: ApiConfig): {
                 name: string;
                 count: number;
             }[];
+            package: string | null;
             ref: string;
             namespace: string;
-            package: string;
             trust_tier: string;
             pricing: string;
             latest_version: string | null;
@@ -3106,8 +3105,8 @@ export function createApiClient(config: ApiConfig): {
             contract_range: string | null;
             published_at: string | null;
         }[];
+        package: string | null;
         namespace: string;
-        package: string;
         trust_tier: string;
         pricing: string;
         downloads: number;
@@ -3131,44 +3130,16 @@ export function createApiClient(config: ApiConfig): {
                         methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                     }[];
                 } | null | undefined;
+                required_env?: {
+                    name: string;
+                    secret: boolean;
+                }[] | undefined;
             }[];
             version: string;
             contract_range: string | null;
             published_at: string | null;
-            spec?: objectOutputType<    {
-            provides: ZodArray<ZodObject<    {
-            kind: ZodString;
-            name: ZodString;
-            mcp: ZodOptional<ZodNullable<ZodObject<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, "passthrough", ZodTypeAny, objectOutputType<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, ZodTypeAny, "passthrough">, objectInputType<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", ZodTypeAny, objectOutputType<    {
-            kind: ZodString;
-            name: ZodString;
-            mcp: ZodOptional<ZodNullable<ZodObject<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, "passthrough", ZodTypeAny, objectOutputType<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, ZodTypeAny, "passthrough">, objectInputType<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, ZodTypeAny, "passthrough">>>>;
-            }, ZodTypeAny, "passthrough">, objectInputType<    {
-            kind: ZodString;
-            name: ZodString;
-            mcp: ZodOptional<ZodNullable<ZodObject<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, "passthrough", ZodTypeAny, objectOutputType<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, ZodTypeAny, "passthrough">, objectInputType<    {
-            env: ZodOptional<ZodNullable<ZodRecord<ZodString, ZodString>>>;
-            }, ZodTypeAny, "passthrough">>>>;
-            }, ZodTypeAny, "passthrough">>, "many">;
-            }, ZodTypeAny, "passthrough"> | null | undefined;
         } | null;
+        source?: "pypi" | "github" | "spec" | null | undefined;
         premium?: boolean | null | undefined;
         docs_url?: string | null | undefined;
     }>;
@@ -3184,6 +3155,7 @@ export function createApiClient(config: ApiConfig): {
             source: string;
             ref: string;
             latest: string | null;
+            delivery: "package" | "descriptor";
             installed_at: string;
             update_available: boolean;
             incompatible_newer: string | null;
@@ -3213,7 +3185,12 @@ export function createApiClient(config: ApiConfig): {
             default_base: string;
         }[];
         version: string;
+        required_env: {
+            name: string;
+            secret: boolean;
+        }[];
         ref: string;
+        delivery: "package" | "descriptor";
         collisions: {
             methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             item: string;
@@ -3232,6 +3209,7 @@ export function createApiClient(config: ApiConfig): {
             full_path: string;
         }[];
         requires_public_acceptance: boolean;
+        missing_env: string[];
     }>;
     readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
         version: string;
@@ -4916,6 +4894,12 @@ const marketplaceAdvisory: z.ZodObject<{
 // @public
 const marketplaceCategories: z.ZodArray<z.ZodString, "many">;
 
+// @public (undocumented)
+export type MarketplaceDelivery = z.infer<typeof marketplaceDelivery>;
+
+// @public
+const marketplaceDelivery: z.ZodEnum<["package", "descriptor"]>;
+
 // @public
 export interface MarketplaceInstallBody {
     // (undocumented)
@@ -4941,6 +4925,7 @@ const marketplaceInstalled: z.ZodObject<{
         ref: z.ZodString;
         version: z.ZodString;
         source: z.ZodString;
+        delivery: z.ZodEnum<["package", "descriptor"]>;
         installed_at: z.ZodString;
         latest: z.ZodNullable<z.ZodString>;
         update_available: z.ZodBoolean;
@@ -4992,6 +4977,16 @@ const marketplaceInstalled: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             }>>>;
+            required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                name: z.ZodString;
+                secret: z.ZodBoolean;
+            }, "strip", z.ZodTypeAny, {
+                name: string;
+                secret: boolean;
+            }, {
+                name: string;
+                secret: boolean;
+            }>, "many">>;
         }, "name" | "kind">, "strip", z.ZodTypeAny, {
             name: string;
             kind: string;
@@ -5009,6 +5004,7 @@ const marketplaceInstalled: z.ZodObject<{
         source: string;
         ref: string;
         latest: string | null;
+        delivery: "package" | "descriptor";
         installed_at: string;
         update_available: boolean;
         incompatible_newer: string | null;
@@ -5027,6 +5023,7 @@ const marketplaceInstalled: z.ZodObject<{
         source: string;
         ref: string;
         latest: string | null;
+        delivery: "package" | "descriptor";
         installed_at: string;
         update_available: boolean;
         incompatible_newer: string | null;
@@ -5057,6 +5054,7 @@ const marketplaceInstalled: z.ZodObject<{
         source: string;
         ref: string;
         latest: string | null;
+        delivery: "package" | "descriptor";
         installed_at: string;
         update_available: boolean;
         incompatible_newer: string | null;
@@ -5081,6 +5079,7 @@ const marketplaceInstalled: z.ZodObject<{
         source: string;
         ref: string;
         latest: string | null;
+        delivery: "package" | "descriptor";
         installed_at: string;
         update_available: boolean;
         incompatible_newer: string | null;
@@ -5120,6 +5119,7 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     ref: z.ZodString;
     version: z.ZodString;
     source: z.ZodString;
+    delivery: z.ZodEnum<["package", "descriptor"]>;
     installed_at: z.ZodString;
     latest: z.ZodNullable<z.ZodString>;
     update_available: z.ZodBoolean;
@@ -5171,6 +5171,16 @@ const marketplaceInstalledPlugin: z.ZodObject<{
                 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             }[];
         }>>>;
+        required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            secret: z.ZodBoolean;
+        }, "strip", z.ZodTypeAny, {
+            name: string;
+            secret: boolean;
+        }, {
+            name: string;
+            secret: boolean;
+        }>, "many">>;
     }, "name" | "kind">, "strip", z.ZodTypeAny, {
         name: string;
         kind: string;
@@ -5188,6 +5198,7 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     source: string;
     ref: string;
     latest: string | null;
+    delivery: "package" | "descriptor";
     installed_at: string;
     update_available: boolean;
     incompatible_newer: string | null;
@@ -5206,6 +5217,7 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     source: string;
     ref: string;
     latest: string | null;
+    delivery: "package" | "descriptor";
     installed_at: string;
     update_available: boolean;
     incompatible_newer: string | null;
@@ -5314,6 +5326,18 @@ const marketplaceInstallPreview: z.ZodObject<{
         full_path: string;
     }>, "many">;
     requires_public_acceptance: z.ZodBoolean;
+    required_env: z.ZodArray<z.ZodObject<{
+        name: z.ZodString;
+        secret: z.ZodBoolean;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+        secret: boolean;
+    }, {
+        name: string;
+        secret: boolean;
+    }>, "many">;
+    missing_env: z.ZodArray<z.ZodString, "many">;
+    delivery: z.ZodEnum<["package", "descriptor"]>;
 }, "strip", z.ZodTypeAny, {
     items: {
         kind: string;
@@ -5328,7 +5352,12 @@ const marketplaceInstallPreview: z.ZodObject<{
         default_base: string;
     }[];
     version: string;
+    required_env: {
+        name: string;
+        secret: boolean;
+    }[];
     ref: string;
+    delivery: "package" | "descriptor";
     collisions: {
         methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         item: string;
@@ -5347,6 +5376,7 @@ const marketplaceInstallPreview: z.ZodObject<{
         full_path: string;
     }[];
     requires_public_acceptance: boolean;
+    missing_env: string[];
 }, {
     items: {
         kind: string;
@@ -5361,7 +5391,12 @@ const marketplaceInstallPreview: z.ZodObject<{
         default_base: string;
     }[];
     version: string;
+    required_env: {
+        name: string;
+        secret: boolean;
+    }[];
     ref: string;
+    delivery: "package" | "descriptor";
     collisions: {
         methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         item: string;
@@ -5380,6 +5415,7 @@ const marketplaceInstallPreview: z.ZodObject<{
         full_path: string;
     }[];
     requires_public_acceptance: boolean;
+    missing_env: string[];
 }>;
 
 // @public
@@ -5521,6 +5557,16 @@ const marketplaceItem: z.ZodObject<{
             methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         }[];
     }>>>;
+    required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        name: z.ZodString;
+        secret: z.ZodBoolean;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+        secret: boolean;
+    }, {
+        name: string;
+        secret: boolean;
+    }>, "many">>;
 }, "strip", z.ZodTypeAny, {
     name: string;
     description: string;
@@ -5535,6 +5581,10 @@ const marketplaceItem: z.ZodObject<{
             methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         }[];
     } | null | undefined;
+    required_env?: {
+        name: string;
+        secret: boolean;
+    }[] | undefined;
 }, {
     name: string;
     description: string;
@@ -5549,6 +5599,10 @@ const marketplaceItem: z.ZodObject<{
             methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         }[];
     } | null | undefined;
+    required_env?: {
+        name: string;
+        secret: boolean;
+    }[] | undefined;
 }>;
 
 // @public
@@ -5600,6 +5654,16 @@ const marketplaceLatestVersion: z.ZodObject<{
                 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             }[];
         }>>>;
+        required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            secret: z.ZodBoolean;
+        }, "strip", z.ZodTypeAny, {
+            name: string;
+            secret: boolean;
+        }, {
+            name: string;
+            secret: boolean;
+        }>, "many">>;
     }, "strip", z.ZodTypeAny, {
         name: string;
         description: string;
@@ -5614,6 +5678,10 @@ const marketplaceLatestVersion: z.ZodObject<{
                 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             }[];
         } | null | undefined;
+        required_env?: {
+            name: string;
+            secret: boolean;
+        }[] | undefined;
     }, {
         name: string;
         description: string;
@@ -5628,104 +5696,11 @@ const marketplaceLatestVersion: z.ZodObject<{
                 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             }[];
         } | null | undefined;
+        required_env?: {
+            name: string;
+            secret: boolean;
+        }[] | undefined;
     }>, "many">;
-    spec: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        provides: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">>, "many">;
-    }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-        provides: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">>, "many">;
-    }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-        provides: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">>, "many">;
-    }, z.ZodTypeAny, "passthrough">>>>;
 }, "strip", z.ZodTypeAny, {
     status: string;
     items: {
@@ -5742,43 +5717,14 @@ const marketplaceLatestVersion: z.ZodObject<{
                 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             }[];
         } | null | undefined;
+        required_env?: {
+            name: string;
+            secret: boolean;
+        }[] | undefined;
     }[];
     version: string;
     contract_range: string | null;
     published_at: string | null;
-    spec?: z.objectOutputType<{
-        provides: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">>, "many">;
-    }, z.ZodTypeAny, "passthrough"> | null | undefined;
 }, {
     status: string;
     items: {
@@ -5795,43 +5741,14 @@ const marketplaceLatestVersion: z.ZodObject<{
                 methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             }[];
         } | null | undefined;
+        required_env?: {
+            name: string;
+            secret: boolean;
+        }[] | undefined;
     }[];
     version: string;
     contract_range: string | null;
     published_at: string | null;
-    spec?: z.objectInputType<{
-        provides: z.ZodArray<z.ZodObject<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            kind: z.ZodString;
-            name: z.ZodString;
-            mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-            }, z.ZodTypeAny, "passthrough">>>>;
-        }, z.ZodTypeAny, "passthrough">>, "many">;
-    }, z.ZodTypeAny, "passthrough"> | null | undefined;
 }>;
 
 // @public (undocumented)
@@ -5864,7 +5781,8 @@ const marketplacePluginDetail: z.ZodObject<{
     name: z.ZodString;
     display_name: z.ZodNullable<z.ZodString>;
     icon_url: z.ZodNullable<z.ZodString>;
-    package: z.ZodString;
+    package: z.ZodNullable<z.ZodString>;
+    source: z.ZodOptional<z.ZodNullable<z.ZodEnum<["pypi", "github", "spec"]>>>;
     description: z.ZodString;
     readme_md: z.ZodNullable<z.ZodString>;
     license: z.ZodNullable<z.ZodString>;
@@ -5919,6 +5837,16 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             }>>>;
+            required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                name: z.ZodString;
+                secret: z.ZodBoolean;
+            }, "strip", z.ZodTypeAny, {
+                name: string;
+                secret: boolean;
+            }, {
+                name: string;
+                secret: boolean;
+            }>, "many">>;
         }, "strip", z.ZodTypeAny, {
             name: string;
             description: string;
@@ -5933,6 +5861,10 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             } | null | undefined;
+            required_env?: {
+                name: string;
+                secret: boolean;
+            }[] | undefined;
         }, {
             name: string;
             description: string;
@@ -5947,104 +5879,11 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             } | null | undefined;
+            required_env?: {
+                name: string;
+                secret: boolean;
+            }[] | undefined;
         }>, "many">;
-        spec: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, z.ZodTypeAny, "passthrough">>>>;
     }, "strip", z.ZodTypeAny, {
         status: string;
         items: {
@@ -6061,43 +5900,14 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             } | null | undefined;
+            required_env?: {
+                name: string;
+                secret: boolean;
+            }[] | undefined;
         }[];
         version: string;
         contract_range: string | null;
         published_at: string | null;
-        spec?: z.objectOutputType<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, z.ZodTypeAny, "passthrough"> | null | undefined;
     }, {
         status: string;
         items: {
@@ -6114,43 +5924,14 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             } | null | undefined;
+            required_env?: {
+                name: string;
+                secret: boolean;
+            }[] | undefined;
         }[];
         version: string;
         contract_range: string | null;
         published_at: string | null;
-        spec?: z.objectInputType<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, z.ZodTypeAny, "passthrough"> | null | undefined;
     }>>;
     versions: z.ZodArray<z.ZodObject<{
         version: z.ZodString;
@@ -6181,8 +5962,8 @@ const marketplacePluginDetail: z.ZodObject<{
         contract_range: string | null;
         published_at: string | null;
     }[];
+    package: string | null;
     namespace: string;
-    package: string;
     trust_tier: string;
     pricing: string;
     downloads: number;
@@ -6206,44 +5987,16 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             } | null | undefined;
+            required_env?: {
+                name: string;
+                secret: boolean;
+            }[] | undefined;
         }[];
         version: string;
         contract_range: string | null;
         published_at: string | null;
-        spec?: z.objectOutputType<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, z.ZodTypeAny, "passthrough"> | null | undefined;
     } | null;
+    source?: "pypi" | "github" | "spec" | null | undefined;
     premium?: boolean | null | undefined;
     docs_url?: string | null | undefined;
 }, {
@@ -6259,8 +6012,8 @@ const marketplacePluginDetail: z.ZodObject<{
         contract_range: string | null;
         published_at: string | null;
     }[];
+    package: string | null;
     namespace: string;
-    package: string;
     trust_tier: string;
     pricing: string;
     downloads: number;
@@ -6284,44 +6037,16 @@ const marketplacePluginDetail: z.ZodObject<{
                     methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 }[];
             } | null | undefined;
+            required_env?: {
+                name: string;
+                secret: boolean;
+            }[] | undefined;
         }[];
         version: string;
         contract_range: string | null;
         published_at: string | null;
-        spec?: z.objectInputType<{
-            provides: z.ZodArray<z.ZodObject<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                kind: z.ZodString;
-                name: z.ZodString;
-                mcp: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-                    env: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodString>>>;
-                }, z.ZodTypeAny, "passthrough">>>>;
-            }, z.ZodTypeAny, "passthrough">>, "many">;
-        }, z.ZodTypeAny, "passthrough"> | null | undefined;
     } | null;
+    source?: "pypi" | "github" | "spec" | null | undefined;
     premium?: boolean | null | undefined;
     docs_url?: string | null | undefined;
 }>;
@@ -6454,6 +6179,21 @@ const marketplaceQuarantinedPlugin: z.ZodObject<{
 }>;
 
 // @public (undocumented)
+export type MarketplaceRequiredEnvVar = z.infer<typeof marketplaceRequiredEnvVar>;
+
+// @public
+const marketplaceRequiredEnvVar: z.ZodObject<{
+    name: z.ZodString;
+    secret: z.ZodBoolean;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    secret: boolean;
+}, {
+    name: string;
+    secret: boolean;
+}>;
+
+// @public (undocumented)
 export type MarketplaceRouteDecl = z.infer<typeof marketplaceRouteDecl>;
 
 // @public
@@ -6550,7 +6290,7 @@ const marketplaceSearchPage: z.ZodObject<{
         name: z.ZodString;
         display_name: z.ZodNullable<z.ZodString>;
         icon_url: z.ZodNullable<z.ZodString>;
-        package: z.ZodString;
+        package: z.ZodNullable<z.ZodString>;
         description: z.ZodString;
         categories: z.ZodArray<z.ZodString, "many">;
         tags: z.ZodArray<z.ZodString, "many">;
@@ -6595,9 +6335,9 @@ const marketplaceSearchPage: z.ZodObject<{
             name: string;
             count: number;
         }[];
+        package: string | null;
         ref: string;
         namespace: string;
-        package: string;
         trust_tier: string;
         pricing: string;
         latest_version: string | null;
@@ -6620,9 +6360,9 @@ const marketplaceSearchPage: z.ZodObject<{
             name: string;
             count: number;
         }[];
+        package: string | null;
         ref: string;
         namespace: string;
-        package: string;
         trust_tier: string;
         pricing: string;
         latest_version: string | null;
@@ -6653,9 +6393,9 @@ const marketplaceSearchPage: z.ZodObject<{
             name: string;
             count: number;
         }[];
+        package: string | null;
         ref: string;
         namespace: string;
-        package: string;
         trust_tier: string;
         pricing: string;
         latest_version: string | null;
@@ -6683,9 +6423,9 @@ const marketplaceSearchPage: z.ZodObject<{
             name: string;
             count: number;
         }[];
+        package: string | null;
         ref: string;
         namespace: string;
-        package: string;
         trust_tier: string;
         pricing: string;
         latest_version: string | null;
@@ -6733,7 +6473,7 @@ const marketplaceSearchRow: z.ZodObject<{
     name: z.ZodString;
     display_name: z.ZodNullable<z.ZodString>;
     icon_url: z.ZodNullable<z.ZodString>;
-    package: z.ZodString;
+    package: z.ZodNullable<z.ZodString>;
     description: z.ZodString;
     categories: z.ZodArray<z.ZodString, "many">;
     tags: z.ZodArray<z.ZodString, "many">;
@@ -6778,9 +6518,9 @@ const marketplaceSearchRow: z.ZodObject<{
         name: string;
         count: number;
     }[];
+    package: string | null;
     ref: string;
     namespace: string;
-    package: string;
     trust_tier: string;
     pricing: string;
     latest_version: string | null;
@@ -6803,9 +6543,9 @@ const marketplaceSearchRow: z.ZodObject<{
         name: string;
         count: number;
     }[];
+    package: string | null;
     ref: string;
     namespace: string;
-    package: string;
     trust_tier: string;
     pricing: string;
     latest_version: string | null;
@@ -6817,6 +6557,12 @@ const marketplaceSearchRow: z.ZodObject<{
     }[];
     premium?: boolean | null | undefined;
 }>;
+
+// @public (undocumented)
+export type MarketplaceSource = z.infer<typeof marketplaceSource>;
+
+// @public
+const marketplaceSource: z.ZodEnum<["pypi", "github", "spec"]>;
 
 // @public
 export interface MarketplaceUninstallBody {
@@ -10115,6 +9861,12 @@ declare namespace s {
         RunTrace,
         routeMethod,
         RouteMethod,
+        marketplaceDelivery,
+        MarketplaceDelivery,
+        marketplaceSource,
+        MarketplaceSource,
+        marketplaceRequiredEnvVar,
+        MarketplaceRequiredEnvVar,
         marketplaceRouteDecl,
         MarketplaceRouteDecl,
         marketplaceRoutesDecl,
@@ -10548,6 +10300,12 @@ declare namespace schemas {
         RunTrace,
         routeMethod,
         RouteMethod,
+        marketplaceDelivery,
+        MarketplaceDelivery,
+        marketplaceSource,
+        MarketplaceSource,
+        marketplaceRequiredEnvVar,
+        MarketplaceRequiredEnvVar,
         marketplaceRouteDecl,
         MarketplaceRouteDecl,
         marketplaceRoutesDecl,

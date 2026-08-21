@@ -20,7 +20,10 @@ const PROVIDERS = {
       id: 'acme',
       display_name: 'Acme',
       description: 'Acme provider',
-      icon_url: '',
+      // The provider catalog contract requires a real URL (`providerView.icon_url`
+      // parses with `z.string().url()`), so an empty string would fail the response
+      // parse and blank the whole providers list.
+      icon_url: 'https://cdn.example/acme.png',
       kind: 'oauth',
       origin: 'system',
       category: 'tools',
