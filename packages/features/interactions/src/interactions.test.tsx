@@ -91,6 +91,7 @@ async function settle(): Promise<void> {
 function renderInbox(
   answerInteraction?: ApiClient['answerInteraction'],
   projection: MeProjection = fullProjection(),
+  baseUrl = '',
 ): {
   channel: StreamChannel;
   answer: ApiClient['answerInteraction'];
@@ -105,6 +106,7 @@ function renderInbox(
     channel,
     answerInteraction: answer,
     listChannels: vi.fn().mockResolvedValue({ channels: ['telegram'] }),
+    baseUrl,
   });
   const { container } = renderWithProviders(<InteractionsPage search={{}} />, {
     client,
@@ -1236,7 +1238,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     });
   }
 
-  it('renders a served-media item as an <img> with the exact src, alt fallback, and no-referrer', async () => {
+  it('renders a served-media item as an <img>, keeping the relative ref same-origin (empty baseUrl)', async () => {
     const { channel, container } = renderInbox();
     await emitFrame(
       channel,
@@ -1247,10 +1249,29 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(screen.getByTestId('media-gallery')).toBeInTheDocument();
     const img = container.querySelector('img');
     expect(img).not.toBeNull();
+    // Same-origin deployment (baseUrl ''): the ref stays relative, unjoined.
     expect(img?.getAttribute('src')).toBe(SERVED_MEDIA_URL);
     // No caption → the accessibility fallback, never `alt=""`.
     expect(img?.getAttribute('alt')).toBe('Attached image');
     // The privacy mitigation is a PINNED invariant, not optional polish.
+    expect(img?.getAttribute('referrerpolicy')).toBe('no-referrer');
+  });
+
+  it('joins a served-media ref to the configured API base (cross-origin deployment)', async () => {
+    // A cross-origin deployment: Studio and the API are different origins. The
+    // relative ref MUST resolve against the API base, not the SPA page origin, or
+    // the browser loads it from Studio and 404s.
+    const { channel, container } = renderInbox(undefined, fullProjection(), 'https://api.example');
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({ interaction_id: 'q-img-abs', media: [{ kind: 'image', url: SERVED_MEDIA_URL }] }),
+    );
+
+    const img = container.querySelector('img');
+    expect(img?.getAttribute('src')).toBe(`https://api.example${SERVED_MEDIA_URL}`);
+    // The gate, alt fallback, and no-referrer are unchanged by the join.
+    expect(img?.getAttribute('alt')).toBe('Attached image');
     expect(img?.getAttribute('referrerpolicy')).toBe('no-referrer');
   });
 

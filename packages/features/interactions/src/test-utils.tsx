@@ -199,14 +199,19 @@ export function interactionsPage(
  * pending base — defaults to an empty page so a plain inbox test starts empty),
  * `answerInteraction`, and `listChannels` (the delivery-channels catalog card —
  * defaults to an empty catalog so a plain inbox test needs no channel data).
+ * `baseUrl` mirrors the real client's read-only field (default '' for same-origin).
  */
 export function stubClient(parts: {
   channel: StreamChannel;
   listInteractions?: ApiClient['listInteractions'];
   answerInteraction?: ApiClient['answerInteraction'];
   listChannels?: ApiClient['listChannels'];
+  baseUrl?: string;
 }): ApiClient {
   return {
+    // '' for a same-origin deployment, an absolute API origin for a cross-origin
+    // one; served-media refs resolve against it in the display media card.
+    baseUrl: parts.baseUrl ?? '',
     streamInteractions: (_signal?: AbortSignal) => Promise.resolve(parts.channel.iterator),
     listInteractions: parts.listInteractions ?? vi.fn().mockResolvedValue(interactionsPage()),
     answerInteraction: parts.answerInteraction ?? vi.fn().mockResolvedValue(undefined),
