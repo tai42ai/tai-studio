@@ -16,7 +16,10 @@ import pytest
 from tai42_contract.monitoring import (
     MetricsFilter,
     MetricsView,
+    MonitoringLevel,
+    MonitoringObservation,
     MonitoringReadNotSupportedError,
+    MonitoringTrace,
     OrderBy,
     TraceNotFoundError,
 )
@@ -72,7 +75,8 @@ def test_day_series_buckets() -> None:
     for row in res.rows:
         bucket = row.dimensions.get("date")
         # extract_bucket matches the leading \d{4}-\d{2}-\d{2} (observability_support.py).
-        assert isinstance(bucket, str) and re.match(r"\d{4}-\d{2}-\d{2}", bucket)
+        assert isinstance(bucket, str)
+        assert re.match(r"\d{4}-\d{2}-\d{2}", bucket)
     # Sorted ascending by bucket date.
     dates = [r.dimensions["date"] for r in res.rows]
     assert dates == sorted(dates)
@@ -155,12 +159,61 @@ def test_list_spans_in_window() -> None:
     assert spans[0].start >= spans[-1].start  # newest-first default
 
 
+def _trace(trace_id: str, *, level: str, tokens: int) -> MonitoringTrace:
+    start = NOW - timedelta(minutes=5)
+    return MonitoringTrace(
+        id=trace_id,
+        timestamp=start,
+        tags=["demo"],
+        input={"prompt": "hello"},
+        output={"reply": "world"},
+        total_cost=0.01,
+        observations=[
+            MonitoringObservation(
+                id=f"{trace_id}-gen",
+                trace_id=trace_id,
+                type="GENERATION",
+                name="gen",
+                level=level,
+                input={"prompt": "hello"},
+                output={"reply": "world"},
+                usage={"input": tokens, "output": tokens},
+                model="gpt-4o-mini",
+                start=start,
+                end=start + timedelta(seconds=1),
+            )
+        ],
+    )
+
+
+def test_list_traces_summary_carries_status_previews_and_tokens() -> None:
+    store = TraceStore()
+    store.insert(_trace("ok-trace", level=MonitoringLevel.DEFAULT.value, tokens=10))
+    reader = DemoReader(store)
+    summaries = asyncio.run(reader.list_traces(from_timestamp=FROM, to_timestamp=TO))
+    assert len(summaries) == 1
+    summary = summaries[0]
+    assert summary.status == "ok"
+    assert summary.input_preview == {"prompt": "hello"}
+    assert summary.output_preview == {"reply": "world"}
+    assert summary.total_tokens == 20
+
+
+def test_list_traces_error_observation_yields_error_status() -> None:
+    store = TraceStore()
+    store.insert(_trace("err-trace", level=MonitoringLevel.ERROR.value, tokens=5))
+    reader = DemoReader(store)
+    summaries = asyncio.run(reader.list_traces(from_timestamp=FROM, to_timestamp=TO))
+    assert len(summaries) == 1
+    assert summaries[0].status == "error"
+
+
 def test_sorted_missing_last_places_none_last_in_both_directions() -> None:
     # An item with a None sort value (e.g. an open span's end) sorts LAST
     # regardless of direction, per the monitoring OrderBy contract.
     items = [{"v": 3, "id": "a"}, {"v": None, "id": "b"}, {"v": 1, "id": "c"}]
-    val = lambda x: x["v"]  # noqa: E731
-    idf = lambda x: x["id"]  # noqa: E731
+    val = lambda x: x["v"]
+    idf = lambda x: x["id"]
     desc = _sorted_missing_last(items, val, idf, reverse=True)
     assert [x["id"] for x in desc] == ["a", "c", "b"]  # 3, 1, then None last
     asc = _sorted_missing_last(items, val, idf, reverse=False)

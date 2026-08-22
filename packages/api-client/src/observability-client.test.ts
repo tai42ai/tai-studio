@@ -73,10 +73,8 @@ const runsPage = {
       cost: 0.04,
       latencyMs: 42,
       totalTokens: 300,
-      model: 'gpt',
       inputPreview: 'hi',
       outputPreview: 'ok',
-      fetchError: null,
     },
   ],
   page: 1,
@@ -91,8 +89,6 @@ const trace = {
   input: 'hi',
   output: 'ok',
   metadata: null,
-  availability: 'full',
-  fetchError: null,
   spans: [],
 };
 
@@ -179,7 +175,7 @@ describe('observability metrics + runs transport', () => {
     const out = await client.getRunTrace('trace 1');
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/observability/runs/trace%201/trace');
-    expect(out.availability).toBe('full');
+    expect(out.traceId).toBe('trace_1');
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting run row (status not in the enum)', async () => {

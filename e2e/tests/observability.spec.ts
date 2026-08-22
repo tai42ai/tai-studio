@@ -6,8 +6,7 @@
  * Legs: range preset applies; the metric-sort×filter incompatible combo is
  * unreachable from the UI (guarded header) AND repaired from a hand-built URL;
  * a run row opens the two-pane trace with the first ERROR span auto-selected;
- * the waterfall renders bars + a span filter; the summary bar totals; and a run
- * carrying a `fetchError` shows the trace-unavailable badge.
+ * the waterfall renders bars + a span filter; and the summary bar totals.
  */
 import { test, expect, type Page } from '@playwright/test';
 import { seedCredential } from './helpers';
@@ -16,7 +15,7 @@ const RUNS_PATH = '/api/observability/runs';
 const METRICS_PATH = '/api/observability/metrics';
 const TRACE_ID = 'trace-with-error';
 
-/** Two runs: a clean one, and one whose trace read failed (fetchError set). */
+/** Two runs: a clean success, and one in error status with no cost/latency/tokens. */
 const RUNS_PAGE = {
   items: [
     {
@@ -28,10 +27,8 @@ const RUNS_PAGE = {
       cost: 0.0123,
       latencyMs: 240,
       totalTokens: 512,
-      model: 'gpt-x',
       inputPreview: 'hello',
       outputPreview: 'world',
-      fetchError: null,
     },
     {
       id: 'run-degraded',
@@ -42,10 +39,8 @@ const RUNS_PAGE = {
       cost: null,
       latencyMs: null,
       totalTokens: null,
-      model: null,
       inputPreview: 'x',
       outputPreview: 'y',
-      fetchError: 'monitoring backend timeout',
     },
   ],
   page: 1,
@@ -61,8 +56,6 @@ const TRACE = {
   input: 'hello',
   output: 'world',
   metadata: null,
-  availability: 'full',
-  fetchError: null,
   spans: [
     {
       id: 'root',
@@ -216,19 +209,6 @@ test('a hand-built metric-sort×filter URL is repaired to a legal query before i
   // Repaired to a legal query, the table loads rather than showing the metric-sort note.
   await expect(page.getByTestId('run-row-run-ok')).toBeVisible();
   await expect(page.getByText(/filters are unavailable while sorting by a metric/i)).toHaveCount(0);
-});
-
-test('a run carrying a fetchError shows the trace-unavailable badge; a clean run does not', async ({
-  page,
-}) => {
-  await stubObservability(page);
-  await page.goto('/observability?tab=tracing');
-
-  const degraded = page.getByTestId('run-row-run-degraded');
-  await expect(degraded).toBeVisible();
-  await expect(degraded.getByText('trace unavailable')).toBeVisible();
-  // The healthy run's row carries no such badge.
-  await expect(page.getByTestId('run-row-run-ok').getByText('trace unavailable')).toHaveCount(0);
 });
 
 test('opening a run drills into the two-pane trace with the first ERROR span auto-selected', async ({

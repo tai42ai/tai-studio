@@ -6,8 +6,6 @@
   "input": "Summarize the status report",
   "output": "The status report shows...",
   "metadata": { "user": "svc-dashboard" },
-  "availability": "full",
-  "fetchError": null,
   "spans": [
     {
       "id": "span_root",

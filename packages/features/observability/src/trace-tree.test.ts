@@ -44,8 +44,6 @@ function trace(spans: RunSpan[], overrides: Partial<RunTrace> = {}): RunTrace {
     input: null,
     output: null,
     metadata: null,
-    availability: 'full',
-    fetchError: null,
     spans,
     ...overrides,
   };

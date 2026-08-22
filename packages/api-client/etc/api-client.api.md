@@ -3037,7 +3037,6 @@ export function createApiClient(config: ApiConfig): {
     readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
         items: {
             status: "error" | "success";
-            model: string | null;
             tags: string[];
             id: string;
             totalTokens: number | null;
@@ -3045,7 +3044,6 @@ export function createApiClient(config: ApiConfig): {
             traceId: string;
             createdAt: string | null;
             latencyMs: number | null;
-            fetchError: string | null;
             inputPreview?: unknown;
             outputPreview?: unknown;
         }[];
@@ -3056,9 +3054,7 @@ export function createApiClient(config: ApiConfig): {
         tags: string[];
         totalCost: number | null;
         traceId: string;
-        fetchError: string | null;
         timestamp: string | null;
-        availability: "partial" | "unavailable" | "full";
         spans: {
             name: string | null;
             type: string | null;
@@ -9347,13 +9343,10 @@ const run: z.ZodObject<{
     cost: z.ZodNullable<z.ZodNumber>;
     latencyMs: z.ZodNullable<z.ZodNumber>;
     totalTokens: z.ZodNullable<z.ZodNumber>;
-    model: z.ZodNullable<z.ZodString>;
     inputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
     outputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    fetchError: z.ZodNullable<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     status: "error" | "success";
-    model: string | null;
     tags: string[];
     id: string;
     totalTokens: number | null;
@@ -9361,12 +9354,10 @@ const run: z.ZodObject<{
     traceId: string;
     createdAt: string | null;
     latencyMs: number | null;
-    fetchError: string | null;
     inputPreview?: unknown;
     outputPreview?: unknown;
 }, {
     status: "error" | "success";
-    model: string | null;
     tags: string[];
     id: string;
     totalTokens: number | null;
@@ -9374,7 +9365,6 @@ const run: z.ZodObject<{
     traceId: string;
     createdAt: string | null;
     latencyMs: number | null;
-    fetchError: string | null;
     inputPreview?: unknown;
     outputPreview?: unknown;
 }>;
@@ -9390,13 +9380,10 @@ const runsPage: z.ZodObject<{
         cost: z.ZodNullable<z.ZodNumber>;
         latencyMs: z.ZodNullable<z.ZodNumber>;
         totalTokens: z.ZodNullable<z.ZodNumber>;
-        model: z.ZodNullable<z.ZodString>;
         inputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
         outputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-        fetchError: z.ZodNullable<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         status: "error" | "success";
-        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
@@ -9404,12 +9391,10 @@ const runsPage: z.ZodObject<{
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
-        fetchError: string | null;
         inputPreview?: unknown;
         outputPreview?: unknown;
     }, {
         status: "error" | "success";
-        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
@@ -9417,7 +9402,6 @@ const runsPage: z.ZodObject<{
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
-        fetchError: string | null;
         inputPreview?: unknown;
         outputPreview?: unknown;
     }>, "many">;
@@ -9426,7 +9410,6 @@ const runsPage: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     items: {
         status: "error" | "success";
-        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
@@ -9434,7 +9417,6 @@ const runsPage: z.ZodObject<{
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
-        fetchError: string | null;
         inputPreview?: unknown;
         outputPreview?: unknown;
     }[];
@@ -9443,7 +9425,6 @@ const runsPage: z.ZodObject<{
 }, {
     items: {
         status: "error" | "success";
-        model: string | null;
         tags: string[];
         id: string;
         totalTokens: number | null;
@@ -9451,7 +9432,6 @@ const runsPage: z.ZodObject<{
         traceId: string;
         createdAt: string | null;
         latencyMs: number | null;
-        fetchError: string | null;
         inputPreview?: unknown;
         outputPreview?: unknown;
     }[];
@@ -9568,8 +9548,6 @@ const runTrace: z.ZodObject<{
     input: z.ZodType<unknown, z.ZodTypeDef, unknown>;
     output: z.ZodType<unknown, z.ZodTypeDef, unknown>;
     metadata: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    availability: z.ZodEnum<["unavailable", "full", "partial"]>;
-    fetchError: z.ZodNullable<z.ZodString>;
     spans: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         parentId: z.ZodNullable<z.ZodString>;
@@ -9623,9 +9601,7 @@ const runTrace: z.ZodObject<{
     tags: string[];
     totalCost: number | null;
     traceId: string;
-    fetchError: string | null;
     timestamp: string | null;
-    availability: "partial" | "unavailable" | "full";
     spans: {
         name: string | null;
         type: string | null;
@@ -9650,9 +9626,7 @@ const runTrace: z.ZodObject<{
     tags: string[];
     totalCost: number | null;
     traceId: string;
-    fetchError: string | null;
     timestamp: string | null;
-    availability: "partial" | "unavailable" | "full";
     spans: {
         name: string | null;
         type: string | null;

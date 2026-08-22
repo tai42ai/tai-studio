@@ -491,3 +491,22 @@ describe('conversation thread message-sent schema', () => {
     ).toThrow();
   });
 });
+
+describe('run row schema — summary-projected, no per-trace fetchError', () => {
+  it('parses a run row that carries no fetchError field', () => {
+    const parsed = schemas.run.parse({
+      id: 'run_1',
+      traceId: 'trace_1',
+      createdAt: '2026-07-11T00:00:00Z',
+      tags: ['prod'],
+      status: 'success',
+      cost: 0.04,
+      latencyMs: 42,
+      totalTokens: 300,
+      inputPreview: 'hi',
+      outputPreview: 'ok',
+    });
+    expect(parsed.id).toBe('run_1');
+    expect('fetchError' in parsed).toBe(false);
+  });
+});
