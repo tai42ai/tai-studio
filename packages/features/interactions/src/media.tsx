@@ -22,14 +22,16 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import { schemas } from '@tai42/api-client';
 import type { InteractionMediaItem } from '@tai42/api-client';
-import { Badge, ExternalLinkButton, isSafeHttpUrl } from '@tai42/studio-sdk';
+import { Badge, ExternalLinkButton, isSafeHttpUrl, useApi } from '@tai42/studio-sdk';
 
 import { MalformedPayload } from './renderers';
 
 /**
- * The served-media route: media is stored by reference and served same-origin from
- * `MEDIA_ROUTE_PREFIX + <id>`, where the id is 43 urlsafe-base64 chars (32 random
- * bytes). A relative url of exactly that shape is the platform's own media url.
+ * The served-media route: media is stored by reference and served from the API
+ * origin at `MEDIA_ROUTE_PREFIX + <id>`, where the id is 43 urlsafe-base64 chars
+ * (32 random bytes). The record carries it as a RELATIVE url of exactly that
+ * shape — the platform's own media reference, resolved to the API base at render
+ * time (`resolveImageSrc`), not assumed same-origin as the SPA page.
  */
 const MEDIA_ROUTE_PREFIX = '/api/interactions/media/';
 const MEDIA_ID = /^[A-Za-z0-9_-]{43}$/;
@@ -40,16 +42,31 @@ function isServedMediaUrl(url: string): boolean {
 
 /**
  * The image src gate: an image renders ONLY for an `https:` URL or the platform's
- * own served-media url (relative `MEDIA_ROUTE_PREFIX + <id>`, same origin).
+ * own served-media reference (a relative `MEDIA_ROUTE_PREFIX + <id>`).
  * `isSafeHttpUrl` is TIGHTENED to https-only here (it alone also admits `http:`,
  * which the SPA CSP `img-src` blocks and the contract never emits); the served-media
  * branch pins a well-formed platform media id (a relative url `isSafeHttpUrl` cannot
  * parse). The two branches are NOT interchangeable: `http:`, `javascript:`, every
  * `data:` scheme, and any other-shaped relative url fail BOTH → a loud blocked item.
+ * The gate keys on the reference form; `resolveImageSrc` joins an admitted
+ * reference to the API base for the actual load.
  */
 function isRenderableImageSrc(url: string): boolean {
   const isHttpsUrl = isSafeHttpUrl(url) && new URL(url).protocol === 'https:';
   return isHttpsUrl || isServedMediaUrl(url);
+}
+
+/**
+ * The URL an admitted image actually loads. An `https:` url is already absolute and
+ * is returned unchanged. A served-media reference is RELATIVE and is joined to the
+ * API origin (`baseUrl`) — NOT the SPA page origin: in a cross-origin deployment
+ * the two differ, and a page-relative src would resolve against Studio and 404. An
+ * empty `baseUrl` (same-origin deployment) leaves the reference relative, which is
+ * correct; a configured base's trailing slash is stripped so the join never
+ * double-slashes.
+ */
+function resolveImageSrc(url: string, baseUrl: string): string {
+  return isServedMediaUrl(url) ? `${baseUrl.replace(/\/+$/, '')}${url}` : url;
 }
 
 // -- styles ------------------------------------------------------------------
@@ -113,6 +130,7 @@ function MediaImage({
   // new url rendered at this same position gets a fresh load attempt instead of
   // inheriting a stale failure notice.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const { baseUrl } = useApi();
 
   if (!isRenderableImageSrc(url)) {
     return (
@@ -135,7 +153,7 @@ function MediaImage({
   return (
     <div style={itemStyle}>
       <img
-        src={url}
+        src={resolveImageSrc(url, baseUrl)}
         alt={caption ?? 'Attached image'}
         referrerPolicy="no-referrer"
         style={imageStyle}
