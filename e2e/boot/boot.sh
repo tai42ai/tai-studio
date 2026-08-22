@@ -204,18 +204,20 @@ pg_exec -c "INSERT INTO access_control_policies (user_id, scopes, policy_data) V
 # fullmatches a request path to a template, then reads the template's row). "public"
 # is the access-control public_resource_id; "studio" is the single protected
 # resource the wildcard key is authorized for.
-pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('studio_authed','studio'),('public_spa','public'),('public_assets','public'),('public_callback','public'),('public_media','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
+pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('studio_authed','studio'),('public_spa','public'),('public_assets','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
 
 # Tier one: path regex -> route template (fully-anchored via fullmatch in the
 # verifier). The public matchers match ONLY their intended shape:
 #   - public_assets:  the plugin bundle files (NOT the /api/plugins registry)
-#   - public_callback: the OAuth/interaction callback door
-#   - public_media:   the served-media capability url (a tokenless browser <img> fetch)
 #   - public_spa:     everything that is not /api (the SPA, static files, vendor)
 #   - studio_authed:  every other /api route (incl. the /api/plugins registry) —
-#                     a negative lookahead excludes the public /api shapes so
+#                     a negative lookahead excludes the plugin studio-asset door so
 #                     the registry listing stays authed (the prefix-collision pin).
-export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/)(?!interactions/callback(?:/|$))(?!interactions/media(?:/|$)).*":"studio_authed","/(?!api(?:/|$)).*":"public_spa","/api/plugins/[^/]+/studio/.*":"public_assets","/api/interactions/callback(?:/.*)?":"public_callback","/api/interactions/media(?:/.*)?":"public_media"}'
+# The interactions callback and served-media doors register authed=False, so the
+# verifier's declared-public tier publics them from the route registration — the
+# studio_authed catch-all may cover them; the declared-public tier short-circuits
+# above the route table, so no template/row is needed here.
+export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/).*":"studio_authed","/(?!api(?:/|$)).*":"public_spa","/api/plugins/[^/]+/studio/.*":"public_assets"}'
 
 # --- 5. Skeleton env + launch -----------------------------------------------
 export ACCESS_CONTROL_ENABLE=true
