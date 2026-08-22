@@ -86,7 +86,11 @@ export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
 export { useBreakpoint } from './hooks/useBreakpoint';
 export type { Breakpoint, BreakpointState } from './hooks/useBreakpoint';
 export { useInteractionsStream } from './hooks/useSse';
-export type { InteractionsStreamState, StreamInteraction } from './hooks/useSse';
+export type {
+  InteractionsStreamOptions,
+  InteractionsStreamState,
+  StreamInteraction,
+} from './hooks/useSse';
 
 // -- Navigation (shell ⇄ feature route-token contract) -----------------------
 export {

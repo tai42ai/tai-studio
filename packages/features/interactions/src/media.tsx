@@ -7,8 +7,8 @@
  * UNTRUSTED PAYLOADS: every item's `url` and `caption` arrive from the question
  * source and are UNTRUSTED. Captions and urls render ONLY as React-escaped text.
  * The ONLY attribute sinks are the gated image `src` (an image src is admitted
- * exclusively when it is an `https:` URL or a `data:image/` URI — the same
- * https-or-`data:image` rule the server contract and the SPA CSP enforce) and
+ * exclusively when it is an `https:` URL or the platform's own served-media url —
+ * the same rule the server contract and the SPA CSP enforce) and
  * `ExternalLinkButton`'s scheme-gated `href` (its own http(s) allow-list
  * neutralizes every other scheme). There is NO `dangerouslySetInnerHTML` here.
  *
@@ -27,18 +27,29 @@ import { Badge, ExternalLinkButton, isSafeHttpUrl } from '@tai42/studio-sdk';
 import { MalformedPayload } from './renderers';
 
 /**
- * The image src gate: an image renders ONLY for an `https:` URL or a `data:image/`
- * URI. `isSafeHttpUrl` is TIGHTENED to https-only here (it alone also admits
- * `http:`, which the SPA CSP `img-src` blocks and the contract never emits), and
- * the `data:image/` prefix is the mime pin (`isSafeHttpUrl` rejects every `data:`
- * URI, so it alone would block a legit inline image). The two branches are NOT
- * interchangeable: `http:`, `javascript:`, `data:text/html`, and every other
- * scheme fail BOTH → a loud blocked item. `data:image/*` in an `<img>` cannot
- * execute script (scripting is disabled in image contexts, including SVG-in-img).
+ * The served-media route: media is stored by reference and served same-origin from
+ * `MEDIA_ROUTE_PREFIX + <id>`, where the id is 43 urlsafe-base64 chars (32 random
+ * bytes). A relative url of exactly that shape is the platform's own media url.
+ */
+const MEDIA_ROUTE_PREFIX = '/api/interactions/media/';
+const MEDIA_ID = /^[A-Za-z0-9_-]{43}$/;
+
+function isServedMediaUrl(url: string): boolean {
+  return url.startsWith(MEDIA_ROUTE_PREFIX) && MEDIA_ID.test(url.slice(MEDIA_ROUTE_PREFIX.length));
+}
+
+/**
+ * The image src gate: an image renders ONLY for an `https:` URL or the platform's
+ * own served-media url (relative `MEDIA_ROUTE_PREFIX + <id>`, same origin).
+ * `isSafeHttpUrl` is TIGHTENED to https-only here (it alone also admits `http:`,
+ * which the SPA CSP `img-src` blocks and the contract never emits); the served-media
+ * branch pins a well-formed platform media id (a relative url `isSafeHttpUrl` cannot
+ * parse). The two branches are NOT interchangeable: `http:`, `javascript:`, every
+ * `data:` scheme, and any other-shaped relative url fail BOTH → a loud blocked item.
  */
 function isRenderableImageSrc(url: string): boolean {
   const isHttpsUrl = isSafeHttpUrl(url) && new URL(url).protocol === 'https:';
-  return isHttpsUrl || url.startsWith('data:image/');
+  return isHttpsUrl || isServedMediaUrl(url);
 }
 
 // -- styles ------------------------------------------------------------------

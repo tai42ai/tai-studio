@@ -9,12 +9,14 @@ import {
   emitFrame,
   encodeInteraction,
   fullProjection,
+  interactionsPage,
   makeChannel,
   renderWithProviders,
   scopedProjection,
   stubClient,
   type StreamChannel,
 } from './test-utils';
+import type { Interaction } from '@tai42/api-client';
 
 /**
  * Build the JSON `data` of an `interaction.add` SSE frame. Inputs use the concise
@@ -44,6 +46,21 @@ function interactionJson(fields: {
  */
 function idJson(interactionId: string): string {
   return encodeInteraction({ interaction_id: interactionId, group_id: `g-${interactionId}` });
+}
+
+/** A pending record shaped like the paged base door serves (the query seed). */
+function pendingItem(id: string, extra: Partial<Interaction> = {}): Interaction {
+  return {
+    interaction_id: id,
+    group_id: `g-${id}`,
+    answer_format: 'text',
+    question: '',
+    format_payload: {},
+    created_at: '2026-07-04T00:00:00Z',
+    timeout_at: '2026-07-04T00:05:00Z',
+    sensitive: false,
+    ...extra,
+  };
 }
 
 /** A hand-resolved projection promise, so a test can drive `getMe` past a barrier. */
@@ -99,16 +116,16 @@ function renderInbox(
 const XSS = "<script>window.__xss='pwned'</script>";
 
 describe('InteractionsPage — inbox lifecycle', () => {
-  it('shows the loading placeholder before the backlog has replayed', async () => {
+  it('shows the loading placeholder before the first page loads', async () => {
     renderInbox();
     expect(screen.getByTestId('interactions-loading')).toBeInTheDocument();
     expect(screen.queryByText('No pending questions')).not.toBeInTheDocument();
     await settle();
   });
 
-  it('shows the empty state once the backlog replays with no questions', async () => {
-    const { channel } = renderInbox();
-    await emitFrame(channel, 'interaction.backlog_done', '{}');
+  it('shows the empty state once the first page loads with no questions', async () => {
+    renderInbox();
+    await settle();
     expect(await screen.findByText('No pending questions')).toBeInTheDocument();
     // The page header is the SDK PageHeader; its h1 name stays verbatim.
     expect(screen.getByRole('heading', { level: 1, name: 'Interactions' })).toBeInTheDocument();
@@ -122,7 +139,7 @@ describe('InteractionsPage — inbox lifecycle', () => {
       client,
       projection: scopedProjection({ routes: [{ path: '/api/interactions', methods: ['GET'] }] }),
     });
-    await emitFrame(channel, 'interaction.backlog_done', '{}');
+    await settle();
 
     expect(await screen.findByText('Questions addressed to you appear here.')).toBeInTheDocument();
   });
@@ -139,7 +156,7 @@ describe('InteractionsPage — inbox lifecycle', () => {
       client,
       getMe: () => deferred.promise,
     });
-    await emitFrame(channel, 'interaction.backlog_done', '{}');
+    await settle();
 
     await act(async () => {
       deferred.resolve(fullProjection());
@@ -217,11 +234,11 @@ describe('InteractionsPage — inbox lifecycle', () => {
     expect(screen.queryByTestId('interaction-card')).not.toBeInTheDocument();
   });
 
-  it('de-duplicates a re-delivered add (backlog replay does not duplicate)', async () => {
+  it('de-duplicates a re-delivered add (an at-least-once replay does not duplicate)', async () => {
     const { channel } = renderInbox();
     const base = { interaction_id: 'q1', format: 'text', prompt: 'Name?' };
     await emitFrame(channel, 'interaction.add', interactionJson(base));
-    // The reconnect/backlog replay re-delivers the same add at-least-once.
+    // The live tail re-delivers the same add at-least-once.
     await emitFrame(channel, 'interaction.add', interactionJson(base));
     expect(screen.getAllByTestId('interaction-card')).toHaveLength(1);
   });
@@ -236,55 +253,242 @@ describe('InteractionsPage — inbox lifecycle', () => {
 });
 
 describe('InteractionsBadge — floating count', () => {
-  it('reflects the number of pending (unanswered) interactions', async () => {
+  it('reflects the door pending total from the paged base', async () => {
+    // With no live deltas the derived count equals the door's authoritative `total`,
+    // so it stays honest even when only the first page of the pending set is loaded.
     const channel = makeChannel();
+    const client = stubClient({
+      channel,
+      listInteractions: vi
+        .fn()
+        .mockResolvedValue(interactionsPage([pendingItem('a'), pendingItem('b')], { total: 2 })),
+    });
+    renderWithProviders(<InteractionsBadge />, { client });
+
+    expect(await screen.findByTestId('interactions-badge')).toHaveTextContent('2');
+  });
+
+  it('shows no badge when the door reports nothing pending', async () => {
+    const channel = makeChannel();
+    // The default `listInteractions` stub is an empty page (total 0).
     const client = stubClient({ channel });
     renderWithProviders(<InteractionsBadge />, { client });
 
-    // Nothing pending → no badge.
     await settle();
     expect(screen.queryByTestId('interactions-badge')).not.toBeInTheDocument();
+  });
 
+  it('stays live: a live interaction.add bumps the count WITHOUT a refetch', async () => {
+    // The badge count is derived: the door total (1) plus the overlay delta. A live
+    // add for a new id raises it to 2 from the overlay alone — no refetch of the
+    // paged base is triggered by the delta.
+    const listInteractions = vi
+      .fn()
+      .mockResolvedValue(interactionsPage([pendingItem('a')], { total: 1 }));
+    const channel = makeChannel();
+    const client = stubClient({ channel, listInteractions });
+    renderWithProviders(<InteractionsBadge />, { client });
+
+    expect(await screen.findByTestId('interactions-badge')).toHaveTextContent('1');
+    const callsBefore = listInteractions.mock.calls.length;
+
+    // A live add for an id absent from the seed arrives.
     await emitFrame(
       channel,
       'interaction.add',
-      interactionJson({ interaction_id: 'a', format: 'text' }),
+      interactionJson({ interaction_id: 'b', format: 'text' }),
     );
-    await emitFrame(
-      channel,
-      'interaction.add',
-      interactionJson({ interaction_id: 'b', format: 'confirm' }),
-    );
-    expect(screen.getByTestId('interactions-badge')).toHaveTextContent('2');
 
-    // Answering one drops the pending count.
-    await emitFrame(
-      channel,
-      'interaction.answered',
-      interactionJson({ interaction_id: 'a', format: 'text' }),
-    );
-    expect(screen.getByTestId('interactions-badge')).toHaveTextContent('1');
+    await waitFor(() => {
+      expect(screen.getByTestId('interactions-badge')).toHaveTextContent('2');
+    });
+    // The delta moved the count through the overlay, not a refetch of the base.
+    expect(listInteractions.mock.calls.length).toBe(callsBefore);
+  });
 
-    // Removing the last pending one hides the badge.
-    await emitFrame(
-      channel,
-      'interaction.removed',
-      interactionJson({ interaction_id: 'b', format: 'confirm' }),
-    );
-    expect(screen.queryByTestId('interactions-badge')).not.toBeInTheDocument();
+  it('keeps the badge count right after a reconnect following a removal (no double-subtraction)', async () => {
+    // seed [a] with total 2 (one more pending on an unloaded page). Removing `a` drops
+    // the count to 1 through the overlay. The reconnect refetches the base to total 1
+    // (a is gone server-side); the persisted removal must NOT be subtracted from the
+    // fresh total a second time — epoch reconciliation holds the badge at 1, never a
+    // stale 0 (which would wrongly hide the badge). Pin the jitter to 0 for an
+    // immediate reconnect.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      // All fetches before the swap return total 2; the reconnect's resync (after the
+      // swap) returns the reduced total 1. A mutable page makes this timing-robust
+      // against how the initial load and conn1's resync dedupe.
+      let page = interactionsPage([pendingItem('a')], { total: 2 });
+      const listInteractions = vi.fn(() => Promise.resolve(page));
+      const first = makeChannel();
+      const reconnect = makeChannel();
+      const stream = vi.fn();
+      stream.mockResolvedValueOnce(first.iterator);
+      stream.mockImplementation(() => Promise.resolve(reconnect.iterator));
+      const client = {
+        streamInteractions: stream,
+        listInteractions,
+        answerInteraction: vi.fn().mockResolvedValue(undefined),
+        listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+      } as unknown as ApiClient;
+      renderWithProviders(<InteractionsBadge />, { client });
+
+      expect(await screen.findByTestId('interactions-badge')).toHaveTextContent('2');
+
+      // The removal drops the count to 1 via the overlay (no refetch of the base).
+      await emitFrame(first, 'interaction.removed', idJson('a'));
+      await waitFor(() => {
+        expect(screen.getByTestId('interactions-badge')).toHaveTextContent('1');
+      });
+
+      // The connection drops → the reconnect refetches the base to the reduced total 1.
+      page = interactionsPage([], { total: 1 });
+      await act(async () => {
+        first.close();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      // The badge holds at 1, not a stale 0 — the removal is reconciled by epoch, so it
+      // is not re-subtracted from the fresh total.
+      await waitFor(() => {
+        expect(screen.getByTestId('interactions-badge')).toHaveTextContent('1');
+      });
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it('degrades when a background refetch of the base fails after initial success', async () => {
+    // The initial load succeeds (count honest). A stream reconnect then resyncs the
+    // paged base and the list door 500s: the count is now stale, so the badge
+    // degrades — it stays visible with a warning, never a silent freeze on the last
+    // value. Pin the reconnect jitter to 0 so the reconnect is immediate.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      const listInteractions = vi.fn();
+      listInteractions.mockResolvedValueOnce(interactionsPage([pendingItem('a')], { total: 1 }));
+      listInteractions.mockRejectedValue(
+        Object.assign(new Error('list door down'), { status: 500 }),
+      );
+      // First connection ends immediately (its resync dedupes into the initial
+      // load); the reconnect's resync runs after that load settled → a real refetch.
+      const first = makeChannel();
+      first.close();
+      const reconnect = makeChannel();
+      const stream = vi.fn();
+      stream.mockResolvedValueOnce(first.iterator);
+      stream.mockImplementation(() => Promise.resolve(reconnect.iterator));
+      const client = {
+        streamInteractions: stream,
+        listInteractions,
+        answerInteraction: vi.fn().mockResolvedValue(undefined),
+        listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+      } as unknown as ApiClient;
+      renderWithProviders(<InteractionsBadge />, { client });
+
+      await screen.findByTestId('interactions-badge');
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('interactions-badge')).toHaveAttribute('data-degraded', 'true');
+        },
+        { timeout: 5000 },
+      );
+    } finally {
+      randomSpy.mockRestore();
+    }
+  });
+
+  it('holds the count after a removal when the reconnect refetch fails, then reconciles when it recovers', async () => {
+    // Initial load: total 2 with one seeded card. Removing the seeded id drops the
+    // badge to 1 via the overlay. The reconnect resyncs the base and the list door
+    // 500s: the count must HOLD at 1 (the failed refetch does not advance the epoch, so
+    // the prior-epoch removal keeps subtracting against the unchanged total) while the
+    // badge degrades — never the stale 2 that swallowing the refetch error would leave.
+    // A further reconnect resyncs successfully to the reduced total 1: still 1, healthy.
+    // Pin the reconnect jitter to 0 for an immediate reconnect.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    try {
+      let phase: 'ok2' | 'fail' | 'ok1' = 'ok2';
+      const listInteractions = vi.fn(() => {
+        if (phase === 'fail') {
+          return Promise.reject(Object.assign(new Error('list door down'), { status: 500 }));
+        }
+        return Promise.resolve(
+          phase === 'ok2'
+            ? interactionsPage([pendingItem('a')], { total: 2 })
+            : interactionsPage([], { total: 1 }),
+        );
+      });
+      const first = makeChannel();
+      const second = makeChannel();
+      const third = makeChannel();
+      const stream = vi.fn();
+      stream.mockResolvedValueOnce(first.iterator);
+      stream.mockResolvedValueOnce(second.iterator);
+      stream.mockImplementation(() => Promise.resolve(third.iterator));
+      const client = {
+        streamInteractions: stream,
+        listInteractions,
+        answerInteraction: vi.fn().mockResolvedValue(undefined),
+        listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+      } as unknown as ApiClient;
+      renderWithProviders(<InteractionsBadge />, { client });
+
+      // Initial load: total 2, one card seeded → badge 2.
+      expect(await screen.findByTestId('interactions-badge')).toHaveTextContent('2');
+
+      // The removal drops the count to 1 via the overlay (no refetch of the base).
+      await emitFrame(first, 'interaction.removed', idJson('a'));
+      await waitFor(() => {
+        expect(screen.getByTestId('interactions-badge')).toHaveTextContent('1');
+      });
+
+      // The connection drops → the reconnect's resync refetch of the base FAILS (500):
+      // the badge holds at 1 AND degrades.
+      phase = 'fail';
+      await act(async () => {
+        first.close();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      await waitFor(
+        () => {
+          const badge = screen.getByTestId('interactions-badge');
+          expect(badge).toHaveAttribute('data-degraded', 'true');
+          expect(badge).toHaveTextContent('1');
+        },
+        { timeout: 5000 },
+      );
+
+      // A further reconnect resyncs successfully to the reduced total 1: still 1, healthy.
+      phase = 'ok1';
+      await act(async () => {
+        second.close();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+      await waitFor(
+        () => {
+          const badge = screen.getByTestId('interactions-badge');
+          expect(badge).toHaveTextContent('1');
+          expect(badge).not.toHaveAttribute('data-degraded');
+        },
+        { timeout: 5000 },
+      );
+    } finally {
+      randomSpy.mockRestore();
+    }
   });
 });
 
 describe('InteractionsBadge — navigation + degraded state', () => {
   it('is a real link to the interactions view (keyboard-operable), not an inert div', async () => {
     const channel = makeChannel();
-    const client = stubClient({ channel });
-    renderWithProviders(<InteractionsBadge />, { client });
-    await emitFrame(
+    const client = stubClient({
       channel,
-      'interaction.add',
-      interactionJson({ interaction_id: 'a', format: 'text' }),
-    );
+      listInteractions: vi
+        .fn()
+        .mockResolvedValue(interactionsPage([pendingItem('a')], { total: 1 })),
+    });
+    renderWithProviders(<InteractionsBadge />, { client });
+    await screen.findByTestId('interactions-badge');
 
     const badge = screen.getByTestId('interactions-badge');
     const link = within(badge).getByRole('link');
@@ -296,13 +500,14 @@ describe('InteractionsBadge — navigation + degraded state', () => {
 
   it('exposes a polite live region (role=status) so an arriving count is announced', async () => {
     const channel = makeChannel();
-    const client = stubClient({ channel });
-    renderWithProviders(<InteractionsBadge />, { client });
-    await emitFrame(
+    const client = stubClient({
       channel,
-      'interaction.add',
-      interactionJson({ interaction_id: 'a', format: 'text' }),
-    );
+      listInteractions: vi
+        .fn()
+        .mockResolvedValue(interactionsPage([pendingItem('a')], { total: 1 })),
+    });
+    renderWithProviders(<InteractionsBadge />, { client });
+    await screen.findByTestId('interactions-badge');
 
     // The badge is a live region so a screen reader is notified as pending
     // questions arrive; its meaningful announced text is the link's label.
@@ -318,13 +523,14 @@ describe('InteractionsBadge — navigation + degraded state', () => {
 
   it('does not degrade on a malformed frame while the stream stays connected', async () => {
     const channel = makeChannel();
-    const client = stubClient({ channel });
-    renderWithProviders(<InteractionsBadge />, { client });
-    await emitFrame(
+    const client = stubClient({
       channel,
-      'interaction.add',
-      interactionJson({ interaction_id: 'a', format: 'text' }),
-    );
+      listInteractions: vi
+        .fn()
+        .mockResolvedValue(interactionsPage([pendingItem('a')], { total: 1 })),
+    });
+    renderWithProviders(<InteractionsBadge />, { client });
+    await screen.findByTestId('interactions-badge');
     // A parse error on a still-open stream is transient — the count is intact and the
     // stream is not disconnected, so the badge must keep its honest count, not flip.
     await emitFrame(channel, 'interaction.add', '{not json');
@@ -340,6 +546,7 @@ describe('InteractionsBadge — navigation + degraded state', () => {
   it('flips to a degraded indicator on a true outage (errored and disconnected), even at a stale zero', async () => {
     const client = {
       streamInteractions: vi.fn().mockRejectedValue(new Error('network down')),
+      listInteractions: vi.fn().mockResolvedValue(interactionsPage([], { total: 0 })),
       answerInteraction: vi.fn().mockResolvedValue(undefined),
       listChannels: vi.fn().mockResolvedValue({ channels: [] }),
     } as unknown as ApiClient;
@@ -441,6 +648,15 @@ describe('interactions store not configured — honest OFF state', () => {
       // Mirrors the parsed 501 envelope the client produces from the skeleton's OFF
       // store: the verbatim remediation message plus its machine `code`.
       streamInteractions: () =>
+        Promise.reject(
+          new ApiError(
+            'the interactions store is not configured: set INTERACTIONS_REDIS_URL (or TAI_DEFAULT_REDIS_URL)',
+            501,
+            'interactions-not-configured',
+          ),
+        ),
+      // The paged base door is OFF on the same deployment.
+      listInteractions: () =>
         Promise.reject(
           new ApiError(
             'the interactions store is not configured: set INTERACTIONS_REDIS_URL (or TAI_DEFAULT_REDIS_URL)',
@@ -991,7 +1207,12 @@ describe('untrusted payloads — XSS is never a live sink', () => {
 });
 
 describe('MediaGallery — display-only question media (gated render + loud fallbacks)', () => {
-  // A tiny hermetic 1×1 PNG — a valid `data:image/*` src that renders with no network.
+  // The platform's own served-media url (relative, same origin): 43 urlsafe-base64
+  // id chars after the route prefix. This is the ONLY inline image form the record
+  // carries now — media is stored by reference, no `data:` inside the record.
+  const SERVED_MEDIA_URL = `/api/interactions/media/${'a'.repeat(43)}`;
+  // A tiny hermetic 1×1 PNG data: URI — a valid image, but no longer an accepted
+  // record media url (records reference media; only the served-media test uses it).
   const PNG_DATA_URI =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
@@ -1015,18 +1236,18 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     });
   }
 
-  it('renders a data:image/* item as an <img> with the exact src, alt fallback, and no-referrer', async () => {
+  it('renders a served-media item as an <img> with the exact src, alt fallback, and no-referrer', async () => {
     const { channel, container } = renderInbox();
     await emitFrame(
       channel,
       'interaction.add',
-      mediaJson({ interaction_id: 'q-img', media: [{ kind: 'image', url: PNG_DATA_URI }] }),
+      mediaJson({ interaction_id: 'q-img', media: [{ kind: 'image', url: SERVED_MEDIA_URL }] }),
     );
 
     expect(screen.getByTestId('media-gallery')).toBeInTheDocument();
     const img = container.querySelector('img');
     expect(img).not.toBeNull();
-    expect(img?.getAttribute('src')).toBe(PNG_DATA_URI);
+    expect(img?.getAttribute('src')).toBe(SERVED_MEDIA_URL);
     // No caption → the accessibility fallback, never `alt=""`.
     expect(img?.getAttribute('alt')).toBe('Attached image');
     // The privacy mitigation is a PINNED invariant, not optional polish.
@@ -1040,7 +1261,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
       'interaction.add',
       mediaJson({
         interaction_id: 'q-img-cap',
-        media: [{ kind: 'image', url: PNG_DATA_URI, caption: 'The blue widget' }],
+        media: [{ kind: 'image', url: SERVED_MEDIA_URL, caption: 'The blue widget' }],
       }),
     );
 
@@ -1056,7 +1277,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
       'interaction.add',
       mediaJson({
         interaction_id: 'q-null-cap',
-        media: [{ kind: 'image', url: PNG_DATA_URI, caption: null }],
+        media: [{ kind: 'image', url: SERVED_MEDIA_URL, caption: null }],
       }),
     );
 
@@ -1116,7 +1337,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(screen.getByTestId('media-item-blocked')).toBeInTheDocument();
   });
 
-  it('blocks a data:application/pdf image src (prefix pin — data: alone is not enough)', async () => {
+  it('blocks a data:application/pdf image src (data: URIs are no longer accepted media)', async () => {
     const { channel, container } = renderInbox();
     await emitFrame(
       channel,
@@ -1145,6 +1366,39 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(container.querySelector('img')).toBeNull();
     const blocked = screen.getByTestId('media-item-blocked');
     expect(within(blocked).getByText('http://host.example/x.png')).toBeInTheDocument();
+  });
+
+  it('blocks a data:image/png src — media is served by reference, never inline data:', async () => {
+    const { channel, container } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({
+        interaction_id: 'q-data-img',
+        media: [{ kind: 'image', url: PNG_DATA_URI }],
+      }),
+    );
+
+    // The record never carries inline data: any more; the renderer blocks it.
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByTestId('media-item-blocked')).toBeInTheDocument();
+  });
+
+  it('blocks a served-media url whose id is the wrong length', async () => {
+    const { channel, container } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({
+        interaction_id: 'q-bad-id',
+        // A media-route url with a too-short id fails the id charset/length pin.
+        media: [{ kind: 'image', url: '/api/interactions/media/tooshort' }],
+      }),
+    );
+
+    expect(container.querySelector('img')).toBeNull();
+    const blocked = screen.getByTestId('media-item-blocked');
+    expect(within(blocked).getByText('/api/interactions/media/tooshort')).toBeInTheDocument();
   });
 
   it('neutralizes a javascript: link url — a non-navigable span, never an anchor', async () => {
@@ -1218,7 +1472,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
       mediaJson({
         interaction_id: 'q-blank-cap',
         media: [
-          { kind: 'image', url: PNG_DATA_URI, caption: '   ' },
+          { kind: 'image', url: SERVED_MEDIA_URL, caption: '   ' },
           { kind: 'link', url: 'https://docs.example/page', caption: '' },
         ],
       }),
@@ -1237,7 +1491,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
       'interaction.add',
       mediaJson({
         interaction_id: 'q-cap-xss',
-        media: [{ kind: 'image', url: PNG_DATA_URI, caption: XSS }],
+        media: [{ kind: 'image', url: SERVED_MEDIA_URL, caption: XSS }],
       }),
     );
 
@@ -1276,7 +1530,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     await emitFrame(
       channel,
       'interaction.add',
-      mediaJson({ interaction_id: 'q-img-err', media: [{ kind: 'image', url: PNG_DATA_URI }] }),
+      mediaJson({ interaction_id: 'q-img-err', media: [{ kind: 'image', url: SERVED_MEDIA_URL }] }),
     );
 
     const img = container.querySelector('img');
@@ -1321,7 +1575,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
       'interaction.add',
       mediaJson({
         interaction_id: 'q-answered-media',
-        media: [{ kind: 'image', url: PNG_DATA_URI }],
+        media: [{ kind: 'image', url: SERVED_MEDIA_URL }],
       }),
     );
     await emitFrame(channel, 'interaction.answered', idJson('q-answered-media'));
@@ -1336,7 +1590,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     await emitFrame(
       channel,
       'interaction.add',
-      mediaJson({ interaction_id: 'q-reload', media: [{ kind: 'image', url: PNG_DATA_URI }] }),
+      mediaJson({ interaction_id: 'q-reload', media: [{ kind: 'image', url: SERVED_MEDIA_URL }] }),
     );
     const first = container.querySelector('img');
     if (first === null) throw new Error('expected the first image to render before its load error');
@@ -1361,5 +1615,110 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(container.querySelector('img')?.getAttribute('src')).toBe(
       'https://images.example.com/fresh.png',
     );
+  });
+});
+
+describe('InteractionsPage — paged pending base + Load more', () => {
+  it('seeds the inbox cards from the paged base door', async () => {
+    const channel = makeChannel();
+    const client = stubClient({
+      channel,
+      listInteractions: vi
+        .fn()
+        .mockResolvedValue(
+          interactionsPage(
+            [
+              pendingItem('a', { question: 'First question?' }),
+              pendingItem('b', { question: 'Second question?' }),
+            ],
+            { total: 2 },
+          ),
+        ),
+    });
+    renderWithProviders(<InteractionsPage search={{}} />, { client, projection: fullProjection() });
+
+    expect(await screen.findByText('First question?')).toBeInTheDocument();
+    expect(screen.getByText('Second question?')).toBeInTheDocument();
+    // A single exhaustive page → no Load more control.
+    expect(screen.queryByTestId('interactions-load-more')).not.toBeInTheDocument();
+  });
+
+  it('pages the rest in when the base door has a next page', async () => {
+    const user = userEvent.setup();
+    const channel = makeChannel();
+    const listInteractions = vi.fn((page: number) =>
+      Promise.resolve(
+        page === 1
+          ? interactionsPage([pendingItem('a', { question: 'First question?' })], {
+              total: 2,
+              next_page: 2,
+            })
+          : interactionsPage([pendingItem('b', { question: 'Second question?' })], {
+              total: 2,
+              page: 2,
+              next_page: null,
+            }),
+      ),
+    );
+    const client = stubClient({ channel, listInteractions });
+    renderWithProviders(<InteractionsPage search={{}} />, { client, projection: fullProjection() });
+
+    expect(await screen.findByText('First question?')).toBeInTheDocument();
+    expect(screen.queryByText('Second question?')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('interactions-load-more'));
+    expect(await screen.findByText('Second question?')).toBeInTheDocument();
+  });
+
+  it('surfaces a next-page failure inline and stays retryable', async () => {
+    const user = userEvent.setup();
+    const channel = makeChannel();
+    let page2Calls = 0;
+    const listInteractions = vi.fn((page: number) => {
+      if (page === 1) {
+        return Promise.resolve(
+          interactionsPage([pendingItem('a', { question: 'First question?' })], {
+            total: 2,
+            next_page: 2,
+          }),
+        );
+      }
+      page2Calls += 1;
+      // The first page-2 fetch 500s; the retry (a second click) succeeds.
+      if (page2Calls === 1) {
+        return Promise.reject(Object.assign(new Error('page 2 down'), { status: 500 }));
+      }
+      return Promise.resolve(
+        interactionsPage([pendingItem('b', { question: 'Second question?' })], {
+          total: 2,
+          page: 2,
+          next_page: null,
+        }),
+      );
+    });
+    const client = stubClient({ channel, listInteractions });
+    renderWithProviders(
+      <>
+        <InteractionsBadge />
+        <InteractionsPage search={{}} />
+      </>,
+      { client, projection: fullProjection() },
+    );
+
+    expect(await screen.findByText('First question?')).toBeInTheDocument();
+    expect(await screen.findByTestId('interactions-badge')).toHaveTextContent('2');
+
+    // The next-page fetch fails: an inline error appears, the page keeps its cards,
+    // the badge count is untouched, and the control stays usable.
+    await user.click(screen.getByTestId('interactions-load-more'));
+    expect(await screen.findByTestId('interactions-load-more-error')).toBeInTheDocument();
+    expect(screen.queryByText('Second question?')).not.toBeInTheDocument();
+    expect(screen.getByTestId('interactions-badge')).toHaveTextContent('2');
+    expect(screen.getByTestId('interactions-load-more')).toBeEnabled();
+
+    // Clicking again retries and clears the inline error.
+    await user.click(screen.getByTestId('interactions-load-more'));
+    expect(await screen.findByText('Second question?')).toBeInTheDocument();
+    expect(screen.queryByTestId('interactions-load-more-error')).not.toBeInTheDocument();
   });
 });

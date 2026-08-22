@@ -47,7 +47,8 @@ test('an interactive tool blocks; answering completes the run and the result lan
 }) => {
   await seedCredential(page);
 
-  // A unique question so the stream lookup can never match a stale backlog entry.
+  // A unique question so the list-door lookup matches this run's pending question
+  // and never a stale one.
   const question = `Approve the e2e run ${String(Date.now())}?`;
 
   await page.goto('/tools?tool=ask_user');
@@ -58,7 +59,8 @@ test('an interactive tool blocks; answering completes the run and the result lan
   // The panel enters the loud running state while the POST is held open.
   await expect(page.getByText('Running — the tool is executing on the server.')).toBeVisible();
 
-  // The question surfaces on the live interactions stream (blocked server-side).
+  // The blocked-server-side question is pending, so the list door (GET
+  // /api/interactions) returns it — findInteractionId pages that door for its id.
   const interactionId = await findInteractionId(page, question);
   expect(interactionId).toMatch(/[0-9a-f-]{36}/);
 

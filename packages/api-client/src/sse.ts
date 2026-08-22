@@ -73,7 +73,7 @@ function parseFrame(raw: string): SseFrame | null {
 /**
  * Consume an authed SSE endpoint as an async iterator of frames. The caller
  * supplies the fetch (with the auth header + abort signal) and handles
- * reconnect/backlog-replay semantics.
+ * reconnect semantics.
  */
 export async function* readSseFrames(
   response: Response,

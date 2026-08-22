@@ -298,7 +298,7 @@ describe('createApiClient', () => {
     const urls: string[] = [];
     const fetchImpl = vi.fn(async (url: string) => {
       urls.push(url);
-      return sseResponse('event: interaction.backlog_done\ndata: {}\n\n');
+      return sseResponse('event: interaction.add\ndata: {"interaction_id":"x"}\n\n');
     });
     const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
     // Two concurrent opens (the always-mounted badge + the inbox page) must not
