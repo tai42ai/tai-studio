@@ -37,9 +37,11 @@ _SPEC = {
     "license": "MIT",
     "homepage": "https://example.com/alerts-relay",
     "repository": "https://github.com/acme/alerts-relay",
-    # Range must include the docs-demo's running contract line so preview resolves;
-    # it spans the current line through contract 2 (where routes require contract 2).
-    "contract": ">=1.11,<3",
+    # Range must include the docs-demo's running contract line so the install
+    # preview resolves (the skeleton refuses a spec whose contract_range excludes the
+    # installed tai42-contract). Pinned to the current major the same way every
+    # shipped plugin's tai-plugin.yml is (`>=3.0,<4`) so it tracks the contract bump.
+    "contract": ">=3.0,<4",
     "categories": ["channels"],
     "tags": ["alerts", "relay", "webhook"],
     "provides": [
