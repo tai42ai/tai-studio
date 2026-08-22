@@ -1,6 +1,6 @@
 /**
- * The per-run trace explorer rendered directly: the query/availability states
- * (loading, 404 → not-available, unavailable, 501, partial + fetchError), the
+ * The per-run trace explorer rendered directly: the query states
+ * (loading, 404 → not-available, 501, no-spans placeholder), the
  * two-pane layout (waterfall left, span detail right), auto-selection of the first
  * error span, proportional waterfall bars, structural LLM messages, the usage /
  * metadata panes, escaped payloads, jump-to-error / jump-to-slowest, and the
@@ -48,8 +48,6 @@ function traceFixture(overrides: Partial<RunTrace> = {}): RunTrace {
     input: 'trace-in',
     output: 'trace-out',
     metadata: null,
-    availability: 'full',
-    fetchError: null,
     spans: [
       span({
         id: 'root',
@@ -215,40 +213,13 @@ describe('TraceView', () => {
     expect(screen.queryByText('root-chain')).not.toBeInTheDocument();
   });
 
-  it('renders a placeholder when the trace has no spans', async () => {
+  it('renders a placeholder when a trace has no spans', async () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockResolvedValue(traceFixture({ spans: [] })),
     };
     renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
 
     expect(await screen.findByText('This trace has no recorded spans.')).toBeInTheDocument();
-  });
-
-  it('surfaces a partial-availability trace as a loud banner over the spans it did load', async () => {
-    const client: StubApiClient = {
-      getRunTrace: vi
-        .fn()
-        .mockResolvedValue(
-          traceFixture({ availability: 'partial', fetchError: 'spans truncated' }),
-        ),
-    };
-    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('spans truncated');
-    // The spans that DID load are still shown.
-    expect(screen.getByText('root-chain')).toBeInTheDocument();
-  });
-
-  it('shows a not-available state for an unavailable trace, never a retry loop', async () => {
-    const client: StubApiClient = {
-      getRunTrace: vi
-        .fn()
-        .mockResolvedValue(traceFixture({ availability: 'unavailable', fetchError: 'no detail' })),
-    };
-    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
-
-    expect(await screen.findByText('Trace not available')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 
   it('renders the read-not-supported state on a 501', async () => {

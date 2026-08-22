@@ -1850,10 +1850,8 @@ export const run = z.object({
   cost: z.number().nullable(),
   latencyMs: z.number().nullable(),
   totalTokens: z.number().nullable(),
-  model: z.string().nullable(),
   inputPreview: jsonValue,
   outputPreview: jsonValue,
-  fetchError: z.string().nullable(),
 });
 export type Run = z.infer<typeof run>;
 
@@ -1890,8 +1888,6 @@ export const runTrace = z.object({
   input: jsonValue,
   output: jsonValue,
   metadata: jsonValue.nullable(),
-  availability: z.enum(['unavailable', 'full', 'partial']),
-  fetchError: z.string().nullable(),
   spans: z.array(runSpan),
 });
 export type RunTrace = z.infer<typeof runTrace>;

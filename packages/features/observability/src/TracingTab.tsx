@@ -446,11 +446,6 @@ function RunRow({
           }}
         >
           <Badge variant={run.status === 'error' ? 'danger' : 'success'}>{run.status}</Badge>
-          {run.fetchError !== null ? (
-            <span title={run.fetchError} style={{ display: 'inline-flex' }}>
-              <Badge variant="warning">trace unavailable</Badge>
-            </span>
-          ) : null}
         </div>
       </TD>
       <TD>
@@ -469,9 +464,6 @@ function RunRow({
       <TD numeric>{formatCost(run.cost)}</TD>
       <TD numeric>{formatLatencyMs(run.latencyMs)}</TD>
       <TD numeric>{formatTokenCount(run.totalTokens)}</TD>
-      <TD>
-        <span className="tai-mono">{run.model ?? '—'}</span>
-      </TD>
     </TR>
   );
 }
@@ -580,7 +572,6 @@ function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactN
                         search={search}
                         numeric
                       />
-                      <TH>Model</TH>
                     </TR>
                   </THead>
                   <TBody>

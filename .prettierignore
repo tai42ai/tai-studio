@@ -13,3 +13,9 @@ packages/api-client/etc/
 # The reference plugin's COMPILED bundle + generated manifest (emitted by
 # build:reference-plugin, shipped inside the Python package).
 e2e/reference-plugin/src/reference_plugin/studio/
+
+# Python tooling artifacts (bundled demo/reference plugins generate these locally;
+# each drops its own nested .gitignore, which prettier's root config does not read).
+.venv/
+.pytest_cache/
+.ruff_cache/

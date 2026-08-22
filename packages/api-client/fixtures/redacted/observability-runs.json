@@ -9,10 +9,8 @@
       "cost": 0.041,
       "latencyMs": 843,
       "totalTokens": 3120,
-      "model": "gpt-4o",
       "inputPreview": "Summarize the status report",
-      "outputPreview": "The status report shows...",
-      "fetchError": null
+      "outputPreview": "The status report shows..."
     },
     {
       "id": "trace_1a2b3c4d",
@@ -23,10 +21,8 @@
       "cost": null,
       "latencyMs": null,
       "totalTokens": null,
-      "model": null,
       "inputPreview": null,
-      "outputPreview": null,
-      "fetchError": "trace unavailable"
+      "outputPreview": null
     }
   ],
   "page": 1,

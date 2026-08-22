@@ -41,10 +41,8 @@ function run(id: string, traceId: string): Run {
     cost: 0.1,
     latencyMs: 500,
     totalTokens: 100,
-    model: 'gpt-4o',
     inputPreview: `input-${id}`,
     outputPreview: `output-${id}`,
-    fetchError: null,
   };
 }
 
@@ -57,8 +55,6 @@ function traceFixture(): RunTrace {
     input: 'trace-in',
     output: 'trace-out',
     metadata: null,
-    availability: 'full',
-    fetchError: null,
     spans: [
       {
         id: 's1',
@@ -112,6 +108,10 @@ describe('TracingTab — runs table', () => {
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
 
     expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
+    // The Model column is gone — it lives on the trace detail now, not the list.
+    // The runs table carries exactly the eight list-surface columns.
+    expect(screen.getAllByRole('columnheader')).toHaveLength(8);
+    expect(screen.queryByRole('columnheader', { name: /Model/ })).not.toBeInTheDocument();
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
     // widens the document instead of scrolling inside its own box.
     for (const table of document.querySelectorAll('table')) {
@@ -178,7 +178,7 @@ describe('TracingTab — runs table', () => {
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
   });
 
-  it('right-aligns the numeric columns and renders the model id in mono', async () => {
+  it('right-aligns the numeric columns', async () => {
     const client: StubApiClient = {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
@@ -189,8 +189,6 @@ describe('TracingTab — runs table', () => {
     // aligned) via data-numeric; the text columns do not.
     const numericCells = row.querySelectorAll('td[data-numeric="true"]');
     expect(numericCells).toHaveLength(3);
-    // The machine model id renders in the mono type ramp.
-    expect(within(row).getByText('gpt-4o')).toHaveClass('tai-mono');
 
     // The numeric column headers carry the same alignment hook.
     const header = screen.getByRole('button', { name: /Cost/ }).closest('th');
@@ -427,19 +425,6 @@ describe('TracingTab — the runs pane is reachable without a pointer', () => {
     });
     expect(screen.getByRole('region', { name: 'Runs' })).toBe(pane);
     expect(pane).toHaveAttribute('tabindex', '0');
-  });
-});
-
-describe('TracingTab — A20 run.fetchError badge', () => {
-  it('flags a run whose trace could not be fetched with a "trace unavailable" badge', async () => {
-    const failing: Run = { ...run('r1', 't1'), fetchError: 'langfuse timed out' };
-    const client: StubApiClient = {
-      listRuns: vi.fn().mockResolvedValue({ items: [failing], page: 1, nextPage: null }),
-    };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
-
-    const row = await screen.findByTestId('run-row-r1');
-    expect(within(row).getByText('trace unavailable')).toBeInTheDocument();
   });
 });
 

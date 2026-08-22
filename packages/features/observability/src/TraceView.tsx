@@ -6,11 +6,9 @@
  * first root — is auto-selected on open.
  *
  * Every span/trace string renders as ESCAPED text through DS components, so a
- * payload containing markup can never become an HTML sink. The availability states
- * are driven off the wire's own `availability` enum and `fetchError`: a missing
- * trace (404) and an `unavailable` trace render a dedicated "not available" state
- * — never a retry-forever error — while a `partial` trace shows its spans with the
- * fetch error surfaced loudly above them.
+ * payload containing markup can never become an HTML sink. A missing trace (404)
+ * renders a dedicated "not available" state — never a retry-forever error — while
+ * a trace with no spans still shows its summary and empty waterfall.
  */
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -137,9 +135,6 @@ function Loaded({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-      {trace.fetchError !== null ? (
-        <ErrorState message={`This trace is partial: ${trace.fetchError}`} />
-      ) : null}
       {exportError !== null ? <ErrorState message={exportError} /> : null}
 
       <Card style={{ padding: 0, overflow: 'hidden' }}>
@@ -210,8 +205,6 @@ export function TraceView({
     queryFn: ({ signal }) => api.getRunTrace(traceId, signal),
   });
 
-  const notAvailable = query.data?.availability === 'unavailable';
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
       <div>
@@ -233,11 +226,6 @@ export function TraceView({
         ) : (
           <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />
         )
-      ) : notAvailable ? (
-        <EmptyState
-          title="Trace not available"
-          description={query.data.fetchError ?? 'No monitoring detail was recorded for this run.'}
-        />
       ) : (
         <Loaded trace={query.data} traceId={traceId} />
       )}

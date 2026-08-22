@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from tai42_contract.monitoring import (
     MetricsFilter,
@@ -22,13 +22,16 @@ from tai42_contract.monitoring import (
     MetricsRow,
     MetricsView,
     MonitoringFilter,
+    MonitoringLevel,
     MonitoringObservation,
     MonitoringReadNotSupportedError,
     MonitoringTrace,
+    MonitoringTraceSummary,
     OrderBy,
     SpanKind,
     SpanWindowItem,
     TraceNotFoundError,
+    preview,
 )
 
 from docs_demo_monitoring.store import TraceStore
@@ -71,7 +74,7 @@ def _trace_tokens(trace: MonitoringTrace) -> int:
 
 
 def _trace_latency_ms(trace: MonitoringTrace) -> float:
-    """Wall-clock span of a trace (max observation end − min start), in ms."""
+    """Wall-clock span of a trace (max observation end - min start), in ms."""
     starts = [o.start for o in trace.observations if o.start]
     ends = [o.end for o in trace.observations if o.end]
     if not starts or not ends:
@@ -81,6 +84,34 @@ def _trace_latency_ms(trace: MonitoringTrace) -> float:
 
 def _trace_latency_s(trace: MonitoringTrace) -> float:
     return _trace_latency_ms(trace) / 1000.0
+
+
+def _trace_status(trace: MonitoringTrace) -> Literal["ok", "error"]:
+    """``error`` when any observation carries an ERROR level, ``ok`` otherwise."""
+    if any((o.level or "").upper() == MonitoringLevel.ERROR.value for o in trace.observations):
+        return "error"
+    return "ok"
+
+
+def _to_summary(trace: MonitoringTrace) -> MonitoringTraceSummary:
+    """A run-list row for ``trace``: list-surface attributes plus batched
+    aggregates and bounded input/output previews — never a per-trace body (the
+    full input/output are read through ``get_trace``). ``total_tokens`` /
+    ``latency_ms`` are ``None`` when the trace carries no usage / no timing —
+    never coerced to ``0``."""
+    has_usage = any(isinstance(o.usage, dict) for o in trace.observations)
+    has_timing = any(o.start for o in trace.observations) and any(o.end for o in trace.observations)
+    return MonitoringTraceSummary(
+        id=trace.id,
+        timestamp=trace.timestamp,
+        tags=list(trace.tags or []),
+        input_preview=preview(trace.input),
+        output_preview=preview(trace.output),
+        latency_ms=_trace_latency_ms(trace) if has_timing else None,
+        total_cost=trace.total_cost,
+        total_tokens=_trace_tokens(trace) if has_usage else None,
+        status=_trace_status(trace),
+    )
 
 
 def _obs_duration_ms(obs: MonitoringObservation) -> float:
@@ -215,7 +246,7 @@ class DemoReader:
         page: int | None = None,
         filter: MonitoringFilter | None = None,
         order_by: OrderBy | None = None,
-    ) -> list[MonitoringTrace]:
+    ) -> list[MonitoringTraceSummary]:
         traces = [
             t
             for t in self._store.all_traces()
@@ -227,7 +258,7 @@ class DemoReader:
         if limit is not None:
             start = ((page or 1) - 1) * limit
             traces = traces[start : start + limit]
-        return traces
+        return [_to_summary(t) for t in traces]
 
     async def get_trace(self, trace_id: str) -> MonitoringTrace:
         trace = self._store.get(trace_id)
@@ -308,9 +339,7 @@ class DemoReader:
         latency_s = _trace_latency_s(trace)
         if f.min_latency is not None and latency_s < f.min_latency:
             return False
-        if f.max_latency is not None and latency_s > f.max_latency:
-            return False
-        return True
+        return not (f.max_latency is not None and latency_s > f.max_latency)
 
     def _sort_traces(self, traces: list[MonitoringTrace], order_by: OrderBy | None) -> list[MonitoringTrace]:
         # A missing total_cost sorts as 0.0 (present), not last — the run list
@@ -326,7 +355,7 @@ class DemoReader:
         reverse = order_by.direction == "desc" if order_by is not None else True
         getter = getters.get(field)
         if getter is None:
-            raise MonitoringReadNotSupportedError(f"unsupported order_by field: {order_by.field}")
+            raise MonitoringReadNotSupportedError(f"unsupported order_by field: {field}")
         return _sorted_missing_last(traces, getter, lambda t: t.id, reverse=reverse)
 
     def _sort_spans(self, items: list[SpanWindowItem], order_by: OrderBy | None) -> list[SpanWindowItem]:
@@ -341,7 +370,7 @@ class DemoReader:
         reverse = order_by.direction == "desc" if order_by is not None else True
         getter = getters.get(field)
         if getter is None:
-            raise MonitoringReadNotSupportedError(f"unsupported order_by field: {order_by.field}")
+            raise MonitoringReadNotSupportedError(f"unsupported order_by field: {field}")
         return _sorted_missing_last(items, getter, lambda s: s.id, reverse=reverse)
 
 
@@ -350,6 +379,4 @@ def _in_window(ts: datetime | None, t0: datetime | None, t1: datetime | None) ->
         return False
     if t0 is not None and ts < t0:
         return False
-    if t1 is not None and ts >= t1:
-        return False
-    return True
+    return not (t1 is not None and ts >= t1)
