@@ -102,10 +102,11 @@ export async function openToolRow(page: Page, name: string): Promise<void> {
 }
 
 /**
- * Read the authed interactions SSE stream in the browser and resolve the
- * `interaction_id` of the pending question whose text equals `question`. Matching
- * on a UNIQUE question makes this robust against any stale backlog. Runs in-page so
- * it uses the same-origin credential path the app uses.
+ * Page the authed pending door (`GET /api/interactions`) in the browser and resolve
+ * the `interaction_id` of the pending question whose text equals `question`.
+ * Matching on a UNIQUE question makes this robust. Polls until the question appears
+ * (the asking tool run may still be in flight) or a deadline. Runs in-page so it
+ * uses the same-origin credential path the app uses.
  */
 export async function findInteractionId(
   page: Page,
@@ -114,44 +115,27 @@ export async function findInteractionId(
 ): Promise<string> {
   const id = await page.evaluate(
     async ({ apiKey, target }) => {
-      // Unique query token per open — identical concurrent SSE URLs coalesce
-      // onto one connection in some engines (canonical constraint: the
-      // api-client's sseOpenToken).
-      const res = await fetch(`/api/interactions/stream?_=${Date.now().toString(36)}`, {
-        headers: { 'x-api-key': apiKey, accept: 'text/event-stream' },
-      });
-      const reader = res.body?.getReader();
-      if (reader === undefined) return null;
-      const decoder = new TextDecoder();
-      let buffer = '';
       const deadline = Date.now() + 10_000;
       while (Date.now() < deadline) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-        let sep = buffer.indexOf('\n\n');
-        while (sep >= 0) {
-          const frame = buffer.slice(0, sep);
-          buffer = buffer.slice(sep + 2);
-          const dataLine = frame.split('\n').find((line) => line.startsWith('data: '));
-          if (dataLine !== undefined) {
-            try {
-              const obj = JSON.parse(dataLine.slice(6)) as {
-                question?: unknown;
-                interaction_id?: unknown;
-              };
-              if (obj.question === target && typeof obj.interaction_id === 'string') {
-                await reader.cancel();
-                return obj.interaction_id;
-              }
-            } catch {
-              /* keepalive / non-JSON frame */
+        for (let pageNum = 1; pageNum <= 100; pageNum += 1) {
+          const res = await fetch(`/api/interactions?page=${String(pageNum)}&pageSize=50`, {
+            headers: { 'x-api-key': apiKey, accept: 'application/json' },
+          });
+          if (!res.ok) return null;
+          const body = (await res.json()) as {
+            data?: { items?: unknown; next_page?: unknown };
+          };
+          const items = Array.isArray(body.data?.items) ? body.data.items : [];
+          for (const item of items) {
+            const obj = item as { question?: unknown; interaction_id?: unknown };
+            if (obj.question === target && typeof obj.interaction_id === 'string') {
+              return obj.interaction_id;
             }
           }
-          sep = buffer.indexOf('\n\n');
+          if (body.data?.next_page == null) break;
         }
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
-      await reader.cancel();
       return null;
     },
     { apiKey: key, target: question },

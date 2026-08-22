@@ -85,6 +85,14 @@ const defaultHandlers = [
   // the tool-meta overlay on mount; an empty overlay (no display names) is the
   // default, and the strict `onUnhandledRequest` guard would fail without it.
   http.get('*/api/tool-meta', () => HttpResponse.json({ data: { folders: [], meta: [] } })),
+  // The shell-mounted interactions badge reads the paged pending base on mount
+  // (`GET /api/interactions`); an empty page (nothing pending) is the default, and
+  // the strict `onUnhandledRequest` guard would fail without an answer here.
+  http.get('*/api/interactions', () =>
+    HttpResponse.json({
+      data: { items: [], total: 0, page: 1, page_size: 50, next_page: null, truncated: false },
+    }),
+  ),
 ];
 
 /** The msw server; tests register per-case handlers with `server.use(...)`. */

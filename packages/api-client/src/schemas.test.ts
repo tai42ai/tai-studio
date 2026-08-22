@@ -161,6 +161,51 @@ describe('interactionMediaItem schema — applied per item by the renderer', () 
   });
 });
 
+describe('interactionsPage schema — the paged pending inbox', () => {
+  const item = {
+    interaction_id: 'q1',
+    group_id: 'g1',
+    answer_format: 'text',
+    question: 'Approve?',
+    created_at: '2026-07-04T00:00:00Z',
+    timeout_at: '2026-07-04T00:05:00Z',
+  };
+
+  it('parses a page window: items plus total/page/page_size/next_page/truncated', () => {
+    const parsed = schemas.interactionsPage.parse({
+      items: [item],
+      total: 3,
+      page: 1,
+      page_size: 50,
+      next_page: 2,
+      truncated: false,
+    });
+    expect(parsed.items).toHaveLength(1);
+    expect(parsed.items[0]?.interaction_id).toBe('q1');
+    expect(parsed.total).toBe(3);
+    expect(parsed.next_page).toBe(2);
+    expect(parsed.truncated).toBe(false);
+  });
+
+  it('accepts a null next_page on the last page', () => {
+    const parsed = schemas.interactionsPage.parse({
+      items: [],
+      total: 0,
+      page: 1,
+      page_size: 50,
+      next_page: null,
+      truncated: false,
+    });
+    expect(parsed.next_page).toBeNull();
+  });
+
+  it('rejects a page missing a window field', () => {
+    expect(() =>
+      schemas.interactionsPage.parse({ items: [], total: 0, page: 1, page_size: 50 }),
+    ).toThrow();
+  });
+});
+
 describe('channels schema', () => {
   it('accepts an empty and a populated catalog', () => {
     expect(schemas.channels.parse({ channels: [] }).channels).toEqual([]);

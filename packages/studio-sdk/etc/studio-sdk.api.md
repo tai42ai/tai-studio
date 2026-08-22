@@ -1109,6 +1109,29 @@ settings_tabs: string[];
 nav_entries: string[];
 };
 }[]>;
+readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
+items: {
+created_at: string;
+interaction_id: string;
+group_id: string;
+question: string;
+answer_format: "text" | "confirm" | "select" | "form" | "external";
+format_payload: Record<string, unknown>;
+timeout_at: string;
+sensitive: boolean;
+origin?: string | undefined;
+server_verified?: boolean | undefined;
+channel?: string | undefined;
+recipient?: string | undefined;
+audience?: string | undefined;
+media?: unknown[] | undefined;
+}[];
+total: number;
+page: number;
+page_size: number;
+next_page: number | null;
+truncated: boolean;
+}>;
 readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
 status: string;
 interaction_id: string;
@@ -4358,6 +4381,29 @@ function createApiClient(config: ApiConfig): {
             nav_entries: string[];
         };
     }[]>;
+    readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
+        items: {
+            created_at: string;
+            interaction_id: string;
+            group_id: string;
+            question: string;
+            answer_format: "text" | "confirm" | "select" | "form" | "external";
+            format_payload: Record<string, unknown>;
+            timeout_at: string;
+            sensitive: boolean;
+            origin?: string | undefined;
+            server_verified?: boolean | undefined;
+            channel?: string | undefined;
+            recipient?: string | undefined;
+            audience?: string | undefined;
+            media?: unknown[] | undefined;
+        }[];
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
+    }>;
     readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
         status: string;
         interaction_id: string;
@@ -6806,11 +6852,119 @@ const interactionMediaItem: z.ZodObject<{
 export const InteractionsIcon: IconComponent;
 
 // @public (undocumented)
+type InteractionsPage = z.infer<typeof interactionsPage>;
+
+// @public
+const interactionsPage: z.ZodObject<{
+    total: z.ZodNumber;
+    page: z.ZodNumber;
+    page_size: z.ZodNumber;
+    next_page: z.ZodNullable<z.ZodNumber>;
+    truncated: z.ZodBoolean;
+    items: z.ZodArray<z.ZodObject<{
+        interaction_id: z.ZodString;
+        group_id: z.ZodString;
+        question: z.ZodDefault<z.ZodString>;
+        answer_format: z.ZodEnum<["text", "confirm", "select", "form", "external"]>;
+        format_payload: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, Record<string, unknown>, Record<string, unknown> | null | undefined>;
+        created_at: z.ZodString;
+        timeout_at: z.ZodString;
+        sensitive: z.ZodDefault<z.ZodBoolean>;
+        server_verified: z.ZodOptional<z.ZodBoolean>;
+        channel: z.ZodOptional<z.ZodString>;
+        recipient: z.ZodOptional<z.ZodString>;
+        origin: z.ZodOptional<z.ZodString>;
+        audience: z.ZodOptional<z.ZodString>;
+        media: z.ZodOptional<z.ZodArray<z.ZodUnknown, "many">>;
+    }, "strip", z.ZodTypeAny, {
+        created_at: string;
+        interaction_id: string;
+        group_id: string;
+        question: string;
+        answer_format: "text" | "confirm" | "select" | "form" | "external";
+        format_payload: Record<string, unknown>;
+        timeout_at: string;
+        sensitive: boolean;
+        origin?: string | undefined;
+        server_verified?: boolean | undefined;
+        channel?: string | undefined;
+        recipient?: string | undefined;
+        audience?: string | undefined;
+        media?: unknown[] | undefined;
+    }, {
+        created_at: string;
+        interaction_id: string;
+        group_id: string;
+        answer_format: "text" | "confirm" | "select" | "form" | "external";
+        timeout_at: string;
+        origin?: string | undefined;
+        question?: string | undefined;
+        format_payload?: Record<string, unknown> | null | undefined;
+        sensitive?: boolean | undefined;
+        server_verified?: boolean | undefined;
+        channel?: string | undefined;
+        recipient?: string | undefined;
+        audience?: string | undefined;
+        media?: unknown[] | undefined;
+    }>, "many">;
+}, "strip", z.ZodTypeAny, {
+    items: {
+        created_at: string;
+        interaction_id: string;
+        group_id: string;
+        question: string;
+        answer_format: "text" | "confirm" | "select" | "form" | "external";
+        format_payload: Record<string, unknown>;
+        timeout_at: string;
+        sensitive: boolean;
+        origin?: string | undefined;
+        server_verified?: boolean | undefined;
+        channel?: string | undefined;
+        recipient?: string | undefined;
+        audience?: string | undefined;
+        media?: unknown[] | undefined;
+    }[];
+    total: number;
+    page: number;
+    page_size: number;
+    next_page: number | null;
+    truncated: boolean;
+}, {
+    items: {
+        created_at: string;
+        interaction_id: string;
+        group_id: string;
+        answer_format: "text" | "confirm" | "select" | "form" | "external";
+        timeout_at: string;
+        origin?: string | undefined;
+        question?: string | undefined;
+        format_payload?: Record<string, unknown> | null | undefined;
+        sensitive?: boolean | undefined;
+        server_verified?: boolean | undefined;
+        channel?: string | undefined;
+        recipient?: string | undefined;
+        audience?: string | undefined;
+        media?: unknown[] | undefined;
+    }[];
+    total: number;
+    page: number;
+    page_size: number;
+    next_page: number | null;
+    truncated: boolean;
+}>;
+
+// @public
+export interface InteractionsStreamOptions {
+    readonly onResync: () => boolean | Promise<boolean>;
+    readonly seed: readonly Interaction[];
+    readonly total: number;
+}
+
+// @public (undocumented)
 export interface InteractionsStreamState {
     // (undocumented)
-    readonly backlogLoaded: boolean;
-    // (undocumented)
     readonly connected: boolean;
+    readonly count: number;
     readonly disabled: boolean;
     // (undocumented)
     readonly error: Error | null;
@@ -12694,6 +12848,8 @@ declare namespace s {
         Interaction,
         interactionAnswered,
         InteractionAnswered,
+        interactionsPage,
+        InteractionsPage,
         channels,
         Channels,
         conversationDoor,
@@ -15205,7 +15361,7 @@ export function useFieldControl(): FieldControlProps;
 export function useFillViewport(): void;
 
 // @public (undocumented)
-export function useInteractionsStream(): InteractionsStreamState;
+export function useInteractionsStream(options: InteractionsStreamOptions): InteractionsStreamState;
 
 // @public
 export function useNavigationGate(): (href: string) => Promise<boolean>;

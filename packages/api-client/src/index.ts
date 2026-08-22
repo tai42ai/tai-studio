@@ -114,6 +114,7 @@ export type {
   StudioPluginManifest,
   Interaction,
   InteractionAnswered,
+  InteractionsPage,
   InteractionMediaItem,
   MediaKind,
   AnswerFormat,

@@ -797,6 +797,12 @@ export function createApiClient(config: ApiConfig) {
       req('/api/plugins', s.studioPluginRegistry, { signal }),
 
     // -- interactions --------------------------------------------------------
+    // One page of the pending interactions (the tail-only stream's paged base). The
+    // door filters by audience before paging — the SAME filter the stream applies —
+    // so `total` is the caller's own count, and every terminal frame it later receives
+    // refers to a question within that `total`.
+    listInteractions: (page: number, pageSize: number, signal?: AbortSignal) =>
+      req('/api/interactions', s.interactionsPage, { signal, query: { page, pageSize } }),
     answerInteraction: (interactionId: string, answer: unknown) =>
       req(`/api/interactions/${encodeSegment(interactionId)}/answer`, s.interactionAnswered, {
         method: 'POST',
@@ -1256,9 +1262,12 @@ export function createApiClient(config: ApiConfig) {
       req('/api/system/kinds', s.kindStatusList, { signal }),
 
     /**
-     * Open the authed interactions SSE stream. The caller drives reconnect +
-     * backlog-replay dedup. Returns the raw frame iterator; the interactions
-     * feature maps frames to typed events.
+     * Open the authed interactions SSE stream. The stream is TAIL-ONLY: its cursor
+     * is the stream tail at connect, so it carries no backlog and no
+     * `interaction.backlog_done` frame — the pending base comes from
+     * `listInteractions`. The caller drives reconnect and refetches that base on
+     * each (re)connect. Returns the raw frame iterator; the interactions feature
+     * maps frames to typed events.
      */
     streamInteractions: async (signal?: AbortSignal) => {
       const doFetch = config.fetch ?? globalThis.fetch;

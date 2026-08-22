@@ -1,29 +1,50 @@
 /**
- * `useSse` — the live interactions stream, implemented over the api-client's
- * `streamInteractions` (fetch + ReadableStream, never EventSource).
+ * `useInteractionsStream` — the live interactions inbox, a TAIL-ONLY SSE stream
+ * (via the api-client's `streamInteractions`: fetch + ReadableStream, never
+ * EventSource) laid over a PAGED base the caller supplies.
  *
- * SSE event contract: events `interaction.add` /
- * `interaction.answered` / `interaction.removed` / `interaction.backlog_done`.
- * The `add` frame (backlog on connect + live tail) carries the full question;
- * `answered` / `removed` frames carry only ids. On (re)connect the server
- * replays the current PENDING set as the backlog (answered items are NOT in it);
- * this hook treats that backlog as authoritative for the PENDING set only — a
- * still-pending entry not re-seen by `interaction.backlog_done` is dropped
- * (removed while the client was disconnected), while a locally-ANSWERED entry is
- * exempt from that reconcile so it survives reconnect (reconcile-deleting it
- * would vanish an answered card on the next reconnect, since the pending-only
- * backlog never replays it).
+ * The stream carries only the live tail: events `interaction.add` /
+ * `interaction.answered` / `interaction.removed` (no backlog, no
+ * `interaction.backlog_done`). The PENDING SET is not replayed on the stream — it
+ * is the `seed` the caller passes from the paged `GET /api/interactions` door; this
+ * hook overlays the live deltas onto it. The hook calls `onResync` on every
+ * (re)connect ONLY, so the caller refetches that base to catch up anything missed
+ * while disconnected; a live delta never triggers a refetch — the overlay updates
+ * the list and the derived `count` in place.
+ *
+ * The published list is `merge(seed, live)`: every seeded pending item, plus any
+ * item added on the tail since connect, minus any removed on the tail, with the
+ * client `answered` flag set on an item the tail reported answered.
+ *
+ * The published `count` is the live PENDING tally, derived from the same overlay
+ * without a refetch, reconciled by EPOCH so a resync never double-counts. Each
+ * (re)connect refetches the base under a fresh epoch and, once that refetch LANDS
+ * fresh, records it as `countEpoch` (a failed refetch does not advance it, so
+ * prior-epoch deltas keep applying against the consistent prior total rather than
+ * being discarded against a stale one); every overlay add and every terminal
+ * (answered or removed) entry is stamped with the epoch current when its frame
+ * arrived. The count
+ * is the seed `total` plus live adds not in the seed AND stamped at or after
+ * `countEpoch`, minus one for every terminal id stamped at or after `countEpoch`
+ * (deduped per id) — a terminal or an add already folded into the refetched `total`
+ * carries an older stamp and is not applied again. The single residual: a frame
+ * arriving while a refetch is in flight may or may not be reflected in that refetch's
+ * `total`, and is reconciled on the next resync.
  *
  * ANSWERED-CARD LIFECYCLE: the server emits no removal for an answered card —
- * only `interaction.answered`, never `interaction.removed` for it — so answered
- * cards would otherwise pile up unbounded in the always-mounted badge/inbox. This
- * hook AGES them out itself: an answered card is dropped once it is older than
- * `ANSWERED_RETENTION_MS`, with `ANSWERED_CAP` as a hard newest-N flood backstop.
- * Both are swept lazily on frame/reconnect ticks (the stream carries no idle
- * heartbeat frame), never a per-item timer.
+ * only `interaction.answered`, never `interaction.removed` for it — and the paged
+ * base never carries answered items. On its answered frame a card is promoted into
+ * the overlay's adds (a seed-origin card too), so it lingers uniformly whether it
+ * began as a live add or a seed item, even after a refetch drops it from the base.
+ * This hook AGES it out itself: an answered card is dropped `ANSWERED_RETENTION_MS`
+ * after its answered frame (tombstoned so a still-stale seed cannot resurrect it),
+ * with `ANSWERED_CAP` as a hard newest-N flood backstop. Both are swept lazily on
+ * frame/reconnect ticks (the stream carries no idle heartbeat frame), never a
+ * per-item timer.
  *
- * `add` frames are at-least-once, so entries are de-duplicated by
- * `interaction_id`, and a redelivered `add` preserves the client `answered` flag.
+ * `add` / `answered` frames are at-least-once; entries are keyed by
+ * `interaction_id`, a redelivered `add` overwrites in place, and a redelivered
+ * `answered` keeps the original stamp so the retention window is not extended.
  *
  * The `Interaction` type is imported type-only (no runtime dep on api-client);
  * frames are validated defensively and a malformed frame is surfaced as an error,
@@ -40,18 +61,43 @@ import { isFeatureDisabled } from '../feature-disabled';
 /** A live interaction plus the client-maintained `answered` flag. */
 export type StreamInteraction = Interaction & { readonly answered: boolean };
 
-/**
- * The internal map value: a `StreamInteraction` plus the wall-clock ms of its
- * answered frame (`null` while pending), read only by the client-side aging
- * sweep. `answeredAt` is stripped before the interaction is published — it is not
- * part of the public `StreamInteraction` contract.
- */
-type TrackedInteraction = StreamInteraction & { readonly answeredAt: number | null };
+/** The inputs the caller drives the tail-only stream with. */
+export interface InteractionsStreamOptions {
+  /**
+   * The pending set from the paged `GET /api/interactions` door — the base the
+   * live tail overlays. A stable reference between refetches (memoize it upstream);
+   * a new reference re-merges but does NOT reopen the stream.
+   */
+  readonly seed: readonly Interaction[];
+  /**
+   * The door's authoritative pending TOTAL for the current `seed` (the paged
+   * response's `total`). The published `count` derives the live pending tally from
+   * this plus the overlay delta, so the badge stays live without a refetch.
+   */
+  readonly total: number;
+  /**
+   * Refetch `seed`. Called on every (re)connect ONLY — the tail carries no backlog,
+   * so this reconciles anything missed while disconnected. A live delta never calls
+   * it: the overlay updates the list and the derived `count` in place. MUST resolve
+   * `true` only when the refetch LANDED a fresh `total`, and `false` when it failed:
+   * the hook advances `countEpoch` only on `true`, so terminals and adds already
+   * folded into the fresh `total` are not applied to the count again, while after a
+   * failed refetch the prior-epoch deltas keep applying against the unchanged prior
+   * total instead of being discarded against a stale one.
+   */
+  readonly onResync: () => boolean | Promise<boolean>;
+}
 
 export interface InteractionsStreamState {
   readonly interactions: StreamInteraction[];
+  /**
+   * The live pending count: the seed `total` adjusted by the overlay delta stamped at
+   * or after the last landed resync's epoch (adds not in the seed, minus one per
+   * terminal id). Stays live without a refetch; a delta stamped before `countEpoch` is
+   * already reflected in `total` and not applied again.
+   */
+  readonly count: number;
   readonly connected: boolean;
-  readonly backlogLoaded: boolean;
   readonly error: Error | null;
   /**
    * The interactions store is not configured on this deployment: the stream
@@ -64,21 +110,22 @@ export interface InteractionsStreamState {
 
 // Reconnect backoff: capped exponential with full jitter. The delay for attempt
 // n is a random value in [0, min(CAP, BASE * 2**n)); the attempt counter resets
-// only when a connection is proven healthy (`interaction.backlog_done`), not when
-// it merely opens — so a flapping server that accepts the request then drops the
-// body still backs off instead of tight-looping. A healthy tail-reconnect is
-// near-instant while a sustained outage backs off, and the jitter spreads many
-// clients apart rather than retrying in lockstep.
+// only when a connection PROVES HEALTHY — it stayed open at least
+// `HEALTHY_CONNECTION_MS` — not merely when it opens, so a server that accepts the
+// request then drops the body still backs off instead of tight-looping. A healthy
+// tail-reconnect is near-instant while a sustained outage backs off, and the
+// jitter spreads many clients apart rather than retrying in lockstep.
 const RECONNECT_BASE_MS = 1500;
 const RECONNECT_CAP_MS = 30000;
+const HEALTHY_CONNECTION_MS = RECONNECT_BASE_MS;
 
 // The server emits no removal for an answered card — only `interaction.answered`,
-// never `interaction.removed` for it — so answered cards would otherwise pile up
-// unbounded in the always-mounted badge/inbox. The client ages them out: drop an
-// answered card ANSWERED_RETENTION_MS after its answered frame (a "recently
-// answered" window), keeping at most ANSWERED_CAP as a hard flood backstop. Swept
-// lazily on frame/reconnect ticks (the stream carries no idle heartbeat frame),
-// never a per-item timer.
+// never `interaction.removed` for it — and the paged base never carries answered
+// items, so answered cards would otherwise pile up unbounded in the always-mounted
+// badge/inbox. The client ages them out: drop an answered card
+// ANSWERED_RETENTION_MS after its answered frame, keeping at most ANSWERED_CAP as a
+// hard flood backstop. Swept lazily on frame/reconnect ticks (the stream carries no
+// idle heartbeat frame), never a per-item timer.
 const ANSWERED_RETENTION_MS = 10 * 60 * 1000;
 const ANSWERED_CAP = 200;
 
@@ -199,116 +246,186 @@ function parseId(data: string): string | null {
   return typeof id === 'string' ? id : null;
 }
 
-export function useInteractionsStream(): InteractionsStreamState {
+/**
+ * The live overlay a connection accumulates over the paged base: the tail's own
+ * adds (kept whether or not the base already lists them, so a fresher add wins),
+ * the answered stamps (wall-clock ms, for the aging sweep), and the tombstones for
+ * ids removed on the tail OR aged out of the answered window (a tombstone stops a
+ * still-stale seed from re-showing a gone card; ids are never reused). `addEpoch`
+ * and `goneEpoch` carry the resync epoch current when an add / a first terminal frame
+ * arrived, so the count applies an add (or subtracts a terminal) only while it is not
+ * yet folded into the refetched `total`; the merge and the aging sweep ignore them.
+ */
+interface LiveOverlay {
+  readonly adds: Map<string, Interaction>;
+  readonly addEpoch: Map<string, number>;
+  readonly answeredAt: Map<string, number>;
+  readonly removed: Set<string>;
+  readonly goneEpoch: Map<string, number>;
+}
+
+function emptyOverlay(): LiveOverlay {
+  return {
+    adds: new Map(),
+    addEpoch: new Map(),
+    answeredAt: new Map(),
+    removed: new Set(),
+    goneEpoch: new Map(),
+  };
+}
+
+/** Fold the paged base and the live overlay into the published, ordered list. */
+function merge(seed: readonly Interaction[], live: LiveOverlay): StreamInteraction[] {
+  const out = new Map<string, StreamInteraction>();
+  for (const item of seed) {
+    if (live.removed.has(item.interaction_id)) continue;
+    out.set(item.interaction_id, { ...item, answered: live.answeredAt.has(item.interaction_id) });
+  }
+  for (const [id, item] of live.adds) {
+    if (live.removed.has(id)) continue;
+    out.set(id, { ...item, answered: live.answeredAt.has(id) });
+  }
+  return Array.from(out.values());
+}
+
+/**
+ * The live pending tally: the door's `total` for the seed, plus live adds whose id
+ * is absent from the seed AND stamped at or after `countEpoch` (a new question not
+ * yet folded into `total`), minus one for every terminal id — answered OR removed —
+ * stamped at or after `countEpoch`, deduped per id so an id counts once however many
+ * terminal frames it drew. `countEpoch` is the epoch of the last resync whose refetch
+ * LANDED (a failed refetch never advances it): a delta stamped before it is already
+ * reflected in the fresh `total`, so it is NOT applied again — this is what stops a
+ * resync from re-subtracting a terminal it already dropped from `total`, while a
+ * failed refetch keeps the prior-epoch deltas applying against the prior total. Every
+ * terminal frame a client receives refers to a
+ * question inside its own `total` (the stream and the list door apply the same
+ * audience filter). For honest server data this never goes negative, so no clamp is
+ * applied. The single residual: a frame arriving while a refetch is in flight may or
+ * may not be reflected in that refetch's `total`, and is reconciled on the next resync.
+ */
+function pendingCount(
+  seed: readonly Interaction[],
+  total: number,
+  live: LiveOverlay,
+  countEpoch: number,
+): number {
+  const seedIds = new Set(seed.map((item) => item.interaction_id));
+  let count = total;
+  for (const id of live.adds.keys()) {
+    if (!seedIds.has(id) && (live.addEpoch.get(id) ?? 0) >= countEpoch) count += 1;
+  }
+  const gone = new Set<string>([...live.answeredAt.keys(), ...live.removed]);
+  for (const id of gone) {
+    if ((live.goneEpoch.get(id) ?? 0) >= countEpoch) count -= 1;
+  }
+  return count;
+}
+
+export function useInteractionsStream(options: InteractionsStreamOptions): InteractionsStreamState {
+  const { seed, total, onResync } = options;
   const api = useApi();
   const onUnauthorized = useOnUnauthorized();
-  const [state, setState] = useState<InteractionsStreamState>({
-    interactions: [],
-    connected: false,
-    backlogLoaded: false,
-    error: null,
-    disabled: false,
-  });
-  // Source of truth: a dedupe map keyed by interaction_id, rebuilt into the
-  // ordered array on every change.
-  const mapRef = useRef<Map<string, TrackedInteraction>>(new Map());
+
+  const [connectionState, setConnectionState] = useState<{
+    connected: boolean;
+    error: Error | null;
+    disabled: boolean;
+  }>({ connected: false, error: null, disabled: false });
+
+  // The live overlay is a ref (mutated in place by the stream loop); the published
+  // list is `merge(seed, overlay)` held in state, recomputed on every overlay
+  // change (the stream loop) and every seed change (a refetch of the paged base).
+  const overlayRef = useRef<LiveOverlay>(emptyOverlay());
+  const [interactions, setInteractions] = useState<StreamInteraction[]>(() =>
+    merge(seed, overlayRef.current),
+  );
+
+  // Resync epochs. `epochRef` increments on each (re)connect and stamps every frame
+  // that arrives on that connection; `countEpoch` is set to the connect's epoch only
+  // once its refetch landed fresh (onResync resolved true) — a failed refetch leaves
+  // it unchanged so prior-epoch deltas keep applying against the prior total.
+  // `pendingCount` applies only overlay entries stamped at or after `countEpoch`, so a
+  // resync never re-subtracts a terminal it already dropped from the fresh `total`.
+  // `countEpoch` is STATE, not a ref: advancing it must republish the derived count
+  // even when the reconnect carries no frame after the refetch. Both reset with the
+  // overlay on remount.
+  const epochRef = useRef(0);
+  const [countEpoch, setCountEpoch] = useState(0);
+
+  // The stream effect must not reopen when `seed`/`onResync` change, so they are
+  // read through refs the render keeps current.
+  const seedRef = useRef(seed);
+  seedRef.current = seed;
+  const onResyncRef = useRef(onResync);
+  onResyncRef.current = onResync;
+
+  // A new paged base (initial load or a refetch) re-merges over the live overlay.
+  useEffect(() => {
+    setInteractions(merge(seed, overlayRef.current));
+  }, [seed]);
 
   useEffect(() => {
     const controller = new AbortController();
     const aborted = () => controller.signal.aborted;
+    const overlay = overlayRef.current;
+    let reconnectAttempt = 0;
 
-    // The published list carries the public shape only — the internal
-    // `answeredAt` aging stamp is stripped here.
-    const toPublicList = (): StreamInteraction[] =>
-      Array.from(mapRef.current.values(), ({ answeredAt: _answeredAt, ...rest }) => rest);
-
-    // Age answered cards out (the server sends no removal for them): drop any past
-    // the retention window, then — as a flood backstop — the oldest beyond the
-    // count cap. Pending items (`answeredAt === null`) are never touched. Called on
-    // every frame/reconnect tick so the always-mounted badge cannot grow unbounded.
+    // Age answered cards out (the server sends no removal for them): tombstone any
+    // past the retention window, then — as a flood backstop — the oldest beyond the
+    // count cap. A tombstone (not a bare delete) so a still-stale seed cannot
+    // resurrect a card the client has retired.
     const sweepAnswered = () => {
       const now = Date.now();
-      const answered: { id: string; answeredAt: number }[] = [];
-      for (const entry of mapRef.current.values()) {
-        if (entry.answeredAt !== null) {
-          answered.push({ id: entry.interaction_id, answeredAt: entry.answeredAt });
-        }
+      const retire = (id: string) => {
+        overlay.answeredAt.delete(id);
+        overlay.adds.delete(id);
+        overlay.addEpoch.delete(id);
+        overlay.removed.add(id);
+        // The id keeps its original `goneEpoch` (stamped on its answered frame) so
+        // moving answered→removed never re-dates it into a fresher resync.
+      };
+      for (const [id, at] of overlay.answeredAt) {
+        if (now - at >= ANSWERED_RETENTION_MS) retire(id);
       }
-      for (const { id, answeredAt } of answered) {
-        if (now - answeredAt >= ANSWERED_RETENTION_MS) mapRef.current.delete(id);
+      if (overlay.answeredAt.size > ANSWERED_CAP) {
+        const oldest = [...overlay.answeredAt.entries()].sort((a, b) => a[1] - b[1]);
+        for (const [id] of oldest.slice(0, oldest.length - ANSWERED_CAP)) retire(id);
       }
-      const live = answered.filter(({ id }) => mapRef.current.has(id));
-      if (live.length > ANSWERED_CAP) {
-        live.sort((a, b) => a.answeredAt - b.answeredAt); // oldest first
-        for (const { id } of live.slice(0, live.length - ANSWERED_CAP)) {
-          mapRef.current.delete(id);
-        }
-      }
-    };
-
-    // A successful data frame rebuilds the list and clears any transient
-    // frame-parse error — one bad frame on a healthy stream must not stick.
-    const publish = () => {
-      sweepAnswered();
-      setState((prev) => ({
-        ...prev,
-        interactions: toPublicList(),
-        error: null,
-      }));
     };
 
     const surfaceMalformed = (event: string) => {
-      setState((prev) => ({ ...prev, error: new Error(`malformed interaction frame: ${event}`) }));
+      setConnectionState((prev) => ({
+        ...prev,
+        error: new Error(`malformed interaction frame: ${event}`),
+      }));
     };
 
-    // Per-connection reconcile state: the replayed backlog is the PENDING set
-    // only, so a still-pending id not re-seen by `interaction.backlog_done` is
-    // dropped (removed while disconnected); a locally-answered id is exempt — it
-    // survives reconnect and is aged out client-side (see `sweepAnswered`).
-    let reconciling = false;
-    let seenInBacklog = new Set<string>();
-    // Consecutive failed reconnect attempts. Reset only when a connection proves
-    // healthy (`interaction.backlog_done`), NOT merely when it opens — a server
-    // that accepts the request then drops the body would otherwise reset every
-    // time and never back off.
-    let reconnectAttempt = 0;
-    const beginConnection = () => {
-      reconciling = true;
-      seenInBacklog = new Set();
+    // A successful data frame sweeps, republishes the merged list, and clears any
+    // transient frame-parse error — one bad frame on a healthy stream must not
+    // stick. It does NOT refetch: the overlay already updated the list and the
+    // derived count, and `onResync` fires on (re)connect only.
+    const commit = () => {
+      if (aborted()) return;
+      sweepAnswered();
+      setConnectionState((prev) => (prev.error === null ? prev : { ...prev, error: null }));
+      setInteractions(merge(seedRef.current, overlay));
     };
 
     const applyFrame = (event: string, data: string) => {
-      if (event === 'interaction.backlog_done') {
-        if (reconciling) {
-          // The pending-only backlog is authoritative for pending items alone:
-          // drop a still-pending id it did not replay (removed while
-          // disconnected), but NEVER an answered id — that is terminal and the
-          // backlog never carries it, so reconcile-deleting it would vanish an
-          // answered card on every reconnect.
-          for (const [id, item] of mapRef.current) {
-            if (!seenInBacklog.has(id) && !item.answered) mapRef.current.delete(id);
-          }
-          reconciling = false;
-        }
-        // A completed backlog is proof the connection is healthy — clear the
-        // reconnect backoff so the next drop reconnects promptly.
-        reconnectAttempt = 0;
-        sweepAnswered();
-        setState((prev) => ({
-          ...prev,
-          interactions: toPublicList(),
-          backlogLoaded: true,
-        }));
-        return;
-      }
       if (event === 'interaction.removed') {
         const id = parseId(data);
         if (id === null) {
           surfaceMalformed(event);
           return;
         }
-        mapRef.current.delete(id);
-        publish();
+        overlay.adds.delete(id);
+        overlay.addEpoch.delete(id);
+        overlay.answeredAt.delete(id);
+        overlay.removed.add(id);
+        // Stamp the terminal epoch on the FIRST terminal frame for this id only.
+        if (!overlay.goneEpoch.has(id)) overlay.goneEpoch.set(id, epochRef.current);
+        commit();
         return;
       }
       if (event === 'interaction.answered') {
@@ -317,52 +434,63 @@ export function useInteractionsStream(): InteractionsStreamState {
           surfaceMalformed(event);
           return;
         }
-        // The answered frame carries only ids — flip the existing item's flag,
-        // keeping its question/format. An answered event for an item we never saw
-        // has nothing to show. Stamp the answered time on the FIRST answered frame
-        // only; a redelivered answered keeps the original stamp so the retention
-        // window is not extended.
-        const existing = mapRef.current.get(id);
-        if (existing) {
-          const answeredAt = existing.answered ? existing.answeredAt : Date.now();
-          mapRef.current.set(id, { ...existing, answered: true, answeredAt });
+        // Stamp the answered time on the FIRST answered frame only; a redelivered
+        // answered keeps the original stamp so the retention window is not extended.
+        if (!overlay.answeredAt.has(id)) overlay.answeredAt.set(id, Date.now());
+        // Stamp the terminal epoch on the FIRST terminal frame for this id only, so a
+        // later terminal never re-dates it into a fresher resync.
+        if (!overlay.goneEpoch.has(id)) overlay.goneEpoch.set(id, epochRef.current);
+        // Promote a seed-origin card into the overlay so it lingers uniformly with a
+        // live-add card: the paged base never carries answered items, so a refetch
+        // would otherwise drop it before its retention window elapses.
+        if (!overlay.adds.has(id)) {
+          const seeded = seedRef.current.find((item) => item.interaction_id === id);
+          if (seeded !== undefined) {
+            overlay.adds.set(id, seeded);
+            overlay.addEpoch.set(id, epochRef.current);
+          }
         }
-        publish();
+        commit();
         return;
       }
-      // interaction.add — the full question.
+      // interaction.add — the full question. Ids are never reused, so a live add
+      // simply overwrites any prior copy in place.
       const interaction = parseAddFrame(data);
       if (interaction === null) {
         surfaceMalformed(event);
         return;
       }
-      if (reconciling) seenInBacklog.add(interaction.interaction_id);
-      // Dedupe by id; a redelivered add preserves the client answered flag (and
-      // its aging stamp) so a prior `answered` is not undone by an at-least-once
-      // replay. A fresh (pending) add carries no stamp until its answered frame.
-      const existing = mapRef.current.get(interaction.interaction_id);
-      const answered = existing?.answered ?? false;
-      mapRef.current.set(interaction.interaction_id, {
-        ...interaction,
-        answered,
-        answeredAt: answered ? (existing?.answeredAt ?? null) : null,
-      });
-      publish();
+      overlay.adds.set(interaction.interaction_id, interaction);
+      overlay.addEpoch.set(interaction.interaction_id, epochRef.current);
+      commit();
     };
 
     // The abort signal is the single cancellation source of truth: the cleanup
     // aborts it, and every loop guard reads it fresh.
     const run = async () => {
       while (!aborted()) {
+        const openedAt = Date.now();
         try {
           const frames = await api.streamInteractions(controller.signal);
           if (aborted()) return;
-          beginConnection();
-          // Clear `disabled` on a fresh connect: the terminal-501 branch sets it and
-          // returns, so within a single mount this only ever writes false-over-false —
-          // but should the effect re-run and a later stream connect, the hook must not
-          // carry a stale OFF flag. Correct-by-construction, not load-bearing today.
-          setState((prev) => ({ ...prev, connected: true, error: null, disabled: false }));
+          setConnectionState((prev) => ({
+            ...prev,
+            connected: true,
+            error: null,
+            disabled: false,
+          }));
+          // Tail-only: the pending base is not on the stream. Refetch it on every
+          // (re)connect under a fresh epoch so anything removed or added while
+          // disconnected is reconciled by the fresh page; record that epoch as
+          // `countEpoch` only once the refetch LANDED (onResync resolved true), so the
+          // count applies only deltas not yet folded into the fresh `total`. A failed
+          // refetch (false) leaves `countEpoch` unchanged, so prior-epoch deltas keep
+          // applying against the consistent prior total instead of being discarded
+          // against a stale one. Every frame on this connection is stamped with `epoch`.
+          const epoch = (epochRef.current += 1);
+          const landed = await onResyncRef.current();
+          if (aborted()) return;
+          if (landed) setCountEpoch(epoch);
           for await (const frame of frames) {
             if (aborted()) return;
             applyFrame(frame.event, frame.data);
@@ -370,7 +498,7 @@ export function useInteractionsStream(): InteractionsStreamState {
         } catch (err) {
           if (aborted()) return;
           const error = err instanceof Error ? err : new Error(String(err));
-          setState((prev) => ({ ...prev, connected: false, error }));
+          setConnectionState((prev) => ({ ...prev, connected: false, error }));
           if (error.name === 'ApiUnauthorizedError') {
             // A 401 means the stored credential is dead — reconnecting would just
             // replay the same bad key every delay forever. Treat it as terminal
@@ -385,16 +513,20 @@ export function useInteractionsStream(): InteractionsStreamState {
             // every backoff forever (this stream is always-mounted via the shell
             // badge). Stop, and flag the OFF state so the badge disappears and the
             // page renders the muted "not configured" note instead of a red error.
-            setState((prev) => ({ ...prev, connected: false, disabled: true }));
+            setConnectionState((prev) => ({ ...prev, connected: false, disabled: true }));
             return;
           }
         }
-        // Stream ended or errored → wait, then reconnect (server replays backlog).
-        // Guard before the setState, like every other setState in run(): a
-        // microtask scheduled after the `for await` must not write state after
-        // the effect cleanup has aborted (and unmounted) the hook.
+        // A connection that stayed open at least HEALTHY_CONNECTION_MS proved
+        // healthy — clear the reconnect backoff so the next drop reconnects
+        // promptly; an immediate accept-then-drop flap does not reset it.
+        if (Date.now() - openedAt >= HEALTHY_CONNECTION_MS) reconnectAttempt = 0;
+        // Stream ended or errored → wait, then reconnect. Guard before the
+        // setState, like every other setState in run(): a microtask scheduled after
+        // the `for await` must not write state after the effect cleanup has aborted
+        // (and unmounted) the hook.
         if (aborted()) return;
-        setState((prev) => ({ ...prev, connected: false }));
+        setConnectionState((prev) => ({ ...prev, connected: false }));
         const ceiling = Math.min(RECONNECT_CAP_MS, RECONNECT_BASE_MS * 2 ** reconnectAttempt);
         const delay = Math.random() * ceiling;
         reconnectAttempt += 1;
@@ -417,8 +549,25 @@ export function useInteractionsStream(): InteractionsStreamState {
     void run();
     return () => {
       controller.abort();
+      // A fresh mount starts from an empty overlay at epoch 0: the effect owns the
+      // connection and its live deltas, so a re-run must not inherit the prior run's
+      // tail or its epoch stamps.
+      overlayRef.current = emptyOverlay();
+      epochRef.current = 0;
+      setCountEpoch(0);
     };
   }, [api, onUnauthorized]);
 
-  return state;
+  // Derived live, not stored: every overlay mutation republishes `interactions` (a
+  // setState), and every seed/total change and every `countEpoch` advance is itself a
+  // render, so this recomputes from the current overlay ref on the same render.
+  const count = pendingCount(seed, total, overlayRef.current, countEpoch);
+
+  return {
+    interactions,
+    count,
+    connected: connectionState.connected,
+    error: connectionState.error,
+    disabled: connectionState.disabled,
+  };
 }

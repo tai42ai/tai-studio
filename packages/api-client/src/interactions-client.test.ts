@@ -1,9 +1,11 @@
 /**
- * Transport-level tests for the interaction-answer client method:
- * `answerInteraction` — URL (+ id encoding), HTTP method, request-body shaping, the
- * `{ data }` envelope unwrap, and the two loud failure mappings the answer door
- * emits: a 409 (already answered elsewhere → `ApiConflictError`) and a 404 (the
- * interaction expired → `ApiError`). A fake `fetch` records each request.
+ * Transport-level tests for the interactions client methods:
+ * `listInteractions` — URL + page-window query params (`page`/`pageSize`) and the
+ * `{ data }` envelope unwrap — and `answerInteraction` — URL (+ id encoding), HTTP
+ * method, request-body shaping, the envelope unwrap, and the two loud failure
+ * mappings the answer door emits: a 409 (already answered elsewhere →
+ * `ApiConflictError`) and a 404 (the interaction expired → `ApiError`). A fake
+ * `fetch` records each request.
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -44,6 +46,24 @@ function harness(responder: () => Response) {
 }
 
 describe('interactions client transport', () => {
+  it('listInteractions GETs the page window and unwraps the envelope', async () => {
+    const window = {
+      items: [],
+      total: 0,
+      page: 2,
+      page_size: 50,
+      next_page: null,
+      truncated: false,
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: window }));
+    const out = await client.listInteractions(2, 50);
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toContain('/api/interactions?');
+    expect(captured[0]?.url).toContain('page=2');
+    expect(captured[0]?.url).toContain('pageSize=50');
+    expect(out).toEqual(window);
+  });
+
   it('answerInteraction POSTs { answer } to the id-encoded answer route', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { interaction_id: 'q 1', status: 'answered' } }),

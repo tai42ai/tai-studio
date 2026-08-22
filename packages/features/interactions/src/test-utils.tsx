@@ -7,17 +7,17 @@
  * stub navigation context.
  *
  * `makeChannel` builds a scripted SSE stream: a client whose `streamInteractions`
- * returns its async iterator, and `emitFrame` pushes an `interaction.add` /
- * `.answered` / `.removed` / `.backlog_done` frame into it (matching the frame
- * shape `useInteractionsStream` consumes) and flushes React so assertions see the
- * result.
+ * returns its async iterator, and `emitFrame` pushes a live `interaction.add` /
+ * `.answered` / `.removed` frame into it (the tail-only stream carries no backlog)
+ * and flushes React so assertions see the result. The paged pending base is the
+ * `listInteractions` stub (`interactionsPage` builds a page).
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, type RenderOptions, type RenderResult } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { vi } from 'vitest';
 
-import type { ApiClient, MeProjection } from '@tai42/api-client';
+import type { ApiClient, Interaction, InteractionsPage, MeProjection } from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -178,19 +178,37 @@ export function makeChannel(): StreamChannel {
   };
 }
 
+/** Build a page of the pending inbox (`GET /api/interactions`). */
+export function interactionsPage(
+  items: readonly Interaction[] = [],
+  extra: { total?: number; page?: number; next_page?: number | null } = {},
+): InteractionsPage {
+  return {
+    items: [...items],
+    total: extra.total ?? items.length,
+    page: extra.page ?? 1,
+    page_size: 50,
+    next_page: extra.next_page ?? null,
+    truncated: false,
+  };
+}
+
 /**
  * A stub `ApiClient` exposing only the methods this feature consumes:
- * `streamInteractions` (the scripted channel), `answerInteraction`, and
- * `listChannels` (the delivery-channels catalog card mounted on the page —
+ * `streamInteractions` (the scripted live tail), `listInteractions` (the paged
+ * pending base — defaults to an empty page so a plain inbox test starts empty),
+ * `answerInteraction`, and `listChannels` (the delivery-channels catalog card —
  * defaults to an empty catalog so a plain inbox test needs no channel data).
  */
 export function stubClient(parts: {
   channel: StreamChannel;
+  listInteractions?: ApiClient['listInteractions'];
   answerInteraction?: ApiClient['answerInteraction'];
   listChannels?: ApiClient['listChannels'];
 }): ApiClient {
   return {
     streamInteractions: (_signal?: AbortSignal) => Promise.resolve(parts.channel.iterator),
+    listInteractions: parts.listInteractions ?? vi.fn().mockResolvedValue(interactionsPage()),
     answerInteraction: parts.answerInteraction ?? vi.fn().mockResolvedValue(undefined),
     listChannels: parts.listChannels ?? vi.fn().mockResolvedValue({ channels: [] }),
   } as unknown as ApiClient;

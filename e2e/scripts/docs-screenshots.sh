@@ -61,37 +61,6 @@ spawn_group() {
   set +m
 }
 
-# Portable stand-in for GNU `timeout(1)` (absent on macOS): run "$@" and, if it has
-# not finished after the first argument's seconds, kill it. Returns the command's own
-# exit status, or 124 when the watchdog fired — mirroring timeout so a caller can tell
-# a timeout apart from the command's own non-zero exit. The command runs as its own
-# process-group leader (spawn_group), so the kill takes any children with it and the
-# grandchildren never hold a caller's captured stdout open past the kill.
-run_with_timeout() {
-  local secs="$1"; shift
-  spawn_group "$@"
-  local cmd_pid="${SPAWNED_PID}"
-  # Watchdog: SIGTERM the command's whole group once its window elapses, or exit the
-  # moment it finishes first. Its own output goes nowhere.
-  (
-    waited=0
-    while (( waited < secs )); do
-      kill -0 "${cmd_pid}" 2>/dev/null || exit 0
-      sleep 1
-      waited=$(( waited + 1 ))
-    done
-    kill -TERM -- -"${cmd_pid}" 2>/dev/null || true
-  ) >/dev/null 2>&1 &
-  local watch_pid=$!
-  local status=0
-  wait "${cmd_pid}" 2>/dev/null || status=$?
-  kill "${watch_pid}" 2>/dev/null || true
-  wait "${watch_pid}" 2>/dev/null || true
-  # A watchdog SIGTERM surfaces as 143 (128+15); report 124 as timeout does.
-  [[ "${status}" -eq 143 ]] && status=124
-  return "${status}"
-}
-
 # --- 1. Resolve paths -------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 E2E_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -405,12 +374,24 @@ print(json.dumps({"tool_name": "ask_user", "arguments": {
 spawn_group bash -c "curl -s -m 3600 -H 'x-api-key: ${DEMO_KEY}' -H 'content-type: application/json' \
   -X POST '${BASE_URL}/api/run-tool' -d '${ask_body}'" >/dev/null 2>&1
 
-# Confirm both inbox rows are readable before capture (a bounded stream read for the
-# pending question, whose backlog frame carries it; a direct read for the notification).
+# Confirm both inbox rows are readable before capture: page the authed pending door
+# (GET /api/interactions, following next_page) for the pending question, and a direct
+# read for the notification sink.
 sleep 2
-stream_dump="$(run_with_timeout 5 curl -sN -H "x-api-key: ${DEMO_KEY}" "${BASE_URL}/api/interactions/stream" || true)"
-grep -q "${DEMO_QUESTION}" <<<"${stream_dump}" \
-  || die "the seeded audience-addressed question is not on the interactions stream — the scoped-interactions screen would be empty"
+found_question=""
+page=1
+while (( page <= 100 )); do
+  page_body="$(api "${BASE_URL}/api/interactions?page=${page}&pageSize=50")"
+  if grep -qF "${DEMO_QUESTION}" <<<"${page_body}"; then
+    found_question=1
+    break
+  fi
+  next_page="$(printf '%s' "${page_body}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("data", {}).get("next_page") or "")' || true)"
+  [[ -z "${next_page}" ]] && break
+  page="${next_page}"
+done
+[[ -n "${found_question}" ]] \
+  || die "the seeded audience-addressed question is not in the pending list — the scoped-interactions screen would be empty"
 if ! api "${BASE_URL}/api/notifications" | grep -q "nightly export finished"; then
   die "the seeded audience-addressed notification is not in the sink — the scoped-notifications screen would be empty"
 fi

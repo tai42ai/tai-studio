@@ -895,6 +895,20 @@ export const studioPluginManifest = z.object({
 export const studioPluginRegistry = z.array(studioPluginManifest);
 export type StudioPluginManifest = z.infer<typeof studioPluginManifest>;
 
+/**
+ * The page window every paged read door carries; `next_page` is null on the last
+ * page. `truncated` is TRUE when the door had more matches than it would scan or
+ * return under its cap — the UI must surface that LOUDLY, never a silent cut — and
+ * false whenever the window is exhaustive.
+ */
+const pageWindow = {
+  total: z.number(),
+  page: z.number(),
+  page_size: z.number(),
+  next_page: z.number().nullable(),
+  truncated: z.boolean(),
+};
+
 // -- interactions ------------------------------------------------------------
 // Shapes match the skeleton's interactions SSE contract: the SSE
 // `interaction.add` frame carries the question and its answer format; the answer
@@ -975,6 +989,17 @@ export const interactionAnswered = z.object({
   status: z.string(),
 });
 export type InteractionAnswered = z.infer<typeof interactionAnswered>;
+
+/**
+ * A page of pending interactions from `GET /api/interactions?page=&pageSize=`. Each
+ * item is the same record the stream's `interaction.add` frame carries. The pending
+ * set is the paged base the tail-only stream applies live deltas over.
+ */
+export const interactionsPage = z.object({
+  items: z.array(interaction),
+  ...pageWindow,
+});
+export type InteractionsPage = z.infer<typeof interactionsPage>;
 
 // -- channels ----------------------------------------------------------------
 // The installed channel-plugin catalog: names registered via the manifest's
@@ -1067,23 +1092,9 @@ export const conversationThread = z.object({
 });
 export type ConversationThread = z.infer<typeof conversationThread>;
 
-/**
- * The page window every conversation read door carries; `next_page` is null on the
- * last page. `truncated` is TRUE when the door had more matches than it would scan
- * or return under its filter/search cap — the UI must surface that LOUDLY, never a
- * silent cut — and false whenever the window is exhaustive.
- */
-const conversationPageWindow = {
-  total: z.number(),
-  page: z.number(),
-  page_size: z.number(),
-  next_page: z.number().nullable(),
-  truncated: z.boolean(),
-};
-
 export const conversationThreadsPage = z.object({
   items: z.array(conversationThread),
-  ...conversationPageWindow,
+  ...pageWindow,
 });
 export type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
 
@@ -1129,7 +1140,7 @@ export type TranscriptOrder = z.infer<typeof transcriptOrder>;
 /** A transcript page, echoing the order it was read in. */
 export const conversationTranscriptPage = z.object({
   items: z.array(conversationMessage),
-  ...conversationPageWindow,
+  ...pageWindow,
   order: transcriptOrder,
 });
 export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
@@ -1143,7 +1154,7 @@ export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPa
  */
 export const conversationMessageSearchPage = z.object({
   items: z.array(conversationMessage),
-  ...conversationPageWindow,
+  ...pageWindow,
 });
 export type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPage>;
 

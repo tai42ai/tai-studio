@@ -1,34 +1,43 @@
 /**
- * The interactions inbox: the live list of human-in-the-loop questions
- * plus a floating count badge, both fed by the SSE stream.
+ * The interactions inbox: the live list of human-in-the-loop questions plus a
+ * floating count badge.
  *
- * STATE: the live inbox is owned by `useInteractionsStream` — it opens the
- * authed SSE stream and applies `interaction.add` / `interaction.answered` /
- * `interaction.removed` frames, de-duplicating adds by `interaction_id` across the
- * backlog-replay overlap, and reconnecting on a dropped stream. This page only
+ * STATE: the pending set is the PAGED base from `GET /api/interactions` (a
+ * TanStack infinite query), and the live tail-only SSE stream overlays
+ * `interaction.add` / `interaction.answered` / `interaction.removed` deltas on it.
+ * `useInbox` composes the two — the query seeds the stream and is refetched on
+ * every (re)connect (the tail carries no backlog to reconcile against). This page
  * renders that state and submits answers:
  *
- *   - loading (backlog not yet replayed, nothing to show) → Skeleton;
- *   - empty (backlog replayed, no interactions)           → EmptyState;
- *   - a stream OR answer error                            → a LOUD, always-visible
- *                                                           ErrorState (401 is not
- *                                                           special-cased here —
- *                                                           the shell owns that).
+ *   - loading (the first page not yet in) → Skeleton;
+ *   - empty (the page settled, no interactions) → EmptyState;
+ *   - a stream, list-read OR answer error → a LOUD, always-visible ErrorState
+ *     (401 is not special-cased here — the shell owns that).
+ *
+ * The count badge reads the live derived count (the door's `total` moved by the
+ * stream overlay, reconciled by resync epoch so a reconnect never double-counts):
+ * every terminal frame refers to a question within `total`, so an answer/removal
+ * decrements even for a question on an unloaded page, and a live add moves it without
+ * a refetch. The one residual — a frame arriving while a refetch is in flight — may or
+ * may not be in that refetch's total and reconciles on the next resync. "Load more"
+ * pages the rest in.
  *
  * ANSWER SUBMISSION: `answerInteraction(id, answer)` wrapped in a `useMutation`. A
  * 409 (`ApiConflictError`) is surfaced as the specific "already answered elsewhere"
  * message rather than a generic error — the question was resolved on another
  * client, not a failure the operator should retry.
  */
-import { useId, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useCallback, useId, useMemo, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { ApiConflictError } from '@tai42/api-client';
+import type { Interaction } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
   AppLink,
   Badge,
+  Button,
   Card,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -47,10 +56,14 @@ import {
 import type { PageProps, StreamInteraction } from '@tai42/studio-sdk';
 
 import { ChannelsCard } from './ChannelsCard';
+import { inboxKey } from './keys';
 import { InteractionCard } from './renderers';
 
 /** Shown when a 409 says the question was resolved elsewhere (not a generic error). */
 const ALREADY_ANSWERED_MESSAGE = 'This question was already answered elsewhere.';
+
+/** Pending interactions per page. The server caps a page at 200 whatever is asked. */
+const INBOX_PAGE_SIZE = 50;
 
 const listStyle: CSSProperties = {
   display: 'flex',
@@ -87,15 +100,113 @@ const badgeContentStyle: CSSProperties = {
 };
 
 /**
- * Resolve the single message the ErrorState shows. An answer error takes priority
- * over a stream error (it is the operator's most recent action), and a 409 maps to
- * the specific "already answered elsewhere" message.
+ * The composed inbox: the paged pending base (the infinite query) seeding the
+ * tail-only stream, refetched on every (re)connect. Both the page and the
+ * always-mounted badge consume it; the query cache is shared by key, and each
+ * mount opens its own stream (distinct-URL per open).
  */
-function resolveErrorMessage(streamError: Error | null, answerError: Error | null): string | null {
+interface Inbox {
+  /** The merged live list: the paged base with the tail's deltas overlaid. */
+  readonly interactions: StreamInteraction[];
+  /**
+   * The live pending count for the badge: the door's `total` adjusted by the stream
+   * overlay (adds/answered/removed), so it moves on a live delta without a refetch.
+   */
+  readonly count: number;
+  readonly connected: boolean;
+  readonly streamError: Error | null;
+  readonly disabled: boolean;
+  /**
+   * A background refetch of the paged base FAILED after an initial success (the door
+   * 500s on a resync): the count is now stale, so the badge degrades rather than
+   * freezing silently on the last value.
+   */
+  readonly refetchFailed: boolean;
+  /** The query lifecycle: `pending` gates the loading skeleton. */
+  readonly loading: boolean;
+  readonly loadError: Error | null;
+  readonly hasNextPage: boolean;
+  readonly isFetchingNextPage: boolean;
+  /**
+   * The most recent `fetchNextPage` FAILED (the next-page fetch 500s): surfaced
+   * loudly beside the Load more control, which stays usable to retry. Cleared once a
+   * retry succeeds.
+   */
+  readonly loadMoreFailed: boolean;
+  fetchNextPage(): void;
+}
+
+function useInbox(): Inbox {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const query = useInfiniteQuery({
+    queryKey: inboxKey(INBOX_PAGE_SIZE),
+    queryFn: ({ pageParam, signal }) => api.listInteractions(pageParam, INBOX_PAGE_SIZE, signal),
+    initialPageParam: 1,
+    getNextPageParam: (last) => last.next_page ?? undefined,
+  });
+  // A stable seed reference between refetches: the stream hook re-merges on a new
+  // reference but does not reopen the stream, so it must not churn every render.
+  const seed = useMemo<readonly Interaction[]>(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data],
+  );
+  // Refetch the paged base and report whether it LANDED. `throwOnError` makes
+  // `refetchQueries` reject when the list door fails (query-core otherwise swallows a
+  // per-query refetch error), so a failed resync resolves `false` and the stream hook
+  // holds its resync epoch — the prior-epoch deltas keep applying against the prior
+  // total instead of being discarded against a stale one. The failure is still loud:
+  // `query.isRefetchError` flips the badge to its degraded state.
+  const onResync = useCallback(async (): Promise<boolean> => {
+    try {
+      await queryClient.refetchQueries(
+        { queryKey: inboxKey(INBOX_PAGE_SIZE) },
+        { throwOnError: true },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }, [queryClient]);
+  // Every page echoes the same total; the newest read is the freshest. The stream
+  // derives the live badge count from this base total plus its overlay delta.
+  const total = query.data?.pages.at(-1)?.total ?? 0;
+  const stream = useInteractionsStream({ seed, total, onResync });
+  return {
+    interactions: stream.interactions,
+    count: stream.count,
+    connected: stream.connected,
+    streamError: stream.error,
+    disabled: stream.disabled,
+    // `isRefetchError` is a resync failure with pages retained (as opposed to
+    // `isLoadingError`, the initial-load failure): the badge degrades on it.
+    refetchFailed: query.isRefetchError,
+    // `isLoadingError` (not `isError`) is the INITIAL-load failure: query-core flags
+    // `status:'error'` on any fetch error even with pages retained.
+    loading: query.status === 'pending',
+    loadError: query.isLoadingError ? query.error : null,
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    loadMoreFailed: query.isFetchNextPageError,
+    fetchNextPage: () => void query.fetchNextPage(),
+  };
+}
+
+/**
+ * Resolve the single message the ErrorState shows. An answer error takes priority
+ * (it is the operator's most recent action; a 409 maps to the specific "already
+ * answered elsewhere" message), then a list-read failure, then a stream error.
+ */
+function resolveErrorMessage(
+  streamError: Error | null,
+  loadError: Error | null,
+  answerError: Error | null,
+): string | null {
   if (answerError !== null) {
     if (answerError instanceof ApiConflictError) return ALREADY_ANSWERED_MESSAGE;
     return answerError.message;
   }
+  if (loadError !== null) return loadError.message;
   if (streamError !== null) return streamError.message;
   return null;
 }
@@ -117,31 +228,38 @@ function InboxLoading(): ReactNode {
 }
 
 /**
- * The floating badge: the count of UNANSWERED interactions in the live stream,
- * mounted globally by the shell so it is always visible. A real anchor to
- * `/interactions` (focusable, keyboard-operable, middle-clickable).
+ * The floating badge: the count of pending interactions, mounted globally by the
+ * shell so it is always visible. Reads the live derived `count` (the door's `total`
+ * moved by the stream overlay): a terminal frame decrements even for a question on an
+ * unloaded page, and a live add moves it without a refetch (the one residual — a frame
+ * arriving while a refetch is in flight — reconciles on the next resync). A real
+ * anchor to `/interactions` (focusable, keyboard-operable, middle-clickable).
  *
- * DEGRADED: on a true outage (errored AND disconnected) the count is stale, so the
- * badge flips to a warning naming the disconnect and stays visible even at a stale
- * zero — an outage is never silent. A healthy stream with nothing pending renders
- * nothing.
+ * DEGRADED: on a true outage — the stream errored AND disconnected, OR a background
+ * refetch of the paged base failed — the count is stale, so the badge flips to a
+ * warning naming the fault and stays visible even at a stale zero. An outage is
+ * never silent. A healthy stream with nothing pending renders nothing.
  */
 export function InteractionsBadge(): ReactNode {
-  const { interactions, disabled, connected, error } = useInteractionsStream();
+  const inbox = useInbox();
   // The interactions store is unconfigured: the stream is terminally 501 and will
   // never carry a question, so the always-mounted badge stays absent rather than
   // hanging at zero on a stream that keeps trying.
-  if (disabled) return null;
-  const pending = interactions.filter((interaction) => !interaction.answered).length;
-  // A true outage — errored AND not connected — means the count is stale. A frame
-  // error on a still-connected stream is transient and does not degrade the badge.
-  const degraded = error !== null && !connected;
-  // Healthy and nothing pending → nothing to show. A degraded stream stays visible
+  if (inbox.disabled) return null;
+  const pending = inbox.count;
+  // A true outage means the count is stale: the stream errored AND is not connected,
+  // OR a background resync of the paged base failed. A frame error on a still-open
+  // stream is transient and does not degrade the badge.
+  const streamDown = inbox.streamError !== null && !inbox.connected;
+  const degraded = streamDown || inbox.refetchFailed;
+  // Healthy and nothing pending → nothing to show. A degraded badge stays visible
   // even at zero so the outage is announced, not swallowed.
   if (pending === 0 && !degraded) return null;
   const countLabel = pending === 1 ? '1 pending question' : `${String(pending)} pending questions`;
   const label = degraded
-    ? `Interactions stream disconnected — reconnecting (last known: ${countLabel})`
+    ? streamDown
+      ? `Interactions stream disconnected — reconnecting (last known: ${countLabel})`
+      : `Interactions list failed to refresh — retrying (last known: ${countLabel})`
     : countLabel;
   // role="status" is a polite live region: a newly-arriving count or a flip into the
   // degraded state is announced to a screen reader via the link's label.
@@ -191,7 +309,7 @@ function createdMs(interaction: StreamInteraction): number {
 }
 
 /**
- * Fold the flat stream into groups keyed by `group_id`. Group order and the order
+ * Fold the flat list into groups keyed by `group_id`. Group order and the order
  * within each group are both newest-first (by `created_at`); the per-group pending
  * count is the unanswered questions in that group.
  */
@@ -295,42 +413,40 @@ function InteractionGroupSection({
 export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
   const api = useApi();
   const { state } = useCapabilities();
-  const stream = useInteractionsStream();
+  const inbox = useInbox();
   const mutation = useMutation({
     mutationFn: (vars: { id: string; answer: unknown }) =>
       api.answerInteraction(vars.id, vars.answer),
   });
 
   const submittingId = mutation.isPending ? mutation.variables.id : undefined;
-  const errorMessage = resolveErrorMessage(stream.error, mutation.error);
-  // The server stream is `audience`-filtered, so a scoped caller sees only the
+  const errorMessage = resolveErrorMessage(inbox.streamError, inbox.loadError, mutation.error);
+  // The server list/stream are `audience`-filtered, so a scoped caller sees only the
   // questions addressed to it; the empty-state copy reflects that per-identity feed.
   const scoped = state.status === 'ready' && !isFullProjection(state.projection);
+  // A read failure (stream OR list) that left nothing to show must not sit beside a
+  // misleading "all caught up" empty state — the error alone speaks then.
+  const readFailed = inbox.streamError !== null || inbox.loadError !== null;
 
   let body: ReactNode;
-  if (!stream.backlogLoaded && stream.interactions.length === 0 && stream.error === null) {
+  if (inbox.loading) {
     body = <InboxLoading />;
-  } else if (stream.interactions.length === 0) {
-    // A stream that errored before any question arrived shows only the error
-    // above — never a misleading "all caught up" empty state next to it. An
-    // answer-submission failure (mutation.error) does not blank the list, so this
-    // keys on the stream's own error, not the combined message.
-    body =
-      stream.error === null ? (
-        <EmptyState
-          title="No pending questions"
-          description={
-            scoped
-              ? 'Questions addressed to you appear here.'
-              : 'Questions that need your input will appear here.'
-          }
-        />
-      ) : null;
+  } else if (inbox.interactions.length === 0) {
+    body = readFailed ? null : (
+      <EmptyState
+        title="No pending questions"
+        description={
+          scoped
+            ? 'Questions addressed to you appear here.'
+            : 'Questions that need your input will appear here.'
+        }
+      />
+    );
   } else {
     // Questions carrying the same `group_id` belong to one multi-step flow; fold them
     // into collapsible groups (newest-first) so a related set reads as one unit rather
     // than scattered cards. A lone question in its own group stays a bare card.
-    const groups = groupInteractions(stream.interactions);
+    const groups = groupInteractions(inbox.interactions);
     const submit = (interaction: StreamInteraction, answer: unknown): void => {
       mutation.mutate({ id: interaction.interaction_id, answer });
     };
@@ -361,6 +477,24 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
             />
           );
         })}
+        {inbox.hasNextPage ? (
+          <div style={groupStyle}>
+            {inbox.loadMoreFailed ? (
+              <div role="alert" data-testid="interactions-load-more-error">
+                <Badge variant="warning">Could not load more questions. Try again.</Badge>
+              </div>
+            ) : null}
+            <Button
+              onClick={() => {
+                inbox.fetchNextPage();
+              }}
+              disabled={inbox.isFetchingNextPage}
+              data-testid="interactions-load-more"
+            >
+              {inbox.isFetchingNextPage ? 'Loading…' : 'Load more'}
+            </Button>
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -369,11 +503,14 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
     <Stack gap={4}>
       <PageHeader eyebrow="Activity" title="Interactions" />
       <ChannelsCard />
-      {stream.disabled ? (
+      {inbox.disabled ? (
         // The interactions store is unconfigured (terminal 501): render the muted
         // OFF note carrying the server's remediation message, never the loud red
         // stream error.
-        <FeatureDisabled feature="Interactions" message={featureDisabledMessage(stream.error)} />
+        <FeatureDisabled
+          feature="Interactions"
+          message={featureDisabledMessage(inbox.streamError)}
+        />
       ) : (
         <>
           {errorMessage !== null ? <ErrorState message={errorMessage} /> : null}
