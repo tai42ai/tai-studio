@@ -213,6 +213,55 @@ describe('TraceView', () => {
     expect(screen.queryByText('root-chain')).not.toBeInTheDocument();
   });
 
+  it('hides DEBUG spans from the tree by default and reveals them via Show debug', async () => {
+    const user = userEvent.setup();
+    const withDebug = traceFixture({
+      spans: [
+        ...traceFixture().spans,
+        span({
+          id: 'waiting',
+          parentId: 'root',
+          name: 'fan-in-standdown',
+          level: 'DEBUG',
+          start: '2026-01-01T00:00:01.000Z',
+          end: '2026-01-01T00:00:01.000Z',
+        }),
+      ],
+    });
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(withDebug) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await screen.findByText('root-chain');
+    // The phantom DEBUG span is absent from the default waterfall.
+    expect(document.querySelector('[data-span-id="waiting"]')).toBeNull();
+    expect(screen.queryByText('fan-in-standdown')).not.toBeInTheDocument();
+
+    // Toggling "Show debug" on reveals it; the real spans are unaffected.
+    await user.click(screen.getByRole('checkbox', { name: 'Show debug' }));
+    expect(document.querySelector('[data-span-id="waiting"]')).not.toBeNull();
+    expect(screen.getByText('fan-in-standdown')).toBeInTheDocument();
+    expect(document.querySelector('[data-span-id="gen"]')).not.toBeNull();
+  });
+
+  it('re-parents a DEBUG span’s child to its parent instead of dropping the subtree', async () => {
+    const nested = traceFixture({
+      spans: [
+        ...traceFixture().spans,
+        span({ id: 'debug-wrap', parentId: 'root', name: 'standdown', level: 'DEBUG' }),
+        span({ id: 'real-child', parentId: 'debug-wrap', name: 'kept-child' }),
+      ],
+    });
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(nested) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await screen.findByText('root-chain');
+    // The debug wrapper is hidden, but its child survives re-parented under root.
+    expect(document.querySelector('[data-span-id="debug-wrap"]')).toBeNull();
+    const child = document.querySelector<HTMLElement>('[data-span-id="real-child"]');
+    if (child === null) throw new Error('the re-parented child was dropped');
+    expect(within(child).getByText('kept-child')).toBeInTheDocument();
+  });
+
   it('renders a placeholder when a trace has no spans', async () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockResolvedValue(traceFixture({ spans: [] })),
