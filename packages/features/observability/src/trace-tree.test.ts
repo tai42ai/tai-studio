@@ -254,8 +254,7 @@ describe('traceTotals', () => {
       span({ id: 'gen1', parentId: 'wrapper', usage: { input_tokens: 6, output_tokens: 2 } }),
       span({ id: 'gen2', parentId: 'wrapper', usage: { input_tokens: 5, output_tokens: 2 } }),
     ];
-    const tree = buildTree(spans);
-    expect(traceTotals(trace(spans, { totalCost: 0.5 }), tree).totalTokens).toBe(15);
+    expect(traceTotals(trace(spans, { totalCost: 0.5 })).totalTokens).toBe(15);
   });
 
   it('carries cost straight from the wire and reports status, span count, and duration', () => {
@@ -267,8 +266,7 @@ describe('traceTotals', () => {
       }),
       span({ id: 'bad', parentId: 'root', level: 'ERROR' }),
     ];
-    const tree = buildTree(spans);
-    const totals = traceTotals(trace(spans, { totalCost: 1.25 }), tree);
+    const totals = traceTotals(trace(spans, { totalCost: 1.25 }));
     expect(totals.totalCost).toBe(1.25);
     expect(totals.status).toBe('error');
     expect(totals.spanCount).toBe(2);
@@ -281,16 +279,42 @@ describe('traceTotals', () => {
       span({ id: 'bad', parentId: 'root', level: 'ERROR' }),
       span({ id: 'waiting', parentId: 'root', level: 'DEBUG' }),
     ];
-    const totals = traceTotals(trace(spans), buildTree(spans));
+    const totals = traceTotals(trace(spans));
     // The DEBUG span never marks an error; the ERROR span still does.
     expect(totals.status).toBe('error');
     // The raw data keeps every span, so the count reflects all three.
     expect(totals.spanCount).toBe(3);
   });
 
+  it('holds every summary number steady across the debug toggle', () => {
+    // A generation carrying 15 tokens whose ONLY child is a DEBUG stand-down:
+    // hiding debug makes the generation a leaf, showing it does not — but the
+    // token total must not flinch either way.
+    const spans = [
+      span({
+        id: 'gen',
+        type: 'GENERATION',
+        usage: { input_tokens: 10, output_tokens: 5 },
+        start: at('2026-01-01T00:00:00Z'),
+        end: at('2026-01-01T00:00:02Z'),
+      }),
+      span({ id: 'waiting', parentId: 'gen', level: 'DEBUG' }),
+    ];
+    // traceTotals is view-independent by construction (it takes no tree), so the
+    // same call stands in for both the hidden and the shown view.
+    const totals = traceTotals(trace(spans, { totalCost: 0.25 }));
+    expect(totals.totalTokens).toBe(15);
+    expect(totals.spanCount).toBe(2);
+    expect(totals.status).toBe('success');
+    expect(totals.durationMs).toBe(2000);
+    // The rendered tree still differs by view, but the roll-up above does not.
+    expect(buildTree(spans).byId.has('waiting')).toBe(false);
+    expect(buildTree(spans, { includeDebug: true }).byId.has('waiting')).toBe(true);
+  });
+
   it('is success with a null duration when no span errors or carries timing', () => {
     const spans = [span({ id: 'root' })];
-    const totals = traceTotals(trace(spans), buildTree(spans));
+    const totals = traceTotals(trace(spans));
     expect(totals.status).toBe('success');
     expect(totals.durationMs).toBeNull();
   });

@@ -246,10 +246,18 @@ export interface TraceTotals {
  * aggregate usage of the generations beneath it, so summing every span
  * double-counts; leaves carry the actual per-call usage, so their sum is the true
  * total without a dedupe pass.
+ *
+ * The token total is summed over a DEBUG-excluded basis regardless of the view's
+ * "Show debug" state: DEBUG spans are no-op stand-down noise that carry no usage,
+ * and dropping a childless DEBUG stand-down keeps its parent generation a leaf, so
+ * that generation's usage is still attributed — the number stays put across the
+ * toggle. Status, duration, and span count read the FULL wire list, so they too
+ * describe the whole trace and never move with the view.
  */
-export function traceTotals(trace: RunTrace, tree: TraceTree): TraceTotals {
+export function traceTotals(trace: RunTrace): TraceTotals {
+  const tokenBasis = buildTree(trace.spans);
   let totalTokens = 0;
-  for (const node of tree.byId.values()) {
+  for (const node of tokenBasis.byId.values()) {
     if (node.children.length === 0) totalTokens += spanTokens(node.span.usage);
   }
 

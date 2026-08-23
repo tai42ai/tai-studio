@@ -110,7 +110,9 @@ function Loaded({
     () => buildTree(trace.spans, { includeDebug: showDebug }),
     [trace.spans, showDebug],
   );
-  const totals = useMemo(() => traceTotals(trace, tree), [trace, tree]);
+  // Totals read the whole trace, not the view — deliberately independent of
+  // `tree` so no summary number moves when the debug toggle flips.
+  const totals = useMemo(() => traceTotals(trace), [trace]);
 
   // Default selection (first error, else first root), re-applied whenever the
   // trace changes — derived during render, keyed by traceId — so switching runs
