@@ -61,6 +61,62 @@ jobs:
       - name: Test (gate script)
         run: node --test 'scripts/**/*.test.mjs'
 
+  # Freshness gate for the docs-demo marketplace fixture's contract pin. The
+  # fixture (e2e/docs-demo/marketplace-registry.py) hard-codes a `contract` range
+  # in its seeded PluginSpec; the docs-screenshots install-preview only resolves
+  # when the running tai42-contract falls inside it. When the platform bumped its
+  # major, that pin silently excluded the new release and the screenshot run
+  # errored for weeks until a hand fix (a1d9442 bumped it to `>=4.1,<5`). This
+  # job reads the fixture's own pin, asks PyPI for the latest published
+  # tai42-contract, and fails loudly the moment the pin would exclude it so the
+  # bump lands before the next docs run breaks. Self-contained (no siblings).
+  docs-demo-contract-pin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
+        with:
+          version: '0.11.26'
+      # Load the fixture as a module and read _SPEC["contract"] (its single source
+      # of truth for the pin, reused for every contract_range it serves), then
+      # compare the latest published version against it with packaging's own
+      # specifier logic — no shelling-out version math.
+      - name: Check fixture contract pin against latest tai42-contract
+        run: |
+          uv run --with packaging python - <<'PY'
+          import importlib.util
+          import json
+          import sys
+          import urllib.request
+          from pathlib import Path
+
+          from packaging.specifiers import SpecifierSet
+          from packaging.version import Version
+
+          fixture = Path("e2e/docs-demo/marketplace-registry.py")
+          spec = importlib.util.spec_from_file_location("docs_demo_registry", fixture)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          pin = module._SPEC["contract"]
+          specifier = SpecifierSet(pin)
+
+          url = "https://pypi.org/pypi/tai42-contract/json"
+          with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (fixed https URL)
+              data = json.load(response)
+          latest = data["info"]["version"]
+
+          if Version(latest) not in specifier:
+              print(
+                  f"::error file={fixture}::The docs-demo marketplace fixture pins "
+                  f"tai42-contract '{pin}', but the latest published release is "
+                  f"{latest}, which that range EXCLUDES. The docs-screenshots "
+                  f"install-preview will error until the pin is bumped. Update the "
+                  f"`contract` value in {fixture} to admit {latest} (as a1d9442 did)."
+              )
+              sys.exit(1)
+          print(f"OK: latest tai42-contract {latest} satisfies the fixture pin '{pin}'.")
+          PY
+
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
   # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
