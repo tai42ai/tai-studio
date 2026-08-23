@@ -18,6 +18,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   EmptyState,
   ErrorState,
   Skeleton,
@@ -101,9 +102,17 @@ function Loaded({
   const api = useApi();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  // DEBUG spans (e.g. no-op fan-in stand-downs) are hidden by default so they do
+  // not read as real work; the toggle reveals them without touching the raw data.
+  const [showDebug, setShowDebug] = useState(false);
 
-  const tree = useMemo(() => buildTree(trace.spans), [trace.spans]);
-  const totals = useMemo(() => traceTotals(trace, tree), [trace, tree]);
+  const tree = useMemo(
+    () => buildTree(trace.spans, { includeDebug: showDebug }),
+    [trace.spans, showDebug],
+  );
+  // Totals read the whole trace, not the view — deliberately independent of
+  // `tree` so no summary number moves when the debug toggle flips.
+  const totals = useMemo(() => traceTotals(trace), [trace]);
 
   // Default selection (first error, else first root), re-applied whenever the
   // trace changes — derived during render, keyed by traceId — so switching runs
@@ -162,9 +171,12 @@ function Loaded({
               </div>
             ) : null}
           </div>
-          <Button onClick={onExport} disabled={exporting}>
-            {exporting ? 'Exporting…' : 'Export trace'}
-          </Button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
+            <Checkbox label="Show debug" checked={showDebug} onCheckedChange={setShowDebug} />
+            <Button onClick={onExport} disabled={exporting}>
+              {exporting ? 'Exporting…' : 'Export trace'}
+            </Button>
+          </div>
         </div>
 
         {tree.roots.length === 0 ? (

@@ -47,6 +47,52 @@ export function isErrorSpan(span: RunSpan): boolean {
   return (span.level ?? '').toUpperCase() === 'ERROR';
 }
 
+/** Whether a span's level marks it debug-only — hidden from the default tree view. */
+export function isDebugSpan(span: RunSpan): boolean {
+  return (span.level ?? '').toUpperCase() === 'DEBUG';
+}
+
+/** Knobs for {@link buildTree}. */
+export interface BuildTreeOptions {
+  /** Keep DEBUG-level spans in the emitted tree. Default false — DEBUG is hidden. */
+  readonly includeDebug?: boolean;
+}
+
+/**
+ * Drop DEBUG spans while keeping the forest whole: a surviving child of a dropped
+ * span is re-pointed at its nearest surviving ancestor (attaching to a root when
+ * none survives), so a subtree is never lost with the debug node. The underlying
+ * wire list is untouched — this is a view-only projection for rendering.
+ */
+function withoutDebug(spans: readonly RunSpan[]): readonly RunSpan[] {
+  const dropped = new Set<string>();
+  for (const span of spans) if (isDebugSpan(span)) dropped.add(span.id);
+  if (dropped.size === 0) return spans;
+
+  const byId = new Map(spans.map((span) => [span.id, span]));
+  // Walk up raw `parentId` pointers past dropped spans to the first survivor; a
+  // visited set bounds the walk so a pre-existing cycle cannot spin.
+  const survivingParent = (parentId: string | null): string | null => {
+    const seen = new Set<string>();
+    let current: string | null = parentId;
+    while (current !== null) {
+      if (seen.has(current)) return null;
+      seen.add(current);
+      if (!dropped.has(current)) return byId.has(current) ? current : null;
+      current = byId.get(current)?.parentId ?? null;
+    }
+    return null;
+  };
+
+  const out: RunSpan[] = [];
+  for (const span of spans) {
+    if (dropped.has(span.id)) continue;
+    const parentId = survivingParent(span.parentId);
+    out.push(parentId === span.parentId ? span : { ...span, parentId });
+  }
+  return out;
+}
+
 /**
  * Would linking `id` under `parentId` close a cycle? Walk the ancestor chain via
  * raw `parentId` pointers; reaching `id` again — or revisiting any node — means
@@ -70,9 +116,12 @@ function createsCycle(id: string, parentId: string, byId: ReadonlyMap<string, Sp
  * itself, or linking it would close a cycle, so every span attaches exactly once
  * and the forest stays acyclic.
  */
-export function buildTree(spans: readonly RunSpan[]): TraceTree {
+export function buildTree(spans: readonly RunSpan[], options: BuildTreeOptions = {}): TraceTree {
+  // DEBUG spans are dropped from the rendered forest by default (re-parenting
+  // their children); the caller opts back in with `includeDebug` to reveal them.
+  const visible = options.includeDebug === true ? spans : withoutDebug(spans);
   const byId = new Map<string, SpanNode>();
-  for (const span of spans) {
+  for (const span of visible) {
     byId.set(span.id, { span, children: [], durationMs: spanDurationMs(span) });
   }
 
@@ -97,7 +146,7 @@ export function buildTree(spans: readonly RunSpan[]): TraceTree {
   let firstErrorId: string | null = null;
   let firstErrorStart = Infinity;
 
-  for (const span of spans) {
+  for (const span of visible) {
     if (span.start !== null) {
       const start = new Date(span.start).getTime();
       if (!Number.isNaN(start)) t0 = Math.min(t0, start);
@@ -197,10 +246,18 @@ export interface TraceTotals {
  * aggregate usage of the generations beneath it, so summing every span
  * double-counts; leaves carry the actual per-call usage, so their sum is the true
  * total without a dedupe pass.
+ *
+ * The token total is summed over a DEBUG-excluded basis regardless of the view's
+ * "Show debug" state: DEBUG spans are no-op stand-down noise that carry no usage,
+ * and dropping a childless DEBUG stand-down keeps its parent generation a leaf, so
+ * that generation's usage is still attributed — the number stays put across the
+ * toggle. Status, duration, and span count read the FULL wire list, so they too
+ * describe the whole trace and never move with the view.
  */
-export function traceTotals(trace: RunTrace, tree: TraceTree): TraceTotals {
+export function traceTotals(trace: RunTrace): TraceTotals {
+  const tokenBasis = buildTree(trace.spans);
   let totalTokens = 0;
-  for (const node of tree.byId.values()) {
+  for (const node of tokenBasis.byId.values()) {
     if (node.children.length === 0) totalTokens += spanTokens(node.span.usage);
   }
 
