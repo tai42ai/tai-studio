@@ -136,6 +136,8 @@ for (const file of files) {
 const NOT_A_CLASS: Readonly<Record<string, string>> = {
   'tai-oauth':
     'the OAuth popup WINDOW NAME in `features/connectors/src/oauth.ts` — a `window.open` target, never rendered on an element',
+  'tai-stale-chunk-reload-at':
+    'the SESSIONSTORAGE KEY of the stale-chunk auto-reload guard in `apps/studio/src/stale-chunk-reload.ts` — a storage timestamp slot, never rendered on an element',
 };
 
 /**
