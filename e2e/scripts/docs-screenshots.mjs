@@ -90,6 +90,12 @@ if (!OUT_DIR) {
 const VIEWPORT = { width: 1440, height: 900 };
 const WAIT_TIMEOUT = 15000;
 
+/** Framing for a `canvas` route (see `frameCanvasContent`): the margin left around
+ * the graph, and the ceiling on a capture's dimensions — a graph larger than this is
+ * shrunk to fit rather than producing an unbounded shot. */
+const CANVAS_PADDING = 48;
+const CANVAS_MAX_DIMENSION = 4096;
+
 /** sessionStorage key the SDK `useAuth` reads (mirrors e2e/tests/helpers.ts). */
 const SESSION_KEY = 'tai-studio.apiKey';
 /** The seeded, VALID skeleton key. Access control is ON in the boot, so the shell
@@ -145,7 +151,10 @@ async function pickFirstExecutionKey(page, scope) {
 /**
  * Pages captured while SIGNED IN. `wait` is a selector proving the screen rendered
  * its POPULATED content (a real row/card, not a spinner or empty state) before the
- * shot. `action`, when present, drives the page into its captured state.
+ * shot. `action`, when present, drives the page into its captured state. `canvas`,
+ * when true, marks a route whose main surface is a React Flow pane: the shot frames
+ * the whole graph first (see `frameCanvasContent`) so a tall canvas is captured
+ * complete rather than clipped at the pane's fitView min-zoom.
  */
 const AUTHED_PAGES = [
   // The ExplorerView count summary ("N tools") proves the catalog rendered populated.
@@ -525,6 +534,67 @@ async function waitForPopulated(page, entry, theme) {
   }
 }
 
+/**
+ * Frame a React Flow canvas so a TALL graph is captured WHOLE, not cut off.
+ *
+ * WHY: a canvas pane caps zoom at the flow's `minZoom` (0.5) and this harness shoots
+ * a FIXED 1440x900 viewport. A graph taller than the ~900px pane cannot fit at >= 0.5
+ * zoom, so `fitView` centers it and the top/bottom overflow is transformed off-screen
+ * — present in the DOM but clipped by the pane's overflow, so the fixed-viewport shot
+ * captures only the pane and cuts the graph off. Rather than accept that clip, measure
+ * the graph's content extent, pin the pane's transform to the content's top-left at 1:1
+ * (shrinking only if the graph exceeds CANVAS_MAX_DIMENSION), and grow the browser
+ * viewport to that extent — so the capture is COMPLETE and legible. Reads only React
+ * Flow's stable public DOM (`.react-flow__viewport` / `.react-flow__node` transforms),
+ * and self-guards: a route with no pane rendered is left exactly as-is.
+ */
+async function frameCanvasContent(page) {
+  const viewport = page.locator('.react-flow__viewport');
+  if ((await viewport.count()) === 0) return;
+  const pane = viewport.first();
+  // Measured in the pane's own (untransformed) node coordinates: each node carries its
+  // position as an inline `translate(x, y)` and its rendered size as offsetWidth/Height.
+  const content = await pane.evaluate((el) => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const node of el.querySelectorAll('.react-flow__node')) {
+      const match = /translate(?:3d)?\(\s*([-\d.]+)px,\s*([-\d.]+)px/.exec(node.style.transform);
+      if (!match) continue;
+      const x = parseFloat(match[1]);
+      const y = parseFloat(match[2]);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + node.offsetWidth);
+      maxY = Math.max(maxY, y + node.offsetHeight);
+    }
+    if (maxX === -Infinity) return null;
+    return { minX, minY, width: maxX - minX, height: maxY - minY };
+  });
+  if (!content) return;
+  // 1:1 unless the graph is larger than the capture ceiling, then shrink to fit it.
+  const scale = Math.min(
+    1,
+    CANVAS_MAX_DIMENSION / (content.width + CANVAS_PADDING * 2),
+    CANVAS_MAX_DIMENSION / (content.height + CANVAS_PADDING * 2),
+  );
+  const box = {
+    width: Math.max(VIEWPORT.width, Math.ceil(content.width * scale + CANVAS_PADDING * 2)),
+    height: Math.max(VIEWPORT.height, Math.ceil(content.height * scale + CANVAS_PADDING * 2)),
+  };
+  // Grow the viewport BEFORE pinning the transform: resizing can trigger the pane's own
+  // resize handling, so the transform is asserted last (after a settle) and wins.
+  await page.setViewportSize(box);
+  await page.waitForTimeout(200);
+  await pane.evaluate(
+    (el, { minX, minY, scale: s, pad }) => {
+      el.style.transform = `translate(${pad - minX * s}px, ${pad - minY * s}px) scale(${s})`;
+    },
+    { minX: content.minX, minY: content.minY, scale, pad: CANVAS_PADDING },
+  );
+}
+
 async function shoot(page, entry, theme, { awaitPluginNav }) {
   const url = `${STUDIO_URL}${entry.path}`;
   // `domcontentloaded`, not `networkidle`: the shell's InteractionsBadge holds a
@@ -546,6 +616,9 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   }
   // Let fonts/layout settle.
   await page.waitForTimeout(600);
+  // Canvas routes only: frame the whole graph so a tall canvas is captured complete
+  // rather than clipped at the pane's fitView min-zoom (see frameCanvasContent).
+  if (entry.canvas) await frameCanvasContent(page);
   const file = `${OUT_DIR}/${entry.name}-${theme}.png`;
   await page.screenshot({ path: file, fullPage: false });
   console.log(`  ✓ ${file}`);
