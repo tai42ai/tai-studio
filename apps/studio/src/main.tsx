@@ -9,6 +9,11 @@ import { createRoot } from 'react-dom/client';
 import { createApiClient } from '@tai42/api-client';
 
 import { createStudio } from './app/create-studio';
+import { installStaleChunkReload } from './stale-chunk-reload';
+
+// Recover from stale-chunk import failures before anything renders, so even a
+// failing lazy route during boot triggers the one-shot reload.
+installStaleChunkReload();
 
 const { App } = createStudio({
   createClient: (getToken) =>
