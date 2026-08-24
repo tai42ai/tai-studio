@@ -9,7 +9,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
 import type {
   AgentSummary,
@@ -39,10 +39,12 @@ export function renderWithProviders(
     projection,
     systemKinds,
   }: { projection?: MeProjection; systemKinds?: readonly KindStatus[] } = {},
-): RenderResult {
+): RenderResult & { navigate: Mock } {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  // Hoisted so a test can assert a route-token write (e.g. a whole-row open).
+  const navigate = vi.fn();
 
   // A projection drives the capability context to `ready`, and a `systemKinds` table
   // drives the kind-status context to `ready`: either seeds a session key so
@@ -72,7 +74,7 @@ export function renderWithProviders(
                 <ThemeProvider>
                   <NavigationProvider
                     value={{
-                      navigate: vi.fn(),
+                      navigate,
                       // Encode the token + search so a test can assert a link's target.
                       resolvePath: (to, search) => {
                         const qs = search
@@ -95,7 +97,10 @@ export function renderWithProviders(
     );
   }
 
-  return render(ui as ReactElement, { wrapper: Wrapper });
+  // Attach via Object.assign (not a spread): a spread of Testing Library's
+  // mapped `BoundFunctions` query type drops those methods from the inferred
+  // return, and the annotation would then not hold.
+  return Object.assign(render(ui as ReactElement, { wrapper: Wrapper }), { navigate });
 }
 
 /** A total (admin) projection: every surface reachable. */

@@ -153,6 +153,29 @@ describe('PresetsList', () => {
     expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
   });
 
+  it('opens the preset when the row body (a non-link cell) is clicked', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+      client: listClient([normal]),
+    });
+
+    await screen.findByTestId('preset-row-paris_weather');
+    // The description cell is plain, non-interactive text — a body click.
+    await user.click(screen.getByText('Paris weather'));
+    expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+  });
+
+  it('navigates once — not twice — when the name link itself is clicked', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
+      client: listClient([normal]),
+    });
+
+    await user.click(await screen.findByRole('link', { name: 'Open preset paris_weather' }));
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
+  });
+
   it('marks the selected row link as the current page', async () => {
     renderWithProviders(<PresetsList selected="paris_weather" />, { client: listClient([normal]) });
 

@@ -30,10 +30,27 @@ export interface CompletionInputProps {
 const wrapStyle: CSSProperties = { position: 'relative' };
 
 /**
- * The popup sits directly under the field rather than against its top edge. It
- * is a `<ul>`, so it also drops the marker a host without a CSS reset would draw.
+ * The popup FLOATS below the field: absolutely positioned within the
+ * `position: relative` wrapper (`top: 100%` = the field's bottom edge, stretched
+ * `left`/`right` to the field's width) so it is taken OUT OF FLOW — it neither
+ * displaces the content below the field nor gets laid out inside it. Its stacking
+ * comes from `tai-select-content`'s `--tai-z-popover` z-index, which was inert
+ * while the list was in-flow (z-index needs a positioned box) and is exactly what
+ * this `position` now activates, so the list clears a sibling control it overlaps.
+ *
+ * Absolute-in-wrapper rather than a portal on purpose: this is an inline form
+ * control (a `SchemaForm` string field). A portal would need anchor-rect popper
+ * plumbing, and it buys nothing here — the wrapper is a plain flow box, so the
+ * only container that could clip the list is a scrollable ancestor (e.g. the
+ * `Dialog` body), where an absolute list simply extends that ancestor's scroll
+ * area instead of being cut off. It is still a `<ul>`, so it also drops the marker
+ * a host without a CSS reset would draw.
  */
 const listStyle: CSSProperties = {
+  position: 'absolute',
+  top: '100%',
+  left: 0,
+  right: 0,
   marginTop: 'var(--tai-space-1)',
   marginBottom: 0,
   listStyle: 'none',

@@ -36,7 +36,9 @@ import {
   TR,
   Table,
   errorMessage,
+  openTargetProps,
   useApi,
+  useAppNavigate,
   useFeatureOffMessage,
 } from '@tai42/studio-sdk';
 
@@ -73,6 +75,7 @@ function PresetRow({
   readonly overlay: OverlayDetail | undefined;
   readonly selected: boolean;
 }): ReactNode {
+  const navigate = useAppNavigate();
   const rowStyle: CSSProperties = {
     background: selected ? 'var(--tai-color-surface)' : undefined,
     opacity: preset.conflicted ? 0.7 : undefined,
@@ -80,8 +83,22 @@ function PresetRow({
   const displayName = overlay?.displayName ?? null;
   const tags = overlay?.tags ?? [];
 
+  // The whole row opens the preset — the same destination as the name-cell link
+  // below — via the shared house pattern. The link stays as the accessible path;
+  // the helper yields to it (and to any nested control) so a click there
+  // navigates once, never twice. Its `cursor: pointer` merges over `rowStyle`.
+  const openProps = openTargetProps({
+    onOpen: () => {
+      navigate('presets', { preset: preset.name });
+    },
+  });
+
   return (
-    <TR data-testid={`preset-row-${preset.name}`} style={rowStyle}>
+    <TR
+      data-testid={`preset-row-${preset.name}`}
+      {...openProps}
+      style={{ ...rowStyle, ...openProps.style }}
+    >
       <TD>
         <AppLink
           to="presets"
