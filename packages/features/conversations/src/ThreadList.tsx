@@ -35,7 +35,9 @@ import {
   TR,
   Table,
   errorMessage,
+  openTargetProps,
   useApi,
+  useAppNavigate,
 } from '@tai42/studio-sdk';
 import type { ConversationDeliveryStatus, ConversationThread } from '@tai42/api-client';
 
@@ -81,8 +83,19 @@ function ThreadRow({
   /** The list's ticking clock, so "3 minutes ago" does not stay 3 minutes ago. */
   readonly now: number;
 }): ReactNode {
+  const navigate = useAppNavigate();
+  // The whole row opens the thread — the same destination as the address-cell
+  // link below — via the shared house pattern. The link stays as the accessible
+  // activation path; the helper yields to it so a click on the link navigates
+  // once, never twice.
   return (
-    <TR>
+    <TR
+      {...openTargetProps({
+        onOpen: () => {
+          navigate('conversations', { route, thread: thread.thread_id });
+        },
+      })}
+    >
       <TD>
         <AppLink
           to="conversations"

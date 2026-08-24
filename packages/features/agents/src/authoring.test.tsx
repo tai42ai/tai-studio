@@ -812,6 +812,35 @@ describe('authored-agents list', () => {
     expect(manage).toHaveAttribute('href', '/presets?preset=assistant');
   });
 
+  it('opens Manage (its canonical destination) when the row body is clicked', async () => {
+    const { navigate } = renderWithProviders(<AgentsPage />, authoredClient());
+
+    const row = await screen.findByTestId('authored-agent-row');
+    // The description cell is plain, non-interactive text — a body click, which
+    // opens the row's one canonical destination (Manage → the presets page).
+    await userEvent.click(within(row).getByText('An assistant agent'));
+    expect(navigate).toHaveBeenCalledWith('presets', { preset: 'assistant' });
+  });
+
+  it('leaves Run to run and Manage to manage — the row yields to both, no double-nav', async () => {
+    const { navigate } = renderWithProviders(<AgentsPage />, authoredClient());
+
+    const row = await screen.findByTestId('authored-agent-row');
+    // The Manage link navigates exactly once (the row-open yields to it).
+    await userEvent.click(
+      within(row).getByRole('link', { name: /Manage authored agent assistant/ }),
+    );
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('presets', { preset: 'assistant' });
+
+    // The Run button is an action, not the row's destination: it never navigates.
+    navigate.mockClear();
+    await userEvent.click(
+      within(row).getByRole('button', { name: 'Run authored agent assistant' }),
+    );
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
   it('degrades to absence (no wall) when the presets read fails/uncovered, keeping the authorable content', async () => {
     // A scoped caller reaching `/api/agents` but not `/api/presets` gets a 403 on the
     // presets read. That read only enriches registered agents into authored rows, so the
