@@ -129,6 +129,51 @@ describe('MarketplacePage — plugin card version + recency', () => {
   });
 });
 
+describe('MarketplacePage — whole-card open', () => {
+  it('opens the detail from a click on the card body, not just the title link', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    // The description is a non-interactive region of the card. The whole card is the
+    // affordance the interactive lift promises, so clicking it opens the same detail
+    // the title link opens — the drill-in `plugin` search param for this row.
+    await user.click(await screen.findByText('A box of tools.'));
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('marketplace', { plugin: 'tai42/toolbox' });
+  });
+
+  it('opens the detail exactly once from the title link (the card handler yields)', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    // The click lands on the nested title anchor; the card's open handler yields to
+    // it (`closest('a')`) so exactly one navigation fires — the link's — never a
+    // second from the wrapper. Same destination as the body click above.
+    await user.click(await screen.findByRole('link', { name: 'Toolbox' }));
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith('marketplace', { plugin: 'tai42/toolbox' });
+  });
+
+  it('does not open when the click completes a text selection rather than an open intent', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<MarketplacePage search={{}} />, {
+      client: browseReads(pageOf([row()])),
+    });
+    await screen.findByText('A box of tools.');
+    // A press-drag that selects the card's text also fires a click. With an active
+    // (non-collapsed) selection the handler reads a select gesture, not an open
+    // intent, and yields — mirroring the ExplorerView precedent.
+    const getSelection = vi
+      .spyOn(window, 'getSelection')
+      .mockReturnValue({ isCollapsed: false } as unknown as Selection);
+    await user.click(screen.getByText('A box of tools.'));
+    expect(navigate).not.toHaveBeenCalled();
+    getSelection.mockRestore();
+  });
+});
+
 describe('MarketplacePage — premium badge + mcp-server kind', () => {
   it('renders the premium badge only when the row is premium', async () => {
     renderWithProviders(<MarketplacePage search={{}} />, {
