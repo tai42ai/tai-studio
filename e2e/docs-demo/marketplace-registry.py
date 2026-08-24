@@ -40,8 +40,8 @@ _SPEC = {
     # Range must include the docs-demo's running contract line so the install
     # preview resolves (the skeleton refuses a spec whose contract_range excludes the
     # installed tai42-contract). Pinned to the current major the same way every
-    # shipped plugin's tai-plugin.yml is (`>=4.1,<5`) so it tracks the contract bump.
-    "contract": ">=4.1,<5",
+    # shipped plugin's tai-plugin.yml is (`>=5.0,<6`) so it tracks the contract bump.
+    "contract": ">=5.0,<6",
     "categories": ["channels"],
     "tags": ["alerts", "relay", "webhook"],
     "provides": [
