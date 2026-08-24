@@ -101,6 +101,26 @@ describe('installStaleChunkReload', () => {
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('lets a guard-blocked second failure SURFACE — no preventDefault, no silent swallow', async () => {
+    // The genuinely-broken-deploy path: the recovery reload already happened, and the
+    // chunk STILL fails. The guard must block the reload AND leave the error visible —
+    // an unsuppressed preloadError re-throws (Vite), an unsuppressed rejection stays
+    // unhandled — never a silently broken page.
+    await install();
+    const first = dispatchPreloadError();
+    expect(first.defaultPrevented).toBe(true);
+
+    const blockedPreload = dispatchPreloadError(
+      'Failed to fetch dynamically imported module /c.js',
+    );
+    const blockedRejection = dispatchRejection(
+      new Error('Failed to fetch dynamically imported module /d.js'),
+    );
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+    expect(blockedPreload.defaultPrevented).toBe(false);
+    expect(blockedRejection.defaultPrevented).toBe(false);
+  });
+
   it('still reloads once via the in-memory fallback when sessionStorage throws', async () => {
     const throwing = {
       getItem: () => {

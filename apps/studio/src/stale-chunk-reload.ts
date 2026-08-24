@@ -60,13 +60,17 @@ function recordReload(now: number): void {
 
 /**
  * Reload the page unless we already did so within the guard window. Logs one
- * warning first so the blip is diagnosable in the field. Returns nothing —
- * either the page is reloading or the original error is left to surface.
+ * warning first so the blip is diagnosable in the field. Returns whether the
+ * reload was actually taken — the caller suppresses the original error ONLY
+ * then. A guard-blocked failure keeps propagating (Vite re-throws, a rejection
+ * stays unhandled), so a genuinely broken deploy — a chunk that 404s even when
+ * fresh, failing again right after the recovery reload — surfaces loudly
+ * instead of being silently swallowed while the page quietly stays broken.
  */
-function reloadOnce(signal: string, specifier: string | undefined): void {
+function reloadOnce(signal: string, specifier: string | undefined): boolean {
   const now = Date.now();
   const previous = lastReloadAt();
-  if (previous !== undefined && now - previous < RELOAD_WINDOW_MS) return;
+  if (previous !== undefined && now - previous < RELOAD_WINDOW_MS) return false;
 
   console.warn(
     `[stale-chunk-reload] reloading once after ${signal}` +
@@ -74,6 +78,7 @@ function reloadOnce(signal: string, specifier: string | undefined): void {
   );
   recordReload(now);
   window.location.reload();
+  return true;
 }
 
 /**
@@ -85,22 +90,26 @@ export function installStaleChunkReload(): void {
   // Vite's built preload helper dispatches this cancelable event on window when a
   // dynamic chunk (or its css) fails; plugin bundles are Vite-built too, so their
   // failures land here as well. `event.payload` is the underlying Error (see the
-  // installed vite's client.d.ts: VitePreloadErrorEvent). preventDefault() stops
-  // Vite from re-throwing.
+  // installed vite's client.d.ts: VitePreloadErrorEvent). preventDefault() — which
+  // stops Vite re-throwing — is called ONLY when the reload was actually taken;
+  // a guard-blocked failure re-throws and stays visible.
   window.addEventListener('vite:preloadError', (event) => {
-    event.preventDefault();
-    reloadOnce('vite:preloadError', event.payload.message);
+    if (reloadOnce('vite:preloadError', event.payload.message)) {
+      event.preventDefault();
+    }
   });
 
   // Fallback for direct import() failures that bypass the preload helper (older
   // plugin builds / non-Vite bundlers): match the browser error message narrowly.
+  // Same rule: suppress the rejection only when the reload was taken.
   window.addEventListener('unhandledrejection', (event) => {
     const message = errorMessage(event.reason);
     if (message === undefined) return;
     const lower = message.toLowerCase();
     if (!DYNAMIC_IMPORT_ERROR_FRAGMENTS.some((fragment) => lower.includes(fragment))) return;
-    event.preventDefault();
-    reloadOnce('unhandledrejection', message);
+    if (reloadOnce('unhandledrejection', message)) {
+      event.preventDefault();
+    }
   });
 }
 
