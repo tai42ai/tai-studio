@@ -16,6 +16,8 @@ import { FunctionComponentElement } from 'react';
 import type { HTMLAttributes } from 'react';
 import type { InputHTMLAttributes } from 'react';
 import { JSX } from 'react';
+import type { KeyboardEvent as KeyboardEvent_2 } from 'react';
+import type { MouseEvent as MouseEvent_2 } from 'react';
 import { objectOutputType } from 'zod';
 import { Provider } from 'react';
 import { ProviderProps } from 'react';
@@ -9964,6 +9966,30 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
     message: string;
     kind: "cancelled";
 }>]>;
+
+// @public (undocumented)
+export interface OpenTargetOptions {
+    readonly ignoreWithin?: string;
+    readonly keyboard?: boolean;
+    readonly onOpen: (() => void) | undefined;
+}
+
+// @public
+export interface OpenTargetProps {
+    // (undocumented)
+    readonly onClick?: (event: MouseEvent_2<HTMLElement>) => void;
+    // (undocumented)
+    readonly onKeyDown?: (event: KeyboardEvent_2<HTMLElement>) => void;
+    // (undocumented)
+    readonly style?: {
+        readonly cursor: 'pointer';
+    };
+    // (undocumented)
+    readonly tabIndex?: number;
+}
+
+// @public
+export function openTargetProps(input: OpenTargetOptions): OpenTargetProps;
 
 // @public
 export interface OverflowRegionAttributes {

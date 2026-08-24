@@ -12,12 +12,13 @@
  * {@link matchesSelectedTags}, {@link UNTAGGED_TOKEN}) so every consuming screen
  * shares one vocabulary/untagged-sentinel/OR-match rule rather than copying it.
  */
-import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 
 import { EntityCardGrid } from './entity-card-grid';
 import { childFolders, FolderBreadcrumb, FolderRow, type Folder } from './folder-nav';
 import { SearchIcon } from './icons';
 import { TextInput } from './inputs';
+import { openTargetProps, type OpenTargetProps } from './open-target';
 import { Button, Card, EmptyState } from './primitives';
 import { ScrollRegion } from './scroll-region';
 import { Select } from './select';
@@ -373,32 +374,20 @@ export function ExplorerView<T>({
     tags.onChange(next);
   };
 
-  // The pointer-open props for one item's row/card, present only when `onOpenItem`
-  // is set. The handler yields to any nested interactive element the click landed
-  // on (a name link, an actions kebab) so it never hijacks its activation; a
-  // portalled menu (Radix) never bubbles here, so the role selectors are defensive
-  // for an inline menu only.
-  const openProps = (
-    item: T,
-  ): { onClick?: (event: MouseEvent<HTMLElement>) => void; style?: { cursor: 'pointer' } } => {
-    if (onOpenItem === undefined) return {};
-    return {
-      onClick: (event) => {
-        // A press-drag that selects the name text also fires a click; that is a
-        // selection, not an open intent.
-        if (window.getSelection()?.isCollapsed === false) return;
-        const target = event.target;
-        if (
-          target instanceof Element &&
-          target.closest('button, a, [role="menu"], [role="menuitem"]') !== null
-        ) {
-          return;
-        }
-        onOpenItem(item);
-      },
-      style: { cursor: 'pointer' },
-    };
-  };
+  // The pointer-open props for one item's row/card, via the shared house pattern
+  // ({@link openTargetProps}): present only when `onOpenItem` is set, it yields to
+  // the item's own nested interactive elements (its name link, an actions kebab)
+  // and to a text-selection drag. The accessible activation path stays that nested
+  // name link, so no `keyboard` here — the row is never itself a focus stop.
+  const openProps = (item: T): OpenTargetProps =>
+    openTargetProps({
+      onOpen:
+        onOpenItem === undefined
+          ? undefined
+          : () => {
+              onOpenItem(item);
+            },
+    });
 
   const hasEntries = subfolders.length > 0 || filtered.length > 0;
 

@@ -124,4 +124,29 @@ describe('CompletionInput', () => {
     await user.type(input, 'x');
     expect(await screen.findByRole('option', { name: 'x-alpha' })).toHaveClass('tai-select-item');
   });
+
+  it('floats the suggestion list out of flow so it never displaces the content below', async () => {
+    const user = userEvent.setup();
+    const fetchCompletions = vi.fn(async (value: string) => [`${value}-alpha`]);
+    render(<Harness fetchCompletions={fetchCompletions} />);
+
+    await user.type(screen.getByRole('combobox'), 'x');
+
+    const listbox = await screen.findByRole('listbox');
+    // Absolutely positioned within the relative wrapper: pinned to the field's
+    // bottom edge, full field width, and taken out of flow (no displacement).
+    expect(listbox).toHaveStyle({
+      position: 'absolute',
+      top: '100%',
+      left: '0px',
+      right: '0px',
+    });
+    // The wrapper the list is positioned against is the relative box.
+    const wrapper = listbox.parentElement;
+    if (wrapper === null) throw new Error('listbox has no wrapper');
+    expect(wrapper).toHaveStyle({ position: 'relative' });
+    // Its stacking (z-index) rides on the shared popover class, now live because
+    // the list is positioned.
+    expect(listbox).toHaveClass('tai-select-content');
+  });
 });
