@@ -533,8 +533,9 @@
      clears the dialog scrim that would otherwise cover and swallow it. The
      height cap yields to the space the popper actually has, so a long list in a
      short viewport still scrolls inside the screen; the fallback covers the
-     in-flow suggestion list, which wears these classes without a popper to
-     publish that measurement. */
+     completion suggestion list, which wears these classes without a Radix popper
+     to publish that measurement (it floats via its own absolute position, not a
+     popper — see `completion-input.tsx`). */
   .tai-select-content {
     z-index: var(--tai-z-popover);
     /* Capped against the VIEWPORT as well as its own content, like every other
@@ -545,7 +546,7 @@
     overflow-y: auto;
     /* The cap is on the BORDER box, or it is not a cap at all: with the default
        `content-box` the side padding and the 1 px boundary sit outside it. Radix
-       inline-styles `box-sizing: border-box` on its own popper, but the in-flow
+       inline-styles `box-sizing: border-box` on its own popper, but the completion
        suggestion list wears this class as a plain `<ul>` with no Radix near it. */
     box-sizing: border-box;
     background: var(--tai-color-surface-raised);

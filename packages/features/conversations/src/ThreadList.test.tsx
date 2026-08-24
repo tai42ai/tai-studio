@@ -532,6 +532,31 @@ describe('ThreadList — filters', () => {
     renderList(vi.fn().mockResolvedValue(page([])), undefined, { status: 'failed' });
     expect(await screen.findByText('No matching threads')).toBeInTheDocument();
   });
+});
+
+describe('ThreadList — whole-row open', () => {
+  const OPEN_ARGS = ['conversations', { route: 'chat', thread: 'svc-chat/+15551234567' }] as const;
+
+  it('opens the thread when the row body (a non-link cell) is clicked', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderList(
+      vi.fn().mockResolvedValue(page([makeThread({ message_count: 42 })])),
+    );
+    await screen.findByTestId('conversation-threads-table');
+    // The message-count cell is plain, non-interactive text — a body click.
+    await user.click(screen.getByText('42'));
+    expect(navigate).toHaveBeenCalledWith(...OPEN_ARGS);
+  });
+
+  it('navigates once — not twice — when the address link itself is clicked', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderList(vi.fn().mockResolvedValue(page([makeThread()])));
+    await user.click(
+      await screen.findByRole('link', { name: 'Open thread svc-chat/+15551234567' }),
+    );
+    expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(...OPEN_ARGS);
+  });
 
   it('surfaces a LOUD partial-set notice when the listing is truncated', async () => {
     renderList(vi.fn().mockResolvedValue(page([makeThread()], null, 1, true)));

@@ -17,6 +17,8 @@ import {
   THead,
   TR,
   Table,
+  openTargetProps,
+  useAppNavigate,
 } from '@tai42/studio-sdk';
 
 import type { AuthoredRunTarget } from './authoring-types';
@@ -37,6 +39,7 @@ export function AuthoredAgentsList({
   readonly presets: readonly PresetRecord[];
   readonly onRunAuthored: (target: AuthoredRunTarget) => void;
 }): ReactNode {
+  const navigate = useAppNavigate();
   // Map an agent's REGISTRATION name back to the agent — an authored preset's
   // base_tool is the agent's run tool, which the backend registers under the
   // registration name (which can differ from `tool_name`).
@@ -83,7 +86,21 @@ export function AuthoredAgentsList({
           </THead>
           <TBody>
             {authored.map(({ preset, baseAgent }) => (
-              <TR key={preset.name} data-testid="authored-agent-row" data-agent={preset.name}>
+              // The whole row opens Manage — its one canonical destination (the
+              // presets page, where versioning/rollback/delete for this preset
+              // live). Run EXECUTES the agent rather than navigating, so it is an
+              // action, not the row's destination; the shared house pattern yields
+              // to both it and the Manage link, so each control acts once.
+              <TR
+                key={preset.name}
+                data-testid="authored-agent-row"
+                data-agent={preset.name}
+                {...openTargetProps({
+                  onOpen: () => {
+                    navigate('presets', { preset: preset.name });
+                  },
+                })}
+              >
                 <TD className="tai-mono">{preset.name}</TD>
                 <TD>{preset.description}</TD>
                 <TD className="tai-mono">{baseAgent.name}</TD>

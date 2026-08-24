@@ -228,6 +228,10 @@ export type {
   ExplorerEmptyStates,
   TagVocabularyEntry,
 } from './components/explorer-view';
+// The canonical whole-row/whole-card "open" affordance: one helper every
+// navigable list surface spreads onto its entry (see the module doc).
+export { openTargetProps } from './components/open-target';
+export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
 export {
   FolderBreadcrumb,
   FolderRow,
