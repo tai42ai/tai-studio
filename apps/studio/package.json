@@ -43,6 +43,7 @@
     "@tai42/feature-system": "workspace:*",
     "@tai42/feature-templates": "workspace:*",
     "@tai42/feature-tools": "workspace:*",
+    "@tai42/jq-studio": "file:/tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz",
     "@tai42/studio-sdk": "workspace:*",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "^1.95.1",

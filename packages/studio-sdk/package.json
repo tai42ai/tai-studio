@@ -99,6 +99,7 @@
     "@radix-ui/react-select": "^2.3.2",
     "@radix-ui/react-tabs": "^1.1.16",
     "@radix-ui/react-tooltip": "^1.2.11",
-    "@tai42/api-client": "workspace:*"
+    "@tai42/api-client": "workspace:*",
+    "@tai42/jq-studio": "file:/tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz"
   }
 }

@@ -1,61 +1,33 @@
 /**
- * Tests for {@link PolicySection}'s jq-condition field after its graduation to the
- * SDK {@link ExpressionField}: the inline condition still round-trips its value, its
- * visual-editor door appears ONLY when a jq editor is registered (and stays absent
- * otherwise), and the declaration it hands the editor carries an honest
- * JqAuthContext shape, a live sample from the sample-context editor, and the
- * fail-closed `validate-condition` guard as its `serverValidate` hook.
+ * Tests for {@link PolicySection}'s jq-condition field after its migration to the
+ * SDK-re-exported {@link JqField} (the drop-in @tai42/jq-studio control): the inline
+ * condition still round-trips its value, the visual-editor door is now ALWAYS present
+ * (the editor is a direct dependency, not a plugin-registered extension), and the
+ * shape + serverValidate the field is wired with carry an honest JqAuthContext shape
+ * and route to the fail-closed `validate-condition` guard, and its Test panel seeds
+ * from the LIVE sample-context editor. The shape/validate/sample wiring is asserted
+ * directly against the exported {@link CONDITION_SHAPE}, {@link makeConditionServerValidate},
+ * and {@link liveSampleInput} — the real objects/providers the field receives.
  */
-import { useEffect, type ReactElement } from 'react';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError, type ApiClient } from '@tai42/api-client';
-import {
-  EXPRESSION_EDITOR_CONTRACT_VERSION,
-  ExpressionEditorsProvider,
-  type ExpressionEditorContribution,
-  type ExpressionEditorProps,
-  type ExpressionFieldDeclaration,
-} from '@tai42/studio-sdk';
 
-import { PolicySection } from './PolicySection';
+import {
+  CONDITION_SHAPE,
+  liveSampleInput,
+  makeConditionServerValidate,
+  PolicySection,
+} from './PolicySection';
 import { renderWithProviders } from './test-utils';
 
 function stubClient(methods: Partial<Record<keyof ApiClient, unknown>>): ApiClient {
   return methods as unknown as ApiClient;
 }
 
-/** The declaration the fake editor last received, captured for direct exercise. It
- *  is read through {@link captured} (a getter), not the bare field, so its type
- *  stays the union — a direct field read narrows to its `null` seed since TS cannot
- *  see the assignment that happens inside the editor's effect. */
-const box: { declaration: ExpressionFieldDeclaration | null } = { declaration: null };
-const captured = (): ExpressionFieldDeclaration | null => box.declaration;
-
-function CapturingEditor({ declaration }: ExpressionEditorProps): ReactElement {
-  useEffect(() => {
-    box.declaration = declaration;
-  }, [declaration]);
-  return <div data-testid="fake-editor" />;
-}
-
-function withJqEditor(node: ReactElement): ReactElement {
-  const editors = new Map<string, ExpressionEditorContribution>([
-    [
-      'jq',
-      {
-        language: 'jq',
-        contractVersion: EXPRESSION_EDITOR_CONTRACT_VERSION,
-        load: () => Promise.resolve({ Editor: CapturingEditor }),
-      },
-    ],
-  ]);
-  return <ExpressionEditorsProvider editors={editors}>{node}</ExpressionEditorsProvider>;
-}
-
-describe('PolicySection — jq condition expression field', () => {
+describe('PolicySection — jq condition field', () => {
   it('round-trips the inline condition value through onChange', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
@@ -73,58 +45,25 @@ describe('PolicySection — jq condition expression field', () => {
     });
   });
 
-  it('grows a visual-editor door only when a jq editor is registered', async () => {
-    // No provider: plain textarea, no launcher.
-    const { unmount } = renderWithProviders(
+  it('offers an always-present visual-editor door on the jq condition field', async () => {
+    // JqField is a direct dependency now (no editor-registry door): the visual editor
+    // is always available, so the field renders its door unconditionally. The door
+    // folds its field label into its accessible name, so it is pinned by the specific
+    // "Open the visual editor for jq condition" name — not a bare /visual editor/.
+    renderWithProviders(
       <PolicySection idPrefix="p" onChange={vi.fn()} onConditionTestFailedChange={vi.fn()} />,
       { client: stubClient({}) },
     );
     expect(
-      screen.queryByRole('button', { name: /open the visual editor for jq condition/i }),
-    ).not.toBeInTheDocument();
-    unmount();
-
-    // Registered jq editor: the door appears.
-    renderWithProviders(
-      withJqEditor(
-        <PolicySection idPrefix="p" onChange={vi.fn()} onConditionTestFailedChange={vi.fn()} />,
-      ),
-      { client: stubClient({}) },
-    );
-    expect(
-      await screen.findByRole('button', {
-        name: /open the visual editor for jq condition/i,
-      }),
+      await screen.findByRole('button', { name: 'Open the visual editor for jq condition' }),
     ).toBeInTheDocument();
   });
 
-  it('hands the editor a jq declaration wired to the JqAuthContext shape and validate guard', async () => {
-    box.declaration = null;
-    const user = userEvent.setup();
-    const validateCondition = vi.fn();
-    renderWithProviders(
-      withJqEditor(
-        <PolicySection idPrefix="p" onChange={vi.fn()} onConditionTestFailedChange={vi.fn()} />,
-      ),
-      { client: stubClient({ validateCondition }) },
-    );
-
-    await user.click(
-      await screen.findByRole('button', { name: /open the visual editor for jq condition/i }),
-    );
-    await screen.findByTestId('fake-editor');
-    await waitFor(() => {
-      expect(captured()).not.toBeNull();
-    });
-    const declaration = captured();
-    if (declaration === null) throw new Error('declaration not captured');
-
-    // Language + honest shape.
-    expect(declaration.language).toBe('jq');
-    expect(declaration.shape?.id).toBe('tai42.access-control.jq-auth-context');
-    expect(declaration.shape?.returns).toMatch(/true or false/i);
+  it('declares an honest JqAuthContext shape for the condition field', () => {
+    expect(CONDITION_SHAPE.id).toBe('tai42.access-control.jq-auth-context');
+    expect(CONDITION_SHAPE.returns).toMatch(/true or false/i);
     // The FULL JqAuthContext key set — a dropped key must fail this test.
-    expect(declaration.shape?.keys.map((k) => k.name)).toEqual([
+    expect(CONDITION_SHAPE.keys.map((k) => k.name)).toEqual([
       'sub',
       'scopes',
       'identity',
@@ -133,68 +72,59 @@ describe('PolicySection — jq condition expression field', () => {
       'request',
       'system',
     ]);
+    // The static skeleton the visual editor's Test panel seeds from.
+    expect(CONDITION_SHAPE.sample).toMatchObject({ sub: 'anon', scopes: [] });
+  });
 
-    // The Test panel seeds from the sample-context editor (pre-seeded skeleton).
-    expect(declaration.sampleInput?.()).toMatchObject({ sub: 'anon', scopes: [] });
+  it('seeds the visual editor from the LIVE sample-context editor, degrading to the skeleton', () => {
+    // The provider JqField.sampleInput receives: a valid editor yields the live
+    // parsed object (takes precedence over shape.sample upstream); a blank or
+    // malformed editor yields undefined, so JqField falls back to CONDITION_SHAPE.sample.
+    expect(liveSampleInput(JSON.stringify({ sub: 'live', scopes: ['admin'] }))).toEqual({
+      sub: 'live',
+      scopes: ['admin'],
+    });
+    expect(liveSampleInput('')).toBeUndefined();
+    expect(liveSampleInput('   ')).toBeUndefined();
+    expect(liveSampleInput('not-json')).toBeUndefined();
+    // A non-object (array/scalar) is not a valid sample context → undefined → skeleton.
+    expect(liveSampleInput('[1,2,3]')).toBeUndefined();
+    expect(liveSampleInput('42')).toBeUndefined();
+  });
 
-    // serverValidate routes to the guard with the sample and maps its outcomes.
+  it('routes serverValidate to the fail-closed guard and maps its outcomes', async () => {
+    const validateCondition = vi.fn();
+    const serverValidate = makeConditionServerValidate(stubClient({ validateCondition }));
+
+    // A sample object rides as sample_context; result:true → "allows the sample".
     validateCondition.mockResolvedValueOnce({ ok: true, result: true });
     await expect(
-      declaration.serverValidate?.({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
+      serverValidate({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
     ).resolves.toEqual({ ok: true, compiles: true, message: 'allows the sample' });
     expect(validateCondition).toHaveBeenLastCalledWith({
       condition: '.policy.limit > 0',
       sample_context: { sub: 'x' },
     });
 
+    // result:false → "denies the sample".
     validateCondition.mockResolvedValueOnce({ ok: true, result: false });
     await expect(
-      declaration.serverValidate?.({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
+      serverValidate({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
     ).resolves.toEqual({ ok: true, compiles: true, message: 'denies the sample' });
 
     // A non-object sample compiles-only — the guard is called WITHOUT a sample.
     validateCondition.mockResolvedValueOnce({ ok: true, result: null });
     await expect(
-      declaration.serverValidate?.({ expression: '.x', sampleInput: 'not-an-object' }),
+      serverValidate({ expression: '.x', sampleInput: 'not-an-object' }),
     ).resolves.toEqual({ ok: true, compiles: true, message: undefined });
     expect(validateCondition).toHaveBeenLastCalledWith({ condition: '.x' });
 
     // A 400 from the guard maps to a not-ok result carrying its verbatim message.
     validateCondition.mockRejectedValueOnce(new ApiError('bad jq', 400));
-    await expect(
-      declaration.serverValidate?.({ expression: '.(', sampleInput: { sub: 'x' } }),
-    ).resolves.toEqual({ ok: false, compiles: false, message: 'bad jq' });
-  });
-
-  it('falls the sample provider back to the skeleton when the sample editor is blank or invalid', async () => {
-    box.declaration = null;
-    const user = userEvent.setup();
-    renderWithProviders(
-      withJqEditor(
-        <PolicySection idPrefix="p" onChange={vi.fn()} onConditionTestFailedChange={vi.fn()} />,
-      ),
-      { client: stubClient({}) },
-    );
-    await user.click(
-      await screen.findByRole('button', { name: /open the visual editor for jq condition/i }),
-    );
-    await screen.findByTestId('fake-editor');
-    await waitFor(() => {
-      expect(captured()).not.toBeNull();
-    });
-
-    const sampleEditor = screen.getByLabelText('Sample context (JSON)');
-
-    // Blank sample → the skeleton default.
-    await user.clear(sampleEditor);
-    await waitFor(() => {
-      expect(captured()?.sampleInput?.()).toMatchObject({ sub: 'anon' });
-    });
-
-    // Malformed sample → the skeleton default (the catch path), never a throw.
-    await user.type(sampleEditor, 'not-json');
-    await waitFor(() => {
-      expect(captured()?.sampleInput?.()).toMatchObject({ sub: 'anon' });
+    await expect(serverValidate({ expression: '.(', sampleInput: { sub: 'x' } })).resolves.toEqual({
+      ok: false,
+      compiles: false,
+      message: 'bad jq',
     });
   });
 });
