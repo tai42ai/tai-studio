@@ -18,11 +18,16 @@ import type {
   SettingsTabContribution,
   ToolPanelContribution,
 } from './types';
+import {
+  EXPRESSION_EDITOR_CONTRACT_VERSION,
+  type ExpressionEditorContribution,
+} from '../expression/types';
 
 const toolPanels = new Map<string, ToolPanelContribution>();
 const pages: RegisteredPage[] = [];
 const settingsTabs: RegisteredSettingsTab[] = [];
 const navEntries: RegisteredNavEntry[] = [];
+const expressionEditors = new Map<string, ExpressionEditorContribution>();
 
 /**
  * Load one plugin: call its `register` entry with a context bound to `pluginId`,
@@ -50,6 +55,7 @@ export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<
   const stagedSettingsTabs: RegisteredSettingsTab[] = [];
   const stagedTabIds = new Set<string>();
   const stagedNavEntries: RegisteredNavEntry[] = [];
+  const stagedExpressionEditors = new Map<string, ExpressionEditorContribution>();
   let sealed = false;
 
   const context: PluginContext = {
@@ -117,6 +123,38 @@ export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<
       }
       stagedNavEntries.push({ ...contribution, pluginId });
     },
+    registerExpressionEditor(contribution: ExpressionEditorContribution): void {
+      if (sealed) {
+        throw new Error(
+          'registration is closed: a plugin must register during register(), not after it resolves',
+        );
+      }
+      // Contract-version mismatch is a LOUD per-plugin registration error, never a
+      // silent skip: an editor built against a different props contract would mount
+      // with the wrong props, so it is rejected during register() and becomes this
+      // plugin's error card. Checked before the duplicate guard so a mismatched
+      // contribution never claims a language.
+      if (contribution.contractVersion !== EXPRESSION_EDITOR_CONTRACT_VERSION) {
+        throw new Error(
+          `plugin “${pluginId}” registered an expression editor for “${contribution.language}” ` +
+            `targeting contract v${String(contribution.contractVersion)} but this host is ` +
+            `v${String(EXPRESSION_EDITOR_CONTRACT_VERSION)} — the editor must be rebuilt`,
+        );
+      }
+      // A language is a GLOBAL key: at most one editor across the deployment. A
+      // second contribution for a language already staged or committed (by this
+      // plugin or another) would leave one editor unreachable — fail loudly, as
+      // registerToolPanel does for a tool name.
+      if (
+        stagedExpressionEditors.has(contribution.language) ||
+        expressionEditors.has(contribution.language)
+      ) {
+        throw new Error(
+          `an expression editor is already registered for language ${contribution.language}`,
+        );
+      }
+      stagedExpressionEditors.set(contribution.language, contribution);
+    },
   };
 
   try {
@@ -158,11 +196,14 @@ export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<
   for (const navEntry of stagedNavEntries) {
     navEntries.push(navEntry);
   }
+  for (const [language, contribution] of stagedExpressionEditors) {
+    expressionEditors.set(language, contribution);
+  }
 }
 
 /** The shell reads this after loading every installed plugin bundle. */
 export function getContributions(): PluginContributions {
-  return { toolPanels, pages, settingsTabs, navEntries };
+  return { toolPanels, pages, settingsTabs, navEntries, expressionEditors };
 }
 
 /** Tests reset the module-level registry between cases. */
@@ -171,4 +212,5 @@ export function __resetContributions(): void {
   pages.length = 0;
   settingsTabs.length = 0;
   navEntries.length = 0;
+  expressionEditors.clear();
 }

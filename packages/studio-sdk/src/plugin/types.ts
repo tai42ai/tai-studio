@@ -22,6 +22,8 @@
  */
 import type { ComponentType } from 'react';
 
+import type { ExpressionEditorContribution } from '../expression/types';
+
 /**
  * A capability requirement a contribution may declare. `routes` is a list of
  * route-path prefixes (anyOf semantics, the same evaluator the shell nav uses):
@@ -193,6 +195,15 @@ export interface PluginContributions {
   readonly pages: readonly RegisteredPage[];
   readonly settingsTabs: readonly RegisteredSettingsTab[];
   readonly navEntries: readonly RegisteredNavEntry[];
+  /**
+   * The contributed expression editors, keyed by {@link ExpressionLanguage}. A
+   * language maps to at MOST one editor across the whole deployment — the registry
+   * rejects a second contribution for a language it already holds — so a field
+   * resolves its editor by language with no ambiguity. The shell reads this map and
+   * feeds it to `ExpressionEditorsProvider`; the plugin surface reaches it only
+   * through `useExpressionEditor`, never by enumerating this map.
+   */
+  readonly expressionEditors: ReadonlyMap<string, ExpressionEditorContribution>;
 }
 
 /**
@@ -218,6 +229,20 @@ export interface PluginContext {
    * registers (a nav entry with no page is a dead link and is rejected loudly).
    */
   registerNavEntry(contribution: NavEntryContribution): void;
+  /**
+   * Register the visual editor for one {@link ExpressionLanguage}, which every
+   * `ExpressionField` authoring that language then offers. A language is a GLOBAL
+   * key — at most one editor across the deployment — so a second contribution for a
+   * language already registered (by this plugin or another) is rejected loudly, as
+   * a duplicate tool panel is. A contribution whose `contractVersion` is not the
+   * host's {@link EXPRESSION_EDITOR_CONTRACT_VERSION} is likewise rejected loudly
+   * during registration — never silently skipped — so an editor built against an
+   * incompatible props contract is a visible per-plugin error, not a blank field.
+   *
+   * This method is OPTIONAL/ADDITIVE: a host that gains it keeps the same
+   * `STUDIO_PLUGIN_API_VERSION`, and every existing plugin loads unchanged.
+   */
+  registerExpressionEditor(contribution: ExpressionEditorContribution): void;
 }
 
 /**

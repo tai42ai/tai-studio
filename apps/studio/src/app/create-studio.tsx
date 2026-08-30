@@ -8,7 +8,7 @@
  * Provider order (outermost→inner): ThemeProvider ▸ AuthProvider ▸
  * QueryClientProvider ▸ ApiProvider ▸ UnauthorizedProvider ▸ CapabilityProvider ▸
  * SystemKindsProvider ▸ ToolDisplayNamesProvider ▸ NavigationProvider ▸
- * RouterProvider.
+ * ExpressionEditorsBridge ▸ RouterProvider.
  */
 import { useEffect, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -32,6 +32,7 @@ import { ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
 import { PATH } from './routes';
 import { buildRouter, type AppRouter } from './router';
 import { AppErrorBoundary } from './error-boundary';
+import { ExpressionEditorsBridge } from './expression-editors-bridge';
 import { createNavigation } from './navigation';
 import {
   createPluginLoader,
@@ -180,7 +181,13 @@ export function createStudio(deps: StudioDeps): Studio {
 
     return (
       <NavigationProvider value={navigation}>
-        <RouterProvider router={router} />
+        {/* Publishes the plugin-contributed expression editors to the whole routed
+            tree, so a host feature's or a plugin page's ExpressionField resolves an
+            editor for its language (React is the shared import-map singleton, so one
+            provider reaches both). */}
+        <ExpressionEditorsBridge>
+          <RouterProvider router={router} />
+        </ExpressionEditorsBridge>
       </NavigationProvider>
     );
   }
