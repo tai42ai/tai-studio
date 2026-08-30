@@ -157,8 +157,6 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the solid error fill, published so a chart legend or a status swatch draws `--tai-color-err-fill` with the `on-fill` ink instead of inventing its own pair',
   'tai-badge-solid-warn':
     'the solid warning fill, published so a chart legend or a status swatch draws `--tai-color-warn-fill` with the `on-fill` ink instead of inventing its own pair',
-  'tai-input-mono':
-    'the mono variant of `.tai-input`, declared in the same rule as the rendered `.tai-textarea-mono` so a single-line identifier field matches the editor',
   'tai-clamp-2':
     'the two-line card-description clamp, published so a consuming card renderer can hold its description to two lines and keep a card grid row uniform',
 };

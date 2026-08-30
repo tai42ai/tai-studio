@@ -7,6 +7,82 @@
 import type { ComponentType } from 'react';
 
 // @public
+interface ExpressionEditorContribution {
+    readonly contractVersion: number;
+    readonly language: ExpressionLanguage;
+    readonly load: () => Promise<{
+        readonly Editor: ComponentType<ExpressionEditorProps>;
+    }>;
+    readonly preload?: () => void;
+}
+
+// @public
+interface ExpressionEditorProps {
+    readonly declaration: ExpressionFieldDeclaration;
+    readonly fieldLabel?: string;
+    readonly initialExpression: string;
+    readonly onClose: () => void;
+    readonly onSave: (expression: string) => void;
+    readonly open: boolean;
+    readonly readOnly?: boolean;
+}
+
+// @public
+interface ExpressionFieldDeclaration {
+    // (undocumented)
+    readonly language: ExpressionLanguage;
+    // (undocumented)
+    readonly sampleInput?: ExpressionSampleInputProvider;
+    // (undocumented)
+    readonly serverValidate?: ExpressionServerValidate;
+    // (undocumented)
+    readonly shape?: ExpressionShapeDescriptor;
+}
+
+// @public
+interface ExpressionInputKey {
+    // (undocumented)
+    readonly gloss: string;
+    // (undocumented)
+    readonly name: string;
+}
+
+// @public
+type ExpressionLanguage = 'jq' | (string & {});
+
+// @public
+type ExpressionSampleInputProvider = () => unknown;
+
+// @public
+type ExpressionServerValidate = (args: {
+    readonly expression: string;
+    readonly sampleInput: unknown;
+}) => Promise<ExpressionValidationResult>;
+
+// @public
+interface ExpressionShapeDescriptor {
+    readonly blurb: string;
+    readonly caveats?: readonly string[];
+    readonly id: string;
+    readonly keys: readonly ExpressionInputKey[];
+    readonly label: string;
+    readonly returns: string;
+    readonly sample?: unknown;
+}
+
+// @public
+interface ExpressionValidationResult {
+    // (undocumented)
+    readonly compiles?: boolean;
+    // (undocumented)
+    readonly message?: string;
+    // (undocumented)
+    readonly ok: boolean;
+    // (undocumented)
+    readonly singleEmit?: boolean;
+}
+
+// @public
 export function getContributions(): PluginContributions;
 
 // @public
@@ -41,6 +117,7 @@ interface PageContribution {
 
 // @public
 interface PluginContext {
+    registerExpressionEditor(contribution: ExpressionEditorContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
     registerSettingsTab(contribution: SettingsTabContribution): void;
@@ -49,6 +126,7 @@ interface PluginContext {
 
 // @public
 interface PluginContributions {
+    readonly expressionEditors: ReadonlyMap<string, ExpressionEditorContribution>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)
