@@ -18,10 +18,15 @@ import type { ReactNode } from 'react';
 import { ExpressionEditorsProvider } from '@tai42/studio-sdk';
 import { usePluginContributions } from '@tai42/studio-sdk/host';
 
+// Identity-stable fallback for a contributions object that predates the
+// expression surface (the type is optional) — a fresh Map per render would
+// defeat the provider's identity-keyed memo.
+const EMPTY_EDITORS: ReadonlyMap<string, never> = new Map<string, never>();
+
 export function ExpressionEditorsBridge({ children }: { children: ReactNode }): ReactNode {
   const { contributions } = usePluginContributions();
   return (
-    <ExpressionEditorsProvider editors={contributions.expressionEditors}>
+    <ExpressionEditorsProvider editors={contributions.expressionEditors ?? EMPTY_EDITORS}>
       {children}
     </ExpressionEditorsProvider>
   );

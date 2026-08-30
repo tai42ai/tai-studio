@@ -202,8 +202,12 @@ export interface PluginContributions {
    * resolves its editor by language with no ambiguity. The shell reads this map and
    * feeds it to `ExpressionEditorsProvider`; the plugin surface reaches it only
    * through `useExpressionEditor`, never by enumerating this map.
+   *
+   * Optional in the TYPE (this host always provides it): a contributions object
+   * built against the pre-expression shape — an older host, a test double —
+   * remains a valid `PluginContributions`. Readers fall back to an empty map.
    */
-  readonly expressionEditors: ReadonlyMap<string, ExpressionEditorContribution>;
+  readonly expressionEditors?: ReadonlyMap<string, ExpressionEditorContribution>;
 }
 
 /**
@@ -239,10 +243,13 @@ export interface PluginContext {
    * during registration — never silently skipped — so an editor built against an
    * incompatible props contract is a visible per-plugin error, not a blank field.
    *
-   * This method is OPTIONAL/ADDITIVE: a host that gains it keeps the same
-   * `STUDIO_PLUGIN_API_VERSION`, and every existing plugin loads unchanged.
+   * This method is OPTIONAL/ADDITIVE — optional in the TYPE too, so a plugin
+   * written against this SDK still typechecks against an older host context and
+   * a test double of the pre-expression context stays a valid `PluginContext`.
+   * Plugins feature-detect (`typeof context.registerExpressionEditor ===
+   * 'function'`) and no-op gracefully on hosts that predate the extension point.
    */
-  registerExpressionEditor(contribution: ExpressionEditorContribution): void;
+  registerExpressionEditor?(contribution: ExpressionEditorContribution): void;
 }
 
 /**

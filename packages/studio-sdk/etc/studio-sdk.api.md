@@ -10571,7 +10571,7 @@ interface PinRoutePublicBody {
 
 // @public
 export interface PluginContext {
-    registerExpressionEditor(contribution: ExpressionEditorContribution): void;
+    registerExpressionEditor?(contribution: ExpressionEditorContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
     registerSettingsTab(contribution: SettingsTabContribution): void;
@@ -10580,7 +10580,7 @@ export interface PluginContext {
 
 // @public
 export interface PluginContributions {
-    readonly expressionEditors: ReadonlyMap<string, ExpressionEditorContribution>;
+    readonly expressionEditors?: ReadonlyMap<string, ExpressionEditorContribution>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)

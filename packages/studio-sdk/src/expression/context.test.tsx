@@ -46,6 +46,23 @@ describe('useExpressionEditor', () => {
   });
 });
 
+/** Strict accessors for the optional-typed surface — THIS host always provides
+ *  both; absence would be a real regression, so throw rather than skip. */
+const liveEditors = (): ReadonlyMap<string, ExpressionEditorContribution> => {
+  const editors = getContributions().expressionEditors;
+  if (editors === undefined) throw new Error('this host must provide expressionEditors');
+  return editors;
+};
+const registerStrict = (
+  ctx: { registerExpressionEditor?: (c: ExpressionEditorContribution) => void },
+  contribution: ExpressionEditorContribution,
+): void => {
+  if (ctx.registerExpressionEditor === undefined) {
+    throw new Error('this host must provide registerExpressionEditor');
+  }
+  ctx.registerExpressionEditor(contribution);
+};
+
 describe('useExpressionEditor — live registry (the bridge wiring end to end)', () => {
   afterEach(() => {
     __resetContributions();
@@ -57,16 +74,14 @@ describe('useExpressionEditor — live registry (the bridge wiring end to end)',
     // pass commits an editor, the bridge re-renders on the status flip and hands
     // the provider the (reassigned) map — the mounted hook must upgrade.
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <ExpressionEditorsProvider editors={getContributions().expressionEditors}>
-        {children}
-      </ExpressionEditorsProvider>
+      <ExpressionEditorsProvider editors={liveEditors()}>{children}</ExpressionEditorsProvider>
     );
     const { result, rerender } = renderHook(() => useExpressionEditor('jq'), { wrapper });
     expect(result.current).toBeNull();
 
     await act(async () => {
       await loadPlugin('acme', (ctx) => {
-        ctx.registerExpressionEditor({
+        registerStrict(ctx, {
           language: 'jq',
           contractVersion: EXPRESSION_EDITOR_CONTRACT_VERSION,
           load: () => Promise.resolve({ Editor: () => null }),
