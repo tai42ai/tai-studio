@@ -937,6 +937,54 @@ describe('SchemaForm — safety', () => {
     expect(editor).toHaveValue(JSON.stringify({ swapped: true }, null, 2));
   });
 
+  it('does NOT clobber the buffer when the parent merely echoes or re-renders', () => {
+    // The other direction of the resync guard: our own commit echoing back keeps
+    // the typed text (no reformat to pretty-print), and an unrelated sibling
+    // commit re-rendering the form keeps an in-progress INVALID buffer + error.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        config: { type: 'object', title: 'Config' },
+        name: { type: 'string', title: 'Name' },
+      },
+      required: ['config', 'name'],
+    };
+    render(<Harness schema={schema} initial={{ config: { a: 1 } }} />);
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+
+    // Own commit echo: compact typed text survives, not the pretty-print reseed.
+    fireEvent.change(editor, { target: { value: '{"b":2}' } });
+    expect(emitted()).toBe(JSON.stringify({ config: { b: 2 } }));
+    expect(editor).toHaveValue('{"b":2}');
+
+    // In-progress invalid buffer survives a sibling field's commit re-render.
+    fireEvent.change(editor, { target: { value: '{ not json' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+      target: { value: 'ada' },
+    });
+    expect(emitted()).toBe(JSON.stringify({ config: { b: 2 }, name: 'ada' }));
+    expect(editor).toHaveValue('{ not json');
+    expect(screen.getByRole('alert')).toHaveTextContent(/Invalid JSON/);
+  });
+
+  it('an any-typed JSON field commits bare scalars and null', () => {
+    // An open schema permits every JSON value — scalars and null included.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { anything: { title: 'anything' } },
+      required: ['anything'],
+    };
+    render(<Harness schema={schema} initial={{ anything: { seed: 1 } }} />);
+    const editor = screen.getByRole('textbox', { name: 'anything JSON' });
+
+    fireEvent.change(editor, { target: { value: '42' } });
+    expect(emitted()).toBe(JSON.stringify({ anything: 42 }));
+
+    fireEvent.change(editor, { target: { value: 'null' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(emitted()).toBe(JSON.stringify({ anything: null }));
+  });
+
   it('clears the value when the JSON buffer is emptied', () => {
     const schema: JsonSchema = {
       type: 'object',

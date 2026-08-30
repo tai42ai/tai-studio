@@ -44,6 +44,14 @@ describe('classifySchema — json fallback constructs', () => {
     expect(model).toMatchObject({ kind: 'json', jsonType: 'any' });
   });
 
+  it('keeps an allOf intersection nullable — its null-acceptance is undecidable', () => {
+    // `allOf: [{}, {}]` genuinely permits null; whether any given intersection
+    // does is not decidable here, so the escape hatch never rejects null.
+    const classified = classify({ allOf: [{}, { description: 'extra' }] });
+    expect(classified.model).toMatchObject({ kind: 'json', jsonType: 'any' });
+    expect(classified.nullable).toBe(true);
+  });
+
   it('carries nullability onto a nullable free-form object', () => {
     // `type: ['object', 'null']` with no properties: a json (object) field that
     // also accepts `null`, so the editor and validator let `null` through.

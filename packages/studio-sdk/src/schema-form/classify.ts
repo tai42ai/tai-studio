@@ -246,12 +246,18 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
         description: description ?? inner.description,
       };
     }
+    // Whether the intersection accepts `null` is not statically decidable here
+    // (it does iff EVERY member does), and the json escape hatch only enforces
+    // what it KNOWS — so stay permissive like `jsonType: 'any'` itself and let
+    // the server-side contract be the authority, rather than rejecting a null
+    // the schema may well permit (e.g. an intersection of open schemas).
     return jsonFallback(
       resolved,
       'any',
       'allOf intersection of multiple schemas',
       title,
       description,
+      true,
     );
   }
 
@@ -262,14 +268,17 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
 
   if (nonNullTypes.length === 0) {
     // No `type` at all (an open `{}` schema, or `type: "null"` alone) accepts any
-    // JSON — the classic "any" field. Edit it as free-form JSON.
+    // JSON — the classic "any" field. Edit it as free-form JSON. Nullable is
+    // always true here: `type: "null"` declares it, and an open schema with no
+    // type keyword permits null like any other value (`nullableByType` would say
+    // false for it only because there is no type list to find "null" in).
     return jsonFallback(
       resolved,
       'any',
       'schema declares no renderable type',
       title,
       description,
-      nullableByType,
+      true,
     );
   }
   if (nonNullTypes.length > 1) {
