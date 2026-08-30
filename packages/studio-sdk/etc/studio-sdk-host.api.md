@@ -117,7 +117,7 @@ interface PageContribution {
 
 // @public
 interface PluginContext {
-    registerExpressionEditor(contribution: ExpressionEditorContribution): void;
+    registerExpressionEditor?(contribution: ExpressionEditorContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
     registerSettingsTab(contribution: SettingsTabContribution): void;
@@ -126,7 +126,7 @@ interface PluginContext {
 
 // @public
 interface PluginContributions {
-    readonly expressionEditors: ReadonlyMap<string, ExpressionEditorContribution>;
+    readonly expressionEditors?: ReadonlyMap<string, ExpressionEditorContribution>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)
