@@ -123,9 +123,16 @@ describe('PolicySection — jq condition expression field', () => {
     expect(declaration.language).toBe('jq');
     expect(declaration.shape?.id).toBe('tai42.access-control.jq-auth-context');
     expect(declaration.shape?.returns).toMatch(/true or false/i);
-    expect(declaration.shape?.keys.map((k) => k.name)).toEqual(
-      expect.arrayContaining(['sub', 'scopes', 'policy', 'request']),
-    );
+    // The FULL JqAuthContext key set — a dropped key must fail this test.
+    expect(declaration.shape?.keys.map((k) => k.name)).toEqual([
+      'sub',
+      'scopes',
+      'identity',
+      'policy',
+      'context',
+      'request',
+      'system',
+    ]);
 
     // The Test panel seeds from the sample-context editor (pre-seeded skeleton).
     expect(declaration.sampleInput?.()).toMatchObject({ sub: 'anon', scopes: [] });
