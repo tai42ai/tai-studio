@@ -65,6 +65,35 @@ describe('notifications client transport', () => {
     expect((await emptyClient.listNotifications()).notifications).toEqual([]);
   });
 
+  it('parses the rich sink record shape: audience, media, template and options', async () => {
+    const rich = {
+      ...record,
+      recipient: null,
+      audience: 'u-42',
+      media: [{ kind: 'image', url: 'https://cdn.example.com/x.png', caption: 'x' }],
+      template: { name: 'order_update', language: 'en', parameters: ['#1'] },
+      options: ['Acknowledge', 'Snooze'],
+    };
+    const { client } = harness(() => jsonResponse({ data: { notifications: [rich] } }));
+    const out = await client.listNotifications();
+    const parsed = out.notifications[0];
+    expect(parsed?.audience).toBe('u-42');
+    expect(parsed?.media).toHaveLength(1);
+    expect(parsed?.template?.name).toBe('order_update');
+    expect(parsed?.options).toEqual(['Acknowledge', 'Snooze']);
+  });
+
+  it('parses an older plain record that predates the rich fields (keys omitted)', async () => {
+    // A record written before the parity wave carries no audience/media/template/
+    // options keys; each is `.nullish()`, so an absent key parses to a plain record.
+    const { client } = harness(() => jsonResponse({ data: { notifications: [record] } }));
+    const parsed = (await client.listNotifications()).notifications[0];
+    expect(parsed?.audience).toBeUndefined();
+    expect(parsed?.media).toBeUndefined();
+    expect(parsed?.template).toBeUndefined();
+    expect(parsed?.options).toBeUndefined();
+  });
+
   it('throws ApiSchemaError LOUDLY on a drifting record (missing message)', async () => {
     const { message: _dropped, ...broken } = record;
     const { client } = harness(() => jsonResponse({ data: { notifications: [broken] } }));

@@ -14,21 +14,21 @@ import type { CSSProperties } from 'react';
 import { ErrorInfo } from 'react';
 import { FunctionComponentElement } from 'react';
 import type { HTMLAttributes } from 'react';
-import type { InputHTMLAttributes } from 'react';
+import { InputHTMLAttributes } from 'react';
 import { JSX } from 'react';
 import type { KeyboardEvent as KeyboardEvent_2 } from 'react';
 import type { MouseEvent as MouseEvent_2 } from 'react';
 import { objectOutputType } from 'zod';
 import { Provider } from 'react';
 import { ProviderProps } from 'react';
-import type { ReactElement } from 'react';
+import { ReactElement } from 'react';
 import { ReactNode } from 'react';
 import type { Ref } from 'react';
 import type { RefCallback } from 'react';
 import { RefObject } from 'react';
 import type { SVGProps } from 'react';
 import type { TdHTMLAttributes } from 'react';
-import type { TextareaHTMLAttributes } from 'react';
+import { TextareaHTMLAttributes } from 'react';
 import type { ThHTMLAttributes } from 'react';
 import { z } from 'zod';
 import { ZodArray } from 'zod';
@@ -1268,6 +1268,14 @@ message: string;
 created_at: string;
 id: string;
 recipient: string | null;
+options?: string[] | null | undefined;
+template?: {
+name: string;
+language: string;
+parameters: string[];
+} | null | undefined;
+audience?: string | null | undefined;
+media?: unknown[] | null | undefined;
 }[];
 }>;
 readonly listAgents: (signal?: AbortSignal) => Promise<{
@@ -2548,6 +2556,24 @@ const channels: z.ZodObject<{
     channels: string[];
 }, {
     channels: string[];
+}>;
+
+// @public (undocumented)
+type ChannelTemplate = z.infer<typeof channelTemplate>;
+
+// @public
+const channelTemplate: z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodString;
+    parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    language: string;
+    parameters: string[];
+}, {
+    name: string;
+    language: string;
+    parameters?: string[] | undefined;
 }>;
 
 // @public (undocumented)
@@ -4536,6 +4562,14 @@ function createApiClient(config: ApiConfig): {
             created_at: string;
             id: string;
             recipient: string | null;
+            options?: string[] | null | undefined;
+            template?: {
+                name: string;
+                language: string;
+                parameters: string[];
+            } | null | undefined;
+            audience?: string | null | undefined;
+            media?: unknown[] | null | undefined;
         }[];
     }>;
     readonly listAgents: (signal?: AbortSignal) => Promise<{
@@ -5867,6 +5901,136 @@ export interface ExplorerViewProps<T> {
     readonly viewSurface: string;
 }
 
+// @public
+export const EXPRESSION_EDITOR_CONTRACT_VERSION = 1;
+
+// @public
+export type ExpressionControlProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement> & InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'disabled' | 'rows' | 'placeholder' | 'className' | 'spellCheck' | 'children'>;
+
+// @public
+export interface ExpressionEditorContribution {
+    readonly contractVersion: number;
+    readonly language: ExpressionLanguage;
+    readonly load: () => Promise<{
+        readonly Editor: ComponentType<ExpressionEditorProps>;
+    }>;
+    readonly preload?: () => void;
+}
+
+// @public
+export function ExpressionEditorLauncher(input: ExpressionEditorLauncherProps): ReactElement | null;
+
+// @public (undocumented)
+export interface ExpressionEditorLauncherProps {
+    readonly compact?: boolean;
+    readonly declaration: ExpressionFieldDeclaration;
+    readonly editorReadOnly?: boolean;
+    readonly fieldLabel: string;
+    readonly onSave: (expression: string) => void;
+    readonly title?: string;
+    readonly value: string;
+}
+
+// @public
+export interface ExpressionEditorProps {
+    readonly declaration: ExpressionFieldDeclaration;
+    readonly fieldLabel?: string;
+    readonly initialExpression: string;
+    readonly onClose: () => void;
+    readonly onSave: (expression: string) => void;
+    readonly open: boolean;
+    readonly readOnly?: boolean;
+}
+
+// @public
+export function ExpressionEditorsProvider(input: ExpressionEditorsProviderProps): ReactNode;
+
+// @public (undocumented)
+export interface ExpressionEditorsProviderProps {
+    // (undocumented)
+    readonly children: ReactNode;
+    readonly editors: ReadonlyMap<string, ExpressionEditorContribution>;
+}
+
+// @public (undocumented)
+export function ExpressionField(input: ExpressionFieldProps): ReactElement;
+
+// @public
+export interface ExpressionFieldDeclaration {
+    // (undocumented)
+    readonly language: ExpressionLanguage;
+    // (undocumented)
+    readonly sampleInput?: ExpressionSampleInputProvider;
+    // (undocumented)
+    readonly serverValidate?: ExpressionServerValidate;
+    // (undocumented)
+    readonly shape?: ExpressionShapeDescriptor;
+}
+
+// @public (undocumented)
+export interface ExpressionFieldProps {
+    readonly compact?: boolean;
+    readonly declaration: ExpressionFieldDeclaration;
+    readonly description?: string;
+    readonly disabled?: boolean;
+    readonly editorReadOnly?: boolean;
+    readonly error?: string;
+    readonly fieldLabel?: string;
+    readonly hideLabel?: boolean;
+    readonly label: string;
+    readonly launcherTitle?: string;
+    readonly monospace?: boolean;
+    readonly multiline?: boolean;
+    readonly onChange: (expression: string) => void;
+    readonly placeholder?: string;
+    readonly rows?: number;
+    readonly textareaProps?: ExpressionControlProps;
+    readonly value: string;
+}
+
+// @public
+export interface ExpressionInputKey {
+    // (undocumented)
+    readonly gloss: string;
+    // (undocumented)
+    readonly name: string;
+}
+
+// @public
+export type ExpressionLanguage = 'jq' | (string & {});
+
+// @public
+export type ExpressionSampleInputProvider = () => unknown;
+
+// @public
+export type ExpressionServerValidate = (args: {
+    readonly expression: string;
+    readonly sampleInput: unknown;
+}) => Promise<ExpressionValidationResult>;
+
+// @public
+export interface ExpressionShapeDescriptor {
+    readonly blurb: string;
+    readonly caveats?: readonly string[];
+    readonly id: string;
+    readonly keys: readonly ExpressionInputKey[];
+    readonly label: string;
+    readonly returns: string;
+    readonly sample?: unknown;
+}
+
+// @public
+export interface ExpressionValidationResult {
+    // (undocumented)
+    readonly compiles?: boolean;
+    // (undocumented)
+    readonly message?: string;
+    // (undocumented)
+    readonly ok: boolean;
+    // (undocumented)
+    readonly singleEmit?: boolean;
+}
+
 // @public (undocumented)
 type Extension = z.infer<typeof extension>;
 
@@ -6001,6 +6165,7 @@ export interface FieldProps {
     // (undocumented)
     readonly error?: string;
     readonly group?: boolean;
+    readonly hideLabel?: boolean;
     // (undocumented)
     readonly label: string;
     // (undocumented)
@@ -9689,17 +9854,49 @@ const notification: z.ZodObject<{
     id: z.ZodString;
     message: z.ZodString;
     recipient: z.ZodNullable<z.ZodString>;
+    audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown, "many">>>;
+    template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        name: z.ZodString;
+        language: z.ZodString;
+        parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+        language: string;
+        parameters: string[];
+    }, {
+        name: string;
+        language: string;
+        parameters?: string[] | undefined;
+    }>>>;
+    options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
     created_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     message: string;
     created_at: string;
     id: string;
     recipient: string | null;
+    options?: string[] | null | undefined;
+    template?: {
+        name: string;
+        language: string;
+        parameters: string[];
+    } | null | undefined;
+    audience?: string | null | undefined;
+    media?: unknown[] | null | undefined;
 }, {
     message: string;
     created_at: string;
     id: string;
     recipient: string | null;
+    options?: string[] | null | undefined;
+    template?: {
+        name: string;
+        language: string;
+        parameters?: string[] | undefined;
+    } | null | undefined;
+    audience?: string | null | undefined;
+    media?: unknown[] | null | undefined;
 }>;
 
 // @public (undocumented)
@@ -9714,17 +9911,49 @@ const notifications: z.ZodObject<{
         id: z.ZodString;
         message: z.ZodString;
         recipient: z.ZodNullable<z.ZodString>;
+        audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown, "many">>>;
+        template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            name: z.ZodString;
+            language: z.ZodString;
+            parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+        }, "strip", z.ZodTypeAny, {
+            name: string;
+            language: string;
+            parameters: string[];
+        }, {
+            name: string;
+            language: string;
+            parameters?: string[] | undefined;
+        }>>>;
+        options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
         created_at: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         message: string;
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters: string[];
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }, {
         message: string;
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters?: string[] | undefined;
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     notifications: {
@@ -9732,6 +9961,14 @@ const notifications: z.ZodObject<{
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters: string[];
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }[];
 }, {
     notifications: {
@@ -9739,6 +9976,14 @@ const notifications: z.ZodObject<{
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters?: string[] | undefined;
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }[];
 }>;
 
@@ -10326,6 +10571,7 @@ interface PinRoutePublicBody {
 
 // @public
 export interface PluginContext {
+    registerExpressionEditor(contribution: ExpressionEditorContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
     registerSettingsTab(contribution: SettingsTabContribution): void;
@@ -10334,6 +10580,7 @@ export interface PluginContext {
 
 // @public
 export interface PluginContributions {
+    readonly expressionEditors: ReadonlyMap<string, ExpressionEditorContribution>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)
@@ -12890,6 +13137,8 @@ declare namespace s {
         WebEntryCodeMinted,
         webEntryCodeRevoked,
         WebEntryCodeRevoked,
+        channelTemplate,
+        ChannelTemplate,
         notification,
         Notification_2 as Notification,
         notifications,
@@ -15343,6 +15592,9 @@ export function useCanWrite(path: string, method?: string): boolean;
 
 // @public (undocumented)
 export function useCapabilities(): CapabilityContextValue;
+
+// @public
+export function useExpressionEditor(language: ExpressionLanguage): ExpressionEditorContribution | null;
 
 // @public
 export function useFeatureOff(kind: string): boolean;

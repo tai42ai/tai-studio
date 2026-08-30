@@ -91,6 +91,19 @@ export interface FieldProps {
    * `group`.
    */
   readonly group?: boolean;
+  /**
+   * Render the label for ASSISTIVE TECH ONLY — visually hidden, but still the
+   * control's accessible name through the very same `<label for>` (or, in a group,
+   * the same `aria-labelledby`). The label element stays in the DOM behind
+   * `tai-visually-hidden`, so nothing about the accessible name changes; only its
+   * paint is dropped. It is the standard idiom for a dense grid of otherwise
+   * identical fields, where each row needs a UNIQUE, addressable name (a
+   * voice-control user can only say a name that exists) but there is no room for a
+   * visible label on every row — the same trade `RadioGroup`'s `visuallyHiddenLabel`
+   * and `ViewToggle` make. The label text still governs WCAG 2.5.3 (Label in Name),
+   * so a caller passes the real per-row name as `label`, not a decoration.
+   */
+  readonly hideLabel?: boolean;
 }
 
 export function Field({
@@ -101,6 +114,7 @@ export function Field({
   style,
   className,
   group = false,
+  hideLabel = false,
 }: FieldProps) {
   const controlId = useId();
   const labelId = `${controlId}-label`;
@@ -122,6 +136,10 @@ export function Field({
     ? { controlId: undefined, describedBy: undefined, invalid: error !== undefined }
     : { controlId, describedBy, invalid: error !== undefined };
 
+  // The label keeps its `htmlFor`/`id` wiring either way — `hideLabel` only drops
+  // its PAINT, so the accessible name it gives the control is unchanged.
+  const labelClassName = hideLabel ? 'tai-field-label tai-visually-hidden' : 'tai-field-label';
+
   return (
     <FieldContext.Provider value={value}>
       <div
@@ -129,11 +147,11 @@ export function Field({
         style={style}
       >
         {group ? (
-          <span id={labelId} className="tai-field-label">
+          <span id={labelId} className={labelClassName}>
             {label}
           </span>
         ) : (
-          <label id={labelId} htmlFor={controlId} className="tai-field-label">
+          <label id={labelId} htmlFor={controlId} className={labelClassName}>
             {label}
           </label>
         )}

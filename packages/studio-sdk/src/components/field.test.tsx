@@ -38,4 +38,31 @@ describe('Field', () => {
 
     expect(screen.getByRole('textbox')).toHaveAccessibleName('Email');
   });
+
+  it('keeps the label as the accessible name but visually hides it when hideLabel is set', () => {
+    render(
+      <Field label="Argument 2 expression" hideLabel>
+        <TextInput />
+      </Field>,
+    );
+
+    // The name still comes from the label — only its paint is dropped, so the
+    // control stays addressable in a dense grid that shows no visible label.
+    const control = screen.getByRole('textbox');
+    expect(control).toHaveAccessibleName('Argument 2 expression');
+    const label = screen.getByText('Argument 2 expression');
+    expect(label).toHaveClass('tai-field-label', 'tai-visually-hidden');
+    // The `<label for>` wiring is untouched, which is what preserves the name.
+    expect(label.tagName).toBe('LABEL');
+    expect(label).toHaveAttribute('for', control.getAttribute('id'));
+  });
+
+  it('paints the label by default (hideLabel off)', () => {
+    render(
+      <Field label="Email">
+        <TextInput />
+      </Field>,
+    );
+    expect(screen.getByText('Email')).not.toHaveClass('tai-visually-hidden');
+  });
 });

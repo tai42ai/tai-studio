@@ -756,6 +756,24 @@ const channels: z.ZodObject<{
     channels: string[];
 }>;
 
+// @public (undocumented)
+export type ChannelTemplate = z.infer<typeof channelTemplate>;
+
+// @public
+const channelTemplate: z.ZodObject<{
+    name: z.ZodString;
+    language: z.ZodString;
+    parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    language: string;
+    parameters: string[];
+}, {
+    name: string;
+    language: string;
+    parameters?: string[] | undefined;
+}>;
+
 // @public
 export interface ClaimLinkBody {
     // (undocumented)
@@ -2608,6 +2626,14 @@ export function createApiClient(config: ApiConfig): {
             created_at: string;
             id: string;
             recipient: string | null;
+            options?: string[] | null | undefined;
+            template?: {
+                name: string;
+                language: string;
+                parameters: string[];
+            } | null | undefined;
+            audience?: string | null | undefined;
+            media?: unknown[] | null | undefined;
         }[];
     }>;
     readonly listAgents: (signal?: AbortSignal) => Promise<{
@@ -7014,17 +7040,49 @@ const notification: z.ZodObject<{
     id: z.ZodString;
     message: z.ZodString;
     recipient: z.ZodNullable<z.ZodString>;
+    audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown, "many">>>;
+    template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        name: z.ZodString;
+        language: z.ZodString;
+        parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+    }, "strip", z.ZodTypeAny, {
+        name: string;
+        language: string;
+        parameters: string[];
+    }, {
+        name: string;
+        language: string;
+        parameters?: string[] | undefined;
+    }>>>;
+    options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
     created_at: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     message: string;
     created_at: string;
     id: string;
     recipient: string | null;
+    options?: string[] | null | undefined;
+    template?: {
+        name: string;
+        language: string;
+        parameters: string[];
+    } | null | undefined;
+    audience?: string | null | undefined;
+    media?: unknown[] | null | undefined;
 }, {
     message: string;
     created_at: string;
     id: string;
     recipient: string | null;
+    options?: string[] | null | undefined;
+    template?: {
+        name: string;
+        language: string;
+        parameters?: string[] | undefined;
+    } | null | undefined;
+    audience?: string | null | undefined;
+    media?: unknown[] | null | undefined;
 }>;
 
 // @public (undocumented)
@@ -7040,17 +7098,49 @@ const notifications: z.ZodObject<{
         id: z.ZodString;
         message: z.ZodString;
         recipient: z.ZodNullable<z.ZodString>;
+        audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown, "many">>>;
+        template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+            name: z.ZodString;
+            language: z.ZodString;
+            parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+        }, "strip", z.ZodTypeAny, {
+            name: string;
+            language: string;
+            parameters: string[];
+        }, {
+            name: string;
+            language: string;
+            parameters?: string[] | undefined;
+        }>>>;
+        options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
         created_at: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         message: string;
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters: string[];
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }, {
         message: string;
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters?: string[] | undefined;
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }>, "many">;
 }, "strip", z.ZodTypeAny, {
     notifications: {
@@ -7058,6 +7148,14 @@ const notifications: z.ZodObject<{
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters: string[];
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }[];
 }, {
     notifications: {
@@ -7065,6 +7163,14 @@ const notifications: z.ZodObject<{
         created_at: string;
         id: string;
         recipient: string | null;
+        options?: string[] | null | undefined;
+        template?: {
+            name: string;
+            language: string;
+            parameters?: string[] | undefined;
+        } | null | undefined;
+        audience?: string | null | undefined;
+        media?: unknown[] | null | undefined;
     }[];
 }>;
 
@@ -9856,6 +9962,8 @@ declare namespace s {
         WebEntryCodeMinted,
         webEntryCodeRevoked,
         WebEntryCodeRevoked,
+        channelTemplate,
+        ChannelTemplate,
         notification,
         Notification_2 as Notification,
         notifications,
@@ -10297,6 +10405,8 @@ declare namespace schemas {
         WebEntryCodeMinted,
         webEntryCodeRevoked,
         WebEntryCodeRevoked,
+        channelTemplate,
+        ChannelTemplate,
         notification,
         Notification_2 as Notification,
         notifications,
