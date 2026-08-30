@@ -12,23 +12,38 @@ import type { ComponentType } from 'react';
 import { Context } from 'react';
 import type { CSSProperties } from 'react';
 import { ErrorInfo } from 'react';
+import { ExpressionLanguage } from '@tai42/jq-studio';
 import { FunctionComponentElement } from 'react';
 import type { HTMLAttributes } from 'react';
-import { InputHTMLAttributes } from 'react';
+import type { InputHTMLAttributes } from 'react';
+import { installDefaultJqWorker } from '@tai42/jq-studio';
+import { JQEditorDialog } from '@tai42/jq-studio';
+import { JqEditorDialog } from '@tai42/jq-studio';
+import { JQEditorDialogProps } from '@tai42/jq-studio';
+import { JqEditorDialogProps } from '@tai42/jq-studio';
+import { JqField } from '@tai42/jq-studio';
+import { JqFieldDeclaration } from '@tai42/jq-studio';
+import { JqFieldProps } from '@tai42/jq-studio';
+import { JqInputKey } from '@tai42/jq-studio';
+import { JqInputShapeDescriptor } from '@tai42/jq-studio';
 import { JSX } from 'react';
 import type { KeyboardEvent as KeyboardEvent_2 } from 'react';
 import type { MouseEvent as MouseEvent_2 } from 'react';
 import { objectOutputType } from 'zod';
+import { preloadJq } from '@tai42/jq-studio';
 import { Provider } from 'react';
 import { ProviderProps } from 'react';
-import { ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import { ReactNode } from 'react';
 import type { Ref } from 'react';
 import type { RefCallback } from 'react';
 import { RefObject } from 'react';
+import { SampleInputProvider } from '@tai42/jq-studio';
+import { ServerValidateHook } from '@tai42/jq-studio';
+import { ServerValidationResult } from '@tai42/jq-studio';
 import type { SVGProps } from 'react';
 import type { TdHTMLAttributes } from 'react';
-import { TextareaHTMLAttributes } from 'react';
+import type { TextareaHTMLAttributes } from 'react';
 import type { ThHTMLAttributes } from 'react';
 import { z } from 'zod';
 import { ZodArray } from 'zod';
@@ -5901,135 +5916,7 @@ export interface ExplorerViewProps<T> {
     readonly viewSurface: string;
 }
 
-// @public
-export const EXPRESSION_EDITOR_CONTRACT_VERSION = 1;
-
-// @public
-export type ExpressionControlProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement> & InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'disabled' | 'rows' | 'placeholder' | 'className' | 'spellCheck' | 'children'>;
-
-// @public
-export interface ExpressionEditorContribution {
-    readonly contractVersion: number;
-    readonly language: ExpressionLanguage;
-    readonly load: () => Promise<{
-        readonly Editor: ComponentType<ExpressionEditorProps>;
-    }>;
-    readonly preload?: () => void;
-}
-
-// @public
-export function ExpressionEditorLauncher(input: ExpressionEditorLauncherProps): ReactElement | null;
-
-// @public (undocumented)
-export interface ExpressionEditorLauncherProps {
-    readonly compact?: boolean;
-    readonly declaration: ExpressionFieldDeclaration;
-    readonly editorReadOnly?: boolean;
-    readonly fieldLabel: string;
-    readonly onSave: (expression: string) => void;
-    readonly title?: string;
-    readonly value: string;
-}
-
-// @public
-export interface ExpressionEditorProps {
-    readonly declaration: ExpressionFieldDeclaration;
-    readonly fieldLabel?: string;
-    readonly initialExpression: string;
-    readonly onClose: () => void;
-    readonly onSave: (expression: string) => void;
-    readonly open: boolean;
-    readonly readOnly?: boolean;
-}
-
-// @public
-export function ExpressionEditorsProvider(input: ExpressionEditorsProviderProps): ReactNode;
-
-// @public (undocumented)
-export interface ExpressionEditorsProviderProps {
-    // (undocumented)
-    readonly children: ReactNode;
-    readonly editors: ReadonlyMap<string, ExpressionEditorContribution>;
-}
-
-// @public (undocumented)
-export function ExpressionField(input: ExpressionFieldProps): ReactElement;
-
-// @public
-export interface ExpressionFieldDeclaration {
-    // (undocumented)
-    readonly language: ExpressionLanguage;
-    // (undocumented)
-    readonly sampleInput?: ExpressionSampleInputProvider;
-    // (undocumented)
-    readonly serverValidate?: ExpressionServerValidate;
-    // (undocumented)
-    readonly shape?: ExpressionShapeDescriptor;
-}
-
-// @public (undocumented)
-export interface ExpressionFieldProps {
-    readonly compact?: boolean;
-    readonly declaration: ExpressionFieldDeclaration;
-    readonly description?: string;
-    readonly disabled?: boolean;
-    readonly editorReadOnly?: boolean;
-    readonly error?: string;
-    readonly fieldLabel?: string;
-    readonly hideLabel?: boolean;
-    readonly label: string;
-    readonly launcherTitle?: string;
-    readonly monospace?: boolean;
-    readonly multiline?: boolean;
-    readonly onChange: (expression: string) => void;
-    readonly placeholder?: string;
-    readonly rows?: number;
-    readonly textareaProps?: ExpressionControlProps;
-    readonly value: string;
-}
-
-// @public
-export interface ExpressionInputKey {
-    // (undocumented)
-    readonly gloss: string;
-    // (undocumented)
-    readonly name: string;
-}
-
-// @public
-export type ExpressionLanguage = 'jq' | (string & {});
-
-// @public
-export type ExpressionSampleInputProvider = () => unknown;
-
-// @public
-export type ExpressionServerValidate = (args: {
-    readonly expression: string;
-    readonly sampleInput: unknown;
-}) => Promise<ExpressionValidationResult>;
-
-// @public
-export interface ExpressionShapeDescriptor {
-    readonly blurb: string;
-    readonly caveats?: readonly string[];
-    readonly id: string;
-    readonly keys: readonly ExpressionInputKey[];
-    readonly label: string;
-    readonly returns: string;
-    readonly sample?: unknown;
-}
-
-// @public
-export interface ExpressionValidationResult {
-    // (undocumented)
-    readonly compiles?: boolean;
-    // (undocumented)
-    readonly message?: string;
-    // (undocumented)
-    readonly ok: boolean;
-    // (undocumented)
-    readonly singleEmit?: boolean;
-}
+export { ExpressionLanguage }
 
 // @public (undocumented)
 type Extension = z.infer<typeof extension>;
@@ -6923,6 +6810,8 @@ export type IconComponent = (props: IconProps) => ReactElement;
 // @public
 export type IconProps = SVGProps<SVGSVGElement>;
 
+export { installDefaultJqWorker }
+
 // @public (undocumented)
 type Interaction = z.infer<typeof interaction>;
 
@@ -7139,6 +7028,24 @@ export function isFullProjection(projection: MeProjection): boolean;
 
 // @public
 export function isSafeHttpUrl(url: string): boolean;
+
+export { JQEditorDialog }
+
+export { JqEditorDialog }
+
+export { JQEditorDialogProps }
+
+export { JqEditorDialogProps }
+
+export { JqField }
+
+export { JqFieldDeclaration }
+
+export { JqFieldProps }
+
+export { JqInputKey }
+
+export { JqInputShapeDescriptor }
 
 // @public (undocumented)
 export function JsonDiff(input: JsonDiffProps): ReactNode;
@@ -10571,7 +10478,6 @@ interface PinRoutePublicBody {
 
 // @public
 export interface PluginContext {
-    registerExpressionEditor?(contribution: ExpressionEditorContribution): void;
     registerNavEntry(contribution: NavEntryContribution): void;
     registerPage(contribution: PageContribution): void;
     registerSettingsTab(contribution: SettingsTabContribution): void;
@@ -10580,7 +10486,6 @@ export interface PluginContext {
 
 // @public
 export interface PluginContributions {
-    readonly expressionEditors?: ReadonlyMap<string, ExpressionEditorContribution>;
     // (undocumented)
     readonly navEntries: readonly RegisteredNavEntry[];
     // (undocumented)
@@ -10751,6 +10656,8 @@ const policyVersionList: z.ZodArray<z.ZodObject<{
     created_at: string;
     is_current: boolean;
 }>, "many">;
+
+export { preloadJq }
 
 // @public (undocumented)
 type PresetBody = z.infer<typeof presetBody>;
@@ -13313,6 +13220,8 @@ declare namespace s {
 // @public
 export function safeHttpUrl(href: string): string | undefined;
 
+export { SampleInputProvider }
+
 // @public
 interface SavePresetVersionBody {
     // (undocumented)
@@ -13564,6 +13473,10 @@ const serverDateTime: z.ZodObject<{
     local: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
     system: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
 }, z.ZodTypeAny, "passthrough">>;
+
+export { ServerValidateHook }
+
+export { ServerValidationResult }
 
 // @public
 interface SetMcpSecretEnvBody {
@@ -15592,9 +15505,6 @@ export function useCanWrite(path: string, method?: string): boolean;
 
 // @public (undocumented)
 export function useCapabilities(): CapabilityContextValue;
-
-// @public
-export function useExpressionEditor(language: ExpressionLanguage): ExpressionEditorContribution | null;
 
 // @public
 export function useFeatureOff(kind: string): boolean;

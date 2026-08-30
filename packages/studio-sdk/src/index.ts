@@ -48,27 +48,20 @@ export type {
 export { STUDIO_PLUGIN_API_VERSION, checkPluginApiVersion } from './plugin/version';
 export type { VersionGateResult } from './plugin/version';
 
-// -- Expression fields (declaration vocabulary + editor extension point) ------
-export { EXPRESSION_EDITOR_CONTRACT_VERSION } from './expression/types';
+// -- jq fields (re-exported from @tai42/jq-studio; the platform owns no jq code) --
+export { JqField, JQEditorDialog, JqEditorDialog, preloadJq, installDefaultJqWorker } from './jq';
 export type {
+  JqFieldProps,
+  JQEditorDialogProps,
+  JqEditorDialogProps,
   ExpressionLanguage,
-  ExpressionInputKey,
-  ExpressionShapeDescriptor,
-  ExpressionSampleInputProvider,
-  ExpressionValidationResult,
-  ExpressionServerValidate,
-  ExpressionFieldDeclaration,
-  ExpressionEditorProps,
-  ExpressionEditorContribution,
-} from './expression/types';
-export { ExpressionEditorsProvider, useExpressionEditor } from './expression/context';
-export type { ExpressionEditorsProviderProps } from './expression/context';
-export { ExpressionField, ExpressionEditorLauncher } from './expression/ExpressionField';
-export type {
-  ExpressionFieldProps,
-  ExpressionEditorLauncherProps,
-  ExpressionControlProps,
-} from './expression/ExpressionField';
+  JqInputKey,
+  JqInputShapeDescriptor,
+  SampleInputProvider,
+  ServerValidationResult,
+  ServerValidateHook,
+  JqFieldDeclaration,
+} from './jq';
 
 // -- Hooks -------------------------------------------------------------------
 export { ApiProvider, useApi } from './hooks/useApi';

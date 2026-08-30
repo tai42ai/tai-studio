@@ -33,13 +33,20 @@
  * Every server-supplied string (template id, error text) renders as ESCAPED text
  * through the design-system components — never an HTML sink.
  */
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Badge,
   Button,
   ErrorState,
-  ExpressionField,
+  JqField,
   RadioGroup,
   Select,
   Spinner,
@@ -47,7 +54,8 @@ import {
   Textarea,
   errorMessage,
   useApi,
-  type ExpressionFieldDeclaration,
+  type JqInputShapeDescriptor,
+  type ServerValidateHook,
 } from '@tai42/studio-sdk';
 
 import { templateNamesKey } from './keys';
@@ -117,6 +125,23 @@ function parseSampleContext(raw: string): Record<string, unknown> | undefined {
   return value as Record<string, unknown>;
 }
 
+/**
+ * The LIVE sample the visual editor's Test panel seeds from: the sample-context
+ * editor's current content parsed as an object, or `undefined` when it is blank or
+ * malformed. Returning `undefined` is deliberate — JqField's `sampleInput`
+ * precedence is live → `shape.sample` → blank, so a blank/bad editor falls back to
+ * the static `CONDITION_SHAPE.sample` skeleton upstream rather than seeding Test
+ * with junk. Exported so the seeding is unit-tested directly. See
+ * {@link parseSampleContext} for the parse rules (this one swallows its throw).
+ */
+export function liveSampleInput(raw: string): unknown {
+  try {
+    return parseSampleContext(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 /** The `JqAuthContext` field paths the jq condition can read, shown as hints. */
 const JQ_CONTEXT_HINTS: readonly string[] = [
   '.sub',
@@ -171,6 +196,62 @@ const inlineConfirmStyle: CSSProperties = {
 /** A non-null, non-array object — the shape a stored `policy_data`/`condition_kwargs` takes. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * What `.` IS for the inline jq condition: the `JqAuthContext` enforcement evaluates
+ * it against. Handed to the `JqField` `shape` prop so the visual editor offers path
+ * suggestions/context chips and seeds its Test panel from the static skeleton
+ * (`tai42_contract.access_control.models.JqAuthContext`). Exported so the field's
+ * wiring is unit-tested directly rather than through the editor UI.
+ */
+export const CONDITION_SHAPE: JqInputShapeDescriptor = {
+  id: 'tai42.access-control.jq-auth-context',
+  label: 'auth context',
+  blurb: 'The JqAuthContext the access-control condition is evaluated against at enforcement.',
+  keys: [
+    { name: 'sub', gloss: 'the caller subject id' },
+    { name: 'scopes', gloss: 'the granted scopes (array of strings)' },
+    { name: 'identity', gloss: 'identity claims, read as .identity.*' },
+    { name: 'policy', gloss: 'the key policy_data, read as .policy.*' },
+    { name: 'context', gloss: 'request-time context, read as .context.*' },
+    { name: 'request', gloss: 'the request — .request.path, .request.method' },
+    { name: 'system', gloss: 'system values — .system.time' },
+  ],
+  returns: 'true or false — the request is allowed when the condition returns true',
+  sample: SAMPLE_CONTEXT_OBJECT,
+};
+
+/**
+ * The `JqField` `serverValidate` hook for the inline jq condition, bound to the
+ * client: the SAME fail-closed `validate-condition` guard the inline Test button
+ * hits, so the visual editor validates against exactly what enforcement evaluates.
+ * A non-object sample compiles-only (no `sample_context`); a 400 maps to the guard's
+ * verbatim message. Exported so the guard mapping is unit-tested directly.
+ */
+export function makeConditionServerValidate(api: ReturnType<typeof useApi>): ServerValidateHook {
+  return async ({ expression, sampleInput }) => {
+    try {
+      const sample = isPlainObject(sampleInput) ? sampleInput : undefined;
+      const result = await api.validateCondition(
+        sample === undefined
+          ? { condition: expression }
+          : { condition: expression, sample_context: sample },
+      );
+      return {
+        ok: result.ok,
+        compiles: result.ok,
+        message:
+          result.result === null
+            ? undefined
+            : result.result
+              ? 'allows the sample'
+              : 'denies the sample',
+      };
+    } catch (error) {
+      return { ok: false, compiles: false, message: errorMessage(error) };
+    }
+  };
 }
 
 /** Parse a cell value as JSON when it can be (numbers/bools/objects), else keep the string. */
@@ -465,69 +546,15 @@ export function PolicySection({
     validate.mutate(sample);
   };
 
-  // The expression-field declaration for the inline jq condition: the JqAuthContext
-  // envelope it reads (so the visual editor can offer path suggestions/context
-  // chips), a live sample drawn from the sample-context editor, and the SAME
-  // fail-closed `validate-condition` guard the inline Test button hits. So when the
-  // jq plugin is installed the visual editor authors, samples, and validates against
-  // exactly what enforcement evaluates; with no plugin the field stays a plain
-  // monospace textarea and nothing regresses.
-  const conditionDeclaration = useMemo<ExpressionFieldDeclaration>(
-    () => ({
-      language: 'jq',
-      shape: {
-        id: 'tai42.access-control.jq-auth-context',
-        label: 'auth context',
-        blurb:
-          'The JqAuthContext the access-control condition is evaluated against at enforcement.',
-        keys: [
-          { name: 'sub', gloss: 'the caller subject id' },
-          { name: 'scopes', gloss: 'the granted scopes (array of strings)' },
-          { name: 'identity', gloss: 'identity claims, read as .identity.*' },
-          { name: 'policy', gloss: 'the key policy_data, read as .policy.*' },
-          { name: 'context', gloss: 'request-time context, read as .context.*' },
-          { name: 'request', gloss: 'the request — .request.path, .request.method' },
-          { name: 'system', gloss: 'system values — .system.time' },
-        ],
-        returns: 'true or false — the request is allowed when the condition returns true',
-        sample: SAMPLE_CONTEXT_OBJECT,
-      },
-      // The visual editor's Test panel seeds from the live sample-context editor
-      // when it parses, falling back to the JqAuthContext skeleton when blank/bad.
-      sampleInput: () => {
-        try {
-          return parseSampleContext(sampleContext) ?? SAMPLE_CONTEXT_OBJECT;
-        } catch {
-          return SAMPLE_CONTEXT_OBJECT;
-        }
-      },
-      // The fail-closed jq guard: compile the condition and (with a sample object)
-      // evaluate it. A 400 is the guard's verbatim message, mapped to ok:false.
-      serverValidate: async ({ expression, sampleInput }) => {
-        try {
-          const sample = isPlainObject(sampleInput) ? sampleInput : undefined;
-          const result = await api.validateCondition(
-            sample === undefined
-              ? { condition: expression }
-              : { condition: expression, sample_context: sample },
-          );
-          return {
-            ok: result.ok,
-            compiles: result.ok,
-            message:
-              result.result === null
-                ? undefined
-                : result.result
-                  ? 'allows the sample'
-                  : 'denies the sample',
-          };
-        } catch (error) {
-          return { ok: false, compiles: false, message: errorMessage(error) };
-        }
-      },
-    }),
-    [api, sampleContext],
-  );
+  // The inline jq condition's server-validate hook, bound to the client (the shape
+  // is the static {@link CONDITION_SHAPE}); the visual editor's Test panel seeds
+  // from the LIVE sample-context editor via {@link provideSampleInput}, so the
+  // editor validates against exactly what the section's own Test button below runs.
+  const conditionServerValidate = useMemo(() => makeConditionServerValidate(api), [api]);
+  // The live-sample provider for JqField's Test panel: the current sample-context
+  // editor content parsed to an object, or undefined (blank/malformed) so JqField
+  // falls back to the static CONDITION_SHAPE.sample skeleton (live → shape → blank).
+  const provideSampleInput = useCallback(() => liveSampleInput(sampleContext), [sampleContext]);
 
   const fields = useMemo<PolicyFields>(() => {
     const out: PolicyFields = {};
@@ -674,11 +701,14 @@ export function PolicySection({
 
       {mode === 'inline' ? (
         <div>
-          <ExpressionField
+          <JqField
             label="jq condition"
-            declaration={conditionDeclaration}
+            shape={CONDITION_SHAPE}
+            sampleInput={provideSampleInput}
+            serverValidate={conditionServerValidate}
+            multiline
             value={condition}
-            disabled={disabled}
+            readOnly={disabled}
             onChange={(next) => {
               setCondition(next);
               // Editing invalidates the last Test result, clearing the non-blocking
