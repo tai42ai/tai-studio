@@ -160,11 +160,14 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
   const title = firstString(raw.title, resolved.title);
   const description = firstString(raw.description, resolved.description);
 
-  // const pins a single value.
+  // const pins a single value. Null-acceptance is fully decidable here: the one
+  // permitted value either IS null or it is not. Without this, a `const: null`
+  // field would seed to null and then fail the validator's upstream "must not be
+  // null" gate before the equality check ever ran — permanently invalid.
   if ('const' in resolved) {
     return {
       model: { kind: 'const', value: resolved.const },
-      nullable: false,
+      nullable: resolved.const === null,
       schema: resolved,
       title,
       description,

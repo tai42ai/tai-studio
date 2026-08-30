@@ -24,6 +24,19 @@ describe('validateAgainstSchema', () => {
     expect(validateAgainstSchema(schema, { nickname: null })).toEqual({});
   });
 
+  it('accepts null for a const-null field and rejects everything else', () => {
+    // The one shape whose null-acceptance is pinned BY the schema itself; the
+    // seeded default (null) must validate, or the field is permanently invalid.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { tombstone: { const: null } },
+      required: ['tombstone'],
+    };
+    expect(validateAgainstSchema(schema, { tombstone: null })).toEqual({});
+    const errors = validateAgainstSchema(schema, { tombstone: 'x' });
+    expect(errors.tombstone).toMatch(/must equal/);
+  });
+
   it('flags a type mismatch on a number field', () => {
     const schema: JsonSchema = {
       type: 'object',

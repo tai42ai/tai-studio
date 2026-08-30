@@ -84,6 +84,15 @@ describe('classifySchema — json fallback constructs', () => {
   });
 });
 
+describe('classifySchema — const', () => {
+  it('a const-null field is nullable; any other const is not', () => {
+    const pinnedNull = classify({ const: null });
+    expect(pinnedNull.model).toMatchObject({ kind: 'const', value: null });
+    expect(pinnedNull.nullable).toBe(true);
+    expect(classify({ const: 'widget' }).nullable).toBe(false);
+  });
+});
+
 describe('classifySchema — record (additionalProperties map)', () => {
   it('classifies a string→X map as a record and surfaces the value schema', () => {
     const model = classify({

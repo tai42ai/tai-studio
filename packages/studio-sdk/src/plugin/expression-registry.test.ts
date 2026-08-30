@@ -30,6 +30,31 @@ describe('plugin registry — registerExpressionEditor', () => {
     expect(editors.get('jq')?.language).toBe('jq');
   });
 
+  it('turns the map identity over on commit — a mounted provider must be re-notified', async () => {
+    // The provider memoizes its context value on the map's identity, so a field
+    // mounted BEFORE the load pass (core routes never wait for it) only learns
+    // about a committed editor through this turnover.
+    const before = getContributions().expressionEditors;
+    await loadPlugin('acme', (ctx) => {
+      ctx.registerExpressionEditor(editor('jq'));
+    });
+    const after = getContributions().expressionEditors;
+    expect(after).not.toBe(before);
+    expect(before.has('jq')).toBe(false);
+    expect(after.has('jq')).toBe(true);
+  });
+
+  it('keeps the map identity stable across a load that registers no editor', async () => {
+    await loadPlugin('acme', (ctx) => {
+      ctx.registerExpressionEditor(editor('jq'));
+    });
+    const before = getContributions().expressionEditors;
+    await loadPlugin('globex', () => {
+      // registers nothing
+    });
+    expect(getContributions().expressionEditors).toBe(before);
+  });
+
   it('throws when one plugin registers the same language twice (staged)', async () => {
     await expect(
       loadPlugin('acme', (ctx) => {

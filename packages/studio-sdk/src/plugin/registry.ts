@@ -27,7 +27,12 @@ const toolPanels = new Map<string, ToolPanelContribution>();
 const pages: RegisteredPage[] = [];
 const settingsTabs: RegisteredSettingsTab[] = [];
 const navEntries: RegisteredNavEntry[] = [];
-const expressionEditors = new Map<string, ExpressionEditorContribution>();
+// `let`, never mutated in place: {@link ExpressionEditorsProvider} memoizes its
+// context value on this map's IDENTITY, so committing an editor must turn the
+// identity over — otherwise a field mounted on a core route (which never waits
+// for the plugin load pass) would keep the stale empty map and never grow its
+// launcher. The commit path below reassigns; nothing calls `.set` on it.
+let expressionEditors = new Map<string, ExpressionEditorContribution>();
 
 /**
  * Load one plugin: call its `register` entry with a context bound to `pluginId`,
@@ -196,8 +201,10 @@ export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<
   for (const navEntry of stagedNavEntries) {
     navEntries.push(navEntry);
   }
-  for (const [language, contribution] of stagedExpressionEditors) {
-    expressionEditors.set(language, contribution);
+  if (stagedExpressionEditors.size > 0) {
+    // Reassign (see the declaration): identity turnover is what re-notifies
+    // mounted ExpressionFields when the load pass commits an editor.
+    expressionEditors = new Map([...expressionEditors, ...stagedExpressionEditors]);
   }
 }
 
@@ -212,5 +219,5 @@ export function __resetContributions(): void {
   pages.length = 0;
   settingsTabs.length = 0;
   navEntries.length = 0;
-  expressionEditors.clear();
+  expressionEditors = new Map();
 }
