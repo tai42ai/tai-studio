@@ -1,4 +1,5 @@
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ApiProvider,
@@ -74,9 +75,12 @@ function renderWithProviders(
   render(ui, { wrapper });
 }
 
-/** A stub client exposing only the notifications endpoint the page consumes. */
+/**
+ * A stub client exposing only what the page consumes: the notifications endpoint
+ * and the `baseUrl` the media renderer reads (`''` == same-origin deployment).
+ */
 function stubClient(listNotifications: ApiClient['listNotifications']): ApiClient {
-  return { listNotifications } as unknown as ApiClient;
+  return { listNotifications, baseUrl: '' } as unknown as ApiClient;
 }
 
 const baseProjection: MeProjection = {
@@ -118,33 +122,189 @@ const record = {
   id: 'n1',
   message: 'Backup completed',
   recipient: 'ops',
+  audience: null,
+  media: null,
+  template: null,
+  options: null,
   created_at: '2026-07-11T00:00:00Z',
 };
 
 describe('NotificationsPage', () => {
-  it('renders a row per notification, newest-first as served', async () => {
+  it('renders a card per notification, newest-first as served', async () => {
     const client = stubClient(
       vi.fn().mockResolvedValue({
         notifications: [
           record,
-          { id: 'n2', message: 'Disk low', recipient: null, created_at: '2026-07-10T00:00:00Z' },
+          {
+            ...record,
+            id: 'n2',
+            message: 'Disk low',
+            recipient: null,
+            created_at: '2026-07-10T00:00:00Z',
+          },
         ],
       }),
     );
     renderWithProviders(<NotificationsPage search={{}} />, { client });
 
-    const table = await screen.findByTestId('notifications-table');
-    // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
-    // widens the document instead of scrolling inside its own box.
-    for (const table of document.querySelectorAll('table')) {
-      expect(table.closest('.tai-scroll-region')).not.toBeNull();
-    }
-    const rows = within(table).getAllByRole('row');
-    // Header row + two data rows.
-    expect(rows).toHaveLength(3);
-    expect(within(table).getByText('Backup completed')).toBeInTheDocument();
-    expect(within(table).getByText('ops')).toBeInTheDocument();
-    expect(within(table).getByText('Disk low')).toBeInTheDocument();
+    const list = await screen.findByTestId('notifications-list');
+    const cards = within(list).getAllByTestId('notification-card');
+    expect(cards).toHaveLength(2);
+    // Served order is preserved (newest-first is the server's contract).
+    expect(cards[0]).toHaveAttribute('data-notification-id', 'n1');
+    expect(cards[1]).toHaveAttribute('data-notification-id', 'n2');
+    expect(within(list).getByText('Backup completed')).toBeInTheDocument();
+    expect(within(list).getByText('Disk low')).toBeInTheDocument();
+    expect(within(list).getByText('Recipient: ops')).toBeInTheDocument();
+  });
+
+  it('renders the full rich shape: an inline image, a link, options and audience', async () => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          {
+            ...record,
+            id: 'rich',
+            message: 'Release shipped',
+            recipient: null,
+            audience: 'u-42',
+            media: [
+              { kind: 'image', url: 'https://cdn.example.com/ship.png', caption: 'The ship' },
+              { kind: 'link', url: 'https://example.com/notes', caption: 'Release notes' },
+            ],
+            options: ['Acknowledge', 'Snooze'],
+          },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const card = await screen.findByTestId('notification-card');
+    // The image renders as a real <img> with its caption as alt text.
+    const image = within(card).getByRole('img', { name: 'The ship' });
+    expect(image).toHaveAttribute('src', 'https://cdn.example.com/ship.png');
+    // The link renders through the safe external-link button, labelled by its caption.
+    expect(within(card).getByText('Release notes')).toBeInTheDocument();
+    // Options render as inert chips.
+    const options = within(card).getByTestId('notification-options');
+    expect(within(options).getByText('Acknowledge')).toBeInTheDocument();
+    expect(within(options).getByText('Snooze')).toBeInTheDocument();
+    // The addressed identity shows in the metadata.
+    expect(within(card).getByText('Audience: u-42')).toBeInTheDocument();
+  });
+
+  it('renders an inline data:image (the sink stores media raw)', async () => {
+    const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCA';
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          { ...record, id: 'd', media: [{ kind: 'image', url: dataUri, caption: 'inline' }] },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const image = await screen.findByRole('img', { name: 'inline' });
+    expect(image).toHaveAttribute('src', dataUri);
+    expect(screen.queryByTestId('notification-media-blocked')).not.toBeInTheDocument();
+  });
+
+  it('blocks a disallowed image scheme loudly, never as a live src', async () => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          {
+            ...record,
+            id: 'b',
+            media: [{ kind: 'image', url: 'http://insecure.example/x.png', caption: 'nope' }],
+          },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const blocked = await screen.findByTestId('notification-media-blocked');
+    expect(within(blocked).getByText('http://insecure.example/x.png')).toBeInTheDocument();
+    // The blocked url is escaped text, never an image element.
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['a non-image data uri', 'data:text/html,<script>1</script>'],
+    ['a javascript url', 'javascript:alert(1)'],
+  ])('blocks %s loudly, never as a live src', async (_label, url) => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [{ ...record, id: 'b', media: [{ kind: 'image', url, caption: 'nope' }] }],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const blocked = await screen.findByTestId('notification-media-blocked');
+    expect(within(blocked).getByText(url)).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('shows a loud per-item notice for a malformed media item without dropping the record', async () => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          {
+            ...record,
+            id: 'm',
+            message: 'Still visible',
+            media: [{ kind: 'image' }, { kind: 'link', url: 'https://ok.example', caption: 'ok' }],
+          },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    expect(await screen.findByTestId('notification-media-malformed')).toBeInTheDocument();
+    // The record itself — and its good item — still render.
+    expect(screen.getByText('Still visible')).toBeInTheDocument();
+    expect(screen.getByText('ok')).toBeInTheDocument();
+  });
+
+  it('renders a stored template block', async () => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          {
+            ...record,
+            id: 't',
+            template: { name: 'order_update', language: 'en', parameters: ['#123', 'shipped'] },
+          },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const template = await screen.findByTestId('notification-template');
+    expect(within(template).getByText('order_update')).toBeInTheDocument();
+    expect(within(template).getByText('en')).toBeInTheDocument();
+    expect(within(template).getByText('Parameters: #123, shipped')).toBeInTheDocument();
+  });
+
+  it('reveals more with the "Show more" control when the feed exceeds one page', async () => {
+    const notifications = Array.from({ length: 25 }, (_unused, index) => ({
+      ...record,
+      id: `n${String(index)}`,
+      message: `Notice ${String(index)}`,
+    }));
+    const client = stubClient(vi.fn().mockResolvedValue({ notifications }));
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const list = await screen.findByTestId('notifications-list');
+    // The first page (20) is shown; the tail waits behind the reveal.
+    expect(within(list).getAllByTestId('notification-card')).toHaveLength(20);
+    const more = screen.getByRole('button', { name: /Show more \(5\)/ });
+    await userEvent.click(more);
+    await waitFor(() => {
+      expect(within(list).getAllByTestId('notification-card')).toHaveLength(25);
+    });
+    // Fully revealed — the control is gone.
+    expect(screen.queryByRole('button', { name: /Show more/ })).not.toBeInTheDocument();
   });
 
   it('renders the empty state when the feed is empty', async () => {
@@ -152,7 +312,7 @@ describe('NotificationsPage', () => {
     renderWithProviders(<NotificationsPage search={{}} />, { client });
 
     expect(await screen.findByText('No notifications')).toBeInTheDocument();
-    expect(screen.queryByTestId('notifications-table')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('notifications-list')).not.toBeInTheDocument();
   });
 
   it('a scoped projection shows the per-identity empty-state copy', async () => {

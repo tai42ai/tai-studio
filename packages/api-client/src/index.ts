@@ -142,6 +142,7 @@ export type {
   WebEntryCodeRevoked,
   Notification,
   Notifications,
+  ChannelTemplate,
   HookParams,
   HookList,
   TriggerAuth,
