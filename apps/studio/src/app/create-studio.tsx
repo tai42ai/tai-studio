@@ -8,7 +8,7 @@
  * Provider order (outermost→inner): ThemeProvider ▸ AuthProvider ▸
  * QueryClientProvider ▸ ApiProvider ▸ UnauthorizedProvider ▸ CapabilityProvider ▸
  * SystemKindsProvider ▸ ToolDisplayNamesProvider ▸ NavigationProvider ▸
- * ExpressionEditorsBridge ▸ RouterProvider.
+ * JqPrimitivesProvider ▸ RouterProvider.
  */
 import { useEffect, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -32,7 +32,7 @@ import { ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
 import { PATH } from './routes';
 import { buildRouter, type AppRouter } from './router';
 import { AppErrorBoundary } from './error-boundary';
-import { ExpressionEditorsBridge } from './expression-editors-bridge';
+import { JqPrimitivesProvider } from './jq-primitives';
 import { createNavigation } from './navigation';
 import {
   createPluginLoader,
@@ -181,13 +181,13 @@ export function createStudio(deps: StudioDeps): Studio {
 
     return (
       <NavigationProvider value={navigation}>
-        {/* Publishes the plugin-contributed expression editors to the whole routed
-            tree, so a host feature's or a plugin page's ExpressionField resolves an
-            editor for its language (React is the shared import-map singleton, so one
-            provider reaches both). */}
-        <ExpressionEditorsBridge>
+        {/* Injects the Studio design system into @tai42/jq-studio once for the whole
+            routed tree, so every JqField — a host feature's or a plugin page's —
+            paints in the SDK look off the single shared jq-studio instance (React is
+            the import-map singleton, so one provider reaches both). */}
+        <JqPrimitivesProvider>
           <RouterProvider router={router} />
-        </ExpressionEditorsBridge>
+        </JqPrimitivesProvider>
       </NavigationProvider>
     );
   }

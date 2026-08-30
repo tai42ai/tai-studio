@@ -159,6 +159,8 @@ const PUBLISHED_WITHOUT_A_CALL_SITE: Readonly<Record<string, string>> = {
     'the solid warning fill, published so a chart legend or a status swatch draws `--tai-color-warn-fill` with the `on-fill` ink instead of inventing its own pair',
   'tai-clamp-2':
     'the two-line card-description clamp, published so a consuming card renderer can hold its description to two lines and keep a card grid row uniform',
+  'tai-input-mono':
+    'the single-line half of the monospace-input pair (its `.tai-textarea-mono` sibling is rendered by SchemaEditor and the JSON field), published so a consumer can paint a code/expression value in the design-system mono face on one line',
 };
 
 /**

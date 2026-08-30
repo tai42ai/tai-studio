@@ -290,8 +290,6 @@ function fieldOpens(source: string): FieldOpen[] {
  * such sites in the repo. A new one reddens until someone reads it.
  */
 const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
-  'packages/studio-sdk/src/expression/ExpressionField.tsx':
-    'A Textarea (multiline) or a TextInput (single-line), both of which claim the control id — no marker needed.',
   'packages/features/agents/src/ComposeAgentDialog.tsx':
     'ErrorState on a failed read, MultiToolPicker / PresetSpecEditor / SubAgentComposer otherwise — all three are marked group, so neither branch claims the control id.',
   'packages/features/hooks/src/ExecutionKeyPicker.tsx':

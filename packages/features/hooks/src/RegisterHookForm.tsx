@@ -26,14 +26,14 @@ import {
   Button,
   Card,
   ErrorState,
-  ExpressionField,
   Field,
+  JqField,
   Spinner,
   Textarea,
   TextInput,
   errorMessage,
   useApi,
-  type ExpressionFieldDeclaration,
+  type JqFieldDeclaration,
 } from '@tai42/studio-sdk';
 import type { HookParams } from '@tai42/api-client';
 
@@ -49,10 +49,11 @@ import { fireGateUnsatisfiable } from './fire-path-gate';
  * OPEN document descriptor (no fixed keys) rather than inventing an envelope the
  * server does not promise. There is no author-time validate endpoint for a hook
  * spec (unlike the policy condition's `validate-condition` guard), so neither
- * declaration wires `serverValidate`. When the jq plugin is installed each field
- * grows a visual-editor door; without it each stays a plain monospace input.
+ * declaration wires `serverValidate`. Each field is a `JqField`: a resting input
+ * with an always-present visual-editor door, both painted in the SDK design system
+ * the host injects into jq-studio once at the root.
  */
-const HOOK_CONDITION_DECLARATION: ExpressionFieldDeclaration = {
+const HOOK_CONDITION_DECLARATION: JqFieldDeclaration = {
   language: 'jq',
   shape: {
     id: 'tai42.hooks.condition',
@@ -64,7 +65,7 @@ const HOOK_CONDITION_DECLARATION: ExpressionFieldDeclaration = {
   },
 };
 
-const HOOK_EXPR_DECLARATION: ExpressionFieldDeclaration = {
+const HOOK_EXPR_DECLARATION: JqFieldDeclaration = {
   language: 'jq',
   shape: {
     id: 'tai42.hooks.expr',
@@ -280,18 +281,18 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
           }}
         />
       </Field>
-      <ExpressionField
+      <JqField
         label="Condition"
         description="Optional inline condition spec; blank leaves it unset."
-        declaration={HOOK_CONDITION_DECLARATION}
+        shape={HOOK_CONDITION_DECLARATION.shape}
         multiline={false}
         value={condition}
         onChange={setCondition}
       />
-      <ExpressionField
+      <JqField
         label="Expr"
         description="Optional inline expression spec; blank leaves it unset."
-        declaration={HOOK_EXPR_DECLARATION}
+        shape={HOOK_EXPR_DECLARATION.shape}
         multiline={false}
         value={expr}
         onChange={setExpr}

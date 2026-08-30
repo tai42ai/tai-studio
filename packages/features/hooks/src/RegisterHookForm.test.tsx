@@ -4,35 +4,14 @@
  * prefill and id-gate preservation on save, the inline charset-400 surface, the
  * edit-dialog Cancel/close contract, and the honest "list unavailable" fallback.
  */
-import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ApiError } from '@tai42/api-client';
-import {
-  EXPRESSION_EDITOR_CONTRACT_VERSION,
-  ExpressionEditorsProvider,
-  type ExpressionEditorContribution,
-} from '@tai42/studio-sdk';
 
 import { RegisterHookForm } from './RegisterHookForm';
 import { apiKey, hook, renderWithProviders, type StubApiClient } from './test-utils';
-
-/** A registered fake jq editor: enough for a field to grow its visual-editor door. */
-function withJqEditor(node: ReactElement): ReactElement {
-  const editors = new Map<string, ExpressionEditorContribution>([
-    [
-      'jq',
-      {
-        language: 'jq',
-        contractVersion: EXPRESSION_EDITOR_CONTRACT_VERSION,
-        load: () => Promise.resolve({ Editor: () => null }),
-      },
-    ],
-  ]);
-  return <ExpressionEditorsProvider editors={editors}>{node}</ExpressionEditorsProvider>;
-}
 
 /** Open the execution-key Select and pick the seeded svc-events key. */
 async function pickExecutionKey(user: ReturnType<typeof userEvent.setup>): Promise<void> {
@@ -215,30 +194,28 @@ describe('RegisterHookForm — jq condition/expr expression fields', () => {
     );
   });
 
-  it('grows a visual-editor door on each jq field only when a jq editor is registered', async () => {
+  it('offers an always-present visual-editor door on EACH jq field (condition and expr)', async () => {
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     };
 
-    // No provider: the fields stay plain inputs, no launcher.
-    const { unmount } = renderWithProviders(<RegisterHookForm />, { client });
-    expect(
-      screen.queryByRole('button', { name: /open the visual editor for condition/i }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /open the visual editor for expr/i }),
-    ).not.toBeInTheDocument();
-    unmount();
+    // JqField is a direct dependency now (no editor-registry door): the visual
+    // editor is always available, so both jq fields render their door unconditionally.
+    // The door now folds its field label into its accessible name
+    // ("Open the visual editor for <label>"), so each door is pinned to its own field
+    // by name — a bare count could not tell WHICH fields got one.
+    renderWithProviders(<RegisterHookForm />, { client });
 
-    // With a registered jq editor: each field grows its door.
-    renderWithProviders(withJqEditor(<RegisterHookForm />), { client });
     expect(
-      await screen.findByRole('button', { name: /open the visual editor for condition/i }),
+      await screen.findByRole('button', { name: 'Open the visual editor for Condition' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /open the visual editor for expr/i }),
+      screen.getByRole('button', { name: 'Open the visual editor for Expr' }),
     ).toBeInTheDocument();
+
+    // And exactly two doors total across the form — no third field grew one.
+    expect(screen.getAllByRole('button', { name: /Open the visual editor for/i })).toHaveLength(2);
   });
 });
 

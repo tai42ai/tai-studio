@@ -76,8 +76,11 @@ const API_CLIENT_INTERNAL = [];
 // Third-party packages each layer may import in production code. Kept in sync
 // with the packages actually imported by each layer's source.
 const FEATURE_EXTERNAL = ['react', 'react-dom', '@tanstack/react-query', '@dnd-kit/core', 'uqr'];
-const APP_EXTERNAL = ['react', 'react-dom', '@tanstack/*', 'zustand'];
-const SDK_EXTERNAL = ['react', 'react-dom', '@radix-ui/*'];
+const APP_EXTERNAL = ['react', 'react-dom', '@tanstack/*', 'zustand', '@tai42/jq-studio'];
+// `@tai42/jq-studio` is a separately-published package (its own npm release, not a
+// workspace-internal @tai42/* like the SDK/features), so it is an EXTERNAL the SDK
+// re-exports (`JqField` + the editor surface) and the app injects primitives into.
+const SDK_EXTERNAL = ['react', 'react-dom', '@radix-ui/*', '@tai42/jq-studio'];
 const API_CLIENT_EXTERNAL = ['zod'];
 
 // Third-party packages allowed ONLY in test and test-support code (TEST_GLOBS),
@@ -234,10 +237,14 @@ export default tseslint.config(
       'boundaries/dependencies': boundariesDependenciesRule(true),
     },
   },
-  // The SDK is the leaf: it imports nothing internal AT RUNTIME. Type-only
-  // imports are allowed (erased at build) so the hooks can be typed by
+  // The SDK is the leaf: it imports nothing WORKSPACE-INTERNAL at runtime.
+  // Type-only imports are allowed (erased at build) so the hooks can be typed by
   // @tai42/api-client's `ApiClient`/`Interaction` without a runtime coupling that
-  // would break the shared-singleton boundary.
+  // would break the shared-singleton boundary. `@tai42/jq-studio` is the one
+  // exception: it is a SEPARATELY-PUBLISHED third-party package (its own npm
+  // release, not part of this monorepo's graph — like `@radix-ui/*`), and the SDK
+  // re-exports its `JqField`/editor surface as a direct runtime dependency so the
+  // whole deployment shares one jq copy. It is excluded from the group below.
   {
     files: ['packages/studio-sdk/src/**/*.{ts,tsx}'],
     rules: {
@@ -249,10 +256,10 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: ['@tai42/*'],
+              group: ['@tai42/*', '!@tai42/jq-studio'],
               allowTypeImports: true,
               message:
-                'The SDK is the leaf package and must not import any internal @tai42/* package at runtime (type-only imports are allowed).',
+                'The SDK is the leaf package and must not import any workspace-internal @tai42/* package at runtime (type-only imports are allowed). The published @tai42/jq-studio is the one runtime exception.',
             },
           ],
         },
