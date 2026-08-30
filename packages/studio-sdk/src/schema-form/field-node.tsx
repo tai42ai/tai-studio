@@ -13,12 +13,12 @@ import { ArrayField } from './array-field';
 import { classifySchema } from './classify';
 import { EnumField } from './enum-field';
 import { FieldGroup } from './field-group';
+import { JsonField } from './json-field';
 import { ObjectFields } from './object-fields';
 import { RecordField } from './record-field';
 import { scalarLabel } from './resolve';
 import { StringField } from './string-field';
 import { UnionField } from './union-field';
-import { UnsupportedNotice } from './unsupported-notice';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
 interface FieldNodeProps {
@@ -48,13 +48,16 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
   const model = classified.model;
 
   switch (model.kind) {
-    case 'unsupported':
+    case 'json':
       return (
-        <UnsupportedNotice
+        <JsonField
           heading={heading}
-          reason={model.reason}
           description={description}
           error={error}
+          jsonType={model.jsonType}
+          nullable={classified.nullable}
+          value={value}
+          onChange={onChange}
         />
       );
     case 'const':

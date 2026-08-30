@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -822,18 +822,182 @@ describe('SchemaForm — media upload', () => {
 });
 
 describe('SchemaForm — safety', () => {
-  it('renders an unsupported construct loudly without dropping the field', () => {
+  it('renders a JSON editor for a shapeless construct without dropping the field', () => {
     const schema: JsonSchema = {
       type: 'object',
       properties: { anything: { title: 'anything' } },
       required: ['anything'],
     };
     render(<Harness schema={schema} initial={{}} />);
-    expect(screen.getByText('Unsupported')).toBeInTheDocument();
-    // The heading and the state are already on screen — the Field prints one and
-    // the Badge the other. The hint carries the REASON and nothing else.
-    expect(screen.getByText('schema declares no renderable type')).toBeInTheDocument();
-    expect(screen.queryByText(/unsupported field/)).toBeNull();
+    // The field is EDITABLE, not a dead badge: a free-form JSON textarea stands in.
+    expect(screen.getByRole('textbox', { name: 'anything JSON' })).toBeInTheDocument();
+    expect(screen.getByText(/free-form JSON — this field has no structured schema/)).toHaveClass(
+      'tai-field-hint',
+    );
+    expect(screen.queryByText('Unsupported')).toBeNull();
+  });
+
+  it('seeds the JSON editor with the current value and commits a parsed edit', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { config: { type: 'object', title: 'Config' } },
+      required: ['config'],
+    };
+    render(<Harness schema={schema} initial={{ config: { a: 1 } }} />);
+
+    // Seeded, pretty-printed, from the current value.
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+    expect(editor).toHaveValue(JSON.stringify({ a: 1 }, null, 2));
+
+    // A valid edit commits the PARSED object through the normal onChange path.
+    fireEvent.change(editor, { target: { value: '{ "b": 2 }' } });
+    expect(emitted()).toBe(JSON.stringify({ config: { b: 2 } }));
+  });
+
+  it('shows an inline error and does NOT commit an unparseable buffer', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { config: { type: 'object', title: 'Config' } },
+      required: ['config'],
+    };
+    render(<Harness schema={schema} initial={{ config: { keep: true } }} />);
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+
+    fireEvent.change(editor, { target: { value: '{ not json' } });
+    // Loud inline error…
+    expect(screen.getByRole('alert')).toHaveTextContent(/Invalid JSON/);
+    // …and the last committed value stands — the broken buffer never wrote through.
+    expect(emitted()).toBe(JSON.stringify({ config: { keep: true } }));
+    // The invalid text is still in the box for the user to fix.
+    expect(editor).toHaveValue('{ not json');
+  });
+
+  it('rejects a well-formed value of the wrong container without committing', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { config: { type: 'object', title: 'Config' } },
+      required: ['config'],
+    };
+    render(<Harness schema={schema} initial={{ config: {} }} />);
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+
+    // Parses, but a JSON object was required — flagged, not committed.
+    fireEvent.change(editor, { target: { value: '[1, 2, 3]' } });
+    expect(screen.getByRole('alert')).toHaveTextContent(/Must be a JSON object/);
+    expect(emitted()).toBe(JSON.stringify({ config: {} }));
+  });
+
+  it('edits a bare (items-less) array as JSON and commits a parsed array', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { tags: { type: 'array', title: 'Tags' } },
+      required: ['tags'],
+    };
+    render(<Harness schema={schema} initial={{ tags: ['a'] }} />);
+    const editor = screen.getByRole('textbox', { name: 'Tags JSON' });
+    expect(editor).toHaveValue(JSON.stringify(['a'], null, 2));
+    expect(screen.getByText(/free-form JSON array/)).toBeInTheDocument();
+
+    fireEvent.change(editor, { target: { value: '["x", "y"]' } });
+    expect(emitted()).toBe(JSON.stringify({ tags: ['x', 'y'] }));
+    // A non-array is rejected and not committed.
+    fireEvent.change(editor, { target: { value: '{"not": "an array"}' } });
+    expect(screen.getByRole('alert')).toHaveTextContent(/Must be a JSON array/);
+    expect(emitted()).toBe(JSON.stringify({ tags: ['x', 'y'] }));
+  });
+
+  it('reseeds the JSON editor when the parent swaps in a different value', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { config: { type: 'object', title: 'Config' } },
+      required: ['config'],
+    };
+    function ResetHarness() {
+      const [value, setValue] = useState<unknown>({ config: { a: 1 } });
+      return (
+        <>
+          <SchemaForm schema={schema} value={value} onChange={setValue} />
+          <button
+            type="button"
+            onClick={() => {
+              setValue({ config: { swapped: true } });
+            }}
+          >
+            swap
+          </button>
+        </>
+      );
+    }
+    render(<ResetHarness />);
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+    expect(editor).toHaveValue(JSON.stringify({ a: 1 }, null, 2));
+
+    // A value that did not come from this field's own commit resyncs the buffer.
+    fireEvent.click(screen.getByRole('button', { name: 'swap' }));
+    expect(editor).toHaveValue(JSON.stringify({ swapped: true }, null, 2));
+  });
+
+  it('does NOT clobber the buffer when the parent merely echoes or re-renders', () => {
+    // The other direction of the resync guard: our own commit echoing back keeps
+    // the typed text (no reformat to pretty-print), and an unrelated sibling
+    // commit re-rendering the form keeps an in-progress INVALID buffer + error.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        config: { type: 'object', title: 'Config' },
+        name: { type: 'string', title: 'Name' },
+      },
+      required: ['config', 'name'],
+    };
+    render(<Harness schema={schema} initial={{ config: { a: 1 } }} />);
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+
+    // Own commit echo: compact typed text survives, not the pretty-print reseed.
+    fireEvent.change(editor, { target: { value: '{"b":2}' } });
+    expect(emitted()).toBe(JSON.stringify({ config: { b: 2 } }));
+    expect(editor).toHaveValue('{"b":2}');
+
+    // In-progress invalid buffer survives a sibling field's commit re-render.
+    fireEvent.change(editor, { target: { value: '{ not json' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+      target: { value: 'ada' },
+    });
+    expect(emitted()).toBe(JSON.stringify({ config: { b: 2 }, name: 'ada' }));
+    expect(editor).toHaveValue('{ not json');
+    expect(screen.getByRole('alert')).toHaveTextContent(/Invalid JSON/);
+  });
+
+  it('an any-typed JSON field commits bare scalars and null', () => {
+    // An open schema permits every JSON value — scalars and null included.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { anything: { title: 'anything' } },
+      required: ['anything'],
+    };
+    render(<Harness schema={schema} initial={{ anything: { seed: 1 } }} />);
+    const editor = screen.getByRole('textbox', { name: 'anything JSON' });
+
+    fireEvent.change(editor, { target: { value: '42' } });
+    expect(emitted()).toBe(JSON.stringify({ anything: 42 }));
+
+    fireEvent.change(editor, { target: { value: 'null' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(emitted()).toBe(JSON.stringify({ anything: null }));
+  });
+
+  it('clears the value when the JSON buffer is emptied', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { config: { type: 'object', title: 'Config' } },
+      required: ['config'],
+    };
+    render(<Harness schema={schema} initial={{ config: { a: 1 } }} />);
+    const editor = screen.getByRole('textbox', { name: 'Config JSON' });
+
+    fireEvent.change(editor, { target: { value: '' } });
+    // The key is dropped (emitted `undefined` collapses out of the object).
+    expect(emitted()).toBe(JSON.stringify({}));
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('renders schema-supplied title/description as escaped text, never as HTML', () => {
@@ -974,7 +1138,7 @@ describe('SchemaForm — design system', () => {
     expect(within(variantFields).getByRole('textbox', { name: 'b' })).toBeVisible();
   });
 
-  it('renders the unsupported notice as a warning badge: a mark plus a label', () => {
+  it('renders the JSON fallback on the mono textarea with a muted hint', () => {
     const schema: JsonSchema = {
       type: 'object',
       properties: { anything: { title: 'anything' } },
@@ -982,10 +1146,11 @@ describe('SchemaForm — design system', () => {
     };
     render(<Harness schema={schema} initial={{}} />);
 
-    const badge = screen.getByText('Unsupported');
-    expect(badge).toHaveAttribute('data-variant', 'warning');
-    expect(badge.querySelector('svg')).toHaveClass('tai-icon');
-    expect(screen.getByText('schema declares no renderable type')).toHaveClass('tai-field-hint');
+    const editor = screen.getByRole('textbox', { name: 'anything JSON' });
+    expect(editor).toHaveClass('tai-textarea', 'tai-textarea-mono');
+    expect(screen.getByText(/free-form JSON — this field has no structured schema/)).toHaveClass(
+      'tai-field-hint',
+    );
   });
 
   it('renders the media drop zone, its hint and the paste fallback on DS classes', () => {

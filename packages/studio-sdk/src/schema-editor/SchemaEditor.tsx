@@ -57,13 +57,17 @@ function seedText(value: Record<string, unknown> | null): string {
 }
 
 /**
- * Whether {@link SchemaForm} can render this schema's root — i.e. it classifies to a
- * concrete field kind rather than `unsupported`. A schema whose root the form cannot
- * render (or whose classification throws on a bad `$ref`) previews as a `JsonTree`.
+ * Whether {@link SchemaForm} can render this schema's root as a STRUCTURED form —
+ * i.e. it classifies to a concrete field kind rather than the free-form `json`
+ * fallback. A schema whose root has no structure to preview (a property-less
+ * object, an open/`allOf`/multi-type shape), or whose classification throws on a
+ * bad `$ref`, previews as a `JsonTree` of the schema dict instead. (Inside a live
+ * form such a node still renders the JSON editor; here, previewing a shapeless
+ * root as its own schema tree is the more legible affordance.)
  */
 function canRenderWithForm(schema: JsonSchema): boolean {
   try {
-    return classifySchema(schema, schema).model.kind !== 'unsupported';
+    return classifySchema(schema, schema).model.kind !== 'json';
   } catch {
     return false;
   }
