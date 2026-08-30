@@ -61,7 +61,10 @@ export function defaultValueForSchema(schema: JsonSchema, root: JsonSchema = sch
     case 'number':
     case 'boolean':
     case 'union':
-    case 'unsupported':
+    case 'json':
+      // A free-form JSON field starts ABSENT (its editor seeds an empty buffer),
+      // like the other value-less kinds: an optional one never invents a value,
+      // and a required one is left absent so validation flags it.
       return undefined;
   }
 }

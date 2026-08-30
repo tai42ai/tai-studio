@@ -1,8 +1,8 @@
 /**
  * `validateAgainstSchema` — a loud, structured pre-submit check. It walks the
  * schema against a value and returns a path-keyed `SchemaFormErrors` bag:
- * required-presence, type/format mismatches, enum/const violations, and any
- * `unsupported` construct (surfaced, never hidden). It never throws on a
+ * required-presence, type/format mismatches, enum/const violations, and the
+ * container constraint on a free-form `json` field. It never throws on a
  * malformed value — a malformed value IS the error it reports.
  */
 import { classifySchema } from './classify';
@@ -75,8 +75,14 @@ function walk(
 
   const { model } = classified;
   switch (model.kind) {
-    case 'unsupported':
-      errors[path] = `unsupported schema (${model.reason})`;
+    case 'json':
+      // A free-form JSON field: any JSON is accepted, subject only to the
+      // container the schema commits to (mirrors the renderer's inline check).
+      if (model.jsonType === 'object' && !isPlainObject(value)) {
+        errors[path] = 'must be a JSON object';
+      } else if (model.jsonType === 'array' && !Array.isArray(value)) {
+        errors[path] = 'must be a JSON array';
+      }
       return;
     case 'const':
       if (value !== model.value) errors[path] = `must equal ${scalarLabel(model.value)}`;

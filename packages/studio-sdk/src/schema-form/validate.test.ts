@@ -48,14 +48,38 @@ describe('validateAgainstSchema', () => {
     expect(errors.email).toMatch(/email/);
   });
 
-  it('surfaces an unsupported construct as an error rather than passing silently', () => {
+  it('accepts any JSON for a free-form (any) field', () => {
+    // A property with no declared type is a free-form JSON field: any JSON value
+    // passes, so no error is raised for it.
     const schema: JsonSchema = {
       type: 'object',
       properties: { anything: {} },
       required: ['anything'],
     };
-    const errors = validateAgainstSchema(schema, { anything: 42 });
-    expect(errors.anything).toMatch(/unsupported/);
+    expect(validateAgainstSchema(schema, { anything: 42 }).anything).toBeUndefined();
+    expect(validateAgainstSchema(schema, { anything: { a: 1 } }).anything).toBeUndefined();
+  });
+
+  it('enforces the container of a free-form json field', () => {
+    // A property-less object is a json (object) field; a non-object value is flagged,
+    // and a bare-array (json array) field rejects a non-array.
+    const objectSchema: JsonSchema = {
+      type: 'object',
+      properties: { config: { type: 'object' } },
+      required: ['config'],
+    };
+    expect(validateAgainstSchema(objectSchema, { config: 'nope' }).config).toMatch(/object/);
+    expect(validateAgainstSchema(objectSchema, { config: { any: true } }).config).toBeUndefined();
+
+    const arraySchema: JsonSchema = {
+      type: 'object',
+      properties: { items: { type: 'array' } },
+      required: ['items'],
+    };
+    expect(validateAgainstSchema(arraySchema, { items: { not: 'an array' } }).items).toMatch(
+      /array/,
+    );
+    expect(validateAgainstSchema(arraySchema, { items: [1, 2] }).items).toBeUndefined();
   });
 
   it('validates array items by index', () => {

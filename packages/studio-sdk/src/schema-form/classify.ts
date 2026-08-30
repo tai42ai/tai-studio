@@ -3,8 +3,9 @@
  * renderer and the validator classify through here so a construct is treated
  * identically everywhere. Classification resolves `$ref`, normalizes `anyOf`/
  * `oneOf` (null-union → nullable single field; multi-member → variant selector),
- * and lands every unrecognized construct on the explicit `unsupported` kind —
- * a field is never silently dropped.
+ * and lands every shape it has no structured editor for on the explicit `json`
+ * kind (a free-form JSON textarea) — a field is never silently dropped, and a
+ * shapeless one is edited as the JSON it is rather than dead-ending on a badge.
  */
 import {
   isNullSchema,
@@ -79,7 +80,18 @@ export type FieldModel =
       readonly variants: readonly UnionVariant[];
       readonly discriminator: string | undefined;
     }
-  | { readonly kind: 'unsupported'; readonly reason: string };
+  | {
+      // A shape with no structured editor to build — a property-less object, a
+      // bare `additionalProperties`-open object, an items-less array, an empty/
+      // multi-type/`allOf` schema. It is NOT undroppable: every one of these still
+      // describes JSON, so the renderer edits it as free-form JSON in a mono
+      // textarea rather than dead-ending on a badge. `jsonType` is the container
+      // the schema commits to, so a valid buffer must parse to it (`'any'` = no
+      // constraint beyond "is JSON"); `reason` records which shape fell through.
+      readonly kind: 'json';
+      readonly jsonType: 'object' | 'array' | 'any';
+      readonly reason: string;
+    };
 
 /** A fully classified field: its model plus resolved metadata. */
 export interface ClassifiedField {
@@ -120,13 +132,22 @@ function mediaUpload(schema: JsonSchema): MediaUpload | undefined {
   return undefined;
 }
 
-function unsupported(
+/**
+ * Land a shape the form has no structured editor for on the free-form JSON
+ * fallback (a mono JSON textarea) rather than a dead badge — a field is never
+ * silently dropped, and "any JSON" is the honest affordance for a shapeless one.
+ * `jsonType` is the container a valid buffer must parse to; `nullable` carries
+ * through so a nullable shape still accepts JSON `null`.
+ */
+function jsonFallback(
   schema: JsonSchema,
+  jsonType: 'object' | 'array' | 'any',
   reason: string,
   title: string | undefined,
   description: string | undefined,
+  nullable = false,
 ): ClassifiedField {
-  return { model: { kind: 'unsupported', reason }, nullable: false, schema, title, description };
+  return { model: { kind: 'json', jsonType, reason }, nullable, schema, title, description };
 }
 
 /**
@@ -167,7 +188,16 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
     const nullable = nonNull.length !== members.length;
     const soleNonNull = nonNull[0];
     if (soleNonNull === undefined) {
-      return unsupported(resolved, 'union with no non-null members', title, description);
+      // Every member is `null` — degenerate, but `null` is still valid, so edit
+      // it as JSON (nullable) rather than dead-ending on a badge.
+      return jsonFallback(
+        resolved,
+        'any',
+        'union with no non-null members',
+        title,
+        description,
+        true,
+      );
     }
     if (nonNull.length === 1) {
       const inner = classifySchema(soleNonNull, root);
@@ -216,7 +246,13 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
         description: description ?? inner.description,
       };
     }
-    return unsupported(resolved, 'allOf intersection of multiple schemas', title, description);
+    return jsonFallback(
+      resolved,
+      'any',
+      'allOf intersection of multiple schemas',
+      title,
+      description,
+    );
   }
 
   // Type-driven classification.
@@ -225,20 +261,38 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
   const nullableByType = nonNullTypes.length !== types.length;
 
   if (nonNullTypes.length === 0) {
-    return unsupported(resolved, 'schema declares no renderable type', title, description);
+    // No `type` at all (an open `{}` schema, or `type: "null"` alone) accepts any
+    // JSON — the classic "any" field. Edit it as free-form JSON.
+    return jsonFallback(
+      resolved,
+      'any',
+      'schema declares no renderable type',
+      title,
+      description,
+      nullableByType,
+    );
   }
   if (nonNullTypes.length > 1) {
-    return unsupported(
+    return jsonFallback(
       resolved,
+      'any',
       `multiple JSON types (${nonNullTypes.join(', ')}) without a discriminator`,
       title,
       description,
+      nullableByType,
     );
   }
 
   const type = nonNullTypes[0];
   if (type === undefined) {
-    return unsupported(resolved, 'schema declares no renderable type', title, description);
+    return jsonFallback(
+      resolved,
+      'any',
+      'schema declares no renderable type',
+      title,
+      description,
+      nullableByType,
+    );
   }
   switch (type) {
     case 'string':
@@ -275,7 +329,16 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
       };
     case 'array': {
       if (resolved.items === undefined) {
-        return unsupported(resolved, 'array without an items schema', title, description);
+        // A bare array with no item schema: no per-item editor to build, but the
+        // value is still a JSON array — edit it whole as free-form JSON.
+        return jsonFallback(
+          resolved,
+          'array',
+          'array without an items schema',
+          title,
+          description,
+          nullableByType,
+        );
       }
       return {
         model: { kind: 'array', items: resolved.items },
@@ -289,8 +352,9 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
       if (resolved.properties === undefined) {
         // A free-form object typed by a VALUE SCHEMA (`additionalProperties` is a
         // schema, not `false`/`true`/absent) is a string→X map — renderable as
-        // key/value rows. A boolean `additionalProperties` carries no value type
-        // to build an entry editor from, so it stays unsupported.
+        // key/value rows. A boolean/absent `additionalProperties` carries no value
+        // type to build an entry editor from, so it falls through to the free-form
+        // JSON editor (constrained to a JSON object).
         // Read as `unknown`: the value is parsed JSON, where `additionalProperties:
         // null` is possible and `typeof null === 'object'` would otherwise classify
         // it as a record with a `null` value schema.
@@ -304,11 +368,13 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
             description,
           };
         }
-        return unsupported(
+        return jsonFallback(
           resolved,
-          'free-form object (additionalProperties map) is not supported',
+          'object',
+          'free-form object with no property schema',
           title,
           description,
+          nullableByType,
         );
       }
       const properties: (readonly [string, JsonSchema])[] = Object.entries(resolved.properties);
@@ -322,6 +388,13 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
       };
     }
     default:
-      return unsupported(resolved, `unrecognized type "${String(type)}"`, title, description);
+      return jsonFallback(
+        resolved,
+        'any',
+        `unrecognized type "${String(type)}"`,
+        title,
+        description,
+        nullableByType,
+      );
   }
 }

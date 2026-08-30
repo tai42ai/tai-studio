@@ -3,8 +3,8 @@
  * is deliberately PERMISSIVE — every field is optional and an open index
  * signature admits unknown keywords — because the schemas come from Pydantic v2
  * and may carry constructs the renderer does not consume. Unknown keys never
- * break typing; the renderer classifies a node and surfaces anything it cannot
- * render as a LOUD "unsupported field" notice rather than dropping it.
+ * break typing; the renderer classifies a node and, for a shape it has no
+ * structured control for, offers a free-form JSON editor rather than dropping it.
  */
 
 /** The JSON-Schema `type` keyword values Pydantic emits. */
