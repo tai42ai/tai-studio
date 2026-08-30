@@ -26,18 +26,55 @@ import {
   Button,
   Card,
   ErrorState,
+  ExpressionField,
   Field,
   Spinner,
   Textarea,
   TextInput,
   errorMessage,
   useApi,
+  type ExpressionFieldDeclaration,
 } from '@tai42/studio-sdk';
 import type { HookParams } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
 import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
 import { fireGateUnsatisfiable } from './fire-path-gate';
+
+/**
+ * The `condition` and `expr` inline specs are jq (the same jq gate/shape family the
+ * access-control policy authors): `condition` gates whether the hook fires, `expr`
+ * shapes the event before the tool runs. Both evaluate against the event that fired
+ * the hook, whose shape is defined by the topic — so the declaration carries an
+ * OPEN document descriptor (no fixed keys) rather than inventing an envelope the
+ * server does not promise. There is no author-time validate endpoint for a hook
+ * spec (unlike the policy condition's `validate-condition` guard), so neither
+ * declaration wires `serverValidate`. When the jq plugin is installed each field
+ * grows a visual-editor door; without it each stays a plain monospace input.
+ */
+const HOOK_CONDITION_DECLARATION: ExpressionFieldDeclaration = {
+  language: 'jq',
+  shape: {
+    id: 'tai42.hooks.condition',
+    label: 'event',
+    blurb:
+      'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
+    keys: [],
+    returns: 'true or false — the hook fires only when the condition returns true',
+  },
+};
+
+const HOOK_EXPR_DECLARATION: ExpressionFieldDeclaration = {
+  language: 'jq',
+  shape: {
+    id: 'tai42.hooks.expr',
+    label: 'event',
+    blurb:
+      'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
+    keys: [],
+    returns: 'the value the hook shapes from the event before the tool runs',
+  },
+};
 
 /** Parse the `tool_kwargs` textarea; blank means `{}`. Throws a loud message on bad input. */
 function parseToolKwargs(raw: string): Record<string, unknown> {
@@ -243,22 +280,22 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
           }}
         />
       </Field>
-      <Field label="Condition" description="Optional inline condition spec; blank leaves it unset.">
-        <TextInput
-          value={condition}
-          onChange={(event) => {
-            setCondition(event.target.value);
-          }}
-        />
-      </Field>
-      <Field label="Expr" description="Optional inline expression spec; blank leaves it unset.">
-        <TextInput
-          value={expr}
-          onChange={(event) => {
-            setExpr(event.target.value);
-          }}
-        />
-      </Field>
+      <ExpressionField
+        label="Condition"
+        description="Optional inline condition spec; blank leaves it unset."
+        declaration={HOOK_CONDITION_DECLARATION}
+        multiline={false}
+        value={condition}
+        onChange={setCondition}
+      />
+      <ExpressionField
+        label="Expr"
+        description="Optional inline expression spec; blank leaves it unset."
+        declaration={HOOK_EXPR_DECLARATION}
+        multiline={false}
+        value={expr}
+        onChange={setExpr}
+      />
       {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
         {editing ? (
