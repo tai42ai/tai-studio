@@ -163,8 +163,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/features/tools
       '@tai42/jq-studio':
-        specifier: file:/tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz
-        version: file:../../../../../tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.1.0
+        version: 0.1.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@tai42/studio-sdk':
         specifier: workspace:*
         version: link:../../packages/studio-sdk
@@ -1094,8 +1094,8 @@ importers:
         specifier: workspace:*
         version: link:../api-client
       '@tai42/jq-studio':
-        specifier: file:/tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz
-        version: file:../../../../../tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: ^0.1.0
+        version: 0.1.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     devDependencies:
       '@microsoft/api-extractor':
         specifier: 7.58.12
@@ -2127,9 +2127,8 @@ packages:
   '@rushstack/ts-command-line@5.3.12':
     resolution: {integrity: sha512-Vg2n24arSf7JvUNga2DMHYTbxnVq9L5OtVCp4Gfr8YC/kmL/bmdR8FQhGcpMzMYNY9Vdw3+TaimG11Sf+z1Tpw==}
 
-  '@tai42/jq-studio@file:../../../../../tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz':
-    resolution: {integrity: sha512-kHh4qzkUd1m7g1FgH/z13HJsXt842IbFMzLo2UtvfBRtpLrxOaOUX7Yde7lWkCsO/bTFdSTgACIBEjl8SaT/eg==, tarball: file:../../../../../tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz}
-    version: 0.1.0
+  '@tai42/jq-studio@0.1.0':
+    resolution: {integrity: sha512-kHh4qzkUd1m7g1FgH/z13HJsXt842IbFMzLo2UtvfBRtpLrxOaOUX7Yde7lWkCsO/bTFdSTgACIBEjl8SaT/eg==}
     engines: {node: '>=22'}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
@@ -5374,7 +5373,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/node'
 
-  '@tai42/jq-studio@file:../../../../../tmp/claude-1000/-home-tai-agent-runs-mission40-impl-run/4b8fb69c-630b-4b4e-bb4f-e26ffed7ad20/scratchpad/tai42-jq-studio-0.1.0.tgz(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@tai42/jq-studio@0.1.0(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@radix-ui/react-checkbox': 1.3.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@radix-ui/react-dialog': 1.1.18(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
