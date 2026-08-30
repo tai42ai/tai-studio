@@ -39,6 +39,7 @@ import {
   Badge,
   Button,
   ErrorState,
+  ExpressionField,
   RadioGroup,
   Select,
   Spinner,
@@ -46,6 +47,7 @@ import {
   Textarea,
   errorMessage,
   useApi,
+  type ExpressionFieldDeclaration,
 } from '@tai42/studio-sdk';
 
 import { templateNamesKey } from './keys';
@@ -83,11 +85,16 @@ interface Row {
  * sees the exact shape enforcement evaluates the condition against
  * (`tai42_contract.access_control.models.JqAuthContext`).
  */
-const SAMPLE_CONTEXT_SKELETON = JSON.stringify(
-  { sub: 'anon', scopes: [], identity: {}, policy: {}, context: {}, request: {}, system: {} },
-  null,
-  2,
-);
+const SAMPLE_CONTEXT_OBJECT: Record<string, unknown> = {
+  sub: 'anon',
+  scopes: [],
+  identity: {},
+  policy: {},
+  context: {},
+  request: {},
+  system: {},
+};
+const SAMPLE_CONTEXT_SKELETON = JSON.stringify(SAMPLE_CONTEXT_OBJECT, null, 2);
 
 /**
  * Parse the sample-context editor. Blank means NO sample — the guard then only
@@ -458,6 +465,70 @@ export function PolicySection({
     validate.mutate(sample);
   };
 
+  // The expression-field declaration for the inline jq condition: the JqAuthContext
+  // envelope it reads (so the visual editor can offer path suggestions/context
+  // chips), a live sample drawn from the sample-context editor, and the SAME
+  // fail-closed `validate-condition` guard the inline Test button hits. So when the
+  // jq plugin is installed the visual editor authors, samples, and validates against
+  // exactly what enforcement evaluates; with no plugin the field stays a plain
+  // monospace textarea and nothing regresses.
+  const conditionDeclaration = useMemo<ExpressionFieldDeclaration>(
+    () => ({
+      language: 'jq',
+      shape: {
+        id: 'tai42.access-control.jq-auth-context',
+        label: 'auth context',
+        blurb:
+          'The JqAuthContext the access-control condition is evaluated against at enforcement.',
+        keys: [
+          { name: 'sub', gloss: 'the caller subject id' },
+          { name: 'scopes', gloss: 'the granted scopes (array of strings)' },
+          { name: 'identity', gloss: 'identity claims, read as .identity.*' },
+          { name: 'policy', gloss: 'the key policy_data, read as .policy.*' },
+          { name: 'context', gloss: 'request-time context, read as .context.*' },
+          { name: 'request', gloss: 'the request — .request.path, .request.method' },
+          { name: 'system', gloss: 'system values — .system.time' },
+        ],
+        returns: 'true or false — the request is allowed when the condition returns true',
+        sample: SAMPLE_CONTEXT_OBJECT,
+      },
+      // The visual editor's Test panel seeds from the live sample-context editor
+      // when it parses, falling back to the JqAuthContext skeleton when blank/bad.
+      sampleInput: () => {
+        try {
+          return parseSampleContext(sampleContext) ?? SAMPLE_CONTEXT_OBJECT;
+        } catch {
+          return SAMPLE_CONTEXT_OBJECT;
+        }
+      },
+      // The fail-closed jq guard: compile the condition and (with a sample object)
+      // evaluate it. A 400 is the guard's verbatim message, mapped to ok:false.
+      serverValidate: async ({ expression, sampleInput }) => {
+        try {
+          const sample = isPlainObject(sampleInput) ? sampleInput : undefined;
+          const result = await api.validateCondition(
+            sample === undefined
+              ? { condition: expression }
+              : { condition: expression, sample_context: sample },
+          );
+          return {
+            ok: result.ok,
+            compiles: result.ok,
+            message:
+              result.result === null
+                ? undefined
+                : result.result
+                  ? 'allows the sample'
+                  : 'denies the sample',
+          };
+        } catch (error) {
+          return { ok: false, compiles: false, message: errorMessage(error) };
+        }
+      },
+    }),
+    [api, sampleContext],
+  );
+
   const fields = useMemo<PolicyFields>(() => {
     const out: PolicyFields = {};
 
@@ -603,17 +674,13 @@ export function PolicySection({
 
       {mode === 'inline' ? (
         <div>
-          <label style={fieldLabelStyle} htmlFor={`${idPrefix}-condition`}>
-            jq condition
-          </label>
-          <Textarea
-            id={`${idPrefix}-condition`}
-            aria-label="jq condition"
+          <ExpressionField
+            label="jq condition"
+            declaration={conditionDeclaration}
             value={condition}
-            spellCheck={false}
             disabled={disabled}
-            onChange={(event) => {
-              setCondition(event.target.value);
+            onChange={(next) => {
+              setCondition(next);
               // Editing invalidates the last Test result, clearing the non-blocking
               // Save warning until the condition is re-tested.
               setConditionError(null);
