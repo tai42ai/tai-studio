@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -266,6 +266,62 @@ describe('NotificationsPage', () => {
     expect(screen.getByText('ok')).toBeInTheDocument();
   });
 
+  it('replaces an image that fails to load with the loud failure notice', async () => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          {
+            ...record,
+            id: 'f',
+            media: [{ kind: 'image', url: 'https://cdn.example/gone.png', caption: 'gone' }],
+          },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const image = await screen.findByRole('img', { name: 'gone' });
+    fireEvent.error(image);
+
+    const failed = await screen.findByTestId('notification-media-error');
+    expect(within(failed).getByText('Image failed to load')).toBeInTheDocument();
+    expect(within(failed).getByText('https://cdn.example/gone.png')).toBeInTheDocument();
+    // The broken element is gone — the notice replaces it, loudly.
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('admits a served-media url, defaults captions, and keeps a raw unparseable timestamp', async () => {
+    const servedId = 'A'.repeat(43);
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          {
+            ...record,
+            id: 's',
+            created_at: 'not-a-timestamp',
+            media: [
+              // Served-media route (no caption → the default content alt).
+              { kind: 'image', url: `/api/interactions/media/${servedId}` },
+              // Whitespace-only caption falls back the same way.
+              { kind: 'image', url: 'https://cdn.example/pic.png', caption: '   ' },
+              // A caption-less link labels itself with its url.
+              { kind: 'link', url: 'https://docs.example/page' },
+            ],
+          },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const images = await screen.findAllByRole('img', { name: 'Attached image' });
+    expect(images).toHaveLength(2);
+    const link = screen.getByTestId('notification-media-link');
+    expect(within(link).getByText('https://docs.example/page')).toBeInTheDocument();
+    // An unparseable stored timestamp renders raw rather than "Invalid Date".
+    expect(screen.getByText(/not-a-timestamp/)).toBeInTheDocument();
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+  });
+
   it('renders a stored template block', async () => {
     const client = stubClient(
       vi.fn().mockResolvedValue({
@@ -284,6 +340,21 @@ describe('NotificationsPage', () => {
     expect(within(template).getByText('order_update')).toBeInTheDocument();
     expect(within(template).getByText('en')).toBeInTheDocument();
     expect(within(template).getByText('Parameters: #123, shipped')).toBeInTheDocument();
+  });
+
+  it('renders a parameter-less template without a Parameters line', async () => {
+    const client = stubClient(
+      vi.fn().mockResolvedValue({
+        notifications: [
+          { ...record, id: 'tp', template: { name: 'welcome', language: 'he', parameters: [] } },
+        ],
+      }),
+    );
+    renderWithProviders(<NotificationsPage search={{}} />, { client });
+
+    const template = await screen.findByTestId('notification-template');
+    expect(within(template).getByText('welcome')).toBeInTheDocument();
+    expect(within(template).queryByText(/^Parameters:/)).not.toBeInTheDocument();
   });
 
   it('reveals more with the "Show more" control when the feed exceeds one page', async () => {
