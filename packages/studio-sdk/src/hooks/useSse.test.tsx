@@ -274,6 +274,39 @@ describe('useInteractionsStream', () => {
     expect(result.current.count).toBeGreaterThanOrEqual(0);
   });
 
+  it('clamps at 0 when the base refetch folds a terminal BEFORE its frame arrives (the "-1 pending questions" race)', async () => {
+    // The live-observed race: the answer POST lands, the paged base refetches and
+    // drops X (fresh seed [] / total 0) BEFORE the answered frame reaches this
+    // client. The card is gone from the seed, so the answered frame cannot promote
+    // it (+1 has nothing to promote), while its terminal stamp (same epoch as
+    // countEpoch — no reconnect happened) still subtracts: 0 - 1 = -1, the badge
+    // that read "-1 pending questions". The published count clamps at 0; the next
+    // landed resync reconciles the epoch for real.
+    let releaseAnswered!: () => void;
+    const gate = new Promise<void>((resolve) => (releaseAnswered = resolve));
+    async function* gatedFrames(): AsyncGenerator<SseFrame> {
+      await gate;
+      yield answered('X');
+    }
+    const stream = vi.fn<(signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame>>>();
+    stream.mockResolvedValueOnce(gatedFrames());
+    stream.mockImplementation(() => Promise.resolve(iterate([])));
+    const client = { streamInteractions: stream } as unknown as ApiClient;
+
+    const { result, rerender } = renderStream(client, { seed: [seedItem('X')], total: 1 });
+    await flush(); // conn1 connects, resync lands (countEpoch = conn1 epoch); frame still gated
+    expect(result.current.count).toBe(1);
+
+    rerender({ seed: [], total: 0 }); // the refetch already dropped answered X; no reconnect
+    await flush();
+    expect(result.current.count).toBe(0);
+
+    releaseAnswered(); // now the answered(X) frame arrives — too late to promote
+    await flush();
+    expect(result.current.count).toBe(0);
+    expect(result.current.count).toBeGreaterThanOrEqual(0);
+  });
+
   it('holds the count when a reconnect refetch FAILS (onResync false), then reconciles when a later refetch lands', async () => {
     // seed [a] total 2 (one more pending on an unloaded page); removed(a) → 1. On the
     // first reconnect the base refetch FAILS: onResync resolves false, so countEpoch is
