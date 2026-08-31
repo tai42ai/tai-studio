@@ -56,6 +56,47 @@ async function buildSpa() {
   });
 }
 
+/**
+ * The SPA stage must NOT bundle a second jq runtime.
+ *
+ * The one jq runtime the deployment ships is jq-studio bundled INSIDE the
+ * studio-sdk vendor entry (dist/vendor/studio-sdk.js + its worker chunk +
+ * jq.wasm), reached at runtime through the import map. jq-studio builds a
+ * module-scoped React context, so the shell MUST consume its jq surface —
+ * including `PrimitivesProvider` — through the external `@tai42/studio-sdk`
+ * (import-mapped to that one vendor copy), never from `@tai42/jq-studio`
+ * directly. A stray direct import re-bundles jq-studio into dist/assets: Vite
+ * splits its Web Worker into a `jq-studio-worker-*.js` chunk and emits a hashed
+ * `jq-*.wasm` — a ~2.9MB duplicate that no loaded chunk even references (dead
+ * weight), while its own `PrimitivesProvider` context, being a different object
+ * than the vendor `JqField` reads, silently breaks the design-system injection.
+ *
+ * This assertion fails the build LOUDLY on that regression: dist/assets may hold
+ * NO `*.wasm` and NO `jq-studio-worker-*.js`. It walks RECURSIVELY (Vite nests
+ * emitted assets) — the mirror of `assertVendorHasOnlyJsAndWasm`, which guards
+ * dist/vendor but says nothing about dist/assets.
+ */
+async function assertSpaShipsNoJqRuntime() {
+  const assetsDir = resolve(appRoot, 'dist/assets');
+  const entries = await readdir(assetsDir, { recursive: true, withFileTypes: true });
+  const stray = entries
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        (entry.name.endsWith('.wasm') || /^jq-studio-worker-.*\.js$/.test(entry.name)),
+    )
+    .map((entry) => relative(assetsDir, join(entry.parentPath, entry.name)));
+  if (stray.length > 0) {
+    throw new Error(
+      `dist/assets must not contain a jq runtime, but the SPA build emitted ${stray.join(', ')}. ` +
+        'The one jq runtime ships inside dist/vendor/studio-sdk.js (reached via the import map); a ' +
+        'jq-studio-worker-*.js or a jq-*.wasm here means the shell re-bundled @tai42/jq-studio — a ~2.9MB ' +
+        'orphan duplicate. Import jq-studio (JqField, PrimitivesProvider, …) through @tai42/studio-sdk, ' +
+        'never from @tai42/jq-studio directly (only its /styles.css subpath, a pure CSS asset, is allowed).',
+    );
+  }
+}
+
 /** Drop extracted stylesheets from a lib-mode vendor entry.
  *
  * `vendor/studio-sdk.ts` re-exports the SDK barrel, and that barrel is declared
@@ -323,5 +364,9 @@ async function buildBridge() {
 }
 
 await buildSpa();
+// Stage 1 must ship no jq runtime of its own — the one runtime lives in the
+// studio-sdk vendor entry built next. Fail loudly here if the shell re-bundled
+// @tai42/jq-studio (orphan worker + wasm in dist/assets).
+await assertSpaShipsNoJqRuntime();
 await buildVendor();
 await buildBridge();

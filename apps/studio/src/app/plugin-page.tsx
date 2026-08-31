@@ -48,6 +48,18 @@ export function PluginPage({
     string,
     unknown
   >;
+  // This plugin's own per-history-entry state slot, read from `history.state` under the
+  // `studioPluginEntryState` namespace and narrowed to the RENDERED plugin's key — one
+  // plugin never sees another's slot. Absent (no channel used, or an unexpected shape)
+  // reads as `undefined`, which the page treats as "no checkpoint" (see the
+  // FAILURE-DIVERGENCE note on PluginPageProps.entryState). The select returns the
+  // stable slot reference, so it does not churn renders.
+  const entryState = useLocation({
+    select: (location) => {
+      const state = location.state as { studioPluginEntryState?: Record<string, unknown> };
+      return state.studioPluginEntryState?.[pluginId];
+    },
+  });
 
   const resolution = useMemo<PluginPageResolution>(() => {
     // Contributions are registered by the bundle at import time; the route loader
@@ -113,9 +125,15 @@ export function PluginPage({
   }
 
   // Forward the validated sub-path `params` and `search` (present only when the page
-  // declared a schema; a schemaless page receives neither, unchanged).
+  // declared a schema; a schemaless page receives neither, unchanged), plus this
+  // plugin's own `entryState` slot (undefined when the channel was never used).
   const PageComponent = match.component;
   return (
-    <PageComponent pluginId={pluginId} params={resolution.params} search={resolution.search} />
+    <PageComponent
+      pluginId={pluginId}
+      params={resolution.params}
+      search={resolution.search}
+      entryState={entryState}
+    />
   );
 }

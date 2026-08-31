@@ -113,6 +113,35 @@ export interface NavigateOptions {
 }
 
 /**
+ * Per-navigation options for {@link NavigationContextValue.navigatePluginWithOptions}.
+ *
+ * `replace` mirrors {@link NavigateOptions.replace}: overwrite the current history
+ * entry instead of pushing a new one (a page rewriting its own unrenderable URL).
+ *
+ * `state` is an opaque, per-history-ENTRY bag the host stores ON the destination
+ * history entry, namespaced to the navigating plugin, and hands the page back as
+ * {@link PluginPageProps.entryState}. It survives back/forward traversal AND a hard
+ * reload — the browser persists `history.state` across a document load, verified in
+ * a real browser against the router's pinned major before this channel was built.
+ * Two hard rules bind the value:
+ *  - JSON-ROUND-TRIP: it is serialized into `history.state`, so it must survive
+ *    structured-clone / JSON semantics — plain data only, no functions, DOM nodes,
+ *    or class instances. The page reads back a structural COPY, never the same
+ *    reference it wrote.
+ *  - SIZE: `history.state` is browser-bounded (Firefox caps a serialized entry at
+ *    16 MiB; others higher). Keep a slot SMALL — a soft cap of ~32 KB — and store
+ *    only view state (a selection, a scroll anchor, a draft id), never bulk data.
+ *    Oversized state risks a browser-thrown navigation; the host does not police
+ *    the cap, so the discipline is the plugin's.
+ */
+export interface PluginNavigateOptions {
+  /** Overwrite the current history entry instead of pushing a new one. */
+  readonly replace?: boolean;
+  /** Opaque, JSON-round-trippable per-entry state (soft cap ~32 KB); see the type doc. */
+  readonly state?: unknown;
+}
+
+/**
  * The runtime navigation surface the shell provides through
  * {@link NavigationProvider}. `navigate` performs a client-side transition, by
  * default pushing a history entry — see {@link NavigateOptions} for the third
@@ -145,6 +174,40 @@ export interface NavigationContextValue {
     params?: string,
     search?: PluginSearch,
   ) => string;
+  /**
+   * ADDITIVE plugin-page navigation that also carries per-history-entry
+   * {@link PluginNavigateOptions}. OPTIONAL because a Studio host built before this
+   * feature does not provide it; plugins reach it — and require a host that does —
+   * through {@link usePluginEntryNavigation}, which throws loudly on an older host.
+   * It behaves exactly like {@link navigatePlugin} for path / params / search, and in
+   * addition writes `options.state` onto the DESTINATION entry under the plugin's own
+   * namespace slot (see {@link PluginPageProps.entryState}).
+   *
+   * NEXT-MAJOR (9.0) CONSOLIDATION NOTE: fold `options` into {@link navigatePlugin}'s
+   * own signature and RETIRE this sibling. It exists as a separate optional member
+   * ONLY to stay additive under the plugin-API equality gate — a new optional member
+   * does not move {@link STUDIO_PLUGIN_API_VERSION}, so every existing plugin keeps
+   * loading. Cutting a MAJOR now purely to rename one method onto another is the
+   * disproportion anti-pattern: a breaking change for a cosmetic merge. The merge
+   * therefore waits for the next major that carries real breaks; until then both
+   * coexist and {@link navigatePlugin} stays byte-for-byte stable.
+   */
+  navigatePluginWithOptions?: (
+    pluginId: string,
+    pagePath: string,
+    params?: string,
+    search?: PluginSearch,
+    options?: PluginNavigateOptions,
+  ) => void;
+  /**
+   * ADDITIVE: replace the CURRENT history entry's per-entry state slot for `pluginId`
+   * IN PLACE (merge-preserving other plugins' slots), WITHOUT navigating — the URL,
+   * params, search, and scroll are untouched. A page uses it to checkpoint its live
+   * view state onto the entry the reader is already on, so a later back/forward or a
+   * hard reload restores it. OPTIONAL for the same additive reason as
+   * {@link navigatePluginWithOptions}; reached through {@link usePluginEntryNavigation}.
+   */
+  updatePluginEntryState?: (pluginId: string, state: unknown) => void;
 }
 
 /**

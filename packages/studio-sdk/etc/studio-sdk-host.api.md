@@ -84,6 +84,7 @@ interface PluginPageParamsSchema {
 
 // @public
 interface PluginPageProps {
+    readonly entryState?: unknown;
     readonly params?: Record<string, unknown>;
     // (undocumented)
     readonly pluginId: string;

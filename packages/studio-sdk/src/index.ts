@@ -49,7 +49,14 @@ export { STUDIO_PLUGIN_API_VERSION, checkPluginApiVersion } from './plugin/versi
 export type { VersionGateResult } from './plugin/version';
 
 // -- jq fields (re-exported from @tai42/jq-studio; the platform owns no jq code) --
-export { JqField, JQEditorDialog, JqEditorDialog, preloadJq, installDefaultJqWorker } from './jq';
+export {
+  JqField,
+  JQEditorDialog,
+  JqEditorDialog,
+  preloadJq,
+  installDefaultJqWorker,
+  PrimitivesProvider,
+} from './jq';
 export type {
   JqFieldProps,
   JQEditorDialogProps,
@@ -61,6 +68,7 @@ export type {
   ServerValidationResult,
   ServerValidateHook,
   JqFieldDeclaration,
+  Primitives,
 } from './jq';
 
 // -- Hooks -------------------------------------------------------------------
@@ -114,6 +122,7 @@ export {
   useAppNavigate,
   useResolvePath,
   usePluginNavigation,
+  usePluginEntryNavigation,
   useNavigationGuard,
   useNavigationGate,
   useSearchCommit,
@@ -127,6 +136,7 @@ export type {
   PageProps,
   NavigationContextValue,
   NavigateOptions,
+  PluginNavigateOptions,
   PluginSearch,
   NavigationGuardHandler,
 } from './navigation';

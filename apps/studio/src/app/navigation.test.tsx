@@ -340,6 +340,113 @@ describe('shell plugin nav', () => {
   });
 });
 
+describe('shell plugin entry-state channel', () => {
+  function serveEmpty(): void {
+    server.use(
+      http.get('*/api/plugins', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/tools', () => HttpResponse.json({ data: [] })),
+      http.get('*/api/tools/tags', () => HttpResponse.json({ data: [] })),
+    );
+  }
+
+  /** The per-plugin slot map on the current history entry, or {} when absent. */
+  function slots(state: unknown): Record<string, unknown> {
+    if (state !== null && typeof state === 'object') {
+      const bag = (state as Record<string, unknown>).studioPluginEntryState;
+      if (bag !== null && typeof bag === 'object') return bag as Record<string, unknown>;
+    }
+    return {};
+  }
+
+  it('navigatePluginWithOptions writes the plugin state slot onto the pushed entry', async () => {
+    serveEmpty();
+    const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-es-push' });
+    await screen.findByRole('link', { name: 'Tools' });
+    const nav = studio.navigation.navigatePluginWithOptions;
+    expect(nav).toBeDefined();
+    if (nav === undefined) throw new Error('host is missing navigatePluginWithOptions');
+
+    nav('acme', 'flows', 'myflow', { dir: 'eu' }, { state: { sel: 3 } });
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/myflow');
+    });
+    expect(studio.router.state.location.searchStr).toBe('?dir=eu');
+    // The state rides history.state under the plugin's own namespace slot.
+    expect(slots(studio.router.state.location.state)).toEqual({ acme: { sel: 3 } });
+  });
+
+  it('a replace preserves other plugins slots while writing only the target slot', async () => {
+    serveEmpty();
+    const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-es-replace' });
+    await screen.findByRole('link', { name: 'Tools' });
+    const nav = studio.navigation.navigatePluginWithOptions;
+    if (nav === undefined) throw new Error('host is missing navigatePluginWithOptions');
+
+    // Push acme's page carrying acme's slot.
+    nav('acme', 'flows', 'a', undefined, { state: { a: 1 } });
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/a');
+    });
+    // REPLACE the current entry with beta's page + beta's slot: acme's slot on the same
+    // entry is merge-preserved, and only beta's TARGET slot is (re)written.
+    nav('beta', 'grid', 'b', undefined, { replace: true, state: { b: 2 } });
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/plugins/beta/grid/b');
+    });
+    expect(slots(studio.router.state.location.state)).toEqual({ acme: { a: 1 }, beta: { b: 2 } });
+  });
+
+  it('updatePluginEntryState rewrites the current entry in place (URL unchanged)', async () => {
+    serveEmpty();
+    const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-es-update' });
+    await screen.findByRole('link', { name: 'Tools' });
+    const nav = studio.navigation.navigatePluginWithOptions;
+    const update = studio.navigation.updatePluginEntryState;
+    if (nav === undefined || update === undefined) {
+      throw new Error('host is missing the entry-state channel');
+    }
+
+    nav('acme', 'flows', 'x', undefined, { state: { sel: 1 } });
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/x');
+    });
+    const hrefBefore = studio.router.state.location.href;
+    const depth = studio.router.history.length;
+
+    update('acme', { sel: 2 });
+    await waitFor(() => {
+      expect(slots(studio.router.state.location.state)).toEqual({ acme: { sel: 2 } });
+    });
+    // In place: same URL, no new history entry.
+    expect(studio.router.state.location.href).toBe(hrefBefore);
+    expect(studio.router.history.length).toBe(depth);
+  });
+
+  it('namespace isolation: two plugins hold distinct slots on one entry without collision', async () => {
+    serveEmpty();
+    const { studio } = renderStudio({ initialPath: '/interactions', sessionKey: 'k-es-iso' });
+    await screen.findByRole('link', { name: 'Tools' });
+    const nav = studio.navigation.navigatePluginWithOptions;
+    const update = studio.navigation.updatePluginEntryState;
+    if (nav === undefined || update === undefined) {
+      throw new Error('host is missing the entry-state channel');
+    }
+
+    nav('acme', 'flows', 'x', undefined, { state: { a: 1 } });
+    await waitFor(() => {
+      expect(studio.router.state.location.pathname).toBe('/plugins/acme/flows/x');
+    });
+    // A second plugin writes its own slot onto the SAME entry; neither clobbers the other.
+    update('beta', { b: 2 });
+    await waitFor(() => {
+      expect(slots(studio.router.state.location.state)).toEqual({
+        acme: { a: 1 },
+        beta: { b: 2 },
+      });
+    });
+  });
+});
+
 describe('observability search parsing', () => {
   async function loadObservabilitySearch(url: string): Promise<RouteSearch<'observability'>> {
     const loader = createPluginLoader({

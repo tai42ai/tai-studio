@@ -300,9 +300,14 @@ function merge(seed: readonly Interaction[], live: LiveOverlay): StreamInteracti
  * failed refetch keeps the prior-epoch deltas applying against the prior total. Every
  * terminal frame a client receives refers to a
  * question inside its own `total` (the stream and the list door apply the same
- * audience filter). For honest server data this never goes negative, so no clamp is
- * applied. The single residual: a frame arriving while a refetch is in flight may or
- * may not be reflected in that refetch's `total`, and is reconciled on the next resync.
+ * audience filter). One residual race remains: a frame arriving while a refetch is in
+ * flight may already be reflected in that refetch's `total` (the resync GET landing
+ * after an answer POST), so the raw tally can transiently dip below zero until the
+ * next resync reconciles — observed live as a "-1 pending questions" badge. A
+ * pending tally below zero is meaningless, so the published count clamps at 0. The
+ * clamp covers only the negative symptom: the same race can also leave a transient
+ * positive under-count (a double-subtracted question hiding a still-pending one),
+ * which reconciles on the next resync, not here.
  */
 function pendingCount(
   seed: readonly Interaction[],
@@ -319,7 +324,7 @@ function pendingCount(
   for (const id of gone) {
     if ((live.goneEpoch.get(id) ?? 0) >= countEpoch) count -= 1;
   }
-  return count;
+  return Math.max(count, 0);
 }
 
 export function useInteractionsStream(options: InteractionsStreamOptions): InteractionsStreamState {

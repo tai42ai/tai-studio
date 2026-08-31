@@ -1,6 +1,6 @@
 {
   "name": "@tai42/studio-sdk",
-  "version": "8.0.2",
+  "version": "8.1.0",
   "description": "The Studio plugin contract, shared UI components, and hooks that every feature builds on.",
   "license": "Apache-2.0",
   "author": "tai42 <oss@tai42.ai>",
@@ -100,6 +100,6 @@
     "@radix-ui/react-tabs": "^1.1.16",
     "@radix-ui/react-tooltip": "^1.2.11",
     "@tai42/api-client": "workspace:*",
-    "@tai42/jq-studio": "^0.1.2"
+    "@tai42/jq-studio": "^0.1.3"
   }
 }
