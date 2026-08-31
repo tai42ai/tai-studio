@@ -48,4 +48,4 @@ overrides:
   postcss: '>=8.5.18'
 
 minimumReleaseAgeExclude:
-  - '@tai42/jq-studio@0.1.0'
+  - '@tai42/jq-studio@0.1.0 || 0.1.1'
