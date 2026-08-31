@@ -43,6 +43,15 @@ describe('TemplatesPage — master list', () => {
     };
     renderWithProviders(<TemplatesPage search={{}} />, { client });
 
+    // The surface opens two doors in SERIES: the storage-provider gate resolves
+    // first and mounts the list card, and only then does the list query fetch. As
+    // the first test in the file this render also absorbs the suite's one-time
+    // warm-up (module init, coverage instrumentation, the initial jsdom paint).
+    // Await the gate's own heading so that cold-start is spent inside its findBy
+    // window; the list assertion then gets a fresh budget for just its door,
+    // instead of one window having to cover both round-trips (which flaked under
+    // jsdom 30's heavier selector engine on a contended CI runner).
+    await screen.findByRole('heading', { name: 'All templates' });
     expect(await screen.findByText('a.md')).toBeInTheDocument();
     expect(screen.getByText('b.md')).toBeInTheDocument();
   });
