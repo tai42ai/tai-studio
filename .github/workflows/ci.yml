@@ -185,6 +185,10 @@ jobs:
   # skips and the required status stays unset for a maintainer to run.
   trigger-e2e:
     needs: check
+    # Dependabot cannot access the fleet-e2e dispatch secret (GitHub scopes
+    # secrets away from dependabot), so this job would always red on a
+    # Bad-credentials dispatch. Dependabot dep bumps don't need fleet-e2e.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions: {}
     env:
