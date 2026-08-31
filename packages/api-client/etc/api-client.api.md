@@ -41,7 +41,7 @@ export const agentEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     final: z.ZodDefault<z.ZodBoolean>;
     tool: z.ZodString;
     call_id: z.ZodString;
-    result: z.ZodUnknown;
+    result: z.ZodOptional<z.ZodUnknown>;
     is_error: z.ZodDefault<z.ZodBoolean>;
 }, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"message_delta">;
@@ -61,12 +61,12 @@ export const agentEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"structured_final">;
     final: z.ZodDefault<z.ZodBoolean>;
-    data: z.ZodUnknown;
+    data: z.ZodOptional<z.ZodUnknown>;
 }, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"interrupt_final">;
     final: z.ZodDefault<z.ZodBoolean>;
     interrupt_id: z.ZodString;
-    payload: z.ZodUnknown;
+    payload: z.ZodOptional<z.ZodUnknown>;
     reason: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"stream.end">;
