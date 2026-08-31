@@ -4,18 +4,7 @@
 
 ```ts
 
-import { objectOutputType } from 'zod';
 import { z } from 'zod';
-import { ZodArray } from 'zod';
-import { ZodBoolean } from 'zod';
-import { ZodNullable } from 'zod';
-import { ZodObject } from 'zod';
-import { ZodOptional } from 'zod';
-import { ZodRecord } from 'zod';
-import { ZodString } from 'zod';
-import { ZodType } from 'zod';
-import { ZodTypeAny } from 'zod';
-import { ZodTypeDef } from 'zod';
 
 // @public
 export interface AddUrlToScopeBody {
@@ -31,160 +20,60 @@ export interface AddUrlToScopeBody {
 const addUrlToScopeResult: z.ZodObject<{
     scope_id: z.ZodString;
     url: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    url: string;
-    scope_id: string;
-}, {
-    url: string;
-    scope_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 export type AgentEvent = z.infer<typeof agentEventSchema>;
 
 // @public
-export const agentEventSchema: z.ZodDiscriminatedUnion<"type", [z.ZodObject<{
+export const agentEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     type: z.ZodLiteral<"reasoning_step">;
     final: z.ZodDefault<z.ZodBoolean>;
     text: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    type: "reasoning_step";
-    final: boolean;
-    text: string;
-}, {
-    type: "reasoning_step";
-    text: string;
-    final?: boolean | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"tool_call_step">;
     final: z.ZodDefault<z.ZodBoolean>;
     tool: z.ZodString;
     args: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     call_id: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    type: "tool_call_step";
-    final: boolean;
-    tool: string;
-    args: Record<string, unknown>;
-    call_id: string;
-}, {
-    type: "tool_call_step";
-    tool: string;
-    call_id: string;
-    final?: boolean | undefined;
-    args?: Record<string, unknown> | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"tool_result_step">;
     final: z.ZodDefault<z.ZodBoolean>;
     tool: z.ZodString;
     call_id: z.ZodString;
     result: z.ZodUnknown;
     is_error: z.ZodDefault<z.ZodBoolean>;
-}, "strip", z.ZodTypeAny, {
-    type: "tool_result_step";
-    final: boolean;
-    tool: string;
-    call_id: string;
-    is_error: boolean;
-    result?: unknown;
-}, {
-    type: "tool_result_step";
-    tool: string;
-    call_id: string;
-    final?: boolean | undefined;
-    result?: unknown;
-    is_error?: boolean | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"message_delta">;
     final: z.ZodDefault<z.ZodBoolean>;
     text: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    type: "message_delta";
-    final: boolean;
-    text: string;
-}, {
-    type: "message_delta";
-    text: string;
-    final?: boolean | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"message_final">;
     final: z.ZodDefault<z.ZodBoolean>;
     text: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    type: "message_final";
-    final: boolean;
-    text: string;
-}, {
-    type: "message_final";
-    text: string;
-    final?: boolean | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"run_usage">;
     final: z.ZodDefault<z.ZodBoolean>;
     input_tokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     output_tokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     total_tokens: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     model: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, "strip", z.ZodTypeAny, {
-    type: "run_usage";
-    final: boolean;
-    input_tokens: number | null;
-    output_tokens: number | null;
-    total_tokens: number | null;
-    model: string | null;
-}, {
-    type: "run_usage";
-    final?: boolean | undefined;
-    input_tokens?: number | null | undefined;
-    output_tokens?: number | null | undefined;
-    total_tokens?: number | null | undefined;
-    model?: string | null | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"structured_final">;
     final: z.ZodDefault<z.ZodBoolean>;
     data: z.ZodUnknown;
-}, "strip", z.ZodTypeAny, {
-    type: "structured_final";
-    final: boolean;
-    data?: unknown;
-}, {
-    type: "structured_final";
-    data?: unknown;
-    final?: boolean | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"interrupt_final">;
     final: z.ZodDefault<z.ZodBoolean>;
     interrupt_id: z.ZodString;
     payload: z.ZodUnknown;
     reason: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, "strip", z.ZodTypeAny, {
-    type: "interrupt_final";
-    final: boolean;
-    interrupt_id: string;
-    reason: string | null;
-    payload?: unknown;
-}, {
-    type: "interrupt_final";
-    interrupt_id: string;
-    final?: boolean | undefined;
-    payload?: unknown;
-    reason?: string | null | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"stream.end">;
-}, "strip", z.ZodTypeAny, {
-    type: "stream.end";
-}, {
-    type: "stream.end";
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"stream.error">;
     message: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    message: string;
-    type: "stream.error";
-}, {
-    message: string;
-    type: "stream.error";
-}>]>;
+}, z.core.$strip>], "type">;
 
 // @public (undocumented)
 export type AgentSummary = z.infer<typeof agentSummary>;
@@ -196,40 +85,26 @@ const agentSummary: z.ZodObject<{
     tool_name: z.ZodString;
     input_schema: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     spec_runnable: z.ZodDefault<z.ZodBoolean>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    tool_name: string;
-    input_schema: Record<string, unknown>;
-    spec_runnable: boolean;
-}, {
-    name: string;
-    tool_name: string;
-    description?: string | undefined;
-    input_schema?: Record<string, unknown> | undefined;
-    spec_runnable?: boolean | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const allToolSchemas: z.ZodRecord<z.ZodString, z.ZodObject<{
     input: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     output: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     description: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    description: string | null;
-    input: Record<string, unknown>;
-    output: Record<string, unknown> | null;
-}, {
-    description: string | null;
-    input: Record<string, unknown>;
-    output: Record<string, unknown> | null;
-}>>;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type AnswerFormat = z.infer<typeof answerFormat>;
 
 // @public (undocumented)
-const answerFormat: z.ZodEnum<["text", "confirm", "select", "form", "external"]>;
+const answerFormat: z.ZodEnum<{
+    text: "text";
+    external: "external";
+    confirm: "confirm";
+    select: "select";
+    form: "form";
+}>;
 
 // @public (undocumented)
 export type ApiClient = ReturnType<typeof createApiClient>;
@@ -311,26 +186,8 @@ const authCapabilities: z.ZodObject<{
     providers: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         mintable: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        mintable: boolean;
-    }, {
-        name: string;
-        mintable: boolean;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    providers: {
-        name: string;
-        mintable: boolean;
-    }[];
-    mintable: boolean;
-}, {
-    providers: {
-        name: string;
-        mintable: boolean;
-    }[];
-    mintable: boolean;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type AuthRoute = z.infer<typeof authRoute>;
@@ -338,50 +195,32 @@ export type AuthRoute = z.infer<typeof authRoute>;
 // @public
 const authRoute: z.ZodObject<{
     path: z.ZodString;
-    methods: z.ZodArray<z.ZodString, "many">;
+    methods: z.ZodArray<z.ZodString>;
     mapped: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     summary: z.ZodString;
-    action: z.ZodNullable<z.ZodEnum<["read", "write", "fenced", "secret"]>>;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    tags: string[];
-    methods: string[];
-    mapped: string | null;
-    summary: string;
-    action: "secret" | "read" | "write" | "fenced" | null;
-}, {
-    path: string;
-    tags: string[];
-    methods: string[];
-    mapped: string | null;
-    summary: string;
-    action: "secret" | "read" | "write" | "fenced" | null;
-}>;
+    action: z.ZodNullable<z.ZodEnum<{
+        secret: "secret";
+        read: "read";
+        write: "write";
+        fenced: "fenced";
+    }>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const authRoutes: z.ZodArray<z.ZodObject<{
     path: z.ZodString;
-    methods: z.ZodArray<z.ZodString, "many">;
+    methods: z.ZodArray<z.ZodString>;
     mapped: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     summary: z.ZodString;
-    action: z.ZodNullable<z.ZodEnum<["read", "write", "fenced", "secret"]>>;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    tags: string[];
-    methods: string[];
-    mapped: string | null;
-    summary: string;
-    action: "secret" | "read" | "write" | "fenced" | null;
-}, {
-    path: string;
-    tags: string[];
-    methods: string[];
-    mapped: string | null;
-    summary: string;
-    action: "secret" | "read" | "write" | "fenced" | null;
-}>, "many">;
+    action: z.ZodNullable<z.ZodEnum<{
+        secret: "secret";
+        read: "read";
+        write: "write";
+        fenced: "fenced";
+    }>>;
+}, z.core.$strip>>;
 
 // @public
 const authScopes: z.ZodRecord<z.ZodString, z.ZodString>;
@@ -394,15 +233,7 @@ const backendInfo: z.ZodObject<{
     present: z.ZodBoolean;
     backend: z.ZodNullable<z.ZodString>;
     module: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    present: boolean;
-    module: string | null;
-    backend: string | null;
-}, {
-    present: boolean;
-    module: string | null;
-    backend: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type BackupDocument = z.infer<typeof backupDocument>;
@@ -413,17 +244,7 @@ const backupDocument: z.ZodObject<{
     created_at: z.ZodString;
     sections: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     errors: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-}, "strip", z.ZodTypeAny, {
-    version: 1;
-    created_at: string;
-    sections: Record<string, unknown>;
-    errors?: Record<string, string> | undefined;
-}, {
-    version: 1;
-    created_at: string;
-    sections: Record<string, unknown>;
-    errors?: Record<string, string> | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type BackupImportReport = z.infer<typeof backupImportReport>;
@@ -435,326 +256,76 @@ const backupImportReport: z.ZodObject<{
         created: z.ZodNumber;
         updated: z.ZodNumber;
         skipped: z.ZodNumber;
-        errors: z.ZodArray<z.ZodString, "many">;
+        errors: z.ZodArray<z.ZodString>;
         new_api_keys: z.ZodOptional<z.ZodArray<z.ZodObject<{
             user_id: z.ZodString;
             description: z.ZodString;
             api_key: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            description: string;
-            user_id: string;
-            api_key: string;
-        }, {
-            description: string;
-            user_id: string;
-            api_key: string;
-        }>, "many">>;
-        fanout: z.ZodOptional<z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+        }, z.core.$strip>>>;
+        fanout: z.ZodOptional<z.ZodDiscriminatedUnion<[z.ZodObject<{
             mode: z.ZodLiteral<"local-only">;
             note: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            mode: "local-only";
-            note: string;
-        }, {
-            mode: "local-only";
-            note: string;
-        }>, z.ZodObject<{
+        }, z.core.$strip>, z.ZodObject<{
             op: z.ZodString;
             reachable: z.ZodBoolean;
             local_only: z.ZodBoolean;
             results: z.ZodArray<z.ZodObject<{
                 name: z.ZodString;
-                outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-                payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+                outcome: z.ZodEnum<{
+                    failed: "failed";
+                    resyncing: "resyncing";
+                    recycling: "recycling";
+                    stale: "stale";
+                    applied: "applied";
+                    missing: "missing";
+                    departed: "departed";
+                    timed_out: "timed_out";
+                }>;
+                payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
                 error: z.ZodNullable<z.ZodString>;
                 detail: z.ZodNullable<z.ZodString>;
-            }, "strip", z.ZodTypeAny, {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }, {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }>, "many">;
+            }, z.core.$strip>>;
             error: z.ZodNullable<z.ZodString>;
-        } & {
             mode: z.ZodLiteral<"fleet">;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        }, {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        }>, z.ZodObject<{
+        }, z.core.$strip>, z.ZodObject<{
             op: z.ZodString;
             reachable: z.ZodBoolean;
             local_only: z.ZodBoolean;
             results: z.ZodArray<z.ZodObject<{
                 name: z.ZodString;
-                outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-                payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+                outcome: z.ZodEnum<{
+                    failed: "failed";
+                    resyncing: "resyncing";
+                    recycling: "recycling";
+                    stale: "stale";
+                    applied: "applied";
+                    missing: "missing";
+                    departed: "departed";
+                    timed_out: "timed_out";
+                }>;
+                payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
                 error: z.ZodNullable<z.ZodString>;
                 detail: z.ZodNullable<z.ZodString>;
-            }, "strip", z.ZodTypeAny, {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }, {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }>, "many">;
+            }, z.core.$strip>>;
             error: z.ZodNullable<z.ZodString>;
-        } & {
             mode: z.ZodLiteral<"unreachable">;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        }, {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        }>]>>;
-    }, "strip", z.ZodTypeAny, {
-        skipped: number;
-        updated: number;
-        errors: string[];
-        created: number;
-        fanout?: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        } | undefined;
-        new_api_keys?: {
-            description: string;
-            user_id: string;
-            api_key: string;
-        }[] | undefined;
-    }, {
-        skipped: number;
-        updated: number;
-        errors: string[];
-        created: number;
-        fanout?: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        } | undefined;
-        new_api_keys?: {
-            description: string;
-            user_id: string;
-            api_key: string;
-        }[] | undefined;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    ok: boolean;
-    sections: Record<string, {
-        skipped: number;
-        updated: number;
-        errors: string[];
-        created: number;
-        fanout?: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        } | undefined;
-        new_api_keys?: {
-            description: string;
-            user_id: string;
-            api_key: string;
-        }[] | undefined;
-    }>;
-}, {
-    ok: boolean;
-    sections: Record<string, {
-        skipped: number;
-        updated: number;
-        errors: string[];
-        created: number;
-        fanout?: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        } | undefined;
-        new_api_keys?: {
-            description: string;
-            user_id: string;
-            api_key: string;
-        }[] | undefined;
-    }>;
-}>;
+        }, z.core.$strip>], "mode">>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const backupSections: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     secret: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    secret: boolean;
-}, {
-    name: string;
-    secret: boolean;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type Channels = z.infer<typeof channels>;
 
 // @public (undocumented)
 const channels: z.ZodObject<{
-    channels: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    channels: string[];
-}, {
-    channels: string[];
-}>;
+    channels: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ChannelTemplate = z.infer<typeof channelTemplate>;
@@ -763,16 +334,8 @@ export type ChannelTemplate = z.infer<typeof channelTemplate>;
 const channelTemplate: z.ZodObject<{
     name: z.ZodString;
     language: z.ZodString;
-    parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    language: string;
-    parameters: string[];
-}, {
-    name: string;
-    language: string;
-    parameters?: string[] | undefined;
-}>;
+    parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public
 export interface ClaimLinkBody {
@@ -790,48 +353,25 @@ const claimLinkCreated: z.ZodObject<{
     claim_path: z.ZodString;
     token: z.ZodString;
     expires_at: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    expires_at: string;
-    token: string;
-    claim_path: string;
-}, {
-    expires_at: string;
-    token: string;
-    claim_path: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const configFieldView: z.ZodObject<{
     key: z.ZodString;
     label: z.ZodString;
-    target: z.ZodEnum<["env", "header"]>;
+    target: z.ZodEnum<{
+        env: "env";
+        header: "header";
+    }>;
     required: z.ZodBoolean;
     secret: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    key: string;
-    required: boolean;
-    label: string;
-    target: "env" | "header";
-    secret: boolean;
-}, {
-    key: string;
-    required: boolean;
-    label: string;
-    target: "env" | "header";
-    secret: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public
 const configMode: z.ZodObject<{
     config_mode: z.ZodString;
     read_only: z.ZodDefault<z.ZodBoolean>;
-}, "strip", z.ZodTypeAny, {
-    config_mode: string;
-    read_only: boolean;
-}, {
-    config_mode: string;
-    read_only?: boolean | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const connectionsList: z.ZodObject<{
@@ -839,69 +379,24 @@ const connectionsList: z.ZodObject<{
         connection_id: z.ZodString;
         provider_id: z.ZodString;
         alias: z.ZodString;
-        kind: z.ZodEnum<["oauth", "none"]>;
+        kind: z.ZodEnum<{
+            oauth: "oauth";
+            none: "none";
+        }>;
         account_identity: z.ZodNullable<z.ZodString>;
-        enabled_sub_services: z.ZodArray<z.ZodString, "many">;
-        granted_scopes: z.ZodArray<z.ZodString, "many">;
-        unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-        auth_health_state: z.ZodEnum<["healthy", "reconnect_required", "refresh_failing"]>;
+        enabled_sub_services: z.ZodArray<z.ZodString>;
+        granted_scopes: z.ZodArray<z.ZodString>;
+        unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        auth_health_state: z.ZodEnum<{
+            healthy: "healthy";
+            reconnect_required: "reconnect_required";
+            refresh_failing: "refresh_failing";
+        }>;
         created_at: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        kind: "oauth" | "none";
-        created_at: string;
-        connection_id: string;
-        provider_id: string;
-        alias: string;
-        account_identity: string | null;
-        enabled_sub_services: string[];
-        granted_scopes: string[];
-        unreachable_sub_services: string[];
-        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-    }, {
-        kind: "oauth" | "none";
-        created_at: string;
-        connection_id: string;
-        provider_id: string;
-        alias: string;
-        account_identity: string | null;
-        enabled_sub_services: string[];
-        granted_scopes: string[];
-        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-        unreachable_sub_services?: string[] | undefined;
-    }>, "many">;
+    }, z.core.$strip>>;
     total: z.ZodNumber;
     unhealthy: z.ZodOptional<z.ZodNumber>;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        kind: "oauth" | "none";
-        created_at: string;
-        connection_id: string;
-        provider_id: string;
-        alias: string;
-        account_identity: string | null;
-        enabled_sub_services: string[];
-        granted_scopes: string[];
-        unreachable_sub_services: string[];
-        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-    }[];
-    total: number;
-    unhealthy?: number | undefined;
-}, {
-    items: {
-        kind: "oauth" | "none";
-        created_at: string;
-        connection_id: string;
-        provider_id: string;
-        alias: string;
-        account_identity: string | null;
-        enabled_sub_services: string[];
-        granted_scopes: string[];
-        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-        unreachable_sub_services?: string[] | undefined;
-    }[];
-    total: number;
-    unhealthy?: number | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConnectionView = z.infer<typeof connectionView>;
@@ -911,36 +406,21 @@ const connectionView: z.ZodObject<{
     connection_id: z.ZodString;
     provider_id: z.ZodString;
     alias: z.ZodString;
-    kind: z.ZodEnum<["oauth", "none"]>;
+    kind: z.ZodEnum<{
+        oauth: "oauth";
+        none: "none";
+    }>;
     account_identity: z.ZodNullable<z.ZodString>;
-    enabled_sub_services: z.ZodArray<z.ZodString, "many">;
-    granted_scopes: z.ZodArray<z.ZodString, "many">;
-    unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-    auth_health_state: z.ZodEnum<["healthy", "reconnect_required", "refresh_failing"]>;
+    enabled_sub_services: z.ZodArray<z.ZodString>;
+    granted_scopes: z.ZodArray<z.ZodString>;
+    unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    auth_health_state: z.ZodEnum<{
+        healthy: "healthy";
+        reconnect_required: "reconnect_required";
+        refresh_failing: "refresh_failing";
+    }>;
     created_at: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    kind: "oauth" | "none";
-    created_at: string;
-    connection_id: string;
-    provider_id: string;
-    alias: string;
-    account_identity: string | null;
-    enabled_sub_services: string[];
-    granted_scopes: string[];
-    unreachable_sub_services: string[];
-    auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-}, {
-    kind: "oauth" | "none";
-    created_at: string;
-    connection_id: string;
-    provider_id: string;
-    alias: string;
-    account_identity: string | null;
-    enabled_sub_services: string[];
-    granted_scopes: string[];
-    auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-    unreachable_sub_services?: string[] | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConnectorCategoryView = z.infer<typeof connectorCategoryView>;
@@ -950,15 +430,7 @@ const connectorCategoryView: z.ZodObject<{
     id: z.ZodString;
     display_name: z.ZodString;
     sort_order: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    display_name: string;
-    sort_order: number;
-}, {
-    id: string;
-    display_name: string;
-    sort_order: number;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConnectorRef = z.infer<typeof connectorRef>;
@@ -968,33 +440,40 @@ const connectorRef: z.ZodObject<{
     connection_id: z.ZodString;
     provider_id: z.ZodString;
     sub_service: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    connection_id: string;
-    provider_id: string;
-    sub_service: string;
-}, {
-    connection_id: string;
-    provider_id: string;
-    sub_service: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
 // @public
-const conversationAnswerStatus: z.ZodEnum<["answered", "error", "silent"]>;
+const conversationAnswerStatus: z.ZodEnum<{
+    error: "error";
+    silent: "silent";
+    answered: "answered";
+}>;
 
 // @public (undocumented)
 export type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
-const conversationDeliveryStatus: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
+const conversationDeliveryStatus: z.ZodEnum<{
+    failed: "failed";
+    accepted: "accepted";
+    pending_delivery: "pending_delivery";
+    provisional: "provisional";
+    delivered: "delivered";
+    shed: "shed";
+    silent: "silent";
+}>;
 
 // @public (undocumented)
 export type ConversationDoor = z.infer<typeof conversationDoor>;
 
 // @public
-const conversationDoor: z.ZodEnum<["api", "channel"]>;
+const conversationDoor: z.ZodEnum<{
+    channel: "channel";
+    api: "api";
+}>;
 
 // @public (undocumented)
 export type ConversationMessage = z.infer<typeof conversationMessage>;
@@ -1003,15 +482,33 @@ export type ConversationMessage = z.infer<typeof conversationMessage>;
 const conversationMessage: z.ZodObject<{
     message_id: z.ZodString;
     route_name: z.ZodString;
-    door: z.ZodEnum<["api", "channel"]>;
+    door: z.ZodEnum<{
+        channel: "channel";
+        api: "api";
+    }>;
     thread_id: z.ZodString;
     client_address: z.ZodString;
     caller_principal: z.ZodNullable<z.ZodString>;
     inbound_text: z.ZodString;
-    answer_status: z.ZodNullable<z.ZodEnum<["answered", "error", "silent"]>>;
+    answer_status: z.ZodNullable<z.ZodEnum<{
+        error: "error";
+        silent: "silent";
+        answered: "answered";
+    }>>;
     answer: z.ZodNullable<z.ZodString>;
-    origin: z.ZodEnum<["client", "operator"]>;
-    delivery_status: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
+    origin: z.ZodEnum<{
+        client: "client";
+        operator: "operator";
+    }>;
+    delivery_status: z.ZodEnum<{
+        failed: "failed";
+        accepted: "accepted";
+        pending_delivery: "pending_delivery";
+        provisional: "provisional";
+        delivered: "delivered";
+        shed: "shed";
+        silent: "silent";
+    }>;
     created_at: z.ZodNumber;
     updated_at: z.ZodNumber;
     channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -1019,51 +516,9 @@ const conversationMessage: z.ZodObject<{
     provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
     attempts: z.ZodOptional<z.ZodNumber>;
-}, "strip", z.ZodTypeAny, {
-    created_at: number;
-    origin: "client" | "operator";
-    route_name: string;
-    door: "channel" | "api";
-    thread_id: string;
-    client_address: string;
-    message_id: string;
-    caller_principal: string | null;
-    inbound_text: string;
-    answer_status: "error" | "silent" | "answered" | null;
-    answer: string | null;
-    delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-    updated_at: number;
-    error?: string | null | undefined;
-    channel?: string | null | undefined;
-    our_identity?: string | null | undefined;
-    callback_url?: string | null | undefined;
-    provider_message_id?: string | null | undefined;
-    outbound_message_ids?: string[] | undefined;
-    attempts?: number | undefined;
-}, {
-    created_at: number;
-    origin: "client" | "operator";
-    route_name: string;
-    door: "channel" | "api";
-    thread_id: string;
-    client_address: string;
-    message_id: string;
-    caller_principal: string | null;
-    inbound_text: string;
-    answer_status: "error" | "silent" | "answered" | null;
-    answer: string | null;
-    delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-    updated_at: number;
-    error?: string | null | undefined;
-    channel?: string | null | undefined;
-    our_identity?: string | null | undefined;
-    callback_url?: string | null | undefined;
-    provider_message_id?: string | null | undefined;
-    outbound_message_ids?: string[] | undefined;
-    attempts?: number | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationMessageSearchPage = z.infer<typeof conversationMessageSearchPage>;
@@ -1078,15 +533,33 @@ const conversationMessageSearchPage: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         message_id: z.ZodString;
         route_name: z.ZodString;
-        door: z.ZodEnum<["api", "channel"]>;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
         thread_id: z.ZodString;
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
-        answer_status: z.ZodNullable<z.ZodEnum<["answered", "error", "silent"]>>;
+        answer_status: z.ZodNullable<z.ZodEnum<{
+            error: "error";
+            silent: "silent";
+            answered: "answered";
+        }>>;
         answer: z.ZodNullable<z.ZodString>;
-        origin: z.ZodEnum<["client", "operator"]>;
-        delivery_status: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
+        origin: z.ZodEnum<{
+            client: "client";
+            operator: "operator";
+        }>;
+        delivery_status: z.ZodEnum<{
+            failed: "failed";
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+            silent: "silent";
+        }>;
         created_at: z.ZodNumber;
         updated_at: z.ZodNumber;
         channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -1094,108 +567,10 @@ const conversationMessageSearchPage: z.ZodObject<{
         provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
         attempts: z.ZodOptional<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }, {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-}, {
-    items: {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 export interface ConversationMessageSearchQuery {
@@ -1213,7 +588,10 @@ export interface ConversationMessageSearchQuery {
 export type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
 // @public
-const conversationRecordOrigin: z.ZodEnum<["client", "operator"]>;
+const conversationRecordOrigin: z.ZodEnum<{
+    client: "client";
+    operator: "operator";
+}>;
 
 // @public (undocumented)
 export type ConversationRoute = z.infer<typeof conversationRoute>;
@@ -1221,8 +599,14 @@ export type ConversationRoute = z.infer<typeof conversationRoute>;
 // @public
 const conversationRoute: z.ZodObject<{
     route_name: z.ZodString;
-    door: z.ZodEnum<["api", "channel"]>;
-    target_kind: z.ZodEnum<["agent", "tool"]>;
+    door: z.ZodEnum<{
+        channel: "channel";
+        api: "api";
+    }>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
     target_name: z.ZodString;
     payload_expr: z.ZodNullable<z.ZodString>;
     reply_expr: z.ZodNullable<z.ZodString>;
@@ -1231,31 +615,7 @@ const conversationRoute: z.ZodObject<{
     our_identity: z.ZodNullable<z.ZodString>;
     callback_url: z.ZodNullable<z.ZodString>;
     execution_key_fingerprint: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    channel: string | null;
-    route_name: string;
-    door: "channel" | "api";
-    target_kind: "tool" | "agent";
-    target_name: string;
-    payload_expr: string | null;
-    reply_expr: string | null;
-    execution_key: string;
-    our_identity: string | null;
-    callback_url: string | null;
-    execution_key_fingerprint: string;
-}, {
-    channel: string | null;
-    route_name: string;
-    door: "channel" | "api";
-    target_kind: "tool" | "agent";
-    target_name: string;
-    payload_expr: string | null;
-    reply_expr: string | null;
-    execution_key: string;
-    our_identity: string | null;
-    callback_url: string | null;
-    execution_key_fingerprint: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationRoutes = z.infer<typeof conversationRoutes>;
@@ -1264,8 +624,14 @@ export type ConversationRoutes = z.infer<typeof conversationRoutes>;
 const conversationRoutes: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         route_name: z.ZodString;
-        door: z.ZodEnum<["api", "channel"]>;
-        target_kind: z.ZodEnum<["agent", "tool"]>;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
         target_name: z.ZodString;
         payload_expr: z.ZodNullable<z.ZodString>;
         reply_expr: z.ZodNullable<z.ZodString>;
@@ -1274,69 +640,18 @@ const conversationRoutes: z.ZodObject<{
         our_identity: z.ZodNullable<z.ZodString>;
         callback_url: z.ZodNullable<z.ZodString>;
         execution_key_fingerprint: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        channel: string | null;
-        route_name: string;
-        door: "channel" | "api";
-        target_kind: "tool" | "agent";
-        target_name: string;
-        payload_expr: string | null;
-        reply_expr: string | null;
-        execution_key: string;
-        our_identity: string | null;
-        callback_url: string | null;
-        execution_key_fingerprint: string;
-    }, {
-        channel: string | null;
-        route_name: string;
-        door: "channel" | "api";
-        target_kind: "tool" | "agent";
-        target_name: string;
-        payload_expr: string | null;
-        reply_expr: string | null;
-        execution_key: string;
-        our_identity: string | null;
-        callback_url: string | null;
-        execution_key_fingerprint: string;
-    }>, "many">;
+    }, z.core.$strip>>;
     total: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        channel: string | null;
-        route_name: string;
-        door: "channel" | "api";
-        target_kind: "tool" | "agent";
-        target_name: string;
-        payload_expr: string | null;
-        reply_expr: string | null;
-        execution_key: string;
-        our_identity: string | null;
-        callback_url: string | null;
-        execution_key_fingerprint: string;
-    }[];
-    total: number;
-}, {
-    items: {
-        channel: string | null;
-        route_name: string;
-        door: "channel" | "api";
-        target_kind: "tool" | "agent";
-        target_name: string;
-        payload_expr: string | null;
-        reply_expr: string | null;
-        execution_key: string;
-        our_identity: string | null;
-        callback_url: string | null;
-        execution_key_fingerprint: string;
-    }[];
-    total: number;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 // @public
-const conversationTargetKind: z.ZodEnum<["agent", "tool"]>;
+const conversationTargetKind: z.ZodEnum<{
+    tool: "tool";
+    agent: "agent";
+}>;
 
 // @public (undocumented)
 export type ConversationThread = z.infer<typeof conversationThread>;
@@ -1347,20 +662,16 @@ const conversationThread: z.ZodObject<{
     client_address: z.ZodString;
     last_activity_at: z.ZodNumber;
     message_count: z.ZodNumber;
-    last_delivery_status: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
-}, "strip", z.ZodTypeAny, {
-    thread_id: string;
-    client_address: string;
-    last_activity_at: number;
-    message_count: number;
-    last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-}, {
-    thread_id: string;
-    client_address: string;
-    last_activity_at: number;
-    message_count: number;
-    last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-}>;
+    last_delivery_status: z.ZodEnum<{
+        failed: "failed";
+        accepted: "accepted";
+        pending_delivery: "pending_delivery";
+        provisional: "provisional";
+        delivered: "delivered";
+        shed: "shed";
+        silent: "silent";
+    }>;
+}, z.core.$strip>;
 
 // @public
 export interface ConversationThreadFilters {
@@ -1387,34 +698,31 @@ export type ConversationThreadMessageSent = z.infer<typeof conversationThreadMes
 const conversationThreadMessageSent: z.ZodObject<{
     message_id: z.ZodString;
     thread_id: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    thread_id: string;
-    message_id: string;
-}, {
-    thread_id: string;
-    message_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationThreadMode = z.infer<typeof conversationThreadMode>;
 
 // @public
-const conversationThreadMode: z.ZodEnum<["agent", "manual"]>;
+const conversationThreadMode: z.ZodEnum<{
+    agent: "agent";
+    manual: "manual";
+}>;
 
 // @public (undocumented)
 export type ConversationThreadModeState = z.infer<typeof conversationThreadModeState>;
 
 // @public (undocumented)
 const conversationThreadModeState: z.ZodObject<{
-    mode: z.ZodEnum<["agent", "manual"]>;
-    source: z.ZodEnum<["thread", "route"]>;
-}, "strip", z.ZodTypeAny, {
-    mode: "agent" | "manual";
-    source: "thread" | "route";
-}, {
-    mode: "agent" | "manual";
-    source: "thread" | "route";
-}>;
+    mode: z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>;
+    source: z.ZodEnum<{
+        thread: "thread";
+        route: "route";
+    }>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
@@ -1431,54 +739,27 @@ const conversationThreadsPage: z.ZodObject<{
         client_address: z.ZodString;
         last_activity_at: z.ZodNumber;
         message_count: z.ZodNumber;
-        last_delivery_status: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
-    }, "strip", z.ZodTypeAny, {
-        thread_id: string;
-        client_address: string;
-        last_activity_at: number;
-        message_count: number;
-        last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-    }, {
-        thread_id: string;
-        client_address: string;
-        last_activity_at: number;
-        message_count: number;
-        last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        thread_id: string;
-        client_address: string;
-        last_activity_at: number;
-        message_count: number;
-        last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-}, {
-    items: {
-        thread_id: string;
-        client_address: string;
-        last_activity_at: number;
-        message_count: number;
-        last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-}>;
+        last_delivery_status: z.ZodEnum<{
+            failed: "failed";
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+            silent: "silent";
+        }>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ConversationTranscriptPage = z.infer<typeof conversationTranscriptPage>;
 
 // @public
 const conversationTranscriptPage: z.ZodObject<{
-    order: z.ZodEnum<["asc", "desc"]>;
+    order: z.ZodEnum<{
+        asc: "asc";
+        desc: "desc";
+    }>;
     total: z.ZodNumber;
     page: z.ZodNumber;
     page_size: z.ZodNumber;
@@ -1487,15 +768,33 @@ const conversationTranscriptPage: z.ZodObject<{
     items: z.ZodArray<z.ZodObject<{
         message_id: z.ZodString;
         route_name: z.ZodString;
-        door: z.ZodEnum<["api", "channel"]>;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
         thread_id: z.ZodString;
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
-        answer_status: z.ZodNullable<z.ZodEnum<["answered", "error", "silent"]>>;
+        answer_status: z.ZodNullable<z.ZodEnum<{
+            error: "error";
+            silent: "silent";
+            answered: "answered";
+        }>>;
         answer: z.ZodNullable<z.ZodString>;
-        origin: z.ZodEnum<["client", "operator"]>;
-        delivery_status: z.ZodEnum<["accepted", "pending_delivery", "provisional", "delivered", "failed", "shed", "silent"]>;
+        origin: z.ZodEnum<{
+            client: "client";
+            operator: "operator";
+        }>;
+        delivery_status: z.ZodEnum<{
+            failed: "failed";
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+            silent: "silent";
+        }>;
         created_at: z.ZodNumber;
         updated_at: z.ZodNumber;
         channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -1503,110 +802,10 @@ const conversationTranscriptPage: z.ZodObject<{
         provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
         attempts: z.ZodOptional<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }, {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-    order: "asc" | "desc";
-}, {
-    items: {
-        created_at: number;
-        origin: "client" | "operator";
-        route_name: string;
-        door: "channel" | "api";
-        thread_id: string;
-        client_address: string;
-        message_id: string;
-        caller_principal: string | null;
-        inbound_text: string;
-        answer_status: "error" | "silent" | "answered" | null;
-        answer: string | null;
-        delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        updated_at: number;
-        error?: string | null | undefined;
-        channel?: string | null | undefined;
-        our_identity?: string | null | undefined;
-        callback_url?: string | null | undefined;
-        provider_message_id?: string | null | undefined;
-        outbound_message_ids?: string[] | undefined;
-        attempts?: number | undefined;
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-    order: "asc" | "desc";
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 export interface ConversationTranscriptQuery {
@@ -1629,32 +828,32 @@ export function createApiClient(config: ApiConfig): {
     readonly baseUrl: string;
     readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
     readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
-        description: string | null;
         input: Record<string, unknown>;
         output: Record<string, unknown> | null;
+        description: string | null;
     }>;
     readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
-        description: string | null;
         input: Record<string, unknown>;
         output: Record<string, unknown> | null;
+        description: string | null;
     }>>;
     readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
     readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
         run_id: string;
     }>;
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
+        run_id: string;
         tool_name: string;
         status: "running" | "succeeded" | "failed" | "lost";
-        run_id: string;
         started_at: string;
-        error?: string | undefined;
-        result?: unknown;
         finished_at?: string | undefined;
+        result?: unknown;
+        error?: string | undefined;
     }>;
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
+        run_id: string;
         tool_name: string;
         status: "running" | "succeeded" | "failed" | "lost";
-        run_id: string;
         started_at: string;
         finished_at?: string | undefined;
     }[]>;
@@ -1666,8 +865,8 @@ export function createApiClient(config: ApiConfig): {
     }[]>;
     readonly listPresets: (signal?: AbortSignal) => Promise<{
         name: string;
-        description: string;
         base_tool: string;
+        description: string;
         active_version: number;
         extensions: (string | {
             name: string;
@@ -1681,8 +880,8 @@ export function createApiClient(config: ApiConfig): {
     }[]>;
     readonly createPreset: (body: CreatePresetBody) => Promise<{
         name: string;
-        description: string;
         base_tool: string;
+        description: string;
         active_version: number;
         extensions: (string | {
             name: string;
@@ -1696,8 +895,8 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
         name: string;
-        description: string;
         base_tool: string;
+        description: string;
         active_version: number;
         extensions: (string | {
             name: string;
@@ -1711,50 +910,50 @@ export function createApiClient(config: ApiConfig): {
         fixed_kwargs: Record<string, unknown>;
     }>;
     readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
-        tags: string[];
         version: number;
         body: {
-            description: string;
             base_tool: string;
+            description: string;
+            fixed_kwargs: Record<string, unknown>;
             extensions: (string | {
                 name: string;
                 config: Record<string, unknown>;
             })[][];
             output_schema: Record<string, unknown> | null;
-            fixed_kwargs: Record<string, unknown>;
         };
+        tags: string[];
         created_at: string;
         is_current: boolean;
     }[]>;
     readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-        tags: string[];
         version: number;
         body: {
-            description: string;
             base_tool: string;
+            description: string;
+            fixed_kwargs: Record<string, unknown>;
             extensions: (string | {
                 name: string;
                 config: Record<string, unknown>;
             })[][];
             output_schema: Record<string, unknown> | null;
-            fixed_kwargs: Record<string, unknown>;
         };
+        tags: string[];
         created_at: string;
         is_current: boolean;
     }>;
     readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
-        tags: string[];
         version: number;
         body: {
-            description: string;
             base_tool: string;
+            description: string;
+            fixed_kwargs: Record<string, unknown>;
             extensions: (string | {
                 name: string;
                 config: Record<string, unknown>;
             })[][];
             output_schema: Record<string, unknown> | null;
-            fixed_kwargs: Record<string, unknown>;
         };
+        tags: string[];
         created_at: string;
         is_current: boolean;
     }>;
@@ -1768,67 +967,67 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly renamePreset: (name: string, newName: string) => Promise<{
         name: string;
-        active_version: number;
         renamed_from: string;
+        active_version: number;
     }>;
     readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
         name: string;
         referees: string[];
     }>;
     readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-        error: string | null;
         valid: boolean;
+        error: string | null;
     }>;
     readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
         name: string;
-        tags: string[];
         version: number;
+        tags: string[];
     }>;
     readonly listToolMeta: (signal?: AbortSignal) => Promise<{
         folders: {
-            name: string;
             id: string;
+            name: string;
             parent_id: string | null;
         }[];
         meta: {
             tool_name: string;
+            display_name: string | null;
+            folder_id: string | null;
             tags: string[];
             badges: string[];
             hidden: boolean | null;
-            display_name: string | null;
-            folder_id: string | null;
         }[];
     }>;
     readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
         tool_name: string;
+        display_name: string | null;
+        folder_id: string | null;
         tags: string[];
         badges: string[];
         hidden: boolean | null;
-        display_name: string | null;
-        folder_id: string | null;
     }>;
     readonly deleteToolMeta: (toolName: string) => Promise<{
         tool_name: string;
         deleted: true;
     }>;
     readonly createFolder: (name: string, parentId?: string | null) => Promise<{
-        name: string;
         id: string;
+        name: string;
         parent_id: string | null;
     }>;
     readonly renameFolder: (folderId: string, name: string) => Promise<{
-        name: string;
         id: string;
+        name: string;
         parent_id: string | null;
     }>;
     readonly moveFolder: (folderId: string, parentId: string | null) => Promise<{
-        name: string;
         id: string;
+        name: string;
         parent_id: string | null;
     }>;
     readonly deleteFolder: (folderId: string) => Promise<{
-        deleted: true;
         folder_id: string;
+        deleted: true;
     }>;
     readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
         present: boolean;
@@ -1848,17 +1047,17 @@ export function createApiClient(config: ApiConfig): {
         stored: true;
     }>;
     readonly deleteStorageResource: (id: string) => Promise<{
-        deleted: true;
         id: string;
+        deleted: true;
     }>;
     readonly deleteStorageDir: (path: string) => Promise<{
-        deleted: true;
         dir: string;
+        deleted: true;
     }>;
     readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
         present: boolean;
-        module: string | null;
         backend: string | null;
+        module: string | null;
     }>;
     readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
         workers: {
@@ -1871,24 +1070,24 @@ export function createApiClient(config: ApiConfig): {
             state: "ready" | "resyncing" | "recycling";
             stale: boolean;
             last_op: {
-                at: string;
                 op: string;
                 outcome: string;
+                at: string;
             } | null;
         }[];
     }>;
     readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
-        error: string | null;
         op: string;
         reachable: boolean;
         local_only: boolean;
         results: {
-            error: string | null;
             name: string;
             outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
             detail: string | null;
-            payload?: unknown;
         }[];
+        error: string | null;
     }>;
     readonly listExtensions: (signal?: AbortSignal) => Promise<{
         name: string;
@@ -1911,30 +1110,30 @@ export function createApiClient(config: ApiConfig): {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         };
     }>;
@@ -1962,21 +1161,14 @@ export function createApiClient(config: ApiConfig): {
         cleared: true;
     }>;
     readonly getManifest: (signal?: AbortSignal) => Promise<{
-        mcp: objectOutputType<    {
-        managed: ZodOptional<ZodNullable<ZodObject<    {
-        connection_id: ZodString;
-        provider_id: ZodString;
-        sub_service: ZodString;
-        }, "strip", ZodTypeAny, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-        }, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-        }>>>;
-        }, ZodTypeAny, "passthrough">[];
+        mcp: {
+            [x: string]: unknown;
+            managed?: {
+                connection_id: string;
+                provider_id: string;
+                sub_service: string;
+            } | null | undefined;
+        }[];
         user_tools: string[];
     }>;
     readonly setMcpConfig: (mcp: unknown[]) => Promise<{
@@ -1986,61 +1178,61 @@ export function createApiClient(config: ApiConfig): {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         };
     }>;
     readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
-        failed: {
-            status: string;
-            title: string;
-        }[];
         bound: Record<string, string[]>;
+        failed: {
+            title: string;
+            status: string;
+        }[];
     }>;
     readonly reloadMcp: (title: string) => Promise<{
-        error: string | null;
         op: string;
         reachable: boolean;
         local_only: boolean;
         results: {
-            error: string | null;
             name: string;
             outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
             detail: string | null;
-            payload?: unknown;
         }[];
+        error: string | null;
     }>;
     readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
         tools: string[];
         transport: string;
     }>>;
     readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
+        slug: string;
         tools: string[];
         transport: string;
-        slug: string;
     }>;
     readonly deleteSubMcp: (slug: string) => Promise<{
         slug: string;
@@ -2057,30 +1249,30 @@ export function createApiClient(config: ApiConfig): {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         };
     }>;
@@ -2105,8 +1297,8 @@ export function createApiClient(config: ApiConfig): {
         ok: true;
     }>;
     readonly diffSettingsProfile: (name: string) => Promise<{
-        removed: string[];
         added: string[];
+        removed: string[];
         changed: {
             key: string;
             old: string;
@@ -2116,41 +1308,11 @@ export function createApiClient(config: ApiConfig): {
         refused_keys: string[];
     }>;
     readonly applySettingsProfile: (name: string) => Promise<{
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        };
         hot: string[];
         recycle: {
             name: string;
-            status: string;
             kind: string;
+            status: string;
             generation_before: number;
         }[];
         fresh: {
@@ -2162,27 +1324,57 @@ export function createApiClient(config: ApiConfig): {
             key: string;
             reason: string;
         }[];
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
     }>;
     readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
-        tags: string[];
         version: number;
+        tags: string[];
         created_at: string;
         is_current: boolean;
     }[]>;
     readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-        tags: string[];
         version: number;
+        tags: string[];
+        created_at: string;
+        is_current: boolean;
         body: {
             description: string;
             env: Record<string, string>;
             secret_keys: string[];
         };
-        created_at: string;
-        is_current: boolean;
     }>;
     readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
-        version: number;
         ok: true;
+        version: number;
     }>;
     readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
         status: string;
@@ -2191,77 +1383,70 @@ export function createApiClient(config: ApiConfig): {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         };
     }>;
     readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
-        mcp: objectOutputType<    {
-        managed: ZodOptional<ZodNullable<ZodObject<    {
-        connection_id: ZodString;
-        provider_id: ZodString;
-        sub_service: ZodString;
-        }, "strip", ZodTypeAny, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-        }, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-        }>>>;
-        }, ZodTypeAny, "passthrough">[];
+        mcp: {
+            [x: string]: unknown;
+            managed?: {
+                connection_id: string;
+                provider_id: string;
+                sub_service: string;
+            } | null | undefined;
+        }[];
         user_tools: string[];
     }>;
     readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
-        set: boolean;
         var: string;
         pointer: string;
         has_default: boolean;
+        set: boolean;
     }[]>;
     readonly listProviders: (signal?: AbortSignal) => Promise<{
         providers: {
-            description: string;
-            kind: "oauth" | "none";
             id: string;
             display_name: string;
+            description: string;
             icon_url: string;
+            kind: "oauth" | "none";
             origin: "system" | "community";
             category: string;
             sub_services: {
-                description: string;
                 id: string;
                 display_name: string;
+                description: string;
                 scopes: string[];
             }[];
             config_fields: {
                 key: string;
-                required: boolean;
                 label: string;
                 target: "env" | "header";
+                required: boolean;
                 secret: boolean;
             }[];
         }[];
@@ -2273,104 +1458,104 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly listConnections: (signal?: AbortSignal) => Promise<{
         items: {
-            kind: "oauth" | "none";
-            created_at: string;
             connection_id: string;
             provider_id: string;
             alias: string;
+            kind: "oauth" | "none";
             account_identity: string | null;
             enabled_sub_services: string[];
             granted_scopes: string[];
             unreachable_sub_services: string[];
             auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+            created_at: string;
         }[];
         total: number;
         unhealthy?: number | undefined;
     }>;
     readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
-        kind: "oauth" | "none";
-        created_at: string;
         connection_id: string;
         provider_id: string;
         alias: string;
+        kind: "oauth" | "none";
         account_identity: string | null;
         enabled_sub_services: string[];
         granted_scopes: string[];
         unreachable_sub_services: string[];
         auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+        created_at: string;
     }>;
     readonly startConnect: (args: StartConnectArgs) => Promise<{
         flow_id: string;
         authorize_url: string;
     } | {
         connection_id: string;
+        added_manifest_entries: string[];
         fanout: {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         } | null;
-        added_manifest_entries: string[];
     }>;
     readonly disconnect: (id: string) => Promise<{
         connection_id: string;
+        upstream_revoke_outcome: "success" | "failed" | "skipped";
+        upstream_revoke_status: number | null;
+        removed_manifest_entries: string[];
         fanout: {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         } | null;
-        upstream_revoke_outcome: "failed" | "success" | "skipped";
-        upstream_revoke_status: number | null;
-        removed_manifest_entries: string[];
     }>;
     readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
         flow_id: string;
@@ -2378,83 +1563,83 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
         connection_id: string;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "fleet";
-        } | {
-            error: string | null;
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                error: string | null;
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                detail: string | null;
-                payload?: unknown;
-            }[];
-            mode: "unreachable";
-        } | null;
         enabled_sub_services: string[];
+        consent_required: boolean;
         flow_id: string | null;
         authorize_url: string | null;
         added_manifest_entries: string[];
         removed_manifest_entries: string[];
-        consent_required: boolean;
-    }>;
-    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
-        kind: "success";
-        connection_id: string;
         fanout: {
             mode: "local-only";
             note: string;
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "fleet";
         } | {
-            error: string | null;
             op: string;
             reachable: boolean;
             local_only: boolean;
             results: {
-                error: string | null;
                 name: string;
                 outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
                 detail: string | null;
-                payload?: unknown;
             }[];
+            error: string | null;
             mode: "unreachable";
         } | null;
+    }>;
+    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+        kind: "success";
+        connection_id: string;
         return_url: string;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
     } | {
-        reason: string;
         kind: "failed";
+        reason: string;
     } | {
-        message: string;
         kind: "cancelled";
+        message: string;
     }>;
     readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
         name: string;
@@ -2470,38 +1655,37 @@ export function createApiClient(config: ApiConfig): {
         };
     }[]>;
     readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
-        items: {
-            created_at: string;
-            interaction_id: string;
-            group_id: string;
-            question: string;
-            answer_format: "text" | "confirm" | "select" | "form" | "external";
-            format_payload: Record<string, unknown>;
-            timeout_at: string;
-            sensitive: boolean;
-            origin?: string | undefined;
-            server_verified?: boolean | undefined;
-            channel?: string | undefined;
-            recipient?: string | undefined;
-            audience?: string | undefined;
-            media?: unknown[] | undefined;
-        }[];
         total: number;
         page: number;
         page_size: number;
         next_page: number | null;
         truncated: boolean;
+        items: {
+            interaction_id: string;
+            group_id: string;
+            question: string;
+            answer_format: "text" | "external" | "confirm" | "select" | "form";
+            format_payload: Record<string, unknown>;
+            created_at: string;
+            timeout_at: string;
+            sensitive: boolean;
+            server_verified?: boolean | undefined;
+            channel?: string | undefined;
+            recipient?: string | undefined;
+            origin?: string | undefined;
+            audience?: string | undefined;
+            media?: unknown[] | undefined;
+        }[];
     }>;
     readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
-        status: string;
         interaction_id: string;
+        status: string;
     }>;
     readonly listChannels: (signal?: AbortSignal) => Promise<{
         channels: string[];
     }>;
     readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
         items: {
-            channel: string | null;
             route_name: string;
             door: "channel" | "api";
             target_kind: "tool" | "agent";
@@ -2509,6 +1693,7 @@ export function createApiClient(config: ApiConfig): {
             payload_expr: string | null;
             reply_expr: string | null;
             execution_key: string;
+            channel: string | null;
             our_identity: string | null;
             callback_url: string | null;
             execution_key_fingerprint: string;
@@ -2516,6 +1701,11 @@ export function createApiClient(config: ApiConfig): {
         total: number;
     }>;
     readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
         items: {
             thread_id: string;
             client_address: string;
@@ -2523,74 +1713,69 @@ export function createApiClient(config: ApiConfig): {
             message_count: number;
             last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
         }[];
-        total: number;
-        page: number;
-        page_size: number;
-        next_page: number | null;
-        truncated: boolean;
     }>;
     readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
-        items: {
-            created_at: number;
-            origin: "client" | "operator";
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            message_id: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
-            answer: string | null;
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-            updated_at: number;
-            error?: string | null | undefined;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
+        order: "asc" | "desc";
         total: number;
         page: number;
         page_size: number;
         next_page: number | null;
         truncated: boolean;
-        order: "asc" | "desc";
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
     }>;
     readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
-        items: {
-            created_at: number;
-            origin: "client" | "operator";
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            message_id: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
-            answer: string | null;
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-            updated_at: number;
-            error?: string | null | undefined;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
         total: number;
         page: number;
         page_size: number;
         next_page: number | null;
         truncated: boolean;
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
     }>;
     readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
-        thread_id: string;
         message_id: string;
+        thread_id: string;
     }>;
     readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
         mode: "agent" | "manual";
@@ -2603,9 +1788,9 @@ export function createApiClient(config: ApiConfig): {
     readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
         enabled: boolean;
         codes: {
-            created_at: string;
-            label: string | null;
             code_id: string;
+            label: string | null;
+            created_at: string;
             expires_at: string | null;
         }[];
     }>;
@@ -2622,18 +1807,18 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly listNotifications: (signal?: AbortSignal) => Promise<{
         notifications: {
-            message: string;
-            created_at: string;
             id: string;
+            message: string;
             recipient: string | null;
-            options?: string[] | null | undefined;
+            created_at: string;
+            audience?: string | null | undefined;
+            media?: unknown[] | null | undefined;
             template?: {
                 name: string;
                 language: string;
                 parameters: string[];
             } | null | undefined;
-            audience?: string | null | undefined;
-            media?: unknown[] | null | undefined;
+            options?: string[] | null | undefined;
         }[];
     }>;
     readonly listAgents: (signal?: AbortSignal) => Promise<{
@@ -2661,9 +1846,9 @@ export function createApiClient(config: ApiConfig): {
     readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
         items: {
             name: string;
+            topic: string;
             tool: string;
             execution_key: string;
-            topic: string;
             tool_kwargs: Record<string, unknown>;
             condition: string | null;
             condition_id: string | null;
@@ -2674,23 +1859,23 @@ export function createApiClient(config: ApiConfig): {
         }[];
         total: number;
         topic_verifiers: Record<string, {
-            config: Record<string, unknown>;
             verifier: string;
+            config: Record<string, unknown>;
         }>;
         trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
     }>;
     readonly registerHook: (params: s.HookParams) => Promise<{
-        name: string;
         registered: boolean;
+        name: string;
     }>;
     readonly unregisterHook: (name: string) => Promise<{
-        name: string;
         removed: boolean;
+        name: string;
     }>;
     readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
     readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
-        verifier: string;
         topic: string;
+        verifier: string;
     }>;
     readonly deleteTopicVerifier: (topic: string) => Promise<{
         removed: boolean;
@@ -2698,28 +1883,28 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
         name: string;
-        expires_at: string | null;
+        trigger_path: string;
         token: string;
         topic: string;
-        trigger_path: string;
+        expires_at: string | null;
     }>;
     readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
         items: {
             name: string;
-            created_at: string;
-            execution_key: string;
-            expires_at: string | null;
             topic: string;
-            tool_kwargs: Record<string, unknown> | null;
+            execution_key: string;
             trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
+            tool_kwargs: Record<string, unknown> | null;
             created_by: string | null;
+            created_at: string;
+            expires_at: string | null;
             token_hash_prefix: string;
         }[];
         total: number;
     }>;
     readonly deleteTriggerLink: (name: string) => Promise<{
-        name: string;
         removed: boolean;
+        name: string;
     }>;
     readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
     readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
@@ -2729,22 +1914,22 @@ export function createApiClient(config: ApiConfig): {
             qualname: string;
             fields: {
                 name: string;
-                description: string | null;
+                env_var: string;
                 type: string;
+                default: unknown;
                 required: boolean;
                 secret: boolean;
-                env_var: string;
+                description: string | null;
                 nested_group: string | null;
                 default_namespace_var: string | null;
-                value?: unknown;
-                default?: unknown;
+                value: unknown;
             }[];
         }[];
     }>;
     readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
     readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
-        url: string;
         scope_id: string;
+        url: string;
     }>;
     readonly removeUrlFromScope: (body: {
         url: string;
@@ -2757,9 +1942,9 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
         path: string;
-        tags: string[];
         methods: string[];
         mapped: string | null;
+        tags: string[];
         summary: string;
         action: "secret" | "read" | "write" | "fenced" | null;
     }[]>;
@@ -2776,10 +1961,10 @@ export function createApiClient(config: ApiConfig): {
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
+        condition_kwargs: unknown;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
     }[]>;
     readonly createRole: (body: RoleCreateBody) => Promise<{
         name: string;
@@ -2787,10 +1972,10 @@ export function createApiClient(config: ApiConfig): {
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
+        condition_kwargs: unknown;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
     }>;
     readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
         name: string;
@@ -2798,10 +1983,10 @@ export function createApiClient(config: ApiConfig): {
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
+        condition_kwargs: unknown;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
     }>;
     readonly deleteRole: (name: string) => Promise<{
         name: string;
@@ -2809,7 +1994,6 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
         versions: {
-            tags: string[];
             version: number;
             body: {
                 name: string;
@@ -2817,23 +2001,24 @@ export function createApiClient(config: ApiConfig): {
                 scopes: string[];
                 condition: string | null;
                 condition_id: string | null;
+                condition_kwargs: unknown;
                 base_tier: string | null;
                 allow_all: boolean;
                 grants: Record<string, "none" | "read" | "write">;
-                condition_kwargs?: unknown;
             };
+            tags: string[];
             created_at: string;
             is_current: boolean;
         }[];
         audit: {
-            tags: string[];
             version: number;
             body: {
                 action: string;
                 actor: string | null;
-                before?: unknown;
-                after?: unknown;
+                before: unknown;
+                after: unknown;
             };
+            tags: string[];
             created_at: string;
             is_current: boolean;
         }[];
@@ -2844,19 +2029,19 @@ export function createApiClient(config: ApiConfig): {
         scopes: string[];
         condition: string | null;
         condition_id: string | null;
+        condition_kwargs: unknown;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
     }>;
     readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
+        user_id: string;
         description: string;
         scopes: string[];
-        user_id: string;
+        policy_data: unknown;
         condition?: string | null | undefined;
         condition_id?: string | null | undefined;
         condition_kwargs?: unknown;
-        policy_data?: unknown;
     }[]>;
     readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
     readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
@@ -2864,33 +2049,33 @@ export function createApiClient(config: ApiConfig): {
         updated: boolean;
     }>;
     readonly revokeApiKey: (userId: string) => Promise<{
-        revoked: boolean;
         user_id: string;
+        revoked: boolean;
     }>;
     readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
-        expires_at: string;
-        token: string;
         claim_path: string;
+        token: string;
+        expires_at: string;
     }>;
     readonly getMe: (signal?: AbortSignal) => Promise<{
-        tools: string[];
-        scopes: string[];
         user_id: string;
         owner_user_id: string | null;
         admin: boolean;
+        scopes: string[];
         routes: {
             path: string;
             methods: string[];
         }[];
         route_patterns: {
-            scope_id: string;
             pattern: string;
+            scope_id: string;
         }[];
         sub_mcp: {
             tools: string[];
             transport: string;
             slug: string;
         }[];
+        tools: string[];
         agents: string[];
         mintable: boolean;
     }>;
@@ -2901,13 +2086,13 @@ export function createApiClient(config: ApiConfig): {
             shape: "form";
             id: string;
             title: string;
+            purpose: "login" | "bootstrap" | "invite";
             fields: {
                 name: string;
                 label: string;
                 secret: boolean;
                 autocomplete?: string | undefined;
             }[];
-            purpose: "login" | "bootstrap" | "invite";
             submit_path: string;
         } | {
             shape: "button";
@@ -2933,35 +2118,35 @@ export function createApiClient(config: ApiConfig): {
         user_id: string;
     }>;
     readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
+        mintable: boolean;
         providers: {
             name: string;
             mintable: boolean;
         }[];
-        mintable: boolean;
     }>;
     readonly logout: () => Promise<{
         revoked: boolean;
     }>;
     readonly validateCondition: (body: ValidateConditionBody) => Promise<{
-        result: boolean | null;
         ok: boolean;
+        result: boolean | null;
     }>;
     readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
-        tags: string[];
         version: number;
         body: {
             scopes: string[];
+            policy_data: unknown;
             condition: string | null;
             condition_id: string | null;
-            condition_kwargs?: unknown;
-            policy_data?: unknown;
+            condition_kwargs: unknown;
         };
+        tags: string[];
         created_at: string;
         is_current: boolean;
     }[]>;
     readonly rollbackPolicy: (userId: string, version: number) => Promise<{
-        active_version: number;
         user_id: string;
+        active_version: number;
     }>;
     readonly listBackupSections: (signal?: AbortSignal) => Promise<{
         name: string;
@@ -2974,60 +2159,62 @@ export function createApiClient(config: ApiConfig): {
     }) => Promise<{
         ok: boolean;
         sections: Record<string, {
-            skipped: number;
-            updated: number;
-            errors: string[];
             created: number;
+            updated: number;
+            skipped: number;
+            errors: string[];
+            new_api_keys?: {
+                user_id: string;
+                description: string;
+                api_key: string;
+            }[] | undefined;
             fanout?: {
                 mode: "local-only";
                 note: string;
             } | {
-                error: string | null;
                 op: string;
                 reachable: boolean;
                 local_only: boolean;
                 results: {
-                    error: string | null;
                     name: string;
                     outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                    payload: unknown;
+                    error: string | null;
                     detail: string | null;
-                    payload?: unknown;
                 }[];
+                error: string | null;
                 mode: "fleet";
             } | {
-                error: string | null;
                 op: string;
                 reachable: boolean;
                 local_only: boolean;
                 results: {
-                    error: string | null;
                     name: string;
                     outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                    payload: unknown;
+                    error: string | null;
                     detail: string | null;
-                    payload?: unknown;
                 }[];
+                error: string | null;
                 mode: "unreachable";
             } | undefined;
-            new_api_keys?: {
-                description: string;
-                user_id: string;
-                api_key: string;
-            }[] | undefined;
         }>;
     }>;
-    readonly listSchedules: (signal?: AbortSignal) => Promise<objectOutputType<    {
-    name: ZodString;
-    enabled: ZodOptional<ZodBoolean>;
-    schedule: ZodOptional<ZodType<unknown, ZodTypeDef, unknown>>;
-    target: ZodOptional<ZodType<unknown, ZodTypeDef, unknown>>;
-    args: ZodOptional<ZodArray<ZodType<unknown, ZodTypeDef, unknown>, "many">>;
-    kwargs: ZodOptional<ZodRecord<ZodString, ZodType<unknown, ZodTypeDef, unknown>>>;
-    }, ZodTypeAny, "passthrough">[]>;
-    readonly getServerDateTime: (signal?: AbortSignal) => Promise<objectOutputType<    {
-    utc: ZodType<unknown, ZodTypeDef, unknown>;
-    local: ZodOptional<ZodType<unknown, ZodTypeDef, unknown>>;
-    system: ZodOptional<ZodType<unknown, ZodTypeDef, unknown>>;
-    }, ZodTypeAny, "passthrough">>;
+    readonly listSchedules: (signal?: AbortSignal) => Promise<{
+        [x: string]: unknown;
+        name: string;
+        enabled?: boolean | undefined;
+        schedule?: unknown;
+        target?: unknown;
+        args?: unknown[] | undefined;
+        kwargs?: Record<string, unknown> | undefined;
+    }[]>;
+    readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
+        [x: string]: unknown;
+        utc: unknown;
+        local?: unknown;
+        system?: unknown;
+    }>;
     readonly addSchedule: (body: {
         tool_name: string;
         tool_kwargs: Record<string, unknown>;
@@ -3045,134 +2232,131 @@ export function createApiClient(config: ApiConfig): {
             timeToFirstTokenMs: number | null;
         };
         timeSeries: {
-            totalTokens: number;
             bucket: string | null;
             runs: number;
             cost: number;
             avgLatencyMs: number;
+            totalTokens: number;
         }[];
         byModel: {
             model: string;
-            totalTokens: number;
-            cost: number;
-            avgLatencyMs: number;
             calls: number;
+            cost: number;
+            totalTokens: number;
+            avgLatencyMs: number;
         }[];
         granularity: "hour" | "day" | "week";
     }>;
     readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
         items: {
-            status: "error" | "success";
-            tags: string[];
             id: string;
-            totalTokens: number | null;
-            cost: number | null;
             traceId: string;
             createdAt: string | null;
+            tags: string[];
+            status: "error" | "success";
+            cost: number | null;
             latencyMs: number | null;
-            inputPreview?: unknown;
-            outputPreview?: unknown;
+            totalTokens: number | null;
+            inputPreview: unknown;
+            outputPreview: unknown;
         }[];
         page: number;
         nextPage: number | null;
     }>;
     readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
-        tags: string[];
-        totalCost: number | null;
         traceId: string;
         timestamp: string | null;
+        tags: string[];
+        totalCost: number | null;
+        input: unknown;
+        output: unknown;
+        metadata: unknown;
         spans: {
+            id: string;
+            parentId: string | null;
+            traceId: string | null;
             name: string | null;
             type: string | null;
-            model: string | null;
-            id: string;
-            traceId: string | null;
-            parentId: string | null;
             level: string | null;
             statusMessage: string | null;
             start: string | null;
             end: string | null;
+            model: string | null;
+            usage: unknown;
+            metadata: unknown;
+            input: unknown;
+            output: unknown;
             nodeId: string | null;
-            input?: unknown;
-            output?: unknown;
-            usage?: unknown;
-            metadata?: unknown;
         }[];
-        input?: unknown;
-        output?: unknown;
-        metadata?: unknown;
     }>;
     readonly exportTrace: (traceId: string, signal?: AbortSignal) => Promise<Blob>;
     readonly exportRuns: (params: RunsQuery & {
         format: "csv" | "json";
     }, signal?: AbortSignal) => Promise<Blob>;
     readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
-        total: number;
-        page: number;
-        page_size: number;
         listings: {
-            name: string;
-            description: string;
-            tags: string[];
-            display_name: string | null;
-            icon_url: string | null;
-            categories: string[];
-            updated_at: string;
-            groups: {
-                name: string;
-                count: number;
-            }[];
-            package: string | null;
             ref: string;
             namespace: string;
+            name: string;
+            display_name: string | null;
+            icon_url: string | null;
+            package: string | null;
+            description: string;
+            categories: string[];
+            tags: string[];
             trust_tier: string;
             pricing: string;
             latest_version: string | null;
             downloads: number;
+            updated_at: string;
             kinds: {
                 kind: string;
                 count: number;
                 names: string[];
             }[];
+            groups: {
+                name: string;
+                count: number;
+            }[];
             premium?: boolean | null | undefined;
         }[];
+        total: number;
+        page: number;
+        page_size: number;
     }>;
     readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
+        namespace: string;
         name: string;
-        description: string;
-        tags: string[];
         display_name: string | null;
         icon_url: string | null;
-        categories: string[];
-        versions: {
-            status: string;
-            version: string;
-            contract_range: string | null;
-            published_at: string | null;
-        }[];
         package: string | null;
-        namespace: string;
-        trust_tier: string;
-        pricing: string;
-        downloads: number;
+        description: string;
         readme_md: string | null;
         license: string | null;
         homepage_url: string | null;
         repository_url: string | null;
+        categories: string[];
+        tags: string[];
+        trust_tier: string;
+        pricing: string;
+        downloads: number;
         latest: {
+            version: string;
+            contract_range: string | null;
             status: string;
+            published_at: string | null;
             items: {
+                kind: string;
                 name: string;
                 description: string;
                 tags: string[];
-                kind: string;
                 group: string | null;
                 routes?: {
                     base: string;
                     paths: {
                         path: string;
-                        public: boolean;
                         methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                        public: boolean;
                     }[];
                 } | null | undefined;
                 required_env?: {
@@ -3180,28 +2364,27 @@ export function createApiClient(config: ApiConfig): {
                     secret: boolean;
                 }[] | undefined;
             }[];
+        } | null;
+        versions: {
             version: string;
             contract_range: string | null;
+            status: string;
             published_at: string | null;
-        } | null;
+        }[];
         source?: "pypi" | "github" | "spec" | null | undefined;
-        premium?: boolean | null | undefined;
         docs_url?: string | null | undefined;
+        premium?: boolean | null | undefined;
     }>;
     readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
     readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
     readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
         installed: {
-            items: {
-                name: string;
-                kind: string;
-            }[];
+            ref: string;
             version: string;
             source: string;
-            ref: string;
-            latest: string | null;
             delivery: "package" | "descriptor";
             installed_at: string;
+            latest: string | null;
             update_available: boolean;
             incompatible_newer: string | null;
             missing_upstream: boolean;
@@ -3209,6 +2392,10 @@ export function createApiClient(config: ApiConfig): {
                 status: "unknown" | "compatible" | "incompatible";
                 reason: string | null;
             };
+            items: {
+                name: string;
+                kind: string;
+            }[];
             route_mounts: Record<string, string>;
         }[];
         quarantined: {
@@ -3217,105 +2404,105 @@ export function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
+        ref: string;
+        version: string;
         items: {
+            item: string;
             kind: string;
+            base: string;
+            default_base: string;
             routes: {
                 path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
                 full_path: string;
+                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                public: boolean;
             }[];
-            base: string;
-            item: string;
-            default_base: string;
         }[];
-        version: string;
-        required_env: {
-            name: string;
-            secret: boolean;
-        }[];
-        ref: string;
-        delivery: "package" | "descriptor";
         collisions: {
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             item: string;
             full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             conflict_owner: string;
             conflict_path: string;
         }[];
         public_routes: {
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             item: string;
             full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         }[];
         new_public_routes: {
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
             item: string;
             full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
         }[];
         requires_public_acceptance: boolean;
+        required_env: {
+            name: string;
+            secret: boolean;
+        }[];
         missing_env: string[];
+        delivery: "package" | "descriptor";
     }>;
     readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-        version: string;
-        routes: {
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            item: string;
-            full_path: string;
-        }[];
         ref: string;
+        version: string;
+        notes: string[];
         advisories: {
-            created_at: string;
             id: number;
-            summary: string;
             listing: string;
             affected_versions: string;
             severity: string;
+            summary: string;
+            created_at: string;
             withdrawn_at: string | null;
         }[];
-        notes: string[];
+        routes: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            public: boolean;
+        }[];
     }>;
     readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
         ref: string;
-        notes: string[];
         uninstalled: true;
+        notes: string[];
     }>;
     readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-        version: string;
-        routes: {
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            item: string;
-            full_path: string;
-        }[];
         ref: string;
+        version: string;
+        notes: string[];
         advisories: {
-            created_at: string;
             id: number;
-            summary: string;
             listing: string;
             affected_versions: string;
             severity: string;
+            summary: string;
+            created_at: string;
             withdrawn_at: string | null;
         }[];
-        notes: string[];
+        routes: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            public: boolean;
+        }[];
     }>;
     readonly upgradeAllMarketplacePlugins: () => Promise<{
         results: {
+            ref: string;
             outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
             detail: string;
-            ref: string;
         }[];
     }>;
     readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
         advisories: {
-            created_at: string;
             id: number;
-            summary: string;
             listing: string;
             affected_versions: string;
             severity: string;
+            summary: string;
+            created_at: string;
             withdrawn_at: string | null;
         }[];
         fetched_at: string;
@@ -3323,27 +2510,21 @@ export function createApiClient(config: ApiConfig): {
     readonly getHealth: (signal?: AbortSignal) => Promise<string>;
     readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
         kind: string;
-        state: "active" | "default" | "off";
-        detail: string;
+        state: "default" | "active" | "off";
         plugin: string | null;
+        detail: string;
     }[]>;
     readonly streamInteractions: (signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame, any, any>>;
 };
 
 // @public
-const createdApiKey: z.ZodEffects<z.ZodObject<{
+const createdApiKey: z.ZodPipe<z.ZodObject<{
     api_key: z.ZodString;
     key_fingerprint: z.ZodString;
-}, "strip", z.ZodTypeAny, {
+}, z.core.$strip>, z.ZodTransform<string, {
     api_key: string;
     key_fingerprint: string;
-}, {
-    api_key: string;
-    key_fingerprint: string;
-}>, string, {
-    api_key: string;
-    key_fingerprint: string;
-}>;
+}>>;
 
 // @public
 export interface CreatePresetBody {
@@ -3374,329 +2555,99 @@ const dashboardMetrics: z.ZodObject<{
         avgCostPerRun: z.ZodNumber;
         avgTokensPerRun: z.ZodNumber;
         timeToFirstTokenMs: z.ZodNullable<z.ZodNumber>;
-    }, "strip", z.ZodTypeAny, {
-        totalRuns: number;
-        totalCost: number;
-        totalTokens: number;
-        averageLatencyMs: number;
-        avgCostPerRun: number;
-        avgTokensPerRun: number;
-        timeToFirstTokenMs: number | null;
-    }, {
-        totalRuns: number;
-        totalCost: number;
-        totalTokens: number;
-        averageLatencyMs: number;
-        avgCostPerRun: number;
-        avgTokensPerRun: number;
-        timeToFirstTokenMs: number | null;
-    }>;
+    }, z.core.$strip>;
     timeSeries: z.ZodArray<z.ZodObject<{
         bucket: z.ZodNullable<z.ZodString>;
         runs: z.ZodNumber;
         cost: z.ZodNumber;
         avgLatencyMs: z.ZodNumber;
         totalTokens: z.ZodNumber;
-    }, "strip", z.ZodTypeAny, {
-        totalTokens: number;
-        bucket: string | null;
-        runs: number;
-        cost: number;
-        avgLatencyMs: number;
-    }, {
-        totalTokens: number;
-        bucket: string | null;
-        runs: number;
-        cost: number;
-        avgLatencyMs: number;
-    }>, "many">;
+    }, z.core.$strip>>;
     byModel: z.ZodArray<z.ZodObject<{
         model: z.ZodString;
         calls: z.ZodNumber;
         cost: z.ZodNumber;
         totalTokens: z.ZodNumber;
         avgLatencyMs: z.ZodNumber;
-    }, "strip", z.ZodTypeAny, {
-        model: string;
-        totalTokens: number;
-        cost: number;
-        avgLatencyMs: number;
-        calls: number;
-    }, {
-        model: string;
-        totalTokens: number;
-        cost: number;
-        avgLatencyMs: number;
-        calls: number;
-    }>, "many">;
-    granularity: z.ZodEnum<["hour", "day", "week"]>;
-}, "strip", z.ZodTypeAny, {
-    summary: {
-        totalRuns: number;
-        totalCost: number;
-        totalTokens: number;
-        averageLatencyMs: number;
-        avgCostPerRun: number;
-        avgTokensPerRun: number;
-        timeToFirstTokenMs: number | null;
-    };
-    timeSeries: {
-        totalTokens: number;
-        bucket: string | null;
-        runs: number;
-        cost: number;
-        avgLatencyMs: number;
-    }[];
-    byModel: {
-        model: string;
-        totalTokens: number;
-        cost: number;
-        avgLatencyMs: number;
-        calls: number;
-    }[];
-    granularity: "hour" | "day" | "week";
-}, {
-    summary: {
-        totalRuns: number;
-        totalCost: number;
-        totalTokens: number;
-        averageLatencyMs: number;
-        avgCostPerRun: number;
-        avgTokensPerRun: number;
-        timeToFirstTokenMs: number | null;
-    };
-    timeSeries: {
-        totalTokens: number;
-        bucket: string | null;
-        runs: number;
-        cost: number;
-        avgLatencyMs: number;
-    }[];
-    byModel: {
-        model: string;
-        totalTokens: number;
-        cost: number;
-        avgLatencyMs: number;
-        calls: number;
-    }[];
-    granularity: "hour" | "day" | "week";
-}>;
+    }, z.core.$strip>>;
+    granularity: z.ZodEnum<{
+        hour: "hour";
+        day: "day";
+        week: "week";
+    }>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const disconnectResult: z.ZodObject<{
     connection_id: z.ZodString;
-    upstream_revoke_outcome: z.ZodEnum<["success", "failed", "skipped"]>;
+    upstream_revoke_outcome: z.ZodEnum<{
+        success: "success";
+        failed: "failed";
+        skipped: "skipped";
+    }>;
     upstream_revoke_status: z.ZodNullable<z.ZodNumber>;
-    removed_manifest_entries: z.ZodArray<z.ZodString, "many">;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    removed_manifest_entries: z.ZodArray<z.ZodString>;
+    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>>;
-}, "strip", z.ZodTypeAny, {
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    upstream_revoke_outcome: "failed" | "success" | "skipped";
-    upstream_revoke_status: number | null;
-    removed_manifest_entries: string[];
-}, {
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    upstream_revoke_outcome: "failed" | "success" | "skipped";
-    upstream_revoke_status: number | null;
-    removed_manifest_entries: string[];
-}>;
+    }, z.core.$strip>], "mode">>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const editApiKeyResult: z.ZodObject<{
     user_id: z.ZodString;
     updated: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    user_id: string;
-    updated: boolean;
-}, {
-    user_id: string;
-    updated: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const envConfig: z.ZodObject<{
     env: z.ZodRecord<z.ZodString, z.ZodString>;
-    secret_keys: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    env: Record<string, string>;
-    secret_keys: string[];
-}, {
-    env: Record<string, string>;
-    secret_keys: string[];
-}>;
+    secret_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type Extension = z.infer<typeof extension>;
@@ -3705,25 +2656,13 @@ export type Extension = z.infer<typeof extension>;
 const extension: z.ZodObject<{
     name: z.ZodString;
     kind: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    kind: string;
-}, {
-    name: string;
-    kind: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const extensions: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     kind: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    kind: string;
-}, {
-    name: string;
-    kind: string;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public
 export type FleetFailureOutcome = Exclude<FleetOutcome, 'applied'>;
@@ -3732,7 +2671,16 @@ export type FleetFailureOutcome = Exclude<FleetOutcome, 'applied'>;
 export type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 // @public
-const fleetOutcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
+const fleetOutcome: z.ZodEnum<{
+    failed: "failed";
+    resyncing: "resyncing";
+    recycling: "recycling";
+    stale: "stale";
+    applied: "applied";
+    missing: "missing";
+    departed: "departed";
+    timed_out: "timed_out";
+}>;
 
 // @public (undocumented)
 export type FleetReloadResult = z.infer<typeof fleetReloadResult>;
@@ -3744,168 +2692,75 @@ const fleetReloadResult: z.ZodObject<{
     local_only: z.ZodBoolean;
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-        payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        outcome: z.ZodEnum<{
+            failed: "failed";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
+            applied: "applied";
+            missing: "missing";
+            departed: "departed";
+            timed_out: "timed_out";
+        }>;
+        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }>, "many">;
+    }, z.core.$strip>>;
     error: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-}, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type FleetReportFanout = z.infer<typeof fleetReportFanout>;
 
 // @public
-const fleetReportFanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
     mode: z.ZodLiteral<"local-only">;
     note: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    mode: "local-only";
-    note: string;
-}, {
-    mode: "local-only";
-    note: string;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     op: z.ZodString;
     reachable: z.ZodBoolean;
     local_only: z.ZodBoolean;
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-        payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        outcome: z.ZodEnum<{
+            failed: "failed";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
+            applied: "applied";
+            missing: "missing";
+            departed: "departed";
+            timed_out: "timed_out";
+        }>;
+        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }>, "many">;
+    }, z.core.$strip>>;
     error: z.ZodNullable<z.ZodString>;
-} & {
     mode: z.ZodLiteral<"fleet">;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-    mode: "fleet";
-}, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-    mode: "fleet";
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     op: z.ZodString;
     reachable: z.ZodBoolean;
     local_only: z.ZodBoolean;
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-        payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        outcome: z.ZodEnum<{
+            failed: "failed";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
+            applied: "applied";
+            missing: "missing";
+            departed: "departed";
+            timed_out: "timed_out";
+        }>;
+        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }>, "many">;
+    }, z.core.$strip>>;
     error: z.ZodNullable<z.ZodString>;
-} & {
     mode: z.ZodLiteral<"unreachable">;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-    mode: "unreachable";
-}, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-    mode: "unreachable";
-}>]>;
+}, z.core.$strip>], "mode">;
 
 // @public
 export type FleetReportStatus = 'converged' | 'degraded' | 'unreachable';
@@ -3929,49 +2784,22 @@ const fleetResult: z.ZodObject<{
     local_only: z.ZodBoolean;
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-        payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        outcome: z.ZodEnum<{
+            failed: "failed";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
+            applied: "applied";
+            missing: "missing";
+            departed: "departed";
+            timed_out: "timed_out";
+        }>;
+        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }>, "many">;
+    }, z.core.$strip>>;
     error: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-}, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type FleetWorker = z.infer<typeof fleetWorker>;
@@ -3979,55 +2807,26 @@ export type FleetWorker = z.infer<typeof fleetWorker>;
 // @public
 const fleetWorker: z.ZodObject<{
     name: z.ZodString;
-    kind: z.ZodEnum<["serve", "backend"]>;
+    kind: z.ZodEnum<{
+        backend: "backend";
+        serve: "serve";
+    }>;
     pid: z.ZodNumber;
     generation: z.ZodNumber;
     joined_at: z.ZodString;
     beat_at: z.ZodString;
-    state: z.ZodEnum<["ready", "resyncing", "recycling"]>;
+    state: z.ZodEnum<{
+        ready: "ready";
+        resyncing: "resyncing";
+        recycling: "recycling";
+    }>;
     stale: z.ZodBoolean;
     last_op: z.ZodNullable<z.ZodObject<{
         op: z.ZodString;
         outcome: z.ZodString;
         at: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        at: string;
-        op: string;
-        outcome: string;
-    }, {
-        at: string;
-        op: string;
-        outcome: string;
-    }>>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    kind: "backend" | "serve";
-    pid: number;
-    generation: number;
-    joined_at: string;
-    beat_at: string;
-    state: "ready" | "resyncing" | "recycling";
-    stale: boolean;
-    last_op: {
-        at: string;
-        op: string;
-        outcome: string;
-    } | null;
-}, {
-    name: string;
-    kind: "backend" | "serve";
-    pid: number;
-    generation: number;
-    joined_at: string;
-    beat_at: string;
-    state: "ready" | "resyncing" | "recycling";
-    stale: boolean;
-    last_op: {
-        at: string;
-        op: string;
-        outcome: string;
-    } | null;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 export interface FleetWorkerFailure {
@@ -4044,23 +2843,20 @@ export type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
 // @public
 const fleetWorkerResult: z.ZodObject<{
     name: z.ZodString;
-    outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-    payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+    outcome: z.ZodEnum<{
+        failed: "failed";
+        resyncing: "resyncing";
+        recycling: "recycling";
+        stale: "stale";
+        applied: "applied";
+        missing: "missing";
+        departed: "departed";
+        timed_out: "timed_out";
+    }>;
+    payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
     error: z.ZodNullable<z.ZodString>;
     detail: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    name: string;
-    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-    detail: string | null;
-    payload?: unknown;
-}, {
-    error: string | null;
-    name: string;
-    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-    detail: string | null;
-    payload?: unknown;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type FleetWorkers = z.infer<typeof fleetWorkers>;
@@ -4069,100 +2865,33 @@ export type FleetWorkers = z.infer<typeof fleetWorkers>;
 const fleetWorkers: z.ZodObject<{
     workers: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        kind: z.ZodEnum<["serve", "backend"]>;
+        kind: z.ZodEnum<{
+            backend: "backend";
+            serve: "serve";
+        }>;
         pid: z.ZodNumber;
         generation: z.ZodNumber;
         joined_at: z.ZodString;
         beat_at: z.ZodString;
-        state: z.ZodEnum<["ready", "resyncing", "recycling"]>;
+        state: z.ZodEnum<{
+            ready: "ready";
+            resyncing: "resyncing";
+            recycling: "recycling";
+        }>;
         stale: z.ZodBoolean;
         last_op: z.ZodNullable<z.ZodObject<{
             op: z.ZodString;
             outcome: z.ZodString;
             at: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            at: string;
-            op: string;
-            outcome: string;
-        }, {
-            at: string;
-            op: string;
-            outcome: string;
-        }>>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        kind: "backend" | "serve";
-        pid: number;
-        generation: number;
-        joined_at: string;
-        beat_at: string;
-        state: "ready" | "resyncing" | "recycling";
-        stale: boolean;
-        last_op: {
-            at: string;
-            op: string;
-            outcome: string;
-        } | null;
-    }, {
-        name: string;
-        kind: "backend" | "serve";
-        pid: number;
-        generation: number;
-        joined_at: string;
-        beat_at: string;
-        state: "ready" | "resyncing" | "recycling";
-        stale: boolean;
-        last_op: {
-            at: string;
-            op: string;
-            outcome: string;
-        } | null;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    workers: {
-        name: string;
-        kind: "backend" | "serve";
-        pid: number;
-        generation: number;
-        joined_at: string;
-        beat_at: string;
-        state: "ready" | "resyncing" | "recycling";
-        stale: boolean;
-        last_op: {
-            at: string;
-            op: string;
-            outcome: string;
-        } | null;
-    }[];
-}, {
-    workers: {
-        name: string;
-        kind: "backend" | "serve";
-        pid: number;
-        generation: number;
-        joined_at: string;
-        beat_at: string;
-        state: "ready" | "resyncing" | "recycling";
-        stale: boolean;
-        last_op: {
-            at: string;
-            op: string;
-            outcome: string;
-        } | null;
-    }[];
-}>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 const folderDeleted: z.ZodObject<{
     folder_id: z.ZodString;
     deleted: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    deleted: true;
-    folder_id: string;
-}, {
-    deleted: true;
-    folder_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type FolderRecord = z.infer<typeof folderRecord>;
@@ -4172,21 +2901,17 @@ const folderRecord: z.ZodObject<{
     id: z.ZodString;
     name: z.ZodString;
     parent_id: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    id: string;
-    parent_id: string | null;
-}, {
-    name: string;
-    id: string;
-    parent_id: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type GrantLevel = z.infer<typeof grantLevel>;
 
 // @public
-const grantLevel: z.ZodEnum<["none", "read", "write"]>;
+const grantLevel: z.ZodEnum<{
+    none: "none";
+    read: "read";
+    write: "write";
+}>;
 
 // @public (undocumented)
 export type HookList = z.infer<typeof hookList>;
@@ -4205,84 +2930,20 @@ const hookList: z.ZodObject<{
         expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         expr_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         expr_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        tool: string;
-        execution_key: string;
-        topic: string;
-        tool_kwargs: Record<string, unknown>;
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs: Record<string, unknown>;
-        expr: string | null;
-        expr_id: string | null;
-        expr_kwargs: Record<string, unknown>;
-    }, {
-        name: string;
-        tool: string;
-        execution_key: string;
-        topic: string;
-        tool_kwargs?: Record<string, unknown> | undefined;
-        condition?: string | null | undefined;
-        condition_id?: string | null | undefined;
-        condition_kwargs?: Record<string, unknown> | undefined;
-        expr?: string | null | undefined;
-        expr_id?: string | null | undefined;
-        expr_kwargs?: Record<string, unknown> | undefined;
-    }>, "many">;
+    }, z.core.$strip>>;
     total: z.ZodNumber;
     topic_verifiers: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
         verifier: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, "strip", z.ZodTypeAny, {
-        config: Record<string, unknown>;
-        verifier: string;
-    }, {
-        config: Record<string, unknown>;
-        verifier: string;
+    }, z.core.$strip>>>;
+    trigger_auth: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodEnum<{
+        public: "public";
+        verifier: "verifier";
+        token: "token";
+        "token+api_key": "token+api_key";
+        "out-of-service": "out-of-service";
     }>>>;
-    trigger_auth: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodEnum<["public", "verifier", "token", "token+api_key", "out-of-service"]>>>;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        name: string;
-        tool: string;
-        execution_key: string;
-        topic: string;
-        tool_kwargs: Record<string, unknown>;
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs: Record<string, unknown>;
-        expr: string | null;
-        expr_id: string | null;
-        expr_kwargs: Record<string, unknown>;
-    }[];
-    total: number;
-    topic_verifiers: Record<string, {
-        config: Record<string, unknown>;
-        verifier: string;
-    }>;
-    trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
-}, {
-    items: {
-        name: string;
-        tool: string;
-        execution_key: string;
-        topic: string;
-        tool_kwargs?: Record<string, unknown> | undefined;
-        condition?: string | null | undefined;
-        condition_id?: string | null | undefined;
-        condition_kwargs?: Record<string, unknown> | undefined;
-        expr?: string | null | undefined;
-        expr_id?: string | null | undefined;
-        expr_kwargs?: Record<string, unknown> | undefined;
-    }[];
-    total: number;
-    topic_verifiers?: Record<string, {
-        config: Record<string, unknown>;
-        verifier: string;
-    }> | undefined;
-    trigger_auth?: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service"> | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type HookParams = z.infer<typeof hookParams>;
@@ -4300,58 +2961,22 @@ const hookParams: z.ZodObject<{
     expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     expr_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     expr_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    tool: string;
-    execution_key: string;
-    topic: string;
-    tool_kwargs: Record<string, unknown>;
-    condition: string | null;
-    condition_id: string | null;
-    condition_kwargs: Record<string, unknown>;
-    expr: string | null;
-    expr_id: string | null;
-    expr_kwargs: Record<string, unknown>;
-}, {
-    name: string;
-    tool: string;
-    execution_key: string;
-    topic: string;
-    tool_kwargs?: Record<string, unknown> | undefined;
-    condition?: string | null | undefined;
-    condition_id?: string | null | undefined;
-    condition_kwargs?: Record<string, unknown> | undefined;
-    expr?: string | null | undefined;
-    expr_id?: string | null | undefined;
-    expr_kwargs?: Record<string, unknown> | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const hookRegistered: z.ZodObject<{
     registered: z.ZodBoolean;
     name: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    registered: boolean;
-}, {
-    name: string;
-    registered: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const hookRemoved: z.ZodObject<{
     removed: z.ZodBoolean;
     name: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    removed: boolean;
-}, {
-    name: string;
-    removed: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
-const hookVerifiers: z.ZodArray<z.ZodString, "many">;
+const hookVerifiers: z.ZodArray<z.ZodString>;
 
 // @public (undocumented)
 export type Interaction = z.infer<typeof interaction>;
@@ -4361,8 +2986,14 @@ const interaction: z.ZodObject<{
     interaction_id: z.ZodString;
     group_id: z.ZodString;
     question: z.ZodDefault<z.ZodString>;
-    answer_format: z.ZodEnum<["text", "confirm", "select", "form", "external"]>;
-    format_payload: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, Record<string, unknown>, Record<string, unknown> | null | undefined>;
+    answer_format: z.ZodEnum<{
+        text: "text";
+        external: "external";
+        confirm: "confirm";
+        select: "select";
+        form: "form";
+    }>;
+    format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
     created_at: z.ZodString;
     timeout_at: z.ZodString;
     sensitive: z.ZodDefault<z.ZodBoolean>;
@@ -4371,38 +3002,8 @@ const interaction: z.ZodObject<{
     recipient: z.ZodOptional<z.ZodString>;
     origin: z.ZodOptional<z.ZodString>;
     audience: z.ZodOptional<z.ZodString>;
-    media: z.ZodOptional<z.ZodArray<z.ZodUnknown, "many">>;
-}, "strip", z.ZodTypeAny, {
-    created_at: string;
-    interaction_id: string;
-    group_id: string;
-    question: string;
-    answer_format: "text" | "confirm" | "select" | "form" | "external";
-    format_payload: Record<string, unknown>;
-    timeout_at: string;
-    sensitive: boolean;
-    origin?: string | undefined;
-    server_verified?: boolean | undefined;
-    channel?: string | undefined;
-    recipient?: string | undefined;
-    audience?: string | undefined;
-    media?: unknown[] | undefined;
-}, {
-    created_at: string;
-    interaction_id: string;
-    group_id: string;
-    answer_format: "text" | "confirm" | "select" | "form" | "external";
-    timeout_at: string;
-    origin?: string | undefined;
-    question?: string | undefined;
-    format_payload?: Record<string, unknown> | null | undefined;
-    sensitive?: boolean | undefined;
-    server_verified?: boolean | undefined;
-    channel?: string | undefined;
-    recipient?: string | undefined;
-    audience?: string | undefined;
-    media?: unknown[] | undefined;
-}>;
+    media: z.ZodOptional<z.ZodArray<z.ZodUnknown>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type InteractionAnswered = z.infer<typeof interactionAnswered>;
@@ -4411,31 +3012,20 @@ export type InteractionAnswered = z.infer<typeof interactionAnswered>;
 const interactionAnswered: z.ZodObject<{
     interaction_id: z.ZodString;
     status: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    status: string;
-    interaction_id: string;
-}, {
-    status: string;
-    interaction_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 
 // @public
 const interactionMediaItem: z.ZodObject<{
-    kind: z.ZodEnum<["image", "link"]>;
+    kind: z.ZodEnum<{
+        image: "image";
+        link: "link";
+    }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-}, "strip", z.ZodTypeAny, {
-    kind: "image" | "link";
-    url: string;
-    caption?: string | null | undefined;
-}, {
-    kind: "image" | "link";
-    url: string;
-    caption?: string | null | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type InteractionsPage = z.infer<typeof interactionsPage>;
@@ -4451,8 +3041,14 @@ const interactionsPage: z.ZodObject<{
         interaction_id: z.ZodString;
         group_id: z.ZodString;
         question: z.ZodDefault<z.ZodString>;
-        answer_format: z.ZodEnum<["text", "confirm", "select", "form", "external"]>;
-        format_payload: z.ZodEffects<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, Record<string, unknown>, Record<string, unknown> | null | undefined>;
+        answer_format: z.ZodEnum<{
+            text: "text";
+            external: "external";
+            confirm: "confirm";
+            select: "select";
+            form: "form";
+        }>;
+        format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
         created_at: z.ZodString;
         timeout_at: z.ZodString;
         sensitive: z.ZodDefault<z.ZodBoolean>;
@@ -4461,83 +3057,9 @@ const interactionsPage: z.ZodObject<{
         recipient: z.ZodOptional<z.ZodString>;
         origin: z.ZodOptional<z.ZodString>;
         audience: z.ZodOptional<z.ZodString>;
-        media: z.ZodOptional<z.ZodArray<z.ZodUnknown, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        created_at: string;
-        interaction_id: string;
-        group_id: string;
-        question: string;
-        answer_format: "text" | "confirm" | "select" | "form" | "external";
-        format_payload: Record<string, unknown>;
-        timeout_at: string;
-        sensitive: boolean;
-        origin?: string | undefined;
-        server_verified?: boolean | undefined;
-        channel?: string | undefined;
-        recipient?: string | undefined;
-        audience?: string | undefined;
-        media?: unknown[] | undefined;
-    }, {
-        created_at: string;
-        interaction_id: string;
-        group_id: string;
-        answer_format: "text" | "confirm" | "select" | "form" | "external";
-        timeout_at: string;
-        origin?: string | undefined;
-        question?: string | undefined;
-        format_payload?: Record<string, unknown> | null | undefined;
-        sensitive?: boolean | undefined;
-        server_verified?: boolean | undefined;
-        channel?: string | undefined;
-        recipient?: string | undefined;
-        audience?: string | undefined;
-        media?: unknown[] | undefined;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        created_at: string;
-        interaction_id: string;
-        group_id: string;
-        question: string;
-        answer_format: "text" | "confirm" | "select" | "form" | "external";
-        format_payload: Record<string, unknown>;
-        timeout_at: string;
-        sensitive: boolean;
-        origin?: string | undefined;
-        server_verified?: boolean | undefined;
-        channel?: string | undefined;
-        recipient?: string | undefined;
-        audience?: string | undefined;
-        media?: unknown[] | undefined;
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-}, {
-    items: {
-        created_at: string;
-        interaction_id: string;
-        group_id: string;
-        answer_format: "text" | "confirm" | "select" | "form" | "external";
-        timeout_at: string;
-        origin?: string | undefined;
-        question?: string | undefined;
-        format_payload?: Record<string, unknown> | null | undefined;
-        sensitive?: boolean | undefined;
-        server_verified?: boolean | undefined;
-        channel?: string | undefined;
-        recipient?: string | undefined;
-        audience?: string | undefined;
-        media?: unknown[] | undefined;
-    }[];
-    total: number;
-    page: number;
-    page_size: number;
-    next_page: number | null;
-    truncated: boolean;
-}>;
+        media: z.ZodOptional<z.ZodArray<z.ZodUnknown>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 export function isFleetReportFailure(summary: FleetReportSummary | null): boolean;
@@ -4560,38 +3082,26 @@ export type KindStatus = z.infer<typeof kindStatus>;
 // @public (undocumented)
 const kindStatus: z.ZodObject<{
     kind: z.ZodString;
-    state: z.ZodEnum<["active", "default", "off"]>;
+    state: z.ZodEnum<{
+        default: "default";
+        active: "active";
+        off: "off";
+    }>;
     plugin: z.ZodNullable<z.ZodString>;
     detail: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    kind: string;
-    state: "active" | "default" | "off";
-    detail: string;
-    plugin: string | null;
-}, {
-    kind: string;
-    state: "active" | "default" | "off";
-    detail: string;
-    plugin: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const kindStatusList: z.ZodArray<z.ZodObject<{
     kind: z.ZodString;
-    state: z.ZodEnum<["active", "default", "off"]>;
+    state: z.ZodEnum<{
+        default: "default";
+        active: "active";
+        off: "off";
+    }>;
     plugin: z.ZodNullable<z.ZodString>;
     detail: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    kind: string;
-    state: "active" | "default" | "off";
-    detail: string;
-    plugin: string | null;
-}, {
-    kind: string;
-    state: "active" | "default" | "off";
-    detail: string;
-    plugin: string | null;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type LoginFormField = z.infer<typeof loginFormField>;
@@ -4602,202 +3112,66 @@ const loginFormField: z.ZodObject<{
     label: z.ZodString;
     secret: z.ZodBoolean;
     autocomplete: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    label: string;
-    secret: boolean;
-    autocomplete?: string | undefined;
-}, {
-    name: string;
-    label: string;
-    secret: boolean;
-    autocomplete?: string | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type LoginMethod = z.infer<typeof loginMethod>;
 
 // @public
-const loginMethod: z.ZodDiscriminatedUnion<"shape", [z.ZodObject<{
+const loginMethod: z.ZodDiscriminatedUnion<[z.ZodObject<{
     shape: z.ZodLiteral<"form">;
     id: z.ZodString;
     title: z.ZodString;
-    purpose: z.ZodDefault<z.ZodEnum<["login", "bootstrap", "invite"]>>;
+    purpose: z.ZodDefault<z.ZodEnum<{
+        login: "login";
+        bootstrap: "bootstrap";
+        invite: "invite";
+    }>>;
     fields: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         label: z.ZodString;
         secret: z.ZodBoolean;
         autocomplete: z.ZodOptional<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        label: string;
-        secret: boolean;
-        autocomplete?: string | undefined;
-    }, {
-        name: string;
-        label: string;
-        secret: boolean;
-        autocomplete?: string | undefined;
-    }>, "many">;
+    }, z.core.$strip>>;
     submit_path: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    shape: "form";
-    id: string;
-    title: string;
-    fields: {
-        name: string;
-        label: string;
-        secret: boolean;
-        autocomplete?: string | undefined;
-    }[];
-    purpose: "login" | "bootstrap" | "invite";
-    submit_path: string;
-}, {
-    shape: "form";
-    id: string;
-    title: string;
-    fields: {
-        name: string;
-        label: string;
-        secret: boolean;
-        autocomplete?: string | undefined;
-    }[];
-    submit_path: string;
-    purpose?: "login" | "bootstrap" | "invite" | undefined;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     shape: z.ZodLiteral<"button">;
     id: z.ZodString;
     label: z.ZodString;
     icon: z.ZodOptional<z.ZodString>;
     href: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    shape: "button";
-    id: string;
-    label: string;
-    href: string;
-    icon?: string | undefined;
-}, {
-    shape: "button";
-    id: string;
-    label: string;
-    href: string;
-    icon?: string | undefined;
-}>]>;
+}, z.core.$strip>], "shape">;
 
 // @public (undocumented)
 export type LoginMethods = z.infer<typeof loginMethods>;
 
 // @public
 const loginMethods: z.ZodObject<{
-    methods: z.ZodArray<z.ZodDiscriminatedUnion<"shape", [z.ZodObject<{
+    methods: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
         shape: z.ZodLiteral<"form">;
         id: z.ZodString;
         title: z.ZodString;
-        purpose: z.ZodDefault<z.ZodEnum<["login", "bootstrap", "invite"]>>;
+        purpose: z.ZodDefault<z.ZodEnum<{
+            login: "login";
+            bootstrap: "bootstrap";
+            invite: "invite";
+        }>>;
         fields: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             label: z.ZodString;
             secret: z.ZodBoolean;
             autocomplete: z.ZodOptional<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            label: string;
-            secret: boolean;
-            autocomplete?: string | undefined;
-        }, {
-            name: string;
-            label: string;
-            secret: boolean;
-            autocomplete?: string | undefined;
-        }>, "many">;
+        }, z.core.$strip>>;
         submit_path: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        shape: "form";
-        id: string;
-        title: string;
-        fields: {
-            name: string;
-            label: string;
-            secret: boolean;
-            autocomplete?: string | undefined;
-        }[];
-        purpose: "login" | "bootstrap" | "invite";
-        submit_path: string;
-    }, {
-        shape: "form";
-        id: string;
-        title: string;
-        fields: {
-            name: string;
-            label: string;
-            secret: boolean;
-            autocomplete?: string | undefined;
-        }[];
-        submit_path: string;
-        purpose?: "login" | "bootstrap" | "invite" | undefined;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         shape: z.ZodLiteral<"button">;
         id: z.ZodString;
         label: z.ZodString;
         icon: z.ZodOptional<z.ZodString>;
         href: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        shape: "button";
-        id: string;
-        label: string;
-        href: string;
-        icon?: string | undefined;
-    }, {
-        shape: "button";
-        id: string;
-        label: string;
-        href: string;
-        icon?: string | undefined;
-    }>]>, "many">;
+    }, z.core.$strip>], "shape">>;
     bootstrap: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    methods: ({
-        shape: "form";
-        id: string;
-        title: string;
-        fields: {
-            name: string;
-            label: string;
-            secret: boolean;
-            autocomplete?: string | undefined;
-        }[];
-        purpose: "login" | "bootstrap" | "invite";
-        submit_path: string;
-    } | {
-        shape: "button";
-        id: string;
-        label: string;
-        href: string;
-        icon?: string | undefined;
-    })[];
-    bootstrap: boolean;
-}, {
-    methods: ({
-        shape: "form";
-        id: string;
-        title: string;
-        fields: {
-            name: string;
-            label: string;
-            secret: boolean;
-            autocomplete?: string | undefined;
-        }[];
-        submit_path: string;
-        purpose?: "login" | "bootstrap" | "invite" | undefined;
-    } | {
-        shape: "button";
-        id: string;
-        label: string;
-        href: string;
-        icon?: string | undefined;
-    })[];
-    bootstrap: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type LoginResult = z.infer<typeof loginResult>;
@@ -4806,13 +3180,7 @@ export type LoginResult = z.infer<typeof loginResult>;
 const loginResult: z.ZodObject<{
     token: z.ZodString;
     user_id: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    token: string;
-    user_id: string;
-}, {
-    token: string;
-    user_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type LogoutResult = z.infer<typeof logoutResult>;
@@ -4820,11 +3188,7 @@ export type LogoutResult = z.infer<typeof logoutResult>;
 // @public
 const logoutResult: z.ZodObject<{
     revoked: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    revoked: boolean;
-}, {
-    revoked: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ManifestMcpEntry = z.infer<typeof manifestMcpEntry>;
@@ -4835,44 +3199,8 @@ const manifestMcpEntry: z.ZodObject<{
         connection_id: z.ZodString;
         provider_id: z.ZodString;
         sub_service: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-    }, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-    }>>>;
-}, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-    managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        connection_id: z.ZodString;
-        provider_id: z.ZodString;
-        sub_service: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-    }, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-    }>>>;
-}, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-    managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        connection_id: z.ZodString;
-        provider_id: z.ZodString;
-        sub_service: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-    }, {
-        connection_id: string;
-        provider_id: string;
-        sub_service: string;
-    }>>>;
-}, z.ZodTypeAny, "passthrough">>;
+    }, z.core.$strip>>>;
+}, z.core.$loose>;
 
 // @public (undocumented)
 const manifestView: z.ZodObject<{
@@ -4881,80 +3209,10 @@ const manifestView: z.ZodObject<{
             connection_id: z.ZodString;
             provider_id: z.ZodString;
             sub_service: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }>>>;
-    }, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-        managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            connection_id: z.ZodString;
-            provider_id: z.ZodString;
-            sub_service: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }>>>;
-    }, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-        managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            connection_id: z.ZodString;
-            provider_id: z.ZodString;
-            sub_service: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }>>>;
-    }, z.ZodTypeAny, "passthrough">>, "many">;
-    user_tools: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    mcp: z.objectOutputType<{
-        managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            connection_id: z.ZodString;
-            provider_id: z.ZodString;
-            sub_service: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }>>>;
-    }, z.ZodTypeAny, "passthrough">[];
-    user_tools: string[];
-}, {
-    mcp: z.objectInputType<{
-        managed: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            connection_id: z.ZodString;
-            provider_id: z.ZodString;
-            sub_service: z.ZodString;
-        }, "strip", z.ZodTypeAny, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }, {
-            connection_id: string;
-            provider_id: string;
-            sub_service: string;
-        }>>>;
-    }, z.ZodTypeAny, "passthrough">[];
-    user_tools: string[];
-}>;
+        }, z.core.$strip>>>;
+    }, z.core.$loose>>;
+    user_tools: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public
 const marketplaceAdvisories: z.ZodObject<{
@@ -4966,47 +3224,9 @@ const marketplaceAdvisories: z.ZodObject<{
         summary: z.ZodString;
         created_at: z.ZodString;
         withdrawn_at: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }, {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }>, "many">;
+    }, z.core.$strip>>;
     fetched_at: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    advisories: {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }[];
-    fetched_at: string;
-}, {
-    advisories: {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }[];
-    fetched_at: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceAdvisory = z.infer<typeof marketplaceAdvisory>;
@@ -5020,32 +3240,19 @@ const marketplaceAdvisory: z.ZodObject<{
     summary: z.ZodString;
     created_at: z.ZodString;
     withdrawn_at: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    created_at: string;
-    id: number;
-    summary: string;
-    listing: string;
-    affected_versions: string;
-    severity: string;
-    withdrawn_at: string | null;
-}, {
-    created_at: string;
-    id: number;
-    summary: string;
-    listing: string;
-    affected_versions: string;
-    severity: string;
-    withdrawn_at: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public
-const marketplaceCategories: z.ZodArray<z.ZodString, "many">;
+const marketplaceCategories: z.ZodArray<z.ZodString>;
 
 // @public (undocumented)
 export type MarketplaceDelivery = z.infer<typeof marketplaceDelivery>;
 
 // @public
-const marketplaceDelivery: z.ZodEnum<["package", "descriptor"]>;
+const marketplaceDelivery: z.ZodEnum<{
+    package: "package";
+    descriptor: "descriptor";
+}>;
 
 // @public
 export interface MarketplaceInstallBody {
@@ -5072,191 +3279,47 @@ const marketplaceInstalled: z.ZodObject<{
         ref: z.ZodString;
         version: z.ZodString;
         source: z.ZodString;
-        delivery: z.ZodEnum<["package", "descriptor"]>;
+        delivery: z.ZodEnum<{
+            package: "package";
+            descriptor: "descriptor";
+        }>;
         installed_at: z.ZodString;
         latest: z.ZodNullable<z.ZodString>;
         update_available: z.ZodBoolean;
         incompatible_newer: z.ZodNullable<z.ZodString>;
         missing_upstream: z.ZodBoolean;
         compat: z.ZodObject<{
-            status: z.ZodEnum<["compatible", "incompatible", "unknown"]>;
+            status: z.ZodEnum<{
+                unknown: "unknown";
+                compatible: "compatible";
+                incompatible: "incompatible";
+            }>;
             reason: z.ZodNullable<z.ZodString>;
-        }, "strict", z.ZodTypeAny, {
-            status: "unknown" | "compatible" | "incompatible";
-            reason: string | null;
-        }, {
-            status: "unknown" | "compatible" | "incompatible";
-            reason: string | null;
-        }>;
-        items: z.ZodArray<z.ZodObject<Pick<{
-            kind: z.ZodString;
+        }, z.core.$strict>;
+        items: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            description: z.ZodString;
-            tags: z.ZodArray<z.ZodString, "many">;
-            group: z.ZodNullable<z.ZodString>;
-            routes: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-                base: z.ZodString;
-                paths: z.ZodArray<z.ZodObject<{
-                    path: z.ZodString;
-                    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
-                    public: z.ZodBoolean;
-                }, "strip", z.ZodTypeAny, {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }, {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }>, "many">;
-            }, "strip", z.ZodTypeAny, {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            }, {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            }>>>;
-            required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
-                name: z.ZodString;
-                secret: z.ZodBoolean;
-            }, "strip", z.ZodTypeAny, {
-                name: string;
-                secret: boolean;
-            }, {
-                name: string;
-                secret: boolean;
-            }>, "many">>;
-        }, "name" | "kind">, "strip", z.ZodTypeAny, {
-            name: string;
-            kind: string;
-        }, {
-            name: string;
-            kind: string;
-        }>, "many">;
+            kind: z.ZodString;
+        }, z.core.$strip>>;
         route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
-    }, "strict", z.ZodTypeAny, {
-        items: {
-            name: string;
-            kind: string;
-        }[];
-        version: string;
-        source: string;
-        ref: string;
-        latest: string | null;
-        delivery: "package" | "descriptor";
-        installed_at: string;
-        update_available: boolean;
-        incompatible_newer: string | null;
-        missing_upstream: boolean;
-        compat: {
-            status: "unknown" | "compatible" | "incompatible";
-            reason: string | null;
-        };
-        route_mounts: Record<string, string>;
-    }, {
-        items: {
-            name: string;
-            kind: string;
-        }[];
-        version: string;
-        source: string;
-        ref: string;
-        latest: string | null;
-        delivery: "package" | "descriptor";
-        installed_at: string;
-        update_available: boolean;
-        incompatible_newer: string | null;
-        missing_upstream: boolean;
-        compat: {
-            status: "unknown" | "compatible" | "incompatible";
-            reason: string | null;
-        };
-        route_mounts: Record<string, string>;
-    }>, "many">;
+    }, z.core.$strict>>;
     quarantined: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         reason: z.ZodString;
-    }, "strict", z.ZodTypeAny, {
-        name: string;
-        reason: string;
-    }, {
-        name: string;
-        reason: string;
-    }>, "many">;
-}, "strict", z.ZodTypeAny, {
-    installed: {
-        items: {
-            name: string;
-            kind: string;
-        }[];
-        version: string;
-        source: string;
-        ref: string;
-        latest: string | null;
-        delivery: "package" | "descriptor";
-        installed_at: string;
-        update_available: boolean;
-        incompatible_newer: string | null;
-        missing_upstream: boolean;
-        compat: {
-            status: "unknown" | "compatible" | "incompatible";
-            reason: string | null;
-        };
-        route_mounts: Record<string, string>;
-    }[];
-    quarantined: {
-        name: string;
-        reason: string;
-    }[];
-}, {
-    installed: {
-        items: {
-            name: string;
-            kind: string;
-        }[];
-        version: string;
-        source: string;
-        ref: string;
-        latest: string | null;
-        delivery: "package" | "descriptor";
-        installed_at: string;
-        update_available: boolean;
-        incompatible_newer: string | null;
-        missing_upstream: boolean;
-        compat: {
-            status: "unknown" | "compatible" | "incompatible";
-            reason: string | null;
-        };
-        route_mounts: Record<string, string>;
-    }[];
-    quarantined: {
-        name: string;
-        reason: string;
-    }[];
-}>;
+    }, z.core.$strict>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceInstalledCompat = z.infer<typeof marketplaceInstalledCompat>;
 
 // @public
 const marketplaceInstalledCompat: z.ZodObject<{
-    status: z.ZodEnum<["compatible", "incompatible", "unknown"]>;
+    status: z.ZodEnum<{
+        unknown: "unknown";
+        compatible: "compatible";
+        incompatible: "incompatible";
+    }>;
     reason: z.ZodNullable<z.ZodString>;
-}, "strict", z.ZodTypeAny, {
-    status: "unknown" | "compatible" | "incompatible";
-    reason: string | null;
-}, {
-    status: "unknown" | "compatible" | "incompatible";
-    reason: string | null;
-}>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
@@ -5266,115 +3329,29 @@ const marketplaceInstalledPlugin: z.ZodObject<{
     ref: z.ZodString;
     version: z.ZodString;
     source: z.ZodString;
-    delivery: z.ZodEnum<["package", "descriptor"]>;
+    delivery: z.ZodEnum<{
+        package: "package";
+        descriptor: "descriptor";
+    }>;
     installed_at: z.ZodString;
     latest: z.ZodNullable<z.ZodString>;
     update_available: z.ZodBoolean;
     incompatible_newer: z.ZodNullable<z.ZodString>;
     missing_upstream: z.ZodBoolean;
     compat: z.ZodObject<{
-        status: z.ZodEnum<["compatible", "incompatible", "unknown"]>;
+        status: z.ZodEnum<{
+            unknown: "unknown";
+            compatible: "compatible";
+            incompatible: "incompatible";
+        }>;
         reason: z.ZodNullable<z.ZodString>;
-    }, "strict", z.ZodTypeAny, {
-        status: "unknown" | "compatible" | "incompatible";
-        reason: string | null;
-    }, {
-        status: "unknown" | "compatible" | "incompatible";
-        reason: string | null;
-    }>;
-    items: z.ZodArray<z.ZodObject<Pick<{
-        kind: z.ZodString;
+    }, z.core.$strict>;
+    items: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        description: z.ZodString;
-        tags: z.ZodArray<z.ZodString, "many">;
-        group: z.ZodNullable<z.ZodString>;
-        routes: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            base: z.ZodString;
-            paths: z.ZodArray<z.ZodObject<{
-                path: z.ZodString;
-                methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
-                public: z.ZodBoolean;
-            }, "strip", z.ZodTypeAny, {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }, {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }>, "many">;
-        }, "strip", z.ZodTypeAny, {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        }, {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        }>>>;
-        required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
-            name: z.ZodString;
-            secret: z.ZodBoolean;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            secret: boolean;
-        }, {
-            name: string;
-            secret: boolean;
-        }>, "many">>;
-    }, "name" | "kind">, "strip", z.ZodTypeAny, {
-        name: string;
-        kind: string;
-    }, {
-        name: string;
-        kind: string;
-    }>, "many">;
+        kind: z.ZodString;
+    }, z.core.$strip>>;
     route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
-}, "strict", z.ZodTypeAny, {
-    items: {
-        name: string;
-        kind: string;
-    }[];
-    version: string;
-    source: string;
-    ref: string;
-    latest: string | null;
-    delivery: "package" | "descriptor";
-    installed_at: string;
-    update_available: boolean;
-    incompatible_newer: string | null;
-    missing_upstream: boolean;
-    compat: {
-        status: "unknown" | "compatible" | "incompatible";
-        reason: string | null;
-    };
-    route_mounts: Record<string, string>;
-}, {
-    items: {
-        name: string;
-        kind: string;
-    }[];
-    version: string;
-    source: string;
-    ref: string;
-    latest: string | null;
-    delivery: "package" | "descriptor";
-    installed_at: string;
-    update_available: boolean;
-    incompatible_newer: string | null;
-    missing_upstream: boolean;
-    compat: {
-        status: "unknown" | "compatible" | "incompatible";
-        reason: string | null;
-    };
-    route_mounts: Record<string, string>;
-}>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceInstallPreview = z.infer<typeof marketplaceInstallPreview>;
@@ -5391,179 +3368,62 @@ const marketplaceInstallPreview: z.ZodObject<{
         routes: z.ZodArray<z.ZodObject<{
             path: z.ZodString;
             full_path: z.ZodString;
-            methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+            methods: z.ZodArray<z.ZodEnum<{
+                GET: "GET";
+                POST: "POST";
+                PUT: "PUT";
+                PATCH: "PATCH";
+                DELETE: "DELETE";
+            }>>;
             public: z.ZodBoolean;
-        }, "strip", z.ZodTypeAny, {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            full_path: string;
-        }, {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            full_path: string;
-        }>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        kind: string;
-        routes: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            full_path: string;
-        }[];
-        base: string;
-        item: string;
-        default_base: string;
-    }, {
-        kind: string;
-        routes: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            full_path: string;
-        }[];
-        base: string;
-        item: string;
-        default_base: string;
-    }>, "many">;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
     collisions: z.ZodArray<z.ZodObject<{
         item: z.ZodString;
         full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            POST: "POST";
+            PUT: "PUT";
+            PATCH: "PATCH";
+            DELETE: "DELETE";
+        }>>;
         conflict_owner: z.ZodString;
         conflict_path: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-        conflict_owner: string;
-        conflict_path: string;
-    }, {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-        conflict_owner: string;
-        conflict_path: string;
-    }>, "many">;
+    }, z.core.$strip>>;
     public_routes: z.ZodArray<z.ZodObject<{
         item: z.ZodString;
         full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }, {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }>, "many">;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            POST: "POST";
+            PUT: "PUT";
+            PATCH: "PATCH";
+            DELETE: "DELETE";
+        }>>;
+    }, z.core.$strip>>;
     new_public_routes: z.ZodArray<z.ZodObject<{
         item: z.ZodString;
         full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }, {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }>, "many">;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            POST: "POST";
+            PUT: "PUT";
+            PATCH: "PATCH";
+            DELETE: "DELETE";
+        }>>;
+    }, z.core.$strip>>;
     requires_public_acceptance: z.ZodBoolean;
     required_env: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         secret: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        secret: boolean;
-    }, {
-        name: string;
-        secret: boolean;
-    }>, "many">;
-    missing_env: z.ZodArray<z.ZodString, "many">;
-    delivery: z.ZodEnum<["package", "descriptor"]>;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        kind: string;
-        routes: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            full_path: string;
-        }[];
-        base: string;
-        item: string;
-        default_base: string;
-    }[];
-    version: string;
-    required_env: {
-        name: string;
-        secret: boolean;
-    }[];
-    ref: string;
-    delivery: "package" | "descriptor";
-    collisions: {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-        conflict_owner: string;
-        conflict_path: string;
-    }[];
-    public_routes: {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }[];
-    new_public_routes: {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }[];
-    requires_public_acceptance: boolean;
-    missing_env: string[];
-}, {
-    items: {
-        kind: string;
-        routes: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            full_path: string;
-        }[];
-        base: string;
-        item: string;
-        default_base: string;
-    }[];
-    version: string;
-    required_env: {
-        name: string;
-        secret: boolean;
-    }[];
-    ref: string;
-    delivery: "package" | "descriptor";
-    collisions: {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-        conflict_owner: string;
-        conflict_path: string;
-    }[];
-    public_routes: {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }[];
-    new_public_routes: {
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }[];
-    requires_public_acceptance: boolean;
-    missing_env: string[];
-}>;
+    }, z.core.$strip>>;
+    missing_env: z.ZodArray<z.ZodString>;
+    delivery: z.ZodEnum<{
+        package: "package";
+        descriptor: "descriptor";
+    }>;
+}, z.core.$strip>;
 
 // @public
 export interface MarketplaceInstallPreviewBody {
@@ -5582,7 +3442,7 @@ export type MarketplaceInstallResult = z.infer<typeof marketplaceInstallResult>;
 const marketplaceInstallResult: z.ZodObject<{
     ref: z.ZodString;
     version: z.ZodString;
-    notes: z.ZodArray<z.ZodString, "many">;
+    notes: z.ZodArray<z.ZodString>;
     advisories: z.ZodArray<z.ZodObject<{
         id: z.ZodNumber;
         listing: z.ZodString;
@@ -5591,78 +3451,20 @@ const marketplaceInstallResult: z.ZodObject<{
         summary: z.ZodString;
         created_at: z.ZodString;
         withdrawn_at: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }, {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }>, "many">;
+    }, z.core.$strip>>;
     routes: z.ZodArray<z.ZodObject<{
         item: z.ZodString;
         full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            POST: "POST";
+            PUT: "PUT";
+            PATCH: "PATCH";
+            DELETE: "DELETE";
+        }>>;
         public: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }, {
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    version: string;
-    routes: {
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }[];
-    ref: string;
-    advisories: {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }[];
-    notes: string[];
-}, {
-    version: string;
-    routes: {
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        item: string;
-        full_path: string;
-    }[];
-    ref: string;
-    advisories: {
-        created_at: string;
-        id: number;
-        summary: string;
-        listing: string;
-        affected_versions: string;
-        severity: string;
-        withdrawn_at: string | null;
-    }[];
-    notes: string[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceItem = z.infer<typeof marketplaceItem>;
@@ -5672,88 +3474,30 @@ const marketplaceItem: z.ZodObject<{
     kind: z.ZodString;
     name: z.ZodString;
     description: z.ZodString;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     group: z.ZodNullable<z.ZodString>;
     routes: z.ZodOptional<z.ZodNullable<z.ZodObject<{
         base: z.ZodString;
         paths: z.ZodArray<z.ZodObject<{
             path: z.ZodString;
-            methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+            methods: z.ZodArray<z.ZodEnum<{
+                GET: "GET";
+                POST: "POST";
+                PUT: "PUT";
+                PATCH: "PATCH";
+                DELETE: "DELETE";
+            }>>;
             public: z.ZodBoolean;
-        }, "strip", z.ZodTypeAny, {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }, {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        base: string;
-        paths: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-    }, {
-        base: string;
-        paths: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-    }>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>>;
     required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         secret: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        secret: boolean;
-    }, {
-        name: string;
-        secret: boolean;
-    }>, "many">>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    tags: string[];
-    kind: string;
-    group: string | null;
-    routes?: {
-        base: string;
-        paths: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-    } | null | undefined;
-    required_env?: {
-        name: string;
-        secret: boolean;
-    }[] | undefined;
-}, {
-    name: string;
-    description: string;
-    tags: string[];
-    kind: string;
-    group: string | null;
-    routes?: {
-        base: string;
-        paths: {
-            path: string;
-            public: boolean;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-    } | null | undefined;
-    required_env?: {
-        name: string;
-        secret: boolean;
-    }[] | undefined;
-}>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
 
 // @public
-const marketplaceKinds: z.ZodArray<z.ZodString, "many">;
+const marketplaceKinds: z.ZodArray<z.ZodString>;
 
 // @public (undocumented)
 export type MarketplaceLatestVersion = z.infer<typeof marketplaceLatestVersion>;
@@ -5764,139 +3508,32 @@ const marketplaceLatestVersion: z.ZodObject<{
     contract_range: z.ZodNullable<z.ZodString>;
     status: z.ZodString;
     published_at: z.ZodNullable<z.ZodString>;
-} & {
     items: z.ZodArray<z.ZodObject<{
         kind: z.ZodString;
         name: z.ZodString;
         description: z.ZodString;
-        tags: z.ZodArray<z.ZodString, "many">;
+        tags: z.ZodArray<z.ZodString>;
         group: z.ZodNullable<z.ZodString>;
         routes: z.ZodOptional<z.ZodNullable<z.ZodObject<{
             base: z.ZodString;
             paths: z.ZodArray<z.ZodObject<{
                 path: z.ZodString;
-                methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+                methods: z.ZodArray<z.ZodEnum<{
+                    GET: "GET";
+                    POST: "POST";
+                    PUT: "PUT";
+                    PATCH: "PATCH";
+                    DELETE: "DELETE";
+                }>>;
                 public: z.ZodBoolean;
-            }, "strip", z.ZodTypeAny, {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }, {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }>, "many">;
-        }, "strip", z.ZodTypeAny, {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        }, {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        }>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>>;
         required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             secret: z.ZodBoolean;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            secret: boolean;
-        }, {
-            name: string;
-            secret: boolean;
-        }>, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        description: string;
-        tags: string[];
-        kind: string;
-        group: string | null;
-        routes?: {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        } | null | undefined;
-        required_env?: {
-            name: string;
-            secret: boolean;
-        }[] | undefined;
-    }, {
-        name: string;
-        description: string;
-        tags: string[];
-        kind: string;
-        group: string | null;
-        routes?: {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        } | null | undefined;
-        required_env?: {
-            name: string;
-            secret: boolean;
-        }[] | undefined;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    status: string;
-    items: {
-        name: string;
-        description: string;
-        tags: string[];
-        kind: string;
-        group: string | null;
-        routes?: {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        } | null | undefined;
-        required_env?: {
-            name: string;
-            secret: boolean;
-        }[] | undefined;
-    }[];
-    version: string;
-    contract_range: string | null;
-    published_at: string | null;
-}, {
-    status: string;
-    items: {
-        name: string;
-        description: string;
-        tags: string[];
-        kind: string;
-        group: string | null;
-        routes?: {
-            base: string;
-            paths: {
-                path: string;
-                public: boolean;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            }[];
-        } | null | undefined;
-        required_env?: {
-            name: string;
-            secret: boolean;
-        }[] | undefined;
-    }[];
-    version: string;
-    contract_range: string | null;
-    published_at: string | null;
-}>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
@@ -5905,19 +3542,15 @@ export type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
 const marketplaceMountedRoute: z.ZodObject<{
     item: z.ZodString;
     full_path: z.ZodString;
-    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+    methods: z.ZodArray<z.ZodEnum<{
+        GET: "GET";
+        POST: "POST";
+        PUT: "PUT";
+        PATCH: "PATCH";
+        DELETE: "DELETE";
+    }>>;
     public: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    public: boolean;
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    item: string;
-    full_path: string;
-}, {
-    public: boolean;
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    item: string;
-    full_path: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplacePluginDetail = z.infer<typeof marketplacePluginDetail>;
@@ -5929,15 +3562,19 @@ const marketplacePluginDetail: z.ZodObject<{
     display_name: z.ZodNullable<z.ZodString>;
     icon_url: z.ZodNullable<z.ZodString>;
     package: z.ZodNullable<z.ZodString>;
-    source: z.ZodOptional<z.ZodNullable<z.ZodEnum<["pypi", "github", "spec"]>>>;
+    source: z.ZodOptional<z.ZodNullable<z.ZodEnum<{
+        pypi: "pypi";
+        github: "github";
+        spec: "spec";
+    }>>>;
     description: z.ZodString;
     readme_md: z.ZodNullable<z.ZodString>;
     license: z.ZodNullable<z.ZodString>;
     homepage_url: z.ZodNullable<z.ZodString>;
     repository_url: z.ZodNullable<z.ZodString>;
     docs_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    categories: z.ZodArray<z.ZodString, "many">;
-    tags: z.ZodArray<z.ZodString, "many">;
+    categories: z.ZodArray<z.ZodString>;
+    tags: z.ZodArray<z.ZodString>;
     trust_tier: z.ZodString;
     pricing: z.ZodString;
     premium: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
@@ -5947,256 +3584,39 @@ const marketplacePluginDetail: z.ZodObject<{
         contract_range: z.ZodNullable<z.ZodString>;
         status: z.ZodString;
         published_at: z.ZodNullable<z.ZodString>;
-    } & {
         items: z.ZodArray<z.ZodObject<{
             kind: z.ZodString;
             name: z.ZodString;
             description: z.ZodString;
-            tags: z.ZodArray<z.ZodString, "many">;
+            tags: z.ZodArray<z.ZodString>;
             group: z.ZodNullable<z.ZodString>;
             routes: z.ZodOptional<z.ZodNullable<z.ZodObject<{
                 base: z.ZodString;
                 paths: z.ZodArray<z.ZodObject<{
                     path: z.ZodString;
-                    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+                    methods: z.ZodArray<z.ZodEnum<{
+                        GET: "GET";
+                        POST: "POST";
+                        PUT: "PUT";
+                        PATCH: "PATCH";
+                        DELETE: "DELETE";
+                    }>>;
                     public: z.ZodBoolean;
-                }, "strip", z.ZodTypeAny, {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }, {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }>, "many">;
-            }, "strip", z.ZodTypeAny, {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            }, {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            }>>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>>;
             required_env: z.ZodOptional<z.ZodArray<z.ZodObject<{
                 name: z.ZodString;
                 secret: z.ZodBoolean;
-            }, "strip", z.ZodTypeAny, {
-                name: string;
-                secret: boolean;
-            }, {
-                name: string;
-                secret: boolean;
-            }>, "many">>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            description: string;
-            tags: string[];
-            kind: string;
-            group: string | null;
-            routes?: {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            } | null | undefined;
-            required_env?: {
-                name: string;
-                secret: boolean;
-            }[] | undefined;
-        }, {
-            name: string;
-            description: string;
-            tags: string[];
-            kind: string;
-            group: string | null;
-            routes?: {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            } | null | undefined;
-            required_env?: {
-                name: string;
-                secret: boolean;
-            }[] | undefined;
-        }>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        status: string;
-        items: {
-            name: string;
-            description: string;
-            tags: string[];
-            kind: string;
-            group: string | null;
-            routes?: {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            } | null | undefined;
-            required_env?: {
-                name: string;
-                secret: boolean;
-            }[] | undefined;
-        }[];
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    }, {
-        status: string;
-        items: {
-            name: string;
-            description: string;
-            tags: string[];
-            kind: string;
-            group: string | null;
-            routes?: {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            } | null | undefined;
-            required_env?: {
-                name: string;
-                secret: boolean;
-            }[] | undefined;
-        }[];
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    }>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
     versions: z.ZodArray<z.ZodObject<{
         version: z.ZodString;
         contract_range: z.ZodNullable<z.ZodString>;
         status: z.ZodString;
         published_at: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        status: string;
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    }, {
-        status: string;
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    tags: string[];
-    display_name: string | null;
-    icon_url: string | null;
-    categories: string[];
-    versions: {
-        status: string;
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    }[];
-    package: string | null;
-    namespace: string;
-    trust_tier: string;
-    pricing: string;
-    downloads: number;
-    readme_md: string | null;
-    license: string | null;
-    homepage_url: string | null;
-    repository_url: string | null;
-    latest: {
-        status: string;
-        items: {
-            name: string;
-            description: string;
-            tags: string[];
-            kind: string;
-            group: string | null;
-            routes?: {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            } | null | undefined;
-            required_env?: {
-                name: string;
-                secret: boolean;
-            }[] | undefined;
-        }[];
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    } | null;
-    source?: "pypi" | "github" | "spec" | null | undefined;
-    premium?: boolean | null | undefined;
-    docs_url?: string | null | undefined;
-}, {
-    name: string;
-    description: string;
-    tags: string[];
-    display_name: string | null;
-    icon_url: string | null;
-    categories: string[];
-    versions: {
-        status: string;
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    }[];
-    package: string | null;
-    namespace: string;
-    trust_tier: string;
-    pricing: string;
-    downloads: number;
-    readme_md: string | null;
-    license: string | null;
-    homepage_url: string | null;
-    repository_url: string | null;
-    latest: {
-        status: string;
-        items: {
-            name: string;
-            description: string;
-            tags: string[];
-            kind: string;
-            group: string | null;
-            routes?: {
-                base: string;
-                paths: {
-                    path: string;
-                    public: boolean;
-                    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                }[];
-            } | null | undefined;
-            required_env?: {
-                name: string;
-                secret: boolean;
-            }[] | undefined;
-        }[];
-        version: string;
-        contract_range: string | null;
-        published_at: string | null;
-    } | null;
-    source?: "pypi" | "github" | "spec" | null | undefined;
-    premium?: boolean | null | undefined;
-    docs_url?: string | null | undefined;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplacePreviewCollision = z.infer<typeof marketplacePreviewCollision>;
@@ -6205,22 +3625,16 @@ export type MarketplacePreviewCollision = z.infer<typeof marketplacePreviewColli
 const marketplacePreviewCollision: z.ZodObject<{
     item: z.ZodString;
     full_path: z.ZodString;
-    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+    methods: z.ZodArray<z.ZodEnum<{
+        GET: "GET";
+        POST: "POST";
+        PUT: "PUT";
+        PATCH: "PATCH";
+        DELETE: "DELETE";
+    }>>;
     conflict_owner: z.ZodString;
     conflict_path: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    item: string;
-    full_path: string;
-    conflict_owner: string;
-    conflict_path: string;
-}, {
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    item: string;
-    full_path: string;
-    conflict_owner: string;
-    conflict_path: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplacePreviewItem = z.infer<typeof marketplacePreviewItem>;
@@ -6234,42 +3648,16 @@ const marketplacePreviewItem: z.ZodObject<{
     routes: z.ZodArray<z.ZodObject<{
         path: z.ZodString;
         full_path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            POST: "POST";
+            PUT: "PUT";
+            PATCH: "PATCH";
+            DELETE: "DELETE";
+        }>>;
         public: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        full_path: string;
-    }, {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        full_path: string;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    kind: string;
-    routes: {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        full_path: string;
-    }[];
-    base: string;
-    item: string;
-    default_base: string;
-}, {
-    kind: string;
-    routes: {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        full_path: string;
-    }[];
-    base: string;
-    item: string;
-    default_base: string;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPublicRoute>;
@@ -6278,16 +3666,14 @@ export type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPub
 const marketplacePreviewPublicRoute: z.ZodObject<{
     item: z.ZodString;
     full_path: z.ZodString;
-    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
-}, "strip", z.ZodTypeAny, {
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    item: string;
-    full_path: string;
-}, {
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    item: string;
-    full_path: string;
-}>;
+    methods: z.ZodArray<z.ZodEnum<{
+        GET: "GET";
+        POST: "POST";
+        PUT: "PUT";
+        PATCH: "PATCH";
+        DELETE: "DELETE";
+    }>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplacePreviewRoute = z.infer<typeof marketplacePreviewRoute>;
@@ -6296,19 +3682,15 @@ export type MarketplacePreviewRoute = z.infer<typeof marketplacePreviewRoute>;
 const marketplacePreviewRoute: z.ZodObject<{
     path: z.ZodString;
     full_path: z.ZodString;
-    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+    methods: z.ZodArray<z.ZodEnum<{
+        GET: "GET";
+        POST: "POST";
+        PUT: "PUT";
+        PATCH: "PATCH";
+        DELETE: "DELETE";
+    }>>;
     public: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    public: boolean;
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    full_path: string;
-}, {
-    path: string;
-    public: boolean;
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    full_path: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceQuarantinedPlugin = z.infer<typeof marketplaceQuarantinedPlugin>;
@@ -6317,13 +3699,7 @@ export type MarketplaceQuarantinedPlugin = z.infer<typeof marketplaceQuarantined
 const marketplaceQuarantinedPlugin: z.ZodObject<{
     name: z.ZodString;
     reason: z.ZodString;
-}, "strict", z.ZodTypeAny, {
-    name: string;
-    reason: string;
-}, {
-    name: string;
-    reason: string;
-}>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceRequiredEnvVar = z.infer<typeof marketplaceRequiredEnvVar>;
@@ -6332,13 +3708,7 @@ export type MarketplaceRequiredEnvVar = z.infer<typeof marketplaceRequiredEnvVar
 const marketplaceRequiredEnvVar: z.ZodObject<{
     name: z.ZodString;
     secret: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    secret: boolean;
-}, {
-    name: string;
-    secret: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceRouteDecl = z.infer<typeof marketplaceRouteDecl>;
@@ -6346,17 +3716,15 @@ export type MarketplaceRouteDecl = z.infer<typeof marketplaceRouteDecl>;
 // @public
 const marketplaceRouteDecl: z.ZodObject<{
     path: z.ZodString;
-    methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+    methods: z.ZodArray<z.ZodEnum<{
+        GET: "GET";
+        POST: "POST";
+        PUT: "PUT";
+        PATCH: "PATCH";
+        DELETE: "DELETE";
+    }>>;
     public: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    public: boolean;
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-}, {
-    path: string;
-    public: boolean;
-    methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceRoutesDecl = z.infer<typeof marketplaceRoutesDecl>;
@@ -6366,32 +3734,16 @@ const marketplaceRoutesDecl: z.ZodObject<{
     base: z.ZodString;
     paths: z.ZodArray<z.ZodObject<{
         path: z.ZodString;
-        methods: z.ZodArray<z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>, "many">;
+        methods: z.ZodArray<z.ZodEnum<{
+            GET: "GET";
+            POST: "POST";
+            PUT: "PUT";
+            PATCH: "PATCH";
+            DELETE: "DELETE";
+        }>>;
         public: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    }, {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    base: string;
-    paths: {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    }[];
-}, {
-    base: string;
-    paths: {
-        path: string;
-        public: boolean;
-        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceSearchGroup = z.infer<typeof marketplaceSearchGroup>;
@@ -6400,13 +3752,7 @@ export type MarketplaceSearchGroup = z.infer<typeof marketplaceSearchGroup>;
 const marketplaceSearchGroup: z.ZodObject<{
     name: z.ZodString;
     count: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    count: number;
-}, {
-    name: string;
-    count: number;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceSearchKind = z.infer<typeof marketplaceSearchKind>;
@@ -6415,16 +3761,8 @@ export type MarketplaceSearchKind = z.infer<typeof marketplaceSearchKind>;
 const marketplaceSearchKind: z.ZodObject<{
     kind: z.ZodString;
     count: z.ZodNumber;
-    names: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    kind: string;
-    count: number;
-    names: string[];
-}, {
-    kind: string;
-    count: number;
-    names: string[];
-}>;
+    names: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceSearchPage = z.infer<typeof marketplaceSearchPage>;
@@ -6439,8 +3777,8 @@ const marketplaceSearchPage: z.ZodObject<{
         icon_url: z.ZodNullable<z.ZodString>;
         package: z.ZodNullable<z.ZodString>;
         description: z.ZodString;
-        categories: z.ZodArray<z.ZodString, "many">;
-        tags: z.ZodArray<z.ZodString, "many">;
+        categories: z.ZodArray<z.ZodString>;
+        tags: z.ZodArray<z.ZodString>;
         trust_tier: z.ZodString;
         pricing: z.ZodString;
         premium: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
@@ -6450,141 +3788,17 @@ const marketplaceSearchPage: z.ZodObject<{
         kinds: z.ZodArray<z.ZodObject<{
             kind: z.ZodString;
             count: z.ZodNumber;
-            names: z.ZodArray<z.ZodString, "many">;
-        }, "strip", z.ZodTypeAny, {
-            kind: string;
-            count: number;
-            names: string[];
-        }, {
-            kind: string;
-            count: number;
-            names: string[];
-        }>, "many">;
+            names: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
         groups: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             count: z.ZodNumber;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            count: number;
-        }, {
-            name: string;
-            count: number;
-        }>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        description: string;
-        tags: string[];
-        display_name: string | null;
-        icon_url: string | null;
-        categories: string[];
-        updated_at: string;
-        groups: {
-            name: string;
-            count: number;
-        }[];
-        package: string | null;
-        ref: string;
-        namespace: string;
-        trust_tier: string;
-        pricing: string;
-        latest_version: string | null;
-        downloads: number;
-        kinds: {
-            kind: string;
-            count: number;
-            names: string[];
-        }[];
-        premium?: boolean | null | undefined;
-    }, {
-        name: string;
-        description: string;
-        tags: string[];
-        display_name: string | null;
-        icon_url: string | null;
-        categories: string[];
-        updated_at: string;
-        groups: {
-            name: string;
-            count: number;
-        }[];
-        package: string | null;
-        ref: string;
-        namespace: string;
-        trust_tier: string;
-        pricing: string;
-        latest_version: string | null;
-        downloads: number;
-        kinds: {
-            kind: string;
-            count: number;
-            names: string[];
-        }[];
-        premium?: boolean | null | undefined;
-    }>, "many">;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
     total: z.ZodNumber;
     page: z.ZodNumber;
     page_size: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    total: number;
-    page: number;
-    page_size: number;
-    listings: {
-        name: string;
-        description: string;
-        tags: string[];
-        display_name: string | null;
-        icon_url: string | null;
-        categories: string[];
-        updated_at: string;
-        groups: {
-            name: string;
-            count: number;
-        }[];
-        package: string | null;
-        ref: string;
-        namespace: string;
-        trust_tier: string;
-        pricing: string;
-        latest_version: string | null;
-        downloads: number;
-        kinds: {
-            kind: string;
-            count: number;
-            names: string[];
-        }[];
-        premium?: boolean | null | undefined;
-    }[];
-}, {
-    total: number;
-    page: number;
-    page_size: number;
-    listings: {
-        name: string;
-        description: string;
-        tags: string[];
-        display_name: string | null;
-        icon_url: string | null;
-        categories: string[];
-        updated_at: string;
-        groups: {
-            name: string;
-            count: number;
-        }[];
-        package: string | null;
-        ref: string;
-        namespace: string;
-        trust_tier: string;
-        pricing: string;
-        latest_version: string | null;
-        downloads: number;
-        kinds: {
-            kind: string;
-            count: number;
-            names: string[];
-        }[];
-        premium?: boolean | null | undefined;
-    }[];
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface MarketplaceSearchQuery {
@@ -6622,8 +3836,8 @@ const marketplaceSearchRow: z.ZodObject<{
     icon_url: z.ZodNullable<z.ZodString>;
     package: z.ZodNullable<z.ZodString>;
     description: z.ZodString;
-    categories: z.ZodArray<z.ZodString, "many">;
-    tags: z.ZodArray<z.ZodString, "many">;
+    categories: z.ZodArray<z.ZodString>;
+    tags: z.ZodArray<z.ZodString>;
     trust_tier: z.ZodString;
     pricing: z.ZodString;
     premium: z.ZodOptional<z.ZodNullable<z.ZodBoolean>>;
@@ -6633,83 +3847,23 @@ const marketplaceSearchRow: z.ZodObject<{
     kinds: z.ZodArray<z.ZodObject<{
         kind: z.ZodString;
         count: z.ZodNumber;
-        names: z.ZodArray<z.ZodString, "many">;
-    }, "strip", z.ZodTypeAny, {
-        kind: string;
-        count: number;
-        names: string[];
-    }, {
-        kind: string;
-        count: number;
-        names: string[];
-    }>, "many">;
+        names: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>;
     groups: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         count: z.ZodNumber;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        count: number;
-    }, {
-        name: string;
-        count: number;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    tags: string[];
-    display_name: string | null;
-    icon_url: string | null;
-    categories: string[];
-    updated_at: string;
-    groups: {
-        name: string;
-        count: number;
-    }[];
-    package: string | null;
-    ref: string;
-    namespace: string;
-    trust_tier: string;
-    pricing: string;
-    latest_version: string | null;
-    downloads: number;
-    kinds: {
-        kind: string;
-        count: number;
-        names: string[];
-    }[];
-    premium?: boolean | null | undefined;
-}, {
-    name: string;
-    description: string;
-    tags: string[];
-    display_name: string | null;
-    icon_url: string | null;
-    categories: string[];
-    updated_at: string;
-    groups: {
-        name: string;
-        count: number;
-    }[];
-    package: string | null;
-    ref: string;
-    namespace: string;
-    trust_tier: string;
-    pricing: string;
-    latest_version: string | null;
-    downloads: number;
-    kinds: {
-        kind: string;
-        count: number;
-        names: string[];
-    }[];
-    premium?: boolean | null | undefined;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceSource = z.infer<typeof marketplaceSource>;
 
 // @public
-const marketplaceSource: z.ZodEnum<["pypi", "github", "spec"]>;
+const marketplaceSource: z.ZodEnum<{
+    pypi: "pypi";
+    github: "github";
+    spec: "spec";
+}>;
 
 // @public
 export interface MarketplaceUninstallBody {
@@ -6724,16 +3878,8 @@ export type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResu
 const marketplaceUninstallResult: z.ZodObject<{
     ref: z.ZodString;
     uninstalled: z.ZodLiteral<true>;
-    notes: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    ref: string;
-    notes: string[];
-    uninstalled: true;
-}, {
-    ref: string;
-    notes: string[];
-    uninstalled: true;
-}>;
+    notes: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
@@ -6742,30 +3888,15 @@ export type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllRe
 const marketplaceUpgradeAllResult: z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
         ref: z.ZodString;
-        outcome: z.ZodEnum<["upgraded", "up-to-date", "no-compatible-version", "failed"]>;
+        outcome: z.ZodEnum<{
+            failed: "failed";
+            upgraded: "upgraded";
+            "up-to-date": "up-to-date";
+            "no-compatible-version": "no-compatible-version";
+        }>;
         detail: z.ZodString;
-    }, "strict", z.ZodTypeAny, {
-        outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-        detail: string;
-        ref: string;
-    }, {
-        outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-        detail: string;
-        ref: string;
-    }>, "many">;
-}, "strict", z.ZodTypeAny, {
-    results: {
-        outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-        detail: string;
-        ref: string;
-    }[];
-}, {
-    results: {
-        outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-        detail: string;
-        ref: string;
-    }[];
-}>;
+    }, z.core.$strict>>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
@@ -6773,17 +3904,14 @@ export type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
 // @public
 const marketplaceUpgradeAllRow: z.ZodObject<{
     ref: z.ZodString;
-    outcome: z.ZodEnum<["upgraded", "up-to-date", "no-compatible-version", "failed"]>;
+    outcome: z.ZodEnum<{
+        failed: "failed";
+        upgraded: "upgraded";
+        "up-to-date": "up-to-date";
+        "no-compatible-version": "no-compatible-version";
+    }>;
     detail: z.ZodString;
-}, "strict", z.ZodTypeAny, {
-    outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-    detail: string;
-    ref: string;
-}, {
-    outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-    detail: string;
-    ref: string;
-}>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceVersion = z.infer<typeof marketplaceVersion>;
@@ -6794,17 +3922,7 @@ const marketplaceVersion: z.ZodObject<{
     contract_range: z.ZodNullable<z.ZodString>;
     status: z.ZodString;
     published_at: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    status: string;
-    version: string;
-    contract_range: string | null;
-    published_at: string | null;
-}, {
-    status: string;
-    version: string;
-    contract_range: string | null;
-    published_at: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type McpEnvRef = z.infer<typeof mcpEnvRef>;
@@ -6815,17 +3933,7 @@ const mcpEnvRef: z.ZodObject<{
     pointer: z.ZodString;
     has_default: z.ZodBoolean;
     set: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    set: boolean;
-    var: string;
-    pointer: string;
-    has_default: boolean;
-}, {
-    set: boolean;
-    var: string;
-    pointer: string;
-    has_default: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
@@ -6836,17 +3944,7 @@ const mcpEnvRefs: z.ZodArray<z.ZodObject<{
     pointer: z.ZodString;
     has_default: z.ZodBoolean;
     set: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    set: boolean;
-    var: string;
-    pointer: string;
-    has_default: boolean;
-}, {
-    set: boolean;
-    var: string;
-    pointer: string;
-    has_default: boolean;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type McpReloadResult = z.infer<typeof mcpReloadResult>;
@@ -6858,82 +3956,40 @@ const mcpReloadResult: z.ZodObject<{
     local_only: z.ZodBoolean;
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-        payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        outcome: z.ZodEnum<{
+            failed: "failed";
+            resyncing: "resyncing";
+            recycling: "recycling";
+            stale: "stale";
+            applied: "applied";
+            missing: "missing";
+            departed: "departed";
+            timed_out: "timed_out";
+        }>;
+        payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         error: z.ZodNullable<z.ZodString>;
         detail: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }, {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }>, "many">;
+    }, z.core.$strip>>;
     error: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-}, {
-    error: string | null;
-    op: string;
-    reachable: boolean;
-    local_only: boolean;
-    results: {
-        error: string | null;
-        name: string;
-        outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-        detail: string | null;
-        payload?: unknown;
-    }[];
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const mcpStatus: z.ZodObject<{
-    bound: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString, "many">>;
+    bound: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>;
     failed: z.ZodArray<z.ZodObject<{
         title: z.ZodString;
         status: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        status: string;
-        title: string;
-    }, {
-        status: string;
-        title: string;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    failed: {
-        status: string;
-        title: string;
-    }[];
-    bound: Record<string, string[]>;
-}, {
-    failed: {
-        status: string;
-        title: string;
-    }[];
-    bound: Record<string, string[]>;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MediaKind = z.infer<typeof mediaKind>;
 
 // @public
-const mediaKind: z.ZodEnum<["image", "link"]>;
+const mediaKind: z.ZodEnum<{
+    image: "image";
+    link: "link";
+}>;
 
 // @public (undocumented)
 export type MeProjection = z.infer<typeof meProjection>;
@@ -6943,87 +3999,24 @@ const meProjection: z.ZodObject<{
     user_id: z.ZodString;
     owner_user_id: z.ZodNullable<z.ZodString>;
     admin: z.ZodBoolean;
-    scopes: z.ZodArray<z.ZodString, "many">;
+    scopes: z.ZodArray<z.ZodString>;
     routes: z.ZodArray<z.ZodObject<{
         path: z.ZodString;
-        methods: z.ZodArray<z.ZodString, "many">;
-    }, "strip", z.ZodTypeAny, {
-        path: string;
-        methods: string[];
-    }, {
-        path: string;
-        methods: string[];
-    }>, "many">;
+        methods: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>;
     route_patterns: z.ZodArray<z.ZodObject<{
         pattern: z.ZodString;
         scope_id: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        scope_id: string;
-        pattern: string;
-    }, {
-        scope_id: string;
-        pattern: string;
-    }>, "many">;
+    }, z.core.$strip>>;
     sub_mcp: z.ZodArray<z.ZodObject<{
-        tools: z.ZodArray<z.ZodString, "many">;
+        tools: z.ZodArray<z.ZodString>;
         transport: z.ZodString;
-    } & {
         slug: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        tools: string[];
-        transport: string;
-        slug: string;
-    }, {
-        tools: string[];
-        transport: string;
-        slug: string;
-    }>, "many">;
-    tools: z.ZodArray<z.ZodString, "many">;
-    agents: z.ZodArray<z.ZodString, "many">;
+    }, z.core.$strip>>;
+    tools: z.ZodArray<z.ZodString>;
+    agents: z.ZodArray<z.ZodString>;
     mintable: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tools: string[];
-    scopes: string[];
-    user_id: string;
-    owner_user_id: string | null;
-    admin: boolean;
-    routes: {
-        path: string;
-        methods: string[];
-    }[];
-    route_patterns: {
-        scope_id: string;
-        pattern: string;
-    }[];
-    sub_mcp: {
-        tools: string[];
-        transport: string;
-        slug: string;
-    }[];
-    agents: string[];
-    mintable: boolean;
-}, {
-    tools: string[];
-    scopes: string[];
-    user_id: string;
-    owner_user_id: string | null;
-    admin: boolean;
-    routes: {
-        path: string;
-        methods: string[];
-    }[];
-    route_patterns: {
-        scope_id: string;
-        pattern: string;
-    }[];
-    sub_mcp: {
-        tools: string[];
-        transport: string;
-        slug: string;
-    }[];
-    agents: string[];
-    mintable: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface MetricsQuery {
@@ -7041,49 +4034,15 @@ const notification: z.ZodObject<{
     message: z.ZodString;
     recipient: z.ZodNullable<z.ZodString>;
     audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown, "many">>>;
+    media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
     template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
         name: z.ZodString;
         language: z.ZodString;
-        parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        language: string;
-        parameters: string[];
-    }, {
-        name: string;
-        language: string;
-        parameters?: string[] | undefined;
-    }>>>;
-    options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
+        parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>>>;
+    options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
     created_at: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    message: string;
-    created_at: string;
-    id: string;
-    recipient: string | null;
-    options?: string[] | null | undefined;
-    template?: {
-        name: string;
-        language: string;
-        parameters: string[];
-    } | null | undefined;
-    audience?: string | null | undefined;
-    media?: unknown[] | null | undefined;
-}, {
-    message: string;
-    created_at: string;
-    id: string;
-    recipient: string | null;
-    options?: string[] | null | undefined;
-    template?: {
-        name: string;
-        language: string;
-        parameters?: string[] | undefined;
-    } | null | undefined;
-    audience?: string | null | undefined;
-    media?: unknown[] | null | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type Notification_2 = z.infer<typeof notification>;
@@ -7099,290 +4058,80 @@ const notifications: z.ZodObject<{
         message: z.ZodString;
         recipient: z.ZodNullable<z.ZodString>;
         audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown, "many">>>;
+        media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
         template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
             name: z.ZodString;
             language: z.ZodString;
-            parameters: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            language: string;
-            parameters: string[];
-        }, {
-            name: string;
-            language: string;
-            parameters?: string[] | undefined;
-        }>>>;
-        options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
+            parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>>>;
+        options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         created_at: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        message: string;
-        created_at: string;
-        id: string;
-        recipient: string | null;
-        options?: string[] | null | undefined;
-        template?: {
-            name: string;
-            language: string;
-            parameters: string[];
-        } | null | undefined;
-        audience?: string | null | undefined;
-        media?: unknown[] | null | undefined;
-    }, {
-        message: string;
-        created_at: string;
-        id: string;
-        recipient: string | null;
-        options?: string[] | null | undefined;
-        template?: {
-            name: string;
-            language: string;
-            parameters?: string[] | undefined;
-        } | null | undefined;
-        audience?: string | null | undefined;
-        media?: unknown[] | null | undefined;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    notifications: {
-        message: string;
-        created_at: string;
-        id: string;
-        recipient: string | null;
-        options?: string[] | null | undefined;
-        template?: {
-            name: string;
-            language: string;
-            parameters: string[];
-        } | null | undefined;
-        audience?: string | null | undefined;
-        media?: unknown[] | null | undefined;
-    }[];
-}, {
-    notifications: {
-        message: string;
-        created_at: string;
-        id: string;
-        recipient: string | null;
-        options?: string[] | null | undefined;
-        template?: {
-            name: string;
-            language: string;
-            parameters?: string[] | undefined;
-        } | null | undefined;
-        audience?: string | null | undefined;
-        media?: unknown[] | null | undefined;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type OAuthCompleteResult = z.infer<typeof oauthCompleteResult>;
 
 // @public (undocumented)
-const oauthCompleteResult: z.ZodDiscriminatedUnion<"kind", [z.ZodObject<{
+const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
     kind: z.ZodLiteral<"success">;
     connection_id: z.ZodString;
     return_url: z.ZodString;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>>;
-}, "strip", z.ZodTypeAny, {
-    kind: "success";
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    return_url: string;
-}, {
-    kind: "success";
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    return_url: string;
-}>, z.ZodObject<{
+    }, z.core.$strip>], "mode">>;
+}, z.core.$strip>, z.ZodObject<{
     kind: z.ZodLiteral<"failed">;
     reason: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    reason: string;
-    kind: "failed";
-}, {
-    reason: string;
-    kind: "failed";
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     kind: z.ZodLiteral<"cancelled">;
     message: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    message: string;
-    kind: "cancelled";
-}, {
-    message: string;
-    kind: "cancelled";
-}>]>;
+}, z.core.$strip>], "kind">;
 
 // @public
 export function parseAgentFrame(frame: SseFrame): ParsedAgentEvent;
@@ -7402,203 +4151,61 @@ export type ParsedAgentEvent = {
 // @public (undocumented)
 const patchSubServicesResult: z.ZodObject<{
     connection_id: z.ZodString;
-    enabled_sub_services: z.ZodArray<z.ZodString, "many">;
+    enabled_sub_services: z.ZodArray<z.ZodString>;
     consent_required: z.ZodBoolean;
     flow_id: z.ZodNullable<z.ZodString>;
     authorize_url: z.ZodNullable<z.ZodString>;
-    added_manifest_entries: z.ZodArray<z.ZodString, "many">;
-    removed_manifest_entries: z.ZodArray<z.ZodString, "many">;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    added_manifest_entries: z.ZodArray<z.ZodString>;
+    removed_manifest_entries: z.ZodArray<z.ZodString>;
+    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>>;
-}, "strip", z.ZodTypeAny, {
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    enabled_sub_services: string[];
-    flow_id: string | null;
-    authorize_url: string | null;
-    added_manifest_entries: string[];
-    removed_manifest_entries: string[];
-    consent_required: boolean;
-}, {
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    enabled_sub_services: string[];
-    flow_id: string | null;
-    authorize_url: string | null;
-    added_manifest_entries: string[];
-    removed_manifest_entries: string[];
-    consent_required: boolean;
-}>;
+    }, z.core.$strip>], "mode">>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PatternEntry = z.infer<typeof patternEntry>;
@@ -7607,22 +4214,12 @@ export type PatternEntry = z.infer<typeof patternEntry>;
 const patternEntry: z.ZodObject<{
     pattern: z.ZodString;
     scope_id: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    scope_id: string;
-    pattern: string;
-}, {
-    scope_id: string;
-    pattern: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 const pinPublicResult: z.ZodObject<{
     url: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    url: string;
-}, {
-    url: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface PinRoutePublicBody {
@@ -7637,36 +4234,18 @@ export type PolicyBody = z.infer<typeof policyBody>;
 
 // @public
 const policyBody: z.ZodObject<{
-    scopes: z.ZodArray<z.ZodString, "many">;
-    policy_data: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+    scopes: z.ZodArray<z.ZodString>;
+    policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
     condition: z.ZodNullable<z.ZodString>;
     condition_id: z.ZodNullable<z.ZodString>;
-    condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-}, "strip", z.ZodTypeAny, {
-    scopes: string[];
-    condition: string | null;
-    condition_id: string | null;
-    condition_kwargs?: unknown;
-    policy_data?: unknown;
-}, {
-    scopes: string[];
-    condition: string | null;
-    condition_id: string | null;
-    condition_kwargs?: unknown;
-    policy_data?: unknown;
-}>;
+    condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+}, z.core.$strip>;
 
 // @public
 const policyRollback: z.ZodObject<{
     user_id: z.ZodString;
     active_version: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    active_version: number;
-    user_id: string;
-}, {
-    active_version: number;
-    user_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PolicyVersion = z.infer<typeof policyVersion>;
@@ -7675,103 +4254,31 @@ export type PolicyVersion = z.infer<typeof policyVersion>;
 const policyVersion: z.ZodObject<{
     version: z.ZodNumber;
     body: z.ZodObject<{
-        scopes: z.ZodArray<z.ZodString, "many">;
-        policy_data: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        scopes: z.ZodArray<z.ZodString>;
+        policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         condition: z.ZodNullable<z.ZodString>;
         condition_id: z.ZodNullable<z.ZodString>;
-        condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    }, "strip", z.ZodTypeAny, {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    }, {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    }>;
-    tags: z.ZodArray<z.ZodString, "many">;
+        condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const policyVersionList: z.ZodArray<z.ZodObject<{
     version: z.ZodNumber;
     body: z.ZodObject<{
-        scopes: z.ZodArray<z.ZodString, "many">;
-        policy_data: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        scopes: z.ZodArray<z.ZodString>;
+        policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         condition: z.ZodNullable<z.ZodString>;
         condition_id: z.ZodNullable<z.ZodString>;
-        condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    }, "strip", z.ZodTypeAny, {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    }, {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    }>;
-    tags: z.ZodArray<z.ZodString, "many">;
+        condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs?: unknown;
-        policy_data?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type PresetBody = z.infer<typeof presetBody>;
@@ -7781,48 +4288,18 @@ const presetBody: z.ZodObject<{
     base_tool: z.ZodString;
     description: z.ZodString;
     fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        config: Record<string, unknown>;
-    }, {
-        name: string;
-        config: Record<string, unknown>;
-    }>]>, "many">, "many">;
+    }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, "strip", z.ZodTypeAny, {
-    description: string;
-    base_tool: string;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    fixed_kwargs: Record<string, unknown>;
-}, {
-    description: string;
-    base_tool: string;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    fixed_kwargs: Record<string, unknown>;
-}>;
+}, z.core.$strip>;
 
 // @public
 const presetDeleted: z.ZodObject<{
     name: z.ZodString;
     deleted: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    deleted: true;
-}, {
-    name: string;
-    deleted: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PresetDetail = z.infer<typeof presetDetail>;
@@ -7833,81 +4310,32 @@ const presetDetail: z.ZodObject<{
     base_tool: z.ZodString;
     description: z.ZodString;
     active_version: z.ZodNumber;
-    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        config: Record<string, unknown>;
-    }, {
-        name: string;
-        config: Record<string, unknown>;
-    }>]>, "many">, "many">;
+    }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     conflicted: z.ZodBoolean;
     conflicted_reason: z.ZodNullable<z.ZodString>;
-    uses: z.ZodArray<z.ZodString, "many">;
-    used_by: z.ZodArray<z.ZodString, "many">;
-} & {
+    uses: z.ZodArray<z.ZodString>;
+    used_by: z.ZodArray<z.ZodString>;
     fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    base_tool: string;
-    active_version: number;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    conflicted: boolean;
-    conflicted_reason: string | null;
-    uses: string[];
-    used_by: string[];
-    fixed_kwargs: Record<string, unknown>;
-}, {
-    name: string;
-    description: string;
-    base_tool: string;
-    active_version: number;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    conflicted: boolean;
-    conflicted_reason: string | null;
-    uses: string[];
-    used_by: string[];
-    fixed_kwargs: Record<string, unknown>;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PresetExtensionElement = z.infer<typeof presetExtensionElement>;
 
 // @public
-const presetExtensionElement: z.ZodUnion<[z.ZodString, z.ZodObject<{
+const presetExtensionElement: z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
     name: z.ZodString;
     config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    config: Record<string, unknown>;
-}, {
-    name: string;
-    config: Record<string, unknown>;
-}>]>;
+}, z.core.$strip>]>;
 
 // @public
-const presetExtensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+const presetExtensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
     name: z.ZodString;
     config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    config: Record<string, unknown>;
-}, {
-    name: string;
-    config: Record<string, unknown>;
-}>]>, "many">, "many">;
+}, z.core.$strip>]>>>;
 
 // @public (undocumented)
 const presetList: z.ZodArray<z.ZodObject<{
@@ -7915,50 +4343,16 @@ const presetList: z.ZodArray<z.ZodObject<{
     base_tool: z.ZodString;
     description: z.ZodString;
     active_version: z.ZodNumber;
-    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        config: Record<string, unknown>;
-    }, {
-        name: string;
-        config: Record<string, unknown>;
-    }>]>, "many">, "many">;
+    }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     conflicted: z.ZodBoolean;
     conflicted_reason: z.ZodNullable<z.ZodString>;
-    uses: z.ZodArray<z.ZodString, "many">;
-    used_by: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    base_tool: string;
-    active_version: number;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    conflicted: boolean;
-    conflicted_reason: string | null;
-    uses: string[];
-    used_by: string[];
-}, {
-    name: string;
-    description: string;
-    base_tool: string;
-    active_version: number;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    conflicted: boolean;
-    conflicted_reason: string | null;
-    uses: string[];
-    used_by: string[];
-}>, "many">;
+    uses: z.ZodArray<z.ZodString>;
+    used_by: z.ZodArray<z.ZodString>;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type PresetRecord = z.infer<typeof presetRecord>;
@@ -7969,50 +4363,16 @@ const presetRecord: z.ZodObject<{
     base_tool: z.ZodString;
     description: z.ZodString;
     active_version: z.ZodNumber;
-    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+    extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        config: Record<string, unknown>;
-    }, {
-        name: string;
-        config: Record<string, unknown>;
-    }>]>, "many">, "many">;
+    }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     conflicted: z.ZodBoolean;
     conflicted_reason: z.ZodNullable<z.ZodString>;
-    uses: z.ZodArray<z.ZodString, "many">;
-    used_by: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    base_tool: string;
-    active_version: number;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    conflicted: boolean;
-    conflicted_reason: string | null;
-    uses: string[];
-    used_by: string[];
-}, {
-    name: string;
-    description: string;
-    base_tool: string;
-    active_version: number;
-    extensions: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    output_schema: Record<string, unknown> | null;
-    conflicted: boolean;
-    conflicted_reason: string | null;
-    uses: string[];
-    used_by: string[];
-}>;
+    uses: z.ZodArray<z.ZodString>;
+    used_by: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PresetReferees = z.infer<typeof presetReferees>;
@@ -8020,14 +4380,8 @@ export type PresetReferees = z.infer<typeof presetReferees>;
 // @public
 const presetReferees: z.ZodObject<{
     name: z.ZodString;
-    referees: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    referees: string[];
-}, {
-    name: string;
-    referees: string[];
-}>;
+    referees: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PresetRenamed = z.infer<typeof presetRenamed>;
@@ -8037,27 +4391,13 @@ const presetRenamed: z.ZodObject<{
     name: z.ZodString;
     renamed_from: z.ZodString;
     active_version: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    active_version: number;
-    renamed_from: string;
-}, {
-    name: string;
-    active_version: number;
-    renamed_from: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 const presetRollback: z.ZodObject<{
     name: z.ZodString;
     active_version: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    active_version: number;
-}, {
-    name: string;
-    active_version: number;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PresetValidation = z.infer<typeof presetValidation>;
@@ -8066,13 +4406,7 @@ export type PresetValidation = z.infer<typeof presetValidation>;
 const presetValidation: z.ZodObject<{
     valid: z.ZodBoolean;
     error: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    error: string | null;
-    valid: boolean;
-}, {
-    error: string | null;
-    valid: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type PresetVersion = z.infer<typeof presetVersion>;
@@ -8084,70 +4418,16 @@ const presetVersion: z.ZodObject<{
         base_tool: z.ZodString;
         description: z.ZodString;
         fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-        extensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+        extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
             name: z.ZodString;
             config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            config: Record<string, unknown>;
-        }, {
-            name: string;
-            config: Record<string, unknown>;
-        }>]>, "many">, "many">;
+        }, z.core.$strip>]>>>;
         output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, "strip", z.ZodTypeAny, {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    }, {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    }>;
-    tags: z.ZodArray<z.ZodString, "many">;
+    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    };
-    created_at: string;
-    is_current: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const presetVersionList: z.ZodArray<z.ZodObject<{
@@ -8156,70 +4436,16 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
         base_tool: z.ZodString;
         description: z.ZodString;
         fixed_kwargs: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-        extensions: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+        extensions: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
             name: z.ZodString;
             config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            config: Record<string, unknown>;
-        }, {
-            name: string;
-            config: Record<string, unknown>;
-        }>]>, "many">, "many">;
+        }, z.core.$strip>]>>>;
         output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    }, "strip", z.ZodTypeAny, {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    }, {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    }>;
-    tags: z.ZodArray<z.ZodString, "many">;
+    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        description: string;
-        base_tool: string;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        fixed_kwargs: Record<string, unknown>;
-    };
-    created_at: string;
-    is_current: boolean;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type PresetVersionTags = z.infer<typeof presetVersionTags>;
@@ -8228,271 +4454,79 @@ export type PresetVersionTags = z.infer<typeof presetVersionTags>;
 const presetVersionTags: z.ZodObject<{
     name: z.ZodString;
     version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    tags: string[];
-    version: number;
-}, {
-    name: string;
-    tags: string[];
-    version: number;
-}>;
+    tags: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
 // @public
 const profileApplyResponse: z.ZodObject<{
-    hot: z.ZodArray<z.ZodString, "many">;
+    hot: z.ZodArray<z.ZodString>;
     recycle: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         kind: z.ZodString;
         status: z.ZodString;
         generation_before: z.ZodNumber;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        status: string;
-        kind: string;
-        generation_before: number;
-    }, {
-        name: string;
-        status: string;
-        kind: string;
-        generation_before: number;
-    }>, "many">;
+    }, z.core.$strip>>;
     fresh: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         kind: z.ZodString;
         generation: z.ZodNumber;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        kind: string;
-        generation: number;
-    }, {
-        name: string;
-        kind: string;
-        generation: number;
-    }>, "many">;
+    }, z.core.$strip>>;
     refused: z.ZodArray<z.ZodObject<{
         key: z.ZodString;
         reason: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        key: string;
-        reason: string;
-    }, {
-        key: string;
-        reason: string;
-    }>, "many">;
-    fanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    }, z.core.$strip>>;
+    fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>;
-}, "strip", z.ZodTypeAny, {
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    };
-    hot: string[];
-    recycle: {
-        name: string;
-        status: string;
-        kind: string;
-        generation_before: number;
-    }[];
-    fresh: {
-        name: string;
-        kind: string;
-        generation: number;
-    }[];
-    refused: {
-        key: string;
-        reason: string;
-    }[];
-}, {
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    };
-    hot: string[];
-    recycle: {
-        name: string;
-        status: string;
-        kind: string;
-        generation_before: number;
-    }[];
-    fresh: {
-        name: string;
-        kind: string;
-        generation: number;
-    }[];
-    refused: {
-        key: string;
-        reason: string;
-    }[];
-}>;
+    }, z.core.$strip>], "mode">;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ProviderCatalogResponse = z.infer<typeof providers>;
@@ -8504,157 +4538,38 @@ const providers: z.ZodObject<{
         display_name: z.ZodString;
         description: z.ZodString;
         icon_url: z.ZodString;
-        kind: z.ZodEnum<["oauth", "none"]>;
-        origin: z.ZodEnum<["system", "community"]>;
+        kind: z.ZodEnum<{
+            oauth: "oauth";
+            none: "none";
+        }>;
+        origin: z.ZodEnum<{
+            system: "system";
+            community: "community";
+        }>;
         category: z.ZodString;
         sub_services: z.ZodArray<z.ZodObject<{
             id: z.ZodString;
             display_name: z.ZodString;
             description: z.ZodString;
-            scopes: z.ZodArray<z.ZodString, "many">;
-        }, "strip", z.ZodTypeAny, {
-            description: string;
-            id: string;
-            display_name: string;
-            scopes: string[];
-        }, {
-            description: string;
-            id: string;
-            display_name: string;
-            scopes: string[];
-        }>, "many">;
+            scopes: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
         config_fields: z.ZodArray<z.ZodObject<{
             key: z.ZodString;
             label: z.ZodString;
-            target: z.ZodEnum<["env", "header"]>;
+            target: z.ZodEnum<{
+                env: "env";
+                header: "header";
+            }>;
             required: z.ZodBoolean;
             secret: z.ZodBoolean;
-        }, "strip", z.ZodTypeAny, {
-            key: string;
-            required: boolean;
-            label: string;
-            target: "env" | "header";
-            secret: boolean;
-        }, {
-            key: string;
-            required: boolean;
-            label: string;
-            target: "env" | "header";
-            secret: boolean;
-        }>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        description: string;
-        kind: "oauth" | "none";
-        id: string;
-        display_name: string;
-        icon_url: string;
-        origin: "system" | "community";
-        category: string;
-        sub_services: {
-            description: string;
-            id: string;
-            display_name: string;
-            scopes: string[];
-        }[];
-        config_fields: {
-            key: string;
-            required: boolean;
-            label: string;
-            target: "env" | "header";
-            secret: boolean;
-        }[];
-    }, {
-        description: string;
-        kind: "oauth" | "none";
-        id: string;
-        display_name: string;
-        icon_url: string;
-        origin: "system" | "community";
-        category: string;
-        sub_services: {
-            description: string;
-            id: string;
-            display_name: string;
-            scopes: string[];
-        }[];
-        config_fields: {
-            key: string;
-            required: boolean;
-            label: string;
-            target: "env" | "header";
-            secret: boolean;
-        }[];
-    }>, "many">;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
     categories: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         display_name: z.ZodString;
         sort_order: z.ZodNumber;
-    }, "strip", z.ZodTypeAny, {
-        id: string;
-        display_name: string;
-        sort_order: number;
-    }, {
-        id: string;
-        display_name: string;
-        sort_order: number;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    providers: {
-        description: string;
-        kind: "oauth" | "none";
-        id: string;
-        display_name: string;
-        icon_url: string;
-        origin: "system" | "community";
-        category: string;
-        sub_services: {
-            description: string;
-            id: string;
-            display_name: string;
-            scopes: string[];
-        }[];
-        config_fields: {
-            key: string;
-            required: boolean;
-            label: string;
-            target: "env" | "header";
-            secret: boolean;
-        }[];
-    }[];
-    categories: {
-        id: string;
-        display_name: string;
-        sort_order: number;
-    }[];
-}, {
-    providers: {
-        description: string;
-        kind: "oauth" | "none";
-        id: string;
-        display_name: string;
-        icon_url: string;
-        origin: "system" | "community";
-        category: string;
-        sub_services: {
-            description: string;
-            id: string;
-            display_name: string;
-            scopes: string[];
-        }[];
-        config_fields: {
-            key: string;
-            required: boolean;
-            label: string;
-            target: "env" | "header";
-            secret: boolean;
-        }[];
-    }[];
-    categories: {
-        id: string;
-        display_name: string;
-        sort_order: number;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ProviderView = z.infer<typeof providerView>;
@@ -8665,90 +4580,35 @@ const providerView: z.ZodObject<{
     display_name: z.ZodString;
     description: z.ZodString;
     icon_url: z.ZodString;
-    kind: z.ZodEnum<["oauth", "none"]>;
-    origin: z.ZodEnum<["system", "community"]>;
+    kind: z.ZodEnum<{
+        oauth: "oauth";
+        none: "none";
+    }>;
+    origin: z.ZodEnum<{
+        system: "system";
+        community: "community";
+    }>;
     category: z.ZodString;
     sub_services: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         display_name: z.ZodString;
         description: z.ZodString;
-        scopes: z.ZodArray<z.ZodString, "many">;
-    }, "strip", z.ZodTypeAny, {
-        description: string;
-        id: string;
-        display_name: string;
-        scopes: string[];
-    }, {
-        description: string;
-        id: string;
-        display_name: string;
-        scopes: string[];
-    }>, "many">;
+        scopes: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>;
     config_fields: z.ZodArray<z.ZodObject<{
         key: z.ZodString;
         label: z.ZodString;
-        target: z.ZodEnum<["env", "header"]>;
+        target: z.ZodEnum<{
+            env: "env";
+            header: "header";
+        }>;
         required: z.ZodBoolean;
         secret: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        key: string;
-        required: boolean;
-        label: string;
-        target: "env" | "header";
-        secret: boolean;
-    }, {
-        key: string;
-        required: boolean;
-        label: string;
-        target: "env" | "header";
-        secret: boolean;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    description: string;
-    kind: "oauth" | "none";
-    id: string;
-    display_name: string;
-    icon_url: string;
-    origin: "system" | "community";
-    category: string;
-    sub_services: {
-        description: string;
-        id: string;
-        display_name: string;
-        scopes: string[];
-    }[];
-    config_fields: {
-        key: string;
-        required: boolean;
-        label: string;
-        target: "env" | "header";
-        secret: boolean;
-    }[];
-}, {
-    description: string;
-    kind: "oauth" | "none";
-    id: string;
-    display_name: string;
-    icon_url: string;
-    origin: "system" | "community";
-    category: string;
-    sub_services: {
-        description: string;
-        id: string;
-        display_name: string;
-        scopes: string[];
-    }[];
-    config_fields: {
-        key: string;
-        required: boolean;
-        label: string;
-        target: "env" | "header";
-        secret: boolean;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
-const publicRoutes: z.ZodArray<z.ZodString, "many">;
+const publicRoutes: z.ZodArray<z.ZodString>;
 
 // @public
 export function readSseFrames(response: Response, signal?: AbortSignal): AsyncGenerator<SseFrame>;
@@ -8757,13 +4617,7 @@ export function readSseFrames(response: Response, signal?: AbortSignal): AsyncGe
 const reconnectResult: z.ZodObject<{
     flow_id: z.ZodString;
     authorize_url: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    flow_id: string;
-    authorize_url: string;
-}, {
-    flow_id: string;
-    authorize_url: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
@@ -8772,208 +4626,66 @@ export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
 const reloadConfigResult: z.ZodObject<{
     status: z.ZodString;
     env_keys: z.ZodNumber;
-    fanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>;
-}, "strip", z.ZodTypeAny, {
-    status: string;
-    env_keys: number;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    };
-}, {
-    status: string;
-    env_keys: number;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    };
-}>;
+    }, z.core.$strip>], "mode">;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const removeScopeResult: z.ZodObject<{
     scope_id: z.ZodString;
     deleted_keys: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    scope_id: string;
-    deleted_keys: number;
-}, {
-    scope_id: string;
-    deleted_keys: number;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const removeUrlFromScopeResult: z.ZodObject<{
     url: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    url: string;
-}, {
-    url: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export interface RequestOptions {
@@ -8991,13 +4703,7 @@ export interface RequestOptions {
 const revokeApiKeyResult: z.ZodObject<{
     user_id: z.ZodString;
     revoked: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    revoked: boolean;
-    user_id: string;
-}, {
-    revoked: boolean;
-    user_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type RoleAuditEvent = z.infer<typeof roleAuditEvent>;
@@ -9008,45 +4714,13 @@ const roleAuditEvent: z.ZodObject<{
     body: z.ZodObject<{
         action: z.ZodString;
         actor: z.ZodNullable<z.ZodString>;
-        before: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-        after: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    }, "strip", z.ZodTypeAny, {
-        action: string;
-        actor: string | null;
-        before?: unknown;
-        after?: unknown;
-    }, {
-        action: string;
-        actor: string | null;
-        before?: unknown;
-        after?: unknown;
-    }>;
-    tags: z.ZodArray<z.ZodString, "many">;
+        before: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        after: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        action: string;
-        actor: string | null;
-        before?: unknown;
-        after?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        action: string;
-        actor: string | null;
-        before?: unknown;
-        after?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type RoleBody = z.infer<typeof roleBody>;
@@ -9055,34 +4729,18 @@ export type RoleBody = z.infer<typeof roleBody>;
 const roleBody: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
-    scopes: z.ZodArray<z.ZodString, "many">;
+    scopes: z.ZodArray<z.ZodString>;
     condition: z.ZodNullable<z.ZodString>;
     condition_id: z.ZodNullable<z.ZodString>;
-    condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
+    condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     base_tier: z.ZodNullable<z.ZodString>;
     allow_all: z.ZodBoolean;
-    grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    scopes: string[];
-    condition: string | null;
-    condition_id: string | null;
-    base_tier: string | null;
-    allow_all: boolean;
-    grants: Record<string, "none" | "read" | "write">;
-    condition_kwargs?: unknown;
-}, {
-    name: string;
-    description: string;
-    scopes: string[];
-    condition: string | null;
-    condition_id: string | null;
-    base_tier: string | null;
-    allow_all: boolean;
-    grants: Record<string, "none" | "read" | "write">;
-    condition_kwargs?: unknown;
-}>;
+    grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
+        none: "none";
+        read: "read";
+        write: "write";
+    }>>;
+}, z.core.$strip>;
 
 // @public
 export interface RoleCreateBody {
@@ -9100,52 +4758,34 @@ export interface RoleCreateBody {
 const roleDeleted: z.ZodObject<{
     name: z.ZodString;
     deleted: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    deleted: boolean;
-}, {
-    name: string;
-    deleted: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type RoleGrants = z.infer<typeof roleGrants>;
 
 // @public
-const roleGrants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
+const roleGrants: z.ZodRecord<z.ZodString, z.ZodEnum<{
+    none: "none";
+    read: "read";
+    write: "write";
+}>>;
 
 // @public (undocumented)
 const roleList: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
-    scopes: z.ZodArray<z.ZodString, "many">;
+    scopes: z.ZodArray<z.ZodString>;
     condition: z.ZodNullable<z.ZodString>;
     condition_id: z.ZodNullable<z.ZodString>;
-    condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
+    condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     base_tier: z.ZodNullable<z.ZodString>;
     allow_all: z.ZodBoolean;
-    grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-    scopes: string[];
-    condition: string | null;
-    condition_id: string | null;
-    base_tier: string | null;
-    allow_all: boolean;
-    grants: Record<string, "none" | "read" | "write">;
-    condition_kwargs?: unknown;
-}, {
-    name: string;
-    description: string;
-    scopes: string[];
-    condition: string | null;
-    condition_id: string | null;
-    base_tier: string | null;
-    allow_all: boolean;
-    grants: Record<string, "none" | "read" | "write">;
-    condition_kwargs?: unknown;
-}>, "many">;
+    grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
+        none: "none";
+        read: "read";
+        write: "write";
+    }>>;
+}, z.core.$strip>>;
 
 // @public
 export interface RoleUpdateBody {
@@ -9164,70 +4804,22 @@ const roleVersion: z.ZodObject<{
     body: z.ZodObject<{
         name: z.ZodString;
         description: z.ZodString;
-        scopes: z.ZodArray<z.ZodString, "many">;
+        scopes: z.ZodArray<z.ZodString>;
         condition: z.ZodNullable<z.ZodString>;
         condition_id: z.ZodNullable<z.ZodString>;
-        condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
+        condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
         base_tier: z.ZodNullable<z.ZodString>;
         allow_all: z.ZodBoolean;
-        grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        description: string;
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        base_tier: string | null;
-        allow_all: boolean;
-        grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
-    }, {
-        name: string;
-        description: string;
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        base_tier: string | null;
-        allow_all: boolean;
-        grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
-    }>;
-    tags: z.ZodArray<z.ZodString, "many">;
+        grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
+            none: "none";
+            read: "read";
+            write: "write";
+        }>>;
+    }, z.core.$strip>;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        name: string;
-        description: string;
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        base_tier: string | null;
-        allow_all: boolean;
-        grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        name: string;
-        description: string;
-        scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        base_tier: string | null;
-        allow_all: boolean;
-        grants: Record<string, "none" | "read" | "write">;
-        condition_kwargs?: unknown;
-    };
-    created_at: string;
-    is_current: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type RoleVersions = z.infer<typeof roleVersions>;
@@ -9239,181 +4831,46 @@ const roleVersions: z.ZodObject<{
         body: z.ZodObject<{
             name: z.ZodString;
             description: z.ZodString;
-            scopes: z.ZodArray<z.ZodString, "many">;
+            scopes: z.ZodArray<z.ZodString>;
             condition: z.ZodNullable<z.ZodString>;
             condition_id: z.ZodNullable<z.ZodString>;
-            condition_kwargs: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
+            condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
             base_tier: z.ZodNullable<z.ZodString>;
             allow_all: z.ZodBoolean;
-            grants: z.ZodRecord<z.ZodString, z.ZodEnum<["none", "read", "write"]>>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            description: string;
-            scopes: string[];
-            condition: string | null;
-            condition_id: string | null;
-            base_tier: string | null;
-            allow_all: boolean;
-            grants: Record<string, "none" | "read" | "write">;
-            condition_kwargs?: unknown;
-        }, {
-            name: string;
-            description: string;
-            scopes: string[];
-            condition: string | null;
-            condition_id: string | null;
-            base_tier: string | null;
-            allow_all: boolean;
-            grants: Record<string, "none" | "read" | "write">;
-            condition_kwargs?: unknown;
-        }>;
-        tags: z.ZodArray<z.ZodString, "many">;
+            grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
+                none: "none";
+                read: "read";
+                write: "write";
+            }>>;
+        }, z.core.$strip>;
+        tags: z.ZodArray<z.ZodString>;
         created_at: z.ZodString;
         is_current: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        tags: string[];
-        version: number;
-        body: {
-            name: string;
-            description: string;
-            scopes: string[];
-            condition: string | null;
-            condition_id: string | null;
-            base_tier: string | null;
-            allow_all: boolean;
-            grants: Record<string, "none" | "read" | "write">;
-            condition_kwargs?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }, {
-        tags: string[];
-        version: number;
-        body: {
-            name: string;
-            description: string;
-            scopes: string[];
-            condition: string | null;
-            condition_id: string | null;
-            base_tier: string | null;
-            allow_all: boolean;
-            grants: Record<string, "none" | "read" | "write">;
-            condition_kwargs?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }>, "many">;
+    }, z.core.$strip>>;
     audit: z.ZodArray<z.ZodObject<{
         version: z.ZodNumber;
         body: z.ZodObject<{
             action: z.ZodString;
             actor: z.ZodNullable<z.ZodString>;
-            before: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-            after: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-        }, "strip", z.ZodTypeAny, {
-            action: string;
-            actor: string | null;
-            before?: unknown;
-            after?: unknown;
-        }, {
-            action: string;
-            actor: string | null;
-            before?: unknown;
-            after?: unknown;
-        }>;
-        tags: z.ZodArray<z.ZodString, "many">;
+            before: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+            after: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        }, z.core.$strip>;
+        tags: z.ZodArray<z.ZodString>;
         created_at: z.ZodString;
         is_current: z.ZodBoolean;
-    }, "strip", z.ZodTypeAny, {
-        tags: string[];
-        version: number;
-        body: {
-            action: string;
-            actor: string | null;
-            before?: unknown;
-            after?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }, {
-        tags: string[];
-        version: number;
-        body: {
-            action: string;
-            actor: string | null;
-            before?: unknown;
-            after?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    versions: {
-        tags: string[];
-        version: number;
-        body: {
-            name: string;
-            description: string;
-            scopes: string[];
-            condition: string | null;
-            condition_id: string | null;
-            base_tier: string | null;
-            allow_all: boolean;
-            grants: Record<string, "none" | "read" | "write">;
-            condition_kwargs?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }[];
-    audit: {
-        tags: string[];
-        version: number;
-        body: {
-            action: string;
-            actor: string | null;
-            before?: unknown;
-            after?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }[];
-}, {
-    versions: {
-        tags: string[];
-        version: number;
-        body: {
-            name: string;
-            description: string;
-            scopes: string[];
-            condition: string | null;
-            condition_id: string | null;
-            base_tier: string | null;
-            allow_all: boolean;
-            grants: Record<string, "none" | "read" | "write">;
-            condition_kwargs?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }[];
-    audit: {
-        tags: string[];
-        version: number;
-        body: {
-            action: string;
-            actor: string | null;
-            before?: unknown;
-            after?: unknown;
-        };
-        created_at: string;
-        is_current: boolean;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type RouteAction = z.infer<typeof routeAction>;
 
 // @public
-const routeAction: z.ZodEnum<["read", "write", "fenced", "secret"]>;
+const routeAction: z.ZodEnum<{
+    secret: "secret";
+    read: "read";
+    write: "write";
+    fenced: "fenced";
+}>;
 
 // @public (undocumented)
 export type RouteEntry = z.infer<typeof routeEntry>;
@@ -9421,20 +4878,20 @@ export type RouteEntry = z.infer<typeof routeEntry>;
 // @public
 const routeEntry: z.ZodObject<{
     path: z.ZodString;
-    methods: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    methods: string[];
-}, {
-    path: string;
-    methods: string[];
-}>;
+    methods: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type RouteMethod = z.infer<typeof routeMethod>;
 
 // @public
-const routeMethod: z.ZodEnum<["GET", "POST", "PUT", "PATCH", "DELETE"]>;
+const routeMethod: z.ZodEnum<{
+    GET: "GET";
+    POST: "POST";
+    PUT: "PUT";
+    PATCH: "PATCH";
+    DELETE: "DELETE";
+}>;
 
 // @public (undocumented)
 export type Run = z.infer<typeof run>;
@@ -9444,36 +4901,17 @@ const run: z.ZodObject<{
     id: z.ZodString;
     traceId: z.ZodString;
     createdAt: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString, "many">;
-    status: z.ZodEnum<["error", "success"]>;
+    tags: z.ZodArray<z.ZodString>;
+    status: z.ZodEnum<{
+        error: "error";
+        success: "success";
+    }>;
     cost: z.ZodNullable<z.ZodNumber>;
     latencyMs: z.ZodNullable<z.ZodNumber>;
     totalTokens: z.ZodNullable<z.ZodNumber>;
-    inputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    outputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-}, "strip", z.ZodTypeAny, {
-    status: "error" | "success";
-    tags: string[];
-    id: string;
-    totalTokens: number | null;
-    cost: number | null;
-    traceId: string;
-    createdAt: string | null;
-    latencyMs: number | null;
-    inputPreview?: unknown;
-    outputPreview?: unknown;
-}, {
-    status: "error" | "success";
-    tags: string[];
-    id: string;
-    totalTokens: number | null;
-    cost: number | null;
-    traceId: string;
-    createdAt: string | null;
-    latencyMs: number | null;
-    inputPreview?: unknown;
-    outputPreview?: unknown;
-}>;
+    inputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    outputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const runsPage: z.ZodObject<{
@@ -9481,69 +4919,20 @@ const runsPage: z.ZodObject<{
         id: z.ZodString;
         traceId: z.ZodString;
         createdAt: z.ZodNullable<z.ZodString>;
-        tags: z.ZodArray<z.ZodString, "many">;
-        status: z.ZodEnum<["error", "success"]>;
+        tags: z.ZodArray<z.ZodString>;
+        status: z.ZodEnum<{
+            error: "error";
+            success: "success";
+        }>;
         cost: z.ZodNullable<z.ZodNumber>;
         latencyMs: z.ZodNullable<z.ZodNumber>;
         totalTokens: z.ZodNullable<z.ZodNumber>;
-        inputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-        outputPreview: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    }, "strip", z.ZodTypeAny, {
-        status: "error" | "success";
-        tags: string[];
-        id: string;
-        totalTokens: number | null;
-        cost: number | null;
-        traceId: string;
-        createdAt: string | null;
-        latencyMs: number | null;
-        inputPreview?: unknown;
-        outputPreview?: unknown;
-    }, {
-        status: "error" | "success";
-        tags: string[];
-        id: string;
-        totalTokens: number | null;
-        cost: number | null;
-        traceId: string;
-        createdAt: string | null;
-        latencyMs: number | null;
-        inputPreview?: unknown;
-        outputPreview?: unknown;
-    }>, "many">;
+        inputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+        outputPreview: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    }, z.core.$strip>>;
     page: z.ZodNumber;
     nextPage: z.ZodNullable<z.ZodNumber>;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        status: "error" | "success";
-        tags: string[];
-        id: string;
-        totalTokens: number | null;
-        cost: number | null;
-        traceId: string;
-        createdAt: string | null;
-        latencyMs: number | null;
-        inputPreview?: unknown;
-        outputPreview?: unknown;
-    }[];
-    page: number;
-    nextPage: number | null;
-}, {
-    items: {
-        status: "error" | "success";
-        tags: string[];
-        id: string;
-        totalTokens: number | null;
-        cost: number | null;
-        traceId: string;
-        createdAt: string | null;
-        latencyMs: number | null;
-        inputPreview?: unknown;
-        outputPreview?: unknown;
-    }[];
-    page: number;
-    nextPage: number | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type RunSpan = z.infer<typeof runSpan>;
@@ -9560,44 +4949,12 @@ const runSpan: z.ZodObject<{
     start: z.ZodNullable<z.ZodString>;
     end: z.ZodNullable<z.ZodString>;
     model: z.ZodNullable<z.ZodString>;
-    usage: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    metadata: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    input: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    output: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+    usage: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
     nodeId: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    name: string | null;
-    type: string | null;
-    model: string | null;
-    id: string;
-    traceId: string | null;
-    parentId: string | null;
-    level: string | null;
-    statusMessage: string | null;
-    start: string | null;
-    end: string | null;
-    nodeId: string | null;
-    input?: unknown;
-    output?: unknown;
-    usage?: unknown;
-    metadata?: unknown;
-}, {
-    name: string | null;
-    type: string | null;
-    model: string | null;
-    id: string;
-    traceId: string | null;
-    parentId: string | null;
-    level: string | null;
-    statusMessage: string | null;
-    start: string | null;
-    end: string | null;
-    nodeId: string | null;
-    input?: unknown;
-    output?: unknown;
-    usage?: unknown;
-    metadata?: unknown;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface RunsQuery {
@@ -9640,7 +4997,7 @@ export interface RunToolArgs {
 }
 
 // @public (undocumented)
-const runToolResult: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+const runToolResult: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
 
 // @public (undocumented)
 export type RunTrace = z.infer<typeof runTrace>;
@@ -9649,11 +5006,11 @@ export type RunTrace = z.infer<typeof runTrace>;
 const runTrace: z.ZodObject<{
     traceId: z.ZodString;
     timestamp: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     totalCost: z.ZodNullable<z.ZodNumber>;
-    input: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    output: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    metadata: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
+    input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     spans: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         parentId: z.ZodNullable<z.ZodString>;
@@ -9665,95 +5022,13 @@ const runTrace: z.ZodObject<{
         start: z.ZodNullable<z.ZodString>;
         end: z.ZodNullable<z.ZodString>;
         model: z.ZodNullable<z.ZodString>;
-        usage: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-        metadata: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-        input: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-        output: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+        usage: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+        output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         nodeId: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        name: string | null;
-        type: string | null;
-        model: string | null;
-        id: string;
-        traceId: string | null;
-        parentId: string | null;
-        level: string | null;
-        statusMessage: string | null;
-        start: string | null;
-        end: string | null;
-        nodeId: string | null;
-        input?: unknown;
-        output?: unknown;
-        usage?: unknown;
-        metadata?: unknown;
-    }, {
-        name: string | null;
-        type: string | null;
-        model: string | null;
-        id: string;
-        traceId: string | null;
-        parentId: string | null;
-        level: string | null;
-        statusMessage: string | null;
-        start: string | null;
-        end: string | null;
-        nodeId: string | null;
-        input?: unknown;
-        output?: unknown;
-        usage?: unknown;
-        metadata?: unknown;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    totalCost: number | null;
-    traceId: string;
-    timestamp: string | null;
-    spans: {
-        name: string | null;
-        type: string | null;
-        model: string | null;
-        id: string;
-        traceId: string | null;
-        parentId: string | null;
-        level: string | null;
-        statusMessage: string | null;
-        start: string | null;
-        end: string | null;
-        nodeId: string | null;
-        input?: unknown;
-        output?: unknown;
-        usage?: unknown;
-        metadata?: unknown;
-    }[];
-    input?: unknown;
-    output?: unknown;
-    metadata?: unknown;
-}, {
-    tags: string[];
-    totalCost: number | null;
-    traceId: string;
-    timestamp: string | null;
-    spans: {
-        name: string | null;
-        type: string | null;
-        model: string | null;
-        id: string;
-        traceId: string | null;
-        parentId: string | null;
-        level: string | null;
-        statusMessage: string | null;
-        start: string | null;
-        end: string | null;
-        nodeId: string | null;
-        input?: unknown;
-        output?: unknown;
-        usage?: unknown;
-        metadata?: unknown;
-    }[];
-    input?: unknown;
-    output?: unknown;
-    metadata?: unknown;
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 declare namespace s {
     export {
@@ -10154,49 +5429,21 @@ export type ScheduleItem = z.infer<typeof scheduleItem>;
 const scheduleItem: z.ZodObject<{
     name: z.ZodString;
     enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    target: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, z.ZodTypeDef, unknown>, "many">>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-    name: z.ZodString;
-    enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    target: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, z.ZodTypeDef, unknown>, "many">>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-    name: z.ZodString;
-    enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    target: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, z.ZodTypeDef, unknown>, "many">>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, z.ZodTypeAny, "passthrough">>;
+    schedule: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    target: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
+    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
+}, z.core.$loose>;
 
 // @public (undocumented)
 const scheduleList: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    target: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, z.ZodTypeDef, unknown>, "many">>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-    name: z.ZodString;
-    enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    target: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, z.ZodTypeDef, unknown>, "many">>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-    name: z.ZodString;
-    enabled: z.ZodOptional<z.ZodBoolean>;
-    schedule: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    target: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, z.ZodTypeDef, unknown>, "many">>;
-    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, z.ZodTypeAny, "passthrough">>, "many">;
+    schedule: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    target: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    args: z.ZodOptional<z.ZodArray<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
+    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
+}, z.core.$loose>>;
 
 declare namespace schemas {
     export {
@@ -10580,18 +5827,10 @@ declare namespace schemas {
 
 // @public (undocumented)
 const serverDateTime: z.ZodObject<{
-    utc: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    local: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    system: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-}, "passthrough", z.ZodTypeAny, z.objectOutputType<{
-    utc: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    local: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    system: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-}, z.ZodTypeAny, "passthrough">, z.objectInputType<{
-    utc: z.ZodType<unknown, z.ZodTypeDef, unknown>;
-    local: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-    system: z.ZodOptional<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-}, z.ZodTypeAny, "passthrough">>;
+    utc: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+    local: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    system: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+}, z.core.$loose>;
 
 // @public
 interface SetMcpSecretEnvBody {
@@ -10610,81 +5849,35 @@ type SettingsProfileBody = z.infer<typeof settingsProfileBody>;
 const settingsProfileBody: z.ZodObject<{
     description: z.ZodString;
     env: z.ZodRecord<z.ZodString, z.ZodString>;
-    secret_keys: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    description: string;
-    env: Record<string, string>;
-    secret_keys: string[];
-}, {
-    description: string;
-    env: Record<string, string>;
-    secret_keys: string[];
-}>;
+    secret_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public
 const settingsProfileDeleted: z.ZodObject<{
     ok: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    ok: true;
-}, {
-    ok: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
 
 // @public
 const settingsProfileDiff: z.ZodObject<{
-    added: z.ZodArray<z.ZodString, "many">;
-    removed: z.ZodArray<z.ZodString, "many">;
+    added: z.ZodArray<z.ZodString>;
+    removed: z.ZodArray<z.ZodString>;
     changed: z.ZodArray<z.ZodObject<{
         key: z.ZodString;
         old: z.ZodString;
         new: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        key: string;
-        old: string;
-        new: string;
-    }, {
-        key: string;
-        old: string;
-        new: string;
-    }>, "many">;
-    recycle_keys: z.ZodArray<z.ZodString, "many">;
-    refused_keys: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    removed: string[];
-    added: string[];
-    changed: {
-        key: string;
-        old: string;
-        new: string;
-    }[];
-    recycle_keys: string[];
-    refused_keys: string[];
-}, {
-    removed: string[];
-    added: string[];
-    changed: {
-        key: string;
-        old: string;
-        new: string;
-    }[];
-    recycle_keys: string[];
-    refused_keys: string[];
-}>;
+    }, z.core.$strip>>;
+    recycle_keys: z.ZodArray<z.ZodString>;
+    refused_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const settingsProfileList: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-}, {
-    name: string;
-    description: string;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 type SettingsProfileRollback = z.infer<typeof settingsProfileRollback>;
@@ -10693,13 +5886,7 @@ type SettingsProfileRollback = z.infer<typeof settingsProfileRollback>;
 const settingsProfileRollback: z.ZodObject<{
     ok: z.ZodLiteral<true>;
     version: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    version: number;
-    ok: true;
-}, {
-    version: number;
-    ok: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type SettingsProfileSaved = z.infer<typeof settingsProfileSaved>;
@@ -10708,13 +5895,7 @@ type SettingsProfileSaved = z.infer<typeof settingsProfileSaved>;
 const settingsProfileSaved: z.ZodObject<{
     ok: z.ZodLiteral<true>;
     version: z.ZodOptional<z.ZodNumber>;
-}, "strip", z.ZodTypeAny, {
-    ok: true;
-    version?: number | undefined;
-}, {
-    ok: true;
-    version?: number | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type SettingsProfileSummary = z.infer<typeof settingsProfileSummary>;
@@ -10723,13 +5904,7 @@ type SettingsProfileSummary = z.infer<typeof settingsProfileSummary>;
 const settingsProfileSummary: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    description: string;
-}, {
-    name: string;
-    description: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type SettingsProfileVersion = z.infer<typeof settingsProfileVersion>;
@@ -10737,62 +5912,23 @@ type SettingsProfileVersion = z.infer<typeof settingsProfileVersion>;
 // @public
 const settingsProfileVersion: z.ZodObject<{
     version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-} & {
     body: z.ZodObject<{
         description: z.ZodString;
         env: z.ZodRecord<z.ZodString, z.ZodString>;
-        secret_keys: z.ZodArray<z.ZodString, "many">;
-    }, "strip", z.ZodTypeAny, {
-        description: string;
-        env: Record<string, string>;
-        secret_keys: string[];
-    }, {
-        description: string;
-        env: Record<string, string>;
-        secret_keys: string[];
-    }>;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    body: {
-        description: string;
-        env: Record<string, string>;
-        secret_keys: string[];
-    };
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    body: {
-        description: string;
-        env: Record<string, string>;
-        secret_keys: string[];
-    };
-    created_at: string;
-    is_current: boolean;
-}>;
+        secret_keys: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const settingsProfileVersionList: z.ZodArray<z.ZodObject<{
     version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    created_at: string;
-    is_current: boolean;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 type SettingsProfileVersionMeta = z.infer<typeof settingsProfileVersionMeta>;
@@ -10800,20 +5936,10 @@ type SettingsProfileVersionMeta = z.infer<typeof settingsProfileVersionMeta>;
 // @public
 const settingsProfileVersionMeta: z.ZodObject<{
     version: z.ZodNumber;
-    tags: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
     is_current: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    tags: string[];
-    version: number;
-    created_at: string;
-    is_current: boolean;
-}, {
-    tags: string[];
-    version: number;
-    created_at: string;
-    is_current: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type SettingsSchema = z.infer<typeof settingsSchema>;
@@ -10828,106 +5954,16 @@ const settingsSchema: z.ZodObject<{
             name: z.ZodString;
             env_var: z.ZodString;
             type: z.ZodString;
-            default: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
+            default: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
             required: z.ZodBoolean;
             secret: z.ZodBoolean;
             description: z.ZodNullable<z.ZodString>;
             nested_group: z.ZodNullable<z.ZodString>;
             default_namespace_var: z.ZodNullable<z.ZodString>;
-            value: z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>;
-        }, "strip", z.ZodTypeAny, {
-            name: string;
-            description: string | null;
-            type: string;
-            required: boolean;
-            secret: boolean;
-            env_var: string;
-            nested_group: string | null;
-            default_namespace_var: string | null;
-            value?: unknown;
-            default?: unknown;
-        }, {
-            name: string;
-            description: string | null;
-            type: string;
-            required: boolean;
-            secret: boolean;
-            env_var: string;
-            nested_group: string | null;
-            default_namespace_var: string | null;
-            value?: unknown;
-            default?: unknown;
-        }>, "many">;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        module: string;
-        qualname: string;
-        fields: {
-            name: string;
-            description: string | null;
-            type: string;
-            required: boolean;
-            secret: boolean;
-            env_var: string;
-            nested_group: string | null;
-            default_namespace_var: string | null;
-            value?: unknown;
-            default?: unknown;
-        }[];
-    }, {
-        name: string;
-        module: string;
-        qualname: string;
-        fields: {
-            name: string;
-            description: string | null;
-            type: string;
-            required: boolean;
-            secret: boolean;
-            env_var: string;
-            nested_group: string | null;
-            default_namespace_var: string | null;
-            value?: unknown;
-            default?: unknown;
-        }[];
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    groups: {
-        name: string;
-        module: string;
-        qualname: string;
-        fields: {
-            name: string;
-            description: string | null;
-            type: string;
-            required: boolean;
-            secret: boolean;
-            env_var: string;
-            nested_group: string | null;
-            default_namespace_var: string | null;
-            value?: unknown;
-            default?: unknown;
-        }[];
-    }[];
-}, {
-    groups: {
-        name: string;
-        module: string;
-        qualname: string;
-        fields: {
-            name: string;
-            description: string | null;
-            type: string;
-            required: boolean;
-            secret: boolean;
-            env_var: string;
-            nested_group: string | null;
-            default_namespace_var: string | null;
-            value?: unknown;
-            default?: unknown;
-        }[];
-    }[];
-}>;
+            value: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 export interface SseFrame {
@@ -10956,211 +5992,67 @@ export interface StartConnectArgs {
 }
 
 // @public (undocumented)
-const startConnectResult: z.ZodUnion<[z.ZodObject<{
+const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
     flow_id: z.ZodString;
     authorize_url: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    flow_id: string;
-    authorize_url: string;
-}, {
-    flow_id: string;
-    authorize_url: string;
-}>, z.ZodObject<{
+}, z.core.$strip>, z.ZodObject<{
     connection_id: z.ZodString;
-    added_manifest_entries: z.ZodArray<z.ZodString, "many">;
-    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    added_manifest_entries: z.ZodArray<z.ZodString>;
+    fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>>;
-}, "strip", z.ZodTypeAny, {
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    added_manifest_entries: string[];
-}, {
-    connection_id: string;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    } | null;
-    added_manifest_entries: string[];
-}>]>;
+    }, z.core.$strip>], "mode">>;
+}, z.core.$strip>]>;
 
 // @public
 const storageDirDeleted: z.ZodObject<{
     dir: z.ZodString;
     deleted: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    deleted: true;
-    dir: string;
-}, {
-    deleted: true;
-    dir: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type StorageInfo = z.infer<typeof storageInfo>;
@@ -11170,36 +6062,18 @@ const storageInfo: z.ZodObject<{
     present: z.ZodBoolean;
     provider: z.ZodNullable<z.ZodString>;
     module: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    present: boolean;
-    provider: string | null;
-    module: string | null;
-}, {
-    present: boolean;
-    provider: string | null;
-    module: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public
 const storageResourceDeleted: z.ZodObject<{
     id: z.ZodString;
     deleted: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    deleted: true;
-    id: string;
-}, {
-    deleted: true;
-    id: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 const storageResourceList: z.ZodObject<{
-    resources: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    resources: string[];
-}, {
-    resources: string[];
-}>;
+    resources: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type StorageResourceStat = z.infer<typeof storageResourceStat>;
@@ -11208,25 +6082,13 @@ export type StorageResourceStat = z.infer<typeof storageResourceStat>;
 const storageResourceStat: z.ZodObject<{
     id: z.ZodString;
     content_type: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    content_type: string | null;
-}, {
-    id: string;
-    content_type: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public
 const storageResourceStored: z.ZodObject<{
     id: z.ZodString;
     stored: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    id: string;
-    stored: true;
-}, {
-    id: string;
-    stored: true;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface StorageUploadBody {
@@ -11250,45 +6112,11 @@ const studioPluginManifest: z.ZodObject<{
     integrity: z.ZodRecord<z.ZodString, z.ZodString>;
     contributions: z.ZodObject<{
         tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
-        pages: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-        settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        tool_panels: Record<string, string>;
-        pages: string[];
-        settings_tabs: string[];
-        nav_entries: string[];
-    }, {
-        tool_panels?: Record<string, string> | undefined;
-        pages?: string[] | undefined;
-        settings_tabs?: string[] | undefined;
-        nav_entries?: string[] | undefined;
-    }>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    version: string;
-    api_version: number;
-    entry: string;
-    integrity: Record<string, string>;
-    contributions: {
-        tool_panels: Record<string, string>;
-        pages: string[];
-        settings_tabs: string[];
-        nav_entries: string[];
-    };
-}, {
-    name: string;
-    version: string;
-    api_version: number;
-    entry: string;
-    integrity: Record<string, string>;
-    contributions: {
-        tool_panels?: Record<string, string> | undefined;
-        pages?: string[] | undefined;
-        settings_tabs?: string[] | undefined;
-        nav_entries?: string[] | undefined;
-    };
-}>;
+        pages: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const studioPluginRegistry: z.ZodArray<z.ZodObject<{
@@ -11299,118 +6127,49 @@ const studioPluginRegistry: z.ZodArray<z.ZodObject<{
     integrity: z.ZodRecord<z.ZodString, z.ZodString>;
     contributions: z.ZodObject<{
         tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
-        pages: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-        settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-    }, "strip", z.ZodTypeAny, {
-        tool_panels: Record<string, string>;
-        pages: string[];
-        settings_tabs: string[];
-        nav_entries: string[];
-    }, {
-        tool_panels?: Record<string, string> | undefined;
-        pages?: string[] | undefined;
-        settings_tabs?: string[] | undefined;
-        nav_entries?: string[] | undefined;
-    }>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    version: string;
-    api_version: number;
-    entry: string;
-    integrity: Record<string, string>;
-    contributions: {
-        tool_panels: Record<string, string>;
-        pages: string[];
-        settings_tabs: string[];
-        nav_entries: string[];
-    };
-}, {
-    name: string;
-    version: string;
-    api_version: number;
-    entry: string;
-    integrity: Record<string, string>;
-    contributions: {
-        tool_panels?: Record<string, string> | undefined;
-        pages?: string[] | undefined;
-        settings_tabs?: string[] | undefined;
-        nav_entries?: string[] | undefined;
-    };
-}>, "many">;
+        pages: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 const subMcpCreated: z.ZodObject<{
     slug: z.ZodString;
-    tools: z.ZodArray<z.ZodString, "many">;
+    tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    tools: string[];
-    transport: string;
-    slug: string;
-}, {
-    tools: string[];
-    transport: string;
-    slug: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type SubMcpEntry = z.infer<typeof subMcpEntry>;
 
 // @public
 const subMcpEntry: z.ZodObject<{
-    tools: z.ZodArray<z.ZodString, "many">;
+    tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-} & {
     slug: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    tools: string[];
-    transport: string;
-    slug: string;
-}, {
-    tools: string[];
-    transport: string;
-    slug: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const subMcpList: z.ZodRecord<z.ZodString, z.ZodObject<{
-    tools: z.ZodArray<z.ZodString, "many">;
+    tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    tools: string[];
-    transport: string;
-}, {
-    tools: string[];
-    transport: string;
-}>>;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type SubMcpMount = z.infer<typeof subMcpMount>;
 
 // @public
 const subMcpMount: z.ZodObject<{
-    tools: z.ZodArray<z.ZodString, "many">;
+    tools: z.ZodArray<z.ZodString>;
     transport: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    tools: string[];
-    transport: string;
-}, {
-    tools: string[];
-    transport: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const subMcpRemoved: z.ZodObject<{
     slug: z.ZodString;
     removed: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    slug: string;
-    removed: true;
-}, {
-    slug: string;
-    removed: true;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface SubmitToolRunArgs {
@@ -11425,18 +6184,8 @@ const subServiceView: z.ZodObject<{
     id: z.ZodString;
     display_name: z.ZodString;
     description: z.ZodString;
-    scopes: z.ZodArray<z.ZodString, "many">;
-}, "strip", z.ZodTypeAny, {
-    description: string;
-    id: string;
-    display_name: string;
-    scopes: string[];
-}, {
-    description: string;
-    id: string;
-    display_name: string;
-    scopes: string[];
-}>;
+    scopes: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
 
 // @public
 export function summarizeFleetFanout(fanout: FleetReportFanout | null | undefined): FleetReportSummary | null;
@@ -11447,59 +6196,33 @@ export function summarizeFleetResult(result: FleetResult): FleetReportSummary;
 // @public (undocumented)
 const templateCacheCleared: z.ZodObject<{
     cleared: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    cleared: true;
-}, {
-    cleared: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const templateDeleted: z.ZodObject<{
     path: z.ZodString;
     deleted: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    deleted: true;
-}, {
-    path: string;
-    deleted: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const templateDetail: z.ZodObject<{
     template: z.ZodString;
     schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-}, "strip", z.ZodTypeAny, {
-    template: string;
-    schema: Record<string, unknown>;
-}, {
-    template: string;
-    schema: Record<string, unknown>;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
-const templateNames: z.ZodArray<z.ZodString, "many">;
+const templateNames: z.ZodArray<z.ZodString>;
 
 // @public (undocumented)
 const templateRendered: z.ZodObject<{
     rendered: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    rendered: string;
-}, {
-    rendered: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const templateUploaded: z.ZodObject<{
     path: z.ZodString;
     uploaded: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    path: string;
-    uploaded: true;
-}, {
-    path: string;
-    uploaded: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type TokensPayload = z.infer<typeof tokensPayload>;
@@ -11508,73 +6231,27 @@ export type TokensPayload = z.infer<typeof tokensPayload>;
 const tokensPayload: z.ZodArray<z.ZodObject<{
     user_id: z.ZodString;
     description: z.ZodString;
-    scopes: z.ZodArray<z.ZodString, "many">;
-    policy_data: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+    scopes: z.ZodArray<z.ZodString>;
+    policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
     condition: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     condition_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    condition_kwargs: z.ZodOptional<z.ZodNullable<z.ZodType<unknown, z.ZodTypeDef, unknown>>>;
-}, "strip", z.ZodTypeAny, {
-    description: string;
-    scopes: string[];
-    user_id: string;
-    condition?: string | null | undefined;
-    condition_id?: string | null | undefined;
-    condition_kwargs?: unknown;
-    policy_data?: unknown;
-}, {
-    description: string;
-    scopes: string[];
-    user_id: string;
-    condition?: string | null | undefined;
-    condition_id?: string | null | undefined;
-    condition_kwargs?: unknown;
-    policy_data?: unknown;
-}>, "many">;
+    condition_kwargs: z.ZodOptional<z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type ToolExtensions = z.infer<typeof toolExtensions>;
 
 // @public
 const toolExtensions: z.ZodObject<{
-    combos: z.ZodArray<z.ZodArray<z.ZodUnion<[z.ZodString, z.ZodObject<{
+    combos: z.ZodArray<z.ZodArray<z.ZodUnion<readonly [z.ZodString, z.ZodObject<{
         name: z.ZodString;
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        config: Record<string, unknown>;
-    }, {
-        name: string;
-        config: Record<string, unknown>;
-    }>]>, "many">, "many">;
+    }, z.core.$strip>]>>>;
     available: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         kind: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        kind: string;
-    }, {
-        name: string;
-        kind: string;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    combos: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    available: {
-        name: string;
-        kind: string;
-    }[];
-}, {
-    combos: (string | {
-        name: string;
-        config: Record<string, unknown>;
-    })[][];
-    available: {
-        name: string;
-        kind: string;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult>;
@@ -11583,225 +6260,74 @@ export type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult
 const toolExtensionsApplyResult: z.ZodObject<{
     status: z.ZodString;
     env_keys: z.ZodNumber;
-    fanout: z.ZodDiscriminatedUnion<"mode", [z.ZodObject<{
+    fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
         note: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        mode: "local-only";
-        note: string;
-    }, {
-        mode: "local-only";
-        note: string;
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"fleet">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    }>, z.ZodObject<{
+    }, z.core.$strip>, z.ZodObject<{
         op: z.ZodString;
         reachable: z.ZodBoolean;
         local_only: z.ZodBoolean;
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
-            outcome: z.ZodEnum<["applied", "failed", "missing", "departed", "timed_out", "resyncing", "recycling", "stale"]>;
-            payload: z.ZodType<unknown, z.ZodTypeDef, unknown>;
+            outcome: z.ZodEnum<{
+                failed: "failed";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+                applied: "applied";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+            }>;
+            payload: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
             error: z.ZodNullable<z.ZodString>;
             detail: z.ZodNullable<z.ZodString>;
-        }, "strip", z.ZodTypeAny, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }, {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }>, "many">;
+        }, z.core.$strip>>;
         error: z.ZodNullable<z.ZodString>;
-    } & {
         mode: z.ZodLiteral<"unreachable">;
-    }, "strip", z.ZodTypeAny, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }, {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    }>]>;
-}, "strip", z.ZodTypeAny, {
-    status: string;
-    env_keys: number;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    };
-}, {
-    status: string;
-    env_keys: number;
-    fanout: {
-        mode: "local-only";
-        note: string;
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "fleet";
-    } | {
-        error: string | null;
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            error: string | null;
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            detail: string | null;
-            payload?: unknown;
-        }[];
-        mode: "unreachable";
-    };
-}>;
+    }, z.core.$strip>], "mode">;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolMediaResult = z.infer<typeof toolMediaResult>;
 
 // @public
-const toolMediaResult: z.ZodEffects<z.ZodObject<{
-    type: z.ZodEnum<["image", "audio"]>;
+const toolMediaResult: z.ZodObject<{
+    type: z.ZodEnum<{
+        image: "image";
+        audio: "audio";
+    }>;
     data: z.ZodString;
     mimeType: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    data: string;
-    type: "image" | "audio";
-    mimeType: string;
-}, {
-    data: string;
-    type: "image" | "audio";
-    mimeType: string;
-}>, {
-    data: string;
-    type: "image" | "audio";
-    mimeType: string;
-}, {
-    data: string;
-    type: "image" | "audio";
-    mimeType: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 const toolMetaDeleted: z.ZodObject<{
     tool_name: z.ZodString;
     deleted: z.ZodLiteral<true>;
-}, "strip", z.ZodTypeAny, {
-    tool_name: string;
-    deleted: true;
-}, {
-    tool_name: string;
-    deleted: true;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolMetaOverlay = z.infer<typeof toolMetaOverlay>;
@@ -11812,66 +6338,16 @@ const toolMetaOverlay: z.ZodObject<{
         id: z.ZodString;
         name: z.ZodString;
         parent_id: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        id: string;
-        parent_id: string | null;
-    }, {
-        name: string;
-        id: string;
-        parent_id: string | null;
-    }>, "many">;
+    }, z.core.$strip>>;
     meta: z.ZodArray<z.ZodObject<{
         tool_name: z.ZodString;
         display_name: z.ZodNullable<z.ZodString>;
         folder_id: z.ZodNullable<z.ZodString>;
-        tags: z.ZodArray<z.ZodString, "many">;
-        badges: z.ZodArray<z.ZodString, "many">;
+        tags: z.ZodArray<z.ZodString>;
+        badges: z.ZodArray<z.ZodString>;
         hidden: z.ZodNullable<z.ZodBoolean>;
-    }, "strip", z.ZodTypeAny, {
-        tool_name: string;
-        tags: string[];
-        badges: string[];
-        hidden: boolean | null;
-        display_name: string | null;
-        folder_id: string | null;
-    }, {
-        tool_name: string;
-        tags: string[];
-        badges: string[];
-        hidden: boolean | null;
-        display_name: string | null;
-        folder_id: string | null;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    folders: {
-        name: string;
-        id: string;
-        parent_id: string | null;
-    }[];
-    meta: {
-        tool_name: string;
-        tags: string[];
-        badges: string[];
-        hidden: boolean | null;
-        display_name: string | null;
-        folder_id: string | null;
-    }[];
-}, {
-    folders: {
-        name: string;
-        id: string;
-        parent_id: string | null;
-    }[];
-    meta: {
-        tool_name: string;
-        tags: string[];
-        badges: string[];
-        hidden: boolean | null;
-        display_name: string | null;
-        folder_id: string | null;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public
 export interface ToolMetaPatch {
@@ -11895,48 +6371,27 @@ const toolMetaRecord: z.ZodObject<{
     tool_name: z.ZodString;
     display_name: z.ZodNullable<z.ZodString>;
     folder_id: z.ZodNullable<z.ZodString>;
-    tags: z.ZodArray<z.ZodString, "many">;
-    badges: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
+    badges: z.ZodArray<z.ZodString>;
     hidden: z.ZodNullable<z.ZodBoolean>;
-}, "strip", z.ZodTypeAny, {
-    tool_name: string;
-    tags: string[];
-    badges: string[];
-    hidden: boolean | null;
-    display_name: string | null;
-    folder_id: string | null;
-}, {
-    tool_name: string;
-    tags: string[];
-    badges: string[];
-    hidden: boolean | null;
-    display_name: string | null;
-    folder_id: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
-const toolNames: z.ZodArray<z.ZodString, "many">;
+const toolNames: z.ZodArray<z.ZodString>;
 
 // @public (undocumented)
 export const toolRunList: z.ZodArray<z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
-    status: z.ZodEnum<["running", "succeeded", "failed", "lost"]>;
+    status: z.ZodEnum<{
+        running: "running";
+        succeeded: "succeeded";
+        failed: "failed";
+        lost: "lost";
+    }>;
     started_at: z.ZodString;
     finished_at: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    tool_name: string;
-    status: "running" | "succeeded" | "failed" | "lost";
-    run_id: string;
-    started_at: string;
-    finished_at?: string | undefined;
-}, {
-    tool_name: string;
-    status: "running" | "succeeded" | "failed" | "lost";
-    run_id: string;
-    started_at: string;
-    finished_at?: string | undefined;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public (undocumented)
 export type ToolRunListItem = z.infer<typeof toolRunListItem>;
@@ -11945,22 +6400,15 @@ export type ToolRunListItem = z.infer<typeof toolRunListItem>;
 export const toolRunListItem: z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
-    status: z.ZodEnum<["running", "succeeded", "failed", "lost"]>;
+    status: z.ZodEnum<{
+        running: "running";
+        succeeded: "succeeded";
+        failed: "failed";
+        lost: "lost";
+    }>;
     started_at: z.ZodString;
     finished_at: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    tool_name: string;
-    status: "running" | "succeeded" | "failed" | "lost";
-    run_id: string;
-    started_at: string;
-    finished_at?: string | undefined;
-}, {
-    tool_name: string;
-    status: "running" | "succeeded" | "failed" | "lost";
-    run_id: string;
-    started_at: string;
-    finished_at?: string | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolRunRecord = z.infer<typeof toolRunRecord>;
@@ -11969,34 +6417,28 @@ export type ToolRunRecord = z.infer<typeof toolRunRecord>;
 export const toolRunRecord: z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
-    status: z.ZodEnum<["running", "succeeded", "failed", "lost"]>;
+    status: z.ZodEnum<{
+        running: "running";
+        succeeded: "succeeded";
+        failed: "failed";
+        lost: "lost";
+    }>;
     started_at: z.ZodString;
     finished_at: z.ZodOptional<z.ZodString>;
     result: z.ZodOptional<z.ZodUnknown>;
     error: z.ZodOptional<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    tool_name: string;
-    status: "running" | "succeeded" | "failed" | "lost";
-    run_id: string;
-    started_at: string;
-    error?: string | undefined;
-    result?: unknown;
-    finished_at?: string | undefined;
-}, {
-    tool_name: string;
-    status: "running" | "succeeded" | "failed" | "lost";
-    run_id: string;
-    started_at: string;
-    error?: string | undefined;
-    result?: unknown;
-    finished_at?: string | undefined;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolRunStatus = z.infer<typeof toolRunStatus>;
 
 // @public
-export const toolRunStatus: z.ZodEnum<["running", "succeeded", "failed", "lost"]>;
+export const toolRunStatus: z.ZodEnum<{
+    running: "running";
+    succeeded: "succeeded";
+    failed: "failed";
+    lost: "lost";
+}>;
 
 // @public (undocumented)
 export type ToolRunSubmitResult = z.infer<typeof toolRunSubmitResult>;
@@ -12004,11 +6446,7 @@ export type ToolRunSubmitResult = z.infer<typeof toolRunSubmitResult>;
 // @public
 export const toolRunSubmitResult: z.ZodObject<{
     run_id: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    run_id: string;
-}, {
-    run_id: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolSchema = z.infer<typeof toolSchema>;
@@ -12018,15 +6456,7 @@ const toolSchema: z.ZodObject<{
     input: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     output: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     description: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    description: string | null;
-    input: Record<string, unknown>;
-    output: Record<string, unknown> | null;
-}, {
-    description: string | null;
-    input: Record<string, unknown>;
-    output: Record<string, unknown> | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolTagEntry = z.infer<typeof toolTagEntry>;
@@ -12034,38 +6464,18 @@ export type ToolTagEntry = z.infer<typeof toolTagEntry>;
 // @public
 const toolTagEntry: z.ZodObject<{
     name: z.ZodString;
-    tags: z.ZodArray<z.ZodString, "many">;
-    badges: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
+    badges: z.ZodArray<z.ZodString>;
     hidden: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    tags: string[];
-    badges: string[];
-    hidden: boolean;
-}, {
-    name: string;
-    tags: string[];
-    badges: string[];
-    hidden: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const toolTags: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
-    tags: z.ZodArray<z.ZodString, "many">;
-    badges: z.ZodArray<z.ZodString, "many">;
+    tags: z.ZodArray<z.ZodString>;
+    badges: z.ZodArray<z.ZodString>;
     hidden: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    tags: string[];
-    badges: string[];
-    hidden: boolean;
-}, {
-    name: string;
-    tags: string[];
-    badges: string[];
-    hidden: boolean;
-}>, "many">;
+}, z.core.$strip>>;
 
 // @public
 export interface TopicVerifierBody {
@@ -12079,37 +6489,34 @@ export interface TopicVerifierBody {
 const topicVerifierRemoved: z.ZodObject<{
     removed: z.ZodBoolean;
     topic: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    removed: boolean;
-    topic: string;
-}, {
-    removed: boolean;
-    topic: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 const topicVerifierSet: z.ZodObject<{
     topic: z.ZodString;
     verifier: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    verifier: string;
-    topic: string;
-}, {
-    verifier: string;
-    topic: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type TranscriptOrder = z.infer<typeof transcriptOrder>;
 
 // @public
-const transcriptOrder: z.ZodEnum<["asc", "desc"]>;
+const transcriptOrder: z.ZodEnum<{
+    asc: "asc";
+    desc: "desc";
+}>;
 
 // @public (undocumented)
 export type TriggerAuth = z.infer<typeof triggerAuth>;
 
 // @public
-const triggerAuth: z.ZodEnum<["public", "verifier", "token", "token+api_key", "out-of-service"]>;
+const triggerAuth: z.ZodEnum<{
+    public: "public";
+    verifier: "verifier";
+    token: "token";
+    "token+api_key": "token+api_key";
+    "out-of-service": "out-of-service";
+}>;
 
 // @public
 export interface TriggerLinkCreateBody {
@@ -12137,19 +6544,7 @@ const triggerLinkCreated: z.ZodObject<{
     token: z.ZodString;
     topic: z.ZodString;
     expires_at: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    expires_at: string | null;
-    token: string;
-    topic: string;
-    trigger_path: string;
-}, {
-    name: string;
-    expires_at: string | null;
-    token: string;
-    topic: string;
-    trigger_path: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type TriggerLinkDeleted = z.infer<typeof triggerLinkDeleted>;
@@ -12158,13 +6553,7 @@ export type TriggerLinkDeleted = z.infer<typeof triggerLinkDeleted>;
 const triggerLinkDeleted: z.ZodObject<{
     removed: z.ZodBoolean;
     name: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    removed: boolean;
-}, {
-    name: string;
-    removed: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type TriggerLinkList = z.infer<typeof triggerLinkList>;
@@ -12175,61 +6564,21 @@ const triggerLinkList: z.ZodObject<{
         name: z.ZodString;
         topic: z.ZodString;
         execution_key: z.ZodString;
-        trigger_auth: z.ZodEnum<["public", "verifier", "token", "token+api_key", "out-of-service"]>;
+        trigger_auth: z.ZodEnum<{
+            public: "public";
+            verifier: "verifier";
+            token: "token";
+            "token+api_key": "token+api_key";
+            "out-of-service": "out-of-service";
+        }>;
         tool_kwargs: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         created_by: z.ZodNullable<z.ZodString>;
         created_at: z.ZodString;
         expires_at: z.ZodNullable<z.ZodString>;
         token_hash_prefix: z.ZodString;
-    }, "strip", z.ZodTypeAny, {
-        name: string;
-        created_at: string;
-        execution_key: string;
-        expires_at: string | null;
-        topic: string;
-        tool_kwargs: Record<string, unknown> | null;
-        trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-        created_by: string | null;
-        token_hash_prefix: string;
-    }, {
-        name: string;
-        created_at: string;
-        execution_key: string;
-        expires_at: string | null;
-        topic: string;
-        tool_kwargs: Record<string, unknown> | null;
-        trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-        created_by: string | null;
-        token_hash_prefix: string;
-    }>, "many">;
+    }, z.core.$strip>>;
     total: z.ZodNumber;
-}, "strip", z.ZodTypeAny, {
-    items: {
-        name: string;
-        created_at: string;
-        execution_key: string;
-        expires_at: string | null;
-        topic: string;
-        tool_kwargs: Record<string, unknown> | null;
-        trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-        created_by: string | null;
-        token_hash_prefix: string;
-    }[];
-    total: number;
-}, {
-    items: {
-        name: string;
-        created_at: string;
-        execution_key: string;
-        expires_at: string | null;
-        topic: string;
-        tool_kwargs: Record<string, unknown> | null;
-        trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-        created_by: string | null;
-        token_hash_prefix: string;
-    }[];
-    total: number;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type TriggerLinkRecord = z.infer<typeof triggerLinkRecord>;
@@ -12239,33 +6588,19 @@ const triggerLinkRecord: z.ZodObject<{
     name: z.ZodString;
     topic: z.ZodString;
     execution_key: z.ZodString;
-    trigger_auth: z.ZodEnum<["public", "verifier", "token", "token+api_key", "out-of-service"]>;
+    trigger_auth: z.ZodEnum<{
+        public: "public";
+        verifier: "verifier";
+        token: "token";
+        "token+api_key": "token+api_key";
+        "out-of-service": "out-of-service";
+    }>;
     tool_kwargs: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     created_by: z.ZodNullable<z.ZodString>;
     created_at: z.ZodString;
     expires_at: z.ZodNullable<z.ZodString>;
     token_hash_prefix: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    name: string;
-    created_at: string;
-    execution_key: string;
-    expires_at: string | null;
-    topic: string;
-    tool_kwargs: Record<string, unknown> | null;
-    trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-    created_by: string | null;
-    token_hash_prefix: string;
-}, {
-    name: string;
-    created_at: string;
-    execution_key: string;
-    expires_at: string | null;
-    topic: string;
-    tool_kwargs: Record<string, unknown> | null;
-    trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-    created_by: string | null;
-    token_hash_prefix: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface UnknownAgentEvent {
@@ -12278,11 +6613,7 @@ export interface UnknownAgentEvent {
 // @public
 const unpinPublicResult: z.ZodObject<{
     url: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    url: string;
-}, {
-    url: string;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface ValidateConditionBody {
@@ -12303,13 +6634,7 @@ export type ValidateConditionResult = z.infer<typeof validateConditionResult>;
 const validateConditionResult: z.ZodObject<{
     ok: z.ZodBoolean;
     result: z.ZodNullable<z.ZodBoolean>;
-}, "strip", z.ZodTypeAny, {
-    result: boolean | null;
-    ok: boolean;
-}, {
-    result: boolean | null;
-    ok: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface ValidatePresetBody {
@@ -12336,17 +6661,7 @@ const webEntryCode: z.ZodObject<{
     label: z.ZodNullable<z.ZodString>;
     created_at: z.ZodString;
     expires_at: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    created_at: string;
-    label: string | null;
-    code_id: string;
-    expires_at: string | null;
-}, {
-    created_at: string;
-    label: string | null;
-    code_id: string;
-    expires_at: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public
 export interface WebEntryCodeMintBody {
@@ -12364,15 +6679,7 @@ const webEntryCodeMinted: z.ZodObject<{
     code: z.ZodString;
     code_id: z.ZodString;
     expires_at: z.ZodNullable<z.ZodString>;
-}, "strip", z.ZodTypeAny, {
-    code: string;
-    code_id: string;
-    expires_at: string | null;
-}, {
-    code: string;
-    code_id: string;
-    expires_at: string | null;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type WebEntryCodeRevoked = z.infer<typeof webEntryCodeRevoked>;
@@ -12380,11 +6687,7 @@ export type WebEntryCodeRevoked = z.infer<typeof webEntryCodeRevoked>;
 // @public
 const webEntryCodeRevoked: z.ZodObject<{
     status: z.ZodLiteral<"revoked">;
-}, "strip", z.ZodTypeAny, {
-    status: "revoked";
-}, {
-    status: "revoked";
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type WebEntryGate = z.infer<typeof webEntryGate>;
@@ -12397,34 +6700,8 @@ const webEntryGate: z.ZodObject<{
         label: z.ZodNullable<z.ZodString>;
         created_at: z.ZodString;
         expires_at: z.ZodNullable<z.ZodString>;
-    }, "strip", z.ZodTypeAny, {
-        created_at: string;
-        label: string | null;
-        code_id: string;
-        expires_at: string | null;
-    }, {
-        created_at: string;
-        label: string | null;
-        code_id: string;
-        expires_at: string | null;
-    }>, "many">;
-}, "strip", z.ZodTypeAny, {
-    enabled: boolean;
-    codes: {
-        created_at: string;
-        label: string | null;
-        code_id: string;
-        expires_at: string | null;
-    }[];
-}, {
-    enabled: boolean;
-    codes: {
-        created_at: string;
-        label: string | null;
-        code_id: string;
-        expires_at: string | null;
-    }[];
-}>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type WebEntryGateState = z.infer<typeof webEntryGateState>;
@@ -12432,17 +6709,16 @@ export type WebEntryGateState = z.infer<typeof webEntryGateState>;
 // @public
 const webEntryGateState: z.ZodObject<{
     enabled: z.ZodBoolean;
-}, "strip", z.ZodTypeAny, {
-    enabled: boolean;
-}, {
-    enabled: boolean;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type WorkerKind = z.infer<typeof workerKind>;
 
 // @public
-const workerKind: z.ZodEnum<["serve", "backend"]>;
+const workerKind: z.ZodEnum<{
+    backend: "backend";
+    serve: "serve";
+}>;
 
 // @public (undocumented)
 export type WorkerLastOp = z.infer<typeof workerLastOp>;
@@ -12452,21 +6728,17 @@ const workerLastOp: z.ZodObject<{
     op: z.ZodString;
     outcome: z.ZodString;
     at: z.ZodString;
-}, "strip", z.ZodTypeAny, {
-    at: string;
-    op: string;
-    outcome: string;
-}, {
-    at: string;
-    op: string;
-    outcome: string;
-}>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type WorkerState = z.infer<typeof workerState>;
 
 // @public
-const workerState: z.ZodEnum<["ready", "resyncing", "recycling"]>;
+const workerState: z.ZodEnum<{
+    ready: "ready";
+    resyncing: "resyncing";
+    recycling: "recycling";
+}>;
 
 // (No @packageDocumentation comment for this package)
 

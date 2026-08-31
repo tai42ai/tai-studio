@@ -28,7 +28,7 @@ export const agentSummary = z.object({
   description: z.string().default(''),
   tool_name: z.string(),
   // The agent's `ToolInput` JSON schema (the same schema its run tool exposes).
-  input_schema: z.record(z.unknown()).default({}),
+  input_schema: z.record(z.string(), z.unknown()).default({}),
   // The agent's own authorability marker (read, never inferred): `true` means its
   // `ToolInput` accepts the composable spec fields and it can be authored into a
   // versioned agent. A code role-agent reports `false`. The same item shape is
@@ -54,7 +54,7 @@ const toolCallStep = z.object({
   type: z.literal('tool_call_step'),
   final: z.boolean().default(false),
   tool: z.string(),
-  args: z.record(z.unknown()).default({}),
+  args: z.record(z.string(), z.unknown()).default({}),
   call_id: z.string(),
 });
 const toolResultStep = z.object({
