@@ -100,6 +100,6 @@
     "@radix-ui/react-tabs": "^1.1.16",
     "@radix-ui/react-tooltip": "^1.2.11",
     "@tai42/api-client": "workspace:*",
-    "@tai42/jq-studio": "^0.1.1"
+    "@tai42/jq-studio": "^0.1.2"
   }
 }
