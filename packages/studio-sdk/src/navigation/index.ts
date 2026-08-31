@@ -4,6 +4,7 @@ export {
   useAppNavigate,
   useResolvePath,
   usePluginNavigation,
+  usePluginEntryNavigation,
   useNavigationGuard,
   useNavigationGate,
 } from './context';
@@ -17,6 +18,7 @@ export type {
   PageProps,
   NavigationContextValue,
   NavigateOptions,
+  PluginNavigateOptions,
   PluginSearch,
   NavigationGuardHandler,
 } from './types';

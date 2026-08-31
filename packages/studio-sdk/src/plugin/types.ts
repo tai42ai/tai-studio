@@ -60,6 +60,28 @@ export interface PluginPageProps {
   readonly params?: Record<string, unknown>;
   /** The validated search object (present only when the page declared a schema). */
   readonly search?: Record<string, unknown>;
+  /**
+   * The per-history-entry state slot the host stored for THIS plugin on the current
+   * history entry (written via `navigatePluginWithOptions` / `updatePluginEntryState`
+   * on the SDK navigation surface), or `undefined` when none was set. It survives
+   * back/forward traversal and a hard reload, because the host round-trips it through
+   * `history.state`. OPTIONAL — a page that never uses the entry-state channel receives
+   * `undefined`, so this stays a non-breaking addition and the plugin API version does
+   * not move.
+   *
+   * FAILURE-DIVERGENCE — why there is no host-side schema for it, unlike `params` /
+   * `search`: those two come from the URL, a shareable and forgeable surface, so a bad
+   * one is a broken LINK — the host VALIDATES them against the page's
+   * {@link PluginPageParamsSchema} and renders a LOUD error card on rejection, never a
+   * half-populated view. `entryState` is different in kind: it is opaque, author-written
+   * data the host only round-trips through `history.state`, never parses and never shows
+   * a human, and the page that wrote it owns its shape. So the host delivers it RAW and
+   * the page MUST degrade GRACEFULLY on anything unexpected — treat a malformed or absent
+   * value as "no checkpoint" and fall back to defaults, never throw. That asymmetry —
+   * an error card at the host for URL surfaces, graceful raw delivery for entry state —
+   * is exactly why entry state carries no host-side schema slot.
+   */
+  readonly entryState?: unknown;
 }
 
 /**

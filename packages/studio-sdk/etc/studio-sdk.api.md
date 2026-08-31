@@ -9734,10 +9734,12 @@ export interface NavigationContextValue {
     navigate: <T extends RouteToken>(token: T, search?: RouteSearch<T>, options?: NavigateOptions) => void;
     // (undocumented)
     navigatePlugin: (pluginId: string, pagePath: string, params?: string, search?: PluginSearch) => void;
+    navigatePluginWithOptions?: (pluginId: string, pagePath: string, params?: string, search?: PluginSearch, options?: PluginNavigateOptions) => void;
     // (undocumented)
     resolvePath: <T extends RouteToken>(token: T, search?: RouteSearch<T>) => string;
     // (undocumented)
     resolvePluginPath: (pluginId: string, pagePath: string, params?: string, search?: PluginSearch) => string;
+    updatePluginEntryState?: (pluginId: string, state: unknown) => void;
 }
 
 // @public
@@ -10502,6 +10504,12 @@ export interface PluginContributions {
 export type PluginEntry = (context: PluginContext) => void | Promise<void>;
 
 // @public
+export interface PluginNavigateOptions {
+    readonly replace?: boolean;
+    readonly state?: unknown;
+}
+
+// @public
 export interface PluginPageParamsSchema {
     readonly parseParams?: (remainder: string) => Record<string, unknown>;
     readonly parseSearch?: (raw: Record<string, unknown>) => Record<string, unknown>;
@@ -10509,6 +10517,7 @@ export interface PluginPageParamsSchema {
 
 // @public
 export interface PluginPageProps {
+    readonly entryState?: unknown;
     readonly params?: Record<string, unknown>;
     // (undocumented)
     readonly pluginId: string;
@@ -15541,6 +15550,12 @@ export function useOverflowRegion(ref: Ref<HTMLElement> | undefined, label: stri
 
 // @public
 export function usePageFillActive(): boolean;
+
+// @public
+export function usePluginEntryNavigation(): {
+    navigatePluginWithOptions: NonNullable<NavigationContextValue['navigatePluginWithOptions']>;
+    updatePluginEntryState: NonNullable<NavigationContextValue['updatePluginEntryState']>;
+};
 
 // @public
 export function usePluginNavigation(): Pick<NavigationContextValue, 'navigatePlugin' | 'resolvePluginPath'>;

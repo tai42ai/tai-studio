@@ -122,6 +122,7 @@ export {
   useAppNavigate,
   useResolvePath,
   usePluginNavigation,
+  usePluginEntryNavigation,
   useNavigationGuard,
   useNavigationGate,
   useSearchCommit,
@@ -135,6 +136,7 @@ export type {
   PageProps,
   NavigationContextValue,
   NavigateOptions,
+  PluginNavigateOptions,
   PluginSearch,
   NavigationGuardHandler,
 } from './navigation';

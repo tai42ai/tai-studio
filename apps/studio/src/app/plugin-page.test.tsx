@@ -6,7 +6,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import type { PluginContext, PluginPageProps } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 
@@ -99,6 +99,39 @@ describe('plugin deep-link page', () => {
 
     expect(await screen.findByText(/a flow id is required/)).toBeInTheDocument();
     expect(screen.queryByTestId('echo')).toBeNull();
+  });
+
+  it('forwards ONLY the rendered plugin’s own entryState slot, never a sibling’s', async () => {
+    serveShell(['flows']);
+    // The page echoes the entryState it was handed.
+    function EntryEcho({ entryState }: PluginPageProps) {
+      return <div data-testid="entry">{JSON.stringify(entryState ?? null)}</div>;
+    }
+    const register = (ctx: PluginContext): void => {
+      ctx.registerPage({ path: 'flows', title: 'Flows', component: EntryEcho });
+    };
+    const importModule = vi.fn(() => Promise.resolve({ register }));
+
+    const { studio } = renderStudio({
+      initialPath: '/plugins/acme/flows',
+      sessionKey: 'k-entry',
+      importModule,
+    });
+
+    // Before any state is written the page sees no checkpoint.
+    const echo = await screen.findByTestId('entry');
+    expect(JSON.parse(echo.textContent)).toBeNull();
+
+    // Write TWO slots onto the current entry: the rendered plugin (acme) and a sibling
+    // (beta). The page must receive acme's slot only — never beta's.
+    const update = studio.navigation.updatePluginEntryState;
+    if (update === undefined) throw new Error('host is missing updatePluginEntryState');
+    update('beta', { secret: 'not-yours' });
+    update('acme', { selected: 'row-7' });
+
+    await waitFor(() => {
+      expect(JSON.parse(screen.getByTestId('entry').textContent)).toEqual({ selected: 'row-7' });
+    });
   });
 
   it('is a not-found card for a sub-path against a schemaless page', async () => {
