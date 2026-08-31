@@ -7,5 +7,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: import.meta.dirname,
   plugins: [react()],
-  server: { port: 5233, strictPort: true },
+  // Bind the IPv4 loopback explicitly: `localhost` can resolve to ::1 on CI
+  // runners, leaving playwright's 127.0.0.1 readiness probe refused forever.
+  server: { host: '127.0.0.1', port: 5233, strictPort: true },
 });
