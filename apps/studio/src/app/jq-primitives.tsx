@@ -28,8 +28,9 @@ import {
   TextInput,
   Textarea,
   Tooltip,
+  PrimitivesProvider,
+  type Primitives,
 } from '@tai42/studio-sdk';
-import { PrimitivesProvider, type Primitives } from '@tai42/jq-studio';
 
 /**
  * The `Badge` primitive's prop shape as jq-studio hands it to the injected

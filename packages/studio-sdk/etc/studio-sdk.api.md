@@ -31,6 +31,8 @@ import type { KeyboardEvent as KeyboardEvent_2 } from 'react';
 import type { MouseEvent as MouseEvent_2 } from 'react';
 import { objectOutputType } from 'zod';
 import { preloadJq } from '@tai42/jq-studio';
+import { Primitives } from '@tai42/jq-studio';
+import { PrimitivesProvider } from '@tai42/jq-studio';
 import { Provider } from 'react';
 import { ProviderProps } from 'react';
 import type { ReactElement } from 'react';
@@ -11127,6 +11129,10 @@ const presetVersionTags: z.ZodObject<{
     tags: string[];
     version: number;
 }>;
+
+export { Primitives }
+
+export { PrimitivesProvider }
 
 // @public (undocumented)
 type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
