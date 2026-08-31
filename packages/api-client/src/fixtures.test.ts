@@ -14,7 +14,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { ZodTypeAny } from 'zod';
+import type { ZodType } from 'zod';
 
 import {
   FIXTURE_ENDPOINTS,
@@ -65,7 +65,7 @@ describe('fixtures capture guard', () => {
 });
 
 describe('captured fixtures validate against their zod schemas', () => {
-  const schemaMap = schemas as unknown as Record<string, ZodTypeAny>;
+  const schemaMap = schemas as unknown as Record<string, ZodType>;
 
   for (const endpoint of FIXTURE_ENDPOINTS) {
     it(`${endpoint.name} validates with schemas.${endpoint.schema}`, () => {

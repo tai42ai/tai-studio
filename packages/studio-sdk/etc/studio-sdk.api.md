@@ -5481,8 +5481,8 @@ type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 // @public
 const interactionMediaItem: z.ZodObject<{
     kind: z.ZodEnum<{
-        image: "image";
         link: "link";
+        image: "image";
     }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -5668,7 +5668,7 @@ export interface JsonTreeProps {
 }
 
 // @public
-const jsonValue: z.ZodType<unknown>;
+const jsonValue: z.ZodType;
 
 // @public (undocumented)
 type KindStatus = z.infer<typeof kindStatus>;
@@ -6644,8 +6644,8 @@ type MediaKind = z.infer<typeof mediaKind>;
 
 // @public
 const mediaKind: z.ZodEnum<{
-    image: "image";
     link: "link";
+    image: "image";
 }>;
 
 // @public
@@ -7459,7 +7459,7 @@ const providers: z.ZodObject<{
         id: z.ZodString;
         display_name: z.ZodString;
         description: z.ZodString;
-        icon_url: z.ZodString;
+        icon_url: z.ZodURL;
         kind: z.ZodEnum<{
             oauth: "oauth";
             none: "none";
@@ -7501,7 +7501,7 @@ const providerView: z.ZodObject<{
     id: z.ZodString;
     display_name: z.ZodString;
     description: z.ZodString;
-    icon_url: z.ZodString;
+    icon_url: z.ZodURL;
     kind: z.ZodEnum<{
         oauth: "oauth";
         none: "none";

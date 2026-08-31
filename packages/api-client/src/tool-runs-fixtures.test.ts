@@ -17,13 +17,13 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { ZodTypeAny } from 'zod';
+import type { ZodType } from 'zod';
 
 import { toolRunList, toolRunRecord, toolRunSubmitResult } from './tool-runs';
 
 const fixturesDir = resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures');
 
-const FIXTURES: readonly { file: string; schema: ZodTypeAny }[] = [
+const FIXTURES: readonly { file: string; schema: ZodType }[] = [
   { file: 'mutations/submit-tool-run.json', schema: toolRunSubmitResult },
   { file: 'redacted/tool-run.json', schema: toolRunRecord },
   { file: 'redacted/tool-runs.json', schema: toolRunList },

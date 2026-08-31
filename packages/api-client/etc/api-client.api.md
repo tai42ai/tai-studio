@@ -158,7 +158,7 @@ export class ApiLoginFailedError extends Error {
 }
 
 // @public
-export function apiRequest<S extends z.ZodTypeAny>(config: ApiConfig, path: string, schema: S, options?: RequestOptions): Promise<z.infer<S>>;
+export function apiRequest<S extends z.ZodType>(config: ApiConfig, path: string, schema: S, options?: RequestOptions): Promise<z.infer<S>>;
 
 // @public
 export class ApiSchemaError extends Error {
@@ -3020,8 +3020,8 @@ export type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 // @public
 const interactionMediaItem: z.ZodObject<{
     kind: z.ZodEnum<{
-        image: "image";
         link: "link";
+        image: "image";
     }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3074,7 +3074,7 @@ export function isTerminalRunStatus(status: ToolRunStatus): boolean;
 const jsonSchema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 
 // @public
-const jsonValue: z.ZodType<unknown>;
+const jsonValue: z.ZodType;
 
 // @public (undocumented)
 export type KindStatus = z.infer<typeof kindStatus>;
@@ -3987,8 +3987,8 @@ export type MediaKind = z.infer<typeof mediaKind>;
 
 // @public
 const mediaKind: z.ZodEnum<{
-    image: "image";
     link: "link";
+    image: "image";
 }>;
 
 // @public (undocumented)
@@ -4537,7 +4537,7 @@ const providers: z.ZodObject<{
         id: z.ZodString;
         display_name: z.ZodString;
         description: z.ZodString;
-        icon_url: z.ZodString;
+        icon_url: z.ZodURL;
         kind: z.ZodEnum<{
             oauth: "oauth";
             none: "none";
@@ -4579,7 +4579,7 @@ const providerView: z.ZodObject<{
     id: z.ZodString;
     display_name: z.ZodString;
     description: z.ZodString;
-    icon_url: z.ZodString;
+    icon_url: z.ZodURL;
     kind: z.ZodEnum<{
         oauth: "oauth";
         none: "none";
