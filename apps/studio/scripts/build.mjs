@@ -13,6 +13,10 @@
  *                    react instance. studio-sdk is the plugin surface;
  *                    studio-sdk-host carries the registry, and it is the only served
  *                    asset that does, so the registry state is a true singleton.
+ *                    studio-sdk also carries @tai42/jq-studio, so it leaves lib
+ *                    mode (see buildStudioSdkVendor) to ship the jq worker chunk and
+ *                    jq.wasm as REAL same-origin files beside studio-sdk.js rather
+ *                    than CSP-blocked data: URLs.
  *   3. Bridge      — the standalone, directory-self-contained OAuth bridge artifact
  *                    (dist/bridge/), whose allow-list is an anchored-root constant.
  *
@@ -21,7 +25,7 @@
  */
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative, resolve } from 'node:path';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { build } from 'vite';
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -52,16 +56,18 @@ async function buildSpa() {
   });
 }
 
-/** The vendor stage emits ESM JS singletons and nothing else.
+/** Drop extracted stylesheets from a lib-mode vendor entry.
  *
  * `vendor/studio-sdk.ts` re-exports the SDK barrel, and that barrel is declared
  * side-effectful (`sideEffects` in @tai42/studio-sdk) precisely so bundling
- * consumers keep its three bare CSS imports. Rollup therefore keeps them here
- * too, and Vite's lib mode would extract them into a `<pkg>.css` beside the
- * vendor JS — an asset no served document references, because the shell delivers
- * the design system itself through `src/styles.css` in stage 1. Dropping the
- * extracted stylesheets keeps the served vendor directory free of dead weight
- * without weakening the published `sideEffects` contract. */
+ * consumers keep its bare CSS imports. Rollup therefore keeps them in the vendor
+ * entries too, and Vite would extract them into a `<pkg>.css` beside the vendor
+ * JS — an asset no served document references, because the shell delivers the
+ * design system itself through `src/styles.css` in stage 1. Dropping the extracted
+ * stylesheets keeps the served vendor directory free of dead weight without
+ * weakening the published `sideEffects` contract. (studio-sdk itself uses the
+ * broader `dropExtractedAssetsExceptWasm` below; this plugin serves the remaining
+ * lib-mode entries.) */
 const dropExtractedCss = {
   name: 'tai-vendor-drop-extracted-css',
   enforce: 'post',
@@ -77,31 +83,193 @@ const dropExtractedCss = {
 };
 
 /**
- * Pin the property above: dist/vendor holds JS singletons and NOTHING else.
- *
- * The assertion is what the sentence says — every file must be a `.js` — rather
- * than "no `.css`": a stylesheet is only the emission this plugin was written to
- * stop, and an extracted `.woff2`, a source map or a `.json` in the served vendor
- * directory is the same class of dead weight. It walks RECURSIVELY, because Vite
- * emits extracted assets under `assets/` by default and a flat read would pass
- * over `dist/vendor/assets/studio-app.css` without seeing it.
+ * The studio-sdk vendor entry is the only one that carries `@tai42/jq-studio`, and
+ * jq-studio's runtime is a Web Worker plus a `jq.wasm` binary the worker (and the
+ * main-thread loader) resolve with `new URL('jq.wasm', import.meta.url)`. That
+ * entry is therefore built OUT of Vite lib mode (see buildStudioSdkVendor), which
+ * inlines both the worker and the wasm as `data:` URLs — blocked by the studio CSP
+ * (`script-src 'self' 'wasm-unsafe-eval'`, no `data:`/`worker-src`). Out of lib
+ * mode the worker and wasm are emitted as REAL same-origin files, but the same
+ * build also extracts the SDK's stylesheet and its @font-face `.woff2` assets into
+ * dist/vendor — dead weight, because the shell delivers the design system and its
+ * fonts through `src/styles.css` in stage 1. This plugin keeps the jq runtime — the
+ * `jq.wasm` binary and the worker (which Vite emits as a `.js` ASSET, not a chunk) —
+ * and drops every other extracted asset, so the served vendor directory stays free
+ * of dead weight without weakening jq-studio's embed contract (worker file +
+ * `jq.wasm` beside it).
  */
-async function assertVendorHasOnlyJs() {
+const dropExtractedAssetsExceptWasm = {
+  name: 'tai-vendor-drop-extracted-assets-except-wasm',
+  enforce: 'post',
+  generateBundle(_options, bundle) {
+    for (const [fileName, output] of Object.entries(bundle)) {
+      // Vite emits a bundled worker as an `asset` whose name ends in `.js`; keep it
+      // (and `jq.wasm`), drop only the genuine dead weight (`.css`, `.woff2`, maps).
+      if (output.type === 'asset' && !fileName.endsWith('.wasm') && !fileName.endsWith('.js')) {
+        Reflect.deleteProperty(bundle, fileName);
+      }
+    }
+  },
+};
+
+/**
+ * Pin the properties above: dist/vendor holds JS singletons plus the one jq
+ * runtime binary, and NOTHING else.
+ *
+ * The allow-list is precise. Every emitted file must be a `.js` (the vendor
+ * singletons, the jq worker chunk, and the jq engine chunk are all JS) OR exactly
+ * `jq.wasm` — jq-studio's WebAssembly binary, which the worker and the main-thread
+ * loader resolve by that exact bare name relative to the emitted chunk. Anything
+ * else — an extracted `.css`, a `.woff2`, a source map, a `.json`, or a hashed
+ * `jq-<hash>.wasm` that no `import.meta.url` reference would resolve — is dead
+ * weight and fails the build. It walks RECURSIVELY, because Vite emits extracted
+ * assets under `assets/` by default and a flat read would pass over a nested stray.
+ */
+async function assertVendorHasOnlyJsAndWasm() {
   const vendorDir = resolve(appRoot, 'dist/vendor');
   const entries = await readdir(vendorDir, { recursive: true, withFileTypes: true });
   const stray = entries
-    .filter((entry) => entry.isFile() && !entry.name.endsWith('.js'))
+    .filter((entry) => entry.isFile() && !entry.name.endsWith('.js') && entry.name !== 'jq.wasm')
     .map((entry) => relative(vendorDir, join(entry.parentPath, entry.name)));
   if (stray.length > 0) {
     throw new Error(
-      `dist/vendor must contain JS singletons only, but the build emitted ${stray.join(', ')}. ` +
-        'Nothing in dist references a vendor stylesheet; the shell loads the design system via src/styles.css.',
+      `dist/vendor must contain JS singletons and jq.wasm only, but the build emitted ${stray.join(', ')}. ` +
+        'Nothing in dist references a vendor stylesheet; the shell loads the design system via src/styles.css. ' +
+        "The only permitted non-JS asset is jq-studio's jq.wasm, emitted beside its worker chunk.",
     );
   }
 }
 
+/**
+ * Positive proof that the studio-sdk vendor entry shipped jq-studio's runtime as
+ * REAL same-origin files — the exact regression this build stage exists to prevent.
+ *
+ * assertVendorHasOnlyJsAndWasm above only catches STRAY files, and it passes SILENTLY
+ * on the regression: if studio-sdk ever slips back into Vite lib mode, the worker and
+ * jq.wasm get inlined as `data:` URLs INSIDE studio-sdk.js, no jq.wasm and no worker
+ * chunk are emitted, dist/vendor holds zero strays — the stray check stays green while
+ * the jq Test panel breaks for every SPA user (the studio CSP blocks `data:`). These
+ * assertions fail LOUDLY on that layout: they check the runtime is present as real
+ * files and that studio-sdk.js carries no inlining signature.
+ */
+async function assertStudioSdkShipsRealJqRuntime() {
+  const vendorDir = resolve(appRoot, 'dist/vendor');
+
+  // 1. jq.wasm is a REAL WebAssembly binary beside studio-sdk.js (not an inlined data: URL).
+  let wasmHead;
+  try {
+    wasmHead = await readFile(resolve(vendorDir, 'jq.wasm'));
+  } catch {
+    throw new Error(
+      'dist/vendor/jq.wasm is missing: studio-sdk inlined jq.wasm as a data: URL (Vite lib mode) instead of ' +
+        'emitting it as a real same-origin file. The studio CSP blocks data: wasm, so the jq Test panel would break for every SPA user.',
+    );
+  }
+  if (!wasmHead.subarray(0, 4).equals(Buffer.from([0x00, 0x61, 0x73, 0x6d]))) {
+    throw new Error(
+      "dist/vendor/jq.wasm does not begin with the wasm magic bytes (\\0asm): it is not jq-studio's WebAssembly binary. " +
+        'The worker and main-thread loader fetch it by that exact name, so a non-wasm file there breaks the jq Test panel for every SPA user.',
+    );
+  }
+
+  // 2. The jq worker shipped as a real sibling chunk (not an inlined data: worker).
+  const entries = await readdir(vendorDir, { withFileTypes: true });
+  if (!entries.some((entry) => entry.isFile() && /^jq-studio-worker-.*\.js$/.test(entry.name))) {
+    throw new Error(
+      'dist/vendor has no jq-studio-worker-*.js chunk: studio-sdk inlined the jq Web Worker as a data: URL (Vite lib mode) ' +
+        'instead of a real same-origin chunk. The studio CSP blocks data: workers, so the jq Test panel would break for every SPA user.',
+    );
+  }
+
+  // 3. studio-sdk.js resolves the wasm as a real file and carries NO inlining signature.
+  const sdk = await readFile(resolve(vendorDir, 'studio-sdk.js'), 'utf8');
+  if (sdk.includes('data:application/wasm') || sdk.includes('data:text/javascript')) {
+    throw new Error(
+      'dist/vendor/studio-sdk.js contains a data: URL (data:application/wasm or data:text/javascript): studio-sdk slipped ' +
+        'back into Vite lib mode and inlined the jq wasm/worker. The studio CSP blocks data:, so the jq Test panel would break for every SPA user.',
+    );
+  }
+  if (!/new URL\(\s*["']jq\.wasm["']/.test(sdk)) {
+    throw new Error(
+      "dist/vendor/studio-sdk.js has no `new URL('jq.wasm', import.meta.url)` reference: studio-sdk is not resolving jq.wasm " +
+        'as a real same-origin file. Without it the worker and main-thread loader cannot find the wasm, and the jq Test panel would break for every SPA user.',
+    );
+  }
+}
+
+/**
+ * The studio-sdk vendor entry, built OUT of Vite lib mode.
+ *
+ * lib mode makes a self-contained library and so INLINES every worker and every
+ * `new URL(asset, import.meta.url)` target as a `data:` URL. For jq-studio that is
+ * fatal under the studio CSP: the jq Web Worker becomes `new Worker("data:…")`
+ * (blocked — `script-src` lists no `data:`, and there is no `worker-src`) and
+ * `jq.wasm` becomes a `data:application/wasm` fetch (blocked by `connect-src
+ * 'self'`), so the editor falls back and reports "The jq engine could not load."
+ *
+ * A plain rollup input/output build (no `build.lib`) emits jq-studio's worker as a
+ * REAL same-origin chunk and `jq.wasm` as a REAL asset. `base: './'` keeps every
+ * `import.meta.url` reference RELATIVE, so from the served `/vendor/studio-sdk.js`
+ * (and from the worker chunk beside it) `new URL('jq.wasm', import.meta.url)`
+ * resolves to `/vendor/jq.wasm` and `new URL('jq-studio-worker-*.js', …)` to the
+ * sibling worker — a same-origin module worker `script-src 'self'` permits, whose
+ * wasm `connect-src 'self'` permits. `jq.wasm` is pinned to its bare name (the exact
+ * name jq-studio's `import.meta.url` references resolve) so the reference and the
+ * emitted file agree; `assetsInlineLimit: 0` forbids any residual inlining.
+ * `preserveEntrySignatures` keeps the barrel's named exports the import map serves.
+ */
+async function buildStudioSdkVendor(external) {
+  await build({
+    root: appRoot,
+    // Relative asset URLs: `new URL(asset, import.meta.url)` resolves beside the
+    // served /vendor/studio-sdk.js instead of against the origin root.
+    base: './',
+    configFile: false,
+    logLevel: 'warn',
+    plugins: [dropExtractedAssetsExceptWasm],
+    publicDir: false,
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+    resolve: { dedupe: ['react', 'react-dom'] },
+    // Emit jq-studio's worker as a real ES module chunk (not an inlined data: URL).
+    worker: { format: 'es' },
+    build: {
+      outDir: 'dist/vendor',
+      emptyOutDir: false,
+      cssCodeSplit: false,
+      // No data: inlining — jq.wasm and the worker must be real same-origin files.
+      assetsInlineLimit: 0,
+      modulePreload: { polyfill: false },
+      rollupOptions: {
+        input: { 'studio-sdk': resolve(appRoot, 'vendor/studio-sdk.ts') },
+        external,
+        preserveEntrySignatures: 'allow-extension',
+        output: {
+          format: 'es',
+          entryFileNames: '[name].js',
+          chunkFileNames: '[name]-[hash].js',
+          // Pin jq.wasm to its bare name (the name jq-studio's import.meta.url
+          // references resolve); other assets keep a hash but are dropped anyway.
+          assetFileNames: (info) => {
+            const name = info.names?.[0] ?? info.name ?? '';
+            return name.endsWith('.wasm') ? '[name][extname]' : '[name]-[hash][extname]';
+          },
+        },
+      },
+    },
+  });
+}
+
 async function buildVendor() {
   for (const entry of VENDOR_ENTRIES) {
+    // studio-sdk carries jq-studio (worker + jq.wasm); it must leave lib mode so
+    // those ship as real same-origin files, not CSP-blocked data: URLs.
+    if (entry.out === 'studio-sdk') {
+      await buildStudioSdkVendor(entry.external);
+      // Positive check that the jq runtime shipped as real files, not inlined data:
+      // URLs (the regression the stray-file check above cannot see).
+      await assertStudioSdkShipsRealJqRuntime();
+      continue;
+    }
     await build({
       root: appRoot,
       configFile: false,
@@ -128,7 +296,7 @@ async function buildVendor() {
       },
     });
   }
-  await assertVendorHasOnlyJs();
+  await assertVendorHasOnlyJsAndWasm();
 }
 
 async function buildBridge() {
