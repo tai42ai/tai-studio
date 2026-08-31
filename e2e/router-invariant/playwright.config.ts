@@ -16,10 +16,17 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:5233', trace: 'off' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'pnpm exec vite --config vite.config.ts',
+    // Invoke the vite bin directly (the e2e package's own dependency) rather than
+    // through `pnpm exec`: on CI runners the pnpm-exec indirection from this
+    // non-package subfolder died silently before vite ever started. Piping the
+    // server's output keeps any future startup failure visible in the CI log
+    // instead of surfacing only as an opaque webServer timeout.
+    command: 'node ../node_modules/vite/bin/vite.js --config vite.config.ts',
     cwd: import.meta.dirname,
     url: 'http://127.0.0.1:5233',
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
   },
 });
