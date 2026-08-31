@@ -28,7 +28,7 @@ export const agentSummary = z.object({
   description: z.string().default(''),
   tool_name: z.string(),
   // The agent's `ToolInput` JSON schema (the same schema its run tool exposes).
-  input_schema: z.record(z.unknown()).default({}),
+  input_schema: z.record(z.string(), z.unknown()).default({}),
   // The agent's own authorability marker (read, never inferred): `true` means its
   // `ToolInput` accepts the composable spec fields and it can be authored into a
   // versioned agent. A code role-agent reports `false`. The same item shape is
@@ -54,7 +54,7 @@ const toolCallStep = z.object({
   type: z.literal('tool_call_step'),
   final: z.boolean().default(false),
   tool: z.string(),
-  args: z.record(z.unknown()).default({}),
+  args: z.record(z.string(), z.unknown()).default({}),
   call_id: z.string(),
 });
 const toolResultStep = z.object({
@@ -62,7 +62,7 @@ const toolResultStep = z.object({
   final: z.boolean().default(false),
   tool: z.string(),
   call_id: z.string(),
-  result: z.unknown(),
+  result: z.unknown().optional(),
   is_error: z.boolean().default(false),
 });
 const messageDelta = z.object({
@@ -86,13 +86,13 @@ const runUsage = z.object({
 const structuredFinal = z.object({
   type: z.literal('structured_final'),
   final: z.boolean().default(true),
-  data: z.unknown(),
+  data: z.unknown().optional(),
 });
 const interruptFinal = z.object({
   type: z.literal('interrupt_final'),
   final: z.boolean().default(true),
   interrupt_id: z.string(),
-  payload: z.unknown(),
+  payload: z.unknown().optional(),
   reason: z.string().nullable().default(null),
 });
 // The two SSE-layer terminal frames the run route emits (not contract events).

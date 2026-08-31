@@ -84,7 +84,7 @@ function buildUrl(base: string, path: string, query?: RequestOptions['query']): 
  * header is `X-Api-Key` (the skeleton's access-control middleware also accepts
  * `Authorization: Bearer`; we use the dedicated key header).
  */
-export async function apiRequest<S extends z.ZodTypeAny>(
+export async function apiRequest<S extends z.ZodType>(
   config: ApiConfig,
   path: string,
   schema: S,
@@ -125,7 +125,7 @@ export async function apiRequest<S extends z.ZodTypeAny>(
 
   const parsed = schema.safeParse(payload.data);
   if (!parsed.success) throw new ApiSchemaError(path, parsed.error.issues);
-  return parsed.data as z.infer<S>;
+  return parsed.data;
 }
 
 /**

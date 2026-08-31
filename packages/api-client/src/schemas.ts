@@ -7,7 +7,7 @@
 import { z } from 'zod';
 
 /** An arbitrary JSON value (tool results, rendered payloads). */
-export const jsonValue: z.ZodType<unknown> = z.unknown();
+export const jsonValue: z.ZodType = z.unknown();
 
 /** A JSON Schema object (Pydantic-emitted). Permissive; parsed by the auto-form. */
 export const jsonSchema = z.record(z.string(), z.unknown());
@@ -488,14 +488,14 @@ export type ConnectorRef = z.infer<typeof connectorRef>;
  * connector-owned entry back at its connection, and the editor renders such
  * entries read-only. `.nullish()` because a hand-authored entry carries `null`
  * (present) or omits the key. Every other field (title, config, extensions) rides
- * through `.passthrough()` unmodeled so the config editor keeps editing the whole
+ * through `.loose()` unmodeled so the config editor keeps editing the whole
  * entry — narrowing it to a typed subset would silently strip the fields it saves.
  */
 export const manifestMcpEntry = z
   .object({
     managed: connectorRef.nullish(),
   })
-  .passthrough();
+  .loose();
 export type ManifestMcpEntry = z.infer<typeof manifestMcpEntry>;
 
 export const manifestView = z.object({
@@ -761,7 +761,7 @@ export const providerView = z.object({
   // Required and a real URL: the contract's `ProviderDescriptor.icon_url` runs
   // `check_web_url(schemes=("https",))`, which rejects an empty/relative value, so
   // an empty or malformed one here is drift and fails the parse loudly.
-  icon_url: z.string().url(),
+  icon_url: z.url(),
   kind: z.enum(['oauth', 'none']),
   origin: z.enum(['system', 'community']),
   category: z.string(),
@@ -1830,7 +1830,7 @@ export const scheduleItem = z
     args: z.array(jsonValue).optional(),
     kwargs: z.record(z.string(), jsonValue).optional(),
   })
-  .passthrough();
+  .loose();
 export const scheduleList = z.array(scheduleItem);
 export type ScheduleItem = z.infer<typeof scheduleItem>;
 
@@ -1840,7 +1840,7 @@ export const serverDateTime = z
     local: jsonValue.optional(),
     system: jsonValue.optional(),
   })
-  .passthrough();
+  .loose();
 
 // -- observability -----------------------------------------------------------
 
