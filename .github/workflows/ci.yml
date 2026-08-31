@@ -61,6 +61,32 @@ jobs:
       - name: Test (gate script)
         run: node --test 'scripts/**/*.test.mjs'
 
+  # Router entry-state invariant: a cheap browser tripwire pinning the ONE
+  # @tanstack/react-router behaviour the SDK's per-history-entry state channel
+  # rests on — that `router.navigate({ state })` persists through `history.state`
+  # across back/forward AND a hard reload. It drives a bare vite fixture
+  # (e2e/router-invariant/), NO skeleton backend and NO Docker, so it runs on every
+  # PR beside `check` rather than behind the heavy `e2e` boot. A RED here means a
+  # router upgrade (or a browser-behaviour change) broke the channel's headline
+  # claim — hold the bump until the channel is re-verified. Self-contained (no
+  # sibling checkouts).
+  router-invariant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Only Chromium (with its OS deps) — the fixture needs one engine, not the
+      # full browser matrix, keeping the job small and cache-friendly.
+      - name: Install Playwright Chromium
+        run: pnpm --filter @tai42/e2e exec playwright install --with-deps chromium
+      - name: Router entry-state invariant
+        run: pnpm --filter @tai42/e2e test:router-invariant
+
   # Freshness gate for the docs-demo marketplace fixture's contract pin. The
   # fixture (e2e/docs-demo/marketplace-registry.py) hard-codes a `contract` range
   # in its seeded PluginSpec; the docs-screenshots install-preview only resolves
