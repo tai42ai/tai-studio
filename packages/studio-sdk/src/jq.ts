@@ -24,6 +24,17 @@ export {
   JqEditorDialog,
   preloadJq,
   installDefaultJqWorker,
+  // The design-system injection point. jq-studio renders its editor chrome
+  // through primitives it reads from a module-scoped React context; the host
+  // mounts `PrimitivesProvider` ONCE at the root to substitute the SDK design
+  // system. It is re-exported HERE — off the same `@tai42/jq-studio` instance
+  // `JqField` comes from — so the host reaches it through the ONE shared SDK the
+  // import map serves, and the provider's context is the SAME object `JqField`
+  // reads. A host that imported `PrimitivesProvider` from `@tai42/jq-studio`
+  // directly would bundle a SECOND jq-studio copy: its `createContext` would be a
+  // different object, the injection would silently fall back to the built-ins,
+  // and the shell would ship a duplicate (orphan) jq worker + wasm.
+  PrimitivesProvider,
 } from '@tai42/jq-studio';
 export type {
   JqFieldProps,
@@ -36,4 +47,7 @@ export type {
   ServerValidationResult,
   ServerValidateHook,
   JqFieldDeclaration,
+  // The nine-primitive contract a host builds its injection map against (see
+  // `PrimitivesProvider`).
+  Primitives,
 } from '@tai42/jq-studio';
