@@ -44,6 +44,10 @@
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js"
     },
+    "./schema-form": {
+      "types": "./dist/schema-form/index.d.ts",
+      "import": "./dist/schema-form/index.js"
+    },
     "./tokens.css": "./dist/components/tokens.css",
     "./fonts.css": "./dist/components/fonts.css",
     "./components.css": "./dist/components/components.css",
@@ -69,8 +73,8 @@
     "lint": "eslint src scripts --max-warnings 0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.mjs\"",
     "test": "vitest run",
-    "api:check": "api-extractor run --config config/api-extractor.index.json && api-extractor run --config config/api-extractor.host.json && api-extractor run --config config/api-extractor.testing.json",
-    "api:update": "api-extractor run --local --config config/api-extractor.index.json && api-extractor run --local --config config/api-extractor.host.json && api-extractor run --local --config config/api-extractor.testing.json"
+    "api:check": "api-extractor run --config config/api-extractor.index.json && api-extractor run --config config/api-extractor.host.json && api-extractor run --config config/api-extractor.testing.json && api-extractor run --config config/api-extractor.schema-form.json",
+    "api:update": "api-extractor run --local --config config/api-extractor.index.json && api-extractor run --local --config config/api-extractor.host.json && api-extractor run --local --config config/api-extractor.testing.json && api-extractor run --local --config config/api-extractor.schema-form.json"
   },
   "peerDependencies": {
     "react": "^19.0.0",

@@ -4869,6 +4869,48 @@ export interface ExplorerViewProps<T> {
     readonly viewSurface: string;
 }
 
+// @public
+export type ExpressionFieldComponent = ComponentType<ExpressionFieldProps>;
+
+// @public
+export const ExpressionFieldContext: Context<ExpressionFieldComponent | undefined>;
+
+// @public
+export interface ExpressionFieldProps {
+    // (undocumented)
+    readonly description?: ReactNode;
+    // (undocumented)
+    readonly error?: ReactNode;
+    // (undocumented)
+    readonly label: string;
+    readonly multiline?: boolean;
+    // (undocumented)
+    readonly onChange: (value: string) => void;
+    // (undocumented)
+    readonly shape?: ExpressionInputShape;
+    // (undocumented)
+    readonly value: string;
+}
+
+// @public
+export interface ExpressionInputKey {
+    // (undocumented)
+    readonly gloss: string;
+    // (undocumented)
+    readonly name: string;
+}
+
+// @public
+export interface ExpressionInputShape {
+    readonly blurb: string;
+    readonly caveats?: readonly string[];
+    readonly id: string;
+    readonly keys: readonly ExpressionInputKey[];
+    readonly label: string;
+    readonly returns: string;
+    readonly sample?: unknown;
+}
+
 export { ExpressionLanguage }
 
 // @public (undocumented)
@@ -8585,6 +8627,7 @@ export interface SchemaFormProps {
     readonly completionProvider?: CompletionProvider;
     // (undocumented)
     readonly errors?: SchemaFormErrors;
+    readonly expressionField?: ExpressionFieldComponent;
     // (undocumented)
     readonly idPrefix?: string;
     readonly maxUploadBytes?: number;

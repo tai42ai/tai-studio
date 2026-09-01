@@ -32,10 +32,26 @@
  * validator ignores it); these client-side caps are UX guards, and the SERVER
  * MUST independently validate the decoded size. The base64 decoding and cap
  * checks live in the sibling `media` module.
+ *
+ * EXPRESSION FIELDS ARE OPT-IN. A string field carrying `x-tai42-expression`
+ * renders an expression-authoring door — the SDK's `JqField` — only when the host
+ * INJECTS one, through {@link SchemaFormProps.expressionField} or the ambient
+ * {@link ExpressionFieldContext}; with no door it renders the plain string input.
+ * The form owns no edge to the door: importing it here, even dynamically behind
+ * `lazy`, would EMIT the visual editor, its worker file, and a multi-megabyte wasm
+ * engine into every consumer that bundles the SDK to render forms, whether or not
+ * a form ever authors an expression. Injection puts that weight on the hosts that
+ * want it and only there.
  */
 import type { ReactNode } from 'react';
+import { useContext } from 'react';
 
-import { CompletionProviderContext, MaxUploadBytesContext } from './context';
+import type { ExpressionFieldComponent } from './context';
+import {
+  CompletionProviderContext,
+  ExpressionFieldContext,
+  MaxUploadBytesContext,
+} from './context';
 import { FieldNode } from './field-node';
 import { DEFAULT_MAX_UPLOAD_BYTES } from './media';
 import { stackClass } from './styles';
@@ -70,6 +86,14 @@ export interface SchemaFormProps {
    * absent both, {@link DEFAULT_MAX_UPLOAD_BYTES} applies.
    */
   readonly maxUploadBytes?: number;
+  /**
+   * Optional. The expression-authoring door for `x-tai42-expression` fields —
+   * the SDK's `JqField`, which the host imports directly and passes here (see
+   * the module doc-comment). Omitted, the enclosing
+   * {@link ExpressionFieldContext} supplies it; absent both, an annotated field
+   * renders the plain string input.
+   */
+  readonly expressionField?: ExpressionFieldComponent;
 }
 
 /**
@@ -84,23 +108,30 @@ export function SchemaForm({
   idPrefix = 'schema-form',
   completionProvider,
   maxUploadBytes = DEFAULT_MAX_UPLOAD_BYTES,
+  expressionField,
 }: SchemaFormProps): ReactNode {
+  // The prop overrides the ambient door for this form only; omitted, the
+  // enclosing one flows through unchanged (providing `undefined` would BLIND the
+  // form to a door the host wired above it).
+  const ambientExpressionField = useContext(ExpressionFieldContext);
   return (
     <CompletionProviderContext.Provider value={completionProvider}>
       <MaxUploadBytesContext.Provider value={maxUploadBytes}>
-        <div className={stackClass} data-testid={idPrefix}>
-          <FieldNode
-            schema={schema}
-            root={schema}
-            value={value}
-            onChange={onChange}
-            path=""
-            label={undefined}
-            required
-            errors={errors}
-            idPrefix={idPrefix}
-          />
-        </div>
+        <ExpressionFieldContext.Provider value={expressionField ?? ambientExpressionField}>
+          <div className={stackClass} data-testid={idPrefix}>
+            <FieldNode
+              schema={schema}
+              root={schema}
+              value={value}
+              onChange={onChange}
+              path=""
+              label={undefined}
+              required
+              errors={errors}
+              idPrefix={idPrefix}
+            />
+          </div>
+        </ExpressionFieldContext.Provider>
       </MaxUploadBytesContext.Provider>
     </CompletionProviderContext.Provider>
   );
