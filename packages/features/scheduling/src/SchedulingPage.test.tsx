@@ -4,8 +4,12 @@
  * delete-confirm flow, the dedicated 501 "needs a backend" empty state, and the
  * loud error surface for any other failure. The client is stubbed via `makeClient`.
  */
+// The add-dialog flows here are typing-heavy; userEvent runs without its inter-key
+// delay so a loaded runner cannot push a keystroke chain past the suite timeout, and
+// no timer-scheduled keystroke can outlive its test to leak into the next. No
+// assertion depends on typing cadence.
 import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError, ApiSchemaError } from '@tai42/api-client';
@@ -16,6 +20,19 @@ import { makeClient, renderWithProviders, schedule } from './test-utils';
 /** The datetime tool is unavailable in most tests; a 501 keeps its note out of the way. */
 function serverTime501(): () => Promise<never> {
   return vi.fn().mockRejectedValue(new ApiError('no server time', 501));
+}
+
+/**
+ * Open the shared `ToolPicker` (a Radix combobox). Its trigger is `disabled` until
+ * `listTools` resolves, so the open is gated on it being ENABLED — the real ready
+ * signal — rather than on incidental timer slack.
+ */
+async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<void> {
+  const combobox = within(dialog).getByRole('combobox');
+  await waitFor(() => {
+    expect(combobox).toBeEnabled();
+  });
+  await user.click(combobox);
 }
 
 describe('SchedulingPage — table', () => {
@@ -129,7 +146,7 @@ describe('SchedulingPage — no-backend + error states', () => {
 
 describe('SchedulingPage — add dialog', () => {
   it('blocks a submit with invalid kwargs JSON and never calls addSchedule', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
       listSchedules: vi.fn().mockResolvedValue([]),
@@ -153,7 +170,7 @@ describe('SchedulingPage — add dialog', () => {
   });
 
   it('submits a valid schedule with the expected body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn().mockResolvedValue({});
     const client = makeClient({
       listSchedules: vi.fn().mockResolvedValue([]),
@@ -169,7 +186,7 @@ describe('SchedulingPage — add dialog', () => {
     await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
 
     // Pick a tool via the shared ToolPicker (Radix combobox).
-    await user.click(within(dialog).getByRole('combobox'));
+    await openToolPicker(user, dialog);
     await user.click(await screen.findByRole('option', { name: 'run_report_schedule_task' }));
 
     const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
@@ -193,7 +210,7 @@ describe('SchedulingPage — add dialog', () => {
   });
 
   it('submits an interval schedule with a numeric backend_schedule', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn().mockResolvedValue({});
     const client = makeClient({
       listSchedules: vi.fn().mockResolvedValue([]),
@@ -207,7 +224,7 @@ describe('SchedulingPage — add dialog', () => {
     const dialog = await screen.findByRole('dialog');
 
     await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
-    await user.click(within(dialog).getByRole('combobox'));
+    await openToolPicker(user, dialog);
     await user.click(await screen.findByRole('option', { name: 'sync_schedule_task' }));
 
     // Switch to the interval spec.
@@ -231,7 +248,7 @@ describe('SchedulingPage — add dialog', () => {
 
 describe('SchedulingPage — delete', () => {
   it('deletes a schedule after confirming', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deleteSchedule = vi.fn().mockResolvedValue({});
     const client = makeClient({
       listSchedules: vi.fn().mockResolvedValue([schedule({ name: 'nightly-report' })]),

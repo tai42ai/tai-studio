@@ -8,6 +8,10 @@
  * the in-flight disabled/spinner state, the loud error surface when the mutation
  * rejects, the tools-list error branch, and both close paths (Cancel + Escape).
  */
+// These flows are typing-heavy; userEvent runs without its inter-key delay so a
+// loaded runner cannot push a keystroke chain past the suite timeout, and no
+// timer-scheduled keystroke can outlive its test to leak into the next. No
+// assertion depends on typing cadence.
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -18,9 +22,23 @@ import { deferred, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/test
 import { AddScheduleDialog } from './AddScheduleDialog';
 import { makeClient, renderWithProviders } from './test-utils';
 
-/** Pick a tool by name via the shared `ToolPicker` (a Radix combobox portalled to body). */
+/**
+ * Open the shared `ToolPicker` (a Radix combobox portalled to body). The trigger is
+ * `disabled` until `listTools` resolves, so the open is gated on it being ENABLED —
+ * the real ready signal — rather than on incidental timer slack, or a synchronous
+ * click lands on the still-disabled trigger and nothing opens.
+ */
+async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<void> {
+  const combobox = within(dialog).getByRole('combobox');
+  await waitFor(() => {
+    expect(combobox).toBeEnabled();
+  });
+  await user.click(combobox);
+}
+
+/** Pick a tool by name via the shared `ToolPicker`. */
 async function pickTool(user: UserEvent, dialog: HTMLElement, toolName: string): Promise<void> {
-  await user.click(within(dialog).getByRole('combobox'));
+  await openToolPicker(user, dialog);
   await user.click(await screen.findByRole('option', { name: toolName }));
 }
 
@@ -42,7 +60,7 @@ describe('AddScheduleDialog — render', () => {
 
 describe('AddScheduleDialog — valid submit', () => {
   it('posts the exact crontab body, then closes on success', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const addSchedule = vi.fn().mockResolvedValue({});
     const client = makeClient({
@@ -79,7 +97,7 @@ describe('AddScheduleDialog — valid submit', () => {
   });
 
   it('posts a numeric backend_schedule and empty kwargs for the interval spec', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const addSchedule = vi.fn().mockResolvedValue({});
     const client = makeClient({
@@ -116,7 +134,7 @@ describe('AddScheduleDialog — valid submit', () => {
 
 describe('AddScheduleDialog — kwargs validation', () => {
   it('blocks malformed JSON kwargs with a message and never calls addSchedule', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
       listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
@@ -140,7 +158,7 @@ describe('AddScheduleDialog — kwargs validation', () => {
   });
 
   it('blocks a non-object (scalar) kwargs payload with a message', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
       listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
@@ -167,7 +185,7 @@ describe('AddScheduleDialog — kwargs validation', () => {
 
 describe('AddScheduleDialog — required-field guards', () => {
   it('shows every missing-field error and does not submit an empty form', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
       listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
@@ -185,7 +203,7 @@ describe('AddScheduleDialog — required-field guards', () => {
   });
 
   it('rejects a non-positive interval with a message', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
       listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
@@ -208,7 +226,7 @@ describe('AddScheduleDialog — required-field guards', () => {
 
 describe('AddScheduleDialog — mutation states', () => {
   it('disables the submit and shows a spinner while the mutation is in flight', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const pending = deferred<unknown>();
     const client = makeClient({
@@ -239,7 +257,7 @@ describe('AddScheduleDialog — mutation states', () => {
   });
 
   it('surfaces a rejected mutation as a loud error and keeps the dialog open', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const client = makeClient({
       listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
@@ -263,7 +281,7 @@ describe('AddScheduleDialog — mutation states', () => {
 
 describe('AddScheduleDialog — tools list error', () => {
   it('replaces the tool picker with a retryable error when listTools fails', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listTools = vi.fn().mockRejectedValue(new ApiError('tools unavailable', 500));
     const client = makeClient({ listTools });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
@@ -281,7 +299,7 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
   it('excludes an EFFECTIVE-hidden tool, keeping an overlay-`false` unhidden one', async () => {
     // `secret_task` is plugin-hidden with no overlay opinion → excluded. `open_task`
     // is plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client = makeClient({
       listTools: vi
         .fn()
@@ -302,7 +320,7 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('combobox'));
+    await openToolPicker(user, dialog);
 
     expect(
       await screen.findByRole('option', { name: 'run_report_schedule_task' }),
@@ -316,7 +334,7 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
 
 describe('AddScheduleDialog — display names', () => {
   it('labels a picker option "Display (raw)" from the tool-meta overlay', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client = makeClient({ listTools: vi.fn().mockResolvedValue(['sync_schedule_task']) });
     renderWithProviders(
       <StaticToolDisplayNamesProvider names={{ sync_schedule_task: 'Nightly Sync' }}>
@@ -326,7 +344,7 @@ describe('AddScheduleDialog — display names', () => {
     );
 
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('combobox'));
+    await openToolPicker(user, dialog);
     expect(
       await screen.findByRole('option', { name: 'Nightly Sync (sync_schedule_task)' }),
     ).toBeInTheDocument();
@@ -337,7 +355,7 @@ describe('AddScheduleDialog — declared badges', () => {
   it('shows the SELECTED tool declared badges (native ∪ overlay) as read-only chips', async () => {
     // `network` is plugin-declared; `audited` is an operator overlay badge. The picker
     // shows their merged, deduped, sorted union beneath the chosen tool.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client = makeClient({
       listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
       listToolTags: vi
@@ -375,7 +393,7 @@ describe('AddScheduleDialog — declared badges', () => {
 
 describe('AddScheduleDialog — close paths', () => {
   it('calls onClose when Cancel is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const client = makeClient({ listTools: vi.fn().mockResolvedValue([]) });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
@@ -387,7 +405,7 @@ describe('AddScheduleDialog — close paths', () => {
   });
 
   it('calls onClose when the dialog is dismissed with Escape', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const client = makeClient({ listTools: vi.fn().mockResolvedValue([]) });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
