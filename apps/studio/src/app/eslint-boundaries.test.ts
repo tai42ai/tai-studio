@@ -35,8 +35,10 @@ const repoRoot = new URL('../../../../', import.meta.url).pathname.replace(/\/+$
 // decides whether the test-only half of the allowlist applies.
 const featureHooksFile = `${repoRoot}/packages/features/hooks/src/__boundary_fixture__.ts`;
 const featureHooksTestFile = `${repoRoot}/packages/features/hooks/src/__boundary_fixture__.test.ts`;
+const featureToolsFile = `${repoRoot}/packages/features/tools/src/__boundary_fixture__.ts`;
 const sdkFile = `${repoRoot}/packages/studio-sdk/src/components/__boundary_fixture__.ts`;
 const sdkTestFile = `${repoRoot}/packages/studio-sdk/src/components/__boundary_fixture__.test.ts`;
+const appFile = `${repoRoot}/apps/studio/src/app/__boundary_fixture__.ts`;
 const appTestFile = `${repoRoot}/apps/studio/src/app/__boundary_fixture__.test.ts`;
 const apiClientFile = `${repoRoot}/packages/api-client/src/__boundary_fixture__.ts`;
 const apiClientTestFile = `${repoRoot}/packages/api-client/src/__boundary_fixture__.test.ts`;
@@ -212,6 +214,62 @@ describe('Node core in the read-from-disk gate tests', () => {
       ],
       ['apps/studio/src/app/eslint-boundaries.test.ts'],
     ]);
+  });
+});
+
+/**
+ * Confinement of the standalone visual jq editor (`@tai42/jq-studio`).
+ *
+ * The editor is a multi-megabyte package with a Web Worker and a wasm engine, and
+ * the SDK deliberately holds NO edge to it: the barrel re-exports none of it, so a
+ * consumer that imports the SDK for a Button ships no jq. Only the host app, the
+ * features that actually author expressions, and the SDK's contract TEST (which
+ * checks the real `JqField` still satisfies the mirrored injection contract) may
+ * name it. These cases pin every edge of that grant, in both directions.
+ */
+describe('@tai42/jq-studio confinement', () => {
+  const strictRule = boundariesDependenciesRule(false);
+  const testRule = boundariesDependenciesRule(true);
+  const importJq = "import '@tai42/jq-studio';\n";
+
+  it('withholds the editor from SDK production source', async () => {
+    // A production SDK module naming the editor re-emits it, its worker, and its
+    // wasm into every bundling consumer — the regression the whole split prevents.
+    const errors = await boundaryErrorsAt(sdkFile, importJq, strictRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('@tai42/jq-studio');
+  });
+
+  it('permits the editor in an SDK test (the injection-contract test)', async () => {
+    const errors = await boundaryErrorsAt(sdkTestFile, importJq, testRule);
+    expect(errors).toEqual([]);
+  });
+
+  it('permits the editor in the features that render it', async () => {
+    const errors = await boundaryErrorsAt(featureHooksFile, importJq, strictRule);
+    expect(errors).toEqual([]);
+  });
+
+  it('withholds the editor from a feature that does not render it', async () => {
+    // The grant is scoped by captured feature name, not handed to the feature layer:
+    // an unrelated feature reaching for the editor is a boundary error.
+    const errors = await boundaryErrorsAt(featureToolsFile, importJq, strictRule);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.message).toContain('@tai42/jq-studio');
+  });
+
+  it('withholds the editor from a non-rendering feature in TESTS too', async () => {
+    const errors = await boundaryErrorsAt(
+      `${repoRoot}/packages/features/tools/src/__boundary_fixture__.test.ts`,
+      importJq,
+      testRule,
+    );
+    expect(errors).toHaveLength(1);
+  });
+
+  it('permits the editor in the shell app, which injects the primitives and worker', async () => {
+    const errors = await boundaryErrorsAt(appFile, importJq, strictRule);
+    expect(errors).toEqual([]);
   });
 });
 

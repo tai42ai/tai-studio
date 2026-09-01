@@ -4,17 +4,17 @@
  * component plus the value/validation helpers a caller needs to seed, validate,
  * and submit.
  *
- * THE JQ-FREE ENTRY POINT. This module is published as
- * `@tai42/studio-sdk/schema-form`, and a consumer that BUNDLES the SDK — a
- * standalone widget rather than a host serving the SDK as a shared module —
- * should import the form from here rather than from the package barrel. The
- * barrel re-exports `JqField` off `@tai42/jq-studio`, and a bundler emits that
- * package's Web Worker file and wasm engine from the mere presence of the
- * MODULE in the graph: those assets are emitted while the module is transformed,
- * before tree-shaking can drop the unused re-export. Reaching the form through
- * this entry point, and injecting the door only where it is wanted (see
- * `SchemaForm`'s `expressionField`), is what holds a form-only consumer at zero
- * jq bytes.
+ * THE FORM-ONLY ENTRY POINT. This module is published as
+ * `@tai42/studio-sdk/schema-form` for a consumer that BUNDLES the SDK — a
+ * standalone widget rather than a host serving the SDK as a shared module — and
+ * wants the form without the barrel: no CSS side effects, and no module graph
+ * beyond what the form itself renders.
+ *
+ * It is also jq-free, and so is the barrel: the visual editor lives in the
+ * separately published `@tai42/jq-studio`, which nothing under the SDK imports at
+ * runtime. Expression authoring reaches a form only by INJECTION (see
+ * `SchemaForm`'s `expressionField` and `ExpressionFieldContext`), so a consumer
+ * that never injects a door ships zero jq bytes through either entry point.
  *
  * The design system reaches this entry point through relative imports, so the
  * form renders complete; only the barrel's three CSS side-effect imports stay

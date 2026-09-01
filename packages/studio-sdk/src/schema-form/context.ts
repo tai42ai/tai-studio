@@ -98,8 +98,8 @@ export interface ExpressionFieldProps {
 }
 
 /**
- * The expression-authoring door a host INJECTS into the form — `JqField`, imported
- * by the host straight from the SDK's jq surface.
+ * The expression-authoring door a host INJECTS into the form — `JqField`, which the
+ * host imports straight from `@tai42/jq-studio`.
  *
  * It is a COMPONENT, rendered as an element, never called as a function: the door
  * owns hooks and state (editor open, worker handle), which only survive as its own

@@ -34,7 +34,8 @@
  * checks live in the sibling `media` module.
  *
  * EXPRESSION FIELDS ARE OPT-IN. A string field carrying `x-tai42-expression`
- * renders an expression-authoring door — the SDK's `JqField` — only when the host
+ * renders an expression-authoring door — `JqField` from `@tai42/jq-studio` — only
+ * when the host
  * INJECTS one, through {@link SchemaFormProps.expressionField} or the ambient
  * {@link ExpressionFieldContext}; with no door it renders the plain string input.
  * The form owns no edge to the door: importing it here, even dynamically behind
@@ -88,8 +89,8 @@ export interface SchemaFormProps {
   readonly maxUploadBytes?: number;
   /**
    * Optional. The expression-authoring door for `x-tai42-expression` fields —
-   * the SDK's `JqField`, which the host imports directly and passes here (see
-   * the module doc-comment). Omitted, the enclosing
+   * `JqField` from `@tai42/jq-studio`, which the host imports directly and passes
+   * here (see the module doc-comment). Omitted, the enclosing
    * {@link ExpressionFieldContext} supplies it; absent both, an annotated field
    * renders the plain string input.
    */

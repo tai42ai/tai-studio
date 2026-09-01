@@ -19,13 +19,14 @@ pnpm add @tai42/studio-sdk
 
 ## Entry points
 
-- `@tai42/studio-sdk` — the plugin API, design system, and hooks.
+- `@tai42/studio-sdk` — the plugin API, design system, hooks, and the
+  schema-driven `SchemaForm`. It exports **no jq**: the visual jq editor is the
+  separately published `@tai42/jq-studio`, which consumers import directly (see
+  [Expression fields](#expression-fields)).
 - `@tai42/studio-sdk/host` — the host-only plugin registry.
-- `@tai42/studio-sdk/schema-form` — a jq-free `SchemaForm` entry for bundling
-  consumers: importing it emits no jq editor, worker, or wasm. It imports no
-  CSS by design — a subpath consumer loads `tokens.css` and `components.css`
-  explicitly. Expression fields render as plain inputs unless the host injects
-  a door (see `ExpressionFieldContext`).
+- `@tai42/studio-sdk/schema-form` — a form-only `SchemaForm` entry for bundling
+  consumers that want the form without the barrel. It imports no CSS by design —
+  a subpath consumer loads `tokens.css` and `components.css` explicitly.
 - `@tai42/studio-sdk/testing` — test-only helpers: a registry reset and
   `installJsdomStubs()`, which fills the browser APIs jsdom omits.
 - `@tai42/studio-sdk/tokens.css` — the design-token stylesheet. It also emits the
@@ -46,6 +47,44 @@ pnpm add @tai42/studio-sdk
 A host that bundles the SDK gets all three through the barrel's side-effect
 imports. A host that consumes the SDK as an external module (the Studio shell
 resolves it through the served import map) imports the three stylesheets itself.
+
+## Expression fields
+
+A string field carrying the `x-tai42-expression` annotation authors through a
+visual expression editor — but **only when the host injects one**. The SDK owns
+the injection point and nothing else:
+
+- `ExpressionFieldContext` — the ambient door for a whole tree.
+- `SchemaForm`'s `expressionField` prop — the per-form door.
+- `ExpressionFieldComponent` / `ExpressionFieldProps` / `ExpressionInputShape` —
+  the door contract, which MIRRORS jq-studio's field props without importing
+  them.
+
+With no door, an annotated field renders the plain string input, and the SDK's
+module graph reaches no jq at all — no editor, no Web Worker, no wasm.
+
+The door itself is `JqField` from
+[`@tai42/jq-studio`](https://www.npmjs.com/package/@tai42/jq-studio), imported
+directly by whoever wants it:
+
+```tsx
+import { SchemaForm } from '@tai42/studio-sdk';
+import { JqField } from '@tai42/jq-studio';
+
+<SchemaForm schema={schema} value={value} onChange={onChange} expressionField={JqField} />;
+```
+
+A host that wants the editor everywhere mounts the door once at its root
+(`ExpressionFieldContext.Provider`), injects its design system into the editor
+once (`PrimitivesProvider` from `@tai42/jq-studio`), and installs the shared
+evaluation worker once at boot (`installDefaultJqWorker()`).
+
+**Singleton.** jq-studio holds a module-scoped React context and one shared
+worker, so a deployment must resolve `@tai42/jq-studio` to ONE module. In the
+Studio that is the served import map (`/vendor/jq-studio.js`), exactly as it
+serves react and `@tai42/studio-sdk`; a second bundled copy would give a second
+primitives context (the design-system injection silently falls back to the
+built-ins), a second worker, and a duplicate multi-megabyte wasm.
 
 ## Browser support
 

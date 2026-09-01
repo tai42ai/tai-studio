@@ -1,14 +1,14 @@
 /**
  * SchemaForm's expression door: a string property carrying a well-formed
- * `x-tai42-expression` annotation renders the door the HOST injected (the SDK's
- * `JqField` in the shell) with the annotation mapped onto the input-shape
- * descriptor; an absent or malformed annotation — and an annotated field with no
- * injected door — renders the plain string input.
+ * `x-tai42-expression` annotation renders the door the HOST injected
+ * (`@tai42/jq-studio`'s `JqField` in the shell) with the annotation mapped onto the
+ * input-shape descriptor; an absent or malformed annotation — and an annotated field
+ * with no injected door — renders the plain string input.
  *
  * The real `JqField` editor is WASM/worker-backed and not drivable in jsdom, so
  * these tests inject a props-capturing double instead. Injection is the production
  * path, so no module mock is needed (and none is possible: the form holds no edge
- * to `../jq`). The double is faithful on the one contract that matters here:
+ * to `@tai42/jq-studio`). The double is faithful on the one contract that matters here:
  * `onChange` reports the edited expression string, exactly as the real resting
  * control and editor Save do.
  *

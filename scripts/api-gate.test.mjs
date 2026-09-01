@@ -216,6 +216,122 @@ test('removing an exported symbol is breaking', () => {
   assert.ok(found.some((f) => f.includes('Gone')));
 });
 
+// -------------------------------------------------------- bare re-export lines
+// api-extractor renders a symbol re-exported from a dependency as a bare
+// `export { Foo }` line — no local declaration to classify. Those are public API
+// exactly like a declared one, so dropping a package's whole re-export surface
+// (say, retiring a pass-through) must read as breaking rather than as no change.
+
+test('removing a bare re-export is breaking', () => {
+  const found = findings(
+    "import { JqField } from 'pkg';\nexport { JqField }\nexport { Kept }",
+    'export { Kept }',
+  );
+  assert.ok(found.some((f) => f.includes('JqField')));
+});
+
+test('adding a bare re-export is non-breaking', () => {
+  const found = findings('export { Kept }', 'export { Kept }\nexport { Added }');
+  assert.deepEqual(found, []);
+});
+
+test('re-pointing an exported name at a different local symbol is breaking', () => {
+  const found = findings('export { A as Foo }', 'export { B as Foo }');
+  assert.ok(found.some((f) => f.includes('Foo')));
+});
+
+test('narrowing a value re-export to type-only is breaking', () => {
+  const found = findings('export { Foo }', 'export type { Foo }');
+  assert.ok(found.some((f) => f.includes('Foo')));
+});
+
+test('an unchanged re-export surface is clean', () => {
+  const found = findings(
+    'export { A as Foo }\nexport type { Bar }',
+    'export { A as Foo }\nexport type { Bar }',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('re-pointing a re-export at a different SOURCE MODULE is breaking', () => {
+  // Same exported name, same local symbol, different package behind it: the name a
+  // consumer imports now resolves to another implementation.
+  const found = findings("export { Foo } from 'pkg-a'", "export { Foo } from 'pkg-b'");
+  assert.ok(found.some((f) => f.includes('Foo')));
+});
+
+test('a re-export keeping its source module is clean', () => {
+  assert.deepEqual(findings("export { Foo } from 'pkg-a'", "export { Foo } from 'pkg-a'"), []);
+});
+
+// ------------------------------------------------------------- wildcard exports
+// `export * from 'm'` names no symbol, so nothing about it can be classified: a
+// name vanishing behind it would read as no change. The gate never passes on a
+// classification it could not compute, so parsing one fails LOUDLY.
+
+test('a wildcard `export * from` fails the gate loudly', () => {
+  assert.throws(
+    () => findings('export { Kept }', "export { Kept }\nexport * from 'pkg'"),
+    (err) => err instanceof GateError && /enumerate the exports explicitly/i.test(err.message),
+  );
+});
+
+test('a wildcard already present on the OLD side fails too', () => {
+  // The old report is parsed by the same code path, so a report that has always
+  // carried a wildcard cannot quietly gate on its non-wildcard remainder.
+  assert.throws(() => findings("export * from 'pkg'", 'export { Kept }'), GateError);
+});
+
+test('a NAMESPACE re-export is classified, not rejected', () => {
+  // `export * as ns from 'm'` names exactly one symbol (`ns`), so it is classifiable:
+  // unchanged is clean, removed is breaking.
+  assert.deepEqual(findings("export * as ns from 'pkg'", "export * as ns from 'pkg'"), []);
+  const found = findings("export * as ns from 'pkg'\nexport { Kept }", 'export { Kept }');
+  assert.ok(found.some((f) => f.includes('ns')));
+});
+
+// --------------------------------------------------------------- default slots
+// `export default Foo` / `export = Foo` are consumable names too: dropping one
+// breaks every `import Foo from '<pkg>'` (or `require`) consumer.
+
+test('removing a default export is breaking', () => {
+  const found = findings(
+    'declare const _default: () => void;\nexport default _default;',
+    'declare const _default: () => void;',
+  );
+  assert.ok(found.some((f) => f.includes('export default')));
+});
+
+test('re-pointing a default export at a different symbol is breaking', () => {
+  const found = findings('export default A;', 'export default B;');
+  assert.ok(found.some((f) => f.includes('export default')));
+});
+
+test('adding a default export is non-breaking', () => {
+  assert.deepEqual(findings('export { Kept }', 'export { Kept }\nexport default A;'), []);
+});
+
+test('swapping `export default` for `export =` is breaking', () => {
+  const found = findings('export default A;', 'export = A;');
+  assert.ok(found.some((f) => f.includes('export default')));
+});
+
+test('removing an `export =` assignment is breaking', () => {
+  const found = findings('export = A;', 'export { Kept }');
+  assert.ok(found.some((f) => f.includes('export=')));
+});
+
+test('an unchanged default export is clean', () => {
+  assert.deepEqual(findings('export default A;', 'export default A;'), []);
+});
+
+test('dropping the default-ness of an inline `export default class` is breaking', () => {
+  // The named declaration survives, so only the DEFAULT slot disappears — the
+  // `import Foo from '<pkg>'` form stops resolving.
+  const found = findings('export default class Foo {\n}', 'export class Foo {\n}');
+  assert.ok(found.some((f) => f.includes('export default')));
+});
+
 // --------------------------------------- non-exported (forgotten-export) decls
 // An api-extractor report lists every declaration reachable from the public
 // surface, exported or not. A zod-backed type's real shape lives in the

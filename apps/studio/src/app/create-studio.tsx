@@ -19,7 +19,6 @@ import {
   AuthProvider,
   CapabilityProvider,
   ExpressionFieldContext,
-  JqField,
   NavigationProvider,
   SystemKindsProvider,
   ThemeProvider,
@@ -29,6 +28,11 @@ import {
   type AuthState,
   type NavigationContextValue,
 } from '@tai42/studio-sdk';
+// The expression-authoring door, imported STRAIGHT from the standalone editor
+// package — the SDK re-exports nothing of jq. The import map resolves this bare
+// specifier to the one served copy, so the door injected here, the primitives
+// injected above it, and the worker installed at boot all bind the same instance.
+import { JqField } from '@tai42/jq-studio';
 import { ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
 
 import { PATH } from './routes';
@@ -185,14 +189,15 @@ export function createStudio(deps: StudioDeps): Studio {
       <NavigationProvider value={navigation}>
         {/* Injects the Studio design system into @tai42/jq-studio once for the whole
             routed tree, so every JqField — a host feature's or a plugin page's —
-            paints in the SDK look off the single shared jq-studio instance (React is
-            the import-map singleton, so one provider reaches both). */}
+            paints in the SDK look off the single shared jq-studio instance the import
+            map serves (React is an import-map singleton too, so one provider reaches
+            both). */}
         <JqPrimitivesProvider>
           {/* The jq authoring door, injected ONCE for every SchemaForm in the
               shell — feature forms, the SchemaEditor preview, an elicitation
-              answer, a plugin page's own form. The SDK's schema form holds no
-              edge to jq (a bundled consumer would otherwise EMIT the editor, its
-              worker, and its wasm whether or not it authors expressions), so a
+              answer, a plugin page's own form. The SDK holds no edge to jq at
+              all (a bundled consumer would otherwise EMIT the editor, its worker,
+              and its wasm whether or not it authors expressions), so a
               schema's `x-tai42-expression` field renders the visual editor here
               because THIS host hands it the component. */}
           <ExpressionFieldContext.Provider value={JqField}>

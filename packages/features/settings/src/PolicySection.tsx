@@ -46,7 +46,6 @@ import {
   Badge,
   Button,
   ErrorState,
-  JqField,
   RadioGroup,
   Select,
   Spinner,
@@ -54,9 +53,8 @@ import {
   Textarea,
   errorMessage,
   useApi,
-  type JqInputShapeDescriptor,
-  type ServerValidateHook,
 } from '@tai42/studio-sdk';
+import { JqField, type JqInputShapeDescriptor, type ServerValidateHook } from '@tai42/jq-studio';
 
 import { templateNamesKey } from './keys';
 

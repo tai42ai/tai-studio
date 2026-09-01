@@ -8,9 +8,10 @@
  * silently drop (a forgotten `shape=` / `sampleInput=` / `serverValidate=` prop
  * still typechecks and renders fine), so this file pins it.
  *
- * It replaces ONLY `JqField` in the SDK barrel with a capture stub that records the
- * props it receives on every render (everything else — `useApi`, `ApiProvider`, the
- * design-system primitives — stays the real module via `importOriginal`). It then
+ * It replaces ONLY `JqField` in `@tai42/jq-studio` with a capture stub that records
+ * the props it receives on every render (the rest of that module, and the whole SDK
+ * barrel — `useApi`, `ApiProvider`, the design-system primitives — stay real via
+ * `importOriginal`). It then
  * asserts the captured props are the real wired objects: `shape` is `CONDITION_SHAPE`
  * by identity; `serverValidate` routes to the client's `validateCondition`; `value`
  * tracks the live condition state through `onChange`; and `sampleInput` reflects the
@@ -24,9 +25,9 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient } from '@tai42/api-client';
-// The barrel is mocked below, but ApiProvider is preserved by the importOriginal
-// spread, so this is the real provider — useApi resolves the client it is given.
-import { ApiProvider, type JqFieldProps } from '@tai42/studio-sdk';
+import { ApiProvider } from '@tai42/studio-sdk';
+// Only `JqField` is stubbed (below); the props type comes from the real module.
+import type { JqFieldProps } from '@tai42/jq-studio';
 
 import { CONDITION_SHAPE, PolicySection } from './PolicySection';
 
@@ -34,8 +35,8 @@ import { CONDITION_SHAPE, PolicySection } from './PolicySection';
 // Created via vi.hoisted so the hoisted vi.mock factory below can close over it.
 const jqField = vi.hoisted(() => ({ props: undefined as JqFieldProps | undefined }));
 
-vi.mock('@tai42/studio-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tai42/studio-sdk')>();
+vi.mock('@tai42/jq-studio', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tai42/jq-studio')>();
   return {
     ...actual,
     // Capture-only stub: record the props (so the test can drive them) and render

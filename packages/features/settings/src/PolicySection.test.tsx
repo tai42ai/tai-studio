@@ -1,6 +1,6 @@
 /**
- * Tests for {@link PolicySection}'s jq-condition field after its migration to the
- * SDK-re-exported {@link JqField} (the drop-in @tai42/jq-studio control): the inline
+ * Tests for {@link PolicySection}'s jq-condition field after its migration to
+ * {@link JqField}, the drop-in control imported straight from @tai42/jq-studio: the inline
  * condition still round-trips its value, the visual-editor door is now ALWAYS present
  * (the editor is a direct dependency, not a plugin-registered extension), and the
  * shape + serverValidate the field is wired with carry an honest JqAuthContext shape

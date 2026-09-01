@@ -75,19 +75,35 @@ const API_CLIENT_INTERNAL = [];
 
 // Third-party packages each layer may import in production code. Kept in sync
 // with the packages actually imported by each layer's source.
+// `@tai42/jq-studio` is a separately-published package (its own npm release, not a
+// workspace-internal @tai42/* like the SDK/features), so it is an EXTERNAL — and
+// every consumer of the visual jq editor imports it DIRECTLY. The app injects the
+// design-system primitives and installs the shared worker; a feature renders
+// `JqField`. It is deliberately absent from SDK_EXTERNAL: the SDK holds no runtime
+// edge to jq (see SDK_TEST_EXTERNAL and the barrel's doc-comment), and absent from
+// FEATURE_EXTERNAL: the editor is granted per feature (JQ_EDITOR_FEATURES below),
+// not to the feature layer at large.
 const FEATURE_EXTERNAL = ['react', 'react-dom', '@tanstack/react-query', '@dnd-kit/core', 'uqr'];
 const APP_EXTERNAL = ['react', 'react-dom', '@tanstack/*', 'zustand', '@tai42/jq-studio'];
-// `@tai42/jq-studio` is a separately-published package (its own npm release, not a
-// workspace-internal @tai42/* like the SDK/features), so it is an EXTERNAL the SDK
-// re-exports (`JqField` + the editor surface) and the app injects primitives into.
-const SDK_EXTERNAL = ['react', 'react-dom', '@radix-ui/*', '@tai42/jq-studio'];
+const SDK_EXTERNAL = ['react', 'react-dom', '@radix-ui/*'];
 const API_CLIENT_EXTERNAL = ['zod'];
+
+// The features that render the visual jq editor, by captured feature name (the
+// `feature` element's `*` segment). jq-studio is a multi-megabyte editor with a Web
+// Worker and a wasm engine, so the grant is scoped to the features that actually
+// author expressions — every other feature reaching for it is a boundary error, not
+// a silently-allowed import.
+const JQ_EDITOR_FEATURES = ['hooks', 'settings'];
 
 // Third-party packages allowed ONLY in test and test-support code (TEST_GLOBS),
 // so production code cannot pull in a test runner or a mock server.
 const FEATURE_TEST_EXTERNAL = ['vitest', '@testing-library/*'];
 const APP_TEST_EXTERNAL = ['vitest', '@testing-library/*', 'msw'];
-const SDK_TEST_EXTERNAL = ['vitest', '@testing-library/*'];
+// The SDK reaches `@tai42/jq-studio` in TEST code only: one contract test asserts
+// the real `JqField` still satisfies the mirrored injection contract. Production
+// SDK source naming it would re-emit the editor, its worker, and its wasm into
+// every bundling consumer.
+const SDK_TEST_EXTERNAL = ['vitest', '@testing-library/*', '@tai42/jq-studio'];
 const API_CLIENT_TEST_EXTERNAL = ['vitest'];
 
 /** Test and test-support source files (e.g. `test-setup.ts`, `test-utils.tsx`). */
@@ -137,6 +153,13 @@ export function boundariesDependenciesRule(includeTestExternals) {
         {
           from: { type: 'feature' },
           allow: external(FEATURE_INTERNAL, FEATURE_EXTERNAL, FEATURE_TEST_EXTERNAL),
+        },
+        // The visual jq editor, granted only to the features that render it — the
+        // element's captured `feature` name selects them, so the rest of the feature
+        // layer still cannot import it.
+        {
+          from: { type: 'feature', captured: { feature: JQ_EDITOR_FEATURES } },
+          allow: external([], ['@tai42/jq-studio'], []),
         },
         // The shell app composes the features and the two libraries.
         {
@@ -240,11 +263,10 @@ export default tseslint.config(
   // The SDK is the leaf: it imports nothing WORKSPACE-INTERNAL at runtime.
   // Type-only imports are allowed (erased at build) so the hooks can be typed by
   // @tai42/api-client's `ApiClient`/`Interaction` without a runtime coupling that
-  // would break the shared-singleton boundary. `@tai42/jq-studio` is the one
-  // exception: it is a SEPARATELY-PUBLISHED third-party package (its own npm
-  // release, not part of this monorepo's graph — like `@radix-ui/*`), and the SDK
-  // re-exports its `JqField`/editor surface as a direct runtime dependency so the
-  // whole deployment shares one jq copy. It is excluded from the group below.
+  // would break the shared-singleton boundary. `@tai42/jq-studio` is excluded from
+  // the group below because it is a SEPARATELY-PUBLISHED third-party package (its
+  // own npm release, not part of this monorepo's graph — like `@radix-ui/*`); the
+  // boundaries allowlist above is what actually confines it to SDK test code.
   {
     files: ['packages/studio-sdk/src/**/*.{ts,tsx}'],
     rules: {
@@ -259,7 +281,7 @@ export default tseslint.config(
               group: ['@tai42/*', '!@tai42/jq-studio'],
               allowTypeImports: true,
               message:
-                'The SDK is the leaf package and must not import any workspace-internal @tai42/* package at runtime (type-only imports are allowed). The published @tai42/jq-studio is the one runtime exception.',
+                'The SDK is the leaf package and must not import any workspace-internal @tai42/* package at runtime (type-only imports are allowed). The separately-published @tai42/jq-studio is not workspace-internal; it is confined to SDK test code by the boundaries allowlist.',
             },
           ],
         },
