@@ -40,6 +40,43 @@ export interface MediaUpload {
   readonly maxBytes: number | undefined;
 }
 
+/** One top-level key of the expression's input document, with a one-line gloss. */
+export interface ExpressionAnnotationKey {
+  readonly name: string;
+  readonly gloss: string;
+}
+
+/**
+ * The `x-tai42-expression` annotation on a string schema: the server declares
+ * that the field's value is authored in a pipeline expression language (only jq
+ * today) and optionally describes what `.` is for that expression. The renderer
+ * uses it to open the visual-editor door instead of a plain text box. The shape
+ * mirrors jq-studio's input-shape descriptor WITHOUT importing it — classification
+ * stays a pure schema concern; the renderer maps this onto a jq field declaration.
+ */
+export interface ExpressionAnnotation {
+  /** The declared language. An unknown language never reaches here — it classifies
+   *  as a plain string, so an older client renders a newer server's field as the
+   *  ordinary text input it always was. */
+  readonly language: 'jq';
+  /** Short chip label for what `.` is (e.g. "node envelope"). */
+  readonly label: string | undefined;
+  /** One sentence describing what `.` is in this field. */
+  readonly blurb: string | undefined;
+  /** The top-level keys of `.`, each with a one-liner. */
+  readonly keys: readonly ExpressionAnnotationKey[] | undefined;
+  /** What the expression must return (e.g. "true or false"). */
+  readonly returns: string | undefined;
+  /** Per-field caveats. */
+  readonly caveats: readonly string[] | undefined;
+  /** True when the annotation carries a `sample` — tracked separately because a
+   *  legitimate sample may be JSON `null`. */
+  readonly hasSample: boolean;
+  /** A static skeleton of `.` for the Test panel. Meaningful only when
+   *  {@link hasSample} is true. */
+  readonly sample: unknown;
+}
+
 /** One selectable variant of a union field. */
 export interface UnionVariant {
   readonly label: string;
@@ -58,6 +95,9 @@ export type FieldModel =
       readonly format: string | undefined;
       /** Present when media annotations opt the field into the upload control. */
       readonly media: MediaUpload | undefined;
+      /** Present when a well-formed `x-tai42-expression` annotation opts the
+       *  field into the jq expression editor (see {@link ExpressionAnnotation}). */
+      readonly expression: ExpressionAnnotation | undefined;
     }
   | { readonly kind: 'number'; readonly integer: boolean }
   | { readonly kind: 'boolean' }
@@ -130,6 +170,70 @@ function mediaUpload(schema: JsonSchema): MediaUpload | undefined {
     return { encoding: 'base64', mediaType, maxBytes };
   }
   return undefined;
+}
+
+const EXPRESSION_KEYWORD = 'x-tai42-expression';
+
+/** A parsed-JSON plain object (arrays and `null` are `typeof 'object'` too). */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Detect the `x-tai42-expression` annotation on a (ref-resolved) string schema,
+ * mirroring {@link mediaUpload}: a well-formed annotation opts the field into the
+ * jq expression editor; anything else — absent, non-object, unknown language, or
+ * any wrongly-typed member — yields `undefined`, so the field renders EXACTLY as
+ * the plain string input it is today. Malformed payloads NEVER throw: a bad
+ * annotation is a server-side authoring bug, and degrading to the ordinary text
+ * box keeps the form usable while staying byte-identical to the unannotated
+ * rendering.
+ */
+function expressionAnnotation(schema: JsonSchema): ExpressionAnnotation | undefined {
+  const raw: unknown = schema[EXPRESSION_KEYWORD];
+  if (!isRecord(raw)) return undefined;
+  // The language gate doubles as the forward-compatibility valve: a future
+  // language this client does not understand degrades to a plain string field.
+  if (raw.language !== 'jq') return undefined;
+
+  const { label, blurb, returns } = raw;
+  if (label !== undefined && typeof label !== 'string') return undefined;
+  if (blurb !== undefined && typeof blurb !== 'string') return undefined;
+  if (returns !== undefined && typeof returns !== 'string') return undefined;
+
+  let keys: ExpressionAnnotationKey[] | undefined;
+  if (raw.keys !== undefined) {
+    if (!Array.isArray(raw.keys)) return undefined;
+    keys = [];
+    for (const entry of raw.keys as readonly unknown[]) {
+      if (!isRecord(entry) || typeof entry.name !== 'string' || typeof entry.gloss !== 'string') {
+        return undefined;
+      }
+      keys.push({ name: entry.name, gloss: entry.gloss });
+    }
+  }
+
+  let caveats: string[] | undefined;
+  if (raw.caveats !== undefined) {
+    if (!Array.isArray(raw.caveats)) return undefined;
+    caveats = [];
+    for (const entry of raw.caveats as readonly unknown[]) {
+      if (typeof entry !== 'string') return undefined;
+      caveats.push(entry);
+    }
+  }
+
+  // `sample` is any JSON — including `null` — so presence is tracked, not typed.
+  return {
+    language: 'jq',
+    label,
+    blurb,
+    keys,
+    returns,
+    caveats,
+    hasSample: 'sample' in raw,
+    sample: raw.sample,
+  };
 }
 
 /**
@@ -208,10 +312,16 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
       // that land on the OUTER null-union wrapper of an OPTIONAL field would
       // otherwise be lost when delegating to the inner string member, silently
       // degrading an optional upload field to a plain text box. Re-detect them on
-      // the wrapper and attach to the inner string model.
+      // the wrapper and attach to the inner string model. The expression
+      // annotation gets the same treatment for the same reason: an optional
+      // annotated field must keep its editor door.
       const model =
-        inner.model.kind === 'string' && inner.model.media === undefined
-          ? { ...inner.model, media: mediaUpload(resolved) }
+        inner.model.kind === 'string'
+          ? {
+              ...inner.model,
+              media: inner.model.media ?? mediaUpload(resolved),
+              expression: inner.model.expression ?? expressionAnnotation(resolved),
+            }
           : inner.model;
       return {
         model,
@@ -309,7 +419,12 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
   switch (type) {
     case 'string':
       return {
-        model: { kind: 'string', format: resolved.format, media: mediaUpload(resolved) },
+        model: {
+          kind: 'string',
+          format: resolved.format,
+          media: mediaUpload(resolved),
+          expression: expressionAnnotation(resolved),
+        },
         nullable: nullableByType,
         schema: resolved,
         title,

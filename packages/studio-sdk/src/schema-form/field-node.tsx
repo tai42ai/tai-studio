@@ -85,6 +85,7 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
           error={error}
           format={model.format}
           media={model.media}
+          expression={model.expression}
           argName={path}
           value={value}
           required={required}
