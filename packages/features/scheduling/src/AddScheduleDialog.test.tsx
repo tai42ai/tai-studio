@@ -42,6 +42,11 @@ async function pickTool(user: UserEvent, dialog: HTMLElement, toolName: string):
   await user.click(await screen.findByRole('option', { name: toolName }));
 }
 
+// The full dialog submit mounts the radix dialog, the tool picker and the typed
+// fields in one pass — correct but heavy, so CI contention alone can exceed the
+// default test budget. The ceiling bounds runner slowness, never the assertions.
+const SUBMIT_FLOW_TIMEOUT_MS = 15_000;
+
 describe('AddScheduleDialog — render', () => {
   it('renders the dialog open with its fields, defaulting to the crontab spec', async () => {
     const client = makeClient({ listTools: vi.fn().mockResolvedValue([]) });
@@ -58,79 +63,87 @@ describe('AddScheduleDialog — render', () => {
   });
 });
 
-describe('AddScheduleDialog — valid submit', () => {
-  it('posts the exact crontab body, then closes on success', async () => {
-    const user = userEvent.setup({ delay: null });
-    const onClose = vi.fn();
-    const addSchedule = vi.fn().mockResolvedValue({});
-    const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task', 'sync_schedule_task']),
-      addSchedule,
-    });
-    renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
+describe(
+  'AddScheduleDialog — valid submit',
+  () => {
+    it('posts the exact crontab body, then closes on success', async () => {
+      const user = userEvent.setup({ delay: null });
+      const onClose = vi.fn();
+      const addSchedule = vi.fn().mockResolvedValue({});
+      const client = makeClient({
+        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task', 'sync_schedule_task']),
+        addSchedule,
+      });
+      renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
-    const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-    await pickTool(user, dialog, 'run_report_schedule_task');
+      const dialog = await screen.findByRole('dialog');
+      await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
+      await pickTool(user, dialog, 'run_report_schedule_task');
 
-    const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
-    await user.clear(kwargs);
-    await user.type(kwargs, '{{"limit": 10}');
+      const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
+      await user.clear(kwargs);
+      await user.type(kwargs, '{{"limit": 10}');
 
-    await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
-    await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+      await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
 
-    await waitFor(() => {
-      expect(addSchedule).toHaveBeenCalledWith({
-        tool_name: 'run_report_schedule_task',
-        tool_kwargs: { limit: 10 },
-        schedule_kwargs: {
-          backend_schedule: '0 2 * * *',
-          backend_schedule_name: 'nightly-report',
-        },
+      await waitFor(() => {
+        expect(addSchedule).toHaveBeenCalledWith({
+          tool_name: 'run_report_schedule_task',
+          tool_kwargs: { limit: 10 },
+          schedule_kwargs: {
+            backend_schedule: '0 2 * * *',
+            backend_schedule_name: 'nightly-report',
+          },
+        });
+      });
+      expect(addSchedule).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
       });
     });
-    expect(addSchedule).toHaveBeenCalledTimes(1);
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
 
-  it('posts a numeric backend_schedule and empty kwargs for the interval spec', async () => {
-    const user = userEvent.setup({ delay: null });
-    const onClose = vi.fn();
-    const addSchedule = vi.fn().mockResolvedValue({});
-    const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
-      addSchedule,
-    });
-    renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
+    it(
+      'posts a numeric backend_schedule and empty kwargs for the interval spec',
+      async () => {
+        const user = userEvent.setup({ delay: null });
+        const onClose = vi.fn();
+        const addSchedule = vi.fn().mockResolvedValue({});
+        const client = makeClient({
+          listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+          addSchedule,
+        });
+        renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
-    const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
-    await pickTool(user, dialog, 'sync_schedule_task');
+        const dialog = await screen.findByRole('dialog');
+        await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
+        await pickTool(user, dialog, 'sync_schedule_task');
 
-    // Switch to the interval spec; the untouched default kwargs `{}` maps to `{}`.
-    await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));
-    await user.type(within(dialog).getByRole('spinbutton'), '3600');
+        // Switch to the interval spec; the untouched default kwargs `{}` maps to `{}`.
+        await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));
+        await user.type(within(dialog).getByRole('spinbutton'), '3600');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+        await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
 
-    await waitFor(() => {
-      expect(addSchedule).toHaveBeenCalledWith({
-        tool_name: 'sync_schedule_task',
-        tool_kwargs: {},
-        schedule_kwargs: {
-          backend_schedule: 3600,
-          backend_schedule_name: 'hourly-sync',
-        },
-      });
-    });
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-  });
-});
+        await waitFor(() => {
+          expect(addSchedule).toHaveBeenCalledWith({
+            tool_name: 'sync_schedule_task',
+            tool_kwargs: {},
+            schedule_kwargs: {
+              backend_schedule: 3600,
+              backend_schedule_name: 'hourly-sync',
+            },
+          });
+        });
+        await waitFor(() => {
+          expect(onClose).toHaveBeenCalledTimes(1);
+        });
+      },
+      SUBMIT_FLOW_TIMEOUT_MS,
+    );
+  },
+  SUBMIT_FLOW_TIMEOUT_MS,
+);
 
 describe('AddScheduleDialog — kwargs validation', () => {
   it('blocks malformed JSON kwargs with a message and never calls addSchedule', async () => {
