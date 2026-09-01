@@ -35,6 +35,11 @@ async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<voi
   await user.click(combobox);
 }
 
+// The full dialog submit mounts the radix dialog, the tool picker and the typed
+// fields in one pass — correct but heavy, so CI contention alone can exceed the
+// default test budget. The ceiling bounds runner slowness, never the assertions.
+const SUBMIT_FLOW_TIMEOUT_MS = 15_000;
+
 describe('SchedulingPage — table', () => {
   it('renders schedules from the list', async () => {
     const client = makeClient({
@@ -144,107 +149,111 @@ describe('SchedulingPage — no-backend + error states', () => {
   });
 });
 
-describe('SchedulingPage — add dialog', () => {
-  it('blocks a submit with invalid kwargs JSON and never calls addSchedule', async () => {
-    const user = userEvent.setup({ delay: null });
-    const addSchedule = vi.fn();
-    const client = makeClient({
-      listSchedules: vi.fn().mockResolvedValue([]),
-      getServerDateTime: serverTime501(),
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
-      addSchedule,
+describe(
+  'SchedulingPage — add dialog',
+  () => {
+    it('blocks a submit with invalid kwargs JSON and never calls addSchedule', async () => {
+      const user = userEvent.setup({ delay: null });
+      const addSchedule = vi.fn();
+      const client = makeClient({
+        listSchedules: vi.fn().mockResolvedValue([]),
+        getServerDateTime: serverTime501(),
+        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+        addSchedule,
+      });
+      renderWithProviders(<SchedulingPage search={{}} />, { client });
+
+      await user.click(await screen.findByRole('button', { name: 'Add schedule' }));
+      const dialog = await screen.findByRole('dialog');
+
+      const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
+      await user.clear(kwargs);
+      await user.type(kwargs, '{{not json');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+
+      expect(within(dialog).getByText(/Kwargs must be valid JSON/)).toBeInTheDocument();
+      expect(addSchedule).not.toHaveBeenCalled();
     });
-    renderWithProviders(<SchedulingPage search={{}} />, { client });
 
-    await user.click(await screen.findByRole('button', { name: 'Add schedule' }));
-    const dialog = await screen.findByRole('dialog');
+    it('submits a valid schedule with the expected body', async () => {
+      const user = userEvent.setup({ delay: null });
+      const addSchedule = vi.fn().mockResolvedValue({});
+      const client = makeClient({
+        listSchedules: vi.fn().mockResolvedValue([]),
+        getServerDateTime: serverTime501(),
+        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task', 'sync_schedule_task']),
+        addSchedule,
+      });
+      renderWithProviders(<SchedulingPage search={{}} />, { client });
 
-    const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
-    await user.clear(kwargs);
-    await user.type(kwargs, '{{not json');
+      await user.click(await screen.findByRole('button', { name: 'Add schedule' }));
+      const dialog = await screen.findByRole('dialog');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+      await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
 
-    expect(within(dialog).getByText(/Kwargs must be valid JSON/)).toBeInTheDocument();
-    expect(addSchedule).not.toHaveBeenCalled();
-  });
+      // Pick a tool via the shared ToolPicker (Radix combobox).
+      await openToolPicker(user, dialog);
+      await user.click(await screen.findByRole('option', { name: 'run_report_schedule_task' }));
 
-  it('submits a valid schedule with the expected body', async () => {
-    const user = userEvent.setup({ delay: null });
-    const addSchedule = vi.fn().mockResolvedValue({});
-    const client = makeClient({
-      listSchedules: vi.fn().mockResolvedValue([]),
-      getServerDateTime: serverTime501(),
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task', 'sync_schedule_task']),
-      addSchedule,
-    });
-    renderWithProviders(<SchedulingPage search={{}} />, { client });
+      const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
+      await user.clear(kwargs);
+      await user.type(kwargs, '{{"limit": 10}');
 
-    await user.click(await screen.findByRole('button', { name: 'Add schedule' }));
-    const dialog = await screen.findByRole('dialog');
+      await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
 
-    await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
 
-    // Pick a tool via the shared ToolPicker (Radix combobox).
-    await openToolPicker(user, dialog);
-    await user.click(await screen.findByRole('option', { name: 'run_report_schedule_task' }));
-
-    const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
-    await user.clear(kwargs);
-    await user.type(kwargs, '{{"limit": 10}');
-
-    await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
-
-    await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
-
-    await waitFor(() => {
-      expect(addSchedule).toHaveBeenCalledWith({
-        tool_name: 'run_report_schedule_task',
-        tool_kwargs: { limit: 10 },
-        schedule_kwargs: {
-          backend_schedule: '0 2 * * *',
-          backend_schedule_name: 'nightly-report',
-        },
+      await waitFor(() => {
+        expect(addSchedule).toHaveBeenCalledWith({
+          tool_name: 'run_report_schedule_task',
+          tool_kwargs: { limit: 10 },
+          schedule_kwargs: {
+            backend_schedule: '0 2 * * *',
+            backend_schedule_name: 'nightly-report',
+          },
+        });
       });
     });
-  });
 
-  it('submits an interval schedule with a numeric backend_schedule', async () => {
-    const user = userEvent.setup({ delay: null });
-    const addSchedule = vi.fn().mockResolvedValue({});
-    const client = makeClient({
-      listSchedules: vi.fn().mockResolvedValue([]),
-      getServerDateTime: serverTime501(),
-      listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
-      addSchedule,
-    });
-    renderWithProviders(<SchedulingPage search={{}} />, { client });
+    it('submits an interval schedule with a numeric backend_schedule', async () => {
+      const user = userEvent.setup({ delay: null });
+      const addSchedule = vi.fn().mockResolvedValue({});
+      const client = makeClient({
+        listSchedules: vi.fn().mockResolvedValue([]),
+        getServerDateTime: serverTime501(),
+        listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+        addSchedule,
+      });
+      renderWithProviders(<SchedulingPage search={{}} />, { client });
 
-    await user.click(await screen.findByRole('button', { name: 'Add schedule' }));
-    const dialog = await screen.findByRole('dialog');
+      await user.click(await screen.findByRole('button', { name: 'Add schedule' }));
+      const dialog = await screen.findByRole('dialog');
 
-    await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
-    await openToolPicker(user, dialog);
-    await user.click(await screen.findByRole('option', { name: 'sync_schedule_task' }));
+      await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
+      await openToolPicker(user, dialog);
+      await user.click(await screen.findByRole('option', { name: 'sync_schedule_task' }));
 
-    // Switch to the interval spec.
-    await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));
-    await user.type(within(dialog).getByRole('spinbutton'), '3600');
+      // Switch to the interval spec.
+      await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));
+      await user.type(within(dialog).getByRole('spinbutton'), '3600');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
 
-    await waitFor(() => {
-      expect(addSchedule).toHaveBeenCalledWith({
-        tool_name: 'sync_schedule_task',
-        tool_kwargs: {},
-        schedule_kwargs: {
-          backend_schedule: 3600,
-          backend_schedule_name: 'hourly-sync',
-        },
+      await waitFor(() => {
+        expect(addSchedule).toHaveBeenCalledWith({
+          tool_name: 'sync_schedule_task',
+          tool_kwargs: {},
+          schedule_kwargs: {
+            backend_schedule: 3600,
+            backend_schedule_name: 'hourly-sync',
+          },
+        });
       });
     });
-  });
-});
+  },
+  SUBMIT_FLOW_TIMEOUT_MS,
+);
 
 describe('SchedulingPage — delete', () => {
   it('deletes a schedule after confirming', async () => {
