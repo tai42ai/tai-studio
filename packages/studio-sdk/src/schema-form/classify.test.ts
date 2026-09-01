@@ -125,3 +125,129 @@ describe('classifySchema — record (additionalProperties map)', () => {
     }
   });
 });
+
+/**
+ * The `x-tai42-expression` annotation contract: a WELL-FORMED annotation on a
+ * string schema classifies with an `expression` payload (the jq editor door);
+ * an absent or malformed one classifies as the plain string it always was —
+ * never a throw, never a degraded half-field. The malformed variants pin the
+ * "renders exactly as today" guarantee at the classification root.
+ */
+describe('classifySchema — x-tai42-expression annotation', () => {
+  /** The `expression` payload of a classified string model, if any. */
+  function expressionOf(schema: JsonSchema) {
+    const model = classify(schema).model;
+    expect(model.kind).toBe('string');
+    return model.kind === 'string' ? model.expression : undefined;
+  }
+
+  const annotated = (annotation: unknown): JsonSchema => ({
+    type: 'string',
+    'x-tai42-expression': annotation,
+  });
+
+  it('recognizes a fully described annotation and carries every descriptor field', () => {
+    const expression = expressionOf(
+      annotated({
+        language: 'jq',
+        label: 'signal envelope',
+        blurb: 'The signal document the route condition inspects.',
+        keys: [
+          { name: 'payload', gloss: 'the emitted body' },
+          { name: 'meta', gloss: 'routing metadata' },
+        ],
+        returns: 'true or false',
+        caveats: ['.meta is absent on replayed signals'],
+        sample: { payload: {}, meta: { origin: 'relay' } },
+      }),
+    );
+    expect(expression).toEqual({
+      language: 'jq',
+      label: 'signal envelope',
+      blurb: 'The signal document the route condition inspects.',
+      keys: [
+        { name: 'payload', gloss: 'the emitted body' },
+        { name: 'meta', gloss: 'routing metadata' },
+      ],
+      returns: 'true or false',
+      caveats: ['.meta is absent on replayed signals'],
+      hasSample: true,
+      sample: { payload: {}, meta: { origin: 'relay' } },
+    });
+  });
+
+  it('recognizes a bare { language: "jq" } annotation with no descriptor fields', () => {
+    expect(expressionOf(annotated({ language: 'jq' }))).toEqual({
+      language: 'jq',
+      label: undefined,
+      blurb: undefined,
+      keys: undefined,
+      returns: undefined,
+      caveats: undefined,
+      hasSample: false,
+      sample: undefined,
+    });
+  });
+
+  it('tracks a null sample as PRESENT — null is a legitimate sample document', () => {
+    const expression = expressionOf(annotated({ language: 'jq', sample: null }));
+    expect(expression?.hasSample).toBe(true);
+    expect(expression?.sample).toBeNull();
+  });
+
+  it('classifies an unannotated string as a plain string', () => {
+    expect(expressionOf({ type: 'string' })).toBeUndefined();
+  });
+
+  it('classifies an unknown language as a plain string (forward compatibility)', () => {
+    expect(expressionOf(annotated({ language: 'lorem' }))).toBeUndefined();
+    expect(expressionOf(annotated({}))).toBeUndefined();
+  });
+
+  it('classifies a non-object annotation as a plain string', () => {
+    expect(expressionOf(annotated('jq'))).toBeUndefined();
+    expect(expressionOf(annotated(['jq']))).toBeUndefined();
+    expect(expressionOf(annotated(null))).toBeUndefined();
+    expect(expressionOf(annotated(7))).toBeUndefined();
+  });
+
+  it('classifies wrongly typed descriptor members as a plain string, never throwing', () => {
+    expect(expressionOf(annotated({ language: 'jq', label: 7 }))).toBeUndefined();
+    expect(expressionOf(annotated({ language: 'jq', blurb: null }))).toBeUndefined();
+    expect(expressionOf(annotated({ language: 'jq', returns: ['x'] }))).toBeUndefined();
+    expect(expressionOf(annotated({ language: 'jq', keys: 'payload' }))).toBeUndefined();
+    expect(
+      expressionOf(annotated({ language: 'jq', keys: [{ name: 'payload' }] })),
+    ).toBeUndefined();
+    expect(
+      expressionOf(annotated({ language: 'jq', keys: [{ name: 7, gloss: 'x' }] })),
+    ).toBeUndefined();
+    expect(expressionOf(annotated({ language: 'jq', caveats: 'careful' }))).toBeUndefined();
+    expect(expressionOf(annotated({ language: 'jq', caveats: ['ok', 7] }))).toBeUndefined();
+  });
+
+  it('keeps the door on an OPTIONAL field annotated on the null-union wrapper', () => {
+    // Pydantic emits `str | None` as an anyOf wrapper; an annotation landing on
+    // the wrapper must survive the delegation to the inner string member,
+    // exactly as media annotations do.
+    const classified = classify({
+      anyOf: [{ type: 'string' }, { type: 'null' }],
+      'x-tai42-expression': { language: 'jq', label: 'signal envelope' },
+    });
+    expect(classified.nullable).toBe(true);
+    expect(classified.model.kind).toBe('string');
+    if (classified.model.kind === 'string') {
+      expect(classified.model.expression?.label).toBe('signal envelope');
+    }
+  });
+
+  it('keeps the door on an optional field annotated on the inner member', () => {
+    const classified = classify({
+      anyOf: [annotated({ language: 'jq', returns: 'an object' }), { type: 'null' }],
+    });
+    expect(classified.model.kind).toBe('string');
+    if (classified.model.kind === 'string') {
+      expect(classified.model.expression?.returns).toBe('an object');
+    }
+  });
+});
