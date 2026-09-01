@@ -10,6 +10,11 @@
  * other `../jq` export is preserved). The double is faithful on the one contract
  * that matters here: `onChange` reports the edited expression string, exactly as
  * the real resting control and editor Save do.
+ *
+ * `StringField` loads the door through a dynamic `import('../jq')` behind a
+ * `lazy` boundary, so an annotated field mounts asynchronously: the assertions
+ * `await` the door (`findBy…`) rather than reading it synchronously. The mock
+ * still intercepts that dynamic import, so the double is what resolves.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
@@ -102,10 +107,10 @@ const annotatedSchema = (annotation: unknown): JsonSchema => ({
 });
 
 describe('SchemaForm — jq expression door', () => {
-  it('renders the annotated field as a JqField with the annotation mapped onto the declaration', () => {
+  it('renders the annotated field as a JqField with the annotation mapped onto the declaration', async () => {
     render(<Harness schema={annotatedSchema(FULL_ANNOTATION)} initial={{ condition: '.meta' }} />);
 
-    expect(screen.getByTestId('jq-door')).toBeInTheDocument();
+    expect(await screen.findByTestId('jq-door')).toBeInTheDocument();
     const props = lastDoorProps();
     expect(props.label).toBe('Route condition');
     expect(props.description).toBe('Runs against each signal.');
@@ -131,21 +136,25 @@ describe('SchemaForm — jq expression door', () => {
     expect(props.compact).toBeUndefined();
   });
 
-  it('maps a bare { language: "jq" } annotation to NO shape descriptor', () => {
+  it('maps a bare { language: "jq" } annotation to NO shape descriptor', async () => {
     render(<Harness schema={annotatedSchema({ language: 'jq' })} initial={{}} />);
-    expect(screen.getByTestId('jq-door')).toBeInTheDocument();
+    expect(await screen.findByTestId('jq-door')).toBeInTheDocument();
     expect(lastDoorProps().shape).toBeUndefined();
   });
 
-  it('flows an edit from the jq field into the emitted form value', () => {
+  it('flows an edit from the jq field into the emitted form value', async () => {
     render(<Harness schema={annotatedSchema(FULL_ANNOTATION)} initial={{}} />);
+    // Await the door itself, not merely a matching textbox: the loading fallback
+    // also exposes a (read-only) `Route condition` textbox, so acting before the
+    // door mounts could target the placeholder instead of the live control.
+    await screen.findByTestId('jq-door');
     fireEvent.change(screen.getByRole('textbox', { name: 'Route condition' }), {
       target: { value: '.payload | length > 0' },
     });
     expect(screen.getByTestId('value').textContent).toBe('{"condition":".payload | length > 0"}');
   });
 
-  it('drops the key when an OPTIONAL jq field is cleared, like every string field', () => {
+  it('drops the key when an OPTIONAL jq field is cleared, like every string field', async () => {
     const schema: JsonSchema = {
       type: 'object',
       properties: {
@@ -153,13 +162,14 @@ describe('SchemaForm — jq expression door', () => {
       },
     };
     render(<Harness schema={schema} initial={{ shaper: '.meta' }} />);
+    await screen.findByTestId('jq-door');
     fireEvent.change(screen.getByRole('textbox', { name: 'Shaper' }), {
       target: { value: '' },
     });
     expect(screen.getByTestId('value').textContent).toBe('{}');
   });
 
-  it("wires the form's per-field error into the JqField error prop", () => {
+  it("wires the form's per-field error into the JqField error prop", async () => {
     render(
       <Harness
         schema={annotatedSchema(FULL_ANNOTATION)}
@@ -167,6 +177,7 @@ describe('SchemaForm — jq expression door', () => {
         errors={{ condition: 'This field is required.' }}
       />,
     );
+    await screen.findByTestId('jq-door');
     expect(lastDoorProps().error).toBe('This field is required.');
   });
 
