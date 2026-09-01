@@ -8,7 +8,7 @@
  * Provider order (outermost→inner): ThemeProvider ▸ AuthProvider ▸
  * QueryClientProvider ▸ ApiProvider ▸ UnauthorizedProvider ▸ CapabilityProvider ▸
  * SystemKindsProvider ▸ ToolDisplayNamesProvider ▸ NavigationProvider ▸
- * JqPrimitivesProvider ▸ RouterProvider.
+ * JqPrimitivesProvider ▸ ExpressionFieldContext ▸ RouterProvider.
  */
 import { useEffect, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -18,6 +18,8 @@ import {
   ApiProvider,
   AuthProvider,
   CapabilityProvider,
+  ExpressionFieldContext,
+  JqField,
   NavigationProvider,
   SystemKindsProvider,
   ThemeProvider,
@@ -186,7 +188,16 @@ export function createStudio(deps: StudioDeps): Studio {
             paints in the SDK look off the single shared jq-studio instance (React is
             the import-map singleton, so one provider reaches both). */}
         <JqPrimitivesProvider>
-          <RouterProvider router={router} />
+          {/* The jq authoring door, injected ONCE for every SchemaForm in the
+              shell — feature forms, the SchemaEditor preview, an elicitation
+              answer, a plugin page's own form. The SDK's schema form holds no
+              edge to jq (a bundled consumer would otherwise EMIT the editor, its
+              worker, and its wasm whether or not it authors expressions), so a
+              schema's `x-tai42-expression` field renders the visual editor here
+              because THIS host hands it the component. */}
+          <ExpressionFieldContext.Provider value={JqField}>
+            <RouterProvider router={router} />
+          </ExpressionFieldContext.Provider>
         </JqPrimitivesProvider>
       </NavigationProvider>
     );

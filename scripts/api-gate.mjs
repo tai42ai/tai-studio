@@ -53,6 +53,7 @@ const REPORTS = [
   { dir: 'packages/studio-sdk/etc', name: 'studio-sdk.api.md' },
   { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-host.api.md' },
   { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-testing.api.md' },
+  { dir: 'packages/studio-sdk/etc', name: 'studio-sdk-schema-form.api.md' },
   { dir: 'packages/api-client/etc', name: 'api-client.api.md' },
 ];
 const MODE_NAMES = new Set(['label-honesty', 'strict']);

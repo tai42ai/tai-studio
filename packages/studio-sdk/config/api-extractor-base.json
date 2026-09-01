@@ -1,7 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
 
-  // Shared settings for the per-entry-point configs (index, host, testing). Each
+  // Shared settings for the per-entry-point configs (index, host, testing,
+  // schema-form). Each
   // concrete config extends this and sets only its own entry point + report name.
   // Only the API report is produced; the rollup, doc model and tsdoc metadata are
   // off — the committed report is the surface contract this package gates on.

@@ -21,6 +21,11 @@ pnpm add @tai42/studio-sdk
 
 - `@tai42/studio-sdk` — the plugin API, design system, and hooks.
 - `@tai42/studio-sdk/host` — the host-only plugin registry.
+- `@tai42/studio-sdk/schema-form` — a jq-free `SchemaForm` entry for bundling
+  consumers: importing it emits no jq editor, worker, or wasm. It imports no
+  CSS by design — a subpath consumer loads `tokens.css` and `components.css`
+  explicitly. Expression fields render as plain inputs unless the host injects
+  a door (see `ExpressionFieldContext`).
 - `@tai42/studio-sdk/testing` — test-only helpers: a registry reset and
   `installJsdomStubs()`, which fills the browser APIs jsdom omits.
 - `@tai42/studio-sdk/tokens.css` — the design-token stylesheet. It also emits the

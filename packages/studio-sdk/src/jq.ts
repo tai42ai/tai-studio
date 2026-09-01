@@ -6,6 +6,14 @@
  * the drop-in `JqField`, the lower-level `JqEditorDialog`, the agnostic
  * field-declaration contract, and the runtime loader/worker helpers.
  *
+ * NOTHING IN THE SDK IMPORTS THIS MODULE. Every edge to it runs the other way: a
+ * host imports `JqField` from here and hands it in — to a `SchemaForm` through its
+ * `expressionField` prop or the ambient `ExpressionFieldContext`, or straight into
+ * its own JSX. That is what keeps this heavy subgraph — the visual editor, its
+ * worker file, and its wasm engine — OUT of the bundle of a consumer that imports
+ * the SDK for anything else; a bundler emits a dynamic import's chunks as surely
+ * as a static import's, so `lazy` inside the SDK would not have kept them out.
+ *
  * BUNDLE + WORKER SHARING. A plugin bundle externalises `@tai42/studio-sdk`, so
  * the SDK — and the one copy of `@tai42/jq-studio` it carries — ships once for the
  * whole deployment. A plugin that renders `JqField` shares the host's single jq

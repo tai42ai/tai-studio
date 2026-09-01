@@ -372,6 +372,12 @@ export type { IconProps, IconComponent } from './components/icons';
 export {
   SchemaForm,
   RecordEntryRendererContext,
+  // The expression-door injection point: a host that wants `x-tai42-expression`
+  // fields to author through the visual editor hands `JqField` to a form (the
+  // `expressionField` prop) or mounts this context above its tree. A form with no
+  // door renders those fields as plain string inputs and stays free of the jq
+  // subgraph — the editor, its worker, and its wasm — entirely.
+  ExpressionFieldContext,
   SecretRefField,
   defaultValueForSchema,
   validateAgainstSchema,
@@ -382,6 +388,10 @@ export type {
   CompletionProvider,
   RecordEntryRenderer,
   RecordEntryContext,
+  ExpressionFieldComponent,
+  ExpressionFieldProps,
+  ExpressionInputShape,
+  ExpressionInputKey,
   SecretRefFieldProps,
   SecretRef,
   JsonSchema,

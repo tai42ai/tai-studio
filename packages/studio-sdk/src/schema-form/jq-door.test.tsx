@@ -1,57 +1,52 @@
 /**
- * SchemaForm's jq expression door: a string property carrying a well-formed
- * `x-tai42-expression` annotation renders the SDK's `JqField` (resting control +
- * visual-editor door) with the annotation mapped onto the field declaration; an
- * absent or malformed annotation renders the plain string input BYTE-IDENTICALLY
- * to today's form.
+ * SchemaForm's expression door: a string property carrying a well-formed
+ * `x-tai42-expression` annotation renders the door the HOST injected (the SDK's
+ * `JqField` in the shell) with the annotation mapped onto the input-shape
+ * descriptor; an absent or malformed annotation — and an annotated field with no
+ * injected door — renders the plain string input.
  *
  * The real `JqField` editor is WASM/worker-backed and not drivable in jsdom, so
- * these tests replace it with a props-capturing double (spread-actual, so every
- * other `../jq` export is preserved). The double is faithful on the one contract
- * that matters here: `onChange` reports the edited expression string, exactly as
- * the real resting control and editor Save do.
+ * these tests inject a props-capturing double instead. Injection is the production
+ * path, so no module mock is needed (and none is possible: the form holds no edge
+ * to `../jq`). The double is faithful on the one contract that matters here:
+ * `onChange` reports the edited expression string, exactly as the real resting
+ * control and editor Save do.
  *
- * `StringField` loads the door through a dynamic `import('../jq')` behind a
- * `lazy` boundary, so an annotated field mounts asynchronously: the assertions
- * `await` the door (`findBy…`) rather than reading it synchronously. The mock
- * still intercepts that dynamic import, so the double is what resolves.
+ * Both wirings are exercised — the `expressionField` prop and the ambient
+ * `ExpressionFieldContext` a host mounts above its tree — because the shell uses
+ * the second and a form-level caller uses the first.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
+import { act, lazy, useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import type { JqFieldProps } from '../jq';
+import type { ExpressionFieldComponent, ExpressionFieldProps } from './context';
+import { ExpressionFieldContext } from './context';
 import { SchemaForm } from './SchemaForm';
 import type { JsonSchema } from './types';
 
-/** Every props object the door double rendered with, in render order. The type
- *  annotation is erased at compile time, so referencing it from hoisted code is
- *  safe. */
-const captured = vi.hoisted(() => ({ door: [] as JqFieldProps[] }));
+/** Every props object the door double rendered with, in render order. */
+const captured: { door: ExpressionFieldProps[] } = { door: [] };
 
-// Replace ONLY JqField; every other export of the SDK's jq module is preserved.
-vi.mock('../jq', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../jq')>();
-  const DoorDouble = (props: JqFieldProps) => {
-    captured.door.push(props);
-    return (
-      <div data-testid="jq-door">
-        <textarea
-          aria-label={props.label}
-          value={props.value}
-          onChange={(event) => {
-            props.onChange(event.target.value);
-          }}
-        />
-      </div>
-    );
-  };
-  return { ...actual, JqField: DoorDouble };
-});
+/** The injected door: captures its props and edits through `onChange`. */
+function DoorDouble(props: ExpressionFieldProps) {
+  captured.door.push(props);
+  return (
+    <div data-testid="jq-door">
+      <textarea
+        aria-label={props.label}
+        value={props.value}
+        onChange={(event) => {
+          props.onChange(event.target.value);
+        }}
+      />
+    </div>
+  );
+}
 
 /** The last props the door double rendered with (it re-renders per form edit). */
-function lastDoorProps(): JqFieldProps {
+function lastDoorProps(): ExpressionFieldProps {
   const last = captured.door.at(-1);
   if (last === undefined) throw new Error('the jq door double never rendered');
   return last;
@@ -61,20 +56,36 @@ beforeEach(() => {
   captured.door.length = 0;
 });
 
-/** A controlled harness mirroring the emitted value, as the run panel owns it. */
+/** A controlled harness mirroring the emitted value, as the run panel owns it.
+ *  `wiring` picks how the door reaches the form; `none` injects no door. */
 function Harness({
   schema,
   initial,
   errors,
+  wiring = 'prop',
 }: {
   schema: JsonSchema;
   initial: unknown;
   errors?: Readonly<Record<string, string>>;
+  wiring?: 'prop' | 'context' | 'none';
 }) {
   const [value, setValue] = useState<unknown>(initial);
+  const form = (
+    <SchemaForm
+      schema={schema}
+      value={value}
+      onChange={setValue}
+      errors={errors}
+      {...(wiring === 'prop' ? { expressionField: DoorDouble } : {})}
+    />
+  );
   return (
     <>
-      <SchemaForm schema={schema} value={value} onChange={setValue} errors={errors} />
+      {wiring === 'context' ? (
+        <ExpressionFieldContext.Provider value={DoorDouble}>{form}</ExpressionFieldContext.Provider>
+      ) : (
+        form
+      )}
       <output data-testid="value">{JSON.stringify(value)}</output>
     </>
   );
@@ -107,7 +118,7 @@ const annotatedSchema = (annotation: unknown): JsonSchema => ({
 });
 
 describe('SchemaForm — jq expression door', () => {
-  it('renders the annotated field as a JqField with the annotation mapped onto the declaration', async () => {
+  it('renders the annotated field through the injected door, annotation mapped onto the shape', async () => {
     render(<Harness schema={annotatedSchema(FULL_ANNOTATION)} initial={{ condition: '.meta' }} />);
 
     expect(await screen.findByTestId('jq-door')).toBeInTheDocument();
@@ -128,12 +139,32 @@ describe('SchemaForm — jq expression door', () => {
       caveats: ['.meta is absent on replayed signals'],
       sample: { payload: {}, meta: { origin: 'relay' } },
     });
-    // Deliberately unwired: no author-time validator applies to a schema field,
-    // the hosts register no global shortcuts to mute, and the form's sibling
-    // fields all show visible labels (no compact variant).
-    expect(props.serverValidate).toBeUndefined();
-    expect(props.onEditorOpenChange).toBeUndefined();
-    expect(props.compact).toBeUndefined();
+    // Exactly the contract props, nothing more: a jq door's `serverValidate`,
+    // `onEditorOpenChange`, and `compact` stay unwired, because no author-time
+    // validator applies to a schema-declared field, the hosts register no global
+    // shortcuts to mute, and every sibling field shows a visible label.
+    expect(Object.keys(props).sort()).toEqual([
+      'description',
+      'error',
+      'label',
+      'multiline',
+      'onChange',
+      'shape',
+      'value',
+    ]);
+  });
+
+  it('renders the door injected through the ambient context, as the shell wires it', async () => {
+    render(
+      <Harness
+        schema={annotatedSchema(FULL_ANNOTATION)}
+        initial={{ condition: '.meta' }}
+        wiring="context"
+      />,
+    );
+
+    expect(await screen.findByTestId('jq-door')).toBeInTheDocument();
+    expect(lastDoorProps().value).toBe('.meta');
   });
 
   it('maps a bare { language: "jq" } annotation to NO shape descriptor', async () => {
@@ -169,7 +200,39 @@ describe('SchemaForm — jq expression door', () => {
     expect(screen.getByTestId('value').textContent).toBe('{}');
   });
 
-  it("wires the form's per-field error into the JqField error prop", async () => {
+  it('paints the resting shell while a LAZILY injected door resolves, then swaps to it', async () => {
+    // A host is free to code-split the door in its own bundle; the form's Suspense
+    // boundary is what keeps the field's footprint and value visible meanwhile.
+    let arrive: (module: { default: ExpressionFieldComponent }) => void = () => undefined;
+    const LazyDoor = lazy(
+      () =>
+        new Promise<{ default: ExpressionFieldComponent }>((resolve) => {
+          arrive = resolve;
+        }),
+    );
+    render(
+      <SchemaForm
+        schema={annotatedSchema(FULL_ANNOTATION)}
+        value={{ condition: '.meta' }}
+        onChange={() => undefined}
+        expressionField={LazyDoor}
+      />,
+    );
+
+    const resting = screen.getByRole('textbox', { name: 'Route condition' });
+    expect(resting.tagName).toBe('TEXTAREA');
+    expect(resting).toHaveAttribute('aria-busy', 'true');
+    expect(resting).toHaveValue('.meta');
+    expect(screen.queryByTestId('jq-door')).not.toBeInTheDocument();
+
+    await act(async () => {
+      arrive({ default: DoorDouble });
+    });
+    expect(await screen.findByTestId('jq-door')).toBeInTheDocument();
+    expect(lastDoorProps().value).toBe('.meta');
+  });
+
+  it("wires the form's per-field error into the injected door's error prop", async () => {
     render(
       <Harness
         schema={annotatedSchema(FULL_ANNOTATION)}
