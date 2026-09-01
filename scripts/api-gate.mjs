@@ -25,12 +25,22 @@
 // not: an api-extractor report lists only declarations reachable from the public
 // surface, so a non-exported schema const backing an exported `z.infer` alias is
 // itself part of the contract and a change to it is a potential surface change.
+// Bare re-export statements (`export { Foo }`, `export { Bar as Foo }`, `export
+// type { Foo }`, `export * as ns from 'm'`) count too: api-extractor emits one for
+// every symbol a package re-exports from a dependency, and those are public API
+// exactly like a local declaration — dropping one removes a name consumers import.
+// So do the default slots (`export default`, `export =`, and an inline `export
+// default class Foo {}`). A wildcard `export * from 'm'` names no symbol at all, so
+// no classification of it can be computed: it fails the gate rather than passing
+// silently over whatever vanished behind it.
 //
 // Breaking classes: a removed symbol, a removed or changed interface/class
 // member (named or an index/call/construct signature), a member turned from
 // optional to required, a new REQUIRED member, a removed/changed function or method
-// overload, a removed/changed enum member, a removed/changed namespace member, and
-// a non-widening change to a type alias. Non-breaking changes — a new export, a new
+// overload, a removed/changed enum member, a removed/changed namespace member, a
+// re-export dropped or re-pointed at a different local symbol, source module or
+// namespace (or narrowed to type-only), a default export dropped or re-pointed,
+// and a non-widening change to a type alias. Non-breaking changes — a new export, a new
 // optional member, a member turned from required to optional, an added overload, an
 // added enum member, a string-literal union widened with more members. Any tooling
 // failure —
@@ -232,6 +242,67 @@ function literalUnionSet(typeNode, sf) {
   return set;
 }
 
+// The re-export's source module rendered for an entry's text, or '' when the
+// statement re-exports a local symbol (api-extractor's usual form: it declares the
+// symbol above and re-exports it bare). Carrying the module means re-pointing an
+// exported name at a DIFFERENT package reads as a change instead of a no-op.
+function moduleSuffix(node, sf) {
+  return node.moduleSpecifier ? ` from ${normalize(node.moduleSpecifier.getText(sf))}` : '';
+}
+
+// Classify one `export ... ` statement into entries.
+//
+//   * `export { Foo }` / `export { Bar as Foo }` / `export type { Foo }` [from 'm']
+//     — keyed by the EXPORTED name (what a consumer imports); the text carries the
+//     local symbol behind it, the type-only flag and the source module, so
+//     re-pointing a name at a different symbol or package, or narrowing a value
+//     export to type-only, is a change rather than a silent no-op.
+//   * `export * as ns from 'm'` — names one symbol (`ns`), keyed by it.
+//   * `export * from 'm'` — names NO symbol: the set of exports it carries cannot be
+//     computed from the report, so a name silently vanishing behind it would pass the
+//     gate. The gate never passes on a classification it could not compute, so this
+//     fails LOUDLY instead.
+function classifyExportDeclaration(entries, node, sf) {
+  const typeOnlyPrefix = node.isTypeOnly ? 'type ' : '';
+  if (!node.exportClause) {
+    fail(
+      `report ${sf.fileName} has an unclassifiable \`export *${moduleSuffix(node, sf)}\`: it names no symbol, ` +
+        'so the gate cannot tell whether an export disappeared behind it. Enumerate the exports explicitly ' +
+        '(`export { A, B } from ...`).',
+    );
+  }
+  if (ts.isNamespaceExport(node.exportClause)) {
+    entries.set(node.exportClause.name.getText(sf), {
+      kind: 're-export',
+      text: `${typeOnlyPrefix}*${moduleSuffix(node, sf)}`,
+    });
+    return;
+  }
+  for (const spec of node.exportClause.elements) {
+    const local = (spec.propertyName ?? spec.name).getText(sf);
+    const typeOnly = node.isTypeOnly || spec.isTypeOnly;
+    entries.set(spec.name.getText(sf), {
+      kind: 're-export',
+      text: `${typeOnly ? 'type ' : ''}${local}${moduleSuffix(node, sf)}`,
+    });
+  }
+}
+
+// The DEFAULT export slot of a declaration that carries `export default` inline
+// (`export default class Foo {}`, `export default function foo() {}`), or null. The
+// declaration itself is classified under its own name; the default slot is a SECOND
+// consumable name, and losing it breaks every `import Foo from '<pkg>'` consumer even
+// when the named declaration survives.
+function defaultSlotText(node, sf) {
+  const isDefault = node.modifiers?.some(
+    (modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword,
+  );
+  if (!isDefault) return null;
+  // An anonymous default declaration has no name to point at, so its whole text is
+  // the slot's identity — any change to it reads as a change of the default export.
+  return `${ts.SyntaxKind[node.kind]} ${node.name ? node.name.getText(sf) : normalize(node.getText(sf))}`;
+}
+
 function namespaceEntry(node, sf) {
   const body = node.body;
   const statements = body && ts.isModuleBlock(body) ? body.statements : [];
@@ -250,6 +321,12 @@ function namespaceEntry(node, sf) {
 function collectEntries(statements, sf) {
   const entries = new Map();
   for (const node of statements) {
+    // An inline `export default` on a declaration: record the default SLOT here, then
+    // classify the declaration itself under its own name in the chain below.
+    const defaultSlot = defaultSlotText(node, sf);
+    if (defaultSlot !== null) {
+      entries.set('export default', { kind: 'export-assignment', text: defaultSlot });
+    }
     if (ts.isInterfaceDeclaration(node)) {
       entries.set(node.name.text, { kind: 'interface', members: collectMembers(node, sf) });
     } else if (ts.isClassDeclaration(node) && node.name) {
@@ -273,6 +350,17 @@ function collectEntries(statements, sf) {
       for (const decl of node.declarationList.declarations) {
         entries.set(decl.name.getText(sf), { kind: 'variable', text: normalize(decl.getText(sf)) });
       }
+    } else if (ts.isExportDeclaration(node)) {
+      classifyExportDeclaration(entries, node, sf);
+    } else if (ts.isExportAssignment(node)) {
+      // `export default Foo` / `export = Foo`. Each is a single consumable slot, so
+      // it is keyed by the slot (not by the symbol behind it): dropping the default
+      // export breaks every `import Foo from '<pkg>'`, and swapping `export default`
+      // for `export =` reads as one slot removed and another added — both breaking.
+      entries.set(node.isExportEquals ? 'export=' : 'export default', {
+        kind: 'export-assignment',
+        text: normalize(node.expression.getText(sf)),
+      });
     }
   }
   return entries;

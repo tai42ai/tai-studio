@@ -12,7 +12,7 @@ import './styles.css';
 import '@tai42/jq-studio/styles.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { installDefaultJqWorker } from '@tai42/studio-sdk';
+import { installDefaultJqWorker } from '@tai42/jq-studio';
 import { createApiClient } from '@tai42/api-client';
 
 import { createStudio } from './app/create-studio';

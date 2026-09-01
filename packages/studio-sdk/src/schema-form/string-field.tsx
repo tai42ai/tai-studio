@@ -6,8 +6,9 @@
  * control instead; and when the form supplies a completion provider, the input is
  * backed by argument autocomplete.
  *
- * NO JQ EDGE. This module — and every module under `schema-form` — names no jq
- * type and imports the SDK's `../jq` re-export neither statically NOR dynamically.
+ * NO JQ EDGE. This module — and every module under `schema-form`, and the package
+ * barrel above them — names no jq type and imports `@tai42/jq-studio` neither
+ * statically NOR dynamically.
  * The jq authoring door drags a heavy subgraph (the xyflow visual editor, a Web
  * Worker entry, and a multi-megabyte wasm engine), and a bundler EMITS that whole
  * subgraph for a dynamic import just as it does for a static one — `lazy` defers

@@ -11,9 +11,22 @@
  * exported only from `@tai42/studio-sdk/host`, which the host bundle imports. See
  * SECURITY.md for the trust boundary.
  *
- * The three shared modules (react, react-dom, @tai42/studio-sdk) are singletons
- * across the plugin boundary; this package imports nothing internal at runtime
- * (the `ApiClient`/`Interaction` types are type-only imports).
+ * The shared modules (react, react-dom, @tai42/studio-sdk, @tai42/jq-studio) are
+ * singletons across the plugin boundary; this package imports nothing internal at
+ * runtime (the `ApiClient`/`Interaction` types are type-only imports).
+ *
+ * NO JQ. The visual jq editor is `@tai42/jq-studio`, a separately published,
+ * client-agnostic package, and this barrel does not re-export it — not even as a
+ * thin pass-through. A bundler emits a package's Web Worker file and wasm engine
+ * from the mere PRESENCE of the module in the graph (the assets are emitted while
+ * the module is transformed, before tree-shaking can drop an unused re-export), so
+ * a pass-through here would put ~2.9MB of jq runtime into every consumer that
+ * imports this barrel for a Button. Consumers that want the editor import
+ * `@tai42/jq-studio` directly; the import map resolves that bare specifier to the
+ * one served copy, so the whole deployment still shares a single jq instance, a
+ * single primitives injection, and a single worker. What the SDK keeps is the
+ * INJECTION POINT — `ExpressionFieldContext` / `SchemaForm`'s `expressionField`
+ * prop, plus the mirrored contract types — which holds no edge to jq at all.
  */
 // The design system, delivered by the BARREL so each host app loads it once and a
 // plugin never ships its own copy. These are bare side-effect imports, so they
@@ -47,29 +60,6 @@ export type {
 } from './plugin/types';
 export { STUDIO_PLUGIN_API_VERSION, checkPluginApiVersion } from './plugin/version';
 export type { VersionGateResult } from './plugin/version';
-
-// -- jq fields (re-exported from @tai42/jq-studio; the platform owns no jq code) --
-export {
-  JqField,
-  JQEditorDialog,
-  JqEditorDialog,
-  preloadJq,
-  installDefaultJqWorker,
-  PrimitivesProvider,
-} from './jq';
-export type {
-  JqFieldProps,
-  JQEditorDialogProps,
-  JqEditorDialogProps,
-  ExpressionLanguage,
-  JqInputKey,
-  JqInputShapeDescriptor,
-  SampleInputProvider,
-  ServerValidationResult,
-  ServerValidateHook,
-  JqFieldDeclaration,
-  Primitives,
-} from './jq';
 
 // -- Hooks -------------------------------------------------------------------
 export { ApiProvider, useApi } from './hooks/useApi';
@@ -373,10 +363,11 @@ export {
   SchemaForm,
   RecordEntryRendererContext,
   // The expression-door injection point: a host that wants `x-tai42-expression`
-  // fields to author through the visual editor hands `JqField` to a form (the
-  // `expressionField` prop) or mounts this context above its tree. A form with no
-  // door renders those fields as plain string inputs and stays free of the jq
-  // subgraph — the editor, its worker, and its wasm — entirely.
+  // fields to author through the visual editor imports `JqField` from
+  // `@tai42/jq-studio` and hands it to a form (the `expressionField` prop) or
+  // mounts this context above its tree. A form with no door renders those fields
+  // as plain string inputs and stays free of the jq subgraph — the editor, its
+  // worker, and its wasm — entirely.
   ExpressionFieldContext,
   SecretRefField,
   defaultValueForSchema,

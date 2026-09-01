@@ -3,8 +3,8 @@
 `@tai42/studio-sdk` ships as three entry points, split along a trust boundary:
 
 - **`@tai42/studio-sdk`** — the plugin surface. Types, `PluginContext`/`PluginEntry`,
-  contribution types, the design system, and hooks. This is the only entry a
-  Studio plugin is allowed to import, and it is the single served vendor asset
+  contribution types, the design system, and hooks. This is the only SDK entry a
+  Studio plugin is allowed to import, and it is the served vendor asset
   (`/vendor/studio-sdk.js`) every plugin bundle binds through the import map.
 - **`@tai42/studio-sdk/host`** — the host-only registry API: `loadPlugin` (the one
   entry a plugin's `register` contributes through) and `getContributions` (what the
@@ -12,6 +12,14 @@
   shell.
 - **`@tai42/studio-sdk/testing`** — a test-only registry reset (`__resetContributions`).
   Never served to the browser.
+
+The SDK is not the only shared module the import map serves to plugins. The other
+is **`@tai42/jq-studio`** (`/vendor/jq-studio.js`), the standalone visual jq editor:
+a separately published package, not an SDK entry point — the SDK re-exports none of
+it — that a plugin rendering `JqField` imports directly. It sits on the plugin side
+of the boundary: it carries no registry, and being served as one module is what
+makes a plugin's editor share the host's single primitives context and evaluation
+worker, exactly as the served react and `@tai42/studio-sdk` are shared.
 
 ## Why the split
 

@@ -8,8 +8,8 @@ const DEFAULT_API_PROXY_TARGET = 'http://localhost:8765';
  * The SHELL SPA build + dev server.
  *
  * Module sharing: `react`, `react-dom` (+ the `react/jsx-runtime` and
- * `react-dom/client` subpaths), `@tai42/studio-sdk`, and its `@tai42/studio-sdk/host`
- * subpath are marked EXTERNAL — the shell consumes them through the server-injected
+ * `react-dom/client` subpaths), `@tai42/studio-sdk`, its `@tai42/studio-sdk/host`
+ * subpath, and `@tai42/jq-studio` are marked EXTERNAL — the shell consumes them through the server-injected
  * import map, exactly as every Studio-plugin bundle does, so there is ONE React/SDK
  * instance for the whole page (a shell that bundled its own React would break hooks
  * across the plugin boundary). Externalizing `@tai42/studio-sdk/host` in particular is
@@ -29,6 +29,15 @@ export const SHARED_EXTERNALS: readonly string[] = [
   'react-dom/client',
   '@tai42/studio-sdk',
   '@tai42/studio-sdk/host',
+  // The standalone visual jq editor. External for the same singleton reason and
+  // one more: bundling it here would emit its Web Worker chunk and its ~2.9MB
+  // wasm engine into dist/assets as an orphan duplicate of the served vendor
+  // copy, and its module-scoped primitives context would be a DIFFERENT object
+  // from the one the served `JqField` reads, silently dropping the host's
+  // design-system injection. Only the bare specifier is external: the
+  // `@tai42/jq-studio/styles.css` subpath is a pure CSS asset the shell bundles
+  // into its own stylesheet.
+  '@tai42/jq-studio',
 ];
 
 export default defineConfig(({ mode }) => {

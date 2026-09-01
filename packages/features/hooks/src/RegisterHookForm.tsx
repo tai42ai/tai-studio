@@ -27,14 +27,13 @@ import {
   Card,
   ErrorState,
   Field,
-  JqField,
   Spinner,
   Textarea,
   TextInput,
   errorMessage,
   useApi,
-  type JqFieldDeclaration,
 } from '@tai42/studio-sdk';
+import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
 import type { HookParams } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';

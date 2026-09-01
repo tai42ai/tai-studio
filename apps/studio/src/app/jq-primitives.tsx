@@ -7,8 +7,8 @@
  * Studio look with no jq-studio dependency on that design system. This module maps
  * the SDK's nine primitives onto jq-studio's primitive contracts and mounts the
  * provider ONCE at the composition root, so every `JqField` — a host feature's or a
- * plugin page's — inherits it from the single shared jq-studio instance the SDK
- * carries. There is no per-site wiring: eight of the nine SDK primitives satisfy
+ * plugin page's — inherits it from the single shared jq-studio instance the import
+ * map serves. There is no per-site wiring: eight of the nine SDK primitives satisfy
  * jq-studio's contract directly and map as bare references (their prop surfaces
  * were cut from the same cloth). The ninth, `Badge`, is the one contract
  * TRANSLATION — jq-studio and the SDK label their tints with DIFFERENT variant
@@ -28,9 +28,8 @@ import {
   TextInput,
   Textarea,
   Tooltip,
-  PrimitivesProvider,
-  type Primitives,
 } from '@tai42/studio-sdk';
+import { PrimitivesProvider, type Primitives } from '@tai42/jq-studio';
 
 /**
  * The `Badge` primitive's prop shape as jq-studio hands it to the injected

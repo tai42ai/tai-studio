@@ -12,26 +12,12 @@ import type { ComponentType } from 'react';
 import { Context } from 'react';
 import type { CSSProperties } from 'react';
 import { ErrorInfo } from 'react';
-import { ExpressionLanguage } from '@tai42/jq-studio';
 import { FunctionComponentElement } from 'react';
 import type { HTMLAttributes } from 'react';
 import type { InputHTMLAttributes } from 'react';
-import { installDefaultJqWorker } from '@tai42/jq-studio';
-import { JQEditorDialog } from '@tai42/jq-studio';
-import { JqEditorDialog } from '@tai42/jq-studio';
-import { JQEditorDialogProps } from '@tai42/jq-studio';
-import { JqEditorDialogProps } from '@tai42/jq-studio';
-import { JqField } from '@tai42/jq-studio';
-import { JqFieldDeclaration } from '@tai42/jq-studio';
-import { JqFieldProps } from '@tai42/jq-studio';
-import { JqInputKey } from '@tai42/jq-studio';
-import { JqInputShapeDescriptor } from '@tai42/jq-studio';
 import { JSX } from 'react';
 import type { KeyboardEvent as KeyboardEvent_2 } from 'react';
 import type { MouseEvent as MouseEvent_2 } from 'react';
-import { preloadJq } from '@tai42/jq-studio';
-import { Primitives } from '@tai42/jq-studio';
-import { PrimitivesProvider } from '@tai42/jq-studio';
 import { Provider } from 'react';
 import { ProviderProps } from 'react';
 import type { ReactElement } from 'react';
@@ -39,9 +25,6 @@ import { ReactNode } from 'react';
 import type { Ref } from 'react';
 import type { RefCallback } from 'react';
 import { RefObject } from 'react';
-import { SampleInputProvider } from '@tai42/jq-studio';
-import { ServerValidateHook } from '@tai42/jq-studio';
-import { ServerValidationResult } from '@tai42/jq-studio';
 import type { SVGProps } from 'react';
 import type { TdHTMLAttributes } from 'react';
 import type { TextareaHTMLAttributes } from 'react';
@@ -4911,8 +4894,6 @@ export interface ExpressionInputShape {
     readonly sample?: unknown;
 }
 
-export { ExpressionLanguage }
-
 // @public (undocumented)
 type Extension = z.infer<typeof extension>;
 
@@ -5479,8 +5460,6 @@ export type IconComponent = (props: IconProps) => ReactElement;
 // @public
 export type IconProps = SVGProps<SVGSVGElement>;
 
-export { installDefaultJqWorker }
-
 // @public (undocumented)
 type Interaction = z.infer<typeof interaction>;
 
@@ -5594,24 +5573,6 @@ export function isFullProjection(projection: MeProjection): boolean;
 
 // @public
 export function isSafeHttpUrl(url: string): boolean;
-
-export { JQEditorDialog }
-
-export { JqEditorDialog }
-
-export { JQEditorDialogProps }
-
-export { JqEditorDialogProps }
-
-export { JqField }
-
-export { JqFieldDeclaration }
-
-export { JqFieldProps }
-
-export { JqInputKey }
-
-export { JqInputShapeDescriptor }
 
 // @public (undocumented)
 export function JsonDiff(input: JsonDiffProps): ReactNode;
@@ -7217,8 +7178,6 @@ const policyVersionList: z.ZodArray<z.ZodObject<{
     is_current: z.ZodBoolean;
 }, z.core.$strip>>;
 
-export { preloadJq }
-
 // @public (undocumented)
 type PresetBody = z.infer<typeof presetBody>;
 
@@ -7398,10 +7357,6 @@ const presetVersionTags: z.ZodObject<{
     version: z.ZodNumber;
     tags: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
-
-export { Primitives }
-
-export { PrimitivesProvider }
 
 // @public (undocumented)
 type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
@@ -8552,8 +8507,6 @@ declare namespace s {
 // @public
 export function safeHttpUrl(href: string): string | undefined;
 
-export { SampleInputProvider }
-
 // @public
 interface SavePresetVersionBody {
     // (undocumented)
@@ -8770,10 +8723,6 @@ const serverDateTime: z.ZodObject<{
     local: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     system: z.ZodOptional<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
 }, z.core.$loose>;
-
-export { ServerValidateHook }
-
-export { ServerValidationResult }
 
 // @public
 interface SetMcpSecretEnvBody {
