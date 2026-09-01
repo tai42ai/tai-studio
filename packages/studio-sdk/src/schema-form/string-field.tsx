@@ -5,24 +5,46 @@
  * media-annotated schema renders the upload control instead; and when the form
  * supplies a completion provider, the input is backed by argument autocomplete.
  *
- * `JqField` is imported through the SDK's own `./jq` re-export — the ONE
+ * `JqField` is reached through the SDK's own `./jq` re-export — the ONE
  * `@tai42/jq-studio` instance the whole deployment shares — never from
  * `@tai42/jq-studio` directly, which would bundle a second copy and orphan its
  * worker (see the `jq` module doc-comment).
+ *
+ * That door is loaded LAZILY, through a dynamic `import('../jq')` behind
+ * {@link JqField}. The jq authoring door drags a heavy subgraph — the xyflow
+ * visual editor, a Web Worker entry, and a wasm engine chunk — that a form
+ * whose fields carry no `x-tai42-expression` annotation must never ship. A
+ * static import would pin that subgraph into every consumer that bundles the
+ * SDK (a host that externalises the SDK is unaffected either way); the dynamic
+ * import keeps it out of `schema-form`'s static graph and pulls it only when an
+ * annotated field actually mounts.
  */
 import type { ReactNode } from 'react';
-import { useCallback, useContext, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useContext, useMemo, useState } from 'react';
 
 import { CompletionInput } from '../components/completion-input';
 import { Field } from '../components/field';
 import { AlertTriangleIcon } from '../components/icons';
-import { TextInput } from '../components/inputs';
+import { TextInput, Textarea } from '../components/inputs';
 import { errorMessage } from '../errors';
-import { JqField, type JqInputShapeDescriptor } from '../jq';
+import type { JqInputShapeDescriptor } from '../jq';
 import type { ExpressionAnnotation, MediaUpload } from './classify';
 import { CompletionProviderContext } from './context';
 import { MediaField } from './media-field';
 import type { CompletionProvider } from './SchemaForm';
+
+// The lazily-loaded jq door. Defining it at module scope (never inside a
+// component) is what keeps the lazy component's identity stable across renders,
+// so React resolves the chunk once and never re-suspends a mounted field. The
+// `import('../jq')` here is a DYNAMIC import — the sole runtime edge from
+// `schema-form` to the jq door — so the visual editor, worker, and wasm live in
+// a split chunk that a non-annotated form never requests. The `type`-only
+// import of `JqInputShapeDescriptor` above is erased at compile time and adds no
+// such edge.
+const JqField = lazy(async () => {
+  const { JqField } = await import('../jq');
+  return { default: JqField };
+});
 
 export function StringField({
   heading,
@@ -191,6 +213,12 @@ function CompletionField({
  * - `compact` — the form renders every sibling field with a visible label;
  *   the compact variant (visually-hidden label, icon-only door) is for dense
  *   host rows, which the schema form does not have.
+ *
+ * The door is code-split ({@link JqField} is a `lazy` component), so it mounts
+ * inside a `Suspense` boundary. Its fallback paints the resting shell —
+ * label/description/error chrome around the current value in a read-only
+ * multiline control — so the field holds its layout and keeps the value visible
+ * while the chunk resolves, and the swap to the live door does not flash.
  */
 function JqExpressionField({
   heading,
@@ -213,15 +241,51 @@ function JqExpressionField({
   // fresh object each keystroke would defeat it.
   const shape = useMemo(() => expressionShape(expression, argName), [expression, argName]);
   return (
-    <JqField
-      label={heading}
-      description={description}
-      error={error}
-      shape={shape}
-      multiline
-      value={value}
-      onChange={onChange}
-    />
+    <Suspense
+      fallback={
+        <JqExpressionFieldSkeleton
+          heading={heading}
+          description={description}
+          error={error}
+          value={value}
+        />
+      }
+    >
+      <JqField
+        label={heading}
+        description={description}
+        error={error}
+        shape={shape}
+        multiline
+        value={value}
+        onChange={onChange}
+      />
+    </Suspense>
+  );
+}
+
+/**
+ * The resting shell shown while the jq door chunk loads. It mirrors the live
+ * door's footprint — the same label/description/error chrome wrapping a
+ * multiline control seeded with the current value — but the control is inert
+ * (read-only, `aria-busy`) because there is nothing to edit yet. Matching the
+ * footprint is what keeps the Suspense swap from shifting layout or flashing.
+ */
+function JqExpressionFieldSkeleton({
+  heading,
+  description,
+  error,
+  value,
+}: {
+  heading: string;
+  description: string | undefined;
+  error: string | undefined;
+  value: string;
+}): ReactNode {
+  return (
+    <Field label={heading} description={description} error={error}>
+      <Textarea value={value} readOnly aria-busy="true" />
+    </Field>
   );
 }
 
