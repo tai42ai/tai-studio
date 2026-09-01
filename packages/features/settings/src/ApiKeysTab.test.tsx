@@ -1,6 +1,7 @@
-// The dialogs here are typing-heavy; userEvent runs without its inter-key delay so
-// a loaded runner cannot push a chain past the suite timeout. No assertion depends on
-// typing cadence.
+// The dialogs here are typing-heavy; userEvent runs without its inter-key delay so a
+// loaded runner cannot push a keystroke chain past the suite timeout. No assertion
+// depends on typing cadence. (Render weight, a separate axis, is handled where it bites
+// — see MINT_FLOW_TIMEOUT_MS.)
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
@@ -17,6 +18,16 @@ import {
 
 /** The mint route entry a projection carries when the caller can reach it. */
 const MINT_ROUTE = { path: '/api/auth/api-keys', methods: ['POST'] };
+
+/**
+ * The create/mint dialog mounts the full policy editor plus the template and
+ * condition-validate seams, so an end-to-end mint flow is a genuinely heavy render
+ * chain — race-free, but slow. On a contended CI runner that weight alone can push a
+ * correct flow past the default 5s test budget; the mint-flow tests carry headroom so
+ * render slowness never reds them. The flow's correctness is still gated by real
+ * assertions and awaited signals, not by this ceiling.
+ */
+const MINT_FLOW_TIMEOUT_MS = 15_000;
 
 function tokens(): TokensPayload {
   return [{ user_id: 'alice', description: 'Alice key', scopes: ['admin'], policy_data: {} }];
@@ -91,61 +102,69 @@ describe('ApiKeysTab', () => {
     expect(within(row).getByText('admin')).toBeInTheDocument();
   });
 
-  it('creates a key and shows the minted key once', async () => {
-    const user = userEvent.setup({ delay: null });
-    const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+  it(
+    'creates a key and shows the minted key once',
+    async () => {
+      const user = userEvent.setup({ delay: null });
+      const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
+      renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
 
-    await screen.findByText('alice');
-    await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
-    await user.type(screen.getByLabelText('Description'), 'Bob key');
-    await user.click(screen.getByRole('checkbox', { name: 'admin' }));
-    await user.click(screen.getByRole('button', { name: 'Create' }));
+      await screen.findByText('alice');
+      await user.click(screen.getByRole('button', { name: 'Create key' }));
+      await user.type(screen.getByLabelText('User ID'), 'bob');
+      await user.type(screen.getByLabelText('Description'), 'Bob key');
+      await user.click(screen.getByRole('checkbox', { name: 'admin' }));
+      await user.click(screen.getByRole('button', { name: 'Create' }));
 
-    await waitFor(() => {
-      expect(createApiKey).toHaveBeenCalledWith({
-        user_id: 'bob',
-        description: 'Bob key',
-        scopes: ['admin'],
+      await waitFor(() => {
+        expect(createApiKey).toHaveBeenCalledWith({
+          user_id: 'bob',
+          description: 'Bob key',
+          scopes: ['admin'],
+        });
       });
-    });
 
-    // The raw key is shown once…
-    expect(await screen.findByText('sk-generated-123')).toBeInTheDocument();
-    // …and is gone from the DOM after the dialog is dismissed (show-once).
-    await user.click(screen.getByRole('button', { name: 'Done' }));
-    await waitFor(() => {
+      // The raw key is shown once…
+      expect(await screen.findByText('sk-generated-123')).toBeInTheDocument();
+      // …and is gone from the DOM after the dialog is dismissed (show-once).
+      await user.click(screen.getByRole('button', { name: 'Done' }));
+      await waitFor(() => {
+        expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
+      });
+    },
+    MINT_FLOW_TIMEOUT_MS,
+  );
+
+  it(
+    'reopens a blank create form with the minted key cleared',
+    async () => {
+      const user = userEvent.setup({ delay: null });
+      const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
+      renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+
+      await screen.findByText('alice');
+      await user.click(screen.getByRole('button', { name: 'Create key' }));
+      await user.type(screen.getByLabelText('User ID'), 'bob');
+      await user.type(screen.getByLabelText('Description'), 'Bob key');
+      await user.click(screen.getByRole('checkbox', { name: 'admin' }));
+      await user.click(screen.getByRole('button', { name: 'Create' }));
+
+      // Dismiss the show-once minted-key dialog.
+      await user.click(await screen.findByRole('button', { name: 'Done' }));
+      await waitFor(() => {
+        expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
+      });
+
+      // Reopen: the form is blank (no pre-filled user_id/description/scopes) and the
+      // minted key never resurfaces from stale mutation state.
+      await user.click(screen.getByRole('button', { name: 'Create key' }));
+      expect(screen.getByLabelText('User ID')).toHaveValue('');
+      expect(screen.getByLabelText('Description')).toHaveValue('');
+      expect(screen.getByRole('checkbox', { name: 'admin' })).not.toBeChecked();
       expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
-    });
-  });
-
-  it('reopens a blank create form with the minted key cleared', async () => {
-    const user = userEvent.setup({ delay: null });
-    const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
-
-    await screen.findByText('alice');
-    await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('User ID'), 'bob');
-    await user.type(screen.getByLabelText('Description'), 'Bob key');
-    await user.click(screen.getByRole('checkbox', { name: 'admin' }));
-    await user.click(screen.getByRole('button', { name: 'Create' }));
-
-    // Dismiss the show-once minted-key dialog.
-    await user.click(await screen.findByRole('button', { name: 'Done' }));
-    await waitFor(() => {
-      expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
-    });
-
-    // Reopen: the form is blank (no pre-filled user_id/description/scopes) and the
-    // minted key never resurfaces from stale mutation state.
-    await user.click(screen.getByRole('button', { name: 'Create key' }));
-    expect(screen.getByLabelText('User ID')).toHaveValue('');
-    expect(screen.getByLabelText('Description')).toHaveValue('');
-    expect(screen.getByRole('checkbox', { name: 'admin' })).not.toBeChecked();
-    expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
-  });
+    },
+    MINT_FLOW_TIMEOUT_MS,
+  );
 
   it('surfaces a 404 on revoke loudly (unknown user_id)', async () => {
     const user = userEvent.setup({ delay: null });
