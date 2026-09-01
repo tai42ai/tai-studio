@@ -1,6 +1,6 @@
 {
   "name": "tai-studio",
-  "version": "9.3.0",
+  "version": "10.0.0",
   "private": true,
   "description": "The Studio: a React 19 + TypeScript web UI for a tai42-skeleton MCP server.",
   "license": "Apache-2.0",
