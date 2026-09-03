@@ -155,6 +155,16 @@ export function Field({
             {label}
           </label>
         )}
+        {/* The description sits BETWEEN the label and the control, so it stays
+            adjacent to the label it glosses. After the control it drifts: a
+            group Field can wrap an arbitrarily tall surface (a whole schema
+            form), and a description below that surface reads as a footnote to
+            nothing. */}
+        {description !== undefined ? (
+          <p id={descriptionId} className="tai-field-hint" style={{ margin: 0 }}>
+            {description}
+          </p>
+        ) : null}
         {group ? (
           <div
             role="group"
@@ -167,11 +177,6 @@ export function Field({
         ) : (
           children
         )}
-        {description !== undefined ? (
-          <p id={descriptionId} className="tai-field-hint" style={{ margin: 0 }}>
-            {description}
-          </p>
-        ) : null}
         {/* The icon carries the invalid state alongside the color, never the color
             alone — and it is the ERROR mark: a rejected value is a definite
             negative, not the warning the triangle states. */}

@@ -30,6 +30,13 @@ interface FieldNodeProps {
   /** The label to show — a property key, array-item caption, or `undefined` at root. */
   readonly label: string | undefined;
   readonly required: boolean;
+  /**
+   * Append the design system's required marker (a trailing ` *`, the same
+   * convention host forms use on their own labels) to the heading when the
+   * field is required. Opt-in per face: the union variant surface sets it so
+   * the ACTIVE variant's obligations read at a glance.
+   */
+  readonly markRequired?: boolean;
   readonly errors: SchemaFormErrors | undefined;
   readonly idPrefix: string;
 }
@@ -40,9 +47,21 @@ function labelText(explicit: string | undefined, label: string | undefined): str
 
 /** A single schema node, dispatched on its classified model kind. */
 export function FieldNode(props: FieldNodeProps): ReactNode {
-  const { schema, root, value, onChange, path, label, required, errors, idPrefix } = props;
+  const {
+    schema,
+    root,
+    value,
+    onChange,
+    path,
+    label,
+    required,
+    markRequired = false,
+    errors,
+    idPrefix,
+  } = props;
   const classified = classifySchema(schema, root);
-  const heading = labelText(classified.title, label);
+  const base = labelText(classified.title, label);
+  const heading = markRequired && required ? `${base} *` : base;
   const description = classified.description;
   const error = errors?.[path];
   const model = classified.model;
