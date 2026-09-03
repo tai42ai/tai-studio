@@ -23,6 +23,7 @@ export function ObjectFields({
   errors,
   idPrefix,
   skip,
+  markRequired = false,
 }: {
   properties: readonly (readonly [string, JsonSchema])[];
   requiredKeys: ReadonlySet<string>;
@@ -33,6 +34,8 @@ export function ObjectFields({
   errors: SchemaFormErrors | undefined;
   idPrefix: string;
   skip: string | undefined;
+  /** Mark each required property's label with the DS required marker. */
+  markRequired?: boolean;
 }): ReactNode {
   const obj = isPlainObject(value) ? value : {};
   return (
@@ -52,6 +55,7 @@ export function ObjectFields({
             path={childPath}
             label={name}
             required={requiredKeys.has(name)}
+            markRequired={markRequired}
             errors={errors}
             idPrefix={idPrefix}
           />

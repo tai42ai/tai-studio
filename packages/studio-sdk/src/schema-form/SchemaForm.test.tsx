@@ -301,14 +301,16 @@ describe('SchemaForm — unions', () => {
     const user = userEvent.setup();
     render(<Harness schema={petSchema} initial={undefined} />);
 
-    await user.click(screen.getByRole('combobox', { name: 'Variant' }));
+    // The picker is named after the discriminator property, title-cased.
+    await user.click(screen.getByRole('combobox', { name: 'Kind' }));
     await user.click(await screen.findByRole('option', { name: 'dog' }));
 
-    expect(emitted()).toBe('{"kind":"dog"}');
-    expect(screen.getByRole('checkbox', { name: 'bark' })).toBeInTheDocument();
-    expect(screen.queryByRole('checkbox', { name: 'meow' })).not.toBeInTheDocument();
+    // The seed is a full skeleton: the required boolean is minted, not absent.
+    expect(emitted()).toBe('{"kind":"dog","bark":false}');
+    expect(screen.getByRole('checkbox', { name: 'bark *' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'meow *' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('checkbox', { name: 'bark' }));
+    await user.click(screen.getByRole('checkbox', { name: 'bark *' }));
     expect(emitted()).toBe('{"kind":"dog","bark":true}');
   });
 
@@ -336,7 +338,7 @@ describe('SchemaForm — unions', () => {
     await user.click(await screen.findByRole('option', { name: 'B' }));
 
     expect(emitted()).toBe('{"b":"y"}');
-    expect(screen.getByRole('textbox', { name: 'b' })).toHaveValue('y');
+    expect(screen.getByRole('textbox', { name: 'b *' })).toHaveValue('y');
   });
 });
 
@@ -366,6 +368,160 @@ describe('SchemaForm — scalar unions', () => {
 
     expect(emitted()).toBe('0');
     expect(screen.getByRole('spinbutton')).toHaveValue(0);
+  });
+});
+
+describe('SchemaForm — union variant switching and cues', () => {
+  // A synthetic discriminated union whose variants SHARE fields — the shape any
+  // tagged union takes. Alpha and Beta share `endpoint`; each carries fields of
+  // its own; Alpha mixes required (string, array) and optional (integer, string)
+  // members so the skeleton and the cues are both observable.
+  const modeSchema: JsonSchema = {
+    $defs: {
+      Alpha: {
+        type: 'object',
+        title: 'Alpha',
+        properties: {
+          mode: { const: 'alpha' },
+          endpoint: { type: 'string', title: 'endpoint' },
+          headers: { type: 'array', items: { type: 'string' }, title: 'headers' },
+          retries: { type: 'integer', title: 'retries' },
+          note: { type: 'string', title: 'note' },
+        },
+        required: ['mode', 'endpoint', 'headers'],
+      },
+      Beta: {
+        type: 'object',
+        title: 'Beta',
+        properties: {
+          mode: { const: 'beta' },
+          endpoint: { type: 'string', title: 'endpoint' },
+          channel: { type: 'string', title: 'channel' },
+        },
+        required: ['mode', 'endpoint', 'channel'],
+      },
+    },
+    discriminator: { propertyName: 'mode' },
+    oneOf: [{ $ref: '#/$defs/Alpha' }, { $ref: '#/$defs/Beta' }],
+  };
+
+  it('preserves the fields both variants share across a switch, both ways', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={modeSchema} initial={undefined} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Mode' }));
+    await user.click(await screen.findByRole('option', { name: 'alpha' }));
+    await user.type(screen.getByRole('textbox', { name: 'endpoint *' }), 'svc-1');
+
+    // Alpha → Beta: the typed `endpoint` survives; Alpha-only `headers` is
+    // dropped; Beta's own required `channel` is minted; the tag is Beta's.
+    await user.click(screen.getByRole('combobox', { name: 'Mode' }));
+    await user.click(await screen.findByRole('option', { name: 'beta' }));
+    expect(emitted()).toBe('{"mode":"beta","endpoint":"svc-1","channel":""}');
+    expect(screen.getByRole('textbox', { name: 'endpoint *' })).toHaveValue('svc-1');
+
+    // Beta → Alpha: `endpoint` survives again; `channel` is dropped; Alpha's
+    // required `headers` reseeds.
+    await user.click(screen.getByRole('combobox', { name: 'Mode' }));
+    await user.click(await screen.findByRole('option', { name: 'alpha' }));
+    expect(emitted()).toBe('{"mode":"alpha","endpoint":"svc-1","headers":[]}');
+  });
+
+  it('seeds a self-consistent skeleton that validates against the chosen variant', async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={modeSchema} initial={undefined} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Mode' }));
+    await user.click(await screen.findByRole('option', { name: 'alpha' }));
+
+    // Required string AND required array both mint their empty value (optional
+    // fields stay absent) — the seed is already valid against its own face.
+    expect(emitted()).toBe('{"mode":"alpha","endpoint":"","headers":[]}');
+    expect(validateAgainstSchema(modeSchema, JSON.parse(emitted()))).toEqual({});
+  });
+
+  it('labels the picker from the discriminator: schema title first, else the title-cased name', async () => {
+    // Title-cased property name (covered above as "Mode"); snake_case splits.
+    const snake: JsonSchema = {
+      discriminator: { propertyName: 'content_type' },
+      oneOf: [
+        {
+          type: 'object',
+          title: 'Plain',
+          properties: { content_type: { const: 'plain' } },
+          required: ['content_type'],
+        },
+        {
+          type: 'object',
+          title: 'Rich',
+          properties: { content_type: { const: 'rich' } },
+          required: ['content_type'],
+        },
+      ],
+    };
+    const { unmount } = render(<Harness schema={snake} initial={undefined} />);
+    expect(screen.getByRole('combobox', { name: 'Content Type' })).toBeInTheDocument();
+    unmount();
+
+    // A schema `title` on the discriminator property wins over the cased name.
+    const titled: JsonSchema = {
+      discriminator: { propertyName: 'mode' },
+      oneOf: [
+        {
+          type: 'object',
+          title: 'Push',
+          properties: { mode: { const: 'push', title: 'Delivery Mode' } },
+          required: ['mode'],
+        },
+        {
+          type: 'object',
+          title: 'Pull',
+          properties: { mode: { const: 'pull', title: 'Delivery Mode' } },
+          required: ['mode'],
+        },
+      ],
+    };
+    render(<Harness schema={titled} initial={undefined} />);
+    expect(screen.getByRole('combobox', { name: 'Delivery Mode' })).toBeInTheDocument();
+    // The generic fallback stays pinned by the non-discriminated union tests.
+  });
+
+  it("marks the active variant's required fields and leaves its optional fields bare", async () => {
+    const user = userEvent.setup();
+    render(<Harness schema={modeSchema} initial={undefined} />);
+
+    await user.click(screen.getByRole('combobox', { name: 'Mode' }));
+    await user.click(await screen.findByRole('option', { name: 'alpha' }));
+
+    expect(screen.getByRole('textbox', { name: 'endpoint *' })).toBeInTheDocument();
+    expect(screen.getByText('headers *')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'retries' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'note' })).toBeInTheDocument();
+  });
+
+  it('suppresses the synthetic root heading but keeps a nested union heading', () => {
+    const { unmount } = render(<Harness schema={modeSchema} initial={undefined} />);
+    // At the root the host already labels the surface — no synthetic "Value".
+    expect(screen.queryByText('Value')).not.toBeInTheDocument();
+    unmount();
+
+    // Nested below the root, the union keeps its heading — there it is the only
+    // thing naming the group. (Inline variants: a $ref union would resolve
+    // against THIS root, not the fixture's.)
+    const nested: JsonSchema = {
+      type: 'object',
+      properties: {
+        choice: {
+          anyOf: [
+            { type: 'object', title: 'A', properties: { a: { type: 'string' } }, required: ['a'] },
+            { type: 'object', title: 'B', properties: { b: { type: 'string' } }, required: ['b'] },
+          ],
+        },
+      },
+      required: ['choice'],
+    };
+    render(<Harness schema={nested} initial={undefined} />);
+    expect(screen.getByRole('group', { name: 'choice' })).toBeInTheDocument();
   });
 });
 
@@ -1135,7 +1291,7 @@ describe('SchemaForm — design system', () => {
     const cards = container.querySelectorAll('.tai-card');
     const variantFields = cards[cards.length - 1] as HTMLElement;
     expect(variantFields).toHaveClass('tai-stack', 'tai-stack-3');
-    expect(within(variantFields).getByRole('textbox', { name: 'b' })).toBeVisible();
+    expect(within(variantFields).getByRole('textbox', { name: 'b *' })).toBeVisible();
   });
 
   it('renders the JSON fallback on the mono textarea with a muted hint', () => {

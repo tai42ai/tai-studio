@@ -10,6 +10,10 @@
  *    `default` — an optional object/array is NOT auto-materialized, so its own
  *    required children can't raise spurious errors on a field the user never
  *    opted into.
+ *
+ * `skeletonValueForSchema` is the sibling entry for programmatic reseeds (a
+ * union variant switch): same walk, but required scalars mint their type's
+ * empty value so the committed seed validates against its own schema.
  */
 import { classifySchema } from './classify';
 import type { JsonSchema } from './types';
@@ -30,6 +34,30 @@ function explicitDefault(
  * whole-tool-schema call).
  */
 export function defaultValueForSchema(schema: JsonSchema, root: JsonSchema = schema): unknown {
+  return seedValue(schema, root, false);
+}
+
+/**
+ * A SELF-CONSISTENT skeleton for a schema — the seed a variant switch (or any
+ * other programmatic reseed) commits as the field's new value. Where
+ * {@link defaultValueForSchema} deliberately leaves a required scalar absent so
+ * a fresh form flags it, a committed skeleton must validate against its own
+ * schema, so here EVERY required field with a known empty value is minted:
+ * required strings seed `''`, numbers `0`, booleans `false` — consistently with
+ * the `[]` / `{}` / nested-object seeds the default path already mints. Kinds
+ * with no empty value to name (enum, union, free-form JSON) stay absent either
+ * way: inventing a choice would be a lie the user never made.
+ */
+export function skeletonValueForSchema(schema: JsonSchema, root: JsonSchema = schema): unknown {
+  return seedValue(schema, root, true);
+}
+
+/**
+ * The shared seeding walk. `mintScalars` distinguishes the two entry points
+ * above: `false` leaves value-less required scalars absent; `true` mints their
+ * type's empty value.
+ */
+function seedValue(schema: JsonSchema, root: JsonSchema, mintScalars: boolean): unknown {
   const classified = classifySchema(schema, root);
   const explicit = explicitDefault(schema, classified.schema);
   if (explicit.present) return explicit.value;
@@ -42,7 +70,7 @@ export function defaultValueForSchema(schema: JsonSchema, root: JsonSchema = sch
       const result: Record<string, unknown> = {};
       for (const [name, propSchema] of model.properties) {
         if (model.required.has(name)) {
-          const seeded = defaultValueForSchema(propSchema, root);
+          const seeded = seedValue(propSchema, root, mintScalars);
           if (seeded !== undefined) result[name] = seeded;
           continue;
         }
@@ -56,15 +84,20 @@ export function defaultValueForSchema(schema: JsonSchema, root: JsonSchema = sch
       return [];
     case 'record':
       return {};
-    case 'enum':
     case 'string':
+      return mintScalars ? '' : undefined;
     case 'number':
+      return mintScalars ? 0 : undefined;
     case 'boolean':
+      return mintScalars ? false : undefined;
+    case 'enum':
     case 'union':
     case 'json':
       // A free-form JSON field starts ABSENT (its editor seeds an empty buffer),
       // like the other value-less kinds: an optional one never invents a value,
-      // and a required one is left absent so validation flags it.
+      // and a required one is left absent so validation flags it. These kinds
+      // have no honest empty value even for a minted skeleton — an enum or a
+      // union would need a CHOICE invented on the user's behalf.
       return undefined;
   }
 }

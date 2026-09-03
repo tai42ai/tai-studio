@@ -101,6 +101,28 @@ describe('Field', () => {
     expect(screen.getByText('work address')).toBeInTheDocument();
   });
 
+  it('renders the description adjacent to its label, before the control', () => {
+    // The description glosses the LABEL, so it sits between the label and the
+    // control. Placed after the control it drifts: a group Field can wrap an
+    // arbitrarily tall surface (a whole schema form), and a hint below that
+    // surface reads as a footnote to nothing.
+    render(
+      <Field label="Params" description="what the tool accepts" group>
+        <TextInput aria-label="inner" />
+      </Field>,
+    );
+
+    const description = screen.getByText('what the tool accepts');
+    const surface = screen.getByRole('group', { name: 'Params' });
+    expect(
+      description.compareDocumentPosition(surface) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Params').compareDocumentPosition(description) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("keeps the field's description IDREFs when the caller adds one of its own", () => {
     // The `aria-describedby` IDREF list is shared: a caller's own `aria-describedby`
     // merges with the field's description and error IDREFs rather than replacing
