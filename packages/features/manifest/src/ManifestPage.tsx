@@ -10,6 +10,7 @@ import { PageHeader, Stack } from '@tai42/studio-sdk';
 import type { PageProps } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
+import { ManifestSectionsCard } from './tabs/ManifestSectionsCard';
 import { ManifestTab } from './tabs/ManifestTab';
 
 // The `manifest` route carries no search params, so the passed props are unused; the
@@ -17,9 +18,10 @@ import { ManifestTab } from './tabs/ManifestTab';
 // with `PageProps<token>`).
 export function ManifestPage(_props: PageProps<'manifest'>): ReactNode {
   return (
-    <Stack>
+    <Stack gap={6}>
       <PageHeader eyebrow="Administration" title="Manifest" />
       <ManifestTab />
+      <ManifestSectionsCard />
     </Stack>
   );
 }

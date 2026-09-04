@@ -34,6 +34,14 @@ export const preservedManifestKey = ['manifest', 'preserved'] as const;
 /** Key for the mounted MCP servers' status (`GET /api/mcp-status`). */
 export const mcpStatusKey = ['mcp-status'] as const;
 
+/**
+ * Key for the fleet-wide failed-MCP roster (`GET /api/mcp-status/failed`) — the
+ * servers skipped by the viability check, feeding the failed-servers health section.
+ * A reload/reload-all/deregister remediation invalidates it (and `mcpStatusKey`, since
+ * a re-attached server moves between the two views).
+ */
+export const mcpFailedKey = ['mcp-status', 'failed'] as const;
+
 /** Key for the MCP entry config schema (`GET /api/mcp-config/schema`). */
 export const mcpConfigSchemaKey = ['mcp-config-schema'] as const;
 

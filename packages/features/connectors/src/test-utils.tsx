@@ -1,10 +1,22 @@
 /**
  * Test harness for the connectors feature. `renderWithProviders` wraps the UI in
  * the exact provider stack the shell supplies: a retry-disabled
- * QueryClient, the raw `ApiProvider`, the ThemeProvider, and a NavigationProvider
- * with spy-able `navigate` / `resolvePath`.
+ * QueryClient, the raw `ApiProvider`, the auth + capability contexts, the
+ * ThemeProvider, and a NavigationProvider with spy-able `navigate` / `resolvePath`.
+ *
+ * The page embeds the MCP-servers section, whose write affordances gate on the
+ * capability projection. These tests seed no session key, so `CapabilityProvider`
+ * stays unauthenticated → the write gates fail closed (the section's read surfaces
+ * still render); the connectors surfaces under test carry their own coverage. A test
+ * that needs a gated affordance present drives it through the dedicated MCP harness.
  */
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
 import type { NavigationContextValue } from '@tai42/studio-sdk';
 import type {
   ApiClient,
@@ -39,13 +51,21 @@ export function renderWithProviders(
     navigatePlugin: vi.fn(),
     resolvePluginPath: () => '/x',
   };
+  // No session key is seeded, so `CapabilityProvider` stays unauthenticated and never
+  // fetches `getMe`; the MCP section's write gates fall closed, which these tests do
+  // not assert on.
+  globalThis.sessionStorage.removeItem('tai-studio.apiKey');
   const utils = render(
     <QueryClientProvider client={queryClient}>
-      <ApiProvider value={client}>
-        <ThemeProvider>
-          <NavigationProvider value={nav}>{ui}</NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider value={client}>
+          <CapabilityProvider>
+            <ThemeProvider>
+              <NavigationProvider value={nav}>{ui}</NavigationProvider>
+            </ThemeProvider>
+          </CapabilityProvider>
+        </ApiProvider>
+      </AuthProvider>
     </QueryClientProvider>,
   );
   return { ...utils, nav, queryClient };
@@ -69,6 +89,13 @@ export function makeClient(overrides: Partial<ApiClient>): ApiClient {
     getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
     listInstalledMarketplacePlugins: vi.fn().mockResolvedValue({ installed: [] }),
     getMcpEnvRefs: vi.fn().mockResolvedValue([]),
+    listFailedMcps: vi.fn().mockResolvedValue({
+      op: 'list_failed_mcps',
+      reachable: true,
+      local_only: true,
+      results: [],
+      error: null,
+    }),
   };
   return { ...mcpQuietDefaults, ...overrides } as ApiClient;
 }

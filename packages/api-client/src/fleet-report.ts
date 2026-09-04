@@ -92,3 +92,36 @@ export function summarizeFleetFanout(
   }
   return summarizeFleetResult(fanout);
 }
+
+/** One MCP server skipped by the viability check — its title and a coarse status. */
+export interface FailedMcpEntry {
+  readonly title: string;
+  readonly status: string;
+}
+
+/**
+ * The failed-MCP roster carried by a `GET /api/mcp-status/failed` broadcast report.
+ * The query op rides the fleet fan-out primitive, so each worker's own failed list
+ * arrives as its per-worker `payload` (opaque on the wire). This unions those lists
+ * by title — a server failed on ANY worker is a server the operator must see — and
+ * name-sorts the result, tolerating a worker whose payload is absent or malformed
+ * (skipped, never a throw: a partial fleet report still yields the roster it can).
+ */
+export function failedMcpsFromReport(result: FleetResult): FailedMcpEntry[] {
+  const byTitle = new Map<string, string>();
+  for (const worker of result.results) {
+    const payload: unknown = worker.payload;
+    if (!Array.isArray(payload)) continue;
+    for (const entry of payload) {
+      if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) continue;
+      const record = entry as Record<string, unknown>;
+      const { title, status } = record;
+      if (typeof title !== 'string' || title === '') continue;
+      if (!byTitle.has(title))
+        byTitle.set(title, typeof status === 'string' ? status : 'unavailable');
+    }
+  }
+  return [...byTitle]
+    .map(([title, status]) => ({ title, status }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}

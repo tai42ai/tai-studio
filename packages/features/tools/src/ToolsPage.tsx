@@ -63,7 +63,9 @@ import {
 import type { ToolMetaPatch } from '@tai42/api-client';
 
 import { ToolBadges } from './badges';
+import { FolderActionsMenu } from './FolderActions';
 import { RunPanel } from './RunPanel';
+import { ToolAdminCard } from './ToolAdminCard';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 import { ToolMetaEditDialog } from './ToolMetaEditDialog';
 import { buildToolViews, toFolders, type ToolView } from './toolView';
@@ -346,6 +348,13 @@ function ToolList({
                 q: preserveQuery,
               });
             }}
+            // Writers get per-folder Rename + Move (the overlay folder doors); a
+            // reader session never sees an action it can only be refused.
+            renderFolderActions={
+              canWrite
+                ? (folder) => <FolderActionsMenu folder={folder} folders={folders} />
+                : undefined
+            }
             search={{
               value: query,
               onChange: setQuery,
@@ -515,6 +524,8 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
           )}
         </Stack>
       </div>
+
+      <ToolAdminCard />
 
       {editing !== null ? (
         <ToolMetaEditDialog
