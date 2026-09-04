@@ -80,8 +80,8 @@ export interface FleetReportProps {
    * Whose framing the copy takes: a saved config change (`'save'`), a dispatched
    * reload (`'reload'`), a connector detach fan-out (`'deregister'`), or a live-registry
    * tool removal (`'remove'`). All but `'save'` drop the "Change saved" framing;
-   * `'deregister'` and `'remove'` also point remediation back at
-   * re-running the deregister, since a reload would re-attach the detached server.
+   * `'deregister'` and `'remove'` also point remediation back at re-running that
+   * same detach, since a reload would re-attach the detached server or tool.
    */
   readonly action?: 'save' | 'reload' | 'deregister' | 'remove';
 }
