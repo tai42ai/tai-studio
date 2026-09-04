@@ -32,7 +32,7 @@ import { ConnectorsPage } from '@tai42/feature-connectors';
 import { HooksPage } from '@tai42/feature-hooks';
 import { TemplatesPage } from '@tai42/feature-templates';
 import { StoragePage } from '@tai42/feature-storage';
-import { ManifestPage } from '@tai42/feature-manifest';
+import { ManifestPage, ServedEndpointsPage } from '@tai42/feature-manifest';
 import { SettingsPage } from '@tai42/feature-settings';
 import { SystemPage } from '@tai42/feature-system';
 import { SchedulingPage } from '@tai42/feature-scheduling';
@@ -294,6 +294,12 @@ export function buildRouter(options: BuildRouterOptions) {
     },
   });
 
+  const servedEndpointsRoute = createRoute({
+    getParentRoute: () => authedLayout,
+    path: '/served-endpoints',
+    component: (): ReactNode => <ServedEndpointsPage search={{}} />,
+  });
+
   const hooksRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/hooks',
@@ -388,6 +394,7 @@ export function buildRouter(options: BuildRouterOptions) {
       notificationsRoute,
       conversationsRoute,
       connectorsRoute,
+      servedEndpointsRoute,
       hooksRoute,
       templatesRoute,
       storageRoute,

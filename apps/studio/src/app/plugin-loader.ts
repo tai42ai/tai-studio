@@ -69,6 +69,7 @@ export interface PluginLoader {
 const INITIAL: PluginLoaderState = {
   status: 'idle',
   loaded: [],
+  plugins: [],
   errors: {},
   registryError: null,
 };
@@ -126,6 +127,7 @@ export function createPluginLoader(deps: PluginLoaderDeps): PluginLoader {
     }
 
     const loaded: string[] = [];
+    const plugins: { name: string; version: string }[] = [];
     const errors: Record<string, string> = {};
     for (const manifest of manifests) {
       const gate = checkPluginApiVersion(manifest.api_version);
@@ -161,6 +163,10 @@ export function createPluginLoader(deps: PluginLoaderDeps): PluginLoader {
         // never leaves a partial registration.
         await loadPlugin(manifest.name, register as PluginEntry);
         loaded.push(manifest.name);
+        // Record identity (name + version) so host chrome can attribute a
+        // contribution to its plugin (the nav provenance badge). Only a plugin that
+        // fully loaded is listed — a failed one falls to the errors map below.
+        plugins.push({ name: manifest.name, version: manifest.version });
       } catch (error) {
         // A failed plugin leaves nothing behind — detach any stylesheets already
         // injected for it before recording the loud error card.
@@ -169,7 +175,7 @@ export function createPluginLoader(deps: PluginLoaderDeps): PluginLoader {
       }
     }
 
-    store.setState({ status: 'ready', loaded, errors, registryError: null });
+    store.setState({ status: 'ready', loaded, plugins, errors, registryError: null });
   };
 
   const ensureLoaded = (): Promise<void> => {

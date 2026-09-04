@@ -2,18 +2,30 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '../test-utils';
-import { SubMcpTab } from './SubMcpTab';
+import { renderWithProviders } from './test-utils';
+import { ServedEndpointsPage } from './ServedEndpointsPage';
 
 const TOOLS = ['echo', 'sum'];
 
-describe('SubMcpTab', () => {
+describe('ServedEndpointsPage', () => {
+  it('renders the Connections page header', async () => {
+    const client = {
+      listSubMcp: vi.fn().mockResolvedValue({}),
+      listTools: vi.fn().mockResolvedValue(TOOLS),
+    };
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
+
+    expect(screen.getByRole('heading', { name: 'Served endpoints' })).toBeInTheDocument();
+    // The page still owns the sub-MCP listing + create surfaces.
+    expect(await screen.findByText('Sub-MCP servers')).toBeInTheDocument();
+  });
+
   it('lists sub-MCP servers with their transport, endpoint, and tools', async () => {
     const client = {
       listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'sse' } }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     expect(await screen.findByText('alpha')).toBeInTheDocument();
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
@@ -36,7 +48,7 @@ describe('SubMcpTab', () => {
       listSubMcp: vi.fn().mockResolvedValue({}),
       listTools: vi.fn().mockResolvedValue(TOOLS),
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     expect(await screen.findByText('No sub-MCP servers')).toBeInTheDocument();
   });
@@ -46,7 +58,7 @@ describe('SubMcpTab', () => {
       listSubMcp: vi.fn().mockRejectedValue(new Error('list boom')),
       listTools: vi.fn().mockResolvedValue(TOOLS),
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     expect(await screen.findByText('list boom')).toBeInTheDocument();
   });
@@ -61,7 +73,7 @@ describe('SubMcpTab', () => {
       listTools: vi.fn().mockResolvedValue(TOOLS),
       createSubMcp,
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     await screen.findByRole('checkbox', { name: 'sum' });
     await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'beta');
@@ -83,7 +95,7 @@ describe('SubMcpTab', () => {
       listTools: vi.fn().mockResolvedValue(TOOLS),
       createSubMcp,
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     await screen.findByRole('checkbox', { name: 'sum' });
     await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'beta');
@@ -106,7 +118,7 @@ describe('SubMcpTab', () => {
       listTools: vi.fn().mockResolvedValue(TOOLS),
       createSubMcp,
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     await screen.findByRole('checkbox', { name: 'sum' });
     await user.type(screen.getByRole('textbox', { name: 'Slug' }), 'alpha');
@@ -134,7 +146,7 @@ describe('SubMcpTab', () => {
       listTools: vi.fn().mockResolvedValue(TOOLS),
       createSubMcp,
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     await screen.findByRole('checkbox', { name: 'sum' });
     await user.click(screen.getByRole('button', { name: /Create sub-MCP/ }));
@@ -152,7 +164,7 @@ describe('SubMcpTab', () => {
       listTools: vi.fn().mockResolvedValue(TOOLS),
       deleteSubMcp,
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     await screen.findByText('alpha');
     await user.click(screen.getByRole('button', { name: 'Delete' }));
@@ -169,7 +181,7 @@ describe('SubMcpTab', () => {
       listSubMcp: vi.fn().mockResolvedValue({}),
       listTools: vi.fn().mockRejectedValue(new Error('tools boom')),
     };
-    renderWithProviders(<SubMcpTab />, { client });
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
 
     expect(await screen.findByText('tools boom')).toBeInTheDocument();
   });

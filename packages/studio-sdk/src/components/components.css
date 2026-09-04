@@ -984,6 +984,24 @@
     background-image: linear-gradient(var(--tai-color-accent-tint), var(--tai-color-accent-tint));
   }
 
+  /* The HOST-APPLIED provenance mark on plugin-contributed nav (the shell renders
+     it; a plugin cannot suppress or restyle it). A small muted glyph that links to
+     the plugin's marketplace row and brightens on hover/focus. It sits beside a nav
+     row (per-entry, in a core section) or beside a self-named section header. */
+  .tai-plugin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    color: var(--tai-color-text-muted);
+    border-radius: var(--tai-radius-sm);
+  }
+
+  .tai-plugin-badge:hover,
+  .tai-plugin-badge:focus-visible {
+    color: var(--tai-color-text);
+  }
+
   /* Skip-to-content: off-screen until focused, so a keyboard or screen-reader
      user can bypass the sidebar nav and jump straight to the page content
      (WCAG 2.4.1). It is the first focusable element in the shell. */

@@ -45,6 +45,7 @@ const FEATURE_ROUTES = [
   '/conversations',
   '/marketplace',
   '/manifest',
+  '/served-endpoints',
   '/settings',
   '/system',
 ] as const;

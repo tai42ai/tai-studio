@@ -1,7 +1,8 @@
 /**
- * Sub-MCP, against the LIVE boot skeleton with the sub-MCP list + tool
- * catalog stubbed via `page.route` so the registered entry and the create form see
- * a known slug.
+ * Sub-MCP (the Served endpoints page), against the LIVE boot skeleton with the
+ * sub-MCP list + tool catalog stubbed via `page.route` so the registered entry and
+ * the create form see a known slug. The surface moved off the manifest page's
+ * Sub-MCP tab onto its own `/served-endpoints` page under Connections.
  *
  * Legs: a registered sub-MCP shows its `/app/{slug}` connect URL with a copy
  * control; typing an already-registered slug into the create form warns that
@@ -30,14 +31,14 @@ async function stubSubMcp(page: Page): Promise<void> {
   );
 }
 
-async function openSubMcpTab(page: Page): Promise<void> {
-  await page.goto('/manifest');
-  await page.getByRole('tab', { name: 'Sub-MCP' }).click();
+async function openServedEndpoints(page: Page): Promise<void> {
+  // The sub-MCP surface is its own page now — no tab to select.
+  await page.goto('/served-endpoints');
 }
 
 test('a registered sub-MCP shows its connect URL with a copy control', async ({ page }) => {
   await stubSubMcp(page);
-  await openSubMcpTab(page);
+  await openServedEndpoints(page);
 
   const row = page.getByRole('row', { name: /existing/ });
   await expect(row).toBeVisible();
@@ -50,7 +51,7 @@ test('typing an already-registered slug warns that registering will replace it',
   page,
 }) => {
   await stubSubMcp(page);
-  await openSubMcpTab(page);
+  await openServedEndpoints(page);
 
   const slug = page.getByLabel('Slug');
   // A fresh slug draws no swap warning.

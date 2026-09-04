@@ -51,6 +51,7 @@ import {
   MoonIcon,
   NAV_ICONS,
   PageFillProvider,
+  PluginIcon,
   RadioGroup,
   SignOutIcon,
   Skeleton,
@@ -99,6 +100,7 @@ const NAV_LABELS: Record<FeatureToken, string> = {
   notifications: 'Notifications',
   conversations: 'Conversations',
   connectors: 'Connectors',
+  servedEndpoints: 'Served endpoints',
   hooks: 'Hooks',
   templates: 'Templates',
   storage: 'Storage',
@@ -124,20 +126,108 @@ const navGroupsStyle = {
   gap: 'var(--tai-space-3)',
 } as const;
 
-/** The catch-all section for plugin nav entries that name no core section. */
-const PLUGINS_SECTION_LABEL = 'Plugins' as const;
-
-/** The core section labels a plugin nav entry may target; every other value
- * (absent field, `'Plugins'`, or an unrecognised string from a newer bundle)
- * lands in the {@link PLUGINS_SECTION_LABEL} section. */
+/** The core section labels a plugin nav entry may target. */
 const CORE_SECTION_LABELS: ReadonlySet<string> = new Set(NAV_SECTIONS.map((s) => s.label));
 
-/** The sidebar section a plugin nav entry renders in: its declared core section,
- * else the Plugins section. Tolerates an unknown declared value at runtime. */
-function navEntrySectionLabel(entry: RegisteredNavEntry): string {
-  return entry.section !== undefined && CORE_SECTION_LABELS.has(entry.section)
-    ? entry.section
-    : PLUGINS_SECTION_LABEL;
+/** Runtime aliases from a DEPRECATED {@link NavEntrySection} value to its live core
+ * section, so a bundle published against the old name still lands in the right place.
+ * `Integrations` was renamed to `Connections`. */
+const SECTION_ALIASES: Readonly<Record<string, string>> = { Integrations: 'Connections' };
+
+/** Plugin id → its version, for the provenance badge. */
+type PluginVersions = ReadonlyMap<string, string>;
+
+/**
+ * The CORE section a plugin nav entry targets, or `null` when it names none — an absent
+ * field, the deprecated catch-all `'Plugins'`, or any value that is not a live core
+ * section (a bundle newer than this host). A `null` result renders the entry in the
+ * plugin's OWN self-named section; a deprecated-but-aliased value resolves to its live
+ * core section. Tolerant by design: the field is a placement hint, not a hard contract.
+ */
+function coreSectionOf(entry: RegisteredNavEntry): string | null {
+  if (entry.section === undefined) return null;
+  const resolved = SECTION_ALIASES[entry.section] ?? entry.section;
+  return CORE_SECTION_LABELS.has(resolved) ? resolved : null;
+}
+
+/**
+ * Nav entries in render order WITHIN a section: ascending `order`, every entry that
+ * omits it AFTER the ordered ones, ties broken by registration order. `Array.sort`
+ * is stable (ES2019+), so equal keys keep their incoming (registration) order, and a
+ * missing `order` sorts as +∞ so it always trails an explicit weight.
+ */
+function sortNavEntries(entries: readonly RegisteredNavEntry[]): RegisteredNavEntry[] {
+  return [...entries].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+}
+
+/** A self-named plugin section: one contributing plugin's fallback nav entries,
+ * grouped under its own header (the plugin's display name + a provenance badge). */
+interface PluginSectionGroup {
+  readonly pluginId: string;
+  readonly entries: readonly RegisteredNavEntry[];
+}
+
+/**
+ * Group the entries that name no core section into per-PLUGIN self-named sections,
+ * preserving the order plugins first appear (registration order) and sorting each
+ * plugin's entries by {@link sortNavEntries}. Multiple pages from one plugin share its
+ * one section header — there is no generic catch-all section.
+ */
+function selfNamedGroups(entries: readonly RegisteredNavEntry[]): PluginSectionGroup[] {
+  const order: string[] = [];
+  const byPlugin = new Map<string, RegisteredNavEntry[]>();
+  for (const entry of entries) {
+    if (coreSectionOf(entry) !== null) continue;
+    let bucket = byPlugin.get(entry.pluginId);
+    if (bucket === undefined) {
+      bucket = [];
+      byPlugin.set(entry.pluginId, bucket);
+      order.push(entry.pluginId);
+    }
+    bucket.push(entry);
+  }
+  return order.map((pluginId) => ({
+    pluginId,
+    entries: sortNavEntries(byPlugin.get(pluginId) ?? []),
+  }));
+}
+
+/**
+ * The HOST-APPLIED provenance mark on plugin-contributed nav: a small muted glyph the
+ * SHELL renders (a plugin cannot suppress, restyle, or forge it). It links to the
+ * marketplace — deep to the plugin's row when the id is a "namespace/name" ref, else to
+ * the marketplace Installed tab — names itself "Plugin: <display name> <version>" for hover
+ * (title) and assistive tech (aria-label), and knows nothing about any specific plugin.
+ * The display name is the plugin's id (the manifest carries no separate display name).
+ */
+function PluginProvenanceBadge({
+  pluginId,
+  version,
+}: {
+  pluginId: string;
+  version: string | undefined;
+}): ReactNode {
+  const label =
+    version !== undefined && version !== ''
+      ? `Plugin: ${pluginId} ${version}`
+      : `Plugin: ${pluginId}`;
+  // The marketplace detail deep-link (search.plugin) only resolves a "namespace/name"
+  // ref — a bare id renders the detail page's Malformed-reference ErrorState. Studio
+  // plugin ids are bare names, so deep-link ONLY when the id is already a marketplace
+  // ref; otherwise land on the marketplace Installed tab — the contributing plugin is
+  // by definition installed, so it is present in the list the user arrives at.
+  const search = pluginId.includes('/') ? { plugin: pluginId } : { tab: 'installed' as const };
+  return (
+    <AppLink
+      to="marketplace"
+      search={search}
+      className="tai-plugin-badge"
+      title={label}
+      aria-label={label}
+    >
+      <PluginIcon />
+    </AppLink>
+  );
 }
 
 function NavItem({ token }: { token: FeatureToken }): ReactNode {
@@ -167,9 +257,14 @@ function NavItem({ token }: { token: FeatureToken }): ReactNode {
 function PluginNavItem({
   entry,
   active,
+  badge,
 }: {
   entry: RegisteredNavEntry;
   active: boolean;
+  /** The host provenance badge, rendered as a sibling of the link (never nested — two
+   * anchors must not nest). Present for entries injected into a core section; absent
+   * in a self-named section, whose header carries the one badge for the whole group. */
+  badge?: ReactNode;
 }): ReactNode {
   const { navigatePlugin, resolvePluginPath } = usePluginNavigation();
   const href = resolvePluginPath(entry.pluginId, entry.path);
@@ -185,7 +280,7 @@ function PluginNavItem({
     [navigatePlugin, entry.pluginId, entry.path],
   );
   return (
-    <li>
+    <li style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-1)' }}>
       {/* `activeOptions.exact` turns OFF the router Link's own prefix-match highlight
           (which would force `aria-current="page"` on EVERY ancestor entry of a deep
           link); the single winner is chosen once by the parent and passed in `active`. */}
@@ -195,6 +290,7 @@ function PluginNavItem({
         activeOptions={{ exact: true }}
         aria-current={active ? 'page' : undefined}
         onClick={onClick}
+        style={{ flex: 1, minWidth: 0 }}
       >
         <span
           aria-hidden="true"
@@ -211,6 +307,7 @@ function PluginNavItem({
         </span>
         <span>{entry.title}</span>
       </Link>
+      {badge}
     </li>
   );
 }
@@ -225,27 +322,40 @@ function sectionHeaderId(prefix: string, label: string): string {
   return `${prefix}nav-section-${label.toLowerCase()}`;
 }
 
+/** The DOM id of a self-named plugin section's header text, for its list's
+ * `aria-labelledby`. Distinct namespace from core sections, and per-`NavBody` unique
+ * (the `prefix` is a `useId()`), so the sidebar and drawer copies never collide. */
+function pluginHeaderId(prefix: string, pluginId: string): string {
+  return `${prefix}nav-plugin-${pluginId}`;
+}
+
 /**
- * The primary nav body under a ready projection: the standalone Dashboard row
- * first, then each {@link NAV_SECTIONS} group as an uppercase muted header over
- * its items — the section's core tokens, then any plugin nav entry that declared
- * that section (rendered after the core rows). Core rows are capability-filtered
- * by {@link tokenCovered}; the plugin entries arrive already filtered. A section
- * with no visible item of either kind renders NOTHING (no empty labelled group),
- * and the Dashboard row hides the same way.
+ * The primary nav body under a ready projection: the standalone Dashboard row first,
+ * then each {@link NAV_SECTIONS} group as an uppercase muted header over its items —
+ * the section's core tokens, then any plugin nav entry that targets that section
+ * (after the core rows, each carrying a host provenance badge). AFTER the core
+ * sections come the FIRST-CLASS self-named plugin sections: every entry that names no
+ * core section, grouped per plugin under that plugin's own display-name header (which
+ * carries the one provenance badge for the whole group) — no generic "Plugins"
+ * wrapper. Core rows are capability-filtered by {@link tokenCovered}; the plugin
+ * entries arrive already filtered. A section with no visible item renders NOTHING (no
+ * empty labelled group), and the Dashboard row hides the same way.
  */
 function NavSections({
   projection,
   navEntries,
   activeKey,
+  pluginVersions,
 }: {
   projection: MeProjection;
   navEntries: readonly RegisteredNavEntry[];
   activeKey: string | undefined;
+  pluginVersions: PluginVersions;
 }): ReactNode {
   // Unique per NavBody instance, so the sidebar's and the drawer's copies of the
   // same sections never share a header id when both are mounted (drawer open).
   const idPrefix = useId();
+  const pluginSections = selfNamedGroups(navEntries);
   return (
     <div style={navGroupsStyle}>
       {tokenCovered(projection, DASHBOARD_TOKEN) ? (
@@ -255,7 +365,9 @@ function NavSections({
       ) : null}
       {NAV_SECTIONS.map((section) => {
         const tokens = section.tokens.filter((token) => tokenCovered(projection, token));
-        const entries = navEntries.filter((entry) => navEntrySectionLabel(entry) === section.label);
+        const entries = sortNavEntries(
+          navEntries.filter((entry) => coreSectionOf(entry) === section.label),
+        );
         if (tokens.length === 0 && entries.length === 0) return null;
         const headerId = sectionHeaderId(idPrefix, section.label);
         return (
@@ -269,6 +381,45 @@ function NavSections({
               ))}
               {entries.map((entry) => {
                 const key = navEntryKey(entry);
+                return (
+                  <PluginNavItem
+                    key={key}
+                    entry={entry}
+                    active={key === activeKey}
+                    badge={
+                      <PluginProvenanceBadge
+                        pluginId={entry.pluginId}
+                        version={pluginVersions.get(entry.pluginId)}
+                      />
+                    }
+                  />
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
+      {pluginSections.map((group) => {
+        const headerId = pluginHeaderId(idPrefix, group.pluginId);
+        return (
+          <div key={group.pluginId}>
+            <div
+              className="tai-nav-section-header"
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-1)' }}
+            >
+              {/* Only the display name names the list — the badge (a link) is excluded
+                  from the accessible name so the group reads as just the plugin. */}
+              <span id={headerId}>{group.pluginId}</span>
+              <PluginProvenanceBadge
+                pluginId={group.pluginId}
+                version={pluginVersions.get(group.pluginId)}
+              />
+            </div>
+            <ul style={navListStyle} aria-labelledby={headerId}>
+              {group.entries.map((entry) => {
+                const key = navEntryKey(entry);
+                // No per-entry badge here: the section header carries the one badge
+                // for the whole self-named group.
                 return <PluginNavItem key={key} entry={entry} active={key === activeKey} />;
               })}
             </ul>
@@ -325,65 +476,46 @@ function activeNavKey(
 }
 
 /**
- * The Primary + Plugins navigation, shared by the sidebar and the mobile drawer.
- * The primary nav follows the capability projection's three states, and each of
- * its sections carries the plugin entries that declared it. The Plugins nav holds
- * the entries that named no core section; it renders only when at least one such
- * entry is both loaded and covered (no empty labelled section).
+ * The Primary navigation, shared by the sidebar and the mobile drawer. It follows
+ * the capability projection's three states; when ready, {@link NavSections} renders
+ * the core sections (each carrying the plugin entries that target it) followed by the
+ * first-class self-named plugin sections. There is no separate "Plugins" landmark —
+ * a plugin's fallback entries render as its own section within this one Primary nav.
  */
 function NavBody({
   state,
   retry,
   visibleNavEntries,
+  pluginVersions,
 }: {
   state: CapabilityState;
   retry: () => void;
   visibleNavEntries: readonly RegisteredNavEntry[];
+  pluginVersions: PluginVersions;
 }): ReactNode {
   // The active plugin nav row is chosen ONCE for the whole list: only the longest
   // matching entry wins, so nested prefix entries never both light up.
   const { pathname } = useLocation();
   const activeKey = activeNavKey(visibleNavEntries, pathname);
-  // Unique per NavBody instance, so the sidebar's and drawer's copies never share
-  // this header id when both are mounted (drawer open beside the sidebar).
-  const idPrefix = useId();
-  const pluginsHeaderId = sectionHeaderId(idPrefix, PLUGINS_SECTION_LABEL);
-  const pluginsEntries = visibleNavEntries.filter(
-    (entry) => navEntrySectionLabel(entry) === PLUGINS_SECTION_LABEL,
-  );
   return (
-    <>
-      <nav aria-label="Primary">
-        {state.status === 'loading' ? (
-          <NavSkeleton />
-        ) : state.status === 'failed' ? (
-          // Fail closed and loud: never an optimistic full nav on a `/me` error.
-          <ErrorState
-            message="Your access could not be loaded. Retry to reload the navigation."
-            onRetry={retry}
-          />
-        ) : (
-          <NavSections
-            projection={state.projection}
-            navEntries={visibleNavEntries}
-            activeKey={activeKey}
-          />
-        )}
-      </nav>
-      {pluginsEntries.length > 0 ? (
-        <nav aria-label="Plugins">
-          <div id={pluginsHeaderId} className="tai-nav-section-header">
-            {PLUGINS_SECTION_LABEL}
-          </div>
-          <ul style={navListStyle} aria-labelledby={pluginsHeaderId}>
-            {pluginsEntries.map((entry) => {
-              const key = navEntryKey(entry);
-              return <PluginNavItem key={key} entry={entry} active={key === activeKey} />;
-            })}
-          </ul>
-        </nav>
-      ) : null}
-    </>
+    <nav aria-label="Primary">
+      {state.status === 'loading' ? (
+        <NavSkeleton />
+      ) : state.status === 'failed' ? (
+        // Fail closed and loud: never an optimistic full nav on a `/me` error.
+        <ErrorState
+          message="Your access could not be loaded. Retry to reload the navigation."
+          onRetry={retry}
+        />
+      ) : (
+        <NavSections
+          projection={state.projection}
+          navEntries={visibleNavEntries}
+          activeKey={activeKey}
+          pluginVersions={pluginVersions}
+        />
+      )}
+    </nav>
   );
 }
 
@@ -523,6 +655,14 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
     () => (status === 'ready' ? getContributions().navEntries : []),
     [status],
   );
+  // Plugin id → version, for the host provenance badge. Read from the same load-pass
+  // store as `status`; a plugin missing from it (older host, or not yet loaded) simply
+  // yields no version and the badge names the plugin without one.
+  const loadedPlugins = useStore(loader.store, (s) => s.plugins);
+  const pluginVersions = useMemo<PluginVersions>(
+    () => new Map((loadedPlugins ?? []).map((p) => [p.name, p.version])),
+    [loadedPlugins],
+  );
   // A plugin nav entry shows only when the projection covers its declared
   // `requiredCapabilities` (absent ⇒ full projection only); the whole Plugins nav
   // is hidden until the projection is ready.
@@ -660,7 +800,12 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
 
       <aside className="tai-shell-sidebar">
         <Brand />
-        <NavBody state={state} retry={retry} visibleNavEntries={visibleNavEntries} />
+        <NavBody
+          state={state}
+          retry={retry}
+          visibleNavEntries={visibleNavEntries}
+          pluginVersions={pluginVersions}
+        />
         {isPhone ? null : (
           <div
             style={{
@@ -692,7 +837,12 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
             }
           >
             <div className="tai-stack">
-              <NavBody state={state} retry={retry} visibleNavEntries={visibleNavEntries} />
+              <NavBody
+                state={state}
+                retry={retry}
+                visibleNavEntries={visibleNavEntries}
+                pluginVersions={pluginVersions}
+              />
               <div style={{ marginTop: 'var(--tai-space-2)' }}>
                 <SignOutButton compact={false} onSignOut={signOut} />
               </div>
