@@ -1150,6 +1150,10 @@ export function createApiClient(config: ApiConfig): {
         path: string;
         deleted: true;
     }>;
+    readonly deleteTemplateDir: (path: string) => Promise<{
+        path: string;
+        deleted: true;
+    }>;
     readonly renderTemplate: (body: {
         content?: string;
         template_id?: string;
@@ -1279,6 +1283,19 @@ export function createApiClient(config: ApiConfig): {
     readonly getConfigMode: (signal?: AbortSignal) => Promise<{
         config_mode: string;
         read_only: boolean;
+    }>;
+    readonly reloadConfig: (targets?: string[] | null) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
     }>;
     readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
         name: string;
@@ -5084,6 +5101,7 @@ declare namespace s {
         templateDetail,
         templateUploaded,
         templateDeleted,
+        templateDirDeleted,
         templateRendered,
         templateCacheCleared,
         storageInfo,
@@ -5499,6 +5517,7 @@ declare namespace schemas {
         templateDetail,
         templateUploaded,
         templateDeleted,
+        templateDirDeleted,
         templateRendered,
         templateCacheCleared,
         storageInfo,
@@ -6208,6 +6227,12 @@ const templateDeleted: z.ZodObject<{
 const templateDetail: z.ZodObject<{
     template: z.ZodString;
     schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+const templateDirDeleted: z.ZodObject<{
+    path: z.ZodString;
+    deleted: z.ZodLiteral<true>;
 }, z.core.$strip>;
 
 // @public (undocumented)

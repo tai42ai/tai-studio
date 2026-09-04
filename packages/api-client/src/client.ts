@@ -666,6 +666,11 @@ export function createApiClient(config: ApiConfig) {
       req('/api/upload-template', s.templateUploaded, { method: 'POST', body: { path, content } }),
     deleteTemplate: (path: string) =>
       req('/api/delete-template', s.templateDeleted, { method: 'POST', body: { path } }),
+    // Delete every stored template under a directory prefix. Unlike the idempotent
+    // single delete, the server 404s a prefix matching nothing and 400s the template
+    // root; those surface as loud errors, never a faked success.
+    deleteTemplateDir: (path: string) =>
+      req('/api/delete-template-dir', s.templateDirDeleted, { method: 'POST', body: { path } }),
     renderTemplate: (body: {
       content?: string;
       template_id?: string;
@@ -698,6 +703,14 @@ export function createApiClient(config: ApiConfig) {
     setEnvConfig: (env: Record<string, string>) =>
       req('/api/config/env', s.reloadConfigResult, { method: 'POST', body: env }),
     getConfigMode: (signal?: AbortSignal) => req('/api/config/mode', s.configMode, { signal }),
+    // The LOCAL soft-restart door (distinct from the System page's fleet door
+    // `/api/fleet/reload-config`): refresh env from the config manager, reset the
+    // settings caches, and re-initialize from the manifest — applied on the serving
+    // worker and broadcast to the fleet (all workers, or only `targets`; `null` = all).
+    // Admin-`fenced`; the 200 body is the bare per-worker fleet report so an
+    // unconverged sibling is visible, never hidden.
+    reloadConfig: (targets: string[] | null = null) =>
+      req('/api/config/reload', s.fleetReloadResult, { method: 'POST', body: { targets } }),
 
     // -- settings profiles ---------------------------------------------------
     // The admin-only `/api/config/profiles/*` surface. Bodies/diff/versions carry

@@ -287,6 +287,86 @@ describe('TemplatesPage — detail', () => {
   });
 });
 
+describe('TemplatesPage — delete directory', () => {
+  it('does not show a folder delete action when there are no directories', async () => {
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['a.md', 'b.md']),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    await screen.findByRole('heading', { name: 'All templates' });
+    expect(await screen.findByText('a.md')).toBeInTheDocument();
+    // Root-level keys derive no folder, so no directory delete affordance appears.
+    expect(screen.queryByRole('button', { name: /Delete directory/ })).not.toBeInTheDocument();
+  });
+
+  it('deletes a directory from its folder row, warning that every template goes', async () => {
+    const user = userEvent.setup();
+    const listTemplates = vi
+      .fn()
+      .mockResolvedValueOnce(['prompts/a.md', 'prompts/b.md'])
+      .mockResolvedValue([]);
+    const deleteTemplateDir = vi.fn().mockResolvedValue({ path: 'prompts', deleted: true });
+    const client: StubApiClient = { listTemplates, deleteTemplateDir };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    await screen.findByRole('heading', { name: 'All templates' });
+    // The delete affordance rides the `prompts` folder row for its own prefix.
+    await user.click(await screen.findByRole('button', { name: 'Delete directory prompts' }));
+    const dialog = await screen.findByRole('dialog');
+    // The confirm copy states plainly the door removes every template under the prefix.
+    expect(within(dialog).getByText(/every template under it/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Delete directory' }));
+
+    await waitFor(() => {
+      expect(deleteTemplateDir).toHaveBeenCalledWith('prompts');
+    });
+    // The master list is invalidated and re-fetched after the delete.
+    await waitFor(() => {
+      expect(listTemplates).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('renders a rejected directory delete verbatim in the dialog', async () => {
+    const user = userEvent.setup();
+    const message = "template directory 'prompts' not found";
+    const client: StubApiClient = {
+      listTemplates: vi.fn().mockResolvedValue(['prompts/a.md']),
+      deleteTemplateDir: vi.fn().mockRejectedValue(new Error(message)),
+    };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    await screen.findByRole('heading', { name: 'All templates' });
+    await user.click(await screen.findByRole('button', { name: 'Delete directory prompts' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete directory' }));
+
+    expect(await within(dialog).findByText(message)).toBeInTheDocument();
+  });
+
+  it('clears the open selection when the deleted directory held the shown template', async () => {
+    const user = userEvent.setup();
+    const listTemplates = vi.fn().mockResolvedValueOnce(['prompts/a.md']).mockResolvedValue([]);
+    const client: StubApiClient = {
+      listTemplates,
+      getTemplate: vi.fn().mockResolvedValue({ template: 'Hello', schema: {} }),
+      deleteTemplateDir: vi.fn().mockResolvedValue({ path: 'prompts', deleted: true }),
+    };
+    const { navigate } = renderTemplatesHarness(client, { template: 'prompts/a.md' });
+
+    await screen.findByRole('heading', { name: 'All templates' });
+    await user.click(await screen.findByRole('button', { name: 'Delete directory prompts' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Delete directory' }));
+
+    // The open template lived under the removed prefix, so the selection is cleared
+    // back to the un-selected templates view.
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('templates');
+    });
+  });
+});
+
 describe('TemplatesPage — storage-provider gate', () => {
   it('shows the marketplace pointer, not the 500, when no storage provider is installed', async () => {
     const listTemplates = vi.fn().mockRejectedValue(new Error('no storage provider'));

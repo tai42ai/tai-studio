@@ -1,6 +1,7 @@
 /**
  * Transport-level tests for the config client methods: `getEnvConfig`,
- * `setEnvConfig`, `getConfigMode` — URL, HTTP method, request-body shaping, the
+ * `setEnvConfig`, `getConfigMode`, `reloadConfig` — URL, HTTP method, request-body
+ * shaping, the
  * `{ data }` envelope unwrap, the `read_only` tolerated-absent default, and a LOUD
  * error on a 4xx `{error}` plus an `ApiSchemaError` on a drifting response.
  *
@@ -93,6 +94,26 @@ describe('config client transport', () => {
     const { client } = harness(() => jsonResponse({ data: { config_mode: 'file' } }));
     const out = await client.getConfigMode();
     expect(out.read_only).toBe(false);
+  });
+
+  it('reloadConfig POSTs { targets: null } to /api/config/reload and parses the fleet report', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { op: 'reload_config', reachable: true, local_only: true, results: [], error: null },
+      }),
+    );
+    const out = await client.reloadConfig();
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/config/reload');
+    // No targets selected on the settings surface → reload the whole fleet.
+    expect(captured[0]?.body).toEqual({ targets: null });
+    expect(out.reachable).toBe(true);
+    expect(out.results).toEqual([]);
+  });
+
+  it('surfaces a 4xx { error } from a rejected config reload as a LOUD ApiError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'reload is admin-only' }, 403));
+    await expect(client.reloadConfig()).rejects.toBeInstanceOf(ApiError);
   });
 
   it('surfaces a 4xx { error } from a rejected env write as a LOUD ApiError', async () => {

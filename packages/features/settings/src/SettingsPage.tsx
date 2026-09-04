@@ -62,6 +62,7 @@ import type { CapabilityState, PageProps, RequiredCapabilities, TabItem } from '
 import type { MeProjection } from '@tai42/api-client';
 import { usePluginContributions } from '@tai42/studio-sdk/host';
 
+import { ReloadConfigButton } from './ReloadConfigButton';
 import { SettingsTab } from './SettingsTab';
 import { EnvironmentTab } from './EnvironmentTab';
 import { ApiKeysTab } from './ApiKeysTab';
@@ -262,6 +263,9 @@ export function SettingsPage(props: PageProps<'settings'>): ReactNode {
                 <Badge variant="primary">{mode.config_mode}</Badge>
                 {readOnly ? <Badge variant="warning">Read-only</Badge> : null}
               </div>
+              {/* The local soft-restart action: re-read env + re-init from the manifest,
+                  admin-fenced (self-hidden for a caller who cannot reach the door). */}
+              <ReloadConfigButton />
             </Stack>
           </Card>
         ) : null}
