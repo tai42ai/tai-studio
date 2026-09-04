@@ -232,8 +232,12 @@ describe('McpServersSection', () => {
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
-    // Nothing was "saved" — a detach is a reload-framed op, never a config save.
+    // Nothing was "saved" — a detach is never a config save.
     expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
+    // The remediation must be to RE-RUN THE DEREGISTER, not a reload: a reload would
+    // re-attach the very server being detached, converging the fleet the wrong way.
+    expect(within(alert).getByText(/re-run the deregister to converge it/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
   });
 
   it('reports a converged deregister calmly, with no fleet-failure alert', async () => {

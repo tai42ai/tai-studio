@@ -57,6 +57,37 @@ describe('ToolAdminCard', () => {
     expect(removeTool).toHaveBeenCalledWith({ kind: 'example_tool', name: 'echo' });
   });
 
+  it('advises re-running the remove, never a reload, on a non-converged remove', async () => {
+    const user = userEvent.setup();
+    const removeTool = vi.fn().mockResolvedValue({
+      op: 'remove_tool',
+      reachable: true,
+      local_only: false,
+      results: [
+        { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+        { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+      ],
+      error: null,
+    });
+    renderWithProviders(<ToolAdminCard />, {
+      client: { removeTool },
+      projection: fullProjection(),
+    });
+
+    await screen.findByText('App tool administration');
+    await user.type(screen.getByLabelText('Kind'), 'example_tool');
+    await user.type(screen.getByLabelText('Name'), 'echo');
+    await user.click(screen.getByRole('button', { name: 'Remove tool' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Remove tool' }));
+
+    // A reload would re-register the removed tool — the stranded-worker advice
+    // must point back at the remove itself.
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText(/re-run the remove to converge it/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
+  });
+
   it('disables both actions until kind AND name are filled', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ToolAdminCard />, {

@@ -389,7 +389,7 @@ function FailedServersSection(): ReactNode {
           lone-worker detach), mirroring the sibling reload's report. */}
       {deregister.isSuccess ? (
         <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={summarizeFleetResult(deregister.data)} action="reload" />
+          <FleetReport summary={summarizeFleetResult(deregister.data)} action="deregister" />
         </div>
       ) : null}
       {deregisterTarget !== null ? (

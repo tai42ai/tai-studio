@@ -142,7 +142,7 @@ export function ToolAdminCard(): ReactNode {
           <FleetReport summary={summarizeFleetResult(reload.data)} action="reload" />
         ) : null}
         {remove.isSuccess ? (
-          <FleetReport summary={summarizeFleetResult(remove.data)} action="reload" />
+          <FleetReport summary={summarizeFleetResult(remove.data)} action="remove" />
         ) : null}
       </Stack>
       {confirmRemove ? (

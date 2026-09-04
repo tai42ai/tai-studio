@@ -6054,7 +6054,7 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
 
 // @public
 export interface FleetReportProps {
-    readonly action?: 'save' | 'reload';
+    readonly action?: 'save' | 'reload' | 'deregister' | 'remove';
     // (undocumented)
     readonly summary: FleetReportSummary | null;
 }
