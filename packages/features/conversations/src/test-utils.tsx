@@ -174,10 +174,13 @@ export function makeRoute(overrides: Partial<ConversationRoute> = {}): Conversat
     target_name: 'assistant',
     payload_expr: null,
     reply_expr: null,
+    initial_mode: 'agent',
     execution_key: 'svc-chat',
     channel: 'whatsapp',
     our_identity: '+15550000000',
     callback_url: null,
+    turns_per_hour_override: null,
+    error_reply_text: null,
     execution_key_fingerprint: 'fp-1',
     ...overrides,
   };

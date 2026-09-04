@@ -818,6 +818,21 @@ export function createApiClient(config: ApiConfig) {
     // conversation monitor's route picker.
     listConversationRoutes: (signal?: AbortSignal) =>
       req('/api/conversations', s.conversationRoutes, { signal }),
+    // Create or REPLACE a route (an UPSERT: the same door is the create and the
+    // edit path). `route_name` rides the URL path AND the body; the door rejects a
+    // disagreeing pair, so both come from the one create object. The reply carries
+    // the freshly-minted `callback_secret` for an `api`-door row, returned ONCE.
+    createOrReplaceConversationRoute: (route: s.ConversationRouteCreate) =>
+      req(`/api/conversations/${encodeSegment(route.route_name)}`, s.conversationRouteWritten, {
+        method: 'POST',
+        body: route,
+      }),
+    // Delete a route by name (destructive + authority-changing server-side): it
+    // drops the routing row and reclaims the thread indexes it owned.
+    deleteConversationRoute: (routeName: string) =>
+      req(`/api/conversations/${encodeSegment(routeName)}`, s.conversationRouteDeleted, {
+        method: 'DELETE',
+      }),
     // One route's threads, newest activity first. Admin-only server-side: a
     // listing spans every caller on the route, so a scoped session gets a 403.
     listConversationThreads: (

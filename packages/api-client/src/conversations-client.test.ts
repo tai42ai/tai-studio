@@ -128,6 +128,117 @@ describe('conversation routes transport', () => {
     );
     await expect(client.listConversationRoutes()).rejects.toBeInstanceOf(ApiSchemaError);
   });
+
+  it('defaults the row fields a stub payload omits (initial_mode, override, error text)', async () => {
+    const { client } = harness(() => jsonResponse({ data: { items: [route], total: 1 } }));
+    const out = await client.listConversationRoutes();
+    expect(out.items[0]?.initial_mode).toBe('agent');
+    expect(out.items[0]?.turns_per_hour_override).toBeNull();
+    expect(out.items[0]?.error_reply_text).toBeNull();
+  });
+});
+
+describe('conversation route write transport', () => {
+  const written = {
+    created: true,
+    route_name: 'account',
+    route: {
+      ...route,
+      route_name: 'account',
+      door: 'api',
+      channel: null,
+      our_identity: null,
+      callback_url: 'https://sink.example/answers',
+      target_kind: 'tool',
+      target_name: 'lookup_account',
+    },
+    callback_secret: 'sekret-token',
+  };
+
+  it('createOrReplaceConversationRoute() POSTs the create body to the name path', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: written }));
+    const out = await client.createOrReplaceConversationRoute({
+      route_name: 'account',
+      door: 'api',
+      target_kind: 'tool',
+      target_name: 'lookup_account',
+      payload_expr: null,
+      reply_expr: null,
+      initial_mode: 'agent',
+      execution_key: 'svc-account',
+      channel: null,
+      our_identity: null,
+      callback_url: 'https://sink.example/answers',
+      turns_per_hour_override: null,
+      error_reply_text: null,
+    });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/conversations/account');
+    expect(captured[0]?.body).toMatchObject({
+      route_name: 'account',
+      door: 'api',
+      target_kind: 'tool',
+      callback_url: 'https://sink.example/answers',
+    });
+    expect(out.created).toBe(true);
+    // The api-door secret rides the reply once — the caller must capture it here.
+    expect(out.callback_secret).toBe('sekret-token');
+  });
+
+  it('percent-encodes a route name with unsafe path characters', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { ...written, route_name: 'a b/c' } }),
+    );
+    await client.createOrReplaceConversationRoute({
+      route_name: 'a b/c',
+      door: 'channel',
+      target_kind: 'agent',
+      target_name: 'assistant',
+      payload_expr: null,
+      reply_expr: null,
+      initial_mode: 'agent',
+      execution_key: 'svc',
+      channel: 'whatsapp',
+      our_identity: '+1',
+      callback_url: null,
+      turns_per_hour_override: null,
+      error_reply_text: null,
+    });
+    expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc');
+  });
+
+  it('deleteConversationRoute() DELETEs the name path and unwraps the reply', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { removed: true, route_name: 'account' } }),
+    );
+    const out = await client.deleteConversationRoute('account');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/conversations/account');
+    expect(out.removed).toBe(true);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a drifting write reply', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { created: 'yes', route_name: 'account' } }),
+    );
+    await expect(
+      client.createOrReplaceConversationRoute({
+        route_name: 'account',
+        door: 'channel',
+        target_kind: 'agent',
+        target_name: 'assistant',
+        payload_expr: null,
+        reply_expr: null,
+        initial_mode: 'agent',
+        execution_key: 'svc',
+        channel: 'whatsapp',
+        our_identity: '+1',
+        callback_url: null,
+        turns_per_hour_override: null,
+        error_reply_text: null,
+      }),
+    ).rejects.toBeInstanceOf(ApiSchemaError);
+  });
 });
 
 describe('conversation threads transport', () => {
