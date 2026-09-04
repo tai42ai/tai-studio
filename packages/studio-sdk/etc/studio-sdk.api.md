@@ -1039,13 +1039,41 @@ target_kind: "tool" | "agent";
 target_name: string;
 payload_expr: string | null;
 reply_expr: string | null;
+initial_mode: "agent" | "manual";
 execution_key: string;
 channel: string | null;
 our_identity: string | null;
 callback_url: string | null;
+turns_per_hour_override: number | null;
+error_reply_text: string | null;
 execution_key_fingerprint: string;
 }[];
 total: number;
+}>;
+readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
+created: boolean;
+route_name: string;
+route: {
+route_name: string;
+door: "channel" | "api";
+target_kind: "tool" | "agent";
+target_name: string;
+payload_expr: string | null;
+reply_expr: string | null;
+initial_mode: "agent" | "manual";
+execution_key: string;
+channel: string | null;
+our_identity: string | null;
+callback_url: string | null;
+turns_per_hour_override: number | null;
+error_reply_text: string | null;
+execution_key_fingerprint: string;
+};
+callback_secret: string | null;
+}>;
+readonly deleteConversationRoute: (routeName: string) => Promise<{
+removed: boolean;
+route_name: string;
 }>;
 readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
 total: number;
@@ -1126,11 +1154,11 @@ thread_id: string;
 }>;
 readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
 mode: "agent" | "manual";
-source: "thread" | "route";
+source: "route" | "thread";
 }>;
 readonly setConversationThreadMode: (routeName: string, threadId: string, mode: ConversationThreadMode) => Promise<{
 mode: "agent" | "manual";
-source: "thread" | "route";
+source: "route" | "thread";
 }>;
 readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
 enabled: boolean;
@@ -2508,6 +2536,15 @@ interface ConversationMessageSearchQuery {
 }
 
 // @public (undocumented)
+type ConversationMode = z.infer<typeof conversationMode>;
+
+// @public
+const conversationMode: z.ZodEnum<{
+    agent: "agent";
+    manual: "manual";
+}>;
+
+// @public (undocumented)
 type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
 // @public
@@ -2533,11 +2570,55 @@ const conversationRoute: z.ZodObject<{
     target_name: z.ZodString;
     payload_expr: z.ZodNullable<z.ZodString>;
     reply_expr: z.ZodNullable<z.ZodString>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
     execution_key: z.ZodString;
     channel: z.ZodNullable<z.ZodString>;
     our_identity: z.ZodNullable<z.ZodString>;
     callback_url: z.ZodNullable<z.ZodString>;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key_fingerprint: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationRouteCreate = z.infer<typeof conversationRouteCreate>;
+
+// @public
+const conversationRouteCreate: z.ZodObject<{
+    route_name: z.ZodString;
+    door: z.ZodEnum<{
+        channel: "channel";
+        api: "api";
+    }>;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    payload_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    reply_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    initial_mode: z.ZodDefault<z.ZodEnum<{
+        agent: "agent";
+        manual: "manual";
+    }>>;
+    execution_key: z.ZodString;
+    channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    our_identity: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationRouteDeleted = z.infer<typeof conversationRouteDeleted>;
+
+// @public
+const conversationRouteDeleted: z.ZodObject<{
+    removed: z.ZodBoolean;
+    route_name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -2558,13 +2639,54 @@ const conversationRoutes: z.ZodObject<{
         target_name: z.ZodString;
         payload_expr: z.ZodNullable<z.ZodString>;
         reply_expr: z.ZodNullable<z.ZodString>;
+        initial_mode: z.ZodDefault<z.ZodEnum<{
+            agent: "agent";
+            manual: "manual";
+        }>>;
         execution_key: z.ZodString;
         channel: z.ZodNullable<z.ZodString>;
         our_identity: z.ZodNullable<z.ZodString>;
         callback_url: z.ZodNullable<z.ZodString>;
+        turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key_fingerprint: z.ZodString;
     }, z.core.$strip>>;
     total: z.ZodNumber;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationRouteWritten = z.infer<typeof conversationRouteWritten>;
+
+// @public
+const conversationRouteWritten: z.ZodObject<{
+    created: z.ZodBoolean;
+    route_name: z.ZodString;
+    route: z.ZodObject<{
+        route_name: z.ZodString;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        payload_expr: z.ZodNullable<z.ZodString>;
+        reply_expr: z.ZodNullable<z.ZodString>;
+        initial_mode: z.ZodDefault<z.ZodEnum<{
+            agent: "agent";
+            manual: "manual";
+        }>>;
+        execution_key: z.ZodString;
+        channel: z.ZodNullable<z.ZodString>;
+        our_identity: z.ZodNullable<z.ZodString>;
+        callback_url: z.ZodNullable<z.ZodString>;
+        turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+        error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        execution_key_fingerprint: z.ZodString;
+    }, z.core.$strip>;
+    callback_secret: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -2645,8 +2767,8 @@ const conversationThreadModeState: z.ZodObject<{
         manual: "manual";
     }>;
     source: z.ZodEnum<{
-        thread: "thread";
         route: "route";
+        thread: "thread";
     }>;
 }, z.core.$strip>;
 
@@ -3662,13 +3784,41 @@ function createApiClient(config: ApiConfig): {
             target_name: string;
             payload_expr: string | null;
             reply_expr: string | null;
+            initial_mode: "agent" | "manual";
             execution_key: string;
             channel: string | null;
             our_identity: string | null;
             callback_url: string | null;
+            turns_per_hour_override: number | null;
+            error_reply_text: string | null;
             execution_key_fingerprint: string;
         }[];
         total: number;
+    }>;
+    readonly createOrReplaceConversationRoute: (route: s.ConversationRouteCreate) => Promise<{
+        created: boolean;
+        route_name: string;
+        route: {
+            route_name: string;
+            door: "channel" | "api";
+            target_kind: "tool" | "agent";
+            target_name: string;
+            payload_expr: string | null;
+            reply_expr: string | null;
+            initial_mode: "agent" | "manual";
+            execution_key: string;
+            channel: string | null;
+            our_identity: string | null;
+            callback_url: string | null;
+            turns_per_hour_override: number | null;
+            error_reply_text: string | null;
+            execution_key_fingerprint: string;
+        };
+        callback_secret: string | null;
+    }>;
+    readonly deleteConversationRoute: (routeName: string) => Promise<{
+        removed: boolean;
+        route_name: string;
     }>;
     readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
         total: number;
@@ -3749,11 +3899,11 @@ function createApiClient(config: ApiConfig): {
     }>;
     readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
         mode: "agent" | "manual";
-        source: "thread" | "route";
+        source: "route" | "thread";
     }>;
     readonly setConversationThreadMode: (routeName: string, threadId: string, mode: s.ConversationThreadMode) => Promise<{
         mode: "agent" | "manual";
-        source: "thread" | "route";
+        source: "route" | "thread";
     }>;
     readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
         enabled: boolean;
@@ -8328,6 +8478,8 @@ declare namespace s {
         ConversationDoor,
         conversationTargetKind,
         ConversationTargetKind,
+        conversationMode,
+        ConversationMode,
         conversationDeliveryStatus,
         ConversationDeliveryStatus,
         conversationAnswerStatus,
@@ -8338,6 +8490,12 @@ declare namespace s {
         ConversationRoute,
         conversationRoutes,
         ConversationRoutes,
+        conversationRouteCreate,
+        ConversationRouteCreate,
+        conversationRouteWritten,
+        ConversationRouteWritten,
+        conversationRouteDeleted,
+        ConversationRouteDeleted,
         conversationThread,
         ConversationThread,
         conversationThreadsPage,

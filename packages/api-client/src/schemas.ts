@@ -1029,6 +1029,15 @@ export const conversationTargetKind = z.enum(['agent', 'tool']);
 export type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 /**
+ * A route's default control mode (`initial_mode`) when a thread carries no
+ * per-thread override: `agent` runs the target turn, `manual` suppresses it for an
+ * operator to answer. The same value vocabulary as a per-thread mode override, but
+ * a distinct concept (the route default vs. one thread's override).
+ */
+export const conversationMode = z.enum(['agent', 'manual']);
+export type ConversationMode = z.infer<typeof conversationMode>;
+
+/**
  * Where a record sits between intake and a terminal outcome. `failed` is the one
  * the monitor surfaces loudly; `shed` and `silent` are terminal by design and
  * never send.
@@ -1056,7 +1065,14 @@ export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 export const conversationRecordOrigin = z.enum(['client', 'operator']);
 export type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
-/** A stored routing row as a read door returns it, its `callback_secret` withheld. */
+/**
+ * A stored routing row as a read door returns it, its `callback_secret` withheld.
+ *
+ * `initial_mode`, `turns_per_hour_override`, and `error_reply_text` carry defaults
+ * because a stored row always returns them, while a hand-built stub/fixture may
+ * omit them — the default keeps such a payload valid without inventing a field the
+ * server never sends.
+ */
 export const conversationRoute = z.object({
   route_name: z.string(),
   door: conversationDoor,
@@ -1064,10 +1080,13 @@ export const conversationRoute = z.object({
   target_name: z.string(),
   payload_expr: z.string().nullable(),
   reply_expr: z.string().nullable(),
+  initial_mode: conversationMode.default('agent'),
   execution_key: z.string(),
   channel: z.string().nullable(),
   our_identity: z.string().nullable(),
   callback_url: z.string().nullable(),
+  turns_per_hour_override: z.number().int().nullable().default(null),
+  error_reply_text: z.string().nullable().default(null),
   execution_key_fingerprint: z.string(),
 });
 export type ConversationRoute = z.infer<typeof conversationRoute>;
@@ -1077,6 +1096,62 @@ export const conversationRoutes = z.object({
   total: z.number(),
 });
 export type ConversationRoutes = z.infer<typeof conversationRoutes>;
+
+/**
+ * The client-facing create/edit body for a conversation route — the wire model of
+ * `tai42_contract.conversations.ConversationRouteCreate`. `POST
+ * /api/conversations/{route_name}` is an UPSERT, so this one shape is both the
+ * create AND the edit body. `route_name` rides the URL path; it is carried here too
+ * (the door rejects a body whose `route_name` disagrees with the path).
+ *
+ * The contract's cross-field validators are mirrored where the form authors this
+ * body: `payload_expr`/`reply_expr` are tool-only; an `api` door carries a
+ * `callback_url` (and no channel identity); a `channel` door carries `channel` +
+ * `our_identity` (and no callback). Sent explicitly (including `null`) so an edit
+ * clears a field the operator emptied rather than leaving the stored value.
+ */
+export const conversationRouteCreate = z.object({
+  route_name: z.string(),
+  door: conversationDoor,
+  target_kind: conversationTargetKind,
+  target_name: z.string().min(1),
+  payload_expr: z.string().nullable().default(null),
+  reply_expr: z.string().nullable().default(null),
+  initial_mode: conversationMode.default('agent'),
+  execution_key: z.string().min(1),
+  channel: z.string().nullable().default(null),
+  our_identity: z.string().nullable().default(null),
+  callback_url: z.string().nullable().default(null),
+  turns_per_hour_override: z.number().int().positive().nullable().default(null),
+  error_reply_text: z.string().min(1).max(2000).nullable().default(null),
+});
+export type ConversationRouteCreate = z.infer<typeof conversationRouteCreate>;
+
+/**
+ * The create/replace reply: whether THIS call created the row (vs. replaced an
+ * existing one), the row itself (its `callback_secret` withheld), and the
+ * `callback_secret` returned ONCE for an `api`-door row (`null` for a `channel`
+ * row). The secret signs delivery callbacks and is never re-read from any door, so
+ * a caller that needs it must capture it from this reply.
+ */
+export const conversationRouteWritten = z.object({
+  created: z.boolean(),
+  route_name: z.string(),
+  route: conversationRoute,
+  callback_secret: z.string().nullable(),
+});
+export type ConversationRouteWritten = z.infer<typeof conversationRouteWritten>;
+
+/**
+ * The delete reply: `removed` says whether THIS call removed the routing row (a
+ * retryable reclamation of orphaned thread indexes answers `false` rather than a
+ * 404).
+ */
+export const conversationRouteDeleted = z.object({
+  removed: z.boolean(),
+  route_name: z.string(),
+});
+export type ConversationRouteDeleted = z.infer<typeof conversationRouteDeleted>;
 
 /**
  * One thread of a route, summarized from its newest record. A `thread_id` holds

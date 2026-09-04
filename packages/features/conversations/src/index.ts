@@ -7,6 +7,7 @@
  */
 export { ConversationsPage } from './ConversationsPage';
 export { RoutesTable } from './RoutesTable';
+export { RouteFormDialog } from './RouteFormDialog';
 export { RouteThreads } from './RouteThreads';
 export { EntryGate } from './EntryGate';
 export { ThreadList } from './ThreadList';
