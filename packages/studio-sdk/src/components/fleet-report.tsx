@@ -9,7 +9,10 @@
  * used by every config-mutation surface) reports a saved change that did not fully
  * propagate and points the operator at the System page to reload; `'reload'` (the
  * System page's own fleet-reload action) drops the "Change saved" framing — nothing
- * was saved, a reload was dispatched — and the self-referential System-page pointer.
+ * was saved, a reload was dispatched — and the self-referential System-page pointer;
+ * `'deregister'` and `'remove'` (detach fan-outs) likewise drop the "Change saved"
+ * framing and points the operator back at re-running the deregister, because a
+ * reload would re-attach the very server being detached — the wrong remediation.
  *
  * A `converged` summary (every worker applied, or a lone-worker local-only change)
  * renders NOTHING — the calling surface shows its own success. A `degraded` summary
@@ -73,26 +76,44 @@ const OUTCOME_STATUS: Record<FleetFailureOutcome, StatusTone> = {
  */
 export interface FleetReportProps {
   readonly summary: FleetReportSummary | null;
-  /** Whose framing the copy takes: a saved config change, or a dispatched reload. */
-  readonly action?: 'save' | 'reload';
+  /**
+   * Whose framing the copy takes: a saved config change (`'save'`), a dispatched
+   * reload (`'reload'`), a connector detach fan-out (`'deregister'`), or a live-registry
+   * tool removal (`'remove'`). All but `'save'` drop the "Change saved" framing;
+   * `'deregister'` and `'remove'` also point remediation back at re-running that
+   * same detach, since a reload would re-attach the detached server or tool.
+   */
+  readonly action?: 'save' | 'reload' | 'deregister' | 'remove';
 }
 
 export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
   if (summary === null || summary.status === 'converged') return null;
 
+  // Only a saved config change carries the "Change saved" framing; a reload or a
+  // deregister saved nothing.
+  const savedFraming = action === 'save';
+
   if (summary.status === 'unreachable') {
+    // Where to send the operator once the bus is back: re-run the same op, except a
+    // saved change reloads from the System page.
+    const unreachableRemediation =
+      action === 'deregister'
+        ? 'Re-run the deregister once the bus is back.'
+        : action === 'remove'
+          ? 'Re-run the remove once the bus is back.'
+          : action === 'reload'
+            ? 'Re-run the reload once the bus is back.'
+            : 'Re-run the reload from the System page once the bus is back.';
     return (
       <div role="alert" className="tai-error-state tai-stack tai-stack-2">
         <strong className="tai-status tai-status-err">
           <XCircleIcon />
-          {action === 'reload'
-            ? 'The worker fleet was not reached'
-            : 'Change saved, but the worker fleet was not reached'}
+          {savedFraming
+            ? 'Change saved, but the worker fleet was not reached'
+            : 'The worker fleet was not reached'}
         </strong>
         <p>
-          {action === 'reload'
-            ? 'The worker bus was unreachable, so other workers may still be running the old config. Re-run the reload once the bus is back.'
-            : 'The worker bus was unreachable, so other workers may still be running the old config. Re-run the reload from the System page once the bus is back.'}
+          {`The worker bus was unreachable, so other workers may still be running the old config. ${unreachableRemediation}`}
         </p>
         {/* The bus error is a message, not a listing: it wraps rather than scrolls. */}
         {summary.error !== null ? (
@@ -111,17 +132,27 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
   // worker is the commonest degraded fleet there is.
   const count = summary.failures.length;
   const workers = `${String(count)} worker${count === 1 ? '' : 's'}`;
+  // How the operator converges the stranded workers: re-run the same op, except a
+  // saved change reloads the fleet from the System page.
+  const remediation =
+    action === 'deregister'
+      ? 're-run the deregister'
+      : action === 'remove'
+        ? 're-run the remove'
+        : action === 'reload'
+          ? 're-run the reload'
+          : 'reload the fleet from the System page';
   return (
     <div role="alert" className="tai-warn-state tai-stack tai-stack-2">
       <strong className="tai-status tai-status-warn">
         <AlertTriangleIcon />
-        {action === 'reload'
-          ? `${workers} did not converge`
-          : `Change saved, but ${workers} did not converge`}
+        {savedFraming
+          ? `Change saved, but ${workers} did not converge`
+          : `${workers} did not converge`}
       </strong>
       <p>
         {`${count === 1 ? 'This worker' : 'These workers'} may still be running the old config — ` +
-          (action === 'reload' ? 're-run the reload' : 'reload the fleet from the System page') +
+          remediation +
           ` to converge ${count === 1 ? 'it' : 'them'}.`}
       </p>
       <ul className="tai-stack tai-stack-2">

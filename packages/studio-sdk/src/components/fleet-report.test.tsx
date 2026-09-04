@@ -191,6 +191,75 @@ describe('FleetReport', () => {
     expect(within(alert).getByText('RedisConnectionError: connection refused')).toBeInTheDocument();
   });
 
+  it('points a degraded remove at re-running the remove, never a reload', () => {
+    const summary: FleetReportSummary = {
+      status: 'degraded',
+      note: null,
+      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null }],
+      error: null,
+    };
+    render(<FleetReport summary={summary} action="remove" />);
+    const alert = screen.getByRole('alert');
+    // Nothing was saved on a live-registry removal, so the heading must not claim a save.
+    expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
+    // A reload would re-register the very tool being removed — the remediation must
+    // be to re-run the remove, and must never tell the operator to reload.
+    expect(within(alert).getByText(/re-run the remove to converge it/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
+  });
+
+  it('points an unreachable remove at re-running the remove, never a reload', () => {
+    const summary: FleetReportSummary = {
+      status: 'unreachable',
+      note: null,
+      failures: [],
+      error: 'RedisConnectionError: connection refused',
+    };
+    render(<FleetReport summary={summary} action="remove" />);
+    const alert = screen.getByRole('alert');
+    expect(within(alert).getByText(/The worker fleet was not reached/)).toBeInTheDocument();
+    expect(within(alert).getByText(/Re-run the remove once the bus is back/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/re-run the reload/i)).not.toBeInTheDocument();
+  });
+
+  it('points a degraded deregister at re-running the deregister, never a reload', () => {
+    const summary: FleetReportSummary = {
+      status: 'degraded',
+      note: null,
+      failures: [{ name: 'serve-b', outcome: 'timed_out', message: null }],
+      error: null,
+    };
+    render(<FleetReport summary={summary} action="deregister" />);
+    const alert = screen.getByRole('alert');
+    // Nothing was saved on a detach, so the heading must not claim a save.
+    expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
+    // A reload would re-attach the very server being detached — the remediation must
+    // be to re-run the deregister, and must never tell the operator to reload.
+    expect(within(alert).getByText(/re-run the deregister to converge it/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
+    expect(within(alert).queryByText(/from the System page/)).not.toBeInTheDocument();
+  });
+
+  it('points an unreachable deregister at re-running the deregister, never a reload', () => {
+    const summary: FleetReportSummary = {
+      status: 'unreachable',
+      note: null,
+      failures: [],
+      error: 'RedisConnectionError: connection refused',
+    };
+    render(<FleetReport summary={summary} action="deregister" />);
+    const alert = screen.getByRole('alert');
+    expect(within(alert).getByText(/The worker fleet was not reached/)).toBeInTheDocument();
+    expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
+    expect(
+      within(alert).getByText(/Re-run the deregister once the bus is back/),
+    ).toBeInTheDocument();
+    expect(within(alert).queryByText(/Re-run the reload/)).not.toBeInTheDocument();
+    expect(within(alert).getByText('RedisConnectionError: connection refused')).toBeInTheDocument();
+  });
+
   it('keeps the alert, its mark and its per-worker labels', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
