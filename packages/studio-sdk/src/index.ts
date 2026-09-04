@@ -191,7 +191,7 @@ export { Dialog } from './components/dialog';
 export type { DialogProps } from './components/dialog';
 export { ConfirmDialog } from './components/confirm-dialog';
 export type { ConfirmDialogProps } from './components/confirm-dialog';
-export { GuardedTabs, useRegisterDirty } from './components/dirty-guard';
+export { GuardedTabs, DirtyGuardBoundary, useRegisterDirty } from './components/dirty-guard';
 export { FormDialog } from './components/form-dialog';
 export type { FormDialogProps } from './components/form-dialog';
 export { Drawer } from './components/drawer';

@@ -16,22 +16,31 @@ import type { RenderResult } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { vi } from 'vitest';
 
-const navigation: NavigationContextValue = {
-  navigate: vi.fn(),
-  resolvePath: () => '/x',
-  navigatePlugin: vi.fn(),
-  resolvePluginPath: () => '/x',
-};
+/** The render result plus the transitions the shell's `NavigationProvider` wraps, so a
+ *  guard test can assert whether a navigation was allowed through or held. */
+export interface McpRenderResult extends RenderResult {
+  readonly navigate: ReturnType<typeof vi.fn>;
+}
 
 export function renderWithProviders(
   ui: ReactNode,
   { client, queryClient }: { client: Partial<ApiClient>; queryClient?: QueryClient },
-): RenderResult {
+): McpRenderResult {
   // A caller can supply its own client (to drive a background cache update via
   // `setQueryData` in-test); otherwise a fresh, retry-free one is used.
   const resolvedQueryClient =
     queryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  // A FRESH navigation per render (not a shared module singleton), so a guard test's
+  // navigate-call assertions never carry over between renders. The real
+  // `NavigationProvider` wraps these behind the dirty-editor guard.
+  const navigate = vi.fn();
+  const navigation: NavigationContextValue = {
+    navigate,
+    resolvePath: () => '/x',
+    navigatePlugin: vi.fn(),
+    resolvePluginPath: () => '/x',
+  };
+  const result = render(
     <QueryClientProvider client={resolvedQueryClient}>
       {/* The stub only implements the methods each test exercises; the section reads
           nothing else, so widening the partial stub to the full client is safe. */}
@@ -42,4 +51,5 @@ export function renderWithProviders(
       </ApiProvider>
     </QueryClientProvider>,
   );
+  return Object.assign(result, { navigate });
 }

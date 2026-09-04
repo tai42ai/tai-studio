@@ -175,7 +175,9 @@ test('a disconnect whose upstream revoke FAILED surfaces the warning and stays o
 });
 
 test('a connector-managed MCP entry renders read-only in the config form', async ({ page }) => {
-  await seedCredential(page);
+  // The MCP config surface moved onto the unified Connectors page (its MCP servers
+  // section), so the managed entry renders there directly — no manifest tab to select.
+  await stubCatalog(page);
   const manifestBody = {
     data: {
       mcp: [
@@ -222,8 +224,7 @@ test('a connector-managed MCP entry renders read-only in the config form', async
     },
   );
 
-  await page.goto('/manifest');
-  await page.getByRole('tab', { name: 'MCP', exact: true }).click();
+  await page.goto('/connectors');
 
   // The managed entry is labelled Managed, explains its owning connection, and its
   // Remove control is disabled — the whole entry is read-only (disconnect to change it).

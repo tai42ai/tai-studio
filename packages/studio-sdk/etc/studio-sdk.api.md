@@ -4618,6 +4618,11 @@ export interface DialogProps {
 // @public
 export function diffJson(before: unknown, after: unknown): JsonDiffRow[];
 
+// @public
+export function DirtyGuardBoundary(input: {
+    readonly children: ReactNode;
+}): ReactNode;
+
 // @public (undocumented)
 const disconnectResult: z.ZodObject<{
     connection_id: z.ZodString;

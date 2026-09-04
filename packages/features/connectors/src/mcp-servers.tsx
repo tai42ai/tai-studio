@@ -19,8 +19,8 @@
  *     `Manifest.model_validate` is the single gate; a 400 renders as ESCAPED
  *     text in the loud error surface.
  *
- * Dirtiness is reported to the enclosing tab guard (`useRegisterDirty`) so a tab
- * switch, a route navigation, or a full-page unload all confirm before the fleet-
+ * Dirtiness is reported (`useRegisterDirty`) to the `DirtyGuardBoundary` this section
+ * mounts, so a route navigation away or a full-page unload confirms before the fleet-
  * reloading config is dropped unsaved.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,6 +33,7 @@ import {
   Card,
   CloseIcon,
   Dialog,
+  DirtyGuardBoundary,
   EmptyState,
   ErrorState,
   ExtensionPicker,
@@ -1133,8 +1134,8 @@ function McpConfigEditor({
   const isDirty = (): boolean => draftSignature !== baseline;
   const dirty = isDirty();
 
-  // Report to the enclosing tab guard so a switch/navigation/unload confirms before
-  // the fleet-reloading config is dropped unsaved.
+  // Report to the enclosing DirtyGuardBoundary so a route navigation away or a
+  // full-page unload confirms before the fleet-reloading config is dropped unsaved.
   useRegisterDirty(dirty);
 
   // Perform the actual switch, converting the working list across. A JSON→form
@@ -1440,21 +1441,25 @@ function McpConfigSection(): ReactNode {
  */
 export function McpServersSection(): ReactNode {
   return (
-    <section aria-label="MCP servers">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-        <Card>
-          <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
-            Mounted servers
-          </h2>
-          <McpStatusSection />
-        </Card>
-        <Card>
-          <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
-            Configuration
-          </h2>
-          <McpConfigSection />
-        </Card>
-      </div>
-    </section>
+    // The config editor arms its dirty guard against this boundary (`useRegisterDirty`),
+    // so leaving the page — or closing the tab — with unsaved MCP edits confirms first.
+    <DirtyGuardBoundary>
+      <section aria-label="MCP servers">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
+          <Card>
+            <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
+              Mounted servers
+            </h2>
+            <McpStatusSection />
+          </Card>
+          <Card>
+            <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
+              Configuration
+            </h2>
+            <McpConfigSection />
+          </Card>
+        </div>
+      </section>
+    </DirtyGuardBoundary>
   );
 }

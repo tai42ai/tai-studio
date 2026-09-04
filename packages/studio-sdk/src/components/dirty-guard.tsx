@@ -1,10 +1,11 @@
 /**
- * Unsaved-changes guard for tabbed editors. `Tabs` unmount inactive panels, so a
- * tab switch tears an editor down and drops its edits. One registry closes the gap:
- * editors report dirtiness via {@link useRegisterDirty}; {@link GuardedTabs} holds a
- * switch away from a dirty editor behind a confirm; the same registry arms
- * {@link useNavigationGuard}, so a route navigation confirms through the SAME dialog
- * and a full-page unload raises the native prompt. The dialog is one shared
+ * Unsaved-changes guard for editors that get torn down or navigated away from. One
+ * registry closes the gap: editors report dirtiness via {@link useRegisterDirty}; the
+ * enclosing {@link DirtyGuardBoundary} arms {@link useNavigationGuard} from that
+ * registry, so a route navigation confirms through a shared dialog and a full-page
+ * unload raises the native prompt. {@link GuardedTabs} adds a tab-switch confirm on
+ * top of the same boundary — `Tabs` unmount inactive panels, so a switch away from a
+ * dirty editor is held behind the confirm too. The dialog is one shared
  * {@link ConfirmDialog} driven by a pending-promise resolver, so the guard's
  * `Promise<boolean>` handler and the tab switch both settle against it.
  */
@@ -36,7 +37,16 @@ interface DirtyGuardValue {
 
 const DirtyGuardContext = createContext<DirtyGuardValue | null>(null);
 
-function DirtyGuardProvider({ children }: { readonly children: ReactNode }): ReactNode {
+/**
+ * Boundary that guards navigation away from a region holding a dirty editor. Editors
+ * inside it arm the guard through {@link useRegisterDirty}; while any is dirty a route
+ * navigation (a route-token/plugin navigate, an {@link AppLink}, or a browser
+ * back/forward) confirms through the shared discard dialog, and a full-page unload
+ * raises the native prompt. Use this directly to guard a dirty editor that is a plain
+ * page section (no tabs); {@link GuardedTabs} wraps this same boundary to additionally
+ * guard tab switches.
+ */
+export function DirtyGuardBoundary({ children }: { readonly children: ReactNode }): ReactNode {
   const dirtyIds = useRef<Set<string>>(new Set());
   // Mirror the registry's non-empty state into React so the navigation guard's
   // `when` re-arms as editors go dirty/clean.
@@ -96,9 +106,9 @@ function DirtyGuardProvider({ children }: { readonly children: ReactNode }): Rea
 }
 
 /**
- * Report an editor's dirty state to the enclosing {@link GuardedTabs}. A no-op
- * outside a provider (an editor rendered standalone, e.g. in isolation tests) so
- * the hook is always safe to call.
+ * Report an editor's dirty state to the enclosing {@link DirtyGuardBoundary} (which
+ * {@link GuardedTabs} also provides). A no-op outside a boundary (an editor rendered
+ * standalone, e.g. in isolation tests) so the hook is always safe to call.
  */
 export function useRegisterDirty(dirty: boolean): void {
   const ctx = useContext(DirtyGuardContext);
@@ -135,7 +145,7 @@ function GuardedTabsInner({
 
 /**
  * A drop-in replacement for {@link Tabs} that guards a switch away from a dirty
- * editor. Wraps the tabs in a {@link DirtyGuardProvider}, so an editor rendered in
+ * editor. Wraps the tabs in a {@link DirtyGuardBoundary}, so an editor rendered in
  * any panel can arm the guard through {@link useRegisterDirty}.
  */
 export function GuardedTabs({
@@ -146,8 +156,8 @@ export function GuardedTabs({
   readonly defaultValue?: string;
 }): ReactNode {
   return (
-    <DirtyGuardProvider>
+    <DirtyGuardBoundary>
       <GuardedTabsInner items={items} defaultValue={defaultValue} />
-    </DirtyGuardProvider>
+    </DirtyGuardBoundary>
   );
 }
