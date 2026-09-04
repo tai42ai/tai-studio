@@ -105,7 +105,7 @@ test('the reference plugin contributes a sidebar nav entry and a host-injected s
   // in the Primary navigation and navigates (client-side) to the plugin's page.
   const navLink = page
     .getByRole('navigation', { name: 'Primary' })
-    .getByRole('link', { name: 'Reference' });
+    .getByRole('link', { name: 'Reference', exact: true });
   await expect(navLink).toBeVisible();
   await navLink.click();
   await expect(page).toHaveURL(/\/plugins\/reference_plugin\/demo$/);
