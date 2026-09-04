@@ -37,6 +37,11 @@ function StubExpressionField({ label, value, onChange }: ExpressionFieldProps): 
   );
 }
 
+// Every case drives a full Radix dialog flow (portal mount, combobox pickers,
+// multi-field typing); loaded CI runners overrun the default timeout, so the
+// whole file gets explicit headroom.
+vi.setConfig({ testTimeout: 15_000 });
+
 /** Open a discriminated-union variant picker inside the named field group. */
 async function pickVariant(
   user: ReturnType<typeof userEvent.setup>,
