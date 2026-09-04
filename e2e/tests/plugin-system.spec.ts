@@ -101,10 +101,10 @@ test('the reference plugin contributes a sidebar nav entry and a host-injected s
   // The nav entry is committed at the same module-eval point that sets __pluginReact.
   await page.waitForFunction(() => '__pluginReact' in window);
 
-  // The registered nav entry appears in the shell's Plugins nav and navigates
-  // (client-side) to the plugin's own page.
+  // The registered nav entry appears under the plugin's own self-named section
+  // in the Primary navigation and navigates (client-side) to the plugin's page.
   const navLink = page
-    .getByRole('navigation', { name: 'Plugins' })
+    .getByRole('navigation', { name: 'Primary' })
     .getByRole('link', { name: 'Reference' });
   await expect(navLink).toBeVisible();
   await navLink.click();
