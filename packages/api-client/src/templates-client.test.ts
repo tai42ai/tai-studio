@@ -1,7 +1,8 @@
 /**
  * Transport-level tests for the templates client methods: `listTemplates`,
- * `getTemplate`, `uploadTemplate`, `deleteTemplate`, `renderTemplate`,
- * `clearTemplatesCache` — URL, HTTP method, request-body shaping, the `{ data }`
+ * `getTemplate`, `uploadTemplate`, `deleteTemplate`, `deleteTemplateDir`,
+ * `renderTemplate`, `clearTemplatesCache` — URL, HTTP method, request-body shaping,
+ * the `{ data }`
  * envelope unwrap, and a LOUD error on a 4xx `{error}` plus an `ApiSchemaError` on a
  * drifting response. A fake `fetch` records each request and returns a canned body.
  */
@@ -84,6 +85,24 @@ describe('templates client transport', () => {
     expect(captured[0]?.url).toBe('/api/delete-template');
     expect(captured[0]?.body).toEqual({ path: 'welcome.md' });
     expect(out.deleted).toBe(true);
+  });
+
+  it('deleteTemplateDir POSTs { path } to /api/delete-template-dir and parses the receipt', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { path: 'prompts', deleted: true } }),
+    );
+    const out = await client.deleteTemplateDir('prompts');
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/delete-template-dir');
+    expect(captured[0]?.body).toEqual({ path: 'prompts' });
+    expect(out.deleted).toBe(true);
+  });
+
+  it('surfaces a 404 { error } from a missing directory as a LOUD ApiError', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ error: "template directory 'ghost' not found" }, 404),
+    );
+    await expect(client.deleteTemplateDir('ghost')).rejects.toBeInstanceOf(ApiError);
   });
 
   it('renderTemplate POSTs the render body and parses the rendered output', async () => {

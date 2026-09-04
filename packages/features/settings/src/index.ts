@@ -18,6 +18,7 @@ export { RolesTab } from './RolesTab';
 export type { RolesTabProps } from './RolesTab';
 export { ProfilesTab } from './ProfilesTab';
 export type { ProfilesTabProps } from './ProfilesTab';
+export { ReloadConfigButton } from './ReloadConfigButton';
 export {
   configModeKey,
   envConfigKey,

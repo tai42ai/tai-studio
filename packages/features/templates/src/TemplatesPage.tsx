@@ -1,8 +1,10 @@
 /**
  * Templates page. The master list comes from `api.listTemplates`; selecting
  * a name navigates to `templates?template=<id>` (shell-owned routing via
- * `AppLink`), which drives the detail panel. Also hosts the upload form and the
- * "clear cache" action. All server state flows through TanStack Query:
+ * `AppLink`), which drives the detail panel. Also hosts the upload form, the
+ * "clear cache" action, and a per-directory delete affordance on the explorer's
+ * folder rows (a destructive confirm removing every template under the prefix). All
+ * server state flows through TanStack Query:
  * loading → `Skeleton`, empty → `EmptyState`, error → a loud `ErrorState`.
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -12,6 +14,7 @@ import {
   ArrowLeftIcon,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   ExplorerView,
@@ -26,6 +29,7 @@ import {
   useSearchCommit,
   type ExplorerColumn,
   type ExplorerEmptyStates,
+  type Folder,
   type PageProps,
   type RouteSearch,
 } from '@tai42/studio-sdk';
@@ -89,6 +93,62 @@ function TemplateLink({
   );
 }
 
+/**
+ * The delete-directory confirm for one template folder prefix. The server door
+ * (`deleteTemplateDir`) removes EVERY template filed under the prefix — a virtual
+ * folder exists only through its members, so the copy states plainly that everything
+ * under it goes. On success it invalidates the master list and every cached template
+ * detail; if the OPEN template lived under the removed prefix its detail is now stale,
+ * so the selection is cleared back to the un-selected view. A rejected delete (the
+ * server 404s a prefix matching nothing, 400s the template root) renders verbatim in
+ * the dialog.
+ */
+function DeleteTemplateDirDialog({
+  dir,
+  selected,
+  onClose,
+}: {
+  readonly dir: string;
+  readonly selected: string | undefined;
+  readonly onClose: () => void;
+}): ReactNode {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const navigate = useAppNavigate();
+  const remove = useMutation({
+    mutationFn: () => api.deleteTemplateDir(dir),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: templatesListKey });
+      void queryClient.invalidateQueries({
+        predicate: (q) => q.queryKey[0] === 'template',
+      });
+      if (selected?.startsWith(`${dir}/`)) {
+        navigate('templates');
+      }
+      onClose();
+    },
+  });
+
+  return (
+    <ConfirmDialog
+      title="Delete directory"
+      confirmLabel="Delete directory"
+      pendingLabel="Deleting directory"
+      onConfirm={() => {
+        remove.mutate();
+      }}
+      onClose={onClose}
+      isPending={remove.isPending}
+      error={remove.error}
+    >
+      <p style={{ margin: 0 }}>
+        Delete <strong className="tai-mono">{dir}</strong> and every template under it? This cannot
+        be undone.
+      </p>
+    </ConfirmDialog>
+  );
+}
+
 function TemplateList({
   selected,
   committedQuery,
@@ -100,6 +160,10 @@ function TemplateList({
   const api = useApi();
   const navigate = useAppNavigate();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  // The folder whose delete-directory confirm is open (`null` = none). Templates are
+  // stored through the same provider as storage resources, so directory rows carry the
+  // same destructive-confirm folder action the storage explorer uses.
+  const [deleteDir, setDeleteDir] = useState<string | null>(null);
 
   // The live search box holds a local draft; the committed `?q=` is written only on an
   // explicit commit (Enter / an edited blur), never per keystroke. Re-seed the draft
@@ -140,6 +204,23 @@ function TemplateList({
     <TemplateLink templateKey={key} selected={key === selected} preserveQuery={preserveQuery} />
   );
 
+  // The per-folder destructive affordance, mirroring the storage explorer: a danger
+  // button on each directory row/card opening the delete-directory confirm. It follows
+  // the surface's existing gate (storage-provider presence) — no extra per-write gate,
+  // exactly as the single-template delete; the server `write` fence stays the authority
+  // and a refusal surfaces loudly in the dialog.
+  const renderFolderActions = (folder: Folder): ReactNode => (
+    <Button
+      variant="danger"
+      aria-label={`Delete directory ${folder.id}`}
+      onClick={() => {
+        setDeleteDir(folder.id);
+      }}
+    >
+      Delete
+    </Button>
+  );
+
   let body: ReactNode;
   if (listQuery.isPending) {
     body = (
@@ -175,6 +256,7 @@ function TemplateList({
         columns={COLUMNS}
         renderRow={(key) => <TD className="tai-table-id">{renderLink(key)}</TD>}
         renderCard={(key) => <Card interactive>{renderLink(key)}</Card>}
+        renderFolderActions={renderFolderActions}
         // Open == select in this master/detail; a click anywhere on the row/card sets
         // `?template=`, mirroring the name link (the SDK yields to that link so neither
         // double-fires).
@@ -193,7 +275,20 @@ function TemplateList({
     );
   }
 
-  return <div ref={containerRef}>{body}</div>;
+  return (
+    <div ref={containerRef}>
+      {body}
+      {deleteDir !== null ? (
+        <DeleteTemplateDirDialog
+          dir={deleteDir}
+          selected={selected}
+          onClose={() => {
+            setDeleteDir(null);
+          }}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
