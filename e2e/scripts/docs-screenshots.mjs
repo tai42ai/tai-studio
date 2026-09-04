@@ -610,8 +610,8 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   // plugin, so this entry always resolves.
   if (awaitPluginNav) {
     await page
-      .getByRole('navigation', { name: 'Plugins' })
-      .getByRole('link', { name: 'Reference' })
+      .getByRole('navigation', { name: 'Primary' })
+      .getByRole('link', { name: 'Reference', exact: true })
       .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   }
   // Let fonts/layout settle.
