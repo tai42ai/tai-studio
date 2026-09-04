@@ -12,6 +12,7 @@ import { ConversationsPage } from './ConversationsPage';
 import { THREADS_MAX_PAGES } from './ThreadList';
 import {
   installViewportBand,
+  makeConfig,
   makeMessage,
   makeRoute,
   makeThread,
@@ -415,5 +416,50 @@ describe('the OFF deployment', () => {
       screen.getByText('conversation routes require the redis conversations backend'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('the admin-cluster tabs', () => {
+  /** A landing client serving the route picker plus the two admin surfaces. */
+  function landingClient() {
+    return {
+      listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
+      listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
+      listFailedConversationMessages: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    };
+  }
+
+  it('opens on the route picker, with the other doors unread until their tab', async () => {
+    const client = landingClient();
+    renderWithProviders(<ConversationsPage search={{}} />, { client });
+
+    expect(await screen.findByTestId('conversation-routes-table')).toBeInTheDocument();
+    // Only the open tab reads its door — the config and failed listings stay unread.
+    expect(client.listConversationConfigs).not.toHaveBeenCalled();
+    expect(client.listFailedConversationMessages).not.toHaveBeenCalled();
+  });
+
+  it('mounts the per-target config surface when its tab is chosen', async () => {
+    const user = userEvent.setup();
+    const client = landingClient();
+    renderWithProviders(<ConversationsPage search={{}} />, { client });
+
+    await user.click(await screen.findByRole('tab', { name: 'Per-target configs' }));
+    expect(await screen.findByTestId('conversation-configs-table')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(client.listConversationConfigs).toHaveBeenCalled();
+    });
+  });
+
+  it('mounts the failed-delivery view when its tab is chosen', async () => {
+    const user = userEvent.setup();
+    const client = landingClient();
+    renderWithProviders(<ConversationsPage search={{}} />, { client });
+
+    await user.click(await screen.findByRole('tab', { name: 'Failed deliveries' }));
+    expect(await screen.findByText('No failed deliveries')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(client.listFailedConversationMessages).toHaveBeenCalled();
+    });
   });
 });

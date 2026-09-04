@@ -119,10 +119,10 @@ type AnswerFormat = z.infer<typeof answerFormat>;
 // @public (undocumented)
 const answerFormat: z.ZodEnum<{
     text: "text";
-    external: "external";
     confirm: "confirm";
     select: "select";
     form: "form";
+    external: "external";
 }>;
 
 // @public (undocumented)
@@ -174,7 +174,7 @@ run_id: string;
 readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "running" | "succeeded" | "failed" | "lost";
+status: "failed" | "running" | "succeeded" | "lost";
 started_at: string;
 finished_at?: string | undefined;
 result?: unknown;
@@ -183,7 +183,7 @@ error?: string | undefined;
 readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "running" | "succeeded" | "failed" | "lost";
+status: "failed" | "running" | "succeeded" | "lost";
 started_at: string;
 finished_at?: string | undefined;
 }[]>;
@@ -412,7 +412,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -445,7 +445,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -458,7 +458,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -517,7 +517,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -530,7 +530,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -552,7 +552,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -588,7 +588,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -601,7 +601,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -620,7 +620,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -680,7 +680,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -693,7 +693,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -735,7 +735,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -748,7 +748,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -846,7 +846,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -859,7 +859,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -882,7 +882,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -895,7 +895,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -925,7 +925,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -938,7 +938,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -960,7 +960,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -973,7 +973,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1011,7 +1011,7 @@ items: {
 interaction_id: string;
 group_id: string;
 question: string;
-answer_format: "text" | "external" | "confirm" | "select" | "form";
+answer_format: "text" | "confirm" | "select" | "form" | "external";
 format_payload: Record<string, unknown>;
 created_at: string;
 timeout_at: string;
@@ -1035,7 +1035,7 @@ readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
 items: {
 route_name: string;
 door: "channel" | "api";
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 payload_expr: string | null;
 reply_expr: string | null;
@@ -1056,7 +1056,7 @@ route_name: string;
 route: {
 route_name: string;
 door: "channel" | "api";
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 payload_expr: string | null;
 reply_expr: string | null;
@@ -1159,6 +1159,72 @@ source: "route" | "thread";
 readonly setConversationThreadMode: (routeName: string, threadId: string, mode: ConversationThreadMode) => Promise<{
 mode: "agent" | "manual";
 source: "route" | "thread";
+}>;
+readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
+items: {
+target_kind: "agent" | "tool";
+target_name: string;
+multichannel: boolean;
+greeting_template: string | null;
+}[];
+total: number;
+}>;
+readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
+target_kind: "agent" | "tool";
+target_name: string;
+multichannel: boolean;
+greeting_template: string | null;
+}>;
+readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
+created: boolean;
+target_kind: "agent" | "tool";
+target_name: string;
+config: {
+target_kind: "agent" | "tool";
+target_name: string;
+multichannel: boolean;
+greeting_template: string | null;
+};
+}>;
+readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
+removed: boolean;
+target_kind: "agent" | "tool";
+target_name: string;
+}>;
+readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
+items: {
+message_id: string;
+route_name: string;
+door: "channel" | "api";
+thread_id: string;
+client_address: string;
+caller_principal: string | null;
+inbound_text: string;
+answer_status: "error" | "silent" | "answered" | null;
+answer: string | null;
+origin: "client" | "operator";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+created_at: number;
+updated_at: number;
+channel?: string | null | undefined;
+our_identity?: string | null | undefined;
+provider_message_id?: string | null | undefined;
+callback_url?: string | null | undefined;
+error?: string | null | undefined;
+outbound_message_ids?: string[] | undefined;
+attempts?: number | undefined;
+}[];
+total: number;
+}>;
+readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
+removed: number;
+route_name: string;
+thread_id: string;
+}>;
+readonly deleteConversationPerson: (personId: string) => Promise<{
+person_id: string;
+removed: number;
+erased: boolean;
 }>;
 readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
 enabled: boolean;
@@ -1552,7 +1618,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1565,7 +1631,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1628,7 +1694,7 @@ id: string;
 traceId: string;
 createdAt: string | null;
 tags: string[];
-status: "error" | "success";
+status: "success" | "error";
 cost: number | null;
 latencyMs: number | null;
 totalTokens: number | null;
@@ -2033,11 +2099,11 @@ const backupImportReport: z.ZodObject<{
             results: z.ZodArray<z.ZodObject<{
                 name: z.ZodString;
                 outcome: z.ZodEnum<{
-                    failed: "failed";
                     resyncing: "resyncing";
                     recycling: "recycling";
                     stale: "stale";
                     applied: "applied";
+                    failed: "failed";
                     missing: "missing";
                     departed: "departed";
                     timed_out: "timed_out";
@@ -2055,11 +2121,11 @@ const backupImportReport: z.ZodObject<{
             results: z.ZodArray<z.ZodObject<{
                 name: z.ZodString;
                 outcome: z.ZodEnum<{
-                    failed: "failed";
                     resyncing: "resyncing";
                     recycling: "recycling";
                     stale: "stale";
                     applied: "applied";
+                    failed: "failed";
                     missing: "missing";
                     departed: "departed";
                     timed_out: "timed_out";
@@ -2406,6 +2472,58 @@ const conversationAnswerStatus: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
+type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted>;
+
+// @public
+const conversationConfigDeleted: z.ZodObject<{
+    removed: z.ZodBoolean;
+    target_kind: z.ZodEnum<{
+        agent: "agent";
+        tool: "tool";
+    }>;
+    target_name: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationConfigs = z.infer<typeof conversationConfigs>;
+
+// @public
+const conversationConfigs: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            agent: "agent";
+            tool: "tool";
+        }>;
+        target_name: z.ZodString;
+        multichannel: z.ZodDefault<z.ZodBoolean>;
+        greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>;
+    total: z.ZodNumber;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationConfigWritten = z.infer<typeof conversationConfigWritten>;
+
+// @public
+const conversationConfigWritten: z.ZodObject<{
+    created: z.ZodBoolean;
+    target_kind: z.ZodEnum<{
+        agent: "agent";
+        tool: "tool";
+    }>;
+    target_name: z.ZodString;
+    config: z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            agent: "agent";
+            tool: "tool";
+        }>;
+        target_name: z.ZodString;
+        multichannel: z.ZodDefault<z.ZodBoolean>;
+        greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
@@ -2427,6 +2545,54 @@ const conversationDoor: z.ZodEnum<{
     channel: "channel";
     api: "api";
 }>;
+
+// @public (undocumented)
+type ConversationFailedMessages = z.infer<typeof conversationFailedMessages>;
+
+// @public
+const conversationFailedMessages: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        message_id: z.ZodString;
+        route_name: z.ZodString;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        thread_id: z.ZodString;
+        client_address: z.ZodString;
+        caller_principal: z.ZodNullable<z.ZodString>;
+        inbound_text: z.ZodString;
+        answer_status: z.ZodNullable<z.ZodEnum<{
+            error: "error";
+            silent: "silent";
+            answered: "answered";
+        }>>;
+        answer: z.ZodNullable<z.ZodString>;
+        origin: z.ZodEnum<{
+            client: "client";
+            operator: "operator";
+        }>;
+        delivery_status: z.ZodEnum<{
+            failed: "failed";
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+            silent: "silent";
+        }>;
+        created_at: z.ZodNumber;
+        updated_at: z.ZodNumber;
+        channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        attempts: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+    total: z.ZodNumber;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type ConversationMessage = z.infer<typeof conversationMessage>;
@@ -2547,6 +2713,16 @@ const conversationMode: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
+type ConversationPersonDeleted = z.infer<typeof conversationPersonDeleted>;
+
+// @public
+const conversationPersonDeleted: z.ZodObject<{
+    person_id: z.ZodString;
+    removed: z.ZodNumber;
+    erased: z.ZodBoolean;
+}, z.core.$strip>;
+
+// @public (undocumented)
 type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
 // @public
@@ -2566,8 +2742,8 @@ const conversationRoute: z.ZodObject<{
         api: "api";
     }>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     payload_expr: z.ZodNullable<z.ZodString>;
@@ -2596,8 +2772,8 @@ const conversationRouteCreate: z.ZodObject<{
         api: "api";
     }>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     payload_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -2635,8 +2811,8 @@ const conversationRoutes: z.ZodObject<{
             api: "api";
         }>;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         payload_expr: z.ZodNullable<z.ZodString>;
@@ -2670,8 +2846,8 @@ const conversationRouteWritten: z.ZodObject<{
             api: "api";
         }>;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         payload_expr: z.ZodNullable<z.ZodString>;
@@ -2699,8 +2875,8 @@ type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 // @public
 const conversationTargetKind: z.ZodEnum<{
-    tool: "tool";
     agent: "agent";
+    tool: "tool";
 }>;
 
 // @public (undocumented)
@@ -2721,6 +2897,16 @@ const conversationThread: z.ZodObject<{
         shed: "shed";
         silent: "silent";
     }>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationThreadDeleted = z.infer<typeof conversationThreadDeleted>;
+
+// @public
+const conversationThreadDeleted: z.ZodObject<{
+    removed: z.ZodNumber;
+    route_name: z.ZodString;
+    thread_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -2921,7 +3107,7 @@ function createApiClient(config: ApiConfig): {
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "running" | "succeeded" | "failed" | "lost";
+        status: "failed" | "running" | "succeeded" | "lost";
         started_at: string;
         finished_at?: string | undefined;
         result?: unknown;
@@ -2930,7 +3116,7 @@ function createApiClient(config: ApiConfig): {
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "running" | "succeeded" | "failed" | "lost";
+        status: "failed" | "running" | "succeeded" | "lost";
         started_at: string;
         finished_at?: string | undefined;
     }[]>;
@@ -3159,7 +3345,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -3192,7 +3378,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3205,7 +3391,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3264,7 +3450,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3277,7 +3463,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3299,7 +3485,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -3335,7 +3521,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3348,7 +3534,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3367,7 +3553,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -3427,7 +3613,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3440,7 +3626,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3482,7 +3668,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3495,7 +3681,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3593,7 +3779,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3606,7 +3792,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3629,7 +3815,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3642,7 +3828,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3672,7 +3858,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3685,7 +3871,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3707,7 +3893,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3720,7 +3906,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -3758,7 +3944,7 @@ function createApiClient(config: ApiConfig): {
             interaction_id: string;
             group_id: string;
             question: string;
-            answer_format: "text" | "external" | "confirm" | "select" | "form";
+            answer_format: "text" | "confirm" | "select" | "form" | "external";
             format_payload: Record<string, unknown>;
             created_at: string;
             timeout_at: string;
@@ -3782,7 +3968,7 @@ function createApiClient(config: ApiConfig): {
         items: {
             route_name: string;
             door: "channel" | "api";
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             payload_expr: string | null;
             reply_expr: string | null;
@@ -3803,7 +3989,7 @@ function createApiClient(config: ApiConfig): {
         route: {
             route_name: string;
             door: "channel" | "api";
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             payload_expr: string | null;
             reply_expr: string | null;
@@ -3906,6 +4092,72 @@ function createApiClient(config: ApiConfig): {
     readonly setConversationThreadMode: (routeName: string, threadId: string, mode: s.ConversationThreadMode) => Promise<{
         mode: "agent" | "manual";
         source: "route" | "thread";
+    }>;
+    readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
+        items: {
+            target_kind: "agent" | "tool";
+            target_name: string;
+            multichannel: boolean;
+            greeting_template: string | null;
+        }[];
+        total: number;
+    }>;
+    readonly getConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
+        target_kind: "agent" | "tool";
+        target_name: string;
+        multichannel: boolean;
+        greeting_template: string | null;
+    }>;
+    readonly setConversationConfig: (config: s.TargetConversationConfig) => Promise<{
+        created: boolean;
+        target_kind: "agent" | "tool";
+        target_name: string;
+        config: {
+            target_kind: "agent" | "tool";
+            target_name: string;
+            multichannel: boolean;
+            greeting_template: string | null;
+        };
+    }>;
+    readonly deleteConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string) => Promise<{
+        removed: boolean;
+        target_kind: "agent" | "tool";
+        target_name: string;
+    }>;
+    readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
+        total: number;
+    }>;
+    readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
+        removed: number;
+        route_name: string;
+        thread_id: string;
+    }>;
+    readonly deleteConversationPerson: (personId: string) => Promise<{
+        person_id: string;
+        removed: number;
+        erased: boolean;
     }>;
     readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
         enabled: boolean;
@@ -4299,7 +4551,7 @@ function createApiClient(config: ApiConfig): {
                 local_only: boolean;
                 results: {
                     name: string;
-                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                    outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                     payload: unknown;
                     error: string | null;
                     detail: string | null;
@@ -4312,7 +4564,7 @@ function createApiClient(config: ApiConfig): {
                 local_only: boolean;
                 results: {
                     name: string;
-                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                    outcome: "resyncing" | "recycling" | "stale" | "applied" | "failed" | "missing" | "departed" | "timed_out";
                     payload: unknown;
                     error: string | null;
                     detail: string | null;
@@ -4375,7 +4627,7 @@ function createApiClient(config: ApiConfig): {
             traceId: string;
             createdAt: string | null;
             tags: string[];
-            status: "error" | "success";
+            status: "success" | "error";
             cost: number | null;
             latencyMs: number | null;
             totalTokens: number | null;
@@ -4793,11 +5045,11 @@ const disconnectResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -4815,11 +5067,11 @@ const disconnectResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -5225,11 +5477,11 @@ type FleetOutcome = z.infer<typeof fleetOutcome>;
 
 // @public
 const fleetOutcome: z.ZodEnum<{
-    failed: "failed";
     resyncing: "resyncing";
     recycling: "recycling";
     stale: "stale";
     applied: "applied";
+    failed: "failed";
     missing: "missing";
     departed: "departed";
     timed_out: "timed_out";
@@ -5246,11 +5498,11 @@ const fleetReloadResult: z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             resyncing: "resyncing";
             recycling: "recycling";
             stale: "stale";
             applied: "applied";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -5279,11 +5531,11 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             resyncing: "resyncing";
             recycling: "recycling";
             stale: "stale";
             applied: "applied";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -5301,11 +5553,11 @@ const fleetReportFanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             resyncing: "resyncing";
             recycling: "recycling";
             stale: "stale";
             applied: "applied";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -5348,11 +5600,11 @@ const fleetResult: z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             resyncing: "resyncing";
             recycling: "recycling";
             stale: "stale";
             applied: "applied";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -5407,11 +5659,11 @@ type FleetWorkerResult = z.infer<typeof fleetWorkerResult>;
 const fleetWorkerResult: z.ZodObject<{
     name: z.ZodString;
     outcome: z.ZodEnum<{
-        failed: "failed";
         resyncing: "resyncing";
         recycling: "recycling";
         stale: "stale";
         applied: "applied";
+        failed: "failed";
         missing: "missing";
         departed: "departed";
         timed_out: "timed_out";
@@ -5661,10 +5913,10 @@ const interaction: z.ZodObject<{
     question: z.ZodDefault<z.ZodString>;
     answer_format: z.ZodEnum<{
         text: "text";
-        external: "external";
         confirm: "confirm";
         select: "select";
         form: "form";
+        external: "external";
     }>;
     format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
     created_at: z.ZodString;
@@ -5693,8 +5945,8 @@ type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 // @public
 const interactionMediaItem: z.ZodObject<{
     kind: z.ZodEnum<{
-        link: "link";
         image: "image";
+        link: "link";
     }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -5719,10 +5971,10 @@ const interactionsPage: z.ZodObject<{
         question: z.ZodDefault<z.ZodString>;
         answer_format: z.ZodEnum<{
             text: "text";
-            external: "external";
             confirm: "confirm";
             select: "select";
             form: "form";
+            external: "external";
         }>;
         format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
         created_at: z.ZodString;
@@ -6808,11 +7060,11 @@ const mcpReloadResult: z.ZodObject<{
     results: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
         outcome: z.ZodEnum<{
-            failed: "failed";
             resyncing: "resyncing";
             recycling: "recycling";
             stale: "stale";
             applied: "applied";
+            failed: "failed";
             missing: "missing";
             departed: "departed";
             timed_out: "timed_out";
@@ -6838,8 +7090,8 @@ type MediaKind = z.infer<typeof mediaKind>;
 
 // @public
 const mediaKind: z.ZodEnum<{
-    link: "link";
     image: "image";
+    link: "link";
 }>;
 
 // @public
@@ -7025,11 +7277,11 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7047,11 +7299,11 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7211,11 +7463,11 @@ const patchSubServicesResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7233,11 +7485,11 @@ const patchSubServicesResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7588,11 +7840,11 @@ const profileApplyResponse: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7610,11 +7862,11 @@ const profileApplyResponse: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7822,11 +8074,11 @@ const reloadConfigResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -7844,11 +8096,11 @@ const reloadConfigResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -8198,8 +8450,8 @@ const run: z.ZodObject<{
     createdAt: z.ZodNullable<z.ZodString>;
     tags: z.ZodArray<z.ZodString>;
     status: z.ZodEnum<{
-        error: "error";
         success: "success";
+        error: "error";
     }>;
     cost: z.ZodNullable<z.ZodNumber>;
     latencyMs: z.ZodNullable<z.ZodNumber>;
@@ -8216,8 +8468,8 @@ const runsPage: z.ZodObject<{
         createdAt: z.ZodNullable<z.ZodString>;
         tags: z.ZodArray<z.ZodString>;
         status: z.ZodEnum<{
-            error: "error";
             success: "success";
+            error: "error";
         }>;
         cost: z.ZodNullable<z.ZodNumber>;
         latencyMs: z.ZodNullable<z.ZodNumber>;
@@ -8531,6 +8783,20 @@ declare namespace s {
         ConversationThreadModeState,
         conversationThreadMessageSent,
         ConversationThreadMessageSent,
+        targetConversationConfig,
+        TargetConversationConfig,
+        conversationConfigs,
+        ConversationConfigs,
+        conversationConfigWritten,
+        ConversationConfigWritten,
+        conversationConfigDeleted,
+        ConversationConfigDeleted,
+        conversationFailedMessages,
+        ConversationFailedMessages,
+        conversationThreadDeleted,
+        ConversationThreadDeleted,
+        conversationPersonDeleted,
+        ConversationPersonDeleted,
         webEntryCode,
         WebEntryCode,
         webEntryGate,
@@ -9167,11 +9433,11 @@ const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -9189,11 +9455,11 @@ const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -9486,6 +9752,20 @@ export interface TagVocabularyEntry {
 }
 
 // @public (undocumented)
+type TargetConversationConfig = z.infer<typeof targetConversationConfig>;
+
+// @public
+const targetConversationConfig: z.ZodObject<{
+    target_kind: z.ZodEnum<{
+        agent: "agent";
+        tool: "tool";
+    }>;
+    target_name: z.ZodString;
+    multichannel: z.ZodDefault<z.ZodBoolean>;
+    greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export function TBody(input: TableSectionProps): JSX.Element;
 
 // @public (undocumented)
@@ -9667,11 +9947,11 @@ const toolExtensionsApplyResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";
@@ -9689,11 +9969,11 @@ const toolExtensionsApplyResult: z.ZodObject<{
         results: z.ZodArray<z.ZodObject<{
             name: z.ZodString;
             outcome: z.ZodEnum<{
-                failed: "failed";
                 resyncing: "resyncing";
                 recycling: "recycling";
                 stale: "stale";
                 applied: "applied";
+                failed: "failed";
                 missing: "missing";
                 departed: "departed";
                 timed_out: "timed_out";

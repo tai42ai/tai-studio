@@ -16,6 +16,7 @@ import type {
   ConversationMessage,
   ConversationRoute,
   ConversationThread,
+  TargetConversationConfig,
 } from '@tai42/api-client';
 import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
@@ -182,6 +183,18 @@ export function makeRoute(overrides: Partial<ConversationRoute> = {}): Conversat
     turns_per_hour_override: null,
     error_reply_text: null,
     execution_key_fingerprint: 'fp-1',
+    ...overrides,
+  };
+}
+
+export function makeConfig(
+  overrides: Partial<TargetConversationConfig> = {},
+): TargetConversationConfig {
+  return {
+    target_kind: 'agent',
+    target_name: 'assistant',
+    multichannel: false,
+    greeting_template: null,
     ...overrides,
   };
 }

@@ -674,3 +674,206 @@ describe('thread message send transport', () => {
     ).rejects.toBeInstanceOf(ApiSchemaError);
   });
 });
+
+describe('conversation config transport', () => {
+  const config = {
+    target_kind: 'agent',
+    target_name: 'assistant',
+    multichannel: true,
+    greeting_template: 'Welcome — your code is {pairing_code}.',
+  };
+
+  it('listConversationConfigs() GETs the configs door and unwraps the rows', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { items: [config], total: 1 } }),
+    );
+    const out = await client.listConversationConfigs();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/conversation-configs');
+    expect(out.total).toBe(1);
+    expect(out.items[0]?.target_name).toBe('assistant');
+    expect(out.items[0]?.multichannel).toBe(true);
+  });
+
+  it('defaults the fields a stub config omits (multichannel off, no greeting)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { items: [{ target_kind: 'tool', target_name: 'lookup' }], total: 1 },
+      }),
+    );
+    const out = await client.listConversationConfigs();
+    expect(out.items[0]?.multichannel).toBe(false);
+    expect(out.items[0]?.greeting_template).toBeNull();
+  });
+
+  it('getConversationConfig() GETs the keyed door and encodes both key segments', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: config }));
+    const out = await client.getConversationConfig('agent', 'my assistant/v2');
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/conversation-configs/agent/my%20assistant%2Fv2');
+    expect(out.target_name).toBe('assistant');
+  });
+
+  it('setConversationConfig() PUTs the body to the keyed door', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { created: true, target_kind: 'agent', target_name: 'assistant', config },
+      }),
+    );
+    const out = await client.setConversationConfig({
+      target_kind: 'agent',
+      target_name: 'assistant',
+      multichannel: true,
+      greeting_template: 'Welcome — your code is {pairing_code}.',
+    });
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.url).toBe('/api/conversation-configs/agent/assistant');
+    expect(captured[0]?.body).toMatchObject({ target_kind: 'agent', multichannel: true });
+    expect(out.created).toBe(true);
+    expect(out.config.greeting_template).toBe('Welcome — your code is {pairing_code}.');
+  });
+
+  it('carries a null greeting (no greeting) through the body', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          created: false,
+          target_kind: 'tool',
+          target_name: 'lookup',
+          config: {
+            target_kind: 'tool',
+            target_name: 'lookup',
+            multichannel: false,
+            greeting_template: null,
+          },
+        },
+      }),
+    );
+    const out = await client.setConversationConfig({
+      target_kind: 'tool',
+      target_name: 'lookup',
+      multichannel: false,
+      greeting_template: null,
+    });
+    expect(captured[0]?.body).toMatchObject({ greeting_template: null });
+    expect(out.config.greeting_template).toBeNull();
+  });
+
+  it('deleteConversationConfig() DELETEs the keyed door and unwraps the reply', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { removed: true, target_kind: 'agent', target_name: 'assistant' } }),
+    );
+    const out = await client.deleteConversationConfig('agent', 'assistant');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/conversation-configs/agent/assistant');
+    expect(out.removed).toBe(true);
+  });
+
+  it('throws ApiSchemaError LOUDLY on an unknown target kind', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { items: [{ ...config, target_kind: 'daemon' }], total: 1 } }),
+    );
+    await expect(client.listConversationConfigs()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a config missing its target name', async () => {
+    const { target_name: _dropped, ...broken } = config;
+    const { client } = harness(() => jsonResponse({ data: { items: [broken], total: 1 } }));
+    await expect(client.listConversationConfigs()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('failed conversation deliveries transport', () => {
+  it('GETs the failed-deliveries door and unwraps the admin records', async () => {
+    const failedRecord = { ...adminRecord, delivery_status: 'failed', error: 'connreset' };
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { items: [failedRecord], total: 1 } }),
+    );
+    const out = await client.listFailedConversationMessages();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/conversations/messages/failed');
+    expect(out.total).toBe(1);
+    expect(out.items[0]?.delivery_status).toBe('failed');
+    expect(out.items[0]?.error).toBe('connreset');
+  });
+
+  it('throws ApiSchemaError LOUDLY on an unknown delivery status in a failed record', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { items: [{ ...adminRecord, delivery_status: 'teleported' }], total: 1 },
+      }),
+    );
+    await expect(client.listFailedConversationMessages()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('conversation thread delete transport', () => {
+  it('DELETEs the thread door with the thread id as a QUERY value, encoded once', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { removed: 3, route_name: 'chat', thread_id: 'svc-chat/+15551234567' },
+      }),
+    );
+    const out = await client.deleteConversationThread('chat', 'svc-chat/+15551234567');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/chat/thread?thread_id=svc-chat%2F%2B15551234567',
+    );
+    expect(out.removed).toBe(3);
+  });
+
+  it('encodes an already-encoded principal in the thread id exactly once', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { removed: 0, route_name: 'chat', thread_id: 'bridge:chat:user%40example.com/u1' },
+      }),
+    );
+    await client.deleteConversationThread('chat', 'bridge:chat:user%40example.com/u1');
+    expect(captured[0]?.url).toBe(
+      '/api/conversations/chat/thread?thread_id=bridge%3Achat%3Auser%2540example.com%2Fu1',
+    );
+  });
+
+  it('encodes a route name that is not URL-safe', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { removed: 0, route_name: 'a b/c', thread_id: 't' } }),
+    );
+    await client.deleteConversationThread('a b/c', 't');
+    expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc/thread?thread_id=t');
+  });
+
+  it('throws ApiSchemaError LOUDLY when removed is not a count', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { removed: true, route_name: 'chat', thread_id: 't' } }),
+    );
+    await expect(client.deleteConversationThread('chat', 't')).rejects.toBeInstanceOf(
+      ApiSchemaError,
+    );
+  });
+});
+
+describe('conversation person delete transport', () => {
+  it('DELETEs the person door with the id on the PATH and unwraps the reply', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { person_id: 'p-123', removed: 4, erased: true } }),
+    );
+    const out = await client.deleteConversationPerson('p-123');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/conversations/persons/p-123');
+    expect(out.erased).toBe(true);
+    expect(out.removed).toBe(4);
+  });
+
+  it('answers erased=false on an already-gone person (a retry, never a 404)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { person_id: 'p-123', removed: 0, erased: false } }),
+    );
+    const out = await client.deleteConversationPerson('p-123');
+    expect(out.erased).toBe(false);
+  });
+
+  it('throws ApiSchemaError LOUDLY when erased is missing', async () => {
+    const { client } = harness(() => jsonResponse({ data: { person_id: 'p-123', removed: 0 } }));
+    await expect(client.deleteConversationPerson('p-123')).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});

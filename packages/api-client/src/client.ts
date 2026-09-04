@@ -917,6 +917,64 @@ export function createApiClient(config: ApiConfig) {
         { method: 'PUT', body: { thread_id: threadId, mode } },
       ),
 
+    // -- conversation target configs -------------------------------------------
+    // The stored per-target presentation configs (each `(target_kind, target_name)`
+    // pair's multichannel flag + first-contact greeting). Admin config surface.
+    listConversationConfigs: (signal?: AbortSignal) =>
+      req('/api/conversation-configs', s.conversationConfigs, { signal }),
+    // One config by its `(target_kind, target_name)` key. 404 when unknown.
+    getConversationConfig: (
+      targetKind: s.ConversationTargetKind,
+      targetName: string,
+      signal?: AbortSignal,
+    ) =>
+      req(
+        `/api/conversation-configs/${encodeSegment(targetKind)}/${encodeSegment(targetName)}`,
+        s.targetConversationConfig,
+        { signal },
+      ),
+    // Create or REPLACE a config (an UPSERT: the same door is the create and the
+    // edit path). The `(target_kind, target_name)` key rides the URL path; the door
+    // rejects a body whose key disagrees, so both come from the one config object.
+    setConversationConfig: (config: s.TargetConversationConfig) =>
+      req(
+        `/api/conversation-configs/${encodeSegment(config.target_kind)}/${encodeSegment(config.target_name)}`,
+        s.conversationConfigWritten,
+        { method: 'PUT', body: config },
+      ),
+    // Delete a config by its key. 404 when the key is unknown.
+    deleteConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string) =>
+      req(
+        `/api/conversation-configs/${encodeSegment(targetKind)}/${encodeSegment(targetName)}`,
+        s.conversationConfigDeleted,
+        { method: 'DELETE' },
+      ),
+
+    // -- conversation admin ----------------------------------------------------
+    // Every answer record whose delivery ended `failed`, across every route and
+    // caller. Admin-only server-side; not a paged window (returns `{items, total}`).
+    listFailedConversationMessages: (signal?: AbortSignal) =>
+      req('/api/conversations/messages/failed', s.conversationFailedMessages, { signal }),
+    // Forget ONE thread on a route (destructive): its checkpoint, answer records and
+    // thread indexes. The `thread_id` rides the QUERY value, encoded once — it embeds
+    // the api door's percent-encoded `{principal}/{end user}` address, which a path
+    // segment would encode a second time. `removed` counts the records this call
+    // cleared; a valid id on its own route always succeeds, never a 404.
+    deleteConversationThread: (routeName: string, threadId: string) =>
+      req(`/api/conversations/${encodeSegment(routeName)}/thread`, s.conversationThreadDeleted, {
+        method: 'DELETE',
+        query: { thread_id: threadId },
+      }),
+    // Erase a LINKED person ENTIRELY (GDPR, wide blast radius): its aggregated thread
+    // and checkpoint, its person row, and every address→person index mapping, across
+    // EVERY route it wrote under. The `person_id` is a uuid4 with no percent-encoded
+    // principal, so it rides the PATH cleanly. `erased` says whether this call removed
+    // the person row (idempotent — a retry answers `false`, never a 404).
+    deleteConversationPerson: (personId: string) =>
+      req(`/api/conversations/persons/${encodeSegment(personId)}`, s.conversationPersonDeleted, {
+        method: 'DELETE',
+      }),
+
     // -- channel-web entry gate ------------------------------------------------
     // A web route's entry gate, keyed by its `our_identity`: read the flag + its
     // live codes, flip the flag, mint a code (raw returned ONCE), revoke a code by

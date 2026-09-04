@@ -11,8 +11,10 @@
  * truth — back to the legal search.
  */
 import { useEffect, type ReactNode } from 'react';
-import { PageHeader, Stack, useAppNavigate, type PageProps } from '@tai42/studio-sdk';
+import { PageHeader, Stack, Tabs, useAppNavigate, type PageProps } from '@tai42/studio-sdk';
 
+import { ConfigsTable } from './ConfigsTable';
+import { FailedMessages } from './FailedMessages';
 import { useSelectionFocus } from './focus';
 import { RoutesTable, routeRowLabel } from './RoutesTable';
 import { RouteThreads } from './RouteThreads';
@@ -46,7 +48,25 @@ export function ConversationsPage({ search }: PageProps<'conversations'>): React
         description="Threads and transcripts from every conversation route — the API door and each channel medium."
       />
       {route === undefined ? (
-        <RoutesTable listRef={focus.listRef} />
+        // The monitor's landing: the route picker plus the two admin surfaces that
+        // span every route — the per-target config editor and the failed-delivery
+        // listing. They are tabs (not stacked sections) so only the open one reads
+        // its door: on a no-backend deployment each shows its own "off" note, and
+        // three of those stacked would be noise; and the picker stays the default,
+        // so a drill back always lands on it. The tab is ephemeral admin state, not
+        // a URL param — the linkable state here is the route/thread drill, which
+        // leaves this landing entirely.
+        <Tabs
+          items={[
+            {
+              value: 'routes',
+              label: 'Routes',
+              content: <RoutesTable listRef={focus.listRef} />,
+            },
+            { value: 'configs', label: 'Per-target configs', content: <ConfigsTable /> },
+            { value: 'failed', label: 'Failed deliveries', content: <FailedMessages /> },
+          ]}
+        />
       ) : (
         <RouteThreads
           route={route}

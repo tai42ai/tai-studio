@@ -18,6 +18,7 @@ import { EntryGate } from './EntryGate';
 import { useSelectionFocus } from './focus';
 import { MessageSearch } from './MessageSearch';
 import type { ConversationsSearch } from './search';
+import { ThreadActions } from './ThreadActions';
 import { ThreadList, threadRowLabel } from './ThreadList';
 import { ThreadMode } from './ThreadMode';
 import { Transcript } from './Transcript';
@@ -118,6 +119,7 @@ export function RouteThreads({
               <ThreadMode route={route} threadId={thread} />
               <Transcript route={route} threadId={thread} q={q} headingRef={focus.headingRef} />
               <ComposeMessage route={route} threadId={thread} />
+              <ThreadActions route={route} threadId={thread} />
             </div>
           )}
         </div>
