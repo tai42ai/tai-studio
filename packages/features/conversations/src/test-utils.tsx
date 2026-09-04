@@ -2,9 +2,19 @@
  * Test harness: render a unit in the exact provider stack the shell supplies at
  * runtime — a retry-disabled TanStack Query client (so a rejected query surfaces
  * its error state immediately), the SDK's `ApiProvider` fed a stub client, the
+ * auth + capability contexts (so a unit's write-gated affordances resolve), the
  * theme, and a `NavigationProvider` whose `navigate` is a spy so URL writes can
  * be asserted. Only test dependencies are imported; no production module is
  * stubbed.
+ *
+ * The write affordances (route/config create-edit-delete, thread delete, person
+ * erasure) gate on the caller's capability projection. A test that exercises one
+ * passes a `projection`: it seeds a session key so `CapabilityProvider` fetches it and
+ * reaches `ready` (pass {@link fullProjection} to show every write, a scoped one to
+ * assert it withdrawn). With NO projection the capability context stays `loading` and
+ * every write affordance fails closed (hidden) — the shape every read-only test
+ * expects, and the reason a render that never touches a write control drives no
+ * capability fetch (so it schedules no late state update to warn about).
  */
 import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,15 +26,64 @@ import type {
   ConversationMessage,
   ConversationRoute,
   ConversationThread,
+  MeProjection,
   TargetConversationConfig,
 } from '@tai42/api-client';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
 
 import type { ConversationsSearch } from './search';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;
+
+/** The session key `AuthProvider` seeds from, set so `CapabilityProvider` fetches. */
+const SESSION_KEY = 'tai-studio.apiKey';
+
+/** A total (admin) projection: every write reachable — the behavioural-test default. */
+export function fullProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return { ...baseProjection, admin: true, ...overrides };
+}
+
+/** A scoped (non-admin) projection restricted to the given routes/patterns. */
+export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
+  return { ...baseProjection, ...overrides };
+}
+
+const baseProjection: MeProjection = {
+  user_id: 'u-test',
+  owner_user_id: null,
+  admin: false,
+  scopes: [],
+  routes: [],
+  route_patterns: [],
+  sub_mcp: [],
+  tools: [],
+  agents: [],
+  mintable: false,
+};
+
+/**
+ * Fold capability wiring into the stub. When a `projection` is given, seed the session
+ * key and a `getMe` returning it so `AuthProvider` authenticates and `CapabilityProvider`
+ * fetches to `ready` (a test may still override `getMe` in its own client). With no
+ * projection, clear the key so the context stays `loading` and no fetch fires — no late
+ * state update, so a read-only render schedules nothing outside the test's `act`.
+ */
+function withCapabilities(client: StubApiClient, projection: MeProjection | undefined): ApiClient {
+  if (projection === undefined) {
+    globalThis.sessionStorage.removeItem(SESSION_KEY);
+    return client as ApiClient;
+  }
+  globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
+  return { getMe: () => Promise.resolve(projection), ...client } as ApiClient;
+}
 
 export interface RenderWithProvidersResult extends RenderResult {
   readonly navigate: Mock;
@@ -33,13 +92,13 @@ export interface RenderWithProvidersResult extends RenderResult {
 
 export function renderWithProviders(
   ui: ReactElement,
-  { client }: { readonly client: StubApiClient },
+  { client, projection }: { readonly client: StubApiClient; readonly projection?: MeProjection },
 ): RenderWithProvidersResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const navigate = vi.fn();
-  const apiClient = client as ApiClient;
+  const apiClient = withCapabilities(client, projection);
   // Built ONCE, as the shell builds it — `createNavigation` runs at app assembly,
   // not per render. A fresh literal per render would hand every feature a new
   // `navigate` identity each time, which is a re-run of every effect that depends
@@ -56,11 +115,15 @@ export function renderWithProviders(
   // cache) alive across a re-render with new props.
   const wrapper = ({ children }: { readonly children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
-      <ApiProvider value={apiClient}>
-        <ThemeProvider>
-          <NavigationProvider value={navigation}>{children}</NavigationProvider>
-        </ThemeProvider>
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider value={apiClient}>
+          <CapabilityProvider>
+            <ThemeProvider>
+              <NavigationProvider value={navigation}>{children}</NavigationProvider>
+            </ThemeProvider>
+          </CapabilityProvider>
+        </ApiProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 
@@ -91,12 +154,17 @@ export function renderWithLiveUrl(
   {
     client,
     initialSearch,
-  }: { readonly client: StubApiClient; readonly initialSearch: ConversationsSearch },
+    projection,
+  }: {
+    readonly client: StubApiClient;
+    readonly initialSearch: ConversationsSearch;
+    readonly projection?: MeProjection;
+  },
 ): RenderWithLiveUrlResult {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const apiClient = client as ApiClient;
+  const apiClient = withCapabilities(client, projection);
   const history: ConversationsSearch[] = [initialSearch];
 
   function Harness(): ReactElement {
@@ -122,11 +190,15 @@ export function renderWithLiveUrl(
     );
     return (
       <QueryClientProvider client={queryClient}>
-        <ApiProvider value={apiClient}>
-          <ThemeProvider>
-            <NavigationProvider value={value}>{page(search)}</NavigationProvider>
-          </ThemeProvider>
-        </ApiProvider>
+        <AuthProvider>
+          <ApiProvider value={apiClient}>
+            <CapabilityProvider>
+              <ThemeProvider>
+                <NavigationProvider value={value}>{page(search)}</NavigationProvider>
+              </ThemeProvider>
+            </CapabilityProvider>
+          </ApiProvider>
+        </AuthProvider>
       </QueryClientProvider>
     );
   }

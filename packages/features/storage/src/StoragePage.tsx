@@ -747,7 +747,7 @@ export function StoragePage({ search }: PageProps<'storage'>): ReactNode {
 
   return (
     <div className="tai-stack tai-stack-6" data-testid="storage-page">
-      <PageHeader eyebrow="Integrations" title="Storage" />
+      <PageHeader eyebrow="Administration" title="Storage" />
       {body}
     </div>
   );

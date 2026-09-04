@@ -41,7 +41,7 @@ export function HooksPage(_props: PageProps<'hooks'>): ReactNode {
 
   return (
     <Stack gap={6}>
-      <PageHeader eyebrow="Integrations" title="Hooks" />
+      <PageHeader eyebrow="Triggers" title="Hooks" />
 
       <Card>
         <Field

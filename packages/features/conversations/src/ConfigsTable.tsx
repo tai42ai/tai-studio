@@ -31,6 +31,7 @@ import {
   Table,
   errorMessage,
   useApi,
+  useCanWrite,
 } from '@tai42/studio-sdk';
 import type { TargetConversationConfig } from '@tai42/api-client';
 
@@ -51,6 +52,16 @@ export function ConfigsTable(): ReactNode {
     queryKey: conversationConfigsKey,
     queryFn: ({ signal }) => api.listConversationConfigs(signal),
   });
+
+  // Create and edit ride the one UPSERT door
+  // (`PUT /api/conversation-configs/{target_kind}/{target_name}`); delete rides the
+  // `DELETE` on the same path. Both are DYNAMIC (templated) write routes, so — following
+  // the house static-placeholder idiom — the interpolated path resolves to a
+  // full-projection gate: a scoped projection can never method-express a templated
+  // route, so its write affordances stay withdrawn (projection ⊆ gate). The read table
+  // below is unaffected; only the write controls gate.
+  const canWrite = useCanWrite('/api/conversation-configs/{target_kind}/{target_name}', 'PUT');
+  const canDelete = useCanWrite('/api/conversation-configs/{target_kind}/{target_name}', 'DELETE');
 
   // `creating` opens the blank form; `editing` opens it prefilled from a row;
   // `pendingDelete` names the row awaiting a destructive-delete confirm.
@@ -124,26 +135,30 @@ export function ConfigsTable(): ReactNode {
                       justifyContent: 'flex-end',
                     }}
                   >
-                    <Button
-                      aria-label={`Edit config ${configRowKey(config)}`}
-                      onClick={() => {
-                        setEditing(config);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      aria-label={`Delete config ${configRowKey(config)}`}
-                      onClick={() => {
-                        // Clear any prior delete failure so this confirm opens clean,
-                        // never carrying a stale error from a different config's attempt.
-                        deleteMutation.reset();
-                        setPendingDelete(config);
-                      }}
-                    >
-                      Delete
-                    </Button>
+                    {canWrite ? (
+                      <Button
+                        aria-label={`Edit config ${configRowKey(config)}`}
+                        onClick={() => {
+                          setEditing(config);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    ) : null}
+                    {canDelete ? (
+                      <Button
+                        variant="danger"
+                        aria-label={`Delete config ${configRowKey(config)}`}
+                        onClick={() => {
+                          // Clear any prior delete failure so this confirm opens clean,
+                          // never carrying a stale error from a different config's attempt.
+                          deleteMutation.reset();
+                          setPendingDelete(config);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
                   </div>
                 </TD>
               </TR>
@@ -167,14 +182,16 @@ export function ConfigsTable(): ReactNode {
           }}
         >
           <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>Per-target configs</h2>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setCreating(true);
-            }}
-          >
-            Create config
-          </Button>
+          {canWrite ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setCreating(true);
+              }}
+            >
+              Create config
+            </Button>
+          ) : null}
         </div>
         {body}
       </Card>

@@ -32,6 +32,7 @@ import {
   Table,
   errorMessage,
   useApi,
+  useCanWrite,
 } from '@tai42/studio-sdk';
 import type { ConversationRoute } from '@tai42/api-client';
 
@@ -56,6 +57,15 @@ export function RoutesTable({
     queryKey: conversationRoutesKey,
     queryFn: ({ signal }) => api.listConversationRoutes(signal),
   });
+
+  // Create and edit ride the one UPSERT door (`POST /api/conversations/{route_name}`);
+  // delete rides the `DELETE` on the same path. Both are DYNAMIC (templated) write
+  // routes, so — following the house static-placeholder idiom — the interpolated path
+  // resolves to a full-projection gate: a scoped projection can never method-express a
+  // templated route, so its write affordances stay withdrawn (projection ⊆ gate). The
+  // read table below is unaffected; only the write controls gate.
+  const canWrite = useCanWrite('/api/conversations/{route_name}', 'POST');
+  const canDelete = useCanWrite('/api/conversations/{route_name}', 'DELETE');
 
   // `creating` opens the blank form; `editing` opens it prefilled from a row;
   // `pendingDelete` names the row awaiting a destructive-delete confirm.
@@ -133,26 +143,30 @@ export function RoutesTable({
                       justifyContent: 'flex-end',
                     }}
                   >
-                    <Button
-                      aria-label={`Edit route ${route.route_name}`}
-                      onClick={() => {
-                        setEditing(route);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      aria-label={`Delete route ${route.route_name}`}
-                      onClick={() => {
-                        // Clear any prior delete failure so this confirm opens clean,
-                        // never carrying a stale error from a different route's attempt.
-                        deleteMutation.reset();
-                        setPendingDelete(route.route_name);
-                      }}
-                    >
-                      Delete
-                    </Button>
+                    {canWrite ? (
+                      <Button
+                        aria-label={`Edit route ${route.route_name}`}
+                        onClick={() => {
+                          setEditing(route);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                    ) : null}
+                    {canDelete ? (
+                      <Button
+                        variant="danger"
+                        aria-label={`Delete route ${route.route_name}`}
+                        onClick={() => {
+                          // Clear any prior delete failure so this confirm opens clean,
+                          // never carrying a stale error from a different route's attempt.
+                          deleteMutation.reset();
+                          setPendingDelete(route.route_name);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
                   </div>
                 </TD>
               </TR>
@@ -179,14 +193,16 @@ export function RoutesTable({
           }}
         >
           <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>Conversation routes</h2>
-          <Button
-            variant="primary"
-            onClick={() => {
-              setCreating(true);
-            }}
-          >
-            Create route
-          </Button>
+          {canWrite ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setCreating(true);
+              }}
+            >
+              Create route
+            </Button>
+          ) : null}
         </div>
         {body}
       </Card>

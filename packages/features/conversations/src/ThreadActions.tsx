@@ -25,6 +25,7 @@ import {
   errorMessage,
   useApi,
   useAppNavigate,
+  useCanWrite,
 } from '@tai42/studio-sdk';
 
 import { personIdOfThread } from './persons';
@@ -41,6 +42,15 @@ export function ThreadActions({
   const queryClient = useQueryClient();
 
   const personId = personIdOfThread(threadId);
+
+  // Both destructive actions ride DYNAMIC (templated) DELETE doors — the thread delete on
+  // `/api/conversations/{route_name}/thread`, the person erasure on
+  // `/api/conversations/persons/{person_id}`. Following the house static-placeholder
+  // idiom, the interpolated path resolves to a full-projection gate: a scoped projection
+  // can never method-express a templated route, so its write affordances stay withdrawn
+  // (projection ⊆ gate; fail closed until ready+granted).
+  const canDeleteThread = useCanWrite('/api/conversations/{route_name}/thread', 'DELETE');
+  const canErasePerson = useCanWrite('/api/conversations/persons/{person_id}', 'DELETE');
 
   const [confirming, setConfirming] = useState<'thread' | 'person' | null>(null);
 
@@ -85,6 +95,11 @@ export function ThreadActions({
     setConfirming(which);
   };
 
+  // Erase-person is reachable only on a person-aggregated thread AND when its door is
+  // granted; the whole card holds nothing else, so it never renders empty.
+  const showErasePerson = personId !== null && canErasePerson;
+  if (!canDeleteThread && !showErasePerson) return null;
+
   return (
     <Card data-testid="conversation-thread-actions">
       <div
@@ -95,16 +110,18 @@ export function ThreadActions({
           gap: 'var(--tai-space-3)',
         }}
       >
-        <Button
-          variant="danger"
-          aria-label={`Delete thread ${threadId}`}
-          onClick={() => {
-            open('thread');
-          }}
-        >
-          Delete thread
-        </Button>
-        {personId !== null ? (
+        {canDeleteThread ? (
+          <Button
+            variant="danger"
+            aria-label={`Delete thread ${threadId}`}
+            onClick={() => {
+              open('thread');
+            }}
+          >
+            Delete thread
+          </Button>
+        ) : null}
+        {showErasePerson ? (
           <Button
             variant="danger"
             aria-label={`Erase person ${personId}`}

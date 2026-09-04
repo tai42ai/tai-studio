@@ -857,11 +857,13 @@ export function createApiClient(config: ApiConfig) {
     setMcpSecretEnv: (body: SetMcpSecretEnvBody) =>
       req('/api/mcp-config/secret-env', s.reloadConfigResult, { method: 'POST', body }),
     // The PRESERVED manifest (`!ENV` markers intact, no resolved secrets) — the
-    // McpTab editor/raw view reads this so round-trips never inline resolved values.
+    // connectors page's McpServersSection reads this so round-trips never inline
+    // resolved values.
     getManifestPreserved: (signal?: AbortSignal) =>
       req('/api/manifest/preserved', s.manifestView, { signal }),
     // The manifest MCP section's `!ENV ${VAR[:default]}` marker refs — NAMES and
-    // set/unset BOOLEANS only, never values. Drives the McpTab env-refs checklist.
+    // set/unset BOOLEANS only, never values. Drives the McpServersSection env-refs
+    // checklist on the connectors page.
     getMcpEnvRefs: (signal?: AbortSignal) =>
       req('/api/manifest/mcp-env-refs', s.mcpEnvRefs, { signal }),
 
@@ -1169,7 +1171,7 @@ export function createApiClient(config: ApiConfig) {
         method: 'DELETE',
       }),
 
-    // -- mcp config schema (manifest McpTab form) ----------------------------
+    // -- mcp config schema (connectors McpServersSection form) ---------------
     getMcpConfigSchema: (signal?: AbortSignal) =>
       req('/api/mcp-config/schema', s.jsonSchema, { signal }),
 
