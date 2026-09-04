@@ -10,7 +10,7 @@
  * propagate and points the operator at the System page to reload; `'reload'` (the
  * System page's own fleet-reload action) drops the "Change saved" framing — nothing
  * was saved, a reload was dispatched — and the self-referential System-page pointer;
- * `'deregister'` (a connector detach fan-out) likewise drops the "Change saved"
+ * `'deregister'` and `'remove'` (detach fan-outs) likewise drop the "Change saved"
  * framing and points the operator back at re-running the deregister, because a
  * reload would re-attach the very server being detached — the wrong remediation.
  *
