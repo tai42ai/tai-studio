@@ -38,13 +38,11 @@ export interface PluginLoaderState {
   /** Names of plugins whose bundle imported and registered successfully. */
   readonly loaded: readonly string[];
   /**
-   * Identity (name + version) of every successfully-loaded plugin. Parallel to
-   * `loaded`; OPTIONAL and ADDITIVE, so an older host that never populated it still
-   * satisfies this shape (a reader treats absent as `[]`). The host reads it to
-   * attribute a contribution to its plugin — e.g. the nav provenance badge's
-   * "Plugin: name version".
+   * Identity (name + version) of every successfully-loaded plugin, parallel to
+   * `loaded`. The host reads it to attribute a contribution to its plugin — e.g. the
+   * nav provenance badge's "Plugin: name version". Empty before any plugin loads.
    */
-  readonly plugins?: readonly LoadedPlugin[];
+  readonly plugins: readonly LoadedPlugin[];
   /** Plugin name → loud error message (version mismatch / load failure). */
   readonly errors: Readonly<Record<string, string>>;
   /** A registry-listing failure that is NOT a 401 (surfaced loudly, never hidden). */

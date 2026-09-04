@@ -129,25 +129,18 @@ const navGroupsStyle = {
 /** The core section labels a plugin nav entry may target. */
 const CORE_SECTION_LABELS: ReadonlySet<string> = new Set(NAV_SECTIONS.map((s) => s.label));
 
-/** Runtime aliases from a DEPRECATED {@link NavEntrySection} value to its live core
- * section, so a bundle published against the old name still lands in the right place.
- * `Integrations` was renamed to `Connections`. */
-const SECTION_ALIASES: Readonly<Record<string, string>> = { Integrations: 'Connections' };
-
 /** Plugin id → its version, for the provenance badge. */
 type PluginVersions = ReadonlyMap<string, string>;
 
 /**
  * The CORE section a plugin nav entry targets, or `null` when it names none — an absent
- * field, the deprecated catch-all `'Plugins'`, or any value that is not a live core
- * section (a bundle newer than this host). A `null` result renders the entry in the
- * plugin's OWN self-named section; a deprecated-but-aliased value resolves to its live
- * core section. Tolerant by design: the field is a placement hint, not a hard contract.
+ * field, or any value that is not a live core section (a bundle newer than this host).
+ * A `null` result renders the entry in the plugin's OWN self-named section. Tolerant by
+ * design: the field is a placement hint, not a hard contract.
  */
 function coreSectionOf(entry: RegisteredNavEntry): string | null {
   if (entry.section === undefined) return null;
-  const resolved = SECTION_ALIASES[entry.section] ?? entry.section;
-  return CORE_SECTION_LABELS.has(resolved) ? resolved : null;
+  return CORE_SECTION_LABELS.has(entry.section) ? entry.section : null;
 }
 
 /**
@@ -656,11 +649,11 @@ export function ShellLayout({ loader }: { loader: PluginLoader }): ReactNode {
     [status],
   );
   // Plugin id → version, for the host provenance badge. Read from the same load-pass
-  // store as `status`; a plugin missing from it (older host, or not yet loaded) simply
-  // yields no version and the badge names the plugin without one.
+  // store as `status`; a plugin not yet loaded is simply absent from the map, so the
+  // badge names the plugin without a version.
   const loadedPlugins = useStore(loader.store, (s) => s.plugins);
   const pluginVersions = useMemo<PluginVersions>(
-    () => new Map((loadedPlugins ?? []).map((p) => [p.name, p.version])),
+    () => new Map(loadedPlugins.map((p) => [p.name, p.version])),
     [loadedPlugins],
   );
   // A plugin nav entry shows only when the projection covers its declared

@@ -27,7 +27,7 @@ const emptySchema = (): Promise<SettingsSchema> => Promise.resolve({ groups: [] 
 
 /** The load-pass state the page reads via `usePluginContributions`. */
 function hostState(status: PluginLoaderState['status']): PluginLoaderState {
-  return { status, loaded: [], errors: {}, registryError: null };
+  return { status, loaded: [], plugins: [], errors: {}, registryError: null };
 }
 
 // The registry and the host-state store are module singletons; reset both after
