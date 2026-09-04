@@ -10,11 +10,25 @@ import userEvent from '@testing-library/user-event';
 import { ApiError } from '@tai42/api-client';
 
 import { RoutesTable } from './RoutesTable';
-import { makeRoute, renderWithProviders } from './test-utils';
+import {
+  fullProjection,
+  makeRoute,
+  renderWithProviders,
+  scopedProjection,
+  type StubApiClient,
+} from './test-utils';
 
 function renderTable(listConversationRoutes: unknown) {
   return renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
     client: { listConversationRoutes } as never,
+  });
+}
+
+/** Render the table under a full (admin) projection, so its write affordances show. */
+function renderCrud(client: StubApiClient) {
+  return renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
+    client,
+    projection: fullProjection(),
   });
 }
 
@@ -98,11 +112,9 @@ describe('RoutesTable', () => {
 describe('RoutesTable — CRUD', () => {
   it('opens the blank create dialog from the Create route button', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
-      client: { listConversationRoutes: vi.fn().mockResolvedValue({ items: [], total: 0 }) },
-    });
+    renderCrud({ listConversationRoutes: vi.fn().mockResolvedValue({ items: [], total: 0 }) });
 
-    await user.click(screen.getByRole('button', { name: 'Create route' }));
+    await user.click(await screen.findByRole('button', { name: 'Create route' }));
     expect(await screen.findByRole('textbox', { name: 'Route name' })).toBeInTheDocument();
 
     // Cancel closes the dialog.
@@ -114,10 +126,8 @@ describe('RoutesTable — CRUD', () => {
 
   it('opens the edit dialog prefilled from a row', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
-      client: {
-        listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
-      },
+    renderCrud({
+      listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
     });
 
     await user.click(await screen.findByRole('button', { name: 'Edit route chat' }));
@@ -137,9 +147,7 @@ describe('RoutesTable — CRUD', () => {
       .fn()
       .mockResolvedValue({ removed: true, route_name: 'chat' });
     const listConversationRoutes = vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 });
-    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
-      client: { listConversationRoutes, deleteConversationRoute },
-    });
+    renderCrud({ listConversationRoutes, deleteConversationRoute });
 
     await user.click(await screen.findByRole('button', { name: 'Delete route chat' }));
     // The house confirm dialog states the destructive consequence.
@@ -158,11 +166,9 @@ describe('RoutesTable — CRUD', () => {
   it('surfaces a delete failure loudly and keeps the confirm dialog open', async () => {
     const user = userEvent.setup();
     const deleteConversationRoute = vi.fn().mockRejectedValue(new ApiError('route is busy', 409));
-    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
-      client: {
-        listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
-        deleteConversationRoute,
-      },
+    renderCrud({
+      listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
+      deleteConversationRoute,
     });
 
     await user.click(await screen.findByRole('button', { name: 'Delete route chat' }));
@@ -175,14 +181,12 @@ describe('RoutesTable — CRUD', () => {
   it("does not leak a failed delete error into a different route's confirm", async () => {
     const user = userEvent.setup();
     const deleteConversationRoute = vi.fn().mockRejectedValue(new ApiError('route is busy', 409));
-    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
-      client: {
-        listConversationRoutes: vi.fn().mockResolvedValue({
-          items: [makeRoute({ route_name: 'alpha' }), makeRoute({ route_name: 'beta' })],
-          total: 2,
-        }),
-        deleteConversationRoute,
-      },
+    renderCrud({
+      listConversationRoutes: vi.fn().mockResolvedValue({
+        items: [makeRoute({ route_name: 'alpha' }), makeRoute({ route_name: 'beta' })],
+        total: 2,
+      }),
+      deleteConversationRoute,
     });
 
     // A delete on route alpha fails; the confirm keeps the error up.
@@ -205,11 +209,9 @@ describe('RoutesTable — CRUD', () => {
   it('cancels a pending delete without calling the API', async () => {
     const user = userEvent.setup();
     const deleteConversationRoute = vi.fn();
-    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
-      client: {
-        listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
-        deleteConversationRoute,
-      },
+    renderCrud({
+      listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
+      deleteConversationRoute,
     });
 
     await user.click(await screen.findByRole('button', { name: 'Delete route chat' }));
@@ -219,5 +221,35 @@ describe('RoutesTable — CRUD', () => {
       expect(screen.queryByText(/drops the routing row/)).not.toBeInTheDocument();
     });
     expect(deleteConversationRoute).not.toHaveBeenCalled();
+  });
+});
+
+describe('RoutesTable — write gating (projection ⊆ gate)', () => {
+  it('withdraws create, edit and delete for a read-only projection', async () => {
+    // A scoped, non-admin projection reaches no route write door, so every control that
+    // could only 403 on submit is withdrawn — the read table itself stays visible.
+    renderWithProviders(<RoutesTable listRef={createRef<HTMLDivElement>()} />, {
+      client: {
+        listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
+      },
+      projection: scopedProjection(),
+    });
+
+    // The row (a read surface) renders…
+    expect(await screen.findByRole('link', { name: 'Open route chat' })).toBeInTheDocument();
+    // …but no write affordance is offered.
+    expect(screen.queryByRole('button', { name: 'Create route' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit route chat' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete route chat' })).not.toBeInTheDocument();
+  });
+
+  it('offers create, edit and delete for a full (admin) projection', async () => {
+    renderCrud({
+      listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
+    });
+
+    expect(await screen.findByRole('button', { name: 'Edit route chat' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create route' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete route chat' })).toBeInTheDocument();
   });
 });

@@ -9,10 +9,21 @@ import userEvent from '@testing-library/user-event';
 import { ApiError } from '@tai42/api-client';
 
 import { ConfigsTable } from './ConfigsTable';
-import { makeConfig, renderWithProviders } from './test-utils';
+import {
+  fullProjection,
+  makeConfig,
+  renderWithProviders,
+  scopedProjection,
+  type StubApiClient,
+} from './test-utils';
 
-function renderTable(client: Record<string, unknown>) {
+function renderTable(client: StubApiClient) {
   return renderWithProviders(<ConfigsTable />, { client });
+}
+
+/** Render the table under a full (admin) projection, so its write affordances show. */
+function renderCrud(client: StubApiClient) {
+  return renderWithProviders(<ConfigsTable />, { client, projection: fullProjection() });
 }
 
 describe('ConfigsTable', () => {
@@ -74,9 +85,9 @@ describe('ConfigsTable', () => {
 describe('ConfigsTable — CRUD', () => {
   it('opens the blank create dialog and cancels it', async () => {
     const user = userEvent.setup();
-    renderTable({ listConversationConfigs: vi.fn().mockResolvedValue({ items: [], total: 0 }) });
+    renderCrud({ listConversationConfigs: vi.fn().mockResolvedValue({ items: [], total: 0 }) });
 
-    await user.click(screen.getByRole('button', { name: 'Create config' }));
+    await user.click(await screen.findByRole('button', { name: 'Create config' }));
     expect(await screen.findByRole('textbox', { name: /Target name/ })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -87,9 +98,9 @@ describe('ConfigsTable — CRUD', () => {
 
   it('dismisses the create dialog on Escape', async () => {
     const user = userEvent.setup();
-    renderTable({ listConversationConfigs: vi.fn().mockResolvedValue({ items: [], total: 0 }) });
+    renderCrud({ listConversationConfigs: vi.fn().mockResolvedValue({ items: [], total: 0 }) });
 
-    await user.click(screen.getByRole('button', { name: 'Create config' }));
+    await user.click(await screen.findByRole('button', { name: 'Create config' }));
     expect(await screen.findByRole('textbox', { name: /Target name/ })).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
@@ -100,7 +111,7 @@ describe('ConfigsTable — CRUD', () => {
 
   it('dismisses the edit dialog on Escape', async () => {
     const user = userEvent.setup();
-    renderTable({
+    renderCrud({
       listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
     });
 
@@ -115,7 +126,7 @@ describe('ConfigsTable — CRUD', () => {
 
   it('opens the edit dialog with the key pinned read-only', async () => {
     const user = userEvent.setup();
-    renderTable({
+    renderCrud({
       listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
     });
 
@@ -133,9 +144,9 @@ describe('ConfigsTable — CRUD', () => {
       config: makeConfig(),
     });
     const list = vi.fn().mockResolvedValue({ items: [], total: 0 });
-    renderTable({ listConversationConfigs: list, setConversationConfig });
+    renderCrud({ listConversationConfigs: list, setConversationConfig });
 
-    await user.click(screen.getByRole('button', { name: 'Create config' }));
+    await user.click(await screen.findByRole('button', { name: 'Create config' }));
     await user.type(await screen.findByRole('textbox', { name: /Target name/ }), 'assistant');
     // The card button and the dialog's submit share a label; scope to the dialog.
     const dialog = within(await screen.findByRole('dialog'));
@@ -158,12 +169,12 @@ describe('ConfigsTable — CRUD', () => {
   it('blocks a create with a blank target name (no API call)', async () => {
     const user = userEvent.setup();
     const setConversationConfig = vi.fn();
-    renderTable({
+    renderCrud({
       listConversationConfigs: vi.fn().mockResolvedValue({ items: [], total: 0 }),
       setConversationConfig,
     });
 
-    await user.click(screen.getByRole('button', { name: 'Create config' }));
+    await user.click(await screen.findByRole('button', { name: 'Create config' }));
     await screen.findByRole('textbox', { name: /Target name/ });
     // Submit without a name (scope to the dialog — the card button shares the label).
     const dialog = within(await screen.findByRole('dialog'));
@@ -179,7 +190,7 @@ describe('ConfigsTable — CRUD', () => {
       .fn()
       .mockResolvedValue({ removed: true, target_kind: 'agent', target_name: 'assistant' });
     const list = vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 });
-    renderTable({ listConversationConfigs: list, deleteConversationConfig });
+    renderCrud({ listConversationConfigs: list, deleteConversationConfig });
 
     await user.click(await screen.findByRole('button', { name: 'Delete config agent:assistant' }));
     expect(screen.getByText(/falls back to the default/)).toBeInTheDocument();
@@ -198,7 +209,7 @@ describe('ConfigsTable — CRUD', () => {
     const deleteConversationConfig = vi
       .fn()
       .mockRejectedValue(new ApiError('config is locked', 409));
-    renderTable({
+    renderCrud({
       listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
       deleteConversationConfig,
     });
@@ -215,7 +226,7 @@ describe('ConfigsTable — CRUD', () => {
     const deleteConversationConfig = vi
       .fn()
       .mockRejectedValue(new ApiError('config is locked', 409));
-    renderTable({
+    renderCrud({
       listConversationConfigs: vi.fn().mockResolvedValue({
         items: [
           makeConfig({ target_kind: 'agent', target_name: 'alpha' }),
@@ -243,7 +254,7 @@ describe('ConfigsTable — CRUD', () => {
   it('cancels a pending delete without calling the API', async () => {
     const user = userEvent.setup();
     const deleteConversationConfig = vi.fn();
-    renderTable({
+    renderCrud({
       listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
       deleteConversationConfig,
     });
@@ -255,5 +266,45 @@ describe('ConfigsTable — CRUD', () => {
       expect(screen.queryByText(/falls back to the default/)).not.toBeInTheDocument();
     });
     expect(deleteConversationConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConfigsTable — write gating (projection ⊆ gate)', () => {
+  it('withdraws create, edit and delete for a read-only projection', async () => {
+    // A scoped, non-admin projection reaches no config write door, so every control that
+    // could only 403 on submit is withdrawn — the read table itself stays visible.
+    renderWithProviders(<ConfigsTable />, {
+      client: {
+        listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
+      },
+      projection: scopedProjection(),
+    });
+
+    // The row (a read surface) renders…
+    expect(await screen.findByTestId('conversation-configs-table')).toBeInTheDocument();
+    expect(screen.getByText('agent: assistant')).toBeInTheDocument();
+    // …but no write affordance is offered.
+    expect(screen.queryByRole('button', { name: 'Create config' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Edit config agent:assistant' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Delete config agent:assistant' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('offers create, edit and delete for a full (admin) projection', async () => {
+    // The harness defaults to a total (admin) projection.
+    renderCrud({
+      listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'Edit config agent:assistant' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create config' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Delete config agent:assistant' }),
+    ).toBeInTheDocument();
   });
 });

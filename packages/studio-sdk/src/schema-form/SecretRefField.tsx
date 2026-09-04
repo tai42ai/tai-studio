@@ -3,8 +3,9 @@
  * EITHER a reference to an existing env key OR a freshly pasted secret. It knows
  * nothing about the `!ENV ${KEY}` marker syntax or any wire format: it emits a
  * discriminated {@link SecretRef} and the host maps that to whatever it stores
- * (the consumer that mounts this — the McpTab editor — writes an `!ENV ${KEY}`
- * marker for a `key` ref and runs the combined store-then-mark op for a `paste`).
+ * (the consumer that mounts this — the connectors page's McpServersSection —
+ * writes an `!ENV ${KEY}` marker for a `key` ref and runs the combined
+ * store-then-mark op for a `paste`).
  *
  * WRITE-ONLY for a pasted secret: the plaintext lives only in local editor state
  * until the user commits it, at which point it leaves the DOM entirely (held only

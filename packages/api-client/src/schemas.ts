@@ -2359,8 +2359,9 @@ export const marketplaceInstalledPlugin = z
     missing_upstream: z.boolean(),
     compat: marketplaceInstalledCompat,
     // The `{kind, name}` of every item this plugin's stored spec provides
-    // (local truth). The McpTab joins the mcp-server item names against the
-    // manifest's mcp-entry titles to render an installer-written entry read-only.
+    // (local truth). The connectors page's McpServersSection joins the mcp-server
+    // item names against the manifest's mcp-entry titles to render an
+    // installer-written entry read-only.
     items: z.array(marketplaceItem.pick({ kind: true, name: true })),
     // The persisted `{item_name: base}` mount this plugin is installed at (local
     // truth; `{}` means every item at its declared base). Studio seeds the update
