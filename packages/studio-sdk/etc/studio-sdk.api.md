@@ -7643,11 +7643,7 @@ export interface NavEntryContribution {
 }
 
 // @public
-export type NavEntrySection = 'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration'
-/** @deprecated Renamed to `'Connections'`; aliased at runtime. Removed at a future major. */
-| 'Integrations'
-/** @deprecated No catch-all section; renders in the plugin's own self-named section. */
-| 'Plugins';
+export type NavEntrySection = 'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration';
 
 // @public
 export interface NavigateOptions {

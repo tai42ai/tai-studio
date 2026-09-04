@@ -146,27 +146,11 @@ export interface RegisteredPage extends PageContribution {
  * is not a live core section renders the entry as a FIRST-CLASS section of its own,
  * named for the contributing plugin (grouped with that plugin's other such entries),
  * placed after the core sections. The shell tolerates an unknown value at runtime
- * (a bundle newer than this host), so the field is a placement hint, never a hard
- * contract.
- *
- * `'Integrations'` is DEPRECATED: the core section was renamed to `'Connections'`.
- * It stays a member so a published bundle that targets it keeps type-checking, and
- * the shell aliases it to `'Connections'` at runtime; author new entries against
- * `'Connections'`. `'Plugins'` is DEPRECATED too: there is no longer a generic
- * catch-all section, so it now renders the entry in the plugin's own self-named
- * section (the same place an absent field lands). Both are removed only at a future
- * MAJOR — never mid-line, so no existing plugin breaks.
+ * (a bundle newer than this host), falling back to that self-named section, so the
+ * field is a placement hint, never a hard contract.
  */
 export type NavEntrySection =
-  | 'Capabilities'
-  | 'Connections'
-  | 'Triggers'
-  | 'Activity'
-  | 'Administration'
-  /** @deprecated Renamed to `'Connections'`; aliased at runtime. Removed at a future major. */
-  | 'Integrations'
-  /** @deprecated No catch-all section; renders in the plugin's own self-named section. */
-  | 'Plugins';
+  'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration';
 
 export interface NavEntryContribution {
   /**

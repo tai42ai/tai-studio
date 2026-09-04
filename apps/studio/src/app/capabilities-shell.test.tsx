@@ -619,13 +619,16 @@ describe('plugin nav sections', () => {
     expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
   });
 
-  it('aliases the deprecated Integrations section to Connections', async () => {
+  it('renders a retired section value (Integrations) in the plugin self-named section', async () => {
+    // `'Integrations'` is no longer a core section; it takes the ordinary unknown-section
+    // path — the plugin's own self-named section — never a core section.
     landWithEntry('Integrations');
 
-    const connections = await screen.findByRole('list', { name: 'Connections' });
-    expect(within(connections).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
-    // Not stranded in a self-named section.
-    expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
+    const list = await screen.findByRole('list', { name: 'acme' });
+    expect(within(list).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
+    // Not injected into the former target core section.
+    const connections = within(screen.getByRole('list', { name: 'Connections' }));
+    expect(connections.queryByRole('link', { name: 'Reference' })).toBeNull();
   });
 
   it('falls back to a self-named section for an unrecognised declared section value', async () => {
