@@ -987,7 +987,7 @@
   /* The HOST-APPLIED provenance mark on plugin-contributed nav (the shell renders
      it; a plugin cannot suppress or restyle it). A small muted glyph that links to
      the plugin's marketplace row and brightens on hover/focus. It sits beside a nav
-     row (per-entry, in a core section) or beside a self-named section header. */
+     row — per-entry, whether the row sits in a core section or the shared Plugins section. */
   .tai-plugin-badge {
     display: inline-flex;
     align-items: center;

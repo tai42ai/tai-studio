@@ -555,46 +555,46 @@ describe('plugin nav sections', () => {
     renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap', importModule });
   }
 
-  it('renders an undeclared plugin nav entry as its own self-named section (no Plugins wrapper)', async () => {
+  it('renders an undeclared plugin nav entry under the single generic Plugins section', async () => {
     landWithEntry();
 
-    // The section is headed by the plugin's display name (its id) and names its list.
-    const list = await screen.findByRole('list', { name: 'acme' });
+    // The entry lands in the one generic "Plugins" section, whose header names its list;
+    // the section is NOT headed by the plugin's raw id.
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     expect(within(list).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
-    // No generic "Plugins" wrapper landmark, section, or header.
+    // No per-plugin self-named section (headed by the raw plugin id), and no separate
+    // "Plugins" navigation landmark.
+    expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
-    expect(screen.queryByText('Plugins')).toBeNull();
     // It is not injected into a core section.
     const admin = within(screen.getByRole('list', { name: 'Administration' }));
     expect(admin.queryByRole('link', { name: 'Reference' })).toBeNull();
   });
 
-  it('marks a self-named section header with a host provenance badge (bare id → marketplace Installed tab)', async () => {
+  it('marks each Plugins-section entry with a per-entry host provenance badge (bare id → marketplace Installed tab)', async () => {
     landWithEntry();
 
-    await screen.findByRole('list', { name: 'acme' });
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     // The badge is a shell-rendered link, named for a11y + hover. A bare plugin id is
     // NOT a marketplace "namespace/name" ref, so the badge must NOT carry the
     // `plugin` deep-link param — that would land the detail page on its
     // Malformed-reference ErrorState. It links to the marketplace Installed tab instead, where
-    // installed plugins are listed.
-    const badge = screen.getByRole('link', { name: 'Plugin: acme 1.0.0' });
+    // installed plugins are listed. Plugins share the one section, so the badge is
+    // per-entry (inside the list), never on a per-plugin header.
+    const badge = within(list).getByRole('link', { name: 'Plugin: acme 1.0.0' });
     expect(badge.getAttribute('href')).toContain('/marketplace');
     expect(badge.getAttribute('href')).toContain('tab=installed');
     expect(badge.getAttribute('href')).not.toContain('plugin=');
     expect(badge).toHaveAttribute('title', 'Plugin: acme 1.0.0');
-    // The badge sits on the header, NOT duplicated onto the entry row.
-    const list = screen.getByRole('list', { name: 'acme' });
-    expect(within(list).queryByRole('link', { name: 'Plugin: acme 1.0.0' })).toBeNull();
   });
 
-  it('deep-links the provenance badge to the plugin row when the id is a namespace/name ref', async () => {
+  it('deep-links the per-entry provenance badge to the plugin row when the id is a namespace/name ref', async () => {
     landWithEntry(undefined, 'acme/widget');
 
-    await screen.findByRole('list', { name: 'acme/widget' });
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     // A "namespace/name" id IS a valid marketplace ref, so the badge carries the
     // `plugin` deep-link param — the detail page resolves it (no Malformed ErrorState).
-    const badge = screen.getByRole('link', { name: 'Plugin: acme/widget 1.0.0' });
+    const badge = within(list).getByRole('link', { name: 'Plugin: acme/widget 1.0.0' });
     const href = badge.getAttribute('href');
     expect(href).toMatch(/^\/marketplace\?/);
     expect(href).toContain('plugin=');
@@ -619,31 +619,35 @@ describe('plugin nav sections', () => {
     expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
   });
 
-  it('renders a retired section value (Integrations) in the plugin self-named section', async () => {
+  it('renders a retired section value (Integrations) in the generic Plugins section', async () => {
     // `'Integrations'` is no longer a core section; it takes the ordinary unknown-section
-    // path — the plugin's own self-named section — never a core section.
+    // path — the single generic Plugins section — never a core section, and never a
+    // per-plugin self-named section headed by the raw id.
     landWithEntry('Integrations');
 
-    const list = await screen.findByRole('list', { name: 'acme' });
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     expect(within(list).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
     // Not injected into the former target core section.
     const connections = within(screen.getByRole('list', { name: 'Connections' }));
     expect(connections.queryByRole('link', { name: 'Reference' })).toBeNull();
   });
 
-  it('falls back to a self-named section for an unrecognised declared section value', async () => {
+  it('falls back to the generic Plugins section for an unrecognised declared section value', async () => {
     landWithEntry('Nowhere');
 
-    const list = await screen.findByRole('list', { name: 'acme' });
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     expect(within(list).getByRole('link', { name: 'Reference' })).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
   });
 
-  it('renders no self-named section when every plugin entry declares a core section', async () => {
-    // The only entry declares a core section, so nothing is left to self-name.
+  it('renders no Plugins section when every plugin entry declares a core section', async () => {
+    // The only entry declares a core section, so nothing is left for the fallback section.
     landWithEntry('Administration');
 
     await screen.findByRole('list', { name: 'Administration' });
+    expect(screen.queryByRole('list', { name: 'Plugins' })).toBeNull();
     expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
   });
@@ -678,12 +682,63 @@ describe('plugin nav ordering', () => {
     const importModule = vi.fn(() => Promise.resolve({ register }));
     renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap', importModule });
 
-    const list = await screen.findByRole('list', { name: 'acme' });
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     const rows = within(list)
       .getAllByRole('link')
       .filter((el) => el.classList.contains('tai-nav-link'))
       .map((el) => el.textContent);
     expect(rows).toEqual(['B', 'A', 'C']);
+  });
+});
+
+describe('plugin nav — multiple plugins share the generic Plugins section', () => {
+  function manifest(name: string, version: string) {
+    return {
+      name,
+      version,
+      api_version: 1,
+      entry: 'index.js',
+      integrity: { 'index.js': 'sha384-abc' },
+      contributions: { tool_panels: {}, pages: ['p'], settings_tabs: [] },
+    };
+  }
+
+  it('interleaves fallback entries from different plugins by `order` (then registration), each with its own badge', async () => {
+    // Two plugins both contribute a single fallback nav entry. Registration order is
+    // alpha then beta; weights alpha=2, beta=1 ⇒ beta's row precedes alpha's, proving
+    // the sort spans plugins rather than grouping per plugin. The load pass loads them
+    // in listing order, so both share the ONE "Plugins" section.
+    server.use(
+      http.get('*/api/plugins', () =>
+        HttpResponse.json({ data: [manifest('alpha', '2.0.0'), manifest('beta', '3.0.0')] }),
+      ),
+      okChannels,
+    );
+    const registerFor = (title: string, order: number) => (ctx: PluginContext) => {
+      ctx.registerPage({ path: 'p', title, component: () => <div>{title}</div> });
+      ctx.registerNavEntry({ path: 'p', title, order });
+    };
+    // The loader eval order follows the listing; alpha (order 2) evals before beta (order 1).
+    const importModule = vi.fn((url: string) =>
+      Promise.resolve({
+        register: url.includes('beta') ? registerFor('Beta page', 1) : registerFor('Alpha page', 2),
+      }),
+    );
+    renderStudio({ initialPath: '/interactions', sessionKey: 'k-cap', importModule });
+
+    const list = await screen.findByRole('list', { name: 'Plugins' });
+    const rows = within(list)
+      .getAllByRole('link')
+      .filter((el) => el.classList.contains('tai-nav-link'))
+      .map((el) => el.textContent);
+    // Sorted across plugins by ascending order: beta (1) before alpha (2).
+    expect(rows).toEqual(['Beta page', 'Alpha page']);
+    // Each entry carries ITS OWN provenance badge naming its own plugin + version.
+    expect(within(list).getByRole('link', { name: 'Plugin: alpha 2.0.0' })).toBeInTheDocument();
+    expect(within(list).getByRole('link', { name: 'Plugin: beta 3.0.0' })).toBeInTheDocument();
+    // One shared section — no per-plugin self-named sections headed by the raw ids.
+    expect(screen.queryByRole('list', { name: 'alpha' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'beta' })).toBeNull();
   });
 });
 
