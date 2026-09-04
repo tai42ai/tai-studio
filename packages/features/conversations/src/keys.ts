@@ -8,6 +8,12 @@
 /** Key for the stored routing rows (the route picker). */
 export const conversationRoutesKey = ['conversations', 'routes'] as const;
 
+/** Key for the stored per-target presentation configs (the config admin surface). */
+export const conversationConfigsKey = ['conversations', 'configs'] as const;
+
+/** Key for the admin failed-delivery listing (spans every route and caller). */
+export const conversationFailedMessagesKey = ['conversations', 'failed-messages'] as const;
+
 /** Key for one route's thread listing. The status/address filters are part of the
  * key: a different filter is a different listing, never this one re-paged. */
 export function conversationThreadsKey(

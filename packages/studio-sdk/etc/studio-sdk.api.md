@@ -1395,6 +1395,72 @@ readonly setConversationThreadMode: (routeName: string, threadId: string, mode: 
 mode: "agent" | "manual";
 source: "route" | "thread";
 }>;
+readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
+items: {
+target_kind: "tool" | "agent";
+target_name: string;
+multichannel: boolean;
+greeting_template: string | null;
+}[];
+total: number;
+}>;
+readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
+target_kind: "tool" | "agent";
+target_name: string;
+multichannel: boolean;
+greeting_template: string | null;
+}>;
+readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
+created: boolean;
+target_kind: "tool" | "agent";
+target_name: string;
+config: {
+target_kind: "tool" | "agent";
+target_name: string;
+multichannel: boolean;
+greeting_template: string | null;
+};
+}>;
+readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
+removed: boolean;
+target_kind: "tool" | "agent";
+target_name: string;
+}>;
+readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
+items: {
+message_id: string;
+route_name: string;
+door: "channel" | "api";
+thread_id: string;
+client_address: string;
+caller_principal: string | null;
+inbound_text: string;
+answer_status: "error" | "silent" | "answered" | null;
+answer: string | null;
+origin: "client" | "operator";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+created_at: number;
+updated_at: number;
+channel?: string | null | undefined;
+our_identity?: string | null | undefined;
+provider_message_id?: string | null | undefined;
+callback_url?: string | null | undefined;
+error?: string | null | undefined;
+outbound_message_ids?: string[] | undefined;
+attempts?: number | undefined;
+}[];
+total: number;
+}>;
+readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
+removed: number;
+route_name: string;
+thread_id: string;
+}>;
+readonly deleteConversationPerson: (personId: string) => Promise<{
+person_id: string;
+removed: number;
+erased: boolean;
+}>;
 readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
 enabled: boolean;
 codes: {
@@ -2653,6 +2719,58 @@ const conversationAnswerStatus: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
+type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted>;
+
+// @public
+const conversationConfigDeleted: z.ZodObject<{
+    removed: z.ZodBoolean;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationConfigs = z.infer<typeof conversationConfigs>;
+
+// @public
+const conversationConfigs: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        multichannel: z.ZodDefault<z.ZodBoolean>;
+        greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>;
+    total: z.ZodNumber;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationConfigWritten = z.infer<typeof conversationConfigWritten>;
+
+// @public
+const conversationConfigWritten: z.ZodObject<{
+    created: z.ZodBoolean;
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    config: z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        multichannel: z.ZodDefault<z.ZodBoolean>;
+        greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
@@ -2674,6 +2792,54 @@ const conversationDoor: z.ZodEnum<{
     channel: "channel";
     api: "api";
 }>;
+
+// @public (undocumented)
+type ConversationFailedMessages = z.infer<typeof conversationFailedMessages>;
+
+// @public
+const conversationFailedMessages: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        message_id: z.ZodString;
+        route_name: z.ZodString;
+        door: z.ZodEnum<{
+            channel: "channel";
+            api: "api";
+        }>;
+        thread_id: z.ZodString;
+        client_address: z.ZodString;
+        caller_principal: z.ZodNullable<z.ZodString>;
+        inbound_text: z.ZodString;
+        answer_status: z.ZodNullable<z.ZodEnum<{
+            error: "error";
+            silent: "silent";
+            answered: "answered";
+        }>>;
+        answer: z.ZodNullable<z.ZodString>;
+        origin: z.ZodEnum<{
+            client: "client";
+            operator: "operator";
+        }>;
+        delivery_status: z.ZodEnum<{
+            failed: "failed";
+            accepted: "accepted";
+            pending_delivery: "pending_delivery";
+            provisional: "provisional";
+            delivered: "delivered";
+            shed: "shed";
+            silent: "silent";
+        }>;
+        created_at: z.ZodNumber;
+        updated_at: z.ZodNumber;
+        channel: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        our_identity: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        provider_message_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        callback_url: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        error: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        outbound_message_ids: z.ZodOptional<z.ZodArray<z.ZodString>>;
+        attempts: z.ZodOptional<z.ZodNumber>;
+    }, z.core.$strip>>;
+    total: z.ZodNumber;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type ConversationMessage = z.infer<typeof conversationMessage>;
@@ -2792,6 +2958,16 @@ const conversationMode: z.ZodEnum<{
     agent: "agent";
     manual: "manual";
 }>;
+
+// @public (undocumented)
+type ConversationPersonDeleted = z.infer<typeof conversationPersonDeleted>;
+
+// @public
+const conversationPersonDeleted: z.ZodObject<{
+    person_id: z.ZodString;
+    removed: z.ZodNumber;
+    erased: z.ZodBoolean;
+}, z.core.$strip>;
 
 // @public (undocumented)
 type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
@@ -2968,6 +3144,16 @@ const conversationThread: z.ZodObject<{
         shed: "shed";
         silent: "silent";
     }>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ConversationThreadDeleted = z.infer<typeof conversationThreadDeleted>;
+
+// @public
+const conversationThreadDeleted: z.ZodObject<{
+    removed: z.ZodNumber;
+    route_name: z.ZodString;
+    thread_id: z.ZodString;
 }, z.core.$strip>;
 
 // @public
@@ -4388,6 +4574,72 @@ function createApiClient(config: ApiConfig): {
     readonly setConversationThreadMode: (routeName: string, threadId: string, mode: s.ConversationThreadMode) => Promise<{
         mode: "agent" | "manual";
         source: "route" | "thread";
+    }>;
+    readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
+        items: {
+            target_kind: "tool" | "agent";
+            target_name: string;
+            multichannel: boolean;
+            greeting_template: string | null;
+        }[];
+        total: number;
+    }>;
+    readonly getConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
+        target_kind: "tool" | "agent";
+        target_name: string;
+        multichannel: boolean;
+        greeting_template: string | null;
+    }>;
+    readonly setConversationConfig: (config: s.TargetConversationConfig) => Promise<{
+        created: boolean;
+        target_kind: "tool" | "agent";
+        target_name: string;
+        config: {
+            target_kind: "tool" | "agent";
+            target_name: string;
+            multichannel: boolean;
+            greeting_template: string | null;
+        };
+    }>;
+    readonly deleteConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string) => Promise<{
+        removed: boolean;
+        target_kind: "tool" | "agent";
+        target_name: string;
+    }>;
+    readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
+        total: number;
+    }>;
+    readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
+        removed: number;
+        route_name: string;
+        thread_id: string;
+    }>;
+    readonly deleteConversationPerson: (personId: string) => Promise<{
+        person_id: string;
+        removed: number;
+        erased: boolean;
     }>;
     readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
         enabled: boolean;
@@ -9013,6 +9265,20 @@ declare namespace s {
         ConversationThreadModeState,
         conversationThreadMessageSent,
         ConversationThreadMessageSent,
+        targetConversationConfig,
+        TargetConversationConfig,
+        conversationConfigs,
+        ConversationConfigs,
+        conversationConfigWritten,
+        ConversationConfigWritten,
+        conversationConfigDeleted,
+        ConversationConfigDeleted,
+        conversationFailedMessages,
+        ConversationFailedMessages,
+        conversationThreadDeleted,
+        ConversationThreadDeleted,
+        conversationPersonDeleted,
+        ConversationPersonDeleted,
         webEntryCode,
         WebEntryCode,
         webEntryGate,
@@ -9966,6 +10232,20 @@ export interface TagVocabularyEntry {
     // (undocumented)
     readonly token: string;
 }
+
+// @public (undocumented)
+type TargetConversationConfig = z.infer<typeof targetConversationConfig>;
+
+// @public
+const targetConversationConfig: z.ZodObject<{
+    target_kind: z.ZodEnum<{
+        tool: "tool";
+        agent: "agent";
+    }>;
+    target_name: z.ZodString;
+    multichannel: z.ZodDefault<z.ZodBoolean>;
+    greeting_template: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export function TBody(input: TableSectionProps): JSX.Element;

@@ -1255,6 +1255,94 @@ export const conversationThreadMessageSent = z.object({
 });
 export type ConversationThreadMessageSent = z.infer<typeof conversationThreadMessageSent>;
 
+/**
+ * Per-target presentation config for the conversation bridge, keyed by
+ * `(target_kind, target_name)` — the wire model of
+ * `tai42_contract.conversations.TargetConversationConfig`. The row carries no
+ * server-derived fields, so this ONE shape is the stored row AND the upsert body
+ * (`PUT /api/conversation-configs/{target_kind}/{target_name}` is the create AND
+ * the edit path).
+ *
+ * `multichannel` opts the target into person linking; `greeting_template` is the
+ * first-contact greeting. `greeting_template` is a `str.format` template (NOT a jq
+ * expression) that may reference at most the `{pairing_code}` placeholder — it
+ * carries no `x-tai42-expression`. `null` is the explicit spelling for "no
+ * greeting"; a blank string is refused server-side.
+ */
+export const targetConversationConfig = z.object({
+  target_kind: conversationTargetKind,
+  target_name: z.string().min(1),
+  multichannel: z.boolean().default(false),
+  greeting_template: z.string().nullable().default(null),
+});
+export type TargetConversationConfig = z.infer<typeof targetConversationConfig>;
+
+/** Every stored per-target config (`GET /api/conversation-configs`). */
+export const conversationConfigs = z.object({
+  items: z.array(targetConversationConfig),
+  total: z.number(),
+});
+export type ConversationConfigs = z.infer<typeof conversationConfigs>;
+
+/**
+ * The upsert reply: whether THIS call created the config (vs. replaced an existing
+ * one), its key, and the stored row.
+ */
+export const conversationConfigWritten = z.object({
+  created: z.boolean(),
+  target_kind: conversationTargetKind,
+  target_name: z.string(),
+  config: targetConversationConfig,
+});
+export type ConversationConfigWritten = z.infer<typeof conversationConfigWritten>;
+
+/** The config-delete reply: `removed` is always `true` on success (an unknown key is a 404). */
+export const conversationConfigDeleted = z.object({
+  removed: z.boolean(),
+  target_kind: conversationTargetKind,
+  target_name: z.string(),
+});
+export type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted>;
+
+/**
+ * The admin-only failed-delivery listing (`GET /api/conversations/messages/failed`):
+ * every answer record whose delivery ended `failed`, across every route and caller.
+ * The records are the ADMIN projection (delivery bookkeeping and `error` included),
+ * so the row shape is {@link conversationMessage} exactly. It is NOT a paged window —
+ * the door returns `{items, total}` and nothing more.
+ */
+export const conversationFailedMessages = z.object({
+  items: z.array(conversationMessage),
+  total: z.number(),
+});
+export type ConversationFailedMessages = z.infer<typeof conversationFailedMessages>;
+
+/**
+ * The thread-delete reply (`DELETE /api/conversations/{route_name}/thread?thread_id=`).
+ * `removed` is a COUNT of the answer records this call deleted — `0` when a prior
+ * run already cleared them, when they had aged out under retention, or when the id
+ * was never stored (forgetting is absolute, never a 404 on a valid id).
+ */
+export const conversationThreadDeleted = z.object({
+  removed: z.number(),
+  route_name: z.string(),
+  thread_id: z.string(),
+});
+export type ConversationThreadDeleted = z.infer<typeof conversationThreadDeleted>;
+
+/**
+ * The person-erase reply (`DELETE /api/conversations/persons/{person_id}`).
+ * `removed` counts the answer records deleted across the person's routes; `erased`
+ * says whether THIS call removed the person row (`false` on a retry or an
+ * already-gone person — never a 404).
+ */
+export const conversationPersonDeleted = z.object({
+  person_id: z.string(),
+  removed: z.number(),
+  erased: z.boolean(),
+});
+export type ConversationPersonDeleted = z.infer<typeof conversationPersonDeleted>;
+
 // -- channel-web entry gate --------------------------------------------------
 // The web channel's entry gate: a web route can be gated so its chat page is
 // served only to a navigation carrying a live entry code. These four doors are
