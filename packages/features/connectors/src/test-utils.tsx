@@ -51,9 +51,26 @@ export function renderWithProviders(
   return { ...utils, nav, queryClient };
 }
 
-/** Build a mock `ApiClient` from a partial set of methods; unused ones throw if hit. */
+/**
+ * Build a mock `ApiClient` from a partial set of methods; unused ones throw if hit.
+ *
+ * The unified Connectors page also renders the MCP-servers section, which reads a
+ * handful of server doors on mount. A connectors test that cares only about the
+ * providers/connections sections should not have to stub those, so they default to
+ * QUIET empty answers here (no mounted servers, empty config) — a caller can still
+ * override any of them to drive the MCP section explicitly.
+ */
 export function makeClient(overrides: Partial<ApiClient>): ApiClient {
-  return overrides as ApiClient;
+  const mcpQuietDefaults: Partial<ApiClient> = {
+    getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+    getManifestPreserved: vi.fn().mockResolvedValue({ mcp: [], user_tools: [] }),
+    getMcpConfigSchema: vi.fn().mockResolvedValue({ type: 'object', properties: {} }),
+    listExtensions: vi.fn().mockResolvedValue([]),
+    getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+    listInstalledMarketplacePlugins: vi.fn().mockResolvedValue({ installed: [] }),
+    getMcpEnvRefs: vi.fn().mockResolvedValue([]),
+  };
+  return { ...mcpQuietDefaults, ...overrides } as ApiClient;
 }
 
 /** A fake popup window matching the surface `useOAuthPopup` touches. */

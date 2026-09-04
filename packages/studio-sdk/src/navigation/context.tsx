@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type AriaAttributes,
+  type CSSProperties,
   type MouseEvent,
   type ReactNode,
 } from 'react';
@@ -453,6 +454,10 @@ export interface AppLinkProps<T extends RouteToken> {
   className?: string;
   'aria-label'?: string;
   'aria-current'?: AriaAttributes['aria-current'];
+  /** Native tooltip text (also a sensible non-AT hover hint). */
+  title?: string;
+  /** Inline styles for the anchor. */
+  style?: CSSProperties;
 }
 
 /**
@@ -467,6 +472,8 @@ export function AppLink<T extends RouteToken>({
   className,
   'aria-label': ariaLabel,
   'aria-current': ariaCurrent,
+  title,
+  style,
 }: AppLinkProps<T>): ReactNode {
   const { navigate, resolvePath } = useNavigation();
   const href = resolvePath(to, search);
@@ -482,7 +489,15 @@ export function AppLink<T extends RouteToken>({
   );
   return createElement(
     'a',
-    { href, className, 'aria-label': ariaLabel, 'aria-current': ariaCurrent, onClick },
+    {
+      href,
+      className,
+      'aria-label': ariaLabel,
+      'aria-current': ariaCurrent,
+      title,
+      style,
+      onClick,
+    },
     children,
   );
 }

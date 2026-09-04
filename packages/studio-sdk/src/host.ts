@@ -12,4 +12,8 @@ export {
   subscribePluginHost,
   usePluginContributions,
 } from './plugin/host-state';
-export type { PluginLoaderState, PluginContributionsSnapshot } from './plugin/host-state';
+export type {
+  PluginLoaderState,
+  LoadedPlugin,
+  PluginContributionsSnapshot,
+} from './plugin/host-state';

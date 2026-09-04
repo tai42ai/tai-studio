@@ -182,7 +182,7 @@ describe('shell plugin nav', () => {
     };
   }
 
-  it('renders a registered nav entry in the Plugins nav with its icon box and href', async () => {
+  it('renders a registered nav entry in its self-named plugin section with its icon box and href', async () => {
     serveShell();
     const importModule = vi.fn(() => Promise.resolve({ register: registerPageAndNav(true) }));
 
@@ -190,9 +190,11 @@ describe('shell plugin nav', () => {
 
     const link = await screen.findByRole('link', { name: 'Reference' });
     expect(link).toHaveAttribute('href', '/plugins/acme/demo');
-    // The Plugins landmark exists and owns the link.
-    const pluginsNav = screen.getByRole('navigation', { name: 'Plugins' });
-    expect(within(pluginsNav).getByRole('link', { name: 'Reference' })).toBe(link);
+    // The entry lands in the plugin's own self-named section (headed by its id), which
+    // names its list — there is no generic "Plugins" wrapper.
+    expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
+    const list = screen.getByRole('list', { name: 'acme' });
+    expect(within(list).getByRole('link', { name: 'Reference' })).toBe(link);
     // The icon renders in an aria-hidden slot (its accessible name stays the title).
     const iconBox = link.querySelector('[aria-hidden="true"]');
     expect(iconBox).not.toBeNull();
@@ -285,9 +287,9 @@ describe('shell plugin nav', () => {
       importModule,
     });
 
-    const pluginsNav = await screen.findByRole('navigation', { name: 'Plugins' });
-    const detailLink = within(pluginsNav).getByRole('link', { name: 'Detail' });
-    const flowsLink = within(pluginsNav).getByRole('link', { name: 'Flows' });
+    const list = await screen.findByRole('list', { name: 'acme' });
+    const detailLink = within(list).getByRole('link', { name: 'Detail' });
+    const flowsLink = within(list).getByRole('link', { name: 'Flows' });
     // The deep path sits under BOTH hrefs, but aria-current marks EXACTLY the
     // deepest match (`flows/detail`) — never both, so a single winner is announced.
     expect(detailLink).toHaveAttribute('aria-current', 'page');

@@ -142,13 +142,31 @@ export interface RegisteredPage extends PageContribution {
 
 /**
  * The sidebar section a nav entry renders in. A named core section groups the
- * entry there, after that section's core rows; `'Plugins'`, an absent field, or
- * any unrecognised value falls to the Plugins section. The shell tolerates an
- * unknown value at runtime (a bundle newer than this host), so the field is a
- * placement hint, never a hard contract.
+ * entry there, after that section's core rows. An absent field or any value that
+ * is not a live core section renders the entry as a FIRST-CLASS section of its own,
+ * named for the contributing plugin (grouped with that plugin's other such entries),
+ * placed after the core sections. The shell tolerates an unknown value at runtime
+ * (a bundle newer than this host), so the field is a placement hint, never a hard
+ * contract.
+ *
+ * `'Integrations'` is DEPRECATED: the core section was renamed to `'Connections'`.
+ * It stays a member so a published bundle that targets it keeps type-checking, and
+ * the shell aliases it to `'Connections'` at runtime; author new entries against
+ * `'Connections'`. `'Plugins'` is DEPRECATED too: there is no longer a generic
+ * catch-all section, so it now renders the entry in the plugin's own self-named
+ * section (the same place an absent field lands). Both are removed only at a future
+ * MAJOR — never mid-line, so no existing plugin breaks.
  */
 export type NavEntrySection =
-  'Capabilities' | 'Integrations' | 'Activity' | 'Administration' | 'Plugins';
+  | 'Capabilities'
+  | 'Connections'
+  | 'Triggers'
+  | 'Activity'
+  | 'Administration'
+  /** @deprecated Renamed to `'Connections'`; aliased at runtime. Removed at a future major. */
+  | 'Integrations'
+  /** @deprecated No catch-all section; renders in the plugin's own self-named section. */
+  | 'Plugins';
 
 export interface NavEntryContribution {
   /**
@@ -160,10 +178,18 @@ export interface NavEntryContribution {
   readonly title: string;
   /**
    * Optional target sidebar section (see {@link NavEntrySection}); absent ⇒ the
-   * Plugins section. Additive — an older bundle omits it and stays on the same
-   * plugin API version.
+   * plugin's own self-named section. Additive — an older bundle omits it and stays
+   * on the same plugin API version.
    */
   readonly section?: NavEntrySection;
+  /**
+   * Optional sort weight WITHIN the entry's section (whether a core section or the
+   * plugin's own self-named one): entries render in ascending `order`, and every
+   * entry that omits it sorts AFTER the ordered ones, in registration order. Two
+   * entries with the same `order` keep registration order (a stable sort). Additive —
+   * an older bundle omits it and stays on the same plugin API version.
+   */
+  readonly order?: number;
   /**
    * Optional icon rendered before the title. It must be a square inline SVG that
    * fills its box and draws with `currentColor`; the host constrains the slot,

@@ -318,6 +318,8 @@ export {
   ExtensionsIcon,
   TemplatesIcon,
   ConnectorsIcon,
+  ServedEndpointsIcon,
+  PluginIcon,
   HooksIcon,
   StorageIcon,
   SchedulingIcon,

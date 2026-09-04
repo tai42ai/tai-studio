@@ -39,6 +39,7 @@ import type { ReactNode } from 'react';
 import { CONNECTIONS_KEY, PROVIDERS_KEY, connectionKey } from './keys';
 import { ConnectDialog } from './connect-dialog';
 import { ConnectionDetail } from './connection-detail';
+import { McpServersSection } from './mcp-servers';
 import { Notice } from './notice';
 import { useOAuthRedirectResume } from './oauth';
 
@@ -393,7 +394,11 @@ function ConnectorsList(): ReactNode {
   const [connectProvider, setConnectProvider] = useState<ProviderView | null>(null);
   return (
     <Stack gap={6}>
-      <PageHeader eyebrow="Integrations" title="Connectors" />
+      <PageHeader eyebrow="Connections" title="Connectors" />
+      {/* The unified page lists every sourced MCP server (mounted status + manifest
+          config, each row showing how it was added) alongside the provider connectors
+          below — one surface for all the tool sources the deployment mounts. */}
+      <McpServersSection />
       <ProvidersSection onConnect={setConnectProvider} />
       <ConnectionsSection />
       {connectProvider !== null ? (

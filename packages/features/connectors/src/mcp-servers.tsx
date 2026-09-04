@@ -1,5 +1,6 @@
 /**
- * MCP tab — two surfaces over the mounted MCP servers:
+ * MCP servers section of the unified Connectors page — two surfaces over the
+ * mounted MCP servers:
  *
  *  1. STATUS: `GET /api/mcp-status` lists every mounted server (bound = healthy,
  *     failed = errored) with a per-server RELOAD button (`POST …/reload`).
@@ -70,7 +71,7 @@ import {
   mcpExtensionsKey,
   mcpStatusKey,
   preservedManifestKey,
-} from '../keys';
+} from './keys';
 
 interface ServerRow {
   readonly title: string;
@@ -1431,21 +1432,29 @@ function McpConfigSection(): ReactNode {
   );
 }
 
-export function McpTab(): ReactNode {
+/**
+ * The MCP-servers surface of the unified Connectors page: every sourced MCP server —
+ * mounted status plus the manifest `mcp` config (hand-authored, marketplace-installed,
+ * and connector-managed entries, each showing how it was added) — in one section, so
+ * the operator sees all tool sources beside the provider connections below.
+ */
+export function McpServersSection(): ReactNode {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <Card>
-        <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
-          Mounted servers
-        </h2>
-        <McpStatusSection />
-      </Card>
-      <Card>
-        <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
-          Configuration
-        </h2>
-        <McpConfigSection />
-      </Card>
-    </div>
+    <section aria-label="MCP servers">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
+        <Card>
+          <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
+            Mounted servers
+          </h2>
+          <McpStatusSection />
+        </Card>
+        <Card>
+          <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
+            Configuration
+          </h2>
+          <McpConfigSection />
+        </Card>
+      </div>
+    </section>
   );
 }

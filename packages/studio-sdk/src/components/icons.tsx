@@ -504,6 +504,24 @@ export const GridIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** Served endpoints: a broadcast node radiating to the tools it serves. */
+export const ServedEndpointsIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="12" r="2.5" />
+    <path d="M7.8 7.8a6 6 0 0 0 0 8.4" />
+    <path d="M16.2 7.8a6 6 0 0 1 0 8.4" />
+    <path d="M5 5a9 9 0 0 0 0 14" />
+    <path d="M19 5a9 9 0 0 1 0 14" />
+  </Icon>
+);
+
+/** Plugin: a puzzle piece — the host's provenance mark for plugin-contributed nav. */
+export const PluginIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M10 4a2 2 0 0 1 4 0c0 .8.7 1.4 1.5 1.4H18a1 1 0 0 1 1 1v2.6c0 .8.6 1.5 1.4 1.5a2 2 0 0 1 0 4c-.8 0-1.4.7-1.4 1.5V19a1 1 0 0 1-1 1h-2.6c-.8 0-1.4-.6-1.4-1.4a2 2 0 0 0-4 0c0 .8-.6 1.4-1.4 1.4H6a1 1 0 0 1-1-1v-2.5C5 15.7 4.4 15 3.6 15a2 2 0 0 1 0-4c.8 0 1.4-.7 1.4-1.5V6a1 1 0 0 1 1-1h2.5C9.3 5 10 4.4 10 3.6z" />
+  </Icon>
+);
+
 // -- Route mapping -----------------------------------------------------------
 
 /**
@@ -519,6 +537,7 @@ export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconCompon
   extensions: ExtensionsIcon,
   templates: TemplatesIcon,
   connectors: ConnectorsIcon,
+  servedEndpoints: ServedEndpointsIcon,
   hooks: HooksIcon,
   storage: StorageIcon,
   scheduling: SchedulingIcon,

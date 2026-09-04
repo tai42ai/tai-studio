@@ -19,6 +19,7 @@ afterEach(() => {
 const ready = (overrides: Partial<PluginLoaderState> = {}): PluginLoaderState => ({
   status: 'ready',
   loaded: [],
+  plugins: [],
   errors: {},
   registryError: null,
   ...overrides,
@@ -30,7 +31,13 @@ describe('plugin host-state store', () => {
   it('starts idle and mirrors the pushed state', () => {
     expect(getPluginHostState().status).toBe('idle');
 
-    setPluginHostState({ status: 'loading', loaded: [], errors: {}, registryError: null });
+    setPluginHostState({
+      status: 'loading',
+      loaded: [],
+      plugins: [],
+      errors: {},
+      registryError: null,
+    });
     expect(getPluginHostState().status).toBe('loading');
 
     setPluginHostState(ready({ loaded: ['acme'] }));
@@ -41,12 +48,24 @@ describe('plugin host-state store', () => {
     const listener = vi.fn();
     const unsubscribe = subscribePluginHost(listener);
 
-    setPluginHostState({ status: 'loading', loaded: [], errors: {}, registryError: null });
+    setPluginHostState({
+      status: 'loading',
+      loaded: [],
+      plugins: [],
+      errors: {},
+      registryError: null,
+    });
     setPluginHostState(ready());
     expect(listener).toHaveBeenCalledTimes(2);
 
     unsubscribe();
-    setPluginHostState({ status: 'idle', loaded: [], errors: {}, registryError: null });
+    setPluginHostState({
+      status: 'idle',
+      loaded: [],
+      plugins: [],
+      errors: {},
+      registryError: null,
+    });
     expect(listener).toHaveBeenCalledTimes(2);
   });
 

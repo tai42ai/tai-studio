@@ -10,7 +10,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import { Component } from 'react';
 import type { ComponentType } from 'react';
 import { Context } from 'react';
-import type { CSSProperties } from 'react';
+import { CSSProperties } from 'react';
 import { ErrorInfo } from 'react';
 import { FunctionComponentElement } from 'react';
 import type { HTMLAttributes } from 'react';
@@ -1879,6 +1879,8 @@ export interface AppLinkProps<T extends RouteToken> {
     className?: string;
     // (undocumented)
     search?: RouteSearch<T>;
+    style?: CSSProperties;
+    title?: string;
     // (undocumented)
     to: T;
 }
@@ -6743,6 +6745,7 @@ export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconCompon
 // @public (undocumented)
 export interface NavEntryContribution {
     readonly icon?: ComponentType;
+    readonly order?: number;
     readonly path: string;
     readonly requiredCapabilities?: RequiredCapabilities;
     readonly section?: NavEntrySection;
@@ -6751,7 +6754,11 @@ export interface NavEntryContribution {
 }
 
 // @public
-export type NavEntrySection = 'Capabilities' | 'Integrations' | 'Activity' | 'Administration' | 'Plugins';
+export type NavEntrySection = 'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration'
+/** @deprecated Renamed to `'Connections'`; aliased at runtime. Removed at a future major. */
+| 'Integrations'
+/** @deprecated No catch-all section; renders in the plugin's own self-named section. */
+| 'Plugins';
 
 // @public
 export interface NavigateOptions {
@@ -7136,6 +7143,9 @@ export interface PluginContributions {
 
 // @public
 export type PluginEntry = (context: PluginContext) => void | Promise<void>;
+
+// @public
+export const PluginIcon: IconComponent;
 
 // @public
 export interface PluginNavigateOptions {
@@ -7998,6 +8008,8 @@ export interface RouteSearchByToken {
     // (undocumented)
     scheduling: Record<string, never>;
     // (undocumented)
+    servedEndpoints: Record<string, never>;
+    // (undocumented)
     settings: Record<string, never>;
     // (undocumented)
     storage: {
@@ -8751,6 +8763,9 @@ interface SelectSharedProps {
     // (undocumented)
     readonly value?: string;
 }
+
+// @public
+export const ServedEndpointsIcon: IconComponent;
 
 // @public (undocumented)
 const serverDateTime: z.ZodObject<{

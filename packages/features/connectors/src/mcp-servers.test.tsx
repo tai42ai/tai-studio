@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 
-import { renderWithProviders } from '../test-utils';
-import { McpTab } from './McpTab';
+import { renderWithProviders } from './test-utils-mcp-servers';
+import { McpServersSection } from './mcp-servers';
 
 /** The MCP-ENTRY schema (`TaiMCPConfig`) as the schema route emits it: an object
  *  with a required `title` string and a required nested `config` object. */
@@ -51,7 +51,7 @@ function status() {
   return { bound: { srv: ['a', 'b'] }, failed: [{ title: 'bad', status: 'timeout' }] };
 }
 
-describe('McpTab', () => {
+describe('McpServersSection', () => {
   it('lists mounted servers with their status', async () => {
     const client = {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
@@ -59,7 +59,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     expect(await screen.findByText('srv')).toBeInTheDocument();
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
@@ -91,7 +91,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       reloadMcp,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByText('srv');
     const [firstReload] = screen.getAllByRole('button', { name: /Reload/ });
@@ -124,7 +124,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       reloadMcp,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByText('srv');
     const [firstReload] = screen.getAllByRole('button', { name: /Reload/ });
@@ -145,7 +145,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     expect(await screen.findByText('No MCP servers are mounted')).toBeInTheDocument();
   });
@@ -157,7 +157,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     expect(await screen.findByText('status boom')).toBeInTheDocument();
   });
@@ -168,7 +168,7 @@ describe('McpTab', () => {
       getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
       getMcpConfigSchema: vi.fn().mockRejectedValue(new Error('schema boom')),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     expect(await screen.findByText('schema boom')).toBeInTheDocument();
   });
@@ -180,7 +180,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     const entry = await screen.findByTestId('mcp-entry-0');
     expect(screen.getByText('Server 1')).toBeInTheDocument();
@@ -202,7 +202,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
 
@@ -249,7 +249,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     const entry = await screen.findByTestId('mcp-entry-0');
     await user.type(within(entry).getByLabelText('Title'), ' renamed');
@@ -276,7 +276,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     const entry = await screen.findByTestId('mcp-entry-0');
     const title = within(entry).getByLabelText('Title');
@@ -304,7 +304,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: 'JSON' }));
@@ -327,7 +327,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: 'JSON' }));
@@ -350,7 +350,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: 'JSON' }));
@@ -376,7 +376,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    const { container } = renderWithProviders(<McpTab />, { client });
+    const { container } = renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: /Save config/ }));
@@ -405,7 +405,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     // The provenance is surfaced and removal is disabled — the connection owns it.
     expect(
@@ -434,7 +434,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([{ name: 'chain', kind: 'wrapper' }]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
 
@@ -465,7 +465,7 @@ describe('McpTab', () => {
     };
     renderWithProviders(
       <StaticToolDisplayNamesProvider names={{ a: 'Alpha' }}>
-        <McpTab />
+        <McpServersSection />
       </StaticToolDisplayNamesProvider>,
       { client },
     );
@@ -486,7 +486,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client, queryClient });
+    renderWithProviders(<McpServersSection />, { client, queryClient });
 
     const entry = await screen.findByTestId('mcp-entry-0');
     await user.type(within(entry).getByLabelText('Title'), ' draft');
@@ -530,7 +530,7 @@ describe('McpTab', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi.fn().mockResolvedValue([]),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     // The FORM view is seeded from the preserved read: the `!ENV` reference is
     // intact, not a resolved plaintext secret.
@@ -562,7 +562,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client, queryClient });
+    renderWithProviders(<McpServersSection />, { client, queryClient });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: /Save config/ }));
@@ -612,7 +612,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     // The env entry renders through the renderer's SecretRefField, not the built-in
     // record value input: a masked reference chip with a change affordance, and the
@@ -642,7 +642,7 @@ describe('McpTab', () => {
       setMcpSecretEnv,
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client, queryClient });
+    renderWithProviders(<McpServersSection />, { client, queryClient });
 
     await screen.findByTestId('mcp-entry-0');
     const secretInput = screen.getByLabelText('API_KEY');
@@ -695,7 +695,7 @@ describe('McpTab', () => {
       setMcpSecretEnv,
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: 'Reference existing key' }));
@@ -732,7 +732,7 @@ describe('McpTab', () => {
       setMcpConfig,
       setEnvConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     // Drop the env entry that references the shared key, then save.
@@ -768,7 +768,7 @@ describe('McpTab', () => {
       setMcpConfig,
       setEnvConfig,
     };
-    renderWithProviders(<McpTab />, { client, queryClient });
+    renderWithProviders(<McpServersSection />, { client, queryClient });
 
     await screen.findByTestId('mcp-entry-0');
 
@@ -823,7 +823,7 @@ describe('McpTab', () => {
       setMcpConfig,
       setEnvConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     // Paste a fresh secret: the server generates SECRET_1 and writes the marker back.
     await screen.findByTestId('mcp-entry-0');
@@ -857,7 +857,7 @@ describe('McpTab', () => {
       getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
       setMcpSecretEnv,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.type(screen.getByLabelText('API_KEY'), 'plaintext');
@@ -879,7 +879,7 @@ describe('McpTab', () => {
       getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
       setMcpConfig,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.click(screen.getByRole('button', { name: /Save config/ }));
@@ -900,7 +900,7 @@ describe('McpTab', () => {
       getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
       setMcpSecretEnv,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     const entry = await screen.findByTestId('mcp-entry-0');
     // A field edit dirties the editor: the paste target index may no longer match the
@@ -930,7 +930,7 @@ describe('McpTab', () => {
       getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
       setMcpSecretEnv,
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     await screen.findByTestId('mcp-entry-0');
     await user.type(screen.getByLabelText('Secret value'), 'plaintext');
@@ -950,7 +950,7 @@ describe('McpTab', () => {
       listExtensions: vi.fn().mockResolvedValue([]),
       getEnvConfig: vi.fn().mockRejectedValue(new Error('env boom')),
     };
-    renderWithProviders(<McpTab />, { client });
+    renderWithProviders(<McpServersSection />, { client });
 
     // The editor still renders — an envConfig failure is a soft degrade, not a wall.
     const entry = await screen.findByTestId('mcp-entry-0');
@@ -962,7 +962,7 @@ describe('McpTab', () => {
   });
 });
 
-describe('McpTab — installed mcp-server entry + env-refs checklist', () => {
+describe('McpServersSection — installed mcp-server entry + env-refs checklist', () => {
   // Entry 0 is installer-written (its title matches an installed mcp-server item
   // name); entry 1 is hand-authored.
   const PRESERVED = {
@@ -1025,7 +1025,7 @@ describe('McpTab — installed mcp-server entry + env-refs checklist', () => {
   }
 
   it('renders the installer-written entry read-only with the uninstall-to-remove copy', async () => {
-    renderWithProviders(<McpTab />, { client: client() });
+    renderWithProviders(<McpServersSection />, { client: client() });
 
     expect(
       await screen.findByText('Installed from tai42/postgres-mcp — uninstall to remove'),
@@ -1038,7 +1038,7 @@ describe('McpTab — installed mcp-server entry + env-refs checklist', () => {
 
   it('renders the env-refs checklist from get_mcp_env_refs alone — never an env value', async () => {
     const stub = client();
-    renderWithProviders(<McpTab />, { client: stub });
+    renderWithProviders(<McpServersSection />, { client: stub });
 
     await screen.findByText('Installed from tai42/postgres-mcp — uninstall to remove');
     // A bare unset marker is drift (red); a set marker is green.
@@ -1055,7 +1055,7 @@ describe('McpTab — installed mcp-server entry + env-refs checklist', () => {
   });
 
   it('renders a defaulted-but-unset marker green (resolves via its default), no drift warning', async () => {
-    renderWithProviders(<McpTab />, { client: client() });
+    renderWithProviders(<McpServersSection />, { client: client() });
 
     await screen.findByText('Installed from tai42/postgres-mcp — uninstall to remove');
     // has_default:true, set:false → the `:default` resolves the marker, so the badge
@@ -1070,7 +1070,7 @@ describe('McpTab — installed mcp-server entry + env-refs checklist', () => {
   });
 
   it('renders the same checklist on a hand-authored marker-bearing entry (platform-wide)', async () => {
-    renderWithProviders(<McpTab />, { client: client() });
+    renderWithProviders(<McpServersSection />, { client: client() });
 
     // Entry 1 is editable; its `!ENV` marker still gets the names-only checklist.
     expect(await screen.findByTestId('mcp-entry-1')).toBeInTheDocument();

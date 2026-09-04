@@ -17,6 +17,17 @@ import type { PluginContributions } from './types';
 import { getContributions } from './registry';
 
 /**
+ * Identity of a successfully-loaded plugin, for host chrome that must attribute a
+ * contribution to its origin (e.g. the shell's provenance badge on plugin nav). The
+ * `name` is the same id the registry stamps on every contribution (`pluginId`); the
+ * `version` comes from the plugin's manifest.
+ */
+export interface LoadedPlugin {
+  readonly name: string;
+  readonly version: string;
+}
+
+/**
  * The plugin load pass's public state, mirrored for feature pages to read. It is
  * the shape the app shell's loader store already exposes: `status` gates when the
  * contributions are complete, and the error fields carry the loud failures.
@@ -26,6 +37,14 @@ export interface PluginLoaderState {
   readonly status: 'idle' | 'loading' | 'ready';
   /** Names of plugins whose bundle imported and registered successfully. */
   readonly loaded: readonly string[];
+  /**
+   * Identity (name + version) of every successfully-loaded plugin. Parallel to
+   * `loaded`; OPTIONAL and ADDITIVE, so an older host that never populated it still
+   * satisfies this shape (a reader treats absent as `[]`). The host reads it to
+   * attribute a contribution to its plugin — e.g. the nav provenance badge's
+   * "Plugin: name version".
+   */
+  readonly plugins?: readonly LoadedPlugin[];
   /** Plugin name → loud error message (version mismatch / load failure). */
   readonly errors: Readonly<Record<string, string>>;
   /** A registry-listing failure that is NOT a 401 (surfaced loudly, never hidden). */
@@ -35,6 +54,7 @@ export interface PluginLoaderState {
 const INITIAL_HOST_STATE: PluginLoaderState = {
   status: 'idle',
   loaded: [],
+  plugins: [],
   errors: {},
   registryError: null,
 };

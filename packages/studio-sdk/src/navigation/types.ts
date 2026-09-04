@@ -41,6 +41,9 @@ export interface RouteSearchByToken {
     q?: string;
   };
   connectors: { connection?: string };
+  // The Served Endpoints surface (the promoted sub-MCP servers): a curated subset
+  // of tools served on a transport. No search parameters — a flat list + create form.
+  servedEndpoints: Record<string, never>;
   hooks: Record<string, never>;
   templates: { template?: string; q?: string };
   storage: { q?: string };

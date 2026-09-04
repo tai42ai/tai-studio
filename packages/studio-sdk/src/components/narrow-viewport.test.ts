@@ -454,6 +454,8 @@ const CALLER_SIZED_ITEMS = [
 const NOT_CALLER_SIZED: Readonly<Record<string, string>> = {
   '.tai-select-item': 'lives inside the viewport-capped .tai-select-content popover',
   '.tai-select-item-indicator': 'a bare 16 px mark, flex: none, no text',
+  '.tai-plugin-badge':
+    'a bare glyph link, flex: none; the host provenance mark holds a single icon and no text of its own',
   // The two rows nothing in this repo renders. Their reasons are about what the
   // rule DECLARES and what the published class is for, not about a live layout
   // that could be observed here — there is none to observe, and a reason phrased

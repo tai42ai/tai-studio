@@ -1,6 +1,8 @@
 /**
- * SUB-MCP tab — the derived sub-MCP servers (`/api/sub-mcp`): a slug mapped to a
- * curated subset of tool names served on a transport.
+ * `ServedEndpointsPage` — the SERVED ENDPOINTS surface the shell mounts at the
+ * `servedEndpoints` route (a Connections page): the derived sub-MCP servers
+ * (`/api/sub-mcp`), each a slug mapped to a curated subset of tool names served on a
+ * transport.
  *
  *  - LIST every entry with its transport and its concrete endpoint URL
  *    (`/app/{slug}`, copy-to-clipboard) plus a DELETE control guarded by a confirm
@@ -25,10 +27,12 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  PageHeader,
   RadioGroup,
   ScrollRegion,
   Skeleton,
   Spinner,
+  Stack,
   TBody,
   TD,
   TH,
@@ -39,11 +43,11 @@ import {
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { RadioOption } from '@tai42/studio-sdk';
+import type { PageProps, RadioOption } from '@tai42/studio-sdk';
 import { useState } from 'react';
 import type { ReactNode, SyntheticEvent } from 'react';
 
-import { subMcpAvailableToolsKey, subMcpKey } from '../keys';
+import { subMcpAvailableToolsKey, subMcpKey } from './keys';
 
 /** The transports the sub-MCP build path supports end to end (`http` default). */
 const TRANSPORT_OPTIONS: readonly RadioOption[] = [
@@ -412,21 +416,26 @@ function SubMcpListSection(): ReactNode {
   );
 }
 
-export function SubMcpTab(): ReactNode {
+// The `servedEndpoints` route carries no search params, so the passed props are
+// unused; the typed parameter documents the shell → feature contract.
+export function ServedEndpointsPage(_props: PageProps<'servedEndpoints'>): ReactNode {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
-      <Card>
-        <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
-          Sub-MCP servers
-        </h2>
-        <SubMcpListSection />
-      </Card>
-      <Card>
-        <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
-          Create a sub-MCP
-        </h2>
-        <CreateSubMcpForm />
-      </Card>
-    </div>
+    <Stack>
+      <PageHeader eyebrow="Connections" title="Served endpoints" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-6)' }}>
+        <Card>
+          <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
+            Sub-MCP servers
+          </h2>
+          <SubMcpListSection />
+        </Card>
+        <Card>
+          <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
+            Create a sub-MCP
+          </h2>
+          <CreateSubMcpForm />
+        </Card>
+      </div>
+    </Stack>
   );
 }

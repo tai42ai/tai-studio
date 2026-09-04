@@ -13,11 +13,20 @@ export function getContributions(): PluginContributions;
 export function getPluginHostState(): PluginLoaderState;
 
 // @public
+export interface LoadedPlugin {
+    // (undocumented)
+    readonly name: string;
+    // (undocumented)
+    readonly version: string;
+}
+
+// @public
 export function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void>;
 
 // @public (undocumented)
 interface NavEntryContribution {
     readonly icon?: ComponentType;
+    readonly order?: number;
     readonly path: string;
     readonly requiredCapabilities?: RequiredCapabilities;
     readonly section?: NavEntrySection;
@@ -26,7 +35,11 @@ interface NavEntryContribution {
 }
 
 // @public
-type NavEntrySection = 'Capabilities' | 'Integrations' | 'Activity' | 'Administration' | 'Plugins';
+type NavEntrySection = 'Capabilities' | 'Connections' | 'Triggers' | 'Activity' | 'Administration'
+/** @deprecated Renamed to `'Connections'`; aliased at runtime. Removed at a future major. */
+| 'Integrations'
+/** @deprecated No catch-all section; renders in the plugin's own self-named section. */
+| 'Plugins';
 
 // @public (undocumented)
 interface PageContribution {
@@ -72,6 +85,7 @@ type PluginEntry = (context: PluginContext) => void | Promise<void>;
 export interface PluginLoaderState {
     readonly errors: Readonly<Record<string, string>>;
     readonly loaded: readonly string[];
+    readonly plugins?: readonly LoadedPlugin[];
     readonly registryError: string | null;
     readonly status: 'idle' | 'loading' | 'ready';
 }
