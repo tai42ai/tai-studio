@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppLink } from '@tai42/studio-sdk';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 
-import { renderWithProviders } from './test-utils-mcp-servers';
+import { renderWithProviders, scopedProjection } from './test-utils-mcp-servers';
 import { McpServersSection } from './mcp-servers';
 
 /** The dirty-guard discard prompt (the shared ConfirmDialog's body copy). */
@@ -55,6 +55,19 @@ function status() {
   return { bound: { srv: ['a', 'b'] }, failed: [{ title: 'bad', status: 'timeout' }] };
 }
 
+/** A `list_failed_mcps` fleet report whose sole worker carries `entries` as its
+ *  failed-server payload — the shape the dedicated `/api/mcp-status/failed` door
+ *  returns and `failedMcpsFromReport` unwinds. */
+function failedReport(entries: { title: string; status: string }[]) {
+  return {
+    op: 'list_failed_mcps',
+    reachable: true,
+    local_only: true,
+    results: [{ name: 'serve-a', outcome: 'applied', payload: entries, error: null, detail: null }],
+    error: null,
+  };
+}
+
 describe('McpServersSection', () => {
   it('lists mounted servers with their status', async () => {
     const client = {
@@ -73,10 +86,211 @@ describe('McpServersSection', () => {
     }
     // The hidden Actions header wears the published clip class, not a partial
     // hand-rolled copy of it that stays selectable and readable to a magnifier.
-    expect(screen.getByText('Actions')).toHaveClass('tai-visually-hidden');
-    expect(screen.getByText('bad')).toBeInTheDocument();
+    expect(screen.getAllByText('Actions')[0]).toHaveClass('tai-visually-hidden');
+    // The mounted table shows the BOUND server's tool count; failed servers live in
+    // their own health section (this test leaves it empty via the harness default).
     expect(screen.getByText('2 tools')).toBeInTheDocument();
+    expect(screen.queryByText('Failed servers')).not.toBeInTheDocument();
+  });
+
+  it('surfaces failed servers in a dedicated health section with reload + deregister', async () => {
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: { srv: ['a', 'b'] }, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    expect(await screen.findByText('Failed servers')).toBeInTheDocument();
+    expect(screen.getByText('bad')).toBeInTheDocument();
     expect(screen.getByText('timeout')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deregister bad' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reload all failed' })).toBeInTheDocument();
+  });
+
+  const fleetOk = (op: string) => ({
+    op,
+    reachable: true,
+    local_only: true,
+    results: [{ name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null }],
+    error: null,
+  });
+
+  it('reloads one failed server and re-reads both the failed roster and the status', async () => {
+    const user = userEvent.setup();
+    const reloadMcp = vi.fn().mockResolvedValue(fleetOk('reload_mcp'));
+    const listFailedMcps = vi
+      .fn()
+      .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }]));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps,
+      reloadMcp,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    // The failed row's Reload (not the "Reload all failed" button).
+    const rowReload = within(screen.getByText('bad').closest('tr') as HTMLElement).getByRole(
+      'button',
+      { name: /Reload/ },
+    );
+    await user.click(rowReload);
+
+    expect(reloadMcp).toHaveBeenCalledWith('bad');
+    await waitFor(() => {
+      expect(listFailedMcps.mock.calls.length).toBeGreaterThan(1);
+    });
+    expect(client.getMcpStatus.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it('reloads the whole failed roster via Reload all failed', async () => {
+    const user = userEvent.setup();
+    const reloadFailedMcps = vi.fn().mockResolvedValue(fleetOk('reload_failed_mcps'));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+      reloadFailedMcps,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    await user.click(screen.getByRole('button', { name: 'Reload all failed' }));
+    expect(reloadFailedMcps).toHaveBeenCalledTimes(1);
+  });
+
+  it('deregisters a failed server only after the house confirm', async () => {
+    const user = userEvent.setup();
+    const deregisterMcp = vi.fn().mockResolvedValue(fleetOk('deregister_mcp'));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+      deregisterMcp,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
+    // The confirm is open but nothing has fired yet — a destructive detach never runs
+    // on the row click alone.
+    expect(deregisterMcp).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
+    expect(deregisterMcp).toHaveBeenCalledWith('bad');
+  });
+
+  it('surfaces a non-converged deregister as a fleet report naming the stranded worker', async () => {
+    const user = userEvent.setup();
+    // A partial fan-out: detached on serve-a but serve-b never finished — the tools are
+    // still live there. The dialog must NOT close on a silent success; the report names
+    // the stranded worker so the operator can converge it.
+    const deregisterMcp = vi.fn().mockResolvedValue({
+      op: 'deregister_mcp',
+      reachable: true,
+      local_only: false,
+      results: [
+        { name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null },
+        { name: 'serve-b', outcome: 'timed_out', payload: null, error: null, detail: null },
+      ],
+      error: null,
+    });
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+      deregisterMcp,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
+
+    // The detach broadcast is reported loudly — a partial fan-out is never swallowed.
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
+    expect(within(alert).getByText('serve-b')).toBeInTheDocument();
+    // Nothing was "saved" — a detach is a reload-framed op, never a config save.
+    expect(within(alert).queryByText(/Change saved/)).not.toBeInTheDocument();
+  });
+
+  it('reports a converged deregister calmly, with no fleet-failure alert', async () => {
+    const user = userEvent.setup();
+    // A lone-worker (converged) detach: the report renders nothing — the surface shows
+    // its own success, never a spurious fleet-failure panel.
+    const deregisterMcp = vi.fn().mockResolvedValue(fleetOk('deregister_mcp'));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+      deregisterMcp,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    await user.click(screen.getByRole('button', { name: 'Deregister bad' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
+
+    // The detach ran…
+    await waitFor(() => {
+      expect(deregisterMcp).toHaveBeenCalledWith('bad');
+    });
+    // …and the confirm closed (the shared mutation's success clears the target).
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    // A converged fan-out raises no fleet-failure alert.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps failed servers out of the mounted table (bound only)', async () => {
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: { srv: ['a'] }, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    // The mounted table lists the bound server; the failed one appears only under the
+    // health section, never mixed into the mounted rows.
+    await screen.findByText('srv');
+    const mounted = (screen.getByText('Mounted servers').closest('div') ?? null) as HTMLElement;
+    expect(within(mounted).getByText('srv')).toBeInTheDocument();
+    expect(within(mounted).queryByText('bad')).not.toBeInTheDocument();
+    // The failed server shows up under its own health section instead.
+    expect(screen.getByText('Failed servers')).toBeInTheDocument();
+    expect(screen.getByText('bad')).toBeInTheDocument();
   });
 
   it('reloads a server via its per-server button', async () => {
@@ -151,7 +365,7 @@ describe('McpServersSection', () => {
     };
     renderWithProviders(<McpServersSection />, { client });
 
-    expect(await screen.findByText('No MCP servers are mounted')).toBeInTheDocument();
+    expect(await screen.findByText('No MCP servers are bound')).toBeInTheDocument();
   });
 
   it('surfaces a status fetch failure as a loud error', async () => {
@@ -963,6 +1177,56 @@ describe('McpServersSection', () => {
     // key-reference mode toggle (key picking is unavailable).
     expect(screen.getByLabelText('API_KEY')).toHaveAttribute('type', 'password');
     expect(screen.queryByRole('button', { name: 'Reference existing key' })).toBeNull();
+  });
+});
+
+describe('McpServersSection — write gating (projection ⊆ gate)', () => {
+  function gatingClient() {
+    return {
+      // One bound server, so the mounted table's own (gated) Reload is exercised
+      // alongside the failed section's controls.
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: { steady: ['a_tool'] }, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'timeout' }])),
+    };
+  }
+
+  it('withdraws every write affordance for a read-only projection', async () => {
+    // A scoped, non-admin projection carrying no reachable write routes: every write
+    // door reads false, so no control that can only 403 on submit is offered.
+    renderWithProviders(<McpServersSection />, {
+      client: gatingClient(),
+      projection: scopedProjection(),
+    });
+
+    // The failed-server section still renders (a reader may SEE what failed)…
+    await screen.findByText('Failed servers');
+    expect(screen.getByText('bad')).toBeInTheDocument();
+    // …the mounted table lists the bound server without its Reload…
+    expect(await screen.findByText('steady')).toBeInTheDocument();
+    // …but its remediation doors are all withdrawn.
+    expect(screen.queryByRole('button', { name: 'Reload all failed' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deregister bad' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reload/ })).not.toBeInTheDocument();
+    // The config editor renders read-only — its Save door is withdrawn.
+    await screen.findByTestId('mcp-entry-0');
+    expect(screen.queryByRole('button', { name: /Save config/ })).not.toBeInTheDocument();
+  });
+
+  it('offers every write affordance for a full (admin) projection', async () => {
+    // The harness defaults to a total (admin) projection.
+    renderWithProviders(<McpServersSection />, { client: gatingClient() });
+
+    await screen.findByText('Failed servers');
+    expect(screen.getByRole('button', { name: 'Reload all failed' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deregister bad' })).toBeInTheDocument();
+    expect(await screen.findByTestId('mcp-entry-0')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save config/ })).toBeInTheDocument();
   });
 });
 

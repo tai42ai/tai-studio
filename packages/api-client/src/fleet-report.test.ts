@@ -7,7 +7,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { isFleetReportFailure, summarizeFleetFanout, summarizeFleetResult } from './fleet-report';
+import {
+  failedMcpsFromReport,
+  isFleetReportFailure,
+  summarizeFleetFanout,
+  summarizeFleetResult,
+} from './fleet-report';
 import type { FleetResult } from './schemas';
 
 function result(overrides: Partial<FleetResult>): FleetResult {
@@ -156,5 +161,79 @@ describe('summarizeFleetFanout', () => {
     });
     expect(summary?.status).toBe('unreachable');
     expect(summary?.error).toBe('bus down');
+  });
+});
+
+describe('failedMcpsFromReport', () => {
+  it('unions each worker payload roster by title and name-sorts the result', () => {
+    const out = failedMcpsFromReport(
+      result({
+        op: 'list_failed_mcps',
+        results: [
+          {
+            name: 'serve-a',
+            outcome: 'applied',
+            payload: [
+              { title: 'weather', status: 'unavailable' },
+              { title: 'db', status: 'unavailable' },
+            ],
+            error: null,
+            detail: null,
+          },
+          {
+            // A sibling that saw a DIFFERENT server fail contributes it too — a server
+            // failed on ANY worker must reach the operator; the first-seen status wins.
+            name: 'serve-b',
+            outcome: 'applied',
+            payload: [
+              { title: 'db', status: 'error' },
+              { title: 'files', status: 'unavailable' },
+            ],
+            error: null,
+            detail: null,
+          },
+        ],
+      }),
+    );
+    expect(out.map((entry) => entry.title)).toEqual(['db', 'files', 'weather']);
+    expect(out.find((entry) => entry.title === 'db')?.status).toBe('unavailable');
+  });
+
+  it('tolerates an absent or malformed worker payload without throwing', () => {
+    const out = failedMcpsFromReport(
+      result({
+        op: 'list_failed_mcps',
+        results: [
+          { name: 'serve-a', outcome: 'timed_out', payload: null, error: null, detail: 'no reply' },
+          {
+            name: 'serve-b',
+            outcome: 'applied',
+            // A non-string title and a bare string are both skipped, never coerced.
+            payload: [{ title: 42 }, 'garbage', { title: 'ok', status: 'unavailable' }],
+            error: null,
+            detail: null,
+          },
+        ],
+      }),
+    );
+    expect(out).toEqual([{ title: 'ok', status: 'unavailable' }]);
+  });
+
+  it('defaults a missing status to "unavailable" rather than dropping the row', () => {
+    const out = failedMcpsFromReport(
+      result({
+        op: 'list_failed_mcps',
+        results: [
+          {
+            name: 'serve-a',
+            outcome: 'applied',
+            payload: [{ title: 'weather' }],
+            error: null,
+            detail: null,
+          },
+        ],
+      }),
+    );
+    expect(out).toEqual([{ title: 'weather', status: 'unavailable' }]);
   });
 });

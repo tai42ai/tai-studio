@@ -173,6 +173,18 @@ export class ApiSchemaError extends Error {
 export function apiText(config: ApiConfig, path: string, options?: RequestOptions): Promise<string>;
 
 // @public
+export interface ApiToolsListsBody {
+    // (undocumented)
+    readonly exclude_add?: string[];
+    // (undocumented)
+    readonly exclude_remove?: string[];
+    // (undocumented)
+    readonly include_add?: string[];
+    // (undocumented)
+    readonly include_remove?: string[];
+}
+
+// @public
 export class ApiUnauthorizedError extends ApiError {
     constructor(message?: string);
 }
@@ -932,6 +944,32 @@ export function createApiClient(config: ApiConfig): {
         description: string | null;
     }>>;
     readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
+    readonly reloadTool: (args: ToolAdminArgs) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
+    readonly removeTool: (args: ToolAdminArgs) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
     readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
         run_id: string;
     }>;
@@ -1311,6 +1349,215 @@ export function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly reloadMcp: (title: string) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
+    readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly removeToolsEntry: (title: string) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly removeAgentsEntry: (title: string) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
+    readonly reloadFailedMcps: () => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
+    readonly deregisterMcp: (title: string) => Promise<{
         op: string;
         reachable: boolean;
         local_only: boolean;
@@ -2802,6 +3049,17 @@ const extensions: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     kind: z.ZodString;
 }, z.core.$strip>>;
+
+// @public
+export interface FailedMcpEntry {
+    // (undocumented)
+    readonly status: string;
+    // (undocumented)
+    readonly title: string;
+}
+
+// @public
+export function failedMcpsFromReport(result: FleetResult): FailedMcpEntry[];
 
 // @public
 export type FleetFailureOutcome = Exclude<FleetOutcome, 'applied'>;
@@ -6400,6 +6658,16 @@ const tokensPayload: z.ZodArray<z.ZodObject<{
     condition_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     condition_kwargs: z.ZodOptional<z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
 }, z.core.$strip>>;
+
+// @public
+export interface ToolAdminArgs {
+    // (undocumented)
+    readonly kind: string;
+    // (undocumented)
+    readonly name: string;
+    // (undocumented)
+    readonly targets?: string[];
+}
 
 // @public (undocumented)
 export type ToolExtensions = z.infer<typeof toolExtensions>;

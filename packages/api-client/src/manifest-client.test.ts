@@ -280,4 +280,128 @@ describe('manifest / mcp client transport', () => {
     await client.reloadMcp('my server');
     expect(captured[0]?.url).toBe('/api/mcp-status/my%20server/reload');
   });
+
+  const applyResult = {
+    status: 'ok',
+    env_keys: 0,
+    fanout: { mode: 'local-only', note: 'only this worker reloaded' },
+  };
+
+  const fleet = (op: string, results: unknown[] = []) => ({
+    op,
+    reachable: true,
+    local_only: false,
+    results,
+    error: null,
+  });
+
+  it('addToolsEntries POSTs { entries, replace } to the tools-config entries door', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    const out = await client.addToolsEntries([{ title: 't1', module: 'mod' }]);
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/tools-config/entries');
+    // `replace` defaults to false when the caller omits it.
+    expect(captured[0]?.body).toEqual({
+      entries: [{ title: 't1', module: 'mod' }],
+      replace: false,
+    });
+    expect(out.status).toBe('ok');
+  });
+
+  it('addToolsEntries carries replace=true when asked', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    await client.addToolsEntries([{ title: 't1', module: 'mod' }], true);
+    expect(captured[0]?.body).toEqual({ entries: [{ title: 't1', module: 'mod' }], replace: true });
+  });
+
+  it('removeToolsEntry DELETEs the title-encoded tools-config entry route', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    await client.removeToolsEntry('my tool');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/tools-config/entries/my%20tool');
+    expect(captured[0]?.body).toBeUndefined();
+  });
+
+  it('addAgentsEntries POSTs to the agents-config entries door', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    await client.addAgentsEntries([{ title: 'a1', module: 'mod' }]);
+    expect(captured[0]?.url).toBe('/api/agents-config/entries');
+    expect(captured[0]?.body).toEqual({
+      entries: [{ title: 'a1', module: 'mod' }],
+      replace: false,
+    });
+  });
+
+  it('removeAgentsEntry DELETEs the title-encoded agents-config entry route', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    await client.removeAgentsEntry('agent x');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/agents-config/entries/agent%20x');
+  });
+
+  it('updateApiTools POSTs all four delta lists, defaulting the absent ones to empty', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    await client.updateApiTools({ include_add: ['echo'], exclude_remove: ['db'] });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/api-tools');
+    expect(captured[0]?.body).toEqual({
+      include_add: ['echo'],
+      include_remove: [],
+      exclude_add: [],
+      exclude_remove: ['db'],
+    });
+  });
+
+  it('listFailedMcps GETs the failed door and parses the fleet report', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: fleet('list_failed_mcps', [
+          {
+            name: 'serve-a',
+            outcome: 'applied',
+            payload: [{ title: 'db', status: 'unavailable' }],
+            error: null,
+            detail: null,
+          },
+        ]),
+      }),
+    );
+    const out = await client.listFailedMcps();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/mcp-status/failed');
+    expect(out.op).toBe('list_failed_mcps');
+    expect(out.results[0]?.payload).toEqual([{ title: 'db', status: 'unavailable' }]);
+  });
+
+  it('reloadFailedMcps POSTs the reload-failed door with a null targets fan-out', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: fleet('reload_failed_mcps') }));
+    await client.reloadFailedMcps();
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/mcp-status/reload-failed');
+    expect(captured[0]?.body).toEqual({ targets: null });
+  });
+
+  it('deregisterMcp POSTs to the title-encoded deregister route', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: fleet('deregister_mcp') }));
+    await client.deregisterMcp('my server');
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/mcp-status/my%20server/deregister');
+    expect(captured[0]?.body).toEqual({ targets: null });
+  });
+
+  it('rejects an unsafe entry/deregister title before any request leaves', () => {
+    const rule = /path segment must not be/;
+    const { client, captured } = harness(() => jsonResponse({ data: applyResult }));
+    expect(() => client.removeToolsEntry('..')).toThrow(rule);
+    expect(() => client.removeAgentsEntry('.')).toThrow(rule);
+    expect(() => client.deregisterMcp('')).toThrow(rule);
+    expect(captured).toHaveLength(0);
+  });
+
+  it('surfaces a 4xx { error } from a rejected entry add as a LOUD ApiError', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ error: 'entries already present (use replace)' }, 400),
+    );
+    await expect(client.addToolsEntries([{ title: 't1' }])).rejects.toBeInstanceOf(ApiError);
+  });
 });

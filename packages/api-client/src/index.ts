@@ -9,6 +9,8 @@ export { createApiClient, isSafeApiPath } from './client';
 export type {
   ApiClient,
   RunToolArgs,
+  ToolAdminArgs,
+  ApiToolsListsBody,
   StartConnectArgs,
   ApiKeyBody,
   ClaimLinkBody,
@@ -64,12 +66,18 @@ export type {
   ToolRunListItem,
   SubmitToolRunArgs,
 } from './tool-runs';
-export { summarizeFleetResult, summarizeFleetFanout, isFleetReportFailure } from './fleet-report';
+export {
+  summarizeFleetResult,
+  summarizeFleetFanout,
+  isFleetReportFailure,
+  failedMcpsFromReport,
+} from './fleet-report';
 export type {
   FleetReportSummary,
   FleetReportStatus,
   FleetWorkerFailure,
   FleetFailureOutcome,
+  FailedMcpEntry,
 } from './fleet-report';
 export * as schemas from './schemas';
 export type {

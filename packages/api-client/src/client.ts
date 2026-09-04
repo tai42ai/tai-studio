@@ -25,6 +25,30 @@ export interface RunToolArgs {
   readonly kwargs?: Record<string, unknown>;
 }
 
+/**
+ * Identify one app tool for a live-registry op (`POST /api/tools/reload`,
+ * `POST /api/tools/remove`): its `kind` (the reloader kind a plugin registered,
+ * e.g. `example_tool`) and `name`. `targets` optionally restricts the fleet
+ * fan-out to specific workers; omit it to reach every worker.
+ */
+export interface ToolAdminArgs {
+  readonly kind: string;
+  readonly name: string;
+  readonly targets?: string[];
+}
+
+/**
+ * Names to add to / remove from the manifest `api_tools` include and exclude
+ * lists (`POST /api/api-tools`). Each field is a bare name list; the server
+ * refuses a body whose four lists are all empty.
+ */
+export interface ApiToolsListsBody {
+  readonly include_add?: string[];
+  readonly include_remove?: string[];
+  readonly exclude_add?: string[];
+  readonly exclude_remove?: string[];
+}
+
 export interface StartConnectArgs {
   readonly provider_id: string;
   readonly alias: string;
@@ -506,6 +530,22 @@ export function createApiClient(config: ApiConfig) {
         signal,
       }),
 
+    // -- app tool live-registry admin ----------------------------------------
+    // Re-register or remove one app tool by kind+name, applied on this worker and
+    // broadcast to the fleet (all workers, or only `targets`); both return the bare
+    // per-worker `fleetResult` the shared fleet-report handler renders. Both are
+    // fenced + destructive server-side, so a refusal surfaces as a loud error.
+    reloadTool: (args: ToolAdminArgs) =>
+      req('/api/tools/reload', s.fleetResult, {
+        method: 'POST',
+        body: { kind: args.kind, name: args.name, targets: args.targets ?? null },
+      }),
+    removeTool: (args: ToolAdminArgs) =>
+      req('/api/tools/remove', s.fleetResult, {
+        method: 'POST',
+        body: { kind: args.kind, name: args.name, targets: args.targets ?? null },
+      }),
+
     // -- background tool runs ------------------------------------------------
     submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) =>
       submitToolRun(config, args, signal),
@@ -687,6 +727,62 @@ export function createApiClient(config: ApiConfig) {
     reloadMcp: (title: string) =>
       req(`/api/mcp-status/${encodeSegment(title)}/reload`, s.mcpReloadResult, {
         method: 'POST',
+      }),
+
+    // Granular manifest-section entry edits — add/replace or remove ONE entry by
+    // title, leaving the rest of the section untouched (the surgical counterpart to
+    // the whole-section `setMcpConfig`). Each crosses the config pipeline and returns
+    // the shared apply-result (`status` + `env_keys` + fleet `fanout`). `replace` lets
+    // an entry whose title already exists swap in; without it a collision is refused.
+    addToolsEntries: (entries: readonly unknown[], replace = false) =>
+      req('/api/tools-config/entries', s.reloadConfigResult, {
+        method: 'POST',
+        body: { entries, replace },
+      }),
+    removeToolsEntry: (title: string) =>
+      req(`/api/tools-config/entries/${encodeSegment(title)}`, s.reloadConfigResult, {
+        method: 'DELETE',
+      }),
+    addAgentsEntries: (entries: readonly unknown[], replace = false) =>
+      req('/api/agents-config/entries', s.reloadConfigResult, {
+        method: 'POST',
+        body: { entries, replace },
+      }),
+    removeAgentsEntry: (title: string) =>
+      req(`/api/agents-config/entries/${encodeSegment(title)}`, s.reloadConfigResult, {
+        method: 'DELETE',
+      }),
+    // Edit the manifest `api_tools` include/exclude name lists by delta (add/remove
+    // names on either list). Absent fields default to empty; the server refuses a body
+    // whose four lists are all empty. Returns the shared apply-result.
+    updateApiTools: (body: ApiToolsListsBody) =>
+      req('/api/api-tools', s.reloadConfigResult, {
+        method: 'POST',
+        body: {
+          include_add: body.include_add ?? [],
+          include_remove: body.include_remove ?? [],
+          exclude_add: body.exclude_add ?? [],
+          exclude_remove: body.exclude_remove ?? [],
+        },
+      }),
+
+    // -- failed-MCP health ---------------------------------------------------
+    // The MCP servers skipped by the viability check, plus their remediation ops. The
+    // LIST rides the fleet fan-out primitive (each worker's failed roster arrives as
+    // its own report payload; `failedMcpsFromReport` unions them). Reload-all re-probes
+    // every failed server; deregister detaches one server's tools by title. Each op
+    // returns the bare per-worker `fleetResult`.
+    listFailedMcps: (signal?: AbortSignal) =>
+      req('/api/mcp-status/failed', s.fleetResult, { signal }),
+    reloadFailedMcps: () =>
+      req('/api/mcp-status/reload-failed', s.fleetResult, {
+        method: 'POST',
+        body: { targets: null },
+      }),
+    deregisterMcp: (title: string) =>
+      req(`/api/mcp-status/${encodeSegment(title)}/deregister`, s.fleetResult, {
+        method: 'POST',
+        body: { targets: null },
       }),
 
     // -- sub-mcp -------------------------------------------------------------

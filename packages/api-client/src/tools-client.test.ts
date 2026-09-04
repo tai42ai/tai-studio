@@ -129,4 +129,48 @@ describe('tools client transport', () => {
     await client.getToolSchema('weather report');
     expect(captured[0]?.url).toBe('/api/tools/weather%20report/schema');
   });
+
+  const fleet = (op: string) => ({
+    op,
+    reachable: true,
+    local_only: false,
+    results: [{ name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null }],
+    error: null,
+  });
+
+  it('reloadTool POSTs { kind, name, targets } to /api/tools/reload and parses the fleet report', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: fleet('reload_tool') }));
+    const out = await client.reloadTool({ kind: 'example_tool', name: 'echo' });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/tools/reload');
+    // An omitted `targets` rides the wire as a null all-workers fan-out.
+    expect(captured[0]?.body).toEqual({ kind: 'example_tool', name: 'echo', targets: null });
+    expect(out.op).toBe('reload_tool');
+    expect(out.results[0]?.outcome).toBe('applied');
+  });
+
+  it('reloadTool carries an explicit targets fan-out when given', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: fleet('reload_tool') }));
+    await client.reloadTool({ kind: 'example_tool', name: 'echo', targets: ['serve-a'] });
+    expect(captured[0]?.body).toEqual({
+      kind: 'example_tool',
+      name: 'echo',
+      targets: ['serve-a'],
+    });
+  });
+
+  it('removeTool POSTs { kind, name, targets } to /api/tools/remove', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: fleet('remove_tool') }));
+    await client.removeTool({ kind: 'example_tool', name: 'echo' });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/tools/remove');
+    expect(captured[0]?.body).toEqual({ kind: 'example_tool', name: 'echo', targets: null });
+  });
+
+  it('surfaces a 4xx { error } from a rejected tool reload as a LOUD ApiError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'no tool reloader for kind' }, 400));
+    await expect(client.reloadTool({ kind: 'nope', name: 'echo' })).rejects.toBeInstanceOf(
+      ApiError,
+    );
+  });
 });

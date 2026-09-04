@@ -24,14 +24,19 @@
  * reloading config is dropped unsaved.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { summarizeFleetFanout, summarizeFleetResult } from '@tai42/api-client';
-import type { ConnectorRef, Extension, McpEnvRef } from '@tai42/api-client';
+import {
+  failedMcpsFromReport,
+  summarizeFleetFanout,
+  summarizeFleetResult,
+} from '@tai42/api-client';
+import type { ConnectorRef, Extension, FailedMcpEntry, McpEnvRef } from '@tai42/api-client';
 import {
   AppLink,
   Badge,
   Button,
   Card,
   CloseIcon,
+  ConfirmDialog,
   Dialog,
   DirtyGuardBoundary,
   EmptyState,
@@ -56,6 +61,7 @@ import {
   defaultValueForSchema,
   errorMessage,
   useApi,
+  useCanWrite,
   useRegisterDirty,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
@@ -70,6 +76,7 @@ import {
   mcpConfigSchemaKey,
   mcpEnvRefsKey,
   mcpExtensionsKey,
+  mcpFailedKey,
   mcpStatusKey,
   preservedManifestKey,
 } from './keys';
@@ -83,6 +90,10 @@ interface ServerRow {
 function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  // Every per-title reload resolves to the same templated-route gate, so one
+  // static-placeholder check covers the table (a door that can only refuse is
+  // never offered).
+  const canReload = useCanWrite('/api/mcp-status/{title}/reload', 'POST');
   const reload = useMutation({
     mutationFn: (title: string) => api.reloadMcp(title),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: mcpStatusKey }),
@@ -115,16 +126,18 @@ function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode 
                   </TD>
                   <TD>{row.detail}</TD>
                   <TD>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        reload.mutate(row.title);
-                      }}
-                      disabled={pending}
-                    >
-                      {pending ? <Spinner label={`Reloading ${row.title}`} /> : null}
-                      Reload
-                    </Button>
+                    {canReload ? (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          reload.mutate(row.title);
+                        }}
+                        disabled={pending}
+                      >
+                        {pending ? <Spinner label={`Reloading ${row.title}`} /> : null}
+                        Reload
+                      </Button>
+                    ) : null}
                   </TD>
                 </TR>
               );
@@ -160,29 +173,249 @@ function McpStatusSection(): ReactNode {
     return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
   }
 
-  const rows: ServerRow[] = [
-    ...Object.entries(query.data.bound).map(([title, tools]) => ({
-      title,
-      healthy: true,
-      detail: `${String(tools.length)} tool${tools.length === 1 ? '' : 's'}`,
-    })),
-    ...query.data.failed.map((entry) => ({
-      title: entry.title,
-      healthy: false,
-      detail: entry.status,
-    })),
-  ];
+  // The MOUNTED table lists the servers that BOUND successfully; the ones the
+  // viability check skipped live in the dedicated failed-servers health section
+  // below (with their own remediation), so a failure is never buried in a status row.
+  const rows: ServerRow[] = Object.entries(query.data.bound).map(([title, tools]) => ({
+    title,
+    healthy: true,
+    detail: `${String(tools.length)} tool${tools.length === 1 ? '' : 's'}`,
+  }));
 
   if (rows.length === 0) {
     return (
       <EmptyState
-        title="No MCP servers are mounted"
-        description="Add a server in the config below, then save."
+        title="No MCP servers are bound"
+        description="Add a server in the config below, then save. Servers that fail to bind appear under Failed servers."
       />
     );
   }
 
   return <ServerStatusTable rows={rows} />;
+}
+
+/** One failed-server row: its title, coarse status, and the per-server remediation
+ *  (Reload re-probes it; Deregister — a destructive detach — asks the house confirm).
+ *  Each affordance is gated on its OWN door: a caller whose projection cannot reach
+ *  `<verb> path` is never shown a control that can only 403 on submit (projection ⊆
+ *  gate). The per-server routes are DYNAMIC (`/api/mcp-status/{title}/…`), which a
+ *  scoped projection can carry only as a method-less pattern, so — following the house
+ *  approach for a templated write route — the interpolated path resolves to a
+ *  full-projection gate; under-showing a scoped caller's control is safe. */
+function FailedServerRow({
+  entry,
+  onReload,
+  reloadPending,
+  onDeregister,
+}: {
+  readonly entry: FailedMcpEntry;
+  readonly onReload: (title: string) => void;
+  readonly reloadPending: boolean;
+  readonly onDeregister: (title: string) => void;
+}): ReactNode {
+  const canReload = useCanWrite(`/api/mcp-status/${entry.title}/reload`, 'POST');
+  const canDeregister = useCanWrite(`/api/mcp-status/${entry.title}/deregister`, 'POST');
+  return (
+    <TR>
+      <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{entry.title}</TD>
+      <TD>
+        <Badge variant="danger">{entry.status}</Badge>
+      </TD>
+      <TD>
+        <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
+          {canReload ? (
+            <Button
+              type="button"
+              onClick={() => {
+                onReload(entry.title);
+              }}
+              disabled={reloadPending}
+            >
+              {reloadPending ? <Spinner label={`Reloading ${entry.title}`} /> : null}
+              Reload
+            </Button>
+          ) : null}
+          {canDeregister ? (
+            <Button
+              type="button"
+              variant="danger"
+              aria-label={`Deregister ${entry.title}`}
+              onClick={() => {
+                onDeregister(entry.title);
+              }}
+            >
+              Deregister
+            </Button>
+          ) : null}
+        </div>
+      </TD>
+    </TR>
+  );
+}
+
+/**
+ * The failed-MCP health section: the servers the viability check skipped, read from
+ * the fleet-wide `GET /api/mcp-status/failed` door (a server failed on ANY worker is
+ * listed). Each row carries Reload (re-probe one) and Deregister (detach one's tools,
+ * a destructive op behind the house confirm); a Reload-all-failed button re-probes the
+ * whole roster. Every remediation invalidates both the failed roster and the mounted
+ * status, since a re-attached server moves between the two views. An empty roster is a
+ * quiet healthy state — the section renders nothing.
+ */
+function FailedServersSection(): ReactNode {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const [deregisterTarget, setDeregisterTarget] = useState<string | null>(null);
+  // Reload-all rides a CONCRETE, method-expressible route, so it gates exactly on
+  // `POST /api/mcp-status/reload-failed` (projection ⊆ gate); the per-row Reload and
+  // Deregister gates live in `FailedServerRow` on their own dynamic doors.
+  const canReloadAll = useCanWrite('/api/mcp-status/reload-failed', 'POST');
+
+  const query = useQuery({
+    queryKey: mcpFailedKey,
+    queryFn: ({ signal }) => api.listFailedMcps(signal),
+  });
+
+  const invalidateStatus = async (): Promise<void> => {
+    await queryClient.invalidateQueries({ queryKey: mcpFailedKey });
+    await queryClient.invalidateQueries({ queryKey: mcpStatusKey });
+  };
+
+  const reload = useMutation({
+    mutationFn: (title: string) => api.reloadMcp(title),
+    onSuccess: invalidateStatus,
+  });
+  const reloadAll = useMutation({
+    mutationFn: () => api.reloadFailedMcps(),
+    onSuccess: invalidateStatus,
+  });
+  const deregister = useMutation({
+    mutationFn: (title: string) => api.deregisterMcp(title),
+    onSuccess: async () => {
+      await invalidateStatus();
+      setDeregisterTarget(null);
+    },
+  });
+
+  if (query.isPending) return <Skeleton height={72} />;
+  if (query.isError) {
+    return <ErrorState message={errorMessage(query.error)} onRetry={() => void query.refetch()} />;
+  }
+
+  const failed = failedMcpsFromReport(query.data);
+  if (failed.length === 0) return null;
+
+  return (
+    <Card>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--tai-space-3)',
+          marginBottom: 'var(--tai-space-3)',
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Failed servers</h2>
+        {canReloadAll ? (
+          <Button
+            type="button"
+            onClick={() => {
+              reloadAll.mutate();
+            }}
+            disabled={reloadAll.isPending}
+          >
+            {reloadAll.isPending ? <Spinner label="Reloading all failed servers" /> : null}
+            Reload all failed
+          </Button>
+        ) : null}
+      </div>
+      <ScrollRegion label="Failed MCP servers">
+        <Table>
+          <THead>
+            <TR>
+              <TH>Server</TH>
+              <TH>Status</TH>
+              <TH>
+                <span className="tai-visually-hidden">Actions</span>
+              </TH>
+            </TR>
+          </THead>
+          <TBody>
+            {failed.map((entry) => (
+              <FailedServerRow
+                key={entry.title}
+                entry={entry}
+                onReload={(title) => {
+                  reload.mutate(title);
+                }}
+                reloadPending={reload.isPending && reload.variables === entry.title}
+                onDeregister={(title) => {
+                  // A shared mutation drives every row's confirm, so clear any stale error
+                  // from a prior attempt before opening (the reset-on-open precedent).
+                  deregister.reset();
+                  setDeregisterTarget(title);
+                }}
+              />
+            ))}
+          </TBody>
+        </Table>
+      </ScrollRegion>
+      {reload.isError ? (
+        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+          <ErrorState message={errorMessage(reload.error)} />
+        </div>
+      ) : null}
+      {reloadAll.isError ? (
+        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+          <ErrorState message={errorMessage(reloadAll.error)} />
+        </div>
+      ) : null}
+      {/* Each remediation broadcasts to the fleet; surface any failed propagation
+          honestly (nothing on a converged / lone-worker op). */}
+      {reload.isSuccess ? (
+        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+          <FleetReport summary={summarizeFleetResult(reload.data)} action="reload" />
+        </div>
+      ) : null}
+      {reloadAll.isSuccess ? (
+        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+          <FleetReport summary={summarizeFleetResult(reloadAll.data)} action="reload" />
+        </div>
+      ) : null}
+      {/* A deregister detaches one server's tools ACROSS the fleet; a partial fan-out
+          (detached on worker A, still live on worker B) must never close the dialog
+          silently. Surface any failed propagation honestly (nothing on a converged /
+          lone-worker detach), mirroring the sibling reload's report. */}
+      {deregister.isSuccess ? (
+        <div style={{ marginTop: 'var(--tai-space-3)' }}>
+          <FleetReport summary={summarizeFleetResult(deregister.data)} action="reload" />
+        </div>
+      ) : null}
+      {deregisterTarget !== null ? (
+        <ConfirmDialog
+          title="Deregister MCP server"
+          confirmLabel="Deregister"
+          pendingLabel={`Deregistering ${deregisterTarget}`}
+          onConfirm={() => {
+            deregister.mutate(deregisterTarget);
+          }}
+          onClose={() => {
+            setDeregisterTarget(null);
+          }}
+          isPending={deregister.isPending}
+          error={deregister.error}
+        >
+          <p style={{ margin: 0 }}>
+            Detach{' '}
+            <strong style={{ fontFamily: 'var(--tai-font-mono)' }}>{deregisterTarget}</strong> and
+            its tools from the live registry? This leaves the manifest entry in place — reload it
+            once the server is healthy to re-attach.
+          </p>
+        </ConfirmDialog>
+      ) : null}
+    </Card>
+  );
 }
 
 type ConfigView = 'form' | 'json';
@@ -1010,6 +1243,11 @@ function McpConfigEditor({
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  // The Save door: `POST /api/mcp-config` is the single gate every view persists
+  // through, so gate the Save affordance on it (projection ⊆ gate). A door that can
+  // only refuse is never offered; while the projection is loading/failed this is
+  // false (fail closed), so Save stays hidden until the caller is known to reach it.
+  const canSave = useCanWrite('/api/mcp-config', 'POST');
 
   // The exact env keys THIS editor generated through its own pastes. A paste's server
   // half writes a fresh `!ENV ${KEY}` marker at the paste pointer; on success we resolve
@@ -1282,15 +1520,17 @@ function McpConfigEditor({
         </Field>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-        <Button type="button" variant="primary" onClick={onSave} disabled={save.isPending}>
-          {save.isPending ? <Spinner label="Saving config" /> : null}
-          Save config
-        </Button>
-        {save.isSuccess ? (
-          <Badge variant="success">Saved ({String(save.data.env_keys)} env keys)</Badge>
-        ) : null}
-      </div>
+      {canSave ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
+          <Button type="button" variant="primary" onClick={onSave} disabled={save.isPending}>
+            {save.isPending ? <Spinner label="Saving config" /> : null}
+            Save config
+          </Button>
+          {save.isSuccess ? (
+            <Badge variant="success">Saved ({String(save.data.env_keys)} env keys)</Badge>
+          ) : null}
+        </div>
+      ) : null}
       {/* The save persists then broadcasts a reload; surface any failed propagation
           honestly (nothing on a converged / lone-worker save). */}
       {save.isSuccess ? <FleetReport summary={summarizeFleetFanout(save.data.fanout)} /> : null}
@@ -1452,6 +1692,7 @@ export function McpServersSection(): ReactNode {
             </h2>
             <McpStatusSection />
           </Card>
+          <FailedServersSection />
           <Card>
             <h2 style={{ margin: '0 0 var(--tai-space-3)', fontSize: 'var(--tai-text-md)' }}>
               Configuration
