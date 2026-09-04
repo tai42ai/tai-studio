@@ -43,8 +43,11 @@ async function pickVariant(
   groupName: string,
   optionName: string,
 ): Promise<void> {
+  // The picker's accessible name derives from the union's discriminator (e.g.
+  // "Target kind", "Door"), so scope to the group's single combobox instead of
+  // pinning a label.
   const group = screen.getByRole('group', { name: groupName });
-  await user.click(within(group).getByRole('combobox', { name: 'Variant' }));
+  await user.click(within(group).getByRole('combobox'));
   await user.click(await screen.findByRole('option', { name: optionName }));
 }
 
@@ -64,12 +67,12 @@ describe('RouteFormDialog — create', () => {
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
 
     await pickVariant(user, 'Target', 'agent');
-    expect(screen.getByRole('textbox', { name: 'Agent name' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Agent name\b/ })).toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Payload expression' })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox', { name: 'Reply expression' })).not.toBeInTheDocument();
 
     await pickVariant(user, 'Target', 'tool');
-    expect(screen.getByRole('textbox', { name: 'Tool name' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Tool name\b/ })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Payload expression' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Reply expression' })).toBeInTheDocument();
   });
@@ -79,13 +82,13 @@ describe('RouteFormDialog — create', () => {
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
 
     await pickVariant(user, 'Door', 'api');
-    expect(screen.getByRole('textbox', { name: 'Callback URL' })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Channel' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Callback URL\b/ })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /^Channel\b/ })).not.toBeInTheDocument();
 
     await pickVariant(user, 'Door', 'channel');
-    expect(screen.getByRole('textbox', { name: 'Channel' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Our identity' })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Callback URL' })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Channel\b/ })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /^Our identity\b/ })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /^Callback URL\b/ })).not.toBeInTheDocument();
   });
 
   it('renders the jq expression door through an injected ExpressionFieldContext', async () => {
@@ -121,10 +124,10 @@ describe('RouteFormDialog — create', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'support');
     await pickVariant(user, 'Target', 'tool');
-    await user.type(screen.getByRole('textbox', { name: 'Tool name' }), 'lookup_order');
+    await user.type(screen.getByRole('textbox', { name: /^Tool name\b/ }), 'lookup_order');
     await pickVariant(user, 'Door', 'channel');
-    await user.type(screen.getByRole('textbox', { name: 'Channel' }), 'whatsapp');
-    await user.type(screen.getByRole('textbox', { name: 'Our identity' }), '+15550000000');
+    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'whatsapp');
+    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
     await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-support');
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
@@ -192,10 +195,10 @@ describe('RouteFormDialog — create', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
     await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: 'Agent name' }), 'assistant');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
     await pickVariant(user, 'Door', 'api');
     await user.type(
-      screen.getByRole('textbox', { name: 'Callback URL' }),
+      screen.getByRole('textbox', { name: /^Callback URL\b/ }),
       'http://sink.example/cb',
     );
     await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
@@ -222,10 +225,10 @@ describe('RouteFormDialog — create', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
     await pickVariant(user, 'Target', 'agent');
-    await user.type(screen.getByRole('textbox', { name: 'Agent name' }), 'assistant');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
     await pickVariant(user, 'Door', 'api');
     await user.type(
-      screen.getByRole('textbox', { name: 'Callback URL' }),
+      screen.getByRole('textbox', { name: /^Callback URL\b/ }),
       'https://sink.example/cb',
     );
     await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
@@ -260,9 +263,9 @@ describe('RouteFormDialog — edit', () => {
 
     const name = screen.getByDisplayValue('chat');
     expect(name).toBeDisabled();
-    expect(screen.getByRole('textbox', { name: 'Tool name' })).toHaveValue('lookup_account');
+    expect(screen.getByRole('textbox', { name: /^Tool name\b/ })).toHaveValue('lookup_account');
     expect(screen.getByRole('textbox', { name: 'Payload expression' })).toHaveValue('.message');
-    expect(screen.getByRole('textbox', { name: 'Callback URL' })).toHaveValue(
+    expect(screen.getByRole('textbox', { name: /^Callback URL\b/ })).toHaveValue(
       'https://sink.example/answers',
     );
     expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
