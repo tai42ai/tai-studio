@@ -25,6 +25,23 @@ describe('ThreadActions — ordinary thread', () => {
     expect(screen.queryByRole('button', { name: /Erase person/ })).toBeNull();
   });
 
+  it('dismisses the delete confirm on Escape without deleting', async () => {
+    const user = userEvent.setup();
+    const deleteConversationThread = vi.fn();
+    renderWithProviders(<ThreadActions route={ROUTE} threadId={THREAD} />, {
+      client: { deleteConversationThread },
+    });
+
+    await user.click(screen.getByRole('button', { name: `Delete thread ${THREAD}` }));
+    expect(await screen.findByRole('button', { name: 'Delete thread' })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Delete thread' })).not.toBeInTheDocument();
+    });
+    expect(deleteConversationThread).not.toHaveBeenCalled();
+  });
+
   it('deletes the thread behind the confirm and leaves for the route list', async () => {
     const user = userEvent.setup();
     const deleteConversationThread = vi

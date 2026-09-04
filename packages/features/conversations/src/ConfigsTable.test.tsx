@@ -85,6 +85,34 @@ describe('ConfigsTable — CRUD', () => {
     });
   });
 
+  it('dismisses the create dialog on Escape', async () => {
+    const user = userEvent.setup();
+    renderTable({ listConversationConfigs: vi.fn().mockResolvedValue({ items: [], total: 0 }) });
+
+    await user.click(screen.getByRole('button', { name: 'Create config' }));
+    expect(await screen.findByRole('textbox', { name: /Target name/ })).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByRole('textbox', { name: /Target name/ })).not.toBeInTheDocument();
+    });
+  });
+
+  it('dismisses the edit dialog on Escape', async () => {
+    const user = userEvent.setup();
+    renderTable({
+      listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Edit config agent:assistant' }));
+    expect(await screen.findByDisplayValue('assistant')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('assistant')).not.toBeInTheDocument();
+    });
+  });
+
   it('opens the edit dialog with the key pinned read-only', async () => {
     const user = userEvent.setup();
     renderTable({
