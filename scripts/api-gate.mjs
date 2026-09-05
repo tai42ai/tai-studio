@@ -34,16 +34,25 @@
 // no classification of it can be computed: it fails the gate rather than passing
 // silently over whatever vanished behind it.
 //
+// The guiding rule is industry-standard semver for a TypeScript library: a PURELY
+// ADDITIVE surface change is a minor, and only a removal or a change to something
+// that already existed is breaking. A variable/type/function slot whose api.md text
+// changed is compared structurally by its member LINES — when every old line
+// survives and the delta is only insertions (a new member added to a client object,
+// an exported object type, or an inline function-signature return shape; a new
+// param line), it is additive and non-breaking.
+//
 // Breaking classes: a removed symbol, a removed or changed interface/class
 // member (named or an index/call/construct signature), a member turned from
-// optional to required, a new REQUIRED member, a removed/changed function or method
-// overload, a removed/changed enum member, a removed/changed namespace member, a
-// re-export dropped or re-pointed at a different local symbol, source module or
-// namespace (or narrowed to type-only), a default export dropped or re-pointed,
-// and a non-widening change to a type alias. Non-breaking changes — a new export, a new
-// optional member, a member turned from required to optional, an added overload, an
-// added enum member, a string-literal union widened with more members. Any tooling
-// failure —
+// optional to required, a new REQUIRED member, a function or method overload removed
+// or changed NON-additively, a removed/changed enum member, a removed/changed
+// namespace member, a re-export dropped or re-pointed at a different local symbol,
+// source module or namespace (or narrowed to type-only), a default export dropped or
+// re-pointed, and a non-additive change to a type alias. Non-breaking changes — a new
+// export, a new optional member, a member added to a variable/type object or an
+// overload's inline shape (an additive superset of the old member lines), a member
+// turned from required to optional, an added overload, an added enum member, a
+// string-literal union widened with more members. Any tooling failure —
 // unreadable config, an unknown mode, an unparseable report, a git error that is
 // not simply an absent path at the ref — throws; the gate never passes a release on
 // a classification it could not compute.
@@ -179,6 +188,36 @@ function reportAtWorktree(dir, name) {
 }
 
 const normalize = (text) => text.replace(/\s+/g, ' ').trim();
+
+// The multiset of trimmed, non-empty lines of a declaration's raw (multi-line)
+// api-extractor text. api-extractor renders one member per line, so the lines ARE
+// the members; counting multiplicity keeps two members that happen to render to the
+// same line distinct (removing one drops the count).
+function lineMultiset(text) {
+  const map = new Map();
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (line === '') continue;
+    map.set(line, (map.get(line) ?? 0) + 1);
+  }
+  return map;
+}
+
+// True when `newText` is a purely-additive superset of `oldText`: every member line
+// of the old declaration still appears in the new one with at least the same
+// multiplicity, so the change is only insertions (a new member/param line added to
+// an exported object type, client object or function overload). Any old line that
+// vanished or shrank means an existing member was removed, retyped or narrowed — not
+// additive. Deterministic and structural: it compares the api.md member lines, no
+// parsing of the type grammar. A reordering-only change is additive (all old lines
+// survive), which is correct — reordering members is not a breaking change.
+function isAdditive(oldText, newText) {
+  const newLines = lineMultiset(newText);
+  for (const [line, count] of lineMultiset(oldText)) {
+    if ((newLines.get(line) ?? 0) < count) return false;
+  }
+  return true;
+}
 
 // A stable key for an interface/class member. Named members key by their name;
 // the unnamed structural signatures (index/call/construct) key by a synthesized
@@ -333,13 +372,16 @@ function collectEntries(statements, sf) {
       entries.set(node.name.text, { kind: 'class', members: collectMembers(node, sf) });
     } else if (ts.isFunctionDeclaration(node) && node.name) {
       const key = node.name.text;
-      const entry = entries.get(key) ?? { kind: 'function', signatures: new Set() };
-      entry.signatures.add(normalize(node.getText(sf)));
+      const entry = entries.get(key) ?? { kind: 'function', signatures: new Map() };
+      // Keyed by normalized text so a genuinely-unchanged overload matches exactly;
+      // the raw multi-line text is kept for the additive-superset comparison.
+      entry.signatures.set(normalize(node.getText(sf)), node.getText(sf));
       entries.set(key, entry);
     } else if (ts.isTypeAliasDeclaration(node)) {
       entries.set(node.name.text, {
         kind: 'type',
         text: normalize(node.getText(sf)),
+        raw: node.getText(sf),
         literals: literalUnionSet(node.type, sf),
       });
     } else if (ts.isEnumDeclaration(node)) {
@@ -348,7 +390,11 @@ function collectEntries(statements, sf) {
       entries.set(node.name.getText(sf), namespaceEntry(node, sf));
     } else if (ts.isVariableStatement(node)) {
       for (const decl of node.declarationList.declarations) {
-        entries.set(decl.name.getText(sf), { kind: 'variable', text: normalize(decl.getText(sf)) });
+        entries.set(decl.name.getText(sf), {
+          kind: 'variable',
+          text: normalize(decl.getText(sf)),
+          raw: decl.getText(sf),
+        });
       }
     } else if (ts.isExportDeclaration(node)) {
       classifyExportDeclaration(entries, node, sf);
@@ -419,7 +465,13 @@ function classifyType(add, symbol, oldEntry, newEntry) {
     }
     return;
   }
-  if (oldEntry.text !== newEntry.text) add(symbol, 'type alias declaration changed');
+  // A non-literal-union alias: a purely-additive change (a member line added to an
+  // inline object type) is minor-allowed; a removed/retyped member is breaking. A
+  // single-line union that gains a member reads as non-additive (its one line
+  // changed) and stays breaking — the documented-conservative behaviour for a
+  // non-literal union widening is preserved.
+  if (oldEntry.text !== newEntry.text && !isAdditive(oldEntry.raw, newEntry.raw))
+    add(symbol, 'type alias declaration changed');
 }
 
 // Breaking classification for one entries map, old -> new. `scope` prefixes every
@@ -443,14 +495,21 @@ function classifyEntries(scope, oldEntries, newEntries) {
       case 'class':
         classifyMembers(add, name, oldEntry.members, newEntry.members);
         break;
-      case 'function':
-        for (const sig of oldEntry.signatures) {
-          if (!newEntry.signatures.has(sig)) {
-            add(name, 'a function overload was removed or changed');
-            break;
-          }
+      case 'function': {
+        // An old overload is satisfied when the new surface still carries it
+        // unchanged OR an additive superset of it (a param/member line added inside
+        // its inline signature). Added overloads and additive growth of an existing
+        // one are non-breaking; only an overload that vanished or changed
+        // non-additively (a removed/retyped/narrowed member or param) is breaking.
+        const newRaw = [...newEntry.signatures.values()];
+        for (const [sig, oldRaw] of oldEntry.signatures) {
+          if (newEntry.signatures.has(sig)) continue;
+          if (newRaw.some((candidate) => isAdditive(oldRaw, candidate))) continue;
+          add(name, 'a function overload was removed or changed');
+          break;
         }
         break;
+      }
       case 'enum':
         for (const [member, text] of oldEntry.members) {
           const newText = newEntry.members.get(member);
@@ -465,7 +524,16 @@ function classifyEntries(scope, oldEntries, newEntries) {
         classifyType(add, name, oldEntry, newEntry);
         break;
       default:
-        if (oldEntry.text !== newEntry.text) add(name, 'declaration text changed');
+        // A variable (and any other text-compared slot). A change is breaking only
+        // when it is not purely additive — a new member line appended to a client
+        // object / inline object type is minor-allowed, a removed or retyped member
+        // is breaking. Re-exports and export-assignments have no `raw` and compare as
+        // a single normalized line, so any change to one reads as non-additive.
+        if (
+          oldEntry.text !== newEntry.text &&
+          !isAdditive(oldEntry.raw ?? oldEntry.text, newEntry.raw ?? newEntry.text)
+        )
+          add(name, 'declaration text changed');
     }
   }
   return findings;

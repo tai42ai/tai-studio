@@ -369,6 +369,103 @@ test('a forgotten-export (non-exported) interface gaining a required member is b
   assert.ok(found.some((f) => f.includes('"b"')));
 });
 
+// -------------------------------------------- additive member growth (semver)
+// Industry-standard semver for a TS library: a purely-additive surface change is a
+// minor. A new member added to a client-object variable, an inline object type or a
+// function's inline return shape must classify non-breaking; a removed or retyped
+// member of any of them stays breaking. This is the v11.1.0 -> v12.0.0 incident:
+// adding the readonly `cancelInteraction` member to the client object refused a
+// minor via "ApiProvider: declaration text changed" and "createApiClient: a function
+// overload was removed or changed".
+
+test('adding a member to a client-object variable is non-breaking (additive)', () => {
+  const found = findings(
+    'export const client: {\n  readonly baseUrl: string;\n  readonly listTools: () => void;\n};',
+    'export const client: {\n  readonly baseUrl: string;\n  readonly cancelInteraction: (id: string) => void;\n  readonly listTools: () => void;\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('removing a member from a client-object variable is breaking', () => {
+  const found = findings(
+    'export const client: {\n  readonly baseUrl: string;\n  readonly listTools: () => void;\n};',
+    'export const client: {\n  readonly listTools: () => void;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('client') && f.includes('declaration text changed')));
+});
+
+test('retyping a member of a client-object variable is breaking', () => {
+  const found = findings(
+    'export const client: {\n  readonly baseUrl: string;\n};',
+    'export const client: {\n  readonly baseUrl: number;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('client')));
+});
+
+test('reordering variable members is non-breaking', () => {
+  const found = findings(
+    'export const c: {\n  readonly a: number;\n  readonly b: string;\n};',
+    'export const c: {\n  readonly b: string;\n  readonly a: number;\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('a function overload gaining a member in its inline return is non-breaking', () => {
+  const found = findings(
+    'export function createClient(): {\n  readonly baseUrl: string;\n};',
+    'export function createClient(): {\n  readonly baseUrl: string;\n  readonly cancelInteraction: (id: string) => void;\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('a function overload losing a member in its inline return is breaking', () => {
+  const found = findings(
+    'export function createClient(): {\n  readonly baseUrl: string;\n  readonly cancelInteraction: (id: string) => void;\n};',
+    'export function createClient(): {\n  readonly baseUrl: string;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('createClient') && f.includes('overload')));
+});
+
+test('a function overload retyping a member in its inline return is breaking', () => {
+  const found = findings(
+    'export function createClient(): {\n  readonly baseUrl: string;\n};',
+    'export function createClient(): {\n  readonly baseUrl: number;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('createClient') && f.includes('overload')));
+});
+
+test('adding a whole function overload is non-breaking', () => {
+  const found = findings(
+    'export function f(x: number): void;',
+    'export function f(x: number): void;\nexport function f(x: string): void;',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('removing a whole function overload is breaking', () => {
+  const found = findings(
+    'export function f(x: number): void;\nexport function f(x: string): void;',
+    'export function f(x: string): void;',
+  );
+  assert.ok(found.some((f) => f.includes('f') && f.includes('overload')));
+});
+
+test('adding a member to an inline object type alias is non-breaking (additive)', () => {
+  const found = findings(
+    'export type T = {\n  a: number;\n};',
+    'export type T = {\n  a: number;\n  b: string;\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('retyping a member of an inline object type alias is breaking', () => {
+  const found = findings(
+    'export type T = {\n  a: number;\n};',
+    'export type T = {\n  a: string;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('T') && f.includes('type alias declaration changed')));
+});
+
 // --------------------------------------------------- real committed reports E2E
 // The gate parses the actual api-extractor reports it ships to gate. This loads
 // each real etc/*.api.md from disk, parses it with the production parseReport, and
