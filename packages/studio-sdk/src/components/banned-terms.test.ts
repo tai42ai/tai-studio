@@ -1,35 +1,73 @@
 /**
  * The client-neutrality rule, enforced by a repository-wide SOURCE SCAN.
  *
- * The platform is generic: no tracked source may name a specific client, product
- * or deployed flow. The banned terms below (see {@link BANNED_TERMS}) are client
- * product names — their presence anywhere in the tree is a leak of use-case
- * identity into a platform that must read the same for every flow ever deployed.
+ * The platform is generic: no tracked source may name a specific client, product,
+ * deployed flow, or business-domain scenario. The ban list is DATA, never source:
+ * this file carries the scan MECHANISM with no term baked in. Entries load at
+ * runtime from, in order, the `TAI_BANNED_TERMS` environment variable
+ * (comma-separated, whitespace-trimmed, empty entries dropped) else the local
+ * untracked file `~/.config/tai42/banned-terms.txt` (one entry per line, `#`
+ * comments allowed). Entry grammar: a plain entry is a word-boundary term (matched
+ * case-insensitively); a `marker:` prefix is a case-sensitive substring marker and
+ * `marker-ci:` a case-insensitive one, for tokens that do not sit on word
+ * boundaries.
  *
  * The scan reads every TEXT file git tracks or would track — tracked plus
- * untracked-but-not-ignored — matching each banned term case-insensitively at word
- * boundaries, and reports every hit as `path:line:term`. Scanning the untracked-
- * but-not-ignored files too means a banned term in a NEW file is caught before it
- * is committed, not only after. This file is the one exclusion: it carries the
- * banned words as data, so scanning it would report itself.
+ * untracked-but-not-ignored — so a banned term in a NEW file is caught before it is
+ * committed, not only after, and reports every hit as `path:line:term`.
+ *
+ * With no list available the guard is never a silent green: under CI it fails,
+ * locally it skips visibly — both carry the same message.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 
-/**
- * The client product names the platform must never carry. Each is a deployed
- * flow's own name, not a generic mechanism.
- */
-const BANNED_TERMS = ['concierge', 'bookinguru', 'bookin-guru', 'bookin_guru'] as const;
+const NO_LIST_MSG =
+  'no banned-terms list: set TAI_BANNED_TERMS or ~/.config/tai42/banned-terms.txt';
+const LOCAL_LIST = resolve(homedir(), '.config/tai42/banned-terms.txt');
 
-/** This gate's own path, the sole file the scan skips: it holds the terms as data. */
-const SELF = relative(repoRoot, fileURLToPath(import.meta.url));
+interface Marker {
+  needle: string;
+  caseInsensitive: boolean;
+}
+
+/** The raw, trimmed entries from the environment variable or the local file. */
+function rawEntries(): string[] {
+  const env = process.env.TAI_BANNED_TERMS;
+  if (env !== undefined && env.trim() !== '') {
+    return env.split(',').map((entry) => entry.trim());
+  }
+  if (existsSync(LOCAL_LIST)) {
+    return readFileSync(LOCAL_LIST, 'utf8')
+      .split('\n')
+      .map((line) => (line.split('#', 1)[0] ?? '').trim());
+  }
+  return [];
+}
+
+/** Word-boundary terms and substring markers, parsed from the raw entries. */
+function loadBanned(): { terms: string[]; markers: Marker[] } {
+  const terms: string[] = [];
+  const markers: Marker[] = [];
+  for (const entry of rawEntries()) {
+    if (entry === '') continue;
+    if (entry.startsWith('marker-ci:')) {
+      markers.push({ needle: entry.slice('marker-ci:'.length), caseInsensitive: true });
+    } else if (entry.startsWith('marker:')) {
+      markers.push({ needle: entry.slice('marker:'.length), caseInsensitive: false });
+    } else {
+      terms.push(entry);
+    }
+  }
+  return { terms, markers };
+}
 
 /** Escapes a term for literal use inside a regular expression. */
 function escapeForRegExp(term: string): string {
@@ -37,18 +75,17 @@ function escapeForRegExp(term: string): string {
 }
 
 /**
- * One banned term at a word boundary, case-insensitive, global so every hit on a
+ * The banned terms at word boundaries, case-insensitive, global so every hit on a
  * line is reported. Rebuilt per line so `lastIndex` never carries across lines.
  */
-function bannedTermPattern(): RegExp {
-  return new RegExp(`\\b(?:${BANNED_TERMS.map(escapeForRegExp).join('|')})\\b`, 'gi');
+function bannedTermPattern(terms: string[]): RegExp {
+  return new RegExp(`\\b(?:${terms.map(escapeForRegExp).join('|')})\\b`, 'gi');
 }
 
 /**
  * Every path git tracks or would track — tracked (`git ls-files`) plus
  * untracked-but-not-ignored (`git ls-files --others --exclude-standard`) — as
- * repo-relative strings, so a banned term in a NEW file is caught before it is
- * committed, not only after.
+ * repo-relative strings.
  */
 function worktreeFiles(): string[] {
   const tracked = execFileSync('git', ['ls-files', '-z'], {
@@ -69,42 +106,74 @@ function isBinary(bytes: Buffer): boolean {
   return bytes.includes(0);
 }
 
-/** Every banned-term hit in one file, as `path:line:term` strings. */
-function violationsIn(relPath: string): string[] {
-  const bytes = readFileSync(resolve(repoRoot, relPath));
-  if (isBinary(bytes)) return [];
+/** Every banned-term and marker hit in one text body, as `path:line:term` strings. */
+function lineHits(relPath: string, text: string, terms: string[], markers: Marker[]): string[] {
   const hits: string[] = [];
-  const lines = bytes.toString('utf8').split('\n');
-  for (const [index, line] of lines.entries()) {
-    for (const match of line.matchAll(bannedTermPattern())) {
-      hits.push(`${relPath}:${String(index + 1)}:${match[0].toLowerCase()}`);
+  for (const [index, line] of text.split('\n').entries()) {
+    if (terms.length > 0) {
+      for (const match of line.matchAll(bannedTermPattern(terms))) {
+        hits.push(`${relPath}:${String(index + 1)}:${match[0].toLowerCase()}`);
+      }
+    }
+    for (const { needle, caseInsensitive } of markers) {
+      const haystack = caseInsensitive ? line.toLowerCase() : line;
+      const target = caseInsensitive ? needle.toLowerCase() : needle;
+      if (haystack.includes(target)) hits.push(`${relPath}:${String(index + 1)}:${needle}`);
     }
   }
   return hits;
 }
 
-const scanned = worktreeFiles().filter((path) => path !== SELF);
+/** Every hit in one tracked file, skipping binary files. */
+function violationsIn(relPath: string, terms: string[], markers: Marker[]): string[] {
+  const bytes = readFileSync(resolve(repoRoot, relPath));
+  if (isBinary(bytes)) return [];
+  return lineHits(relPath, bytes.toString('utf8'), terms, markers);
+}
 
-describe('banned client terms', () => {
-  it('scans the tracked tree (a scan that read nothing would pass vacuously)', () => {
-    expect(scanned.length).toBeGreaterThan(500);
-    expect(scanned).not.toContain(SELF);
+const { terms, markers } = loadBanned();
+const noList = terms.length === 0 && markers.length === 0;
+const ci = process.env.CI !== undefined && process.env.CI !== '';
+const scanned = worktreeFiles();
+
+describe('banned terms guard', () => {
+  // When no list is configured the guard is never a silent green: under CI this test
+  // runs and throws; locally it is skipped so the absence is visible, not hidden.
+  it.skipIf(noList && !ci)('a banned-terms list is configured', () => {
+    if (noList) throw new Error(NO_LIST_MSG);
   });
 
-  it('still detects a banned term where one really sits', () => {
-    // Positive controls: without them a broken pattern would leave the sweep below
-    // green with nothing to catch. Word-boundary and case-insensitivity, proven.
-    expect([...'a Concierge here'.matchAll(bannedTermPattern())].map((m) => m[0])).toEqual([
-      'Concierge',
-    ]);
-    for (const term of BANNED_TERMS) {
-      expect([term, [...`x ${term} y`.matchAll(bannedTermPattern())].length]).toEqual([term, 1]);
-    }
-    // Word boundary: a term buried inside a larger word is not a hit.
-    expect([...'preconciergeing'.matchAll(bannedTermPattern())]).toEqual([]);
-  });
+  describe.skipIf(noList)('source scan', () => {
+    it('scans the tracked tree (a scan that read nothing would pass vacuously)', () => {
+      expect(scanned.length).toBeGreaterThan(500);
+    });
 
-  it('names no client product anywhere in the tracked source', () => {
-    expect(scanned.flatMap(violationsIn)).toEqual([]);
+    it('still detects a banned term where one really sits', () => {
+      // Controls are derived from the loaded terms, so no term is embedded here.
+      for (const term of terms) {
+        expect([...`a ${term} here`.matchAll(bannedTermPattern(terms))].map((m) => m[0])).toContain(
+          term,
+        );
+        expect([...`x ${term} y`.matchAll(bannedTermPattern(terms))].length).toBeGreaterThan(0);
+        // Word boundary: a term buried inside a larger word is not a hit.
+        expect([...`pre${term}ing`.matchAll(bannedTermPattern(terms))]).toEqual([]);
+      }
+    });
+
+    it('still detects each substring marker', () => {
+      for (const { needle, caseInsensitive } of markers) {
+        const probe = `before ${needle} after`;
+        expect(lineHits('probe', probe, terms, markers)).toContain(`probe:1:${needle}`);
+        if (caseInsensitive) {
+          expect(lineHits('probe', probe.toUpperCase(), terms, markers)).toContain(
+            `probe:1:${needle}`,
+          );
+        }
+      }
+    });
+
+    it('names no banned term anywhere in the tracked source', () => {
+      expect(scanned.flatMap((path) => violationsIn(path, terms, markers))).toEqual([]);
+    });
   });
 });
