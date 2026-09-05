@@ -50,8 +50,10 @@
 // source module or namespace (or narrowed to type-only), a default export dropped or
 // re-pointed, and a non-additive change to a type alias. Non-breaking changes — a new
 // export, a new optional member, a member added to a variable/type object or an
-// overload's inline shape (an additive superset of the old member lines), a member
-// turned from required to optional, an added overload, an added enum member, a
+// overload's inline shape (an additive superset of the old member lines), an
+// interface or class member turned from required to optional (inside an inline
+// object type that flip re-renders the member's line and reads as breaking — the
+// gate errs strict there), an added overload, an added enum member, a
 // string-literal union widened with more members. Any tooling failure —
 // unreadable config, an unknown mode, an unparseable report, a git error that is
 // not simply an absent path at the ref — throws; the gate never passes a release on
@@ -210,7 +212,10 @@ function lineMultiset(text) {
 // vanished or shrank means an existing member was removed, retyped or narrowed — not
 // additive. Deterministic and structural: it compares the api.md member lines, no
 // parsing of the type grammar. A reordering-only change is additive (all old lines
-// survive), which is correct — reordering members is not a breaking change.
+// survive), which is correct — reordering members is not a breaking change. Known
+// blind spot: the multiset is per-declaration, so a narrowing whose removed line is
+// re-added VERBATIM elsewhere in the same declaration in the same release reads as
+// additive; every realistic breaking change carries a distinctive vanished line.
 function isAdditive(oldText, newText) {
   const newLines = lineMultiset(newText);
   for (const [line, count] of lineMultiset(oldText)) {
