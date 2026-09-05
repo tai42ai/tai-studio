@@ -277,4 +277,18 @@ describe('SchedulingPage — delete', () => {
       expect(deleteSchedule).toHaveBeenCalledWith('nightly-report');
     });
   });
+
+  it('wears the ghost style on the per-row Delete, not filled danger', async () => {
+    const client = makeClient({
+      listSchedules: vi.fn().mockResolvedValue([schedule({ name: 'nightly-report' })]),
+      getServerDateTime: serverTime501(),
+    });
+    renderWithProviders(<SchedulingPage search={{}} />, { client });
+
+    // Deleting a schedule is a routine row action: low-emphasis in the table; the danger
+    // emphasis lives on the confirm dialog's Delete button.
+    const rowDelete = await screen.findByRole('button', { name: 'Delete schedule nightly-report' });
+    expect(rowDelete).toHaveClass('tai-btn-ghost');
+    expect(rowDelete).not.toHaveClass('tai-btn-danger');
+  });
 });

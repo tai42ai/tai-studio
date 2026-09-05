@@ -228,8 +228,12 @@ describe('McpServersSection', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
 
-    // The detach broadcast is reported loudly — a partial fan-out is never swallowed.
-    const alert = await screen.findByRole('alert');
+    // The dialog stays OPEN on a non-converged detach so the operator sees the stranded
+    // worker in context and closes explicitly (mirrors ConnectDialog).
+    const openDialog = await screen.findByRole('dialog');
+    // The detach broadcast is reported loudly INSIDE the dialog — a partial fan-out is
+    // never swallowed, and the report lives beside the confirm it came from.
+    const alert = await within(openDialog).findByRole('alert');
     expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
     // Nothing was "saved" — a detach is never a config save.
@@ -238,6 +242,12 @@ describe('McpServersSection', () => {
     // re-attach the very server being detached, converging the fleet the wrong way.
     expect(within(alert).getByText(/re-run the deregister to converge it/)).toBeInTheDocument();
     expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
+
+    // Explicit close: the operator dismisses the dialog, and the report goes with it.
+    await user.click(within(openDialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 
   it('reports a converged deregister calmly, with no fleet-failure alert', async () => {
@@ -446,6 +456,23 @@ describe('McpServersSection', () => {
     expect(await screen.findByText(/Saved \(1 env keys\)/)).toBeInTheDocument();
   });
 
+  it('wears the ghost style on an editable entry Remove server, not filled danger', async () => {
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    // The per-entry Remove in the config editor is a routine list-item control; it stays
+    // low-emphasis rather than filled danger.
+    const rowRemove = screen.getByRole('button', { name: 'Remove server 1' });
+    expect(rowRemove).toHaveClass('tai-btn-ghost');
+    expect(rowRemove).not.toHaveClass('tai-btn-danger');
+  });
+
   it('re-seeds from the save-triggered refetch without detaching the operator', async () => {
     // The refetch that follows a save returns the config the server now holds, so
     // the state the editor is seeded from moves under it. The re-seed has to land
@@ -634,7 +661,12 @@ describe('McpServersSection', () => {
       await screen.findByText(/Managed by connection c-1 \(provider github, issues\)/),
     ).toBeInTheDocument();
     expect(screen.getByText(/Disconnect to remove/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove server 1' })).toBeDisabled();
+    const managedRemove = screen.getByRole('button', { name: 'Remove server 1' });
+    expect(managedRemove).toBeDisabled();
+    // The per-entry Remove is a routine list-item control across every entry-card
+    // variant (editable/installed/managed): low-emphasis, never filled danger.
+    expect(managedRemove).toHaveClass('tai-btn-ghost');
+    expect(managedRemove).not.toHaveClass('tai-btn-danger');
     // No schema-driven editor is rendered for a managed entry (it is read-only)…
     expect(screen.queryByTestId('mcp-entry-0')).toBeNull();
     // …but its bound tool is shown.

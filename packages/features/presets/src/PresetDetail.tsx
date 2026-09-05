@@ -90,11 +90,11 @@ function DeletePresetDialog({
 
   const consequence = conflicted
     ? 'Removes the quarantined record. No live tool is touched.'
-    : 'Soft-deletes the preset and tears down its tool (and its branch tools).';
+    : 'Soft-deletes the custom node and tears down its tool (and its branch tools).';
 
   return (
     <Dialog
-      title={`Delete preset — ${name}`}
+      title={`Delete custom node — ${name}`}
       description={consequence}
       open
       onOpenChange={(next) => {
@@ -103,7 +103,7 @@ function DeletePresetDialog({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
         <p style={{ margin: 0 }}>
-          Delete the preset <strong>{name}</strong>?
+          Delete the custom node <strong>{name}</strong>?
         </p>
         {remove.isError ? <ErrorState message={errorMessage(remove.error)} /> : null}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
@@ -118,7 +118,7 @@ function DeletePresetDialog({
             }}
             disabled={remove.isPending}
           >
-            {remove.isPending ? <Spinner label="Deleting preset" /> : null}
+            {remove.isPending ? <Spinner label="Deleting custom node" /> : null}
             Delete
           </Button>
         </div>
@@ -173,8 +173,8 @@ function RenamePresetDialog({
 
   return (
     <Dialog
-      title={`Rename preset — ${name}`}
-      description="A preset's name is its live tool name, so renaming rebinds the tool."
+      title={`Rename custom node — ${name}`}
+      description="A custom node's name is its live tool name, so renaming rebinds the tool."
       open
       onOpenChange={(next) => {
         if (!next) onClose();
@@ -207,7 +207,7 @@ function RenamePresetDialog({
         </Field>
         {hasReferees ? (
           <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-            Referenced by: {referees.join(', ')} — update those presets first.
+            Referenced by: {referees.join(', ')} — update those custom nodes first.
           </p>
         ) : null}
         {refereesQuery.isError ? (
@@ -229,7 +229,7 @@ function RenamePresetDialog({
             Cancel
           </Button>
           <Button type="submit" variant="primary" disabled={rename.isPending || hasReferees}>
-            {rename.isPending ? <Spinner label="Renaming preset" /> : null}
+            {rename.isPending ? <Spinner label="Renaming custom node" /> : null}
             Rename
           </Button>
         </div>
@@ -284,7 +284,7 @@ function EditOverlayDialog({
   return (
     <Dialog
       title={`Edit details — ${toolName}`}
-      description="A display name and overlay tags for this tool. Both live in the tool_meta overlay, not the preset record."
+      description="A display name and overlay tags for this tool. Both live in the tool_meta overlay, not the custom node record."
       open
       onOpenChange={(next) => {
         if (!next) onClose();
@@ -386,6 +386,7 @@ export function PresetDetail({
               alignItems: 'flex-start',
               justifyContent: 'space-between',
               gap: 'var(--tai-space-4)',
+              flexWrap: 'wrap',
             }}
           >
             <h2
@@ -398,7 +399,7 @@ export function PresetDetail({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 'var(--tai-space-2)',
-                wordBreak: 'break-all',
+                overflowWrap: 'break-word',
               }}
             >
               {preset.name}
@@ -435,7 +436,7 @@ export function PresetDetail({
               {conflicted ? null : (
                 <Button
                   type="button"
-                  aria-label={`Rename preset ${preset.name}`}
+                  aria-label={`Rename custom node ${preset.name}`}
                   onClick={() => {
                     setRenameOpen(true);
                   }}
@@ -446,7 +447,7 @@ export function PresetDetail({
               <Button
                 type="button"
                 variant="danger"
-                aria-label={`Delete preset ${preset.name}`}
+                aria-label={`Delete custom node ${preset.name}`}
                 onClick={() => {
                   setDeleteOpen(true);
                 }}
@@ -459,7 +460,7 @@ export function PresetDetail({
           {conflicted ? (
             <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
               {preset.conflicted_reason ??
-                "This preset's name collided with an existing tool at startup — it is not registered. Delete to resolve."}
+                "This custom node's name collided with an existing tool at startup — it is not registered. Delete to resolve."}
             </p>
           ) : null}
 

@@ -314,9 +314,9 @@ describe('ComposeAgentDialog', () => {
     await fillNameAndDescription('assistant');
     await pickBaseAgent();
 
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Preset to expand' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Custom node to expand' }));
     await userEvent.click(await screen.findByRole('option', { name: 'echo_pinned' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Add preset' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add custom node' }));
 
     // The stored preset resolved into an inline object.
     const entry = await screen.findByTestId('compose-presets-entry');
@@ -358,7 +358,7 @@ describe('ComposeAgentDialog', () => {
     );
 
     await pickBaseAgent();
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Preset to expand' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Custom node to expand' }));
 
     expect(await screen.findByRole('option', { name: 'echo_pinned' })).toBeInTheDocument();
     // A conflicted record is delete-only and must never seed a composition.

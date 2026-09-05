@@ -298,8 +298,8 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
 
   return (
     <Dialog
-      title="Create preset"
-      description="Bind a base tool with fixed kwargs into a new named preset tool."
+      title="Create custom node"
+      description="Bind a base tool with fixed kwargs into a new named custom node."
       open
       onOpenChange={(next) => {
         if (!next) onClose();
@@ -414,8 +414,8 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           label="Fixed kwargs"
           description={
             hints.length > 0
-              ? `A JSON object of values baked into the preset as fixed constants. Base tool inputs: ${hints.join(', ')}`
-              : 'A JSON object of values baked into the preset as fixed constants.'
+              ? `A JSON object of values baked into the custom node as fixed constants. Base tool inputs: ${hints.join(', ')}`
+              : 'A JSON object of values baked into the custom node as fixed constants.'
           }
           error={kwargsError}
         >
@@ -431,7 +431,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
         </Field>
 
         {toolMetaOff ? null : (
-          <Field label="Tags" description="Categorization labels for this preset.">
+          <Field label="Tags" description="Categorization labels for this custom node.">
             <TagsInput value={tags} onChange={setTags} />
           </Field>
         )}
@@ -452,7 +452,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
             id={extensionsDescId}
             style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
           >
-            Ordered extension combos applied to the preset tool.
+            Ordered extension combos applied to the custom node's tool.
           </span>
           {extensionsQuery.isError ? (
             <ErrorState
@@ -476,7 +476,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           onChange={setOutputSchema}
           requireTitle={false}
           label="Output schema"
-          description="An optional JSON Schema the preset enforces on its tool's structured output."
+          description="An optional JSON Schema the custom node enforces on its tool's structured output."
           idPrefix="create-preset-output-schema"
         />
 
@@ -521,8 +521,8 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
               create.isPending || !outputSchema.valid || !extensionsValid || versioningDisabled
             }
           >
-            {create.isPending ? <Spinner label="Creating preset" /> : null}
-            Create preset
+            {create.isPending ? <Spinner label="Creating custom node" /> : null}
+            Create custom node
           </Button>
         </div>
       </form>

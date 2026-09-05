@@ -75,7 +75,7 @@ export function PresetSpecEditor({
               <span className="tai-muted">over {entry.base_tool}</span>
               <Button
                 type="button"
-                aria-label={`Remove preset ${entry.name}`}
+                aria-label={`Remove custom node ${entry.name}`}
                 disabled={disabled}
                 onClick={() => {
                   onChange(value.filter((e) => e.name !== entry.name));
@@ -92,9 +92,9 @@ export function PresetSpecEditor({
           options={options}
           value={pick}
           onValueChange={setPick}
-          placeholder="Pick a stored preset…"
+          placeholder="Pick a stored custom node…"
           disabled={(disabled ?? false) || options.length === 0}
-          aria-label="Preset to expand"
+          aria-label="Custom node to expand"
         />
         <Button
           type="button"
@@ -103,8 +103,8 @@ export function PresetSpecEditor({
             expand.mutate(pick);
           }}
         >
-          {expand.isPending ? <Spinner label="Expanding preset" /> : null}
-          Add preset
+          {expand.isPending ? <Spinner label="Expanding custom node" /> : null}
+          Add custom node
         </Button>
       </div>
       {expand.isError ? <ErrorState message={errorMessage(expand.error)} /> : null}

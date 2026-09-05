@@ -184,6 +184,20 @@ describe('ConfigsTable — CRUD', () => {
     expect(setConversationConfig).not.toHaveBeenCalled();
   });
 
+  it('wears the low-emphasis (ghost) style on the row Delete, not filled danger', async () => {
+    renderCrud({
+      listConversationConfigs: vi.fn().mockResolvedValue({ items: [makeConfig()], total: 1 }),
+    });
+
+    // Row-level destructive actions stay low-emphasis; the danger emphasis lives in the
+    // ConfirmDialog's confirm button, not on the persistent row control.
+    const rowDelete = await screen.findByRole('button', {
+      name: 'Delete config agent:assistant',
+    });
+    expect(rowDelete).toHaveClass('tai-btn-ghost');
+    expect(rowDelete).not.toHaveClass('tai-btn-danger');
+  });
+
   it('deletes a config behind the confirm and refreshes the list', async () => {
     const user = userEvent.setup();
     const deleteConversationConfig = vi

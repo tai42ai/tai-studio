@@ -252,9 +252,9 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ listPresets: vi.fn().mockResolvedValue(presets) }),
     });
 
-    expect(await screen.findByText(/manage shout on the presets page/i)).toBeInTheDocument();
+    expect(await screen.findByText(/manage shout on the custom nodes page/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Edit combos' })).not.toBeInTheDocument();
-    const link = screen.getByRole('link', { name: /manage shout on the presets page/i });
+    const link = screen.getByRole('link', { name: /manage shout on the custom nodes page/i });
     expect(link).toBeInTheDocument();
     // WCAG 2.5.3 (Label in Name): a voice-control user says what they can read, so
     // no control here may carry an `aria-label` that omits its own visible text.
@@ -295,11 +295,11 @@ describe('ToolExtensionsCard', () => {
     // The editor path renders — current combos plus the Edit button — and no hint.
     expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
     expect(screen.getByText('marka')).toBeInTheDocument();
-    expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/manage shout on the custom nodes page/i)).not.toBeInTheDocument();
 
     // …under a LOUD notice carrying the server's own message verbatim, with a retry.
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('Preset tools cannot be identified');
+    expect(alert).toHaveTextContent('Custom node tools cannot be identified');
     expect(alert).toHaveTextContent('forbidden');
     listPresets.mockResolvedValueOnce([]);
     await userEvent.click(within(alert).getByRole('button', { name: /retry/i }));
@@ -344,7 +344,7 @@ describe('ToolExtensionsCard', () => {
     // A conflicted (quarantined) preset name is a foreign live tool authored through the
     // manifest route, so the card must NOT show the presets hint — it shows the editor.
     expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
-    expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/manage shout on the custom nodes page/i)).not.toBeInTheDocument();
   });
 
   it('clears a pending clear-confirm when a combo is added back in the builder', async () => {

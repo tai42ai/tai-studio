@@ -147,7 +147,7 @@ export function ConfigsTable(): ReactNode {
                     ) : null}
                     {canDelete ? (
                       <Button
-                        variant="danger"
+                        variant="ghost"
                         aria-label={`Delete config ${configRowKey(config)}`}
                         onClick={() => {
                           // Clear any prior delete failure so this confirm opens clean,

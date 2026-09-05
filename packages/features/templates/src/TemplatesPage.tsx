@@ -204,14 +204,15 @@ function TemplateList({
     <TemplateLink templateKey={key} selected={key === selected} preserveQuery={preserveQuery} />
   );
 
-  // The per-folder destructive affordance, mirroring the storage explorer: a danger
-  // button on each directory row/card opening the delete-directory confirm. It follows
-  // the surface's existing gate (storage-provider presence) — no extra per-write gate,
-  // exactly as the single-template delete; the server `write` fence stays the authority
-  // and a refusal surfaces loudly in the dialog.
+  // The per-folder destructive affordance, mirroring the storage explorer: a
+  // low-emphasis (ghost) button on each directory row/card opening the delete-directory
+  // confirm, where the destructive emphasis lives. It follows the surface's existing gate
+  // (storage-provider presence) — no extra per-write gate, exactly as the single-template
+  // delete; the server `write` fence stays the authority and a refusal surfaces loudly in
+  // the dialog.
   const renderFolderActions = (folder: Folder): ReactNode => (
     <Button
-      variant="danger"
+      variant="ghost"
       aria-label={`Delete directory ${folder.id}`}
       onClick={() => {
         setDeleteDir(folder.id);

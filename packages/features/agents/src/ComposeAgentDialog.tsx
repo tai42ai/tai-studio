@@ -380,7 +380,7 @@ export function ComposeAgentDialog({
   return (
     <Dialog
       title="Compose an agent"
-      description="Bake a prompt, tools, presets, sub-agents, and any fixed inputs over a base agent into a named, tagged, versioned agent."
+      description="Bake a prompt, tools, custom nodes, sub-agents, and any fixed inputs over a base agent into a named, tagged, versioned agent."
       open
       onOpenChange={(next) => {
         if (!next) onClose();
@@ -485,8 +485,8 @@ export function ComposeAgentDialog({
 
             {hasField(baseSchema, 'presets') ? (
               <Field
-                label="Presets"
-                description="Stored presets expand into inline, self-contained definitions."
+                label="Custom nodes"
+                description="Stored custom nodes expand into inline, self-contained definitions."
                 group
               >
                 {presetsQuery.isError ? (

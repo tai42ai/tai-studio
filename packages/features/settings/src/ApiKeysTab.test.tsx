@@ -167,6 +167,17 @@ describe('ApiKeysTab', () => {
     expect(await screen.findByText('unknown user_id')).toBeInTheDocument();
   });
 
+  it('wears the ghost style on the per-row Revoke, not filled danger', async () => {
+    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({}) });
+
+    await screen.findByText('alice');
+    // Revoking a key is a routine row action: low-emphasis in the table; the danger
+    // emphasis lives on the confirm dialog's Revoke button.
+    const rowRevoke = screen.getByRole('button', { name: 'Revoke key alice' });
+    expect(rowRevoke).toHaveClass('tai-btn-ghost');
+    expect(rowRevoke).not.toHaveClass('tai-btn-danger');
+  });
+
   it('round-trips policy_data key/value rows into the create body', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');

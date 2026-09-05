@@ -86,7 +86,7 @@ describe('CreatePresetForm', () => {
     await fillCreatable(user);
     await user.type(screen.getByLabelText('Tags'), 'geo');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     // The create runs a CHAIN: createPreset → overlay upsertToolMeta → onSuccess
     // (invalidate ×2, then navigate). Synchronize on the navigate the chain ENDS on,
@@ -127,7 +127,7 @@ describe('CreatePresetForm', () => {
     await fillCreatable(user);
     await user.type(screen.getByLabelText('Tags'), 'geo');
     await user.click(screen.getByRole('button', { name: 'Add tag' }));
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     // The create succeeds and navigates: the store-off tag write is a no-op, never a
     // failure that turns a successful create red.
@@ -148,7 +148,7 @@ describe('CreatePresetForm', () => {
     });
 
     await fillCreatable(user);
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     // Synchronize on the navigate the whole create chain ENDS on, so the negative
     // below proves the overlay is never written across the FULL flow — not merely
@@ -180,7 +180,7 @@ describe('CreatePresetForm', () => {
 
     // The create still works with the input hidden, and never writes the overlay.
     await fillCreatable(user);
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
     await waitFor(() => {
       expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
     });
@@ -211,7 +211,7 @@ describe('CreatePresetForm', () => {
     // Name + base are set but the description is left blank — submit is blocked
     // exactly like a missing name (the API rejects an empty description with a 422).
     await fillNameAndBase(user);
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     expect(screen.getByText('A description is required.')).toBeInTheDocument();
     expect(createPreset).not.toHaveBeenCalled();
@@ -290,7 +290,7 @@ describe('CreatePresetForm', () => {
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: JSON.stringify(schema) },
     });
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     expect(createPreset).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'paris_weather', output_schema: schema }),
@@ -309,7 +309,7 @@ describe('CreatePresetForm', () => {
     });
     // The editor shows the loud inline parse error and the submit stays blocked.
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
     expect(createPreset).not.toHaveBeenCalled();
   });
 
@@ -327,7 +327,7 @@ describe('CreatePresetForm', () => {
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: '{"type":"object","title":"X"}' },
     });
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "output_schema is not a valid JSON Schema: 'type' must be a string",
@@ -344,7 +344,7 @@ describe('CreatePresetForm', () => {
     const kwargs = screen.getByLabelText('Fixed kwargs JSON');
     await user.clear(kwargs);
     await user.type(kwargs, '123');
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     expect(createPreset).not.toHaveBeenCalled();
     // A non-object body is a loud, verbatim field error rather than an empty bake.
@@ -360,7 +360,7 @@ describe('CreatePresetForm', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "preset 'paris_weather' already exists",
@@ -386,14 +386,14 @@ describe('CreatePresetForm', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     const note = await screen.findByTestId('feature-disabled');
     expect(note).toHaveTextContent(
       'versioning is not configured: set TAI_DATABASE_DEFAULT_PG_PASSWORD',
     );
     expect(screen.queryByRole('alert')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create custom node' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
   });
 
@@ -420,7 +420,7 @@ describe('CreatePresetForm', () => {
     );
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByRole('button', { name: 'Validate' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Create preset' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Create custom node' })).toBeDisabled();
   });
 
   it('validate — clean verdict: sends the full create draft and shows a success badge', async () => {
@@ -519,7 +519,7 @@ describe('CreatePresetForm', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
-    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await user.click(screen.getByRole('button', { name: 'Create custom node' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       "base tool 'weather' is itself a preset",

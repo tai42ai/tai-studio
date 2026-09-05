@@ -76,7 +76,7 @@ function DeleteSubMcpDialog({
       title={`Delete sub-MCP "${slug}"?`}
       description="This removes the derived sub-MCP server. This cannot be undone."
       trigger={
-        <Button type="button" variant="danger">
+        <Button type="button" variant="ghost">
           Delete
         </Button>
       }

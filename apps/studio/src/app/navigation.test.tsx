@@ -127,6 +127,9 @@ describe('shell navigation', () => {
     const toolsLink = await screen.findByRole('link', { name: 'Tools' });
     expect(toolsLink).toHaveAttribute('href', '/tools');
     expect(screen.getByRole('link', { name: 'System' })).toHaveAttribute('href', '/system');
+    // The presets route surfaces under its renamed label — "Custom nodes", never "Presets".
+    expect(screen.getByRole('link', { name: 'Custom nodes' })).toHaveAttribute('href', '/presets');
+    expect(screen.queryByRole('link', { name: 'Presets' })).toBeNull();
 
     await user.click(toolsLink);
     await waitFor(() => {

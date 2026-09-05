@@ -79,7 +79,7 @@ export function PresetVersions({ name }: { readonly name: string }): ReactNode {
   if (versionsQuery.data.length === 0) {
     return (
       <Card>
-        <EmptyState title="No versions" description="This preset has no version history." />
+        <EmptyState title="No versions" description="This custom node has no version history." />
       </Card>
     );
   }
@@ -103,7 +103,7 @@ export function PresetVersions({ name }: { readonly name: string }): ReactNode {
       }}
       rollbackPending={rollback.isPending}
       rollbackError={rollback.isError ? errorMessage(rollback.error) : undefined}
-      rollbackConfirmDescription="The live preset tool rebinds to this version immediately."
+      rollbackConfirmDescription="The live custom node's tool rebinds to this version immediately."
       onEditTags={async (version, tags) => {
         await editTags.mutateAsync({ version, tags });
       }}

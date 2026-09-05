@@ -651,6 +651,25 @@ describe('StoragePage', () => {
     });
   });
 
+  it('wears the low-emphasis (ghost) style on both the resource and directory Delete rows', async () => {
+    const client = stubClient({
+      getStorageInfo: vi.fn().mockResolvedValue(presentInfo),
+      listStorageResources: vi.fn().mockResolvedValue({ resources: ['reports/x.csv', 'a.txt'] }),
+    });
+    renderPage(<StoragePage search={{}} />, { client });
+
+    await screen.findByRole('table');
+    // Row-level destructive actions stay low-emphasis; the danger emphasis lives in the
+    // ConfirmDialog's confirm button, not on the persistent row/folder controls.
+    const resourceDelete = screen.getByRole('button', { name: 'Delete a.txt' });
+    expect(resourceDelete).toHaveClass('tai-btn-ghost');
+    expect(resourceDelete).not.toHaveClass('tai-btn-danger');
+
+    const dirDelete = screen.getByRole('button', { name: 'Delete directory reports' });
+    expect(dirDelete).toHaveClass('tai-btn-ghost');
+    expect(dirDelete).not.toHaveClass('tai-btn-danger');
+  });
+
   it('deletes a directory from its folder action and invalidates the list', async () => {
     const user = userEvent.setup();
     const list = vi

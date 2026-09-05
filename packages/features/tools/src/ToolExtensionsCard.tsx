@@ -180,7 +180,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           that restores the distinction. */}
       {presetsQuery.isError ? (
         <ErrorState
-          message={`Preset tools cannot be identified: ${errorMessage(presetsQuery.error)}`}
+          message={`Custom node tools cannot be identified: ${errorMessage(presetsQuery.error)}`}
           onRetry={() => void presetsQuery.refetch()}
         />
       ) : null}
@@ -199,12 +199,13 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
 
       {isPresetTool ? (
         <p className="tai-muted" style={{ margin: 0 }}>
-          <Badge variant="success">preset</Badge> Preset tools carry their combos on the preset —{' '}
+          <Badge variant="success">custom node</Badge> Custom node tools carry their combos on the
+          custom node —{' '}
           {/* The link names itself from its own visible text (WCAG 2.5.3, Label in
               Name): an `aria-label` naming the tool and the destination said none of
               the words the link shows. */}
           <AppLink to="presets" search={{ preset: tool }}>
-            manage {tool} on the presets page
+            manage {tool} on the custom nodes page
           </AppLink>
           .
         </p>

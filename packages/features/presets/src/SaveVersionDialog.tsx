@@ -186,7 +186,7 @@ export function SaveVersionDialog({
       >
         <Field
           label="Fixed kwargs"
-          description="A JSON object baked into the preset as fixed constants."
+          description="A JSON object baked into the custom node as fixed constants."
           error={kwargsError}
         >
           <Textarea

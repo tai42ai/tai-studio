@@ -155,7 +155,7 @@ export function RoutesTable({
                     ) : null}
                     {canDelete ? (
                       <Button
-                        variant="danger"
+                        variant="ghost"
                         aria-label={`Delete route ${route.route_name}`}
                         onClick={() => {
                           // Clear any prior delete failure so this confirm opens clean,

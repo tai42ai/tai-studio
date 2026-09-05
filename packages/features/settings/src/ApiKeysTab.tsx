@@ -379,7 +379,7 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
                         {readOnly ? null : (
                           <Button
                             type="button"
-                            variant="danger"
+                            variant="ghost"
                             aria-label={`Revoke key ${payload.user_id}`}
                             onClick={() => {
                               setRevokeUser(payload.user_id);

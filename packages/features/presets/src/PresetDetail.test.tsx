@@ -261,9 +261,9 @@ describe('PresetDetail', () => {
     expect(await screen.findByRole('button', { name: 'New version' })).toBeInTheDocument();
     expect(screen.getByText('Version history')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Delete preset paris_weather' }));
+    await user.click(screen.getByRole('button', { name: 'Delete custom node paris_weather' }));
     expect(
-      screen.getByText(/soft-deletes the preset and tears down its tool/i),
+      screen.getByText(/soft-deletes the custom node and tears down its tool/i),
     ).toBeInTheDocument();
   });
 
@@ -297,7 +297,7 @@ describe('PresetDetail', () => {
     expect(screen.queryByRole('button', { name: 'New version' })).toBeNull();
     expect(screen.queryByText('Version history')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'Delete preset paris_weather' }));
+    await user.click(screen.getByRole('button', { name: 'Delete custom node paris_weather' }));
     expect(
       screen.getByText(/removes the quarantined record\. no live tool is touched/i),
     ).toBeInTheDocument();
@@ -311,7 +311,7 @@ describe('PresetDetail', () => {
     };
     const { unmount } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
     expect(
-      await screen.findByRole('button', { name: 'Rename preset paris_weather' }),
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
     ).toBeInTheDocument();
     unmount();
 
@@ -322,7 +322,7 @@ describe('PresetDetail', () => {
     renderWithProviders(<PresetDetail name="paris_weather" />, { client: conflictedClient });
     await screen.findByText(/not\s+registered/i);
     // A conflicted record is delete-only — no Rename affordance, exactly like Versions.
-    expect(screen.queryByRole('button', { name: 'Rename preset paris_weather' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Rename custom node paris_weather' })).toBeNull();
   });
 
   it('blocks an empty-name submit with a field error and makes no api call', async () => {
@@ -336,7 +336,9 @@ describe('PresetDetail', () => {
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
+    );
     await user.click(screen.getByRole('button', { name: 'Rename' }));
 
     expect(screen.getByText('A new name is required.')).toBeInTheDocument();
@@ -362,7 +364,9 @@ describe('PresetDetail', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const remove = vi.spyOn(queryClient, 'removeQueries');
 
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
+    );
     await user.type(screen.getByRole('textbox'), 'london_weather');
     await user.click(screen.getByRole('button', { name: 'Rename' }));
 
@@ -390,7 +394,9 @@ describe('PresetDetail', () => {
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
+    );
     await user.type(screen.getByRole('textbox'), 'london_weather');
     await user.click(screen.getByRole('button', { name: 'Rename' }));
 
@@ -428,10 +434,12 @@ describe('PresetDetail', () => {
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
+    );
     // The referees callout lists the blockers and the submit is disabled.
     expect(
-      await screen.findByText('Referenced by: a_ref, z_ref — update those presets first.'),
+      await screen.findByText('Referenced by: a_ref, z_ref — update those custom nodes first.'),
     ).toBeInTheDocument();
     const rename = screen.getByRole('button', { name: 'Rename' });
     expect(rename).toBeDisabled();
@@ -459,7 +467,9 @@ describe('PresetDetail', () => {
     const { queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
     const remove = vi.spyOn(queryClient, 'removeQueries');
 
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
+    );
     await user.type(screen.getByRole('textbox'), 'london_weather');
     await user.click(screen.getByRole('button', { name: 'Rename' }));
 
@@ -484,7 +494,9 @@ describe('PresetDetail', () => {
     };
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Rename custom node paris_weather' }),
+    );
     // The advisory error shows small, but a legal rename is NOT blocked.
     expect(
       await screen.findByText(/Could not check referees: referees door 503/),
@@ -510,7 +522,9 @@ describe('PresetDetail', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const remove = vi.spyOn(queryClient, 'removeQueries');
 
-    await user.click(await screen.findByRole('button', { name: 'Delete preset paris_weather' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Delete custom node paris_weather' }),
+    );
     await user.click(screen.getByRole('button', { name: 'Delete' }));
 
     expect(deletePreset).toHaveBeenCalledWith('paris_weather');

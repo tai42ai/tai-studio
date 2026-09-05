@@ -65,7 +65,7 @@ export function AuthoredAgentsList({
       <Card>
         <EmptyState
           title="No authored agents yet"
-          description="Compose an agent to bake a prompt, tools, and presets over a base agent."
+          description="Compose an agent to bake a prompt, tools, and custom nodes over a base agent."
         />
       </Card>
     );

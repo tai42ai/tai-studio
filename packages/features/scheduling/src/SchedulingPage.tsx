@@ -195,7 +195,7 @@ function ScheduleTable({ schedules }: { schedules: readonly ScheduleItem[] }): R
                 <TD className="tai-mono">{toolIdentity(item)}</TD>
                 <TD>
                   <Button
-                    variant="danger"
+                    variant="ghost"
                     aria-label={`Delete schedule ${item.name}`}
                     onClick={() => {
                       setDeleting(item.name);

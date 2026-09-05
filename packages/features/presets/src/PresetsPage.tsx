@@ -65,7 +65,7 @@ export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
       // list pane by the link's own accessible name.
       pendingFocus.current = false;
       listRef.current
-        ?.querySelector<HTMLElement>(`[aria-label="Open preset ${previous}"]`)
+        ?.querySelector<HTMLElement>(`[aria-label="Open custom node ${previous}"]`)
         ?.focus();
     }
   }, [selected]);
@@ -73,9 +73,9 @@ export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
   return (
     <div className="tai-stack tai-stack-6" data-testid="presets-page">
       <PageHeader
-        title="Presets"
+        title="Custom nodes"
         eyebrow="Capabilities"
-        description="Named, versioned tool presets — a base tool with fixed kwargs baked in."
+        description="Custom nodes — a base tool with fixed kwargs baked in, saved as a named, versioned preset."
       />
 
       <div className="tai-split" data-pane={pane}>
@@ -95,8 +95,8 @@ export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
           ) : (
             <Card>
               <EmptyState
-                title="No preset selected"
-                description="Choose a preset from the list to view its versions and manage it."
+                title="No custom node selected"
+                description="Choose a custom node from the list to view its versions and manage it."
               />
             </Card>
           )}
