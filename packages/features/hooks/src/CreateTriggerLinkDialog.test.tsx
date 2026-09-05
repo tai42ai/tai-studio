@@ -84,6 +84,29 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
     expect(screen.queryByLabelText('Topic')).not.toBeInTheDocument();
   });
 
+  it('keeps the revealed QR on Escape, then closes only on the explicit Done', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
+    renderWithProviders(<CreateTriggerLinkDialog onClose={onClose} />, {
+      client: baseClient(createTriggerLink),
+    });
+
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: 'Create link' }));
+    // Reach the shown-once QR reveal.
+    expect(await screen.findByTestId('trigger-link-qr')).toBeInTheDocument();
+
+    // Escape must NOT dismiss the reveal — the link cannot be re-minted.
+    await user.keyboard('{Escape}');
+    expect(screen.getByTestId('trigger-link-qr')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The explicit Done is the only way out.
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('rebuilds the QR only when the link changes, not on every re-render', async () => {
     const user = userEvent.setup();
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);

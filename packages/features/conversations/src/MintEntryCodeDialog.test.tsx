@@ -151,6 +151,28 @@ describe('MintEntryCodeDialog — mint + reveal', () => {
     expect(mintWebEntryCode).not.toHaveBeenCalled();
   });
 
+  it('keeps the revealed code on Escape, then closes only on the explicit Done', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const mintWebEntryCode = vi.fn().mockResolvedValue(MINTED);
+    renderWithProviders(<MintEntryCodeDialog identity="web-1" onClose={onClose} />, {
+      client: baseClient(mintWebEntryCode),
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Mint code' }));
+    // Reach the shown-once reveal.
+    expect(await screen.findByText('ent-raw-token')).toBeInTheDocument();
+
+    // Escape must NOT dismiss the reveal — the raw code cannot be re-minted.
+    await user.keyboard('{Escape}');
+    expect(screen.getByText('ent-raw-token')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The explicit Done is the only way out.
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('closes on Escape without minting', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();

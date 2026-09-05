@@ -165,6 +165,10 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
     <Dialog
       title="Create trigger link"
       open
+      // During the shown-once reveal the link cannot be re-minted, so light
+      // dismissal is disabled there — only the explicit Done button closes it.
+      // The form phase stays an ordinary dismissable modal.
+      dismissable={link === null}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}

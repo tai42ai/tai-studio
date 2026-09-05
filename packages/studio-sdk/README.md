@@ -196,16 +196,19 @@ icons; the `-fill` members are for fills and charts and carry `on-fill` ink.
 | `--tai-color-syntax-number`    | `var(--tai-color-accent)`     | _(same)_             |
 | `--tai-color-syntax-bool`      | `var(--tai-color-warn-text)`  | _(same)_             |
 
-**Legacy slots.** The names a plugin already styles against, re-pointed at the
-members of the contract above that keep them legible.
+**Legacy slots.** The names a plugin already styles against. `primary`,
+`success` and `warning` re-point at the members of the contract above that keep
+them legible; `danger` is its own destructive emphasis — a deep red that runs
+darker than the brand accent in both themes so a destructive control is never
+mistaken for the primary one, with a white label and a hover a shade deeper.
 
 | Token                        | Light                        | Dark      |
 | ---------------------------- | ---------------------------- | --------- |
 | `--tai-color-primary`        | `var(--tai-color-accent)`    | _(same)_  |
 | `--tai-color-primary-text`   | `var(--tai-color-on-accent)` | _(same)_  |
-| `--tai-color-danger`         | `var(--tai-color-err-text)`  | _(same)_  |
-| `--tai-color-danger-text`    | `#ffffff`                    | `#0c0e12` |
-| `--tai-color-danger-hover`   | `#7f1d1d`                    | `#fca5a5` |
+| `--tai-color-danger`         | `#991b1b`                    | `#dc2626` |
+| `--tai-color-danger-text`    | `#ffffff`                    | `#ffffff` |
+| `--tai-color-danger-hover`   | `#7f1d1d`                    | `#b91c1c` |
 | `--tai-color-danger-surface` | `var(--tai-color-err-tint)`  | _(same)_  |
 | `--tai-color-success`        | `var(--tai-color-ok-text)`   | _(same)_  |
 | `--tai-color-warning`        | `var(--tai-color-warn-text)` | _(same)_  |

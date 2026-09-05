@@ -97,6 +97,10 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
     <Dialog
       title={title}
       open
+      // During the shown-once callback-secret reveal the secret cannot be
+      // re-read, so light dismissal is disabled there — only the explicit Done
+      // button closes it. The form phase stays an ordinary dismissable modal.
+      dismissable={secret === null}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
