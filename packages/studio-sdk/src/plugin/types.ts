@@ -143,10 +143,10 @@ export interface RegisteredPage extends PageContribution {
 /**
  * The sidebar section a nav entry renders in. A named core section groups the
  * entry there, after that section's core rows. An absent field or any value that
- * is not a live core section renders the entry as a FIRST-CLASS section of its own,
- * named for the contributing plugin (grouped with that plugin's other such entries),
+ * is not a live core section renders the entry in the shared "Plugins" section that
+ * follows the core sections (alongside every other undeclared plugin entry),
  * placed after the core sections. The shell tolerates an unknown value at runtime
- * (a bundle newer than this host), falling back to that self-named section, so the
+ * (a bundle newer than this host), falling back to that shared section, so the
  * field is a placement hint, never a hard contract.
  */
 export type NavEntrySection =
@@ -162,13 +162,13 @@ export interface NavEntryContribution {
   readonly title: string;
   /**
    * Optional target sidebar section (see {@link NavEntrySection}); absent ⇒ the
-   * plugin's own self-named section. Additive — an older bundle omits it and stays
+   * shared "Plugins" section. Additive — an older bundle omits it and stays
    * on the same plugin API version.
    */
   readonly section?: NavEntrySection;
   /**
    * Optional sort weight WITHIN the entry's section (whether a core section or the
-   * plugin's own self-named one): entries render in ascending `order`, and every
+   * shared "Plugins" one): entries render in ascending `order`, and every
    * entry that omits it sorts AFTER the ordered ones, in registration order. Two
    * entries with the same `order` keep registration order (a stable sort). Additive —
    * an older bundle omits it and stays on the same plugin API version.

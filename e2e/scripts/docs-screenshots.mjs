@@ -607,10 +607,12 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   // which races the async bundle load. Every signed-in shot renders that sidebar,
   // so wait for the entry before shooting — otherwise the sidebar is present in
   // some shots and missing in others. The demo boot always loads the reference
-  // plugin, so this entry always resolves.
+  // plugin, so this entry always resolves. It renders under the single generic
+  // "Plugins" section list; `exact` avoids the per-entry provenance badge link.
   if (awaitPluginNav) {
     await page
       .getByRole('navigation', { name: 'Primary' })
+      .getByRole('list', { name: 'Plugins' })
       .getByRole('link', { name: 'Reference', exact: true })
       .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   }

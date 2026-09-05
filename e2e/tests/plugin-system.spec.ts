@@ -101,11 +101,14 @@ test('the reference plugin contributes a sidebar nav entry and a host-injected s
   // The nav entry is committed at the same module-eval point that sets __pluginReact.
   await page.waitForFunction(() => '__pluginReact' in window);
 
-  // The registered nav entry appears under the plugin's own self-named section
-  // in the Primary navigation and navigates (client-side) to the plugin's page.
-  const navLink = page
+  // The registered nav entry appears under the single generic "Plugins" section
+  // (its list is named by the "Plugins" header) in the Primary navigation, and
+  // navigates (client-side) to the plugin's page. `exact` on "Reference" avoids the
+  // per-entry provenance badge link ("Plugin: reference_plugin …") in the same list.
+  const pluginsList = page
     .getByRole('navigation', { name: 'Primary' })
-    .getByRole('link', { name: 'Reference', exact: true });
+    .getByRole('list', { name: 'Plugins' });
+  const navLink = pluginsList.getByRole('link', { name: 'Reference', exact: true });
   await expect(navLink).toBeVisible();
   await navLink.click();
   await expect(page).toHaveURL(/\/plugins\/reference_plugin\/demo$/);

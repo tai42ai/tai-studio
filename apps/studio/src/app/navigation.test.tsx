@@ -182,7 +182,7 @@ describe('shell plugin nav', () => {
     };
   }
 
-  it('renders a registered nav entry in its self-named plugin section with its icon box and href', async () => {
+  it('renders a registered nav entry in the generic Plugins section with its icon box and href', async () => {
     serveShell();
     const importModule = vi.fn(() => Promise.resolve({ register: registerPageAndNav(true) }));
 
@@ -190,10 +190,12 @@ describe('shell plugin nav', () => {
 
     const link = await screen.findByRole('link', { name: 'Reference' });
     expect(link).toHaveAttribute('href', '/plugins/acme/demo');
-    // The entry lands in the plugin's own self-named section (headed by its id), which
-    // names its list — there is no generic "Plugins" wrapper.
+    // The entry lands in the single generic "Plugins" section, whose header names its
+    // list — never a per-plugin section headed by the raw id, and never a separate
+    // "Plugins" navigation landmark.
     expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
-    const list = screen.getByRole('list', { name: 'acme' });
+    expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
+    const list = screen.getByRole('list', { name: 'Plugins' });
     expect(within(list).getByRole('link', { name: 'Reference' })).toBe(link);
     // The icon renders in an aria-hidden slot (its accessible name stays the title).
     const iconBox = link.querySelector('[aria-hidden="true"]');
@@ -287,7 +289,7 @@ describe('shell plugin nav', () => {
       importModule,
     });
 
-    const list = await screen.findByRole('list', { name: 'acme' });
+    const list = await screen.findByRole('list', { name: 'Plugins' });
     const detailLink = within(list).getByRole('link', { name: 'Detail' });
     const flowsLink = within(list).getByRole('link', { name: 'Flows' });
     // The deep path sits under BOTH hrefs, but aria-current marks EXACTLY the
@@ -336,7 +338,8 @@ describe('shell plugin nav', () => {
     // Wait for the load pass to settle (core nav is always present).
     const toolsLink = await screen.findByRole('link', { name: 'Tools' });
     expect(toolsLink).toBeInTheDocument();
-    // No empty labeled landmark, no stray plugin link.
+    // No empty Plugins section (no header/list), no landmark, no stray plugin link.
+    expect(screen.queryByRole('list', { name: 'Plugins' })).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Plugins' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Reference' })).toBeNull();
   });
