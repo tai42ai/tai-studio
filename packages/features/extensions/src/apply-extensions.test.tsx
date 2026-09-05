@@ -200,6 +200,25 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     });
   });
 
+  it('wears the ghost style on a combo-row Remove, not filled danger', async () => {
+    const user = userEvent.setup();
+    const getToolExtensions = vi
+      .fn()
+      .mockResolvedValue({ combos: [['marka']], available: CATALOG });
+    renderWithProviders(<ApplyExtensionsPanel />, {
+      client: makeClient({ getToolExtensions }),
+    });
+
+    await selectTool(user, 'shout');
+    await screen.findByText('shout_marka');
+
+    // The per-combo Remove is a routine list-item control sitting beside the quiet
+    // reorder arrows; it stays low-emphasis, never filled danger.
+    const rowRemove = screen.getByRole('button', { name: 'Remove combo 1' });
+    expect(rowRemove).toHaveClass('tai-btn-ghost');
+    expect(rowRemove).not.toHaveClass('tai-btn-danger');
+  });
+
   it('adds a combo row, POSTing the resulting full list', async () => {
     const user = userEvent.setup();
     const setToolExtensions = vi.fn().mockResolvedValue({ status: 'ok', env_keys: 0 });

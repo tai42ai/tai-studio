@@ -456,6 +456,23 @@ describe('McpServersSection', () => {
     expect(await screen.findByText(/Saved \(1 env keys\)/)).toBeInTheDocument();
   });
 
+  it('wears the ghost style on an editable entry Remove server, not filled danger', async () => {
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST_CONFIGURED),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    // The per-entry Remove in the config editor is a routine list-item control; it stays
+    // low-emphasis rather than filled danger.
+    const rowRemove = screen.getByRole('button', { name: 'Remove server 1' });
+    expect(rowRemove).toHaveClass('tai-btn-ghost');
+    expect(rowRemove).not.toHaveClass('tai-btn-danger');
+  });
+
   it('re-seeds from the save-triggered refetch without detaching the operator', async () => {
     // The refetch that follows a save returns the config the server now holds, so
     // the state the editor is seeded from moves under it. The re-seed has to land
@@ -644,7 +661,12 @@ describe('McpServersSection', () => {
       await screen.findByText(/Managed by connection c-1 \(provider github, issues\)/),
     ).toBeInTheDocument();
     expect(screen.getByText(/Disconnect to remove/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove server 1' })).toBeDisabled();
+    const managedRemove = screen.getByRole('button', { name: 'Remove server 1' });
+    expect(managedRemove).toBeDisabled();
+    // The per-entry Remove is a routine list-item control across every entry-card
+    // variant (editable/installed/managed): low-emphasis, never filled danger.
+    expect(managedRemove).toHaveClass('tai-btn-ghost');
+    expect(managedRemove).not.toHaveClass('tai-btn-danger');
     // No schema-driven editor is rendered for a managed entry (it is read-only)…
     expect(screen.queryByTestId('mcp-entry-0')).toBeNull();
     // …but its bound tool is shown.

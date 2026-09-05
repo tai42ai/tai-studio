@@ -41,7 +41,7 @@ export function SubAgentCard({
           <div style={spacerStyle} />
           <Button
             type="button"
-            variant="danger"
+            variant="ghost"
             aria-label={`Remove sub-agent ${String(index + 1)}`}
             disabled={disabled}
             onClick={onRemove}

@@ -72,3 +72,28 @@ describe('HooksList — row doors', () => {
     );
   });
 });
+
+describe('HooksList — low-emphasis row destructive controls', () => {
+  it('wears the ghost style on the row Delete and the verifier Unbind, not filled danger', async () => {
+    const client: StubApiClient = {
+      listHooks: vi.fn().mockResolvedValue({
+        items: [hook({ name: 'notify-event', topic: 'events.created' })],
+        total: 1,
+        topic_verifiers: {
+          'events.created': { verifier: 'hmac-sha256', config: {} },
+        },
+      }),
+    };
+    renderWithProviders(<HooksList topic="" />, { client });
+
+    // Routine destructive controls in a persistent table/list stay low-emphasis; the
+    // danger emphasis lives on the confirm dialog's confirm button, not the row control.
+    const rowDelete = await screen.findByRole('button', { name: 'Delete hook notify-event' });
+    expect(rowDelete).toHaveClass('tai-btn-ghost');
+    expect(rowDelete).not.toHaveClass('tai-btn-danger');
+
+    const unbind = screen.getByRole('button', { name: 'Unbind verifier from events.created' });
+    expect(unbind).toHaveClass('tai-btn-ghost');
+    expect(unbind).not.toHaveClass('tai-btn-danger');
+  });
+});

@@ -146,7 +146,7 @@ export function TriggerLinksList(): ReactNode {
                 <TD style={{ textAlign: 'right' }}>
                   {canWrite ? (
                     <Button
-                      variant="danger"
+                      variant="ghost"
                       aria-label={`Revoke trigger link ${record.name}`}
                       onClick={() => {
                         revokeMutation.reset();

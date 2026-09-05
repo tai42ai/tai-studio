@@ -121,7 +121,7 @@ function TopicVerifiers({ verifiers }: { verifiers: Record<string, TopicVerifier
               </span>
             ) : null}
             <Button
-              variant="danger"
+              variant="ghost"
               aria-label={`Unbind verifier from ${topic}`}
               onClick={() => {
                 setPendingUnbind(topic);
@@ -268,7 +268,7 @@ export function HooksList({ topic }: { topic: string }): ReactNode {
                         Edit
                       </Button>
                       <Button
-                        variant="danger"
+                        variant="ghost"
                         aria-label={`Delete hook ${hook.name}`}
                         onClick={() => {
                           setPendingDelete(hook.name);

@@ -857,7 +857,7 @@ function ProfileFormBody({
                   )}
                   <Button
                     type="button"
-                    variant="danger"
+                    variant="ghost"
                     aria-label={removeLabel(row.key, index)}
                     onClick={() => {
                       removeRow(row.id);
@@ -1174,7 +1174,7 @@ export function ProfilesTab({ readOnly }: ProfilesTabProps): ReactNode {
                               </Button>
                               <Button
                                 type="button"
-                                variant="danger"
+                                variant="ghost"
                                 aria-label={`Delete profile ${profile.name}`}
                                 onClick={() => {
                                   setOpen({ kind: 'delete', name: profile.name });

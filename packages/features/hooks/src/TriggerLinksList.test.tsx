@@ -218,3 +218,21 @@ describe('TriggerLinksList — revoke', () => {
     expect(within(dialogB).queryByRole('alert')).not.toBeInTheDocument();
   });
 });
+
+describe('TriggerLinksList — low-emphasis row destructive control', () => {
+  it('wears the ghost style on the per-row Revoke, not filled danger', async () => {
+    const client: StubApiClient = {
+      listTriggerLinks: vi.fn().mockResolvedValue({
+        items: [triggerLink({ name: 'link-a' })],
+        total: 1,
+      }),
+    };
+    renderWithProviders(<TriggerLinksList />, { client, projection: fullProjection() });
+
+    // The kill switch is a routine row action: low-emphasis in the table, with the danger
+    // emphasis reserved for the confirm dialog's Revoke button.
+    const rowRevoke = await screen.findByRole('button', { name: 'Revoke trigger link link-a' });
+    expect(rowRevoke).toHaveClass('tai-btn-ghost');
+    expect(rowRevoke).not.toHaveClass('tai-btn-danger');
+  });
+});

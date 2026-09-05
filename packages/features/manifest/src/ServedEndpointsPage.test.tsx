@@ -185,4 +185,19 @@ describe('ServedEndpointsPage', () => {
 
     expect(await screen.findByText('tools boom')).toBeInTheDocument();
   });
+
+  it('wears the ghost style on the per-row sub-MCP Delete, not filled danger', async () => {
+    const client = {
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'sse' } }),
+      listTools: vi.fn().mockResolvedValue(TOOLS),
+    };
+    renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
+
+    await screen.findByText('alpha');
+    // The row Delete opens a confirm dialog; it stays low-emphasis in the table, with the
+    // danger emphasis reserved for the dialog's own Delete button.
+    const rowDelete = screen.getByRole('button', { name: 'Delete' });
+    expect(rowDelete).toHaveClass('tai-btn-ghost');
+    expect(rowDelete).not.toHaveClass('tai-btn-danger');
+  });
 });

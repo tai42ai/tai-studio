@@ -386,6 +386,7 @@ export function PresetDetail({
               alignItems: 'flex-start',
               justifyContent: 'space-between',
               gap: 'var(--tai-space-4)',
+              flexWrap: 'wrap',
             }}
           >
             <h2
@@ -398,7 +399,7 @@ export function PresetDetail({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 'var(--tai-space-2)',
-                wordBreak: 'break-all',
+                overflowWrap: 'break-word',
               }}
             >
               {preset.name}

@@ -877,7 +877,7 @@ function InstalledEntryCard({
           <Badge variant="primary">Installed</Badge>
           <Button
             type="button"
-            variant="danger"
+            variant="ghost"
             disabled
             aria-label={`Remove server ${String(index + 1)}`}
           >
@@ -947,7 +947,7 @@ function ManagedEntryCard({
           <Badge variant="primary">Managed</Badge>
           <Button
             type="button"
-            variant="danger"
+            variant="ghost"
             disabled
             aria-label={`Remove server ${String(index + 1)}`}
           >
@@ -1071,7 +1071,7 @@ function EditableEntryCard({
         <span style={{ fontWeight: 600 }}>Server {String(index + 1)}</span>
         <Button
           type="button"
-          variant="danger"
+          variant="ghost"
           aria-label={`Remove server ${String(index + 1)}`}
           onClick={onRemove}
         >

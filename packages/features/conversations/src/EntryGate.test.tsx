@@ -328,4 +328,15 @@ describe('EntryGate — mint + revoke', () => {
     );
     expect(revokeWebEntryCode).not.toHaveBeenCalled();
   });
+
+  it('wears the ghost style on the per-row Revoke, not filled danger', async () => {
+    const getWebEntryGate = vi.fn().mockResolvedValue({ enabled: true, codes: [makeCode()] });
+    renderGate(clientWith([webRoute()], { getWebEntryGate }));
+
+    // Revoking a code is a routine row action: low-emphasis in the table; the danger
+    // emphasis lives on the confirm dialog's Revoke button.
+    const rowRevoke = await screen.findByRole('button', { name: 'Revoke entry code newsletter' });
+    expect(rowRevoke).toHaveClass('tai-btn-ghost');
+    expect(rowRevoke).not.toHaveClass('tai-btn-danger');
+  });
 });

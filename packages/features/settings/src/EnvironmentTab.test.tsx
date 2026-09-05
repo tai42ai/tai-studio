@@ -181,6 +181,23 @@ describe('EnvironmentTab', () => {
     });
   });
 
+  it('wears the ghost style on an env-var row Remove, not filled danger', async () => {
+    const client = stubClient({
+      getEnvConfig: vi.fn(() => Promise.resolve({ env: { FOO: 'bar' }, secret_keys: [] })),
+      getSettingsSchema: vi.fn(() => Promise.resolve(schemaFixture())),
+    });
+    renderWithProviders(<EnvironmentTab readOnly={false} />, { client });
+
+    const row = (await screen.findByLabelText('Name of variable FOO')).closest('li');
+    // The per-row Remove in the env-map editor is a routine list-item control; it stays
+    // low-emphasis rather than filled danger.
+    const rowRemove = within(row as HTMLElement).getByRole('button', {
+      name: 'Remove variable FOO',
+    });
+    expect(rowRemove).toHaveClass('tai-btn-ghost');
+    expect(rowRemove).not.toHaveClass('tai-btn-danger');
+  });
+
   it('posts a removed key with an empty value so the merge door deletes it', async () => {
     const user = userEvent.setup();
     const setEnvConfig = vi.fn(saved);

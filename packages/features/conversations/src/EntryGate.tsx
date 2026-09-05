@@ -170,7 +170,7 @@ function EntryGatePanel({ identity }: { readonly identity: string }): ReactNode 
                     <TD>{formatExpiry(code.expires_at)}</TD>
                     <TD style={{ textAlign: 'right' }}>
                       <Button
-                        variant="danger"
+                        variant="ghost"
                         aria-label={`Revoke entry code ${code.label ?? code.code_id}`}
                         onClick={() => {
                           revokeMutation.reset();

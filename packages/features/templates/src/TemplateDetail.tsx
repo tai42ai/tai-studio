@@ -62,12 +62,13 @@ export function TemplateDetail({
           justifyContent: 'space-between',
           gap: 'var(--tai-space-4)',
           marginBottom: 'var(--tai-space-4)',
+          flexWrap: 'wrap',
         }}
       >
         <h2
           ref={headingRef}
           tabIndex={-1}
-          style={{ margin: 0, fontSize: 'var(--tai-text-lg)', wordBreak: 'break-all' }}
+          style={{ margin: 0, fontSize: 'var(--tai-text-lg)', overflowWrap: 'break-word' }}
         >
           {templateId}
         </h2>
