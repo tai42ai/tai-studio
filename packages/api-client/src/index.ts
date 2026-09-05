@@ -122,6 +122,7 @@ export type {
   StudioPluginManifest,
   Interaction,
   InteractionAnswered,
+  InteractionCancelled,
   InteractionsPage,
   InteractionMediaItem,
   MediaKind,

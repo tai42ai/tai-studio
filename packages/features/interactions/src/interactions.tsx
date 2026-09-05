@@ -26,12 +26,22 @@
  * 409 (`ApiConflictError`) is surfaced as the specific "already answered elsewhere"
  * message rather than a generic error — the question was resolved on another
  * client, not a failure the operator should retry.
+ *
+ * WITHDRAW (CANCEL): each PENDING card carries a quiet "Cancel question" ghost
+ * action that opens the house `ConfirmDialog` (a danger confirm) and, on confirm,
+ * calls `cancelInteraction(id)` — a bodyless POST that withdraws the ask WITHOUT
+ * answering it; the flow that asked never resumes. On success the dialog closes and
+ * the paged base refetches so the withdrawn card leaves the list (the server also
+ * emits an `interaction.removed` on the tail). A failed cancel keeps the dialog open
+ * with its error: a 409 (`ApiConflictError`, answered in the meantime) and a 404
+ * (already gone) map to specific, non-retryable copy, any other failure to its
+ * message — so the operator is never left in a half-open, ambiguous state.
  */
 import { useCallback, useId, useMemo, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { ApiConflictError } from '@tai42/api-client';
+import { ApiConflictError, ApiError } from '@tai42/api-client';
 import type { Interaction } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
@@ -41,6 +51,7 @@ import {
   Card,
   ChevronDownIcon,
   ChevronRightIcon,
+  ConfirmDialog,
   EmptyState,
   ErrorState,
   FeatureDisabled,
@@ -61,6 +72,26 @@ import { InteractionCard } from './renderers';
 
 /** Shown when a 409 says the question was resolved elsewhere (not a generic error). */
 const ALREADY_ANSWERED_MESSAGE = 'This question was already answered elsewhere.';
+
+/**
+ * The withdraw-confirm's specific failure copy. A 409 means the question was answered
+ * (by another client, or the flow, in the meantime) and is no longer cancellable; a
+ * 404 means it is already gone (answered, withdrawn, or expired). Both are states the
+ * operator cannot retry, so the dialog names them plainly rather than showing a raw
+ * server line. Any other failure falls through to the generic message.
+ */
+const CANCEL_CONFLICT_MESSAGE =
+  'This question was already answered and can no longer be cancelled.';
+const CANCEL_GONE_MESSAGE =
+  'This question is no longer pending — it may have been answered or already withdrawn.';
+
+/** Resolve the message the withdraw-confirm dialog shows for a failed cancel. */
+function resolveCancelError(error: Error | null): string | null {
+  if (error === null) return null;
+  if (error instanceof ApiConflictError) return CANCEL_CONFLICT_MESSAGE;
+  if (error instanceof ApiError && error.status === 404) return CANCEL_GONE_MESSAGE;
+  return error.message;
+}
 
 /** Pending interactions per page. The server caps a page at 200 whatever is asked. */
 const INBOX_PAGE_SIZE = 50;
@@ -360,10 +391,12 @@ function InteractionGroupSection({
   group,
   submittingId,
   onSubmit,
+  onCancel,
 }: {
   readonly group: InteractionGroup;
   readonly submittingId: string | undefined;
   readonly onSubmit: (interaction: StreamInteraction, answer: unknown) => void;
+  readonly onCancel: (interaction: StreamInteraction) => void;
 }): ReactNode {
   const [open, setOpen] = useState(true);
   const panelId = useId();
@@ -396,6 +429,9 @@ function InteractionGroupSection({
                 onSubmit={(answer) => {
                   onSubmit(interaction, answer);
                 }}
+                onCancel={() => {
+                  onCancel(interaction);
+                }}
               />
             ))}
           </div>
@@ -412,12 +448,33 @@ function InteractionGroupSection({
  */
 export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
   const api = useApi();
+  const queryClient = useQueryClient();
   const { state } = useCapabilities();
   const inbox = useInbox();
   const mutation = useMutation({
     mutationFn: (vars: { id: string; answer: unknown }) =>
       api.answerInteraction(vars.id, vars.answer),
   });
+
+  // Withdrawing a pending ask: the question awaiting the confirm is `pendingCancel`;
+  // a successful cancel closes the dialog and refetches the paged base so the
+  // withdrawn card leaves the list (the server also emits an `interaction.removed` on
+  // the tail — whichever lands first drops it). A failed cancel keeps the dialog open
+  // with its error, never a half-open confusion.
+  const [pendingCancel, setPendingCancel] = useState<StreamInteraction | null>(null);
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => api.cancelInteraction(id),
+    onSuccess: () => {
+      setPendingCancel(null);
+      void queryClient.invalidateQueries({ queryKey: inboxKey(INBOX_PAGE_SIZE) });
+    },
+  });
+  const requestCancel = (interaction: StreamInteraction): void => {
+    // Clear any prior failure so this confirm opens clean, never carrying a stale
+    // error from a different question's attempt.
+    cancelMutation.reset();
+    setPendingCancel(interaction);
+  };
 
   const submittingId = mutation.isPending ? mutation.variables.id : undefined;
   const errorMessage = resolveErrorMessage(inbox.streamError, inbox.loadError, mutation.error);
@@ -465,6 +522,9 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
                 onSubmit={(answer) => {
                   submit(first, answer);
                 }}
+                onCancel={() => {
+                  requestCancel(first);
+                }}
               />
             );
           }
@@ -474,6 +534,7 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
               group={group}
               submittingId={submittingId}
               onSubmit={submit}
+              onCancel={requestCancel}
             />
           );
         })}
@@ -517,6 +578,26 @@ export function InteractionsPage(_props: PageProps<'interactions'>): ReactNode {
           {body}
         </>
       )}
+      {pendingCancel !== null ? (
+        <ConfirmDialog
+          title="Cancel question"
+          confirmLabel="Withdraw question"
+          pendingLabel="Cancelling"
+          isPending={cancelMutation.isPending}
+          error={resolveCancelError(cancelMutation.error)}
+          onConfirm={() => {
+            cancelMutation.mutate(pendingCancel.interaction_id);
+          }}
+          onClose={() => {
+            setPendingCancel(null);
+          }}
+        >
+          <p style={{ margin: 0 }}>
+            Withdraw this question without answering it? The ask is cancelled and the flow that
+            asked it will not resume. This cannot be undone.
+          </p>
+        </ConfirmDialog>
+      ) : null}
     </Stack>
   );
 }

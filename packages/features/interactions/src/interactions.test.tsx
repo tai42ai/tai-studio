@@ -859,6 +859,193 @@ describe('InteractionsPage — answer submission per format', () => {
   });
 });
 
+describe('InteractionsPage — cancel (withdraw) a pending question', () => {
+  /** Render the inbox with a scripted stream and a controllable cancel/list stub. */
+  function renderWithCancel(
+    opts: {
+      cancelInteraction?: ApiClient['cancelInteraction'];
+      listInteractions?: ApiClient['listInteractions'];
+    } = {},
+  ): { channel: StreamChannel; cancel: ApiClient['cancelInteraction'] } {
+    const channel = makeChannel();
+    const cancel =
+      opts.cancelInteraction ??
+      vi.fn().mockResolvedValue({ interaction_id: 'q1', status: 'cancelled' });
+    const client = stubClient({
+      channel,
+      cancelInteraction: cancel,
+      listInteractions: opts.listInteractions,
+      listChannels: vi.fn().mockResolvedValue({ channels: [] }),
+    });
+    renderWithProviders(<InteractionsPage search={{}} />, {
+      client,
+      projection: fullProjection(),
+    });
+    return { channel, cancel };
+  }
+
+  it('shows the Cancel action on a pending card and drops it once the card is answered', async () => {
+    const { channel } = renderWithCancel();
+    const base = { interaction_id: 'q1', format: 'text', prompt: 'Name?' };
+    await emitFrame(channel, 'interaction.add', interactionJson(base));
+    // A pending question is withdrawable.
+    expect(screen.getByTestId('interaction-cancel')).toBeInTheDocument();
+
+    await emitFrame(channel, 'interaction.answered', interactionJson(base));
+    expect(screen.getByTestId('interaction-answered')).toBeInTheDocument();
+    // An answered question is terminal — there is nothing left to withdraw.
+    expect(screen.queryByTestId('interaction-cancel')).not.toBeInTheDocument();
+  });
+
+  it('confirming the withdraw dialog calls cancelInteraction(id)', async () => {
+    const user = userEvent.setup();
+    const cancel = vi.fn().mockResolvedValue({ interaction_id: 'q1', status: 'cancelled' });
+    const { channel } = renderWithCancel({ cancelInteraction: cancel });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'q1', format: 'text', prompt: 'Name?' }),
+    );
+
+    // The card's quiet ghost action opens the confirm; the door is not hit yet.
+    await user.click(screen.getByTestId('interaction-cancel'));
+    expect(cancel).not.toHaveBeenCalled();
+
+    // The dialog's danger confirm reads "Withdraw question" — unambiguous beside the plain Cancel.
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw question' }));
+
+    await waitFor(() => {
+      expect(cancel).toHaveBeenCalledWith('q1');
+    });
+  });
+
+  it('on success the withdrawn card leaves the list (the refetched base no longer carries it)', async () => {
+    const user = userEvent.setup();
+    // The seeded pending row is the paged base; the cancel drops it server-side, so the
+    // refetch onSuccess triggers returns an empty page and the card leaves the list.
+    let page = interactionsPage([pendingItem('a', { question: 'Withdraw me?' })], { total: 1 });
+    const listInteractions = vi.fn(() => Promise.resolve(page));
+    const cancel = vi.fn(() => {
+      page = interactionsPage([], { total: 0 });
+      return Promise.resolve({ interaction_id: 'a', status: 'cancelled' });
+    }) as unknown as ApiClient['cancelInteraction'];
+    renderWithCancel({ cancelInteraction: cancel, listInteractions });
+
+    expect(await screen.findByTestId('interaction-card')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('interaction-cancel'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw question' }));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('interaction-card')).not.toBeInTheDocument();
+    });
+  });
+
+  it('a 404 surfaces the "no longer pending" copy in the dialog and keeps it open', async () => {
+    const user = userEvent.setup();
+    const cancel = vi
+      .fn()
+      .mockRejectedValue(new ApiError('interaction not found', 404, 'not-found'));
+    const { channel } = renderWithCancel({ cancelInteraction: cancel });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'q1', format: 'text', prompt: 'Name?' }),
+    );
+
+    await user.click(screen.getByTestId('interaction-cancel'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw question' }));
+
+    // A gone ask (answered elsewhere or already withdrawn) reads as its own calm copy,
+    // never a raw server line — and the dialog stays open, no half-open state.
+    expect(
+      await screen.findByText(
+        'This question is no longer pending — it may have been answered or already withdrawn.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('a 409 surfaces the "already answered" copy in the dialog and keeps it open', async () => {
+    const user = userEvent.setup();
+    const cancel = vi.fn().mockRejectedValue(new ApiConflictError('interaction already answered'));
+    const { channel } = renderWithCancel({ cancelInteraction: cancel });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'q1', format: 'text', prompt: 'Name?' }),
+    );
+
+    await user.click(screen.getByTestId('interaction-cancel'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw question' }));
+
+    // The conflict is specific, non-retryable copy — not a raw server line — and the
+    // dialog stays open so there is no half-open, ambiguous state.
+    expect(
+      await screen.findByText('This question was already answered and can no longer be cancelled.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('closing the withdraw dialog dismisses it without hitting the cancel door', async () => {
+    const user = userEvent.setup();
+    const cancel = vi.fn().mockResolvedValue({ interaction_id: 'q1', status: 'cancelled' });
+    const { channel } = renderWithCancel({ cancelInteraction: cancel });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'q1', format: 'text', prompt: 'Name?' }),
+    );
+
+    await user.click(screen.getByTestId('interaction-cancel'));
+    const dialog = await screen.findByRole('dialog');
+    // The dialog's plain "Cancel" (its close) is distinct from the danger "Cancel
+    // question" confirm: closing withdraws nothing.
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it('withdraws the still-pending question from within a multi-question group', async () => {
+    const user = userEvent.setup();
+    const cancel = vi.fn().mockResolvedValue({ interaction_id: 'q2', status: 'cancelled' });
+    const { channel } = renderWithCancel({ cancelInteraction: cancel });
+    // Two questions sharing a group_id fold into one collapsible group. Answering q1
+    // leaves exactly one pending card (q2) carrying a withdraw action, so the group's
+    // own cancel wiring is exercised unambiguously.
+    const grouped = (id: string): string =>
+      encodeInteraction({
+        interaction_id: id,
+        group_id: 'flow-1',
+        answer_format: 'text',
+        question: `Step ${id}`,
+        format_payload: {},
+        created_at: '2026-07-04T00:00:00Z',
+        timeout_at: '2026-07-04T00:05:00Z',
+      });
+    await emitFrame(channel, 'interaction.add', grouped('q1'));
+    await emitFrame(channel, 'interaction.add', grouped('q2'));
+    await emitFrame(channel, 'interaction.answered', idJson('q1'));
+
+    const group = screen.getByTestId('interaction-group');
+    // q1 is answered (no withdraw), so the group has a single withdraw target: q2.
+    await user.click(within(group).getByTestId('interaction-cancel'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw question' }));
+
+    await waitFor(() => {
+      expect(cancel).toHaveBeenCalledWith('q2');
+    });
+  });
+});
+
 describe('InteractionsPage — null format_payload', () => {
   // The skeleton sends `format_payload: null` for text/confirm questions; the
   // stream normalizes it to `{}` so every renderer always sees an object.

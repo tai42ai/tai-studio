@@ -84,6 +84,13 @@ const buttonRowStyle: CSSProperties = {
   gap: 'var(--tai-space-2)',
 };
 
+// The withdraw action is a QUIET, secondary affordance: right-aligned and ghost, so
+// it sits apart from the format's primary Submit and never competes with answering.
+const cancelRowStyle: CSSProperties = {
+  display: 'flex',
+  justifyContent: 'flex-end',
+};
+
 const answeredStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -381,14 +388,23 @@ function Attribution({ interaction }: { readonly interaction: StreamInteraction 
  * body is never persisted server-side. The card itself disappears when the stream
  * drops the interaction (`interaction.removed`) — that lifecycle is owned by
  * `useInteractionsStream`, not this component.
+ *
+ * A PENDING card also carries a quiet "Cancel question" ghost action when the page
+ * supplies `onCancel`: it withdraws the ask without answering it (the flow that
+ * asked never resumes). The action rides ONLY the pending branch — an answered card
+ * is already terminal, so there is nothing to withdraw. The confirm dialog and the
+ * cancel request itself are owned by the page, not this card.
  */
 export function InteractionCard({
   interaction,
   onSubmit,
+  onCancel,
   disabled,
 }: {
   readonly interaction: StreamInteraction;
   readonly onSubmit: (answer: unknown) => void;
+  /** Open the page's withdraw-confirm for this pending question. Omitted → no action. */
+  readonly onCancel?: () => void;
   readonly disabled: boolean;
 }): ReactNode {
   return (
@@ -421,7 +437,22 @@ export function InteractionCard({
             ) : null}
           </div>
         ) : (
-          <FormatBody interaction={interaction} onSubmit={onSubmit} disabled={disabled} />
+          <>
+            <FormatBody interaction={interaction} onSubmit={onSubmit} disabled={disabled} />
+            {onCancel !== undefined ? (
+              <div style={cancelRowStyle}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  disabled={disabled}
+                  data-testid="interaction-cancel"
+                  onClick={onCancel}
+                >
+                  Cancel question
+                </Button>
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </Card>

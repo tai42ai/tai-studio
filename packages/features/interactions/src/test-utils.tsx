@@ -197,14 +197,16 @@ export function interactionsPage(
  * A stub `ApiClient` exposing only the methods this feature consumes:
  * `streamInteractions` (the scripted live tail), `listInteractions` (the paged
  * pending base — defaults to an empty page so a plain inbox test starts empty),
- * `answerInteraction`, and `listChannels` (the delivery-channels catalog card —
- * defaults to an empty catalog so a plain inbox test needs no channel data).
+ * `answerInteraction`, `cancelInteraction` (the withdraw door — defaults to a
+ * resolved cancelled reply), and `listChannels` (the delivery-channels catalog card
+ * — defaults to an empty catalog so a plain inbox test needs no channel data).
  * `baseUrl` mirrors the real client's read-only field (default '' for same-origin).
  */
 export function stubClient(parts: {
   channel: StreamChannel;
   listInteractions?: ApiClient['listInteractions'];
   answerInteraction?: ApiClient['answerInteraction'];
+  cancelInteraction?: ApiClient['cancelInteraction'];
   listChannels?: ApiClient['listChannels'];
   baseUrl?: string;
 }): ApiClient {
@@ -215,6 +217,9 @@ export function stubClient(parts: {
     streamInteractions: (_signal?: AbortSignal) => Promise.resolve(parts.channel.iterator),
     listInteractions: parts.listInteractions ?? vi.fn().mockResolvedValue(interactionsPage()),
     answerInteraction: parts.answerInteraction ?? vi.fn().mockResolvedValue(undefined),
+    cancelInteraction:
+      parts.cancelInteraction ??
+      vi.fn().mockResolvedValue({ interaction_id: 'stub', status: 'cancelled' }),
     listChannels: parts.listChannels ?? vi.fn().mockResolvedValue({ channels: [] }),
   } as unknown as ApiClient;
 }
