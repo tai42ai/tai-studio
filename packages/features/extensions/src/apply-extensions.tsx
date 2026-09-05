@@ -468,8 +468,8 @@ export function ApplyExtensionsPanel(): ReactNode {
 
         {selected !== null && editablePreset ? (
           <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-            <Badge variant="success">preset</Badge> Authored through the preset spec (a new version
-            is saved).
+            <Badge variant="success">custom node</Badge> Authored through the custom node spec (a
+            new version is saved).
           </p>
         ) : null}
 

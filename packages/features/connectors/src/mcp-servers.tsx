@@ -429,7 +429,7 @@ function FailedServersSection(): ReactNode {
               (detached on worker A, still live on worker B) must never close the dialog
               silently. On a non-converged detach the honest report stays in the dialog so
               the operator sees the stranded worker in context and closes explicitly; a
-              converged detach closed the dialog and shows nothing. */}
+              converged detach closes the dialog and shows nothing. */}
           {deregisterReport !== null ? (
             <div style={{ marginTop: 'var(--tai-space-3)' }}>
               <FleetReport summary={deregisterReport} action="deregister" />

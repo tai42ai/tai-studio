@@ -250,7 +250,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
       {versioningOffMessage !== null ? (
         // The versioning store is OFF, so the preset store is empty and create is
         // refused: stand the muted OFF note where the create-oriented empty state and
-        // its "Create a preset…" call to action would otherwise mislead.
+        // its "Create custom node" call to action would otherwise mislead.
         <Card>
           <FeatureDisabled feature="Preset versioning" message={versioningOffMessage} />
         </Card>

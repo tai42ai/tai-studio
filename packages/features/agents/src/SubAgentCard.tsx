@@ -82,7 +82,7 @@ export function SubAgentCard({
             idPrefix={`${idPrefix}-tools`}
           />
         </Field>
-        <Field label="Presets" group>
+        <Field label="Custom nodes" group>
           <PresetSpecEditor
             presetRecords={presetRecords}
             value={spec.presets}
