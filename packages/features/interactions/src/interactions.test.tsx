@@ -943,6 +943,32 @@ describe('InteractionsPage — cancel (withdraw) a pending question', () => {
     });
   });
 
+  it('a 404 surfaces the "no longer pending" copy in the dialog and keeps it open', async () => {
+    const user = userEvent.setup();
+    const cancel = vi
+      .fn()
+      .mockRejectedValue(new ApiError('interaction not found', 404, 'not-found'));
+    const { channel } = renderWithCancel({ cancelInteraction: cancel });
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({ interaction_id: 'q1', format: 'text', prompt: 'Name?' }),
+    );
+
+    await user.click(screen.getByTestId('interaction-cancel'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw question' }));
+
+    // A gone ask (answered elsewhere or already withdrawn) reads as its own calm copy,
+    // never a raw server line — and the dialog stays open, no half-open state.
+    expect(
+      await screen.findByText(
+        'This question is no longer pending — it may have been answered or already withdrawn.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
   it('a 409 surfaces the "already answered" copy in the dialog and keeps it open', async () => {
     const user = userEvent.setup();
     const cancel = vi.fn().mockRejectedValue(new ApiConflictError('interaction already answered'));
