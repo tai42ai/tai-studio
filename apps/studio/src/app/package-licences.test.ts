@@ -18,9 +18,11 @@
  * document is in the tarball too. Those references are found by SCANNING the
  * packed sources, so a new one is gated without being enumerated here.
  *
- * `files` entries are matched verbatim rather than through a re-implementation of
- * npm's glob semantics: these are top-level filenames, npm packs such an entry
- * exactly, and an exact match cannot quietly widen.
+ * A positive `files` entry is a top-level filename matched verbatim: npm packs
+ * such an entry exactly, and an exact match cannot quietly widen. A negated entry
+ * excluding the test sources is a path glob, so the scan drops the files it names
+ * through a matcher scoped to the star/globstar syntax those entries use — the
+ * excluded set stays derived from the manifest and cannot drift from what npm ships.
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -81,15 +83,49 @@ function packs(manifest: Manifest, name: string): boolean {
   return ALWAYS_PACKED.has(name) || (manifest.files ?? []).includes(name);
 }
 
-/** Every file under `directory` a consumer could read as shipped text. */
-function sourcesWithin(directory: string): string[] {
+/**
+ * A `!` glob entry as a regex over a package-relative POSIX path. `**` before a
+ * `/` spans any number of directory segments (including none), a lone `*` spans
+ * within one segment, and every regex metacharacter is escaped to a literal.
+ */
+function globToRegExp(glob: string): RegExp {
+  const source = glob.replace(/\*\*\/|\*\*|\*|[\\^$.|?+()[\]{}]/g, (token) => {
+    if (token === '**/') return '(?:.*/)?';
+    if (token === '**') return '.*';
+    if (token === '*') return '[^/]*';
+    return `\\${token}`;
+  });
+  return new RegExp(`^${source}$`);
+}
+
+/**
+ * Whether a package-relative POSIX path is one the manifest's `files` negations
+ * drop. A negation excludes the path it names or any ancestor directory of it,
+ * mirroring npm dropping a negated directory with everything under it. A file a
+ * `files` entry excludes is never packed, so a document cited inside it is not a
+ * pointer any consumer of the tarball can follow.
+ */
+function excludedByFiles(manifest: Manifest, relativePath: string): boolean {
+  const negations = (manifest.files ?? [])
+    .filter((entry) => entry.startsWith('!'))
+    .map((entry) => globToRegExp(entry.slice(1)));
+  const segments = relativePath.split('/');
+  const ancestry = segments.map((_, depth) => segments.slice(0, depth + 1).join('/'));
+  return negations.some((negation) => ancestry.some((path) => negation.test(path)));
+}
+
+/** Every file under `directory` the package's `files` allow-list actually packs. */
+function sourcesWithin(directory: string, manifest: Manifest, root: string = directory): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
-      found.push(...sourcesWithin(resolve(directory, entry.name)));
+      found.push(...sourcesWithin(resolve(directory, entry.name), manifest, root));
     } else if (SOURCE_EXTENSIONS.some((extension) => entry.name.endsWith(extension))) {
-      found.push(resolve(directory, entry.name));
+      const path = resolve(directory, entry.name);
+      if (!excludedByFiles(manifest, relative(root, path).split(sep).join('/'))) {
+        found.push(path);
+      }
     }
   }
   return found;
@@ -102,9 +138,9 @@ function sourcesWithin(directory: string): string[] {
  * (`SECURITY.md`, `CONTRIBUTING.md`, …) — the ones a published file can name and
  * fail to ship. Lower-case prose filenames are not part of that vocabulary.
  */
-function referencedDocuments(directory: string): Map<string, string[]> {
+function referencedDocuments(directory: string, manifest: Manifest): Map<string, string[]> {
   const references = new Map<string, string[]>();
-  for (const file of sourcesWithin(directory)) {
+  for (const file of sourcesWithin(directory, manifest)) {
     for (const [name] of readFileSync(file, 'utf8').matchAll(/\b[A-Z][A-Z0-9_]*\.md\b/g)) {
       const citing = references.get(name) ?? [];
       citing.push(relative(repoRoot, file).split(sep).join('/'));
@@ -154,7 +190,7 @@ describe('published package licences', () => {
   it.each(publishable)(
     '$label ships every document its own source cites',
     ({ directory, manifest, label }) => {
-      const dangling = [...referencedDocuments(directory)]
+      const dangling = [...referencedDocuments(directory, manifest)]
         .filter(([name]) => !(existsSync(join(directory, name)) && packs(manifest, name)))
         .map(([name, citing]) => ({ name, citing }));
       expect({ package: label, dangling }).toEqual({ package: label, dangling: [] });
