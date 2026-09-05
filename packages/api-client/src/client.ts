@@ -919,6 +919,16 @@ export function createApiClient(config: ApiConfig) {
         method: 'POST',
         body: { answer },
       }),
+    // Withdraw a pending ask WITHOUT answering it (a bodyless POST): the question is
+    // resolved as cancelled and the flow that asked never resumes. Terminal like an
+    // answer, so the loud failure mappings mirror it — a 409 (already answered, so no
+    // longer cancellable) surfaces as `ApiConflictError`, a 404 (unknown/already gone)
+    // and a 403 (not this caller's audience) as `ApiError` — all via the shared
+    // `apiRequest` status handling.
+    cancelInteraction: (interactionId: string) =>
+      req(`/api/interactions/${encodeSegment(interactionId)}/cancel`, s.interactionCancelled, {
+        method: 'POST',
+      }),
 
     // -- channels --------------------------------------------------------------
     // The installed channel-plugin names (delivery media for ask_user questions).

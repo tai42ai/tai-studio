@@ -992,6 +992,18 @@ export const interactionAnswered = z.object({
 export type InteractionAnswered = z.infer<typeof interactionAnswered>;
 
 /**
+ * The cancel door's response — a pending ask was WITHDRAWN without an answer (the
+ * asking flow does not resume). `status` is `"cancelled"`; the shape mirrors the
+ * answer door's terminal reply, but the door is distinct so it carries its own
+ * schema.
+ */
+export const interactionCancelled = z.object({
+  interaction_id: z.string(),
+  status: z.string(),
+});
+export type InteractionCancelled = z.infer<typeof interactionCancelled>;
+
+/**
  * A page of pending interactions from `GET /api/interactions?page=&pageSize=`. Each
  * item is the same record the stream's `interaction.add` frame carries. The pending
  * set is the paged base the tail-only stream applies live deltas over.

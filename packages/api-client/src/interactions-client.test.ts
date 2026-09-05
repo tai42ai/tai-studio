@@ -1,11 +1,13 @@
 /**
  * Transport-level tests for the interactions client methods:
  * `listInteractions` — URL + page-window query params (`page`/`pageSize`) and the
- * `{ data }` envelope unwrap — and `answerInteraction` — URL (+ id encoding), HTTP
+ * `{ data }` envelope unwrap; `answerInteraction` — URL (+ id encoding), HTTP
  * method, request-body shaping, the envelope unwrap, and the two loud failure
  * mappings the answer door emits: a 409 (already answered elsewhere →
- * `ApiConflictError`) and a 404 (the interaction expired → `ApiError`). A fake
- * `fetch` records each request.
+ * `ApiConflictError`) and a 404 (the interaction expired → `ApiError`); and
+ * `cancelInteraction` — the bodyless POST to the cancel door (+ id encoding), the
+ * envelope unwrap, and the same 409 (already answered → `ApiConflictError`) / 404
+ * (unknown → `ApiError`) mappings. A fake `fetch` records each request.
  */
 import { describe, expect, it, vi } from 'vitest';
 
@@ -101,5 +103,40 @@ describe('interactions client transport', () => {
     expect(captured).toHaveLength(0);
     await client.answerInteraction('q 1', { choice: 'yes' });
     expect(captured[0]?.url).toBe('/api/interactions/q%201/answer');
+  });
+
+  it('cancelInteraction POSTs bodyless to the id-encoded cancel route and unwraps the envelope', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { interaction_id: 'q 1', status: 'cancelled' } }),
+    );
+    const out = await client.cancelInteraction('q 1');
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/interactions/q%201/cancel');
+    // Cancel withdraws a pending ask; it carries no request body.
+    expect(captured[0]?.body).toBeUndefined();
+    expect(out).toEqual({ interaction_id: 'q 1', status: 'cancelled' });
+  });
+
+  it('cancelInteraction maps a 409 (already answered, no longer cancellable) to ApiConflictError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'interaction already answered' }, 409));
+    const err = await client.cancelInteraction('q1').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiConflictError);
+    expect((err as ApiConflictError).message).toBe('interaction already answered');
+  });
+
+  it('cancelInteraction maps a 404 (unknown / already gone) to a LOUD ApiError', async () => {
+    const { client } = harness(() => jsonResponse({ error: "interaction 'q1' not found" }, 404));
+    await expect(client.cancelInteraction('q1')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('cancelInteraction rejects an unsafe interaction id before any request', async () => {
+    const rule = /path segment must not be/;
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { interaction_id: 'q1', status: 'cancelled' } }),
+    );
+    expect(() => client.cancelInteraction('..')).toThrow(rule);
+    expect(() => client.cancelInteraction('.')).toThrow(rule);
+    expect(() => client.cancelInteraction('')).toThrow(rule);
+    expect(captured).toHaveLength(0);
   });
 });

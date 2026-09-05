@@ -2159,6 +2159,10 @@ export function createApiClient(config: ApiConfig): {
         interaction_id: string;
         status: string;
     }>;
+    readonly cancelInteraction: (interactionId: string) => Promise<{
+        interaction_id: string;
+        status: string;
+    }>;
     readonly listChannels: (signal?: AbortSignal) => Promise<{
         channels: string[];
     }>;
@@ -3593,6 +3597,15 @@ export type InteractionAnswered = z.infer<typeof interactionAnswered>;
 
 // @public
 const interactionAnswered: z.ZodObject<{
+    interaction_id: z.ZodString;
+    status: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type InteractionCancelled = z.infer<typeof interactionCancelled>;
+
+// @public
+const interactionCancelled: z.ZodObject<{
     interaction_id: z.ZodString;
     status: z.ZodString;
 }, z.core.$strip>;
@@ -5775,6 +5788,8 @@ declare namespace s {
         Interaction,
         interactionAnswered,
         InteractionAnswered,
+        interactionCancelled,
+        InteractionCancelled,
         interactionsPage,
         InteractionsPage,
         channels,
@@ -6213,6 +6228,8 @@ declare namespace schemas {
         Interaction,
         interactionAnswered,
         InteractionAnswered,
+        interactionCancelled,
+        InteractionCancelled,
         interactionsPage,
         InteractionsPage,
         channels,
