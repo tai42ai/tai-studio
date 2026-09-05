@@ -483,7 +483,7 @@ function ResourceActions({
       <Button aria-label={`Download ${id}`} onClick={onDownload} disabled={downloading}>
         Download
       </Button>
-      <Button variant="danger" aria-label={`Delete ${id}`} onClick={onDelete}>
+      <Button variant="ghost" aria-label={`Delete ${id}`} onClick={onDelete}>
         Delete
       </Button>
     </div>
@@ -580,7 +580,7 @@ function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNod
 
   const renderFolderActions = (folder: Folder): ReactNode => (
     <Button
-      variant="danger"
+      variant="ghost"
       aria-label={`Delete directory ${folder.id}`}
       onClick={() => {
         setDeleteDir(folder.id);

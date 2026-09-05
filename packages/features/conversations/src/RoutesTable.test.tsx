@@ -141,6 +141,18 @@ describe('RoutesTable — CRUD', () => {
     });
   });
 
+  it('wears the low-emphasis (ghost) style on the row Delete, not filled danger', async () => {
+    renderCrud({
+      listConversationRoutes: vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }),
+    });
+
+    // Row-level destructive actions stay low-emphasis; the danger emphasis lives in the
+    // ConfirmDialog's confirm button, not on the persistent row control.
+    const rowDelete = await screen.findByRole('button', { name: 'Delete route chat' });
+    expect(rowDelete).toHaveClass('tai-btn-ghost');
+    expect(rowDelete).not.toHaveClass('tai-btn-danger');
+  });
+
   it('deletes a route behind the confirm dialog and refreshes the list', async () => {
     const user = userEvent.setup();
     const deleteConversationRoute = vi

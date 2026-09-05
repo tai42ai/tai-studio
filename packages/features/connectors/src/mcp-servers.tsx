@@ -26,10 +26,17 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   failedMcpsFromReport,
+  isFleetReportFailure,
   summarizeFleetFanout,
   summarizeFleetResult,
 } from '@tai42/api-client';
-import type { ConnectorRef, Extension, FailedMcpEntry, McpEnvRef } from '@tai42/api-client';
+import type {
+  ConnectorRef,
+  Extension,
+  FailedMcpEntry,
+  FleetReportSummary,
+  McpEnvRef,
+} from '@tai42/api-client';
 import {
   AppLink,
   Badge,
@@ -266,6 +273,11 @@ function FailedServersSection(): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const [deregisterTarget, setDeregisterTarget] = useState<string | null>(null);
+  // A deregister that landed but whose fleet broadcast did NOT converge keeps the
+  // confirm dialog open showing the honest report in context (mirrors ConnectDialog),
+  // so the operator sees the stranded worker and closes explicitly. `null` on a
+  // converged (or lone-worker) detach, which closes the dialog.
+  const [deregisterReport, setDeregisterReport] = useState<FleetReportSummary | null>(null);
   // Reload-all rides a CONCRETE, method-expressible route, so it gates exactly on
   // `POST /api/mcp-status/reload-failed` (projection ⊆ gate); the per-row Reload and
   // Deregister gates live in `FailedServerRow` on their own dynamic doors.
@@ -291,8 +303,16 @@ function FailedServersSection(): ReactNode {
   });
   const deregister = useMutation({
     mutationFn: (title: string) => api.deregisterMcp(title),
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await invalidateStatus();
+      const summary = summarizeFleetResult(result);
+      if (isFleetReportFailure(summary)) {
+        // Non-converged: keep the dialog open rendering the report in context.
+        setDeregisterReport(summary);
+        return;
+      }
+      // Converged (or lone-worker) detach: close the dialog.
+      setDeregisterReport(null);
       setDeregisterTarget(null);
     },
   });
@@ -352,8 +372,9 @@ function FailedServersSection(): ReactNode {
                 reloadPending={reload.isPending && reload.variables === entry.title}
                 onDeregister={(title) => {
                   // A shared mutation drives every row's confirm, so clear any stale error
-                  // from a prior attempt before opening (the reset-on-open precedent).
+                  // and any prior fleet report before opening (the reset-on-open precedent).
                   deregister.reset();
+                  setDeregisterReport(null);
                   setDeregisterTarget(title);
                 }}
               />
@@ -383,15 +404,6 @@ function FailedServersSection(): ReactNode {
           <FleetReport summary={summarizeFleetResult(reloadAll.data)} action="reload" />
         </div>
       ) : null}
-      {/* A deregister detaches one server's tools ACROSS the fleet; a partial fan-out
-          (detached on worker A, still live on worker B) must never close the dialog
-          silently. Surface any failed propagation honestly (nothing on a converged /
-          lone-worker detach), mirroring the sibling reload's report. */}
-      {deregister.isSuccess ? (
-        <div style={{ marginTop: 'var(--tai-space-3)' }}>
-          <FleetReport summary={summarizeFleetResult(deregister.data)} action="deregister" />
-        </div>
-      ) : null}
       {deregisterTarget !== null ? (
         <ConfirmDialog
           title="Deregister MCP server"
@@ -402,6 +414,7 @@ function FailedServersSection(): ReactNode {
           }}
           onClose={() => {
             setDeregisterTarget(null);
+            setDeregisterReport(null);
           }}
           isPending={deregister.isPending}
           error={deregister.error}
@@ -412,6 +425,16 @@ function FailedServersSection(): ReactNode {
             its tools from the live registry? This leaves the manifest entry in place — reload it
             once the server is healthy to re-attach.
           </p>
+          {/* A deregister detaches one server's tools ACROSS the fleet; a partial fan-out
+              (detached on worker A, still live on worker B) must never close the dialog
+              silently. On a non-converged detach the honest report stays in the dialog so
+              the operator sees the stranded worker in context and closes explicitly; a
+              converged detach closed the dialog and shows nothing. */}
+          {deregisterReport !== null ? (
+            <div style={{ marginTop: 'var(--tai-space-3)' }}>
+              <FleetReport summary={deregisterReport} action="deregister" />
+            </div>
+          ) : null}
         </ConfirmDialog>
       ) : null}
     </Card>

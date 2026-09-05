@@ -103,7 +103,7 @@ function PresetRow({
         <AppLink
           to="presets"
           search={{ preset: preset.name }}
-          aria-label={`Open preset ${preset.name}`}
+          aria-label={`Open custom node ${preset.name}`}
           aria-current={selected ? 'page' : undefined}
         >
           <span style={linkStyle}>{preset.name}</span>
@@ -170,7 +170,7 @@ function PresetTable({
   readonly selected: string | undefined;
 }): ReactNode {
   return (
-    <ScrollRegion label="Presets">
+    <ScrollRegion label="Custom nodes">
       <Table>
         <PresetTableHead />
         <TBody>
@@ -227,7 +227,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
           gap: 'var(--tai-space-2)',
         }}
       >
-        <h2 className="tai-card-title">All presets</h2>
+        <h2 className="tai-card-title">All custom nodes</h2>
         <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
           <Button type="button" onClick={() => void query.refetch()} disabled={query.isFetching}>
             {query.isFetching ? <Spinner label="Refreshing" /> : null}
@@ -241,7 +241,7 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
                 setCreateOpen(true);
               }}
             >
-              Create preset
+              Create custom node
             </Button>
           )}
         </div>
@@ -265,8 +265,8 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
       ) : query.data.length === 0 ? (
         <Card>
           <EmptyState
-            title="No presets yet"
-            description="Create a preset to bind a base tool with fixed kwargs into a new named tool."
+            title="No custom nodes yet"
+            description="Create a custom node to bind a base tool with fixed kwargs into a new named tool."
           />
         </Card>
       ) : (
@@ -276,8 +276,8 @@ export function PresetsList({ selected }: { readonly selected: string | undefine
               <PresetTable presets={active} overlayByTool={overlayByTool} selected={selected} />
             ) : (
               <EmptyState
-                title="No active presets"
-                description="Every preset is currently conflicted — resolve them below."
+                title="No active custom nodes"
+                description="Every custom node is currently conflicted — resolve them below."
               />
             )}
           </Card>

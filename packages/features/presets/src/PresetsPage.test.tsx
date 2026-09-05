@@ -86,7 +86,7 @@ describe('PresetsPage — responsive master/detail focus', () => {
     const user = userEvent.setup();
     renderPresetsHarness(detailClient(['paris']));
 
-    await user.click(await screen.findByRole('link', { name: 'Open preset paris' }));
+    await user.click(await screen.findByRole('link', { name: 'Open custom node paris' }));
 
     const heading = await screen.findByRole('heading', { level: 2, name: /paris/ });
     await waitFor(() => {
@@ -114,10 +114,10 @@ describe('PresetsPage — responsive master/detail focus', () => {
     await user.click(back);
 
     // The selection clears (the no-selection state returns).
-    expect(await screen.findByText('No preset selected')).toBeInTheDocument();
+    expect(await screen.findByText('No custom node selected')).toBeInTheDocument();
     // Focus returns to the originating list row.
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Open preset paris' })).toHaveFocus();
+      expect(screen.getByRole('link', { name: 'Open custom node paris' })).toHaveFocus();
     });
   });
 });

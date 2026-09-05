@@ -300,6 +300,19 @@ describe('TemplatesPage — delete directory', () => {
     expect(screen.queryByRole('button', { name: /Delete directory/ })).not.toBeInTheDocument();
   });
 
+  it('wears the low-emphasis (ghost) style on the directory Delete row, not filled danger', async () => {
+    const listTemplates = vi.fn().mockResolvedValue(['prompts/a.md', 'prompts/b.md']);
+    const client: StubApiClient = { listTemplates };
+    renderWithProviders(<TemplatesPage search={{}} />, { client });
+
+    await screen.findByRole('heading', { name: 'All templates' });
+    // Row-level destructive actions stay low-emphasis; the danger emphasis lives in the
+    // ConfirmDialog's confirm button, not on the persistent folder-row control.
+    const dirDelete = await screen.findByRole('button', { name: 'Delete directory prompts' });
+    expect(dirDelete).toHaveClass('tai-btn-ghost');
+    expect(dirDelete).not.toHaveClass('tai-btn-danger');
+  });
+
   it('deletes a directory from its folder row, warning that every template goes', async () => {
     const user = userEvent.setup();
     const listTemplates = vi

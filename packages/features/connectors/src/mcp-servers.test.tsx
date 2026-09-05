@@ -228,8 +228,12 @@ describe('McpServersSection', () => {
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Deregister' }));
 
-    // The detach broadcast is reported loudly — a partial fan-out is never swallowed.
-    const alert = await screen.findByRole('alert');
+    // The dialog stays OPEN on a non-converged detach so the operator sees the stranded
+    // worker in context and closes explicitly (mirrors ConnectDialog).
+    const openDialog = await screen.findByRole('dialog');
+    // The detach broadcast is reported loudly INSIDE the dialog — a partial fan-out is
+    // never swallowed, and the report lives beside the confirm it came from.
+    const alert = await within(openDialog).findByRole('alert');
     expect(within(alert).getByText(/1 worker did not converge/)).toBeInTheDocument();
     expect(within(alert).getByText('serve-b')).toBeInTheDocument();
     // Nothing was "saved" — a detach is never a config save.
@@ -238,6 +242,12 @@ describe('McpServersSection', () => {
     // re-attach the very server being detached, converging the fleet the wrong way.
     expect(within(alert).getByText(/re-run the deregister to converge it/)).toBeInTheDocument();
     expect(within(alert).queryByText(/re-run the reload/)).not.toBeInTheDocument();
+
+    // Explicit close: the operator dismisses the dialog, and the report goes with it.
+    await user.click(within(openDialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
   });
 
   it('reports a converged deregister calmly, with no fleet-failure alert', async () => {

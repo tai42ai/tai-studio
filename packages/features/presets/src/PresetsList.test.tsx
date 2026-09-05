@@ -73,7 +73,7 @@ describe('PresetsList', () => {
 
     const row = await screen.findByTestId('preset-row-paris_weather');
     expect(
-      within(row).getByRole('link', { name: 'Open preset paris_weather' }),
+      within(row).getByRole('link', { name: 'Open custom node paris_weather' }),
     ).toBeInTheDocument();
     expect(within(row).getByText('weather')).toBeInTheDocument();
     expect(within(row).getByText('Paris weather')).toBeInTheDocument();
@@ -149,7 +149,7 @@ describe('PresetsList', () => {
       client: listClient([normal]),
     });
 
-    await user.click(await screen.findByRole('link', { name: 'Open preset paris_weather' }));
+    await user.click(await screen.findByRole('link', { name: 'Open custom node paris_weather' }));
     expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
   });
 
@@ -171,7 +171,7 @@ describe('PresetsList', () => {
       client: listClient([normal]),
     });
 
-    await user.click(await screen.findByRole('link', { name: 'Open preset paris_weather' }));
+    await user.click(await screen.findByRole('link', { name: 'Open custom node paris_weather' }));
     expect(navigate).toHaveBeenCalledTimes(1);
     expect(navigate).toHaveBeenCalledWith('presets', { preset: 'paris_weather' });
   });
@@ -179,7 +179,7 @@ describe('PresetsList', () => {
   it('marks the selected row link as the current page', async () => {
     renderWithProviders(<PresetsList selected="paris_weather" />, { client: listClient([normal]) });
 
-    const link = await screen.findByRole('link', { name: 'Open preset paris_weather' });
+    const link = await screen.findByRole('link', { name: 'Open custom node paris_weather' });
     // Every table is inside a `ScrollRegion`: a bare table on a 320 px page
     // widens the document instead of scrolling inside its own box.
     for (const table of document.querySelectorAll('table')) {
@@ -201,7 +201,7 @@ describe('PresetsList', () => {
   it('shows the empty state when there are no presets', async () => {
     renderWithProviders(<PresetsList selected={undefined} />, { client: listClient([]) });
 
-    expect(await screen.findByText('No presets yet')).toBeInTheDocument();
+    expect(await screen.findByText('No custom nodes yet')).toBeInTheDocument();
   });
 
   it('HIDES the create affordance and shows the muted OFF note when the versioning kind is OFF', async () => {
@@ -225,10 +225,10 @@ describe('PresetsList', () => {
     // The proactive OFF note shows the kind-status row's server `detail` verbatim.
     expect(note).toHaveTextContent('TAI_DATABASE_DEFAULT_PG_PASSWORD not configured');
     // The create affordance is gone; Refresh (a read) stays.
-    expect(screen.queryByRole('button', { name: 'Create preset' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Create custom node' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
     // The create-oriented empty state is replaced, not shown alongside.
-    expect(screen.queryByText('No presets yet')).toBeNull();
+    expect(screen.queryByText('No custom nodes yet')).toBeNull();
   });
 
   it('KEEPS the create affordance when the versioning kind is active', async () => {
@@ -238,7 +238,7 @@ describe('PresetsList', () => {
     });
 
     await screen.findByTestId('preset-row-paris_weather');
-    expect(screen.getByRole('button', { name: 'Create preset' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create custom node' })).toBeInTheDocument();
     expect(screen.queryByTestId('feature-disabled')).toBeNull();
   });
 });
