@@ -26,6 +26,7 @@ const result = await api.runTool({ tool: 'generate_uuid' });
 The client type grows with the API it wraps — additions to it (such as
 `cancelInteraction`) are major releases, since mocks and implementations of the
 client type must add every member.
+
 ```ts
 await api.cancelInteraction('int_123'); // withdraw a pending ask unanswered
 ```
