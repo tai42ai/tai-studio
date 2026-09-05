@@ -91,6 +91,10 @@ export function MintedKeyDialog({
     <Dialog
       title="API key created"
       open
+      // The raw key is shown once and cannot be retrieved again, and this dialog
+      // opens straight into that reveal — so it is undismissable for its whole
+      // life; the explicit Done below is the only way out.
+      dismissable={false}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}

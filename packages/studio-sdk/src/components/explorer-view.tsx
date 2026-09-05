@@ -409,7 +409,11 @@ export function ExplorerView<T>({
   const footer =
     entries.length > 0 ? (
       <nav className="tai-explorer-pagination" aria-label={`${label} pagination`}>
-        <span className="tai-muted">{`${String(pageStart + 1)}–${String(Math.min(pageStart + pageSize, entries.length))} of ${String(entries.length)}`}</span>
+        {/* The pager counts ENTRIES — subfolders plus filtered items in the
+            current directory — which is a different unit from the header's total
+            item count across every folder. Naming the unit keeps the two honest:
+            "1–4 of 4 entries" here versus "7 templates" above. */}
+        <span className="tai-muted">{`${String(pageStart + 1)}–${String(Math.min(pageStart + pageSize, entries.length))} of ${String(entries.length)} entries`}</span>
         <div className="tai-row">
           <Select
             aria-label="Items per page"
@@ -542,7 +546,10 @@ export function ExplorerView<T>({
       <div className="tai-explorer-controls">
         <div className="tai-row">
           {search !== undefined ? (
-            <span className="tai-row">
+            // The magnifier is a leading icon INSIDE the input, not a detached
+            // glyph beside it: the wrapper positions the icon over the input's
+            // reserved leading padding.
+            <span className="tai-search-field">
               <SearchIcon />
               <TextInput
                 value={search.value}

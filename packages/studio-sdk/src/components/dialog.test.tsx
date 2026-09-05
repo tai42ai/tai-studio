@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from './primitives';
 import { Dialog } from './dialog';
@@ -232,5 +232,77 @@ describe('Dialog', () => {
     );
     expect(screen.getByText('Confirm delete')).toHaveClass('tai-dialog-title');
     expect(screen.getByRole('dialog').querySelector('.tai-stack')).not.toBeNull();
+  });
+
+  it('still closes on an outside press when dismissable is the default', async () => {
+    const user = userEvent.setup();
+    render(
+      <Dialog title="Confirm delete" defaultOpen dismissable>
+        <p>body</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const overlay = document.querySelector<HTMLElement>('.tai-overlay');
+    if (overlay === null) throw new Error('overlay not rendered');
+    // A press on the scrim outside the panel dismisses the ordinary modal.
+    await user.click(overlay);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('blocks Escape when dismissable is false, leaving the panel open', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog title="Reveal" defaultOpen dismissable={false} onOpenChange={onOpenChange}>
+        <p>secret</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    // The Escape gesture is swallowed: the panel stays and no close is requested.
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('secret')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('blocks an outside pointer press when dismissable is false', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    render(
+      <Dialog title="Reveal" defaultOpen dismissable={false} onOpenChange={onOpenChange}>
+        <p>secret</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    const overlay = document.querySelector<HTMLElement>('.tai-overlay');
+    if (overlay === null) throw new Error('overlay not rendered');
+    // A press on the scrim outside the panel does not dismiss it.
+    await user.click(overlay);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('secret')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('still closes from an explicit action when dismissable is false', async () => {
+    const user = userEvent.setup();
+    function Host() {
+      const [open, setOpen] = useState(true);
+      return (
+        <Dialog title="Reveal" open={open} dismissable={false} onOpenChange={setOpen}>
+          <Button
+            onClick={() => {
+              setOpen(false);
+            }}
+          >
+            Done
+          </Button>
+        </Dialog>
+      );
+    }
+    render(<Host />);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    // The explicit action is the only door, and it still works.
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

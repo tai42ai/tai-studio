@@ -389,6 +389,27 @@ describe('ExplorerView search', () => {
     await userEvent.type(screen.getByRole('textbox', { name: 'Search rows' }), 'x');
     expect(onChange).toHaveBeenCalled();
   });
+
+  it('renders the magnifier as a leading icon INSIDE the filter field, not a detached glyph', () => {
+    renderExplorer({
+      items: ROWS.filter((r) => r.folderId === null),
+      folders: [],
+      search: {
+        value: '',
+        onChange: vi.fn(),
+        matches: () => true,
+        label: 'Search rows',
+      },
+    });
+    const input = screen.getByRole('textbox', { name: 'Search rows' });
+    const field = input.closest('.tai-search-field');
+    // The input and the magnifier share one search-field wrapper — the icon is
+    // integrated into the control rather than floating above it in a plain row.
+    expect(field).not.toBeNull();
+    const icon = field?.querySelector('svg');
+    expect(icon).not.toBeNull();
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+  });
 });
 
 describe('ExplorerView onOpenItem', () => {
@@ -574,11 +595,13 @@ describe('ExplorerView pagination and count', () => {
       folders: [{ id: 'w', name: 'Weather', parentId: null }],
       currentFolderId: null,
     });
-    // The count summary is items.length across every folder.
+    // The count summary is items.length across every folder, in the label's unit.
     expect(screen.getByText('20 rows')).toBeInTheDocument();
-    // The footer N is the current view only: one folder row plus the ten root items.
+    // The footer N is the current view only: one folder row plus the ten root
+    // items — a DIFFERENT unit, so it names itself "entries" to stay honest about
+    // counting folders alongside items rather than sharing the header's "rows".
     const nav = screen.getByRole('navigation', { name: 'Rows pagination' });
-    expect(within(nav).getByText('1–11 of 11')).toBeInTheDocument();
+    expect(within(nav).getByText('1–11 of 11 entries')).toBeInTheDocument();
   });
 
   it('names the footer nav and marks prev/next aria-disabled (not removed from the tab order) at the bounds', async () => {
@@ -593,7 +616,7 @@ describe('ExplorerView pagination and count', () => {
     expect(next).toHaveAttribute('aria-disabled', 'true');
     expect(prev).not.toBeDisabled();
     expect(next).not.toBeDisabled();
-    expect(within(nav).getByText('1–3 of 3')).toBeInTheDocument();
+    expect(within(nav).getByText('1–3 of 3 entries')).toBeInTheDocument();
     expect(within(nav).getByText('Page 1 of 1')).toBeInTheDocument();
     // Activation at the bound is an inert no-op — the page does not move.
     await userEvent.click(next);
@@ -632,7 +655,7 @@ describe('ExplorerView pagination and count', () => {
     expect(screen.getByText('root-row-00')).toBeInTheDocument();
     expect(screen.getByText('root-row-01')).toBeInTheDocument();
     expect(screen.queryByText('root-row-02')).not.toBeInTheDocument();
-    expect(screen.getByText('1–12 of 15')).toBeInTheDocument();
+    expect(screen.getByText('1–12 of 15 entries')).toBeInTheDocument();
     expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
@@ -641,7 +664,7 @@ describe('ExplorerView pagination and count', () => {
     expect(screen.queryByText('root-row-01')).not.toBeInTheDocument();
     expect(screen.getByText('root-row-02')).toBeInTheDocument();
     expect(screen.getByText('root-row-04')).toBeInTheDocument();
-    expect(screen.getByText('13–15 of 15')).toBeInTheDocument();
+    expect(screen.getByText('13–15 of 15 entries')).toBeInTheDocument();
     expect(screen.getByText('Page 2 of 2')).toBeInTheDocument();
   });
 
@@ -655,7 +678,7 @@ describe('ExplorerView pagination and count', () => {
     expect(within(grid).getByText('root-row-12')).toBeInTheDocument();
     expect(within(grid).getByText('root-row-19')).toBeInTheDocument();
     expect(within(grid).queryByText('root-row-11')).not.toBeInTheDocument();
-    expect(screen.getByText('13–20 of 20')).toBeInTheDocument();
+    expect(screen.getByText('13–20 of 20 entries')).toBeInTheDocument();
   });
 
   it('resets to page 1 when the current folder changes', async () => {
@@ -775,7 +798,7 @@ describe('ExplorerView pagination and count', () => {
     await userEvent.click(screen.getByRole('combobox', { name: 'Items per page' }));
     await userEvent.click(await screen.findByRole('option', { name: '24 per page' }));
     expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
-    expect(screen.getByText('1–15 of 15')).toBeInTheDocument();
+    expect(screen.getByText('1–15 of 15 entries')).toBeInTheDocument();
   });
 
   it('clamps to the last page when the entry set shrinks below the current page', async () => {
@@ -804,7 +827,7 @@ describe('ExplorerView pagination and count', () => {
       />,
     );
     expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
-    expect(screen.getByText('1–5 of 5')).toBeInTheDocument();
+    expect(screen.getByText('1–5 of 5 entries')).toBeInTheDocument();
     expect(screen.getByText('root-row-00')).toBeInTheDocument();
   });
 
@@ -853,7 +876,7 @@ describe('ExplorerView pagination and count', () => {
     expect(screen.getByRole('combobox', { name: 'Items per page' })).toHaveTextContent(
       '48 per page',
     );
-    expect(screen.getByText('1–48 of 60')).toBeInTheDocument();
+    expect(screen.getByText('1–48 of 60 entries')).toBeInTheDocument();
   });
 
   it('falls back to the default page size on an invalid stored value', () => {
@@ -862,7 +885,7 @@ describe('ExplorerView pagination and count', () => {
     expect(screen.getByRole('combobox', { name: 'Items per page' })).toHaveTextContent(
       '24 per page',
     );
-    expect(screen.getByText('1–24 of 60')).toBeInTheDocument();
+    expect(screen.getByText('1–24 of 60 entries')).toBeInTheDocument();
   });
 
   it('falls back to the default page size when the storage read throws', () => {

@@ -20,7 +20,7 @@ import type { KeyboardEvent as KeyboardEvent_2 } from 'react';
 import type { MouseEvent as MouseEvent_2 } from 'react';
 import { Provider } from 'react';
 import { ProviderProps } from 'react';
-import type { ReactElement } from 'react';
+import { ReactElement } from 'react';
 import { ReactNode } from 'react';
 import type { Ref } from 'react';
 import type { RefCallback } from 'react';
@@ -5489,6 +5489,7 @@ export interface DialogProps {
     readonly defaultOpen?: boolean;
     // (undocumented)
     readonly description?: string;
+    readonly dismissable?: boolean;
     readonly fullscreen?: boolean;
     // (undocumented)
     readonly onOpenChange?: (open: boolean) => void;

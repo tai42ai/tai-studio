@@ -29,6 +29,23 @@ describe('MintedKeyDialog', () => {
     expect(screen.queryByTestId('claim-link-qr')).not.toBeInTheDocument();
   });
 
+  it('keeps the revealed key on Escape, then closes only on the explicit Done', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={onClose} />, {
+      client: stubClient(vi.fn()),
+    });
+
+    // Escape must NOT dismiss the reveal — the raw key cannot be retrieved again.
+    await user.keyboard('{Escape}');
+    expect(screen.getByText(KEY)).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The explicit Done is the only way out.
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('mints a claim link and renders its QR, absolute URL, and expiry', async () => {
     const user = userEvent.setup();
     const createClaimLink = vi.fn().mockResolvedValue(CLAIM);

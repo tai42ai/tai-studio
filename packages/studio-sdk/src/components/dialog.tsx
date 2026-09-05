@@ -11,7 +11,7 @@
  * (see the props) reshape the panel without giving up any Radix behaviour.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
-import type { ReactElement, ReactNode } from 'react';
+import { useRef, type ReactElement, type ReactNode } from 'react';
 
 import { assertSlotElement } from '../element-slot';
 import { useModalFocusReturn } from './modal-focus';
@@ -51,6 +51,18 @@ export interface DialogProps {
    * accessible name never depends on the visible chrome.
    */
   readonly chromeless?: boolean;
+  /**
+   * When `false`, the light-dismiss gestures are disabled: Escape and a pointer
+   * press outside the panel no longer close it, so the only way out is an explicit
+   * action the `children` render (a Done/Cancel button calling `onOpenChange`).
+   * The focus trap, the scrim and every other Radix behaviour are unchanged. This
+   * is a generic mechanism — it knows nothing of what the dialog holds — for the
+   * one-time-reveal case where an accidental dismiss would lose content the server
+   * cannot reproduce. Defaults to `true`, the ordinary dismissable modal. This
+   * design-system panel renders no built-in close (X) affordance, so there is none
+   * to hide here; explicit close stays entirely with the caller's own buttons.
+   */
+  readonly dismissable?: boolean;
 }
 
 export function Dialog({
@@ -64,6 +76,7 @@ export function Dialog({
   fullscreen = false,
   contentClassName,
   chromeless = false,
+  dismissable = true,
 }: DialogProps) {
   const focusReturn = useModalFocusReturn(trigger !== undefined);
   if (trigger !== undefined) assertSlotElement(trigger, 'Dialog `trigger`');
@@ -71,6 +84,27 @@ export function Dialog({
   const contentClasses = ['tai-dialog'];
   if (fullscreen) contentClasses.push('tai-dialog-fullscreen');
   if (contentClassName !== undefined) contentClasses.push(contentClassName);
+
+  // Blocking a dismiss is `preventDefault` on the two gestures Radix fires for
+  // one — Escape and a pointer press outside the panel — so the trap and scrim
+  // stay in place and only an explicit action can call `onOpenChange`.
+  //
+  // The handlers are STABLE (created once) and read `dismissable` through a live
+  // ref, deliberately: Radix's dismissable layer latches the handler it was given
+  // and keeps calling that first closure, so a dialog that mounts dismissable and
+  // later turns undismissable (the shown-once reveal) would go on honouring the
+  // stale `dismissable` if the value were read from the render closure. The ref,
+  // rewritten every render, is what a fresh gesture always sees.
+  const dismissableRef = useRef(dismissable);
+  dismissableRef.current = dismissable;
+  const dismissGuards = useRef({
+    onEscapeKeyDown: (event: KeyboardEvent) => {
+      if (!dismissableRef.current) event.preventDefault();
+    },
+    onPointerDownOutside: (event: Event) => {
+      if (!dismissableRef.current) event.preventDefault();
+    },
+  }).current;
 
   return (
     <RadixDialog.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
@@ -84,6 +118,7 @@ export function Dialog({
         <RadixDialog.Content
           className={contentClasses.join(' ')}
           {...focusReturn}
+          {...dismissGuards}
           {...(description === undefined ? { 'aria-describedby': undefined } : {})}
         >
           {/* The title always names the dialog; `chromeless` only hides it, moving

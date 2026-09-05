@@ -246,6 +246,43 @@ describe('RouteFormDialog — create', () => {
     await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the revealed secret on Escape, then closes only on the explicit Done', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: true,
+      route_name: 'account',
+      route: makeRoute({ route_name: 'account', door: 'api' }),
+      callback_secret: 'super-secret-token',
+    });
+    renderWithProviders(<RouteFormDialog onClose={onClose} />, {
+      client: { createOrReplaceConversationRoute },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
+    await pickVariant(user, 'Target', 'agent');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
+    await pickVariant(user, 'Door', 'api');
+    await user.type(
+      screen.getByRole('textbox', { name: /^Callback URL\b/ }),
+      'https://sink.example/cb',
+    );
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    // Reach the shown-once callback-secret reveal.
+    expect(await screen.findByText('super-secret-token')).toBeInTheDocument();
+
+    // Escape must NOT dismiss the reveal — the secret cannot be re-read.
+    await user.keyboard('{Escape}');
+    expect(screen.getByText('super-secret-token')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The explicit Done is the only way out.
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('RouteFormDialog — edit', () => {

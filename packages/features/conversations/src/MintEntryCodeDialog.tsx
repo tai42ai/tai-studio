@@ -96,6 +96,10 @@ export function MintEntryCodeDialog({
     <Dialog
       title="Mint entry code"
       open
+      // During the shown-once reveal the code cannot be re-minted, so light
+      // dismissal is disabled there — only the explicit Done button closes it.
+      // The form phase stays an ordinary dismissable modal.
+      dismissable={minted === null}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}

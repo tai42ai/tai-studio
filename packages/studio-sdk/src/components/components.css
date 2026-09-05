@@ -2090,6 +2090,29 @@
     flex-wrap: wrap;
   }
 
+  /* A search field whose magnifier sits INSIDE the input on its leading edge,
+     rather than as a detached glyph beside it. The wrapper is not a flex row —
+     the input is its only in-flow child — so it stays out of the horizontal-strip
+     contract; the icon is taken out of flow and centred over the input's reserved
+     leading padding, and made click-through so a press still lands in the field. */
+  .tai-search-field {
+    position: relative;
+    display: inline-block;
+  }
+
+  .tai-search-field > .tai-icon {
+    position: absolute;
+    inset-inline-start: var(--tai-space-3);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--tai-color-text-muted);
+    pointer-events: none;
+  }
+
+  .tai-search-field > .tai-input {
+    padding-inline-start: calc(var(--tai-space-3) + 1.5rem);
+  }
+
   /* A first-class folder entry (row cell or card): the folder affordance beside
      its optional actions, the actions pushed to the trailing edge. */
   .tai-explorer-folder {
