@@ -15,9 +15,27 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
+  # An identical tree already proven green by a pull-request run is not re-tested; the run still concludes success for the release gate.
+  reuse:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+    outputs:
+      should_skip: ${{ steps.skip_check.outputs.should_skip }}
+    steps:
+      - id: skip_check
+        uses: fkirc/skip-duplicate-actions@b974a9395958c231af965b70070979a577efa578 # v5.3.2
+        with:
+          concurrent_skipping: never
+          skip_after_successful_duplicate: 'true'
+          do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
+
   # Fast gate: static checks + unit/component tests + build. Self-contained
   # (no backend), so it needs no sibling checkouts.
   check:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     env:
       # The banned-terms list is data, never source: the naming guard reads it here.
@@ -76,6 +94,8 @@ jobs:
   # claim — hold the bump until the channel is re-verified. Self-contained (no
   # sibling checkouts).
   router-invariant:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -102,6 +122,8 @@ jobs:
   # tai42-contract, and fails loudly the moment the pin would exclude it so the
   # bump lands before the next docs run breaks. Self-contained (no siblings).
   docs-demo-contract-pin:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -160,7 +182,8 @@ jobs:
   # gated to pushes and same-repo, non-Dependabot pull requests; forks and
   # Dependabot fall back to the ``check`` job only.
   e2e:
-    if: (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
+    needs: reuse
+    if: needs.reuse.outputs.should_skip != 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -215,11 +238,11 @@ jobs:
   # so Dependabot PRs dispatch too; a fork PR has neither, so the guarded step
   # skips and the required status stays unset for a maintainer to run.
   trigger-e2e:
-    needs: check
+    needs: [reuse, check]
     # Dependabot cannot access the fleet-e2e dispatch secret (GitHub scopes
     # secrets away from dependabot), so this job would always red on a
     # Bad-credentials dispatch. Dependabot dep bumps don't need fleet-e2e.
-    if: github.actor != 'dependabot[bot]'
+    if: needs.reuse.outputs.should_skip != 'true' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions: {}
     env:
