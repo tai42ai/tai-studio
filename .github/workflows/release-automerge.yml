@@ -1,6 +1,6 @@
-# Release PRs merge themselves the moment branch protection's required checks
-# pass — the release train has no human step. The PAT (not GITHUB_TOKEN) must
-# both enable auto-merge and author the merge commit: refs written by
+# Release trains open as drafts; a person un-drafts one to release it, which
+# fires ready_for_review and arms auto-merge here. The PAT (not GITHUB_TOKEN)
+# must both enable auto-merge and author the merge commit: refs written by
 # GITHUB_TOKEN fire no workflows, so a GITHUB_TOKEN merge would strand the
 # train before its tag ever published.
 # Strict branch protection marks an armed release PR out-of-date on every push
@@ -10,7 +10,7 @@ name: release-automerge
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [ready_for_review]
   push:
     branches: [main]
 
@@ -20,6 +20,7 @@ jobs:
   automerge:
     runs-on: ubuntu-latest
     if: >-
+      github.event_name == 'pull_request' &&
       startsWith(github.head_ref, 'release-please--') &&
       github.event.pull_request.head.repo.full_name == github.repository
     steps:
@@ -37,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           numbers=$(gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
-            --jq ".[] | select(.head.ref | startswith(\"release-please--\")) | select(.head.repo.full_name == \"$REPO\") | .number")
+            --jq ".[] | select(.head.ref | startswith(\"release-please--\")) | select(.head.repo.full_name == \"$REPO\") | select(.draft == false) | .number")
           for n in $numbers; do
             if out=$(gh api -X PUT "repos/$REPO/pulls/$n/update-branch" 2>&1); then
               echo "Refreshed PR #$n"
