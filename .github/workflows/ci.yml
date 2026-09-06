@@ -8,9 +8,11 @@ on:
 permissions:
   contents: read
 
+# Superseded PR runs are cancelled; a run on main never is, so every main commit
+# reaches its own conclusion and the release lane can gate on it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # Fast gate: static checks + unit/component tests + build. Self-contained
