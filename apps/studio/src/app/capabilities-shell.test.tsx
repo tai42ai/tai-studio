@@ -7,12 +7,12 @@
  * server session before clearing local auth (quiet on the expected 404, loud on a
  * real failure).
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NavEntrySection, PluginContext } from '@tai42/studio-sdk';
-import type { MeProjection } from '@tai42/api-client';
+import type { ApiClient, MeProjection } from '@tai42/api-client';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 
 import { installServer, renderStudio, server, FULL_PROJECTION } from './test-harness';
@@ -747,11 +747,11 @@ describe('interactions badge gating', () => {
   const okToolTags = http.get('*/api/tools/tags', () => HttpResponse.json({ data: [] }));
 
   /** An inert interactions stream whose open can be observed. */
-  function streamSpy(): ReturnType<typeof vi.fn> {
+  function streamSpy(): Mock<ApiClient['streamInteractions']> {
     async function* empty(): AsyncGenerator<never> {
       // no frames
     }
-    return vi.fn(() => Promise.resolve(empty()));
+    return vi.fn<ApiClient['streamInteractions']>(() => Promise.resolve(empty()));
   }
 
   it('a scoped session WITHOUT interactions access never opens the SSE', async () => {

@@ -168,7 +168,7 @@ describe('web entry-gate client transport', () => {
 
   it('surfaces a 403 on the gate flip as a LOUD ApiError carrying the envelope text', async () => {
     const { client } = harness(() => jsonResponse({ error: 'not your route' }, 403));
-    await expect(client.setWebEntryGate('web-1', true)).rejects.toThrowError('not your route');
+    await expect(client.setWebEntryGate('web-1', true)).rejects.toThrow('not your route');
   });
 
   // A `.`/`..`/absolute/empty identity or code-id would be collapsed by the browser

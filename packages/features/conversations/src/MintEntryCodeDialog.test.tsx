@@ -21,7 +21,7 @@ const MINTED = {
 };
 
 function baseClient(
-  mintWebEntryCode: ReturnType<typeof vi.fn>,
+  mintWebEntryCode: NonNullable<StubApiClient['mintWebEntryCode']>,
   overrides: StubApiClient = {},
 ): StubApiClient {
   return { baseUrl: '', mintWebEntryCode, ...overrides };

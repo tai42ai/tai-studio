@@ -24,7 +24,7 @@ const CREATED = {
 };
 
 function baseClient(
-  createTriggerLink: ReturnType<typeof vi.fn>,
+  createTriggerLink: NonNullable<StubApiClient['createTriggerLink']>,
   overrides: StubApiClient = {},
 ): StubApiClient {
   return {

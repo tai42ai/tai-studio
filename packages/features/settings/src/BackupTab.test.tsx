@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import type { ApiClient, BackupImportReport } from '@tai42/api-client';
 
@@ -42,7 +42,7 @@ async function uploadBackup(user: ReturnType<typeof userEvent.setup>): Promise<v
   await user.upload(input, file);
 }
 
-let createObjectURL: ReturnType<typeof vi.fn>;
+let createObjectURL: Mock<typeof URL.createObjectURL>;
 
 beforeEach(() => {
   createObjectURL = vi.fn(() => 'blob:mock');

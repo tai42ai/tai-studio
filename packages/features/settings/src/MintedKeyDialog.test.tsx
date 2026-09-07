@@ -132,7 +132,7 @@ describe('MintedKeyDialog', () => {
     const user = userEvent.setup();
     const consoleArgs: unknown[] = [];
     const consoleSpies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((method) =>
-      vi.spyOn(console, method).mockImplementation((...args) => {
+      vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
         consoleArgs.push(...args);
       }),
     );

@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ApiClient, MeProjection } from '@tai42/api-client';
 import type { ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 
 import { ApiProvider } from './useApi';
 import { AuthProvider, useAuth } from './useAuth';
@@ -302,7 +302,7 @@ function renderProvider(getMe: ApiClient['getMe'], onUnauthorized?: () => void) 
 }
 
 describe('CapabilityProvider', () => {
-  let consoleError: ReturnType<typeof vi.spyOn>;
+  let consoleError: MockInstance<typeof console.error>;
 
   beforeEach(() => {
     globalThis.sessionStorage.clear();
