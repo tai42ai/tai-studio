@@ -398,6 +398,12 @@ path: string[];
 parameters: Record<string, unknown>;
 declarations: Record<string, unknown>;
 }[]>;
+readonly getStateMount: (name: string, module: string, signal?: AbortSignal) => Promise<{
+module: string;
+path: string[];
+parameters: Record<string, unknown>;
+declarations: Record<string, unknown>;
+}>;
 readonly mountStateModule: (name: string, module: string, body: StateMountBody) => Promise<{
 mounted: true;
 state: string;
@@ -3902,6 +3908,12 @@ function createApiClient(config: ApiConfig): {
         parameters: Record<string, unknown>;
         declarations: Record<string, unknown>;
     }[]>;
+    readonly getStateMount: (name: string, module: string, signal?: AbortSignal) => Promise<{
+        module: string;
+        path: string[];
+        parameters: Record<string, unknown>;
+        declarations: Record<string, unknown>;
+    }>;
     readonly mountStateModule: (name: string, module: string, body: StateMountBody) => Promise<{
         mounted: true;
         state: string;
