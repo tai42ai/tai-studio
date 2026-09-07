@@ -84,6 +84,14 @@ function buildUrl(base: string, path: string, query?: RequestOptions['query']): 
  * header is `X-Api-Key` (the skeleton's access-control middleware also accepts
  * `Authorization: Bearer`; we use the dedicated key header).
  */
+/** The `Retry-After` header as whole seconds; `undefined` when absent or not a
+ *  delay-seconds value (the HTTP-date form is not used by these routes). */
+function retryAfterSeconds(header: string | null): number | undefined {
+  if (header === null) return undefined;
+  const seconds = Number(header.trim());
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
+}
+
 export async function apiRequest<S extends z.ZodType>(
   config: ApiConfig,
   path: string,
@@ -104,19 +112,28 @@ export async function apiRequest<S extends z.ZodType>(
 
   if (response.status === 401) throw new ApiUnauthorizedError();
 
+  // `Retry-After` rides on the error so a retrying caller waits the delay the server
+  // named (the gated routes' reloading 503 carries one) instead of guessing.
+  const retryAfter = retryAfterSeconds(response.headers.get('Retry-After'));
+
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
     if (response.ok) throw new ApiSchemaError(path, 'response was not valid JSON');
-    throw new ApiError(response.statusText || 'request failed', response.status);
+    throw new ApiError(
+      response.statusText || 'request failed',
+      response.status,
+      undefined,
+      retryAfter,
+    );
   }
 
   if (!response.ok) {
     const { message, code } = extractError(payload);
     const text = message ?? (response.statusText || 'request failed');
     if (response.status === 409) throw new ApiConflictError(text);
-    throw new ApiError(text, response.status, code);
+    throw new ApiError(text, response.status, code, retryAfter);
   }
 
   if (!isDataEnvelope(payload)) {

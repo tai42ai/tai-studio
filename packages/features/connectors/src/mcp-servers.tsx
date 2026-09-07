@@ -25,6 +25,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ApiError,
   failedMcpsFromReport,
   isFleetReportFailure,
   summarizeFleetFanout,
@@ -484,6 +485,13 @@ function baseToolOf(token: string): string {
 // `pyaml_env`-resolved marker the preserved read round-trips intact). These map
 // that wire form to/from a bare key name at the SecretRefField boundary; the
 // server's shared validator — not this parse — is the authority on danglers.
+/** How many times the paste's confirmation read retries the gate's retriable 503 before
+ *  it gives up and raises. A fleet reload holds the gate for a few seconds per cycle. */
+const RELOAD_RETRIES = 10;
+
+/** The wait between those retries when the refusal named no `Retry-After`. */
+const DEFAULT_RETRY_SECONDS = 2;
+
 const ENV_MARKER = /^!ENV\s+\$\{([^}]+)\}$/;
 
 /** The referenced env key of an `!ENV ${KEY}` leaf, or `null` for anything else. */
@@ -997,6 +1005,7 @@ function EditableEntryCard({
   availableSecretKeys,
   keyPickingAvailable,
   dirty,
+  secretStoreBlockedReason,
   refs,
   onPasteSecret,
   onChange,
@@ -1011,6 +1020,7 @@ function EditableEntryCard({
   readonly availableSecretKeys: readonly string[];
   readonly keyPickingAvailable: boolean;
   readonly dirty: boolean;
+  readonly secretStoreBlockedReason: string | undefined;
   readonly refs: readonly McpEnvRef[];
   readonly onPasteSecret: (manifestPointer: string, keyHint: string, secret: string) => void;
   readonly onChange: (next: unknown) => void;
@@ -1030,11 +1040,13 @@ function EditableEntryCard({
     // pointer, so it is safe only when the editor index matches the saved manifest
     // (no unsaved edits) and the entry already has a key to hint the generated name.
     // Referencing an existing key stays available in both cases.
-    const pasteDisabledReason = dirty
-      ? 'Save changes before adding a secret'
-      : recordEntry.keyName.trim() === ''
-        ? 'Name this variable before adding a secret'
-        : undefined;
+    const pasteDisabledReason =
+      secretStoreBlockedReason ??
+      (dirty
+        ? 'Save changes before adding a secret'
+        : recordEntry.keyName.trim() === ''
+          ? 'Name this variable before adding a secret'
+          : undefined);
     return (
       <SecretRefField
         value={referencedKey === null ? undefined : { source: 'key', key: referencedKey }}
@@ -1135,6 +1147,7 @@ function EntryList({
   availableSecretKeys,
   keyPickingAvailable,
   dirty,
+  secretStoreBlockedReason,
   installedMcpRefs,
   refsByTitle,
   onPasteSecret,
@@ -1148,6 +1161,7 @@ function EntryList({
   readonly availableSecretKeys: readonly string[];
   readonly keyPickingAvailable: boolean;
   readonly dirty: boolean;
+  readonly secretStoreBlockedReason: string | undefined;
   // title → installed listing ref (`namespace/name`) for installer-written entries.
   readonly installedMcpRefs: ReadonlyMap<string, string>;
   // title → its `!ENV` marker refs, keyed off the SAVED manifest's entry titles.
@@ -1223,6 +1237,7 @@ function EntryList({
             availableSecretKeys={availableSecretKeys}
             keyPickingAvailable={keyPickingAvailable}
             dirty={dirty}
+            secretStoreBlockedReason={secretStoreBlockedReason}
             refs={refsFor(entry)}
             onPasteSecret={onPasteSecret}
             onChange={(next) => {
@@ -1312,24 +1327,50 @@ function McpConfigEditor({
   const secretEnv = useMutation({
     mutationFn: (body: Parameters<typeof api.setMcpSecretEnv>[0]) => api.setMcpSecretEnv(body),
     onSuccess: async (_result, variables) => {
+      // CONFIRM the paste against an AUTHORITATIVE re-read before anything else. The op's
+      // response carries a COUNT, not the generated name, so the only way to learn the key
+      // is the preserved manifest's leaf at the paste pointer — and it is the sole key the
+      // save-time orphan sweep may ever delete. `fetchQuery` raises when that read fails
+      // (an invalidation would swallow the failure and leave the stale, pre-paste manifest
+      // in the cache), retrying the gate's retriable 503 on the delay it names. Raising
+      // here fails the mutation, which keeps the Save and paste doors shut over a draft
+      // that still carries the pre-paste leaf and tells the operator so.
+      const preserved = await queryClient.fetchQuery({
+        queryKey: preservedManifestKey,
+        queryFn: ({ signal }) => api.getManifestPreserved(signal),
+        staleTime: 0,
+        retry: (failureCount, error) =>
+          failureCount < RELOAD_RETRIES && error instanceof ApiError && error.status === 503,
+        retryDelay: (_attempt, error) =>
+          (error instanceof ApiError && error.retryAfterSeconds !== undefined
+            ? error.retryAfterSeconds
+            : DEFAULT_RETRY_SECONDS) * 1000,
+      });
+      const generatedKey = parseEnvMarker(
+        resolveManifestPointer(preserved, variables.manifest_pointer),
+      );
+      if (generatedKey === null) {
+        throw new Error(
+          'The secret was stored, but the manifest read back does not carry its reference. ' +
+            'Reload the page to continue from the configuration the server holds.',
+        );
+      }
+      sessionGeneratedKeysRef.current.add(generatedKey);
       await queryClient.invalidateQueries({ queryKey: envConfigKey });
-      await queryClient.invalidateQueries({ queryKey: preservedManifestKey });
       await queryClient.invalidateQueries({ queryKey: manifestKey });
       await queryClient.invalidateQueries({ queryKey: mcpStatusKey });
-      // Record the key the server just generated for THIS paste. After the preserved
-      // re-read above lands, the leaf at the paste pointer is the `!ENV ${KEY}` marker
-      // the server wrote; parse it back to the bare key. Only a key captured here is
-      // eligible for the save-time orphan sweep. A leaf that does not resolve to a marker
-      // records nothing — a safe miss that leaves an orphan rather than risking deletion
-      // of a key this editor did not generate.
-      const leaf = resolveManifestPointer(
-        queryClient.getQueryData(preservedManifestKey),
-        variables.manifest_pointer,
-      );
-      const generatedKey = parseEnvMarker(leaf);
-      if (generatedKey !== null) sessionGeneratedKeysRef.current.add(generatedKey);
     },
   });
+
+  // While the combined op is storing — or has failed to confirm — no second paste and no
+  // save may run against this draft: it still carries the leaf the server is replacing, so
+  // either would write the pre-paste marker back over the server's and strand the pasted
+  // secret's key. The reason is the copy both doors show.
+  const secretStoreBlockedReason = secretEnv.isPending
+    ? 'Storing the previous secret'
+    : secretEnv.isError
+      ? 'A stored secret could not be confirmed — reload the page'
+      : undefined;
   const onPasteSecret = (manifestPointer: string, keyHint: string, secret: string): void => {
     secretEnv.mutate({ value: secret, key_hint: keyHint, manifest_pointer: manifestPointer });
   };
@@ -1520,6 +1561,7 @@ function McpConfigEditor({
           availableSecretKeys={availableSecretKeys}
           keyPickingAvailable={keyPickingAvailable}
           dirty={dirty}
+          secretStoreBlockedReason={secretStoreBlockedReason}
           installedMcpRefs={installedMcpRefs}
           refsByTitle={refsByTitle}
           onPasteSecret={onPasteSecret}
@@ -1545,10 +1587,27 @@ function McpConfigEditor({
 
       {canSave ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-          <Button type="button" variant="primary" onClick={onSave} disabled={save.isPending}>
-            {save.isPending ? <Spinner label="Saving config" /> : null}
+          <Button
+            type="button"
+            variant="primary"
+            onClick={onSave}
+            disabled={save.isPending || secretStoreBlockedReason !== undefined}
+          >
             Save config
           </Button>
+          {/* What the disabled Save is waiting on, in words next to it: a disabled button
+              holds no focus and a bare spinner names nothing. */}
+          {save.isPending ? (
+            <div role="status" className="tai-row">
+              <Spinner label="" />
+              <span>Saving config…</span>
+            </div>
+          ) : secretEnv.isPending ? (
+            <div role="status" className="tai-row">
+              <Spinner label="" />
+              <span>Storing secret…</span>
+            </div>
+          ) : null}
           {save.isSuccess ? (
             <Badge variant="success">Saved ({String(save.data.env_keys)} env keys)</Badge>
           ) : null}
@@ -1644,19 +1703,22 @@ function McpConfigSection(): ReactNode {
     queryFn: ({ signal }) => api.getMcpEnvRefs(signal),
   });
 
-  if (manifest.isError || schema.isError) {
-    const error = manifest.error ?? schema.error;
-    return (
-      <ErrorState
-        message={errorMessage(error)}
-        onRetry={() => {
-          void manifest.refetch();
-          void schema.refetch();
-        }}
-      />
-    );
+  // A FAILED REFETCH NEVER TEARS THE EDITOR DOWN. The editor below holds the operator's
+  // unsaved draft and the paste provenance the save-time orphan sweep reads, so replacing
+  // it on a transient read failure (the reload gate answers 503 while the fleet reloads,
+  // and these queries do not retry) would silently discard both — a save after the remount
+  // would strand the pasted secret's key. Only a read that has NO data at all walls the
+  // section; a failure over last-good data is surfaced as a banner above the live editor.
+  const readError = manifest.error ?? schema.error;
+  const retryReads = (): void => {
+    void manifest.refetch();
+    void schema.refetch();
+  };
+  if (manifest.data === undefined || schema.data === undefined) {
+    if (readError !== null)
+      return <ErrorState message={errorMessage(readError)} onRetry={retryReads} />;
+    return <Skeleton height={220} />;
   }
-  if (manifest.isPending || schema.isPending) return <Skeleton height={220} />;
 
   const discoveredTools = status.isSuccess ? status.data.bound : {};
   const extensionsError = extensions.isError ? errorMessage(extensions.error) : undefined;
@@ -1682,17 +1744,25 @@ function McpConfigSection(): ReactNode {
   }
 
   return (
-    <McpConfigEditor
-      initialEntries={initialEntries}
-      schema={schema.data}
-      discoveredTools={discoveredTools}
-      extensions={extensions.data ?? []}
-      extensionsError={extensionsError}
-      availableSecretKeys={envConfig.data?.secret_keys ?? []}
-      keyPickingAvailable={envConfig.isSuccess}
-      installedMcpRefs={installedMcpRefs}
-      refsByTitle={refsByTitle}
-    />
+    <>
+      {readError === null ? null : (
+        <ErrorState
+          message={`${errorMessage(readError)}\nThe form below shows the last configuration read successfully.`}
+          onRetry={retryReads}
+        />
+      )}
+      <McpConfigEditor
+        initialEntries={initialEntries}
+        schema={schema.data}
+        discoveredTools={discoveredTools}
+        extensions={extensions.data ?? []}
+        extensionsError={extensionsError}
+        availableSecretKeys={envConfig.data?.secret_keys ?? []}
+        keyPickingAvailable={envConfig.isSuccess}
+        installedMcpRefs={installedMcpRefs}
+        refsByTitle={refsByTitle}
+      />
+    </>
   );
 }
 

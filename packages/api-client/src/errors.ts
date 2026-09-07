@@ -9,11 +9,18 @@ export class ApiError extends Error {
   readonly status: number;
   /** The optional machine-readable `code` from the `{ error, code }` envelope. */
   readonly code: string | undefined;
-  constructor(message: string, status: number, code?: string) {
+  /**
+   * The response's `Retry-After` delay in seconds, when it carried one (the
+   * retriable reloading `503` does). A caller that retries waits this long; a
+   * caller that does not ignores it.
+   */
+  readonly retryAfterSeconds: number | undefined;
+  constructor(message: string, status: number, code?: string, retryAfterSeconds?: number) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 

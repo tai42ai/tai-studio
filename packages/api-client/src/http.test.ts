@@ -94,6 +94,30 @@ describe('apiRequest', () => {
     });
   });
 
+  it('carries the response `Retry-After` delay onto ApiError', async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ error: 'config is reloading', reloading: true }), {
+          status: 503,
+          headers: { 'content-type': 'application/json', 'Retry-After': '5' },
+        }),
+    );
+    await expect(apiRequest(config(fetchImpl), '/api/x', z.unknown())).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 503,
+      retryAfterSeconds: 5,
+    });
+  });
+
+  it('leaves ApiError.retryAfterSeconds undefined when the response names no delay', async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ error: 'boom' }, 500));
+    const caught = await apiRequest(config(fetchImpl), '/api/x', z.unknown()).catch(
+      (e: unknown) => e,
+    );
+    expect(caught).toBeInstanceOf(ApiError);
+    expect((caught as ApiError).retryAfterSeconds).toBeUndefined();
+  });
+
   it('leaves ApiError.code undefined when the envelope carries no code', async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ error: 'boom' }, 500));
     const caught = await apiRequest(config(fetchImpl), '/api/x', z.unknown()).catch(

@@ -126,8 +126,9 @@ export function apiDownload(config: ApiConfig, path: string, options?: RequestOp
 
 // @public
 export class ApiError extends Error {
-    constructor(message: string, status: number, code?: string);
+    constructor(message: string, status: number, code?: string, retryAfterSeconds?: number);
     readonly code: string | undefined;
+    readonly retryAfterSeconds: number | undefined;
     // (undocumented)
     readonly status: number;
 }
@@ -157,7 +158,7 @@ export class ApiLoginFailedError extends Error {
     readonly status: number;
 }
 
-// @public
+// @public (undocumented)
 export function apiRequest<S extends z.ZodType>(config: ApiConfig, path: string, schema: S, options?: RequestOptions): Promise<z.infer<S>>;
 
 // @public
