@@ -309,6 +309,19 @@ describe('states client transport', () => {
     expect(out[0]?.parameters).toEqual({ cap: 5 });
   });
 
+  it('getStateMount() reads the single mount row under the state', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { module: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} },
+      }),
+    );
+    const out = await client.getStateMount('profile', 'notes');
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/states/profile/mounts/notes');
+    expect(out.module).toBe('notes');
+    expect(out.parameters).toEqual({ cap: 5 });
+  });
+
   it('putStateRecord() PUTs the document to the four-segment record path', async () => {
     const { client, captured } = harness(() => jsonResponse({ data: recordDoc }));
     const out = await client.putStateRecord('profile', subject, { tone: 'warm' });

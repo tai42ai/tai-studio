@@ -689,6 +689,10 @@ export function createApiClient(config: ApiConfig) {
     // -- state mounts --------------------------------------------------------
     listStateMounts: (name: string, signal?: AbortSignal) =>
       req(`/api/states/${encodeSegment(name)}/mounts`, s.stateMountList, { signal }),
+    getStateMount: (name: string, module: string, signal?: AbortSignal) =>
+      req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateMount, {
+        signal,
+      }),
     mountStateModule: (name: string, module: string, body: StateMountBody) =>
       req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateMounted, {
         method: 'PUT',
