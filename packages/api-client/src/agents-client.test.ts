@@ -3,7 +3,8 @@
  * `listSpecRunnableAgents` — URL, HTTP method, the `{ data }` envelope unwrap, the
  * `agentSummary` field defaults, and a LOUD error on a 4xx `{error}` plus an
  * `ApiSchemaError` on a drifting response. The streaming run methods
- * (`streamAgentRun` / `streamAuthoredAgentRun`) are exercised in `agents.test.ts`.
+ * (`streamAgentRun` / `streamAuthoredAgentRun`) are wired here through the client object
+ * onto the `agents.ts` opener (also exercised directly in `agents.test.ts`).
  * A fake `fetch` records each request and returns a canned body.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -82,5 +83,59 @@ describe('agents list client transport', () => {
   it('throws ApiSchemaError LOUDLY on a drifting list (total missing)', async () => {
     const { client } = harness(() => jsonResponse({ data: { items: [] } }));
     await expect(client.listAgents()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+// A minimal SSE transcript: one message event and the terminal stream.end frame —
+// enough to drive the client's streaming wrappers through the shared opener.
+const SSE_TRANSCRIPT =
+  'data: {"type":"message_final","text":"hi"}\n\n' + 'data: {"type":"stream.end"}\n\n';
+
+function sseResponse(): Response {
+  return new Response(SSE_TRANSCRIPT, {
+    status: 200,
+    headers: { 'content-type': 'text/event-stream' },
+  });
+}
+
+function streamHarness() {
+  const calls: { url: string; method: string; body: unknown }[] = [];
+  const fetchImpl = vi.fn((url: RequestInfo | URL, init?: RequestInit) => {
+    calls.push({
+      url: urlString(url),
+      method: init?.method ?? 'GET',
+      body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
+    });
+    return Promise.resolve(sseResponse());
+  });
+  const config: ApiConfig = { getToken: () => 'k', fetch: fetchImpl };
+  return { client: createApiClient(config), calls };
+}
+
+describe('agents streaming client transport', () => {
+  it('streamAgentRun POSTs the input to the run path and yields parsed events', async () => {
+    const { client, calls } = streamHarness();
+    const gen = await client.streamAgentRun('planner', { prompt: 'go' });
+    const types: string[] = [];
+    for await (const parsed of gen) {
+      if (parsed.known) types.push(parsed.event.type);
+    }
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toMatch(/^\/api\/agents\/planner\/runs\?_=/);
+    expect(calls[0]?.body).toEqual({ prompt: 'go' });
+    expect(types.at(-1)).toBe('stream.end');
+  });
+
+  it('streamAuthoredAgentRun POSTs the non-baked input to the authored-run path', async () => {
+    const { client, calls } = streamHarness();
+    const gen = await client.streamAuthoredAgentRun('planner', { note: 'go' });
+    const types: string[] = [];
+    for await (const parsed of gen) {
+      if (parsed.known) types.push(parsed.event.type);
+    }
+    expect(calls[0]?.method).toBe('POST');
+    expect(calls[0]?.url).toMatch(/^\/api\/agents\/authored\/planner\/runs\?_=/);
+    expect(calls[0]?.body).toEqual({ note: 'go' });
+    expect(types.at(-1)).toBe('stream.end');
   });
 });

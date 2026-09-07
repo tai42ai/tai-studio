@@ -313,6 +313,106 @@ describe('states client transport', () => {
     expect(out.pruned.profile).toBe(7);
   });
 
+  it('deleteState() DELETEs the declaration and parses the deleted marker', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { name: 'profile', deleted: true } }),
+    );
+    const out = await client.deleteState('profile');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/states/profile');
+    expect(out.deleted).toBe(true);
+  });
+
+  it('listStateMounts() reads the mounts under the state and parses each row', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: [{ module: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} }],
+      }),
+    );
+    const out = await client.listStateMounts('profile');
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/states/profile/mounts');
+    expect(out[0]?.module).toBe('notes');
+    expect(out[0]?.parameters).toEqual({ cap: 5 });
+  });
+
+  it('putStateRecord() PUTs the document to the four-segment record path', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: recordDoc }));
+    const out = await client.putStateRecord('profile', subject, { tone: 'warm' });
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.url).toBe('/api/states/profile/records/agent/assistant/person/p-1');
+    expect(captured[0]?.body).toEqual({ tone: 'warm' });
+    expect(out.seq).toBe(3);
+  });
+
+  it('patchStateRecord() PATCHes the record path with the partial document', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: recordDoc }));
+    const out = await client.patchStateRecord('profile', subject, { tone: 'brisk' });
+    expect(captured[0]?.method).toBe('PATCH');
+    expect(captured[0]?.url).toBe('/api/states/profile/records/agent/assistant/person/p-1');
+    expect(captured[0]?.body).toEqual({ tone: 'brisk' });
+    expect(out.state).toBe('profile');
+  });
+
+  it('applyStateRecord() POSTs the delta batch under the record path and parses the outcome', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { applied: true, data: { tone: 'warm' }, seq: 4, skipped: [] } }),
+    );
+    const ops = [{ op: 'set', path: ['tone'], value: 'warm' }];
+    const out = await client.applyStateRecord('profile', subject, ops);
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/states/profile/records/agent/assistant/person/p-1/deltas');
+    expect(captured[0]?.body).toEqual({ ops });
+    expect(out.applied).toBe(true);
+    expect(out.seq).toBe(4);
+  });
+
+  it('getStateModule() reads one module document from the sibling collection', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          kind: 'state-module',
+          name: 'notes',
+          schema: { type: 'object' },
+          declarations: null,
+        },
+      }),
+    );
+    const out = await client.getStateModule('notes');
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/state-modules/notes');
+    expect(out.name).toBe('notes');
+    expect(out.declarations).toBeNull();
+  });
+
+  it('putStateModule() PUTs the document, adding replace=true only when asked', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { kind: 'state-module', name: 'notes', schema: { type: 'object' } } }),
+    );
+    await client.putStateModule('notes', { name: 'notes', schema: { type: 'object' } }, true);
+    expect(captured[0]?.method).toBe('PUT');
+    expect(captured[0]?.url).toBe('/api/state-modules/notes?replace=true');
+    expect(captured[0]?.body).toEqual({ name: 'notes', schema: { type: 'object' } });
+  });
+
+  it('putStateModule() omits the replace query when replace is not requested', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { kind: 'state-module', name: 'notes', schema: { type: 'object' } } }),
+    );
+    await client.putStateModule('notes', { name: 'notes', schema: { type: 'object' } });
+    expect(captured[0]?.url).toBe('/api/state-modules/notes');
+  });
+
+  it('deleteStateModule() DELETEs the module document and parses the deleted marker', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { name: 'notes', deleted: true } }),
+    );
+    const out = await client.deleteStateModule('notes');
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(captured[0]?.url).toBe('/api/state-modules/notes');
+    expect(out.deleted).toBe(true);
+  });
+
   it('a drifting state row throws ApiSchemaError (never a silent coerce)', async () => {
     const { client } = harness(() => jsonResponse({ data: [{ name: 'profile' }] }));
     await expect(client.listStates()).rejects.toBeInstanceOf(ApiSchemaError);
