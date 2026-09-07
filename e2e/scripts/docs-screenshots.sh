@@ -21,7 +21,7 @@
 #      named settings profile the Profiles tab lists, the conversation route
 #      whose threads the Conversations screen reads, and the platform state store
 #      (a declared state with a mounted module, subject records and a consumer hook —
-#      its own dedicated database, created + migrated in §5b);
+#      its own dedicated database, created in §3b and migrated by boot.sh);
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
 #   4. copies the five shell screens the tai-studio README embeds into
@@ -131,15 +131,14 @@ export MARKETPLACE_URL="${REGISTRY_URL}"
 export MARKETPLACE_ADVISORIES_POLL="false"
 
 # Platform state store (the States screens). The kit DB component `states`
-# (TAI_DB_BINDING_STATES) DEFAULTS to the `default` database — but boot.sh applies
-# only the skeleton + accounts migration chains there, never the states chain, so the
-# store would report `active` yet answer 501 on the first read. Bind it instead to a
+# (TAI_DB_BINDING_STATES) DEFAULTS to the `default` database; bind it instead to a
 # DEDICATED database on boot.sh's own compose Postgres (the `default` group's
-# TAI_DATABASE_DEFAULT_PG_* host/port, database `docs_demo_states`), which this runner
-# creates and migrates below (§5b). A distinct database name keeps the store's tables
-# off the skeleton/accounts `tai` database, so a concurrent Playwright e2e run (it
-# shares boot.sh's Postgres) is never touched. Exported BEFORE the skeleton launches so
-# its states store binds here on boot; the same vars drive the chain apply in §5b.
+# TAI_DATABASE_DEFAULT_PG_* host/port, database `docs_demo_states`). A distinct
+# database name keeps the store's tables off the skeleton/accounts `tai` database, so a
+# concurrent Playwright e2e run (it shares boot.sh's Postgres) is never touched.
+# Exported BEFORE boot.sh starts: it resolves this binding both for its migration-chain
+# apply (states_entry()) and for the skeleton it then launches, so the database itself
+# must already exist — §3b creates it.
 STATES_DB_NAME="docs_demo_states"
 export TAI_DB_BINDING_STATES="${STATES_DB_NAME}"
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_HOST="${TAI_DATABASE_DEFAULT_PG_HOST:-127.0.0.1}"
@@ -163,7 +162,24 @@ if curl -s -m 2 "${REGISTRY_URL}/healthz" >/dev/null 2>&1; then
   die "a server is already listening on ${REGISTRY_URL} — stop it first and rerun."
 fi
 
-# --- 3b. Boot the minimal marketplace registry ------------------------------
+# --- 3b. Provision the states store database --------------------------------
+# The states component is bound to a dedicated database on boot.sh's compose Postgres
+# (§2), and boot.sh applies the states chain — with every other chain — before it
+# launches the skeleton, so the database must exist before boot.sh runs. Bring that
+# Postgres up with boot.sh's own idempotent compose command (boot.sh repeats it for the
+# whole stack), then create the database when it is absent; guarded on pg_database, so a
+# rerun against the persisted compose Postgres is a no-op. Nothing is spawned yet, so a
+# failure here exits with no process to reap.
+log "provisioning the states store database '${STATES_DB_NAME}'"
+docker compose -f "${E2E_DIR}/boot/compose.yaml" up -d --wait postgres \
+  || die "the compose Postgres that holds the states database did not come up"
+pg_admin() { docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T postgres psql -q -U "${TAI_DATABASE_DOCS_DEMO_STATES_PG_USER}" -d postgres "$@"; }
+if ! pg_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '${STATES_DB_NAME}'" | grep -q 1; then
+  pg_admin -c "CREATE DATABASE \"${STATES_DB_NAME}\"" >/dev/null \
+    || die "could not create the states database '${STATES_DB_NAME}'"
+fi
+
+# --- 3c. Boot the minimal marketplace registry ------------------------------
 # A stdlib-only fixture serving the registry public read API with ONE generic
 # route-carrying plugin (acme/alerts-relay), so the Marketplace detail page and its
 # install dialog render real routes + preview. Booted BEFORE the skeleton so
@@ -226,33 +242,6 @@ for _ in $(seq 1 600); do
 done
 [[ "${ready}" == 1 ]] || { tail -60 "${BOOT_LOG}" >&2; die "/health never returned OK"; }
 log "skeleton is up"
-
-# --- 5b. Provision the states store database + apply its migration chain ------
-# boot.sh migrates only the skeleton + accounts chains onto its compose Postgres; the
-# states component binds to a DEDICATED database on that SAME server (§2), so create it
-# and apply the states chain here — the skeleton (already up) opens the store lazily on
-# the first states call in §7f, after this runs. Idempotent: the create is guarded on
-# pg_database and the chain runner records applied files in `tai_schema_history`, so a
-# rerun against the persisted compose Postgres is a no-op.
-log "provisioning the states store database '${STATES_DB_NAME}' + applying its chain"
-pg_admin() { docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T postgres psql -q -U "${TAI_DATABASE_DOCS_DEMO_STATES_PG_USER}" -d postgres "$@"; }
-if ! pg_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '${STATES_DB_NAME}'" | grep -q 1; then
-  pg_admin -c "CREATE DATABASE \"${STATES_DB_NAME}\"" >/dev/null \
-    || die "could not create the states database '${STATES_DB_NAME}'"
-fi
-# Apply the packaged states chain against the bound database, through the kit migration
-# runner (the same primitive boot.sh uses for the skeleton chain). The states binding
-# env exported in §2 is in scope, so states_entry() resolves to '${STATES_DB_NAME}'.
-( cd "${MONOREPO_DIR}" && uv run --no-sync python - <<'PY' >&2
-import asyncio
-
-from tai42_kit.db import apply_migrations
-from tai42_skeleton.states.db import states_entry
-
-applied = asyncio.run(apply_migrations([states_entry()]))
-print(f"[docs-shots] applied {len(applied)} states migration file(s)")
-PY
-) || die "applying the states migration chain failed"
 
 api() { curl -s -m 8 -H "x-api-key: ${DEMO_KEY}" -H "accept: application/json" "$@"; }
 
