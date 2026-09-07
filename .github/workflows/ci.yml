@@ -181,12 +181,11 @@ jobs:
   # default GITHUB_TOKEN. This job is heavy (Docker + a full backend), so it is
   # gated to pushes and same-repo, non-Dependabot pull requests; forks and
   # Dependabot fall back to the ``check`` job only.
-  # Release trains: the browser lane is not required, so a `release-please--` head
   # skips it; a skipped job reports a `skipped` check-run conclusion, which branch
   # protection counts as passing (the same path the `reuse` duplicate-skip relies on).
   e2e:
     needs: reuse
-    if: needs.reuse.outputs.should_skip != 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'release-please--')
+    if: needs.reuse.outputs.should_skip != 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
