@@ -1340,17 +1340,6 @@ export function createApiClient(config: ApiConfig): {
         per_kind: Record<string, number>;
         consumers: number;
     }>;
-    readonly previewStateMigration: (name: string, body: StateMigrateBody) => Promise<{
-        records: number;
-        fits: number;
-        misfits: number;
-        misfit_fields: Record<string, number>;
-        examples: Record<string, unknown>[];
-    }>;
-    readonly migrateState: (name: string, body: StateMigrateBody) => Promise<{
-        migrated: boolean;
-        name: string;
-    }>;
     readonly listStateMounts: (name: string, signal?: AbortSignal) => Promise<{
         module: string;
         path: string[];
@@ -6555,10 +6544,6 @@ declare namespace s {
         StateFoldReport,
         stateModuleDeleted,
         recordErased,
-        stateMigratePreview,
-        StateMigratePreview,
-        stateMigrated,
-        StateMigrated,
         stateRetentionPruned,
         StateRetentionPruned
     }
@@ -7064,10 +7049,6 @@ declare namespace schemas {
         StateFoldReport,
         stateModuleDeleted,
         recordErased,
-        stateMigratePreview,
-        StateMigratePreview,
-        stateMigrated,
-        StateMigrated,
         stateRetentionPruned,
         StateRetentionPruned
     }
@@ -7418,39 +7399,6 @@ const stateListItem: z.ZodObject<{
     effective_schema: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     regimes: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
     updated_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
-
-// @public
-export interface StateMigrateBody {
-    // (undocumented)
-    readonly confirm_drop?: boolean;
-    // (undocumented)
-    readonly new_schema: Record<string, unknown>;
-    // (undocumented)
-    readonly resolutions?: Record<string, unknown>[];
-    // (undocumented)
-    readonly transform_expr?: string;
-}
-
-// @public (undocumented)
-export type StateMigrated = z.infer<typeof stateMigrated>;
-
-// @public
-const stateMigrated: z.ZodObject<{
-    migrated: z.ZodBoolean;
-    name: z.ZodString;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type StateMigratePreview = z.infer<typeof stateMigratePreview>;
-
-// @public
-const stateMigratePreview: z.ZodObject<{
-    records: z.ZodNumber;
-    fits: z.ZodNumber;
-    misfits: z.ZodNumber;
-    misfit_fields: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
-    examples: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
 }, z.core.$strip>;
 
 // @public

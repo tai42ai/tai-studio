@@ -1,8 +1,7 @@
 /**
- * The declaration editor: the create dialog PUTs a new state; editing a state with no
- * records saves straight through; editing a state WITH records routes through the
- * migration dialog, where a 412 narrowing surfaces the message and a Confirm-drop tick
- * before the migrate re-fires with `confirm_drop`.
+ * The declaration editor: the create dialog PUTs a new state, and every save is a plain
+ * declaration PUT. A schema change over existing records that the server refuses (a 409
+ * for removing or altering a declared field) surfaces the refusal message inline.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
@@ -10,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { ApiError, type StateDetail } from '@tai42/api-client';
 
 import { DeclarationTab, DeclareStateDialog } from './DeclarationTab';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { renderWithProviders } from './test-utils';
 
 function detail(over: Record<string, unknown> = {}): StateDetail {
   return {
@@ -50,7 +49,10 @@ describe('DeclareStateDialog', () => {
 });
 
 describe('DeclarationTab', () => {
-  it('a change on an empty state saves straight through (no migration)', async () => {
+  // A schema that adds a property, forcing a dirty base-schema change in the editor.
+  const CHANGED_SCHEMA = '{"type":"object","properties":{"a":{"type":"string"}}}';
+
+  it('a change on an empty state saves through the declaration PUT', async () => {
     const user = userEvent.setup();
     const putState = vi.fn().mockResolvedValue(detail());
     renderWithProviders(<DeclarationTab state={detail()} />, {
@@ -63,74 +65,34 @@ describe('DeclarationTab', () => {
     });
   });
 
-  // The narrowed schema the migration tests write into the base-schema editor.
-  const NARROWED = '{"type":"object","properties":{"a":{"type":"string"}}}';
-
-  it('a schema change on a state WITH records migrates, confirming a 412 narrowing', async () => {
+  it('a refused schema change over existing records surfaces the server message', async () => {
     const user = userEvent.setup();
-    const previewStateMigration = vi
+    const putState = vi
       .fn()
-      .mockResolvedValue({ records: 3, fits: 3, misfits: 0, misfit_fields: {}, examples: [] });
-    const migrateState = vi
-      .fn()
-      .mockRejectedValueOnce(new ApiError('drops field b from 3 records', 412))
-      .mockResolvedValueOnce({ migrated: true, name: 'profile' });
-    const client: StubApiClient = {
-      getStateStats: vi.fn().mockResolvedValue({ records: 3 }),
-      previewStateMigration,
-      migrateState,
-    };
-    renderWithProviders(<DeclarationTab state={detail()} />, { client });
-
-    // A base-schema change makes the declaration dirty over existing records.
-    fireEvent.change(await screen.findByLabelText('Base schema JSON'), {
-      target: { value: NARROWED },
-    });
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-
-    // The migration dialog previews the fit/misfit count.
-    expect(
-      await screen.findByText(/Previewing against 3 records: 3 fit, 0 need attention/),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Migrate' }));
-
-    // The 412 surfaces the narrowing message and the Confirm-drop tick.
-    expect(await screen.findByText('drops field b from 3 records')).toBeInTheDocument();
-    await user.click(screen.getByLabelText(/Confirm drop/));
-    await user.click(screen.getByRole('button', { name: 'Migrate' }));
-
-    await waitFor(() => {
-      expect(migrateState).toHaveBeenCalledTimes(2);
-    });
-    expect(migrateState.mock.calls[1]?.[1]).toMatchObject({ confirm_drop: true });
-    // The migrate carried the new schema, not a full declaration body.
-    expect(migrateState.mock.calls[1]?.[1]).toHaveProperty('new_schema');
-  });
-
-  it('a non-narrowing migration applies on the first Migrate', async () => {
-    const user = userEvent.setup();
-    const migrateState = vi.fn().mockResolvedValue({ migrated: true, name: 'profile' });
+      .mockRejectedValue(
+        new ApiError('state "profile" has records; cannot remove or change a declared field', 409),
+      );
     renderWithProviders(<DeclarationTab state={detail()} />, {
-      client: {
-        getStateStats: vi.fn().mockResolvedValue({ records: 2 }),
-        previewStateMigration: vi
-          .fn()
-          .mockResolvedValue({ records: 2, fits: 2, misfits: 0, misfit_fields: {}, examples: [] }),
-        migrateState,
-      },
+      client: { getStateStats: vi.fn().mockResolvedValue({ records: 3 }), putState },
     });
+
     fireEvent.change(await screen.findByLabelText('Base schema JSON'), {
-      target: { value: NARROWED },
+      target: { value: CHANGED_SCHEMA },
     });
     await user.click(screen.getByRole('button', { name: 'Save' }));
-    await user.click(await screen.findByRole('button', { name: 'Migrate' }));
+
     await waitFor(() => {
-      expect(migrateState).toHaveBeenCalledTimes(1);
+      expect(putState).toHaveBeenCalledTimes(1);
     });
-    expect(migrateState.mock.calls[0]?.[1]).toMatchObject({ confirm_drop: false });
+    // The 409 is shown plainly; there is no second door the save silently takes.
+    expect(
+      await screen.findByText(
+        'state "profile" has records; cannot remove or change a declared field',
+      ),
+    ).toBeInTheDocument();
   });
 
-  it('a subject change on a state WITH records saves through put (no migration dialog)', async () => {
+  it('a subject change over existing records saves through the declaration PUT', async () => {
     const user = userEvent.setup();
     const putState = vi.fn().mockResolvedValue(detail());
     renderWithProviders(<DeclarationTab state={detail()} />, {
@@ -141,7 +103,6 @@ describe('DeclarationTab', () => {
     await waitFor(() => {
       expect(putState).toHaveBeenCalled();
     });
-    expect(screen.queryByRole('button', { name: 'Migrate' })).toBeNull();
   });
 
   it('shows the mounted subtrees read-only and gates on a 501', async () => {

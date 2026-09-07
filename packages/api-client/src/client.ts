@@ -513,19 +513,6 @@ export interface StateDeclarationBody {
   readonly retention_days?: number | null;
 }
 
-/**
- * The body of a state migration (`POST /api/states/{name}/migrate[/preview]`): the target
- * `new_schema` the change moves records to, plus — for the migrate, when it narrows —
- * exactly one of a `transform_expr`, `confirm_drop` (authorising the data a narrowing
- * loses), or per-field `resolutions`. The preview reads `new_schema` only.
- */
-export interface StateMigrateBody {
-  readonly new_schema: Record<string, unknown>;
-  readonly transform_expr?: string;
-  readonly confirm_drop?: boolean;
-  readonly resolutions?: Record<string, unknown>[];
-}
-
 /** A state-module document write body (`PUT /api/state-modules/{name}`, the platform half). */
 export interface StateModuleBody {
   readonly name: string;
@@ -688,8 +675,8 @@ export function createApiClient(config: ApiConfig) {
     getState: (name: string, signal?: AbortSignal) =>
       req(`/api/states/${encodeSegment(name)}`, s.stateDetail, { signal }),
     // A plain declaration upsert — no `replace` flag. With records present the server
-    // accepts additive schema changes and refuses a narrowing (a 409 → the guarded
-    // migrate door); a subject-kind removal that would strand records is a 409 too.
+    // accepts additive schema changes and refuses with a 409 any change that removes or
+    // alters an existing field, or a subject-kind removal that would strand records.
     putState: (name: string, body: StateDeclarationBody) =>
       req(`/api/states/${encodeSegment(name)}`, s.stateDetail, {
         method: 'PUT',
@@ -699,18 +686,6 @@ export function createApiClient(config: ApiConfig) {
       req(`/api/states/${encodeSegment(name)}`, s.stateDeleted, { method: 'DELETE' }),
     getStateStats: (name: string, signal?: AbortSignal) =>
       req(`/api/states/${encodeSegment(name)}/stats`, s.stateStats, { signal }),
-    // The dry-run of a declaration change over existing records: `narrowing` gates the
-    // migrate behind a confirm (a 412 without it). Preview never writes.
-    previewStateMigration: (name: string, body: StateMigrateBody) =>
-      req(`/api/states/${encodeSegment(name)}/migrate/preview`, s.stateMigratePreview, {
-        method: 'POST',
-        body,
-      }),
-    migrateState: (name: string, body: StateMigrateBody) =>
-      req(`/api/states/${encodeSegment(name)}/migrate`, s.stateMigrated, {
-        method: 'POST',
-        body,
-      }),
     // -- state mounts --------------------------------------------------------
     listStateMounts: (name: string, signal?: AbortSignal) =>
       req(`/api/states/${encodeSegment(name)}/mounts`, s.stateMountList, { signal }),

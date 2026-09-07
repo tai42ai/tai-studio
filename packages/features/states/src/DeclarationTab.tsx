@@ -6,18 +6,15 @@
  * Modules tab, never here (a mount composes into the effective schema, so editing the
  * base never rewrites a module's fragment).
  *
- * Saving a change to a state that already holds records goes through the migration
- * dialog: a preview reports how many records the change rewrites and whether it NARROWS
- * (drops data). A narrowing migration is refused (412) until the operator confirms the
- * drop; a non-narrowing one applies straight through.
+ * A save is a plain declaration PUT. With records present the server accepts only
+ * additive schema changes; a change that removes or alters an existing field (or a
+ * stranding subject-kind removal) is refused with a 409 whose message is shown inline.
  */
 import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
   Button,
-  Checkbox,
-  ConfirmDialog,
   ErrorState,
   Field,
   FormDialog,
@@ -35,12 +32,7 @@ import {
   useApi,
   type SchemaEditorChange,
 } from '@tai42/studio-sdk';
-import {
-  ApiError,
-  type StateDeclarationBody,
-  type StateDetail,
-  type StateMigrateBody,
-} from '@tai42/api-client';
+import { type StateDeclarationBody, type StateDetail } from '@tai42/api-client';
 
 import { stateDetailKey, stateStatsKey, statesListKey } from './keys';
 
@@ -296,19 +288,16 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
     [state],
   );
   const [draft, setDraft] = useState<DeclarationDraft>(initial);
-  const [migrateOpen, setMigrateOpen] = useState(false);
 
-  const recordCount = statsQuery.data?.records ?? 0;
   const schemaChanged = JSON.stringify(draft.schema ?? {}) !== JSON.stringify(state.schema);
   const subjectsChanged =
     JSON.stringify(draft.subjectKinds) !== JSON.stringify(state.subject_kinds) ||
     draft.defaultKind !== state.default_subject_kind;
-  // Everything the plain declaration upsert owns (the migrate door touches only the schema).
-  const metadataChanged =
+  const dirty =
+    schemaChanged ||
     subjectsChanged ||
     draft.description !== state.description ||
     draft.retentionDays !== initial.retentionDays;
-  const dirty = schemaChanged || metadataChanged;
 
   const saveMutation = useMutation({
     mutationFn: () => api.putState(state.name, toBody(state.name, draft)),
@@ -321,18 +310,6 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
   if (statsQuery.isError && isFeatureDisabled(statsQuery.error)) {
     return <FeatureDisabled feature="States" message={featureDisabledMessage(statsQuery.error)} />;
   }
-
-  const onSave = (): void => {
-    // A SCHEMA change over existing records goes through the guarded migrate door (the
-    // preview surfaces a narrowing, behind the drop confirm). Subject/metadata changes —
-    // and an empty state — are a plain declaration PUT, which the server validates
-    // (additive kinds pass; a stranding kind removal is refused).
-    if (recordCount > 0 && schemaChanged) {
-      setMigrateOpen(true);
-      return;
-    }
-    saveMutation.mutate();
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
@@ -347,132 +324,15 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
         <Button
           type="button"
           variant="primary"
-          onClick={onSave}
+          onClick={() => {
+            saveMutation.mutate();
+          }}
           disabled={!dirty || !draftReady(draft) || saveMutation.isPending}
         >
           {saveMutation.isPending ? <Spinner label="Saving" /> : null}
           Save
         </Button>
       </div>
-
-      {migrateOpen ? (
-        <MigrationDialog
-          stateName={state.name}
-          newSchema={draft.schema ?? {}}
-          onClose={() => {
-            setMigrateOpen(false);
-          }}
-          onDone={() => {
-            setMigrateOpen(false);
-            void queryClient.invalidateQueries({ queryKey: stateDetailKey(state.name) });
-            void queryClient.invalidateQueries({ queryKey: stateStatsKey(state.name) });
-            // The migrate moved only the schema; persist any subject/metadata change too
-            // (the schema now matches, so this upsert is additive).
-            if (metadataChanged) saveMutation.mutate();
-          }}
-        />
-      ) : null}
     </div>
-  );
-}
-
-/**
- * The migration dialog: preview the declaration change over existing records, then
- * apply it. A NARROWING change (one that drops data) is refused with 412 until the
- * operator ticks Confirm drop; the server's narrowing message is shown verbatim.
- */
-function MigrationDialog({
-  stateName,
-  newSchema,
-  onClose,
-  onDone,
-}: {
-  readonly stateName: string;
-  readonly newSchema: Record<string, unknown>;
-  readonly onClose: () => void;
-  readonly onDone: () => void;
-}): ReactNode {
-  const api = useApi();
-  const [confirmDrop, setConfirmDrop] = useState(false);
-  const [narrowing, setNarrowing] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const previewQuery = useQuery({
-    queryKey: [...stateStatsKey(stateName), 'migrate-preview'],
-    queryFn: () => api.previewStateMigration(stateName, { new_schema: newSchema }),
-  });
-
-  const preview = previewQuery.data;
-  // A change narrows when any current record would not fit the new schema. The 412
-  // backstop keeps the confirm even if the preview under-reported.
-  const previewNarrowing = (preview !== undefined && preview.misfits > 0) || narrowing;
-  const previewMessage = message;
-
-  const migrateMutation = useMutation({
-    mutationFn: (migrate: StateMigrateBody) => api.migrateState(stateName, migrate),
-    onSuccess: () => {
-      onDone();
-    },
-    onError: (error: unknown) => {
-      if (error instanceof ApiError && error.status === 412) {
-        setNarrowing(true);
-        setMessage(error.message);
-      }
-    },
-  });
-
-  // A 412 is the narrowing-needs-confirmation signal, shown inline as the narrowing
-  // message + Confirm-drop tick — never the dialog's loud error slot; any other failure
-  // is a real error.
-  const migrateError: Error | null =
-    migrateMutation.error instanceof Error &&
-    !(migrateMutation.error instanceof ApiError && migrateMutation.error.status === 412)
-      ? migrateMutation.error
-      : null;
-
-  return (
-    <ConfirmDialog
-      title="Migrate records"
-      confirmLabel="Migrate"
-      pendingLabel="Migrating"
-      confirmVariant={previewNarrowing ? 'danger' : 'primary'}
-      isPending={migrateMutation.isPending}
-      error={migrateError}
-      onConfirm={() => {
-        migrateMutation.mutate({ new_schema: newSchema, confirm_drop: confirmDrop });
-      }}
-      onClose={() => {
-        if (!migrateMutation.isPending) onClose();
-      }}
-    >
-      {previewQuery.isPending ? (
-        <Skeleton height={48} />
-      ) : previewQuery.isError ? (
-        <ErrorState message={errorMessage(previewQuery.error)} />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-          <p style={{ margin: 0 }}>
-            Previewing against {preview?.records ?? 0}{' '}
-            {(preview?.records ?? 0) === 1 ? 'record' : 'records'}: {preview?.fits ?? 0} fit,{' '}
-            {preview?.misfits ?? 0} need attention.
-          </p>
-          {previewNarrowing ? (
-            <>
-              <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-                {previewMessage ??
-                  'This change narrows the schema and drops data from existing records.'}
-              </p>
-              <Checkbox
-                checked={confirmDrop}
-                onCheckedChange={(next) => {
-                  setConfirmDrop(next);
-                }}
-                label="Confirm drop — apply the change and lose the narrowed data"
-              />
-            </>
-          ) : null}
-        </div>
-      )}
-    </ConfirmDialog>
   );
 }

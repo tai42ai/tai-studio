@@ -2876,28 +2876,6 @@ export const stateModuleDeleted = z.object({ name: z.string(), deleted: z.litera
 export const recordErased = z.object({ erased: z.literal(true) });
 
 /**
- * `POST /api/states/{name}/migrate/preview` — the read-only dry-run of a schema change
- * over the state's current records: the `records` total, how many `fits`, how many
- * `misfits` (a `misfits > 0` change narrows and needs confirmation), the `misfit_fields`
- * count per json path, and up to ten misfit `examples` (each `{subject, errors}`).
- */
-export const stateMigratePreview = z.object({
-  records: z.number(),
-  fits: z.number(),
-  misfits: z.number(),
-  misfit_fields: z.record(z.string(), z.number()).default({}),
-  examples: z.array(z.record(z.string(), z.unknown())).default([]),
-});
-export type StateMigratePreview = z.infer<typeof stateMigratePreview>;
-
-/** `POST /api/states/{name}/migrate` — the applied migration's outcome. */
-export const stateMigrated = z.object({
-  migrated: z.boolean(),
-  name: z.string(),
-});
-export type StateMigrated = z.infer<typeof stateMigrated>;
-
-/**
  * `POST /api/state-retention/prune` — the retention sweep's per-state deleted counts
  * (`{}` when nothing expired); the UI sums the values for its total.
  */

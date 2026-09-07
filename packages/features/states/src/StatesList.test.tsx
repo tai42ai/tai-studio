@@ -113,7 +113,9 @@ describe('StatesList', () => {
 
   it('a state upload that conflicts surfaces the error (no replace door for a declaration)', async () => {
     const user = userEvent.setup();
-    const putState = vi.fn().mockRejectedValue(new ApiError('state has records; migrate', 409));
+    const putState = vi
+      .fn()
+      .mockRejectedValue(new ApiError('state has records; cannot change a declared field', 409));
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()], { putState }),
     });
@@ -130,7 +132,9 @@ describe('StatesList', () => {
     await user.upload(input, file);
 
     // No Replace prompt: the declaration PUT has no replace flag, so the 409 is loud.
-    expect(await screen.findByText('state has records; migrate')).toBeInTheDocument();
+    expect(
+      await screen.findByText('state has records; cannot change a declared field'),
+    ).toBeInTheDocument();
     expect(putState).toHaveBeenCalledTimes(1);
   });
 

@@ -168,33 +168,6 @@ describe('states client transport', () => {
     expect(page.matches[0]?.updated_at).toBe(1767225600);
   });
 
-  it('previewStateMigration() POSTs new_schema and parses the fit/misfit report', async () => {
-    const { client, captured } = harness(() =>
-      jsonResponse({
-        data: { records: 4, fits: 1, misfits: 3, misfit_fields: { tone: 3 }, examples: [] },
-      }),
-    );
-    const preview = await client.previewStateMigration('profile', {
-      new_schema: { type: 'object' },
-    });
-    expect(captured[0]?.method).toBe('POST');
-    expect(captured[0]?.url).toBe('/api/states/profile/migrate/preview');
-    expect(captured[0]?.body).toEqual({ new_schema: { type: 'object' } });
-    expect(preview.misfits).toBe(3);
-  });
-
-  it('migrateState() POSTs new_schema + confirm_drop and parses the outcome', async () => {
-    const { client, captured } = harness(() =>
-      jsonResponse({ data: { migrated: true, name: 'profile' } }),
-    );
-    const out = await client.migrateState('profile', {
-      new_schema: { type: 'object' },
-      confirm_drop: true,
-    });
-    expect(captured[0]?.body).toEqual({ new_schema: { type: 'object' }, confirm_drop: true });
-    expect(out.migrated).toBe(true);
-  });
-
   it('mountStateModule() PUTs the mount and parses the acknowledgement', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { mounted: true, state: 'profile', module: 'notes' } }),
