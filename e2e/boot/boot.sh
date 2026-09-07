@@ -154,9 +154,10 @@ fi
 # plugin — the entries are built directly instead. The platform state-store chain is
 # always applied: the manifest mounts the `states` router, whose store binds to the
 # `default` database when TAI_DB_BINDING_STATES is unset, and its boot gate refuses to
-# start until the chain is applied there. Every chain binds to the `default` database
-# (TAI_DATABASE_DEFAULT_PG_* exported above), resolved through the registry's migrator
-# identity. The compose Postgres is up (step 1) and the plugins are installed above, so
+# start until the chain is applied there. A chain binds to its component's database
+# when a TAI_DB_BINDING_<COMPONENT> is exported and to the `default` database
+# (TAI_DATABASE_DEFAULT_PG_* exported above) otherwise, resolved through the registry's
+# migrator identity. The compose Postgres is up (step 1) and the plugins are installed above, so
 # this runs cleanly here; a discovery/apply failure exits non-zero.
 log "applying the platform migration chains (kit migration runner)"
 APPLY_ACCOUNTS_DDL="${APPLY_ACCOUNTS_DDL:-0}" "${VENV_PY}" - <<'PY' >&2
