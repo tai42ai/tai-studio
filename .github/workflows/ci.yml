@@ -233,10 +233,11 @@ jobs:
   # Fleet e2e gate. On push:main and on pull_request, after this repo's own
   # checks pass, dispatch the tai42 monorepo's fleet-e2e receiver for the tested
   # sha; it runs the browser suite against the monorepo harness and posts a
-  # `fleet-e2e` commit status back, which branch protection requires. The
-  # dispatch token is a repo Actions secret AND a Dependabot secret
-  # so Dependabot PRs dispatch too; a fork PR has neither, so the guarded step
-  # skips and the required status stays unset for a maintainer to run.
+  # `fleet-e2e` commit status back, which branch protection requires. GitHub
+  # scopes the dispatch secret away from Dependabot, so this job skips for that
+  # actor (see the job condition below); a fork PR has no secret either, so the
+  # guarded steps skip on the empty token and the required status stays unset for
+  # a maintainer to run.
   trigger-e2e:
     needs: [reuse, check]
     # Dependabot cannot access the fleet-e2e dispatch secret (GitHub scopes

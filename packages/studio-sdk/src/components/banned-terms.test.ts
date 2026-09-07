@@ -16,8 +16,10 @@
  * untracked-but-not-ignored — so a banned term in a NEW file is caught before it is
  * committed, not only after, and reports every hit as `path:line:term`.
  *
- * With no list available the guard is never a silent green: under CI it fails,
- * locally it skips visibly — both carry the same message.
+ * With no list available the guard is never a silent green: it fails under CI and
+ * skips visibly locally — and on a Dependabot run, which GitHub never grants the
+ * secret list, it skips visibly like the local case rather than fail. All carry the
+ * same message.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -134,12 +136,17 @@ function violationsIn(relPath: string, terms: string[], markers: Marker[]): stri
 const { terms, markers } = loadBanned();
 const noList = terms.length === 0 && markers.length === 0;
 const ci = process.env.CI !== undefined && process.env.CI !== '';
+// A Dependabot CI run never receives repository secrets (GitHub scopes them away),
+// so TAI_BANNED_TERMS is unavoidably empty there; the guard skips visibly like a
+// local run rather than red on a list the run cannot be given.
+const dependabot = process.env.GITHUB_ACTOR === 'dependabot[bot]';
 const scanned = worktreeFiles();
 
 describe('banned terms guard', () => {
   // When no list is configured the guard is never a silent green: under CI this test
-  // runs and throws; locally it is skipped so the absence is visible, not hidden.
-  it.skipIf(noList && !ci)('a banned-terms list is configured', () => {
+  // runs and throws; locally, and on a Dependabot run that cannot be given the list,
+  // it is skipped so the absence is visible, not hidden.
+  it.skipIf(noList && (!ci || dependabot))('a banned-terms list is configured', () => {
     if (noList) throw new Error(NO_LIST_MSG);
   });
 
