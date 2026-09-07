@@ -12,13 +12,17 @@
  * orchestrator reads (both themes, by tokens).
  */
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 import { test, expect, type Page } from '@playwright/test';
 
 import { seedCredential } from './helpers';
 
-/** Absolute, out-of-tree shot dir the orchestrator reads. */
-const OUT_DIR = '/home/tai/agent-runs/agenda/_ops/shots/form';
+/** Where the preview shots land: `FORM_SHOTS_DIR` when set, else the gitignored
+ * `test-results/` beside the suite. */
+const OUT_DIR =
+  process.env.FORM_SHOTS_DIR ??
+  fileURLToPath(new URL('../test-results/form-shots', import.meta.url));
 const VIEWPORT = { width: 1440, height: 900 } as const;
 
 /** One pending form ask: an abstract three-field schema, `count`/`notes` prefilled, a
