@@ -14,6 +14,7 @@ export const PATH: Record<RouteToken, string> = {
   tools: '/tools',
   agents: '/agents',
   presets: '/presets',
+  states: '/states',
   extensions: '/extensions',
   interactions: '/interactions',
   notifications: '/notifications',
@@ -44,7 +45,10 @@ export const DASHBOARD_TOKEN = 'observability' as const satisfies RouteToken;
  * section in turn), so nav order and the flat token list can never drift apart.
  */
 export const NAV_SECTIONS = [
-  { label: 'Capabilities', tokens: ['tools', 'agents', 'presets', 'extensions', 'templates'] },
+  {
+    label: 'Capabilities',
+    tokens: ['tools', 'agents', 'presets', 'states', 'extensions', 'templates'],
+  },
   { label: 'Connections', tokens: ['connectors', 'servedEndpoints'] },
   { label: 'Triggers', tokens: ['hooks', 'scheduling'] },
   { label: 'Activity', tokens: ['conversations', 'interactions', 'notifications'] },

@@ -172,6 +172,15 @@ export const StorageIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** States: a stacked-disk cylinder — one document store per subject. */
+export const DatabaseIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <ellipse cx="12" cy="5" rx="8" ry="3" />
+    <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+    <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+  </Icon>
+);
+
 /** Scheduling: a calendar grid with its binding posts. */
 export const SchedulingIcon: IconComponent = (props) => (
   <Icon {...props}>
@@ -348,6 +357,23 @@ export const CheckIcon: IconComponent = (props) => (
 export const MinusIcon: IconComponent = (props) => (
   <Icon {...props}>
     <path d="M5.5 12h13" />
+  </Icon>
+);
+
+/** Edit: a pencil laid across the surface it writes on. */
+export const EditIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M4 20h4L18.5 9.5a2 2 0 0 0-2.83-2.83L5 17.2z" />
+    <path d="M14 8 16 10" />
+  </Icon>
+);
+
+/** Detach / unmount: a plug pulled from its socket, the two prongs above the gap. */
+export const UnplugIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M15.5 8.5 20 4" />
+    <path d="M10.5 6.5 6 11l7 7 4.5-4.5z" />
+    <path d="M13.5 3.5 11 6M18 8.5 20.5 11M8.5 15.5 4 20" />
   </Icon>
 );
 
@@ -534,6 +560,7 @@ export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconCompon
   tools: ToolsIcon,
   agents: AgentsIcon,
   presets: PresetsIcon,
+  states: DatabaseIcon,
   extensions: ExtensionsIcon,
   templates: TemplatesIcon,
   connectors: ConnectorsIcon,

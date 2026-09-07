@@ -103,6 +103,7 @@ export function hook(overrides: Partial<HookParams> = {}): HookParams {
     tool: 'slack.post_message',
     execution_key: 'svc-events',
     tool_kwargs: {},
+    subject: null,
     condition: null,
     condition_id: null,
     condition_kwargs: {},

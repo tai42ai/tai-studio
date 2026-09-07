@@ -943,14 +943,54 @@ export const interactionMediaItem = z.object({
 });
 export type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 
+/**
+ * One per-send choice for a `form` property whose schema is a string (or array of
+ * strings). `value` is what the answer carries; `label` (absent OR null both parse
+ * to no label) is the human text shown in its place. A send may replace a property's
+ * `enum` this way for one ask without republishing the form. Applied per property by
+ * the form preview (safeParsed), so a malformed entry is a loud notice, never silent.
+ */
+export const formOption = z.object({
+  value: z.string(),
+  label: z.string().nullish(),
+});
+export type FormOption = z.infer<typeof formOption>;
+
+/**
+ * Per-send `form` data: `values` prefills top-level properties (keyed by property
+ * name), `options` supplies per-send choice lists (keyed by property name). Both
+ * default to empty. The form preview safeParses this off `format_payload.data`, so a
+ * malformed block is a loud notice rather than a whole-frame parse failure.
+ */
+export const formData = z.object({
+  values: z.record(z.string(), z.unknown()).default({}),
+  options: z.record(z.string(), z.array(formOption)).default({}),
+});
+export type FormData = z.infer<typeof formData>;
+
+/**
+ * One page of a stepped `form`: a `title` and the ordered top-level property names it
+ * groups. `format_payload.pages` is the ordered list of these; absent = one page. The
+ * form preview safeParses the list, so a malformed page is a loud notice, never silent.
+ */
+export const formPage = z.object({
+  title: z.string(),
+  fields: z.array(z.string()),
+});
+export type FormPage = z.infer<typeof formPage>;
+
+/** The `form` pages list (`format_payload.pages`), safeParsed as a whole by the preview. */
+export const formPages = z.array(formPage);
+export type FormPages = z.infer<typeof formPages>;
+
 export const interaction = z.object({
   interaction_id: z.string(),
   group_id: z.string(),
   question: z.string().default(''),
   answer_format: answerFormat,
-  // Format-specific payload: select options, form JSON schema, external url. The
-  // wire sends `null` for formats that carry none (text/confirm); it is
-  // normalized to `{}` so consumers always see an object.
+  // Format-specific payload: select options, form JSON schema (with optional per-send
+  // `data` and `pages`), external url. The wire sends `null` for formats that carry
+  // none (text/confirm); it is normalized to `{}` so consumers always see an object.
   format_payload: z
     .record(z.string(), z.unknown())
     .nullish()
@@ -1468,6 +1508,20 @@ export const triggerAuth = z.enum([
 ]);
 export type TriggerAuth = z.infer<typeof triggerAuth>;
 
+/**
+ * The optional state subject a hook fire targets (mirrors
+ * `tai42_contract.hooks.HookSubject`): the conversation-target scope plus the subject
+ * `kind` and a `key_expr` jq evaluated over the event payload at fire. `null` leaves the
+ * fire with no ambient state context.
+ */
+export const hookSubject = z.object({
+  target_kind: conversationTargetKind,
+  target_name: z.string(),
+  kind: z.string(),
+  key_expr: z.string(),
+});
+export type HookSubject = z.infer<typeof hookSubject>;
+
 export const hookParams = z.object({
   name: z.string(),
   topic: z.string(),
@@ -1475,6 +1529,9 @@ export const hookParams = z.object({
   // The api-key `user_id` the fire runs AS.
   execution_key: z.string().min(1),
   tool_kwargs: z.record(z.string(), z.unknown()).default({}),
+  // The optional state subject the fire targets; `null` leaves it with no ambient
+  // state context (a state tool it calls must then carry an explicit subject).
+  subject: hookSubject.nullable().default(null),
   condition: z.string().nullable().default(null),
   condition_id: z.string().nullable().default(null),
   // The `*_kwargs` pair is non-optional in the contract (defaults to {}, never
@@ -2553,3 +2610,298 @@ export type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResu
 // Background tool-run schemas live in their own module; re-exported here so the
 // shared fixture-validation contract resolves them by name alongside the rest.
 export { toolRunSubmitResult, toolRunRecord, toolRunList } from './tool-runs';
+
+// -- states ------------------------------------------------------------------
+// Shapes mirror tai42_contract.states.models: a declared JSON document, one per
+// subject. The base document, module fragments, write regimes and effective schema
+// are permissive JSON records — the auto-form and JsonTree interpret them at runtime;
+// a drift throws ApiSchemaError. Fields that WP-3's router is finishing concurrently
+// (`effective_schema`, `regimes`, list/stats derived columns) are modelled optional so
+// a server that has not yet composed them still parses.
+
+/** One addressed subject: the conversation-target scope plus the (kind, key) within it. */
+export const stateSubject = z.object({
+  target_kind: conversationTargetKind,
+  target_name: z.string(),
+  kind: z.string(),
+  key: z.string(),
+});
+export type StateSubject = z.infer<typeof stateSubject>;
+
+/** One absolute write-regime rule composed over the mounts: `{path, regime}`, permissive. */
+export const stateRegime = z.record(z.string(), z.unknown());
+
+/**
+ * A declared state served on every read. `schema` is the base JSON Schema;
+ * `effective_schema` (the base composed with every mounted module's fragment) and
+ * `regimes` (the absolute write-regime rules) are platform-COMPUTED and served on every
+ * read — modelled optional so a write body that omits them, or a server yet to compose
+ * them, still parses. A drift throws ApiSchemaError.
+ */
+export const stateDeclaration = z.object({
+  name: z.string(),
+  description: z.string().default(''),
+  schema: jsonSchema,
+  subject_kinds: z.array(z.string()),
+  default_subject_kind: z.string(),
+  retention_days: z.number().nullable().default(null),
+  effective_schema: jsonSchema.nullable().optional(),
+  regimes: z.array(stateRegime).nullable().optional(),
+});
+export type StateDeclaration = z.infer<typeof stateDeclaration>;
+
+/**
+ * One row of `GET /api/states` — a served declaration (`list_states` dumps every
+ * `StateDeclaration`) plus `updated_at` (the row's last-write timestamp, ISO or
+ * `null`). The list carries no record count; the `Records` column reads
+ * `getStateStats` lazily per row.
+ */
+export const stateListItem = stateDeclaration.extend({
+  updated_at: z.string().nullable().default(null),
+});
+export type StateListItem = z.infer<typeof stateListItem>;
+export const stateList = z.array(stateListItem);
+
+/** One module mount on a state: where the fragment lands + its param/declaration values. */
+export const stateMount = z.object({
+  module: z.string(),
+  path: z.array(z.string()),
+  parameters: z.record(z.string(), z.unknown()).default({}),
+  declarations: z.record(z.string(), z.unknown()).default({}),
+});
+export type StateMount = z.infer<typeof stateMount>;
+export const stateMountList = z.array(stateMount);
+
+/** `GET /api/states/{name}` — the declaration (with effective schema + regimes) plus mounts. */
+export const stateDetail = stateDeclaration.extend({
+  mounts: z.array(stateMount).default([]),
+});
+export type StateDetail = z.infer<typeof stateDetail>;
+
+/**
+ * `GET /api/states/{name}/stats` — `records` (total documents), `per_field` (the count
+ * of records carrying each base-schema property), `per_kind` (records per subject kind)
+ * and `consumers` (the count of listable consumers). The Records tab shows `records`;
+ * the states list reads it lazily for its Records column.
+ */
+export const stateStats = z.object({
+  records: z.number(),
+  per_field: z.record(z.string(), z.number()).default({}),
+  per_kind: z.record(z.string(), z.number()).default({}),
+  consumers: z.number().default(0),
+});
+export type StateStats = z.infer<typeof stateStats>;
+
+/** The platform half of a state-module document (mirrors StateModuleDocument). */
+export const stateModuleDocument = z.object({
+  kind: z.literal('state-module').default('state-module'),
+  name: z.string(),
+  description: z.string().default(''),
+  parameters: z.record(z.string(), z.unknown()).default({}),
+  schema: jsonSchema,
+  regimes: z.array(stateRegime).default([]),
+  declarations: z.record(z.string(), z.unknown()).nullable().default(null),
+  trace: z.record(z.string(), z.unknown()).default({}),
+});
+export type StateModuleDocument = z.infer<typeof stateModuleDocument>;
+
+/**
+ * One row of `GET /api/state-modules`. The module document plus the two derived columns
+ * the Modules tab shows: `mounted_on` (how many states mount it — a delete is refused
+ * while > 0) and `shipped_default` (a platform-shipped module). ASSUMED derived fields
+ * (WP-3 owns the list router); the document fields are verbatim.
+ */
+export const stateModuleListItem = stateModuleDocument.extend({
+  mounted_on: z.number().default(0),
+  shipped_default: z.boolean().default(false),
+});
+export type StateModuleListItem = z.infer<typeof stateModuleListItem>;
+export const stateModuleList = z.array(stateModuleListItem);
+
+/** A read record: the state, its subject, the document + monotonic seq, and any fold. */
+export const recordView = z.object({
+  state: z.string(),
+  subject: stateSubject,
+  data: z.record(z.string(), z.unknown()).default({}),
+  seq: z.number(),
+  canonical_subject: stateSubject,
+  folded_from: z.array(stateSubject).default([]),
+});
+export type RecordView = z.infer<typeof recordView>;
+
+/** The outcome of an `apply` (a delta batch): whether it applied + the resulting doc. */
+export const applyResult = z.object({
+  applied: z.boolean(),
+  data: z.record(z.string(), z.unknown()).nullable().default(null),
+  seq: z.number().nullable().default(null),
+  skipped: z.array(z.record(z.string(), z.unknown())).default([]),
+});
+export type ApplyResult = z.infer<typeof applyResult>;
+
+/**
+ * One paged subject row: the addressed `subject` plus its record's last-write
+ * `updated_at` — epoch seconds (the store's `extract(epoch FROM updated_at)`), served
+ * raw (no `mode="json"` dump), and `NOT NULL` on every record, so a plain number.
+ */
+export const subjectRow = z.object({
+  subject: stateSubject,
+  updated_at: z.number(),
+});
+export type SubjectRow = z.infer<typeof subjectRow>;
+
+/**
+ * `GET /api/states/{name}/subjects` — a keyset page of subject rows (optionally of one
+ * `kind`): the matched `subjects` plus the `next_cursor` a "Load more" carries back
+ * (`null` at the end).
+ */
+export const subjectPage = z.object({
+  subjects: z.array(subjectRow),
+  next_cursor: z.string().nullable().default(null),
+});
+export type SubjectPage = z.infer<typeof subjectPage>;
+
+/**
+ * `POST /api/states/{name}/records/search` — a keyset page of the subject rows whose
+ * document contains the filters (a JSONB containment match). Each hit's `subject` opens
+ * the record page; `next_cursor` pages the rest.
+ */
+export const recordSearchPage = z.object({
+  matches: z.array(subjectRow),
+  next_cursor: z.string().nullable().default(null),
+});
+export type RecordSearchPage = z.infer<typeof recordSearchPage>;
+
+/** A WriteEntry's origin completed by the platform chokepoint (mirrors CompletedOrigin). */
+export const completedOrigin = z.object({
+  consumer: z.string().nullable().default(null),
+  // Opaque consumer-supplied provenance JSON the platform stores as is.
+  meta: z.record(z.string(), z.unknown()).nullable().default(null),
+  run_id: z.string().nullable().default(null),
+  op_id: z.string().nullable().default(null),
+  door: z.string(),
+  actor: z.string().nullable().default(null),
+  turn_id: z.string().nullable().default(null),
+  inbound_id: z.string().nullable().default(null),
+});
+export type CompletedOrigin = z.infer<typeof completedOrigin>;
+
+/** One row of a subject's audit trail (mirrors WriteEntry). `paths` are absolute. */
+export const writeEntry = z.object({
+  seq: z.number(),
+  at: z.string(),
+  origin: completedOrigin,
+  paths: z.array(z.array(z.union([z.string(), z.number()]))).default([]),
+});
+export type WriteEntry = z.infer<typeof writeEntry>;
+
+/** `GET /api/states/{name}/records/.../writes` — a keyset page of the audit trail. */
+export const writesPage = z.object({
+  items: z.array(writeEntry),
+  next_cursor: z.string().nullable().default(null),
+});
+export type WritesPage = z.infer<typeof writesPage>;
+
+/** Where the Studio opens a consumer (mirrors ConsumerLink): a token+search OR plugin path. */
+export const consumerLink = z.object({
+  token: z.string().nullable().default(null),
+  plugin_path: z.string().nullable().default(null),
+  search: z.record(z.string(), z.unknown()).nullable().default(null),
+});
+export type ConsumerLink = z.infer<typeof consumerLink>;
+
+/**
+ * One thing that binds a state (mirrors ConsumerRow): its `kind` (flow / hook / schedule
+ * / agent), `name`, human `detail` and optional `link`. `unavailable` marks a consumer
+ * family that cannot be listed on this deployment (e.g. no scheduling backend), surfaced
+ * as a muted line — never swallowed.
+ */
+export const consumerRow = z.object({
+  kind: z.string(),
+  name: z.string().nullable().default(null),
+  detail: z.string().nullable().default(null),
+  link: consumerLink.nullable().default(null),
+  unavailable: z.string().nullable().default(null),
+});
+export type ConsumerRow = z.infer<typeof consumerRow>;
+
+/** `GET /api/states/{name}/consumers` — the union of every registered lister's rows. */
+export const stateConsumers = z.array(consumerRow);
+export type StateConsumers = z.infer<typeof stateConsumers>;
+
+/** `DELETE /api/states/{name}` — the removed state. */
+export const stateDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
+
+/** `PUT /api/states/{name}/mounts/{module}` — the module now mounted on the state. */
+export const stateMounted = z.object({
+  mounted: z.literal(true),
+  state: z.string(),
+  module: z.string(),
+});
+export type StateMounted = z.infer<typeof stateMounted>;
+
+/** `PATCH /api/states/{name}/mounts/{module}` — the mount whose declarations were rewritten. */
+export const stateMountUpdated = z.object({
+  updated: z.literal(true),
+  state: z.string(),
+  module: z.string(),
+});
+export type StateMountUpdated = z.infer<typeof stateMountUpdated>;
+
+/** `DELETE /api/states/{name}/mounts/{module}` — the module unmounted from the state. */
+export const stateUnmounted = z.object({
+  unmounted: z.literal(true),
+  state: z.string(),
+  module: z.string(),
+});
+export type StateUnmounted = z.infer<typeof stateUnmounted>;
+
+/**
+ * `POST /api/states/{name}/records/.../fold` — the fold report: the `mode`, the
+ * `{kind, key}` of the folded `from` and surviving `into` subjects, whether the fold
+ * was `already` in place, and how many records were `flattened` into the survivor.
+ */
+export const stateFoldReport = z.object({
+  mode: z.enum(['switch', 'merge']),
+  from: z.object({ kind: z.string(), key: z.string() }),
+  into: z.object({ kind: z.string(), key: z.string() }),
+  already: z.boolean(),
+  flattened: z.number().default(0),
+});
+export type StateFoldReport = z.infer<typeof stateFoldReport>;
+
+/** `DELETE /api/state-modules/{name}` — the removed module document. */
+export const stateModuleDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
+
+/** `DELETE /api/states/{name}/records/...` — the erased record marker. */
+export const recordErased = z.object({ erased: z.literal(true) });
+
+/**
+ * `POST /api/states/{name}/migrate/preview` — the read-only dry-run of a schema change
+ * over the state's current records: the `records` total, how many `fits`, how many
+ * `misfits` (a `misfits > 0` change narrows and needs confirmation), the `misfit_fields`
+ * count per json path, and up to ten misfit `examples` (each `{subject, errors}`).
+ */
+export const stateMigratePreview = z.object({
+  records: z.number(),
+  fits: z.number(),
+  misfits: z.number(),
+  misfit_fields: z.record(z.string(), z.number()).default({}),
+  examples: z.array(z.record(z.string(), z.unknown())).default([]),
+});
+export type StateMigratePreview = z.infer<typeof stateMigratePreview>;
+
+/** `POST /api/states/{name}/migrate` — the applied migration's outcome. */
+export const stateMigrated = z.object({
+  migrated: z.boolean(),
+  name: z.string(),
+});
+export type StateMigrated = z.infer<typeof stateMigrated>;
+
+/**
+ * `POST /api/state-retention/prune` — the retention sweep's per-state deleted counts
+ * (`{}` when nothing expired); the UI sums the values for its total.
+ */
+export const stateRetentionPruned = z.object({
+  pruned: z.record(z.string(), z.number()).default({}),
+});
+export type StateRetentionPruned = z.infer<typeof stateRetentionPruned>;

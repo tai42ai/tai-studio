@@ -151,6 +151,9 @@ importers:
       '@tai42/feature-settings':
         specifier: workspace:*
         version: link:../../packages/features/settings
+      '@tai42/feature-states':
+        specifier: workspace:*
+        version: link:../../packages/features/states
       '@tai42/feature-storage':
         specifier: workspace:*
         version: link:../../packages/features/storage
@@ -864,6 +867,52 @@ importers:
       uqr:
         specifier: 'catalog:'
         version: 0.1.3
+    devDependencies:
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.101.2(react@19.2.8)
+      '@testing-library/jest-dom':
+        specifier: 'catalog:'
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: 'catalog:'
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@testing-library/user-event':
+        specifier: 'catalog:'
+        version: 14.6.6(@testing-library/dom@10.4.1)
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.18
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.5(@types/react@19.2.18)
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 4.7.0(vite@6.4.3(@types/node@22.20.0)(jiti@2.7.0)(lightningcss@1.32.0))
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 3.2.7(vitest@3.2.7(@types/node@22.20.0)(jiti@2.7.0)(jsdom@30.0.1)(lightningcss@1.32.0)(msw@2.14.6(@types/node@22.20.0)(typescript@6.0.3)))
+      jsdom:
+        specifier: 'catalog:'
+        version: 30.0.1
+      react:
+        specifier: 'catalog:'
+        version: 19.2.8
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.8(react@19.2.8)
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.7(@types/node@22.20.0)(jiti@2.7.0)(jsdom@30.0.1)(lightningcss@1.32.0)(msw@2.14.6(@types/node@22.20.0)(typescript@6.0.3))
+
+  packages/features/states:
+    dependencies:
+      '@tai42/api-client':
+        specifier: workspace:*
+        version: link:../../api-client
+      '@tai42/studio-sdk':
+        specifier: workspace:*
+        version: link:../../studio-sdk
     devDependencies:
       '@tanstack/react-query':
         specifier: 'catalog:'

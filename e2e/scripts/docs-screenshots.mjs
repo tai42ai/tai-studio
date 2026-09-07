@@ -37,6 +37,10 @@
  *                  `studio_demo_echo` presets, the master pane rendered full-width (no
  *                  selection). The version detail is NOT shot — its version panel stamps
  *                  a server `created_at` that would churn every run.
+ *   - states-{list,declaration,modules,records,consumers,record} — the platform state
+ *                  store (`GET /api/states*`, `/api/state-modules`): the seeded `notes`
+ *                  state's list row, its Declaration / Modules / Records / Consumers
+ *                  tabs, and one subject's record page (document + `api` Writes audit).
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
@@ -124,19 +128,24 @@ const OWNED_KEY = process.env.STUDIO_OWNED_KEY;
  * route/thread that names nothing and capture an empty monitor, so it fails loudly. */
 const CONVERSATION_ROUTE = process.env.STUDIO_CONVERSATION_ROUTE;
 const CONVERSATION_THREAD = process.env.STUDIO_CONVERSATION_THREAD;
-if (!CONVERSATION_ROUTE || !CONVERSATION_THREAD) {
-  console.error(
-    'STUDIO_CONVERSATION_ROUTE and STUDIO_CONVERSATION_THREAD are required: the runner ' +
-      '(docs-screenshots.sh) seeds the conversation route and its threads, then exports both.',
-  );
-  process.exit(1);
-}
 
 /** When set (the automated CI pipeline sets it), skip the shots tagged
  * `nondeterministic` — the QR screens, whose QR encodes a freshly-minted random token
  * each run and would otherwise churn every automated regeneration. Unset for a manual
  * full run, which captures them too (for a QR-dialog UI change). */
 const SKIP_NONDETERMINISTIC = process.env.SKIP_NONDETERMINISTIC_SHOTS === '1';
+
+/** `ONLY=name1,name2` restricts the run to those frames (signed-in and public alike),
+ * so a targeted change regenerates a handful of screens without capturing the whole set.
+ * Unset captures every screen. An unknown name is a loud failure, never a silent no-op.
+ * Documented in docs-screenshots.sh's header. */
+const ONLY = process.env.ONLY
+  ? new Set(
+      process.env.ONLY.split(',')
+        .map((name) => name.trim())
+        .filter((name) => name !== ''),
+    )
+  : null;
 
 /** The loud, shared error card. Its presence on any page means the capture is
  * broken; the script throws rather than shooting it. */
@@ -215,6 +224,65 @@ const AUTHED_PAGES = [
     action: async (page) => {
       await page
         .locator('[data-testid="preset-row-shift_handover"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  // --- States screens (the platform state store) -------------------------------
+  // The six frames the docs "## States" section shows, all under the seeded `notes`
+  // state (docs-screenshots.sh §7f declares it, mounts a module, writes two subject
+  // records and registers a consumer hook). Each waits on a stable, populated element —
+  // a table row, a tab's populated control, or the record page's own document/audit —
+  // never a bare timeout. The content is deterministic (no server timestamp is in
+  // frame), so NONE carry the `nondeterministic` flag.
+  {
+    // The states master list: the declared `notes` row with its subject-kind badges and
+    // record/consumer counts.
+    name: 'states-list',
+    path: '/states',
+    wait: '[data-testid="state-row-notes"]',
+  },
+  {
+    // The Declaration tab: the base schema field tree beside the subject section (the
+    // mounted `preferences` subtree shows read-only). Waits on the subject-kinds control,
+    // which only the loaded declaration renders.
+    name: 'states-declaration',
+    path: '/states?state=notes',
+    wait: '[aria-label="Subject kinds"]',
+  },
+  {
+    // The Modules tab: the state's mounts above the platform module documents. Waits on
+    // the mounted module name, rendered only for a non-empty mounts table.
+    name: 'states-modules',
+    path: '/states?state=notes&tab=modules',
+    wait: 'text=preferences',
+  },
+  {
+    // The Records tab: the subject lookup form above the state's subjects. The subjects
+    // browser loads the default kind (`thread`) on mount, so the seeded subject key
+    // proves the list rendered populated.
+    name: 'states-records',
+    path: '/states?state=notes&tab=records',
+    wait: 'text=t-001',
+  },
+  {
+    // The Consumers tab: everything that binds the state. Waits on the seeded hook's name
+    // (the schedule family renders a muted unavailable row beside it — no backend here).
+    name: 'states-consumers',
+    path: '/states?state=notes&tab=consumers',
+    wait: 'text=notes-updater',
+  },
+  {
+    // The record page for one subject: its document, the fold-into card, and the Writes
+    // audit. `t-002` was grown by a `set_by_key` delta, so the audit carries an `api`
+    // row. Waits on the loaded document (the Erase action shows only for a real record),
+    // then requires the `api` write badge so the audit table is framed populated.
+    name: 'states-record',
+    path: '/states?state=notes&subject=thread:t-002&target=tool:studio_demo_echo',
+    wait: 'button:has-text("Erase")',
+    action: async (page) => {
+      await page
+        .getByText('api', { exact: true })
+        .first()
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
@@ -488,10 +556,39 @@ const AUTHED_PAGES = [
 /** The credential screen — captured SIGNED OUT (no seeded key). */
 const PUBLIC_PAGES = [{ name: 'login', path: '/login', wait: 'text=Sign in to the Studio' }];
 
+// Apply the ONLY filter (if set) to both page sets; an unknown name fails loudly so a
+// typo never silently captures nothing. Every downstream guard and the capture loop
+// read the FILTERED lists, so a frame a filtered run excludes needs none of its seeded
+// prerequisites.
+const AUTHED_RUN = ONLY ? AUTHED_PAGES.filter((entry) => ONLY.has(entry.name)) : AUTHED_PAGES;
+const PUBLIC_RUN = ONLY ? PUBLIC_PAGES.filter((entry) => ONLY.has(entry.name)) : PUBLIC_PAGES;
+if (ONLY) {
+  const known = new Set([...AUTHED_PAGES, ...PUBLIC_PAGES].map((entry) => entry.name));
+  const unknown = [...ONLY].filter((name) => !known.has(name));
+  if (unknown.length > 0) {
+    console.error(`ONLY names unknown screen(s): ${unknown.join(', ')} — check the frame names.`);
+    process.exit(1);
+  }
+}
+
+// The conversations frame deep-links a runtime-seeded route + thread; require them only
+// when that frame is actually in the run (the runner seeds and exports both, but a
+// filtered run without conversations needs neither).
+if (
+  AUTHED_RUN.some((entry) => entry.name === 'conversations') &&
+  (!CONVERSATION_ROUTE || !CONVERSATION_THREAD)
+) {
+  console.error(
+    'STUDIO_CONVERSATION_ROUTE and STUDIO_CONVERSATION_THREAD are required: the runner ' +
+      '(docs-screenshots.sh) seeds the conversation route and its threads, then exports both.',
+  );
+  process.exit(1);
+}
+
 // An entry that declares `apiKey` MUST resolve to a real key: a present-but-empty
 // override (the runner did not export STUDIO_OWNED_KEY) would otherwise fall back
 // to the full DEMO_KEY and silently mis-capture the scoped view. Fail loudly here.
-const missingKey = AUTHED_PAGES.find((entry) => 'apiKey' in entry && !entry.apiKey);
+const missingKey = AUTHED_RUN.find((entry) => 'apiKey' in entry && !entry.apiKey);
 if (missingKey) {
   console.error(
     `${missingKey.name} declares a scoped apiKey but STUDIO_OWNED_KEY is unset — ` +
@@ -654,7 +751,7 @@ async function main() {
       return context;
     };
 
-    for (const entry of AUTHED_PAGES) {
+    for (const entry of AUTHED_RUN) {
       // The automated pipeline skips the inherently-nondeterministic shots (a QR of a
       // freshly-minted random token) so re-runs don't churn; a manual full run
       // (SKIP_NONDETERMINISTIC_SHOTS unset) captures them when their dialog UI changes.
@@ -675,8 +772,7 @@ async function main() {
     // Signed-out context for the login screen — no shell, so no plugin sidebar.
     const guest = await browser.newContext({ viewport: VIEWPORT, colorScheme: theme });
     const guestPage = await guest.newPage();
-    for (const entry of PUBLIC_PAGES)
-      await shoot(guestPage, entry, theme, { awaitPluginNav: false });
+    for (const entry of PUBLIC_RUN) await shoot(guestPage, entry, theme, { awaitPluginNav: false });
     await guest.close();
   }
 

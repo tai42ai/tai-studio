@@ -1,0 +1,26 @@
+{
+  // Build config: the emitting composite project. `tsc -b tsconfig.build.json`
+  // compiles src to dist, excluding tests and the vitest setup so neither the
+  // composite build nor the published dist depends on the test toolchain.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": ".tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "src/test-setup.ts",
+    "**/test-utils.ts",
+    "**/test-utils.tsx"
+  ],
+  "references": [
+    { "path": "../../studio-sdk/tsconfig.build.json" },
+    { "path": "../../api-client/tsconfig.build.json" }
+  ]
+}

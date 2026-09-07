@@ -133,9 +133,9 @@ describe('toolTags — additive per-tool native surface', () => {
   it('parses an array of {name, tags, badges, hidden} entries', () => {
     const parsed = schemas.toolTags.parse([
       { name: 'echo', tags: [], badges: [], hidden: false },
-      { name: 'flow_step', tags: ['babelfish'], badges: ['network'], hidden: true },
+      { name: 'acme_probe', tags: ['acme'], badges: ['network'], hidden: true },
     ]);
-    expect(parsed[1]?.tags).toEqual(['babelfish']);
+    expect(parsed[1]?.tags).toEqual(['acme']);
     expect(parsed[1]?.badges).toEqual(['network']);
     expect(parsed[1]?.hidden).toBe(true);
   });

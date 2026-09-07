@@ -151,10 +151,13 @@ fi
 # runner sets APPLY_ACCOUNTS_DDL=1 — gated so the lean e2e boot (no accounts plugin
 # installed) is untouched. NOT `tai db migrate`: that discovers only marketplace-installed
 # plugins, so it would migrate the skeleton chain but skip the pip-installed accounts
-# plugin — the entries are built directly instead. Both chains bind to the `default`
-# database (TAI_DATABASE_DEFAULT_PG_* exported above), resolved through the registry's
-# migrator identity. The compose Postgres is up (step 1) and the plugins are installed
-# above, so this runs cleanly here; a discovery/apply failure exits non-zero.
+# plugin — the entries are built directly instead. The platform state-store chain is
+# always applied: the manifest mounts the `states` router, whose store binds to the
+# `default` database when TAI_DB_BINDING_STATES is unset, and its boot gate refuses to
+# start until the chain is applied there. Every chain binds to the `default` database
+# (TAI_DATABASE_DEFAULT_PG_* exported above), resolved through the registry's migrator
+# identity. The compose Postgres is up (step 1) and the plugins are installed above, so
+# this runs cleanly here; a discovery/apply failure exits non-zero.
 log "applying the platform migration chains (kit migration runner)"
 APPLY_ACCOUNTS_DDL="${APPLY_ACCOUNTS_DDL:-0}" "${VENV_PY}" - <<'PY' >&2
 import asyncio
@@ -164,8 +167,9 @@ import os
 from tai42_kit.db import apply_migrations
 from tai42_kit.plugins import parse_plugin_spec
 from tai42_skeleton.db.discovery import plugin_migration_entry, skeleton_entry
+from tai42_skeleton.states.db import states_entry
 
-entries = [skeleton_entry()]
+entries = [skeleton_entry(), states_entry()]
 if os.environ.get("APPLY_ACCOUNTS_DDL", "0") == "1":
     package = importlib.resources.files("tai42_accounts_postgres")
     spec = parse_plugin_spec(

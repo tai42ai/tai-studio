@@ -498,6 +498,79 @@ export interface SetMcpSecretEnvBody {
   readonly manifest_pointer: string;
 }
 
+/**
+ * The client-facing write body for a state declaration (`PUT /api/states/{name}`), the
+ * wire shape of `tai42_contract.states.StateDeclaration` minus the platform-computed
+ * `effective_schema`/`regimes` (those are read-only, refused on a write). `retention_days`
+ * is `null` to keep records forever.
+ */
+export interface StateDeclarationBody {
+  readonly name: string;
+  readonly description?: string;
+  readonly schema: Record<string, unknown>;
+  readonly subject_kinds: readonly string[];
+  readonly default_subject_kind: string;
+  readonly retention_days?: number | null;
+}
+
+/**
+ * The body of a state migration (`POST /api/states/{name}/migrate[/preview]`): the target
+ * `new_schema` the change moves records to, plus — for the migrate, when it narrows —
+ * exactly one of a `transform_expr`, `confirm_drop` (authorising the data a narrowing
+ * loses), or per-field `resolutions`. The preview reads `new_schema` only.
+ */
+export interface StateMigrateBody {
+  readonly new_schema: Record<string, unknown>;
+  readonly transform_expr?: string;
+  readonly confirm_drop?: boolean;
+  readonly resolutions?: Record<string, unknown>[];
+}
+
+/** A state-module document write body (`PUT /api/state-modules/{name}`, the platform half). */
+export interface StateModuleBody {
+  readonly name: string;
+  readonly description?: string;
+  readonly parameters?: Record<string, unknown>;
+  readonly schema: Record<string, unknown>;
+  readonly regimes?: Record<string, unknown>[];
+  readonly declarations?: Record<string, unknown> | null;
+  readonly trace?: Record<string, unknown>;
+}
+
+/** A module mount / re-mount body (`PUT|PATCH /api/states/{name}/mounts/{module}`). */
+export interface StateMountBody {
+  readonly path?: string[];
+  readonly parameters?: Record<string, unknown>;
+  readonly declarations?: Record<string, unknown>;
+}
+
+/** The four-part subject a record route addresses in its path. */
+export interface StateSubjectRef {
+  readonly target_kind: string;
+  readonly target_name: string;
+  readonly kind: string;
+  readonly key: string;
+}
+
+/** A keyset page request: an optional size and the opaque cursor a prior page returned. */
+export interface StatePageQuery {
+  readonly limit?: number;
+  readonly cursor?: string;
+}
+
+/**
+ * The subject-addressed record path: `/api/states/{name}/records/{target_kind}/
+ * {target_name}/{kind}/{key}` — four path segments, each percent-encoded, so a key
+ * carrying a slash or a colon never escapes its segment.
+ */
+function stateRecordPath(name: string, subject: StateSubjectRef): string {
+  return (
+    `/api/states/${encodeSegment(name)}/records/` +
+    `${encodeSegment(subject.target_kind)}/${encodeSegment(subject.target_name)}/` +
+    `${encodeSegment(subject.kind)}/${encodeSegment(subject.key)}`
+  );
+}
+
 export function createApiClient(config: ApiConfig) {
   const req = <S extends Parameters<typeof apiRequest>[2]>(
     path: string,
@@ -605,6 +678,138 @@ export function createApiClient(config: ApiConfig) {
         s.presetVersionTags,
         { method: 'PUT', body: { tags } },
       ),
+
+    // -- states --------------------------------------------------------------
+    // A state is a declared JSON document, one per subject. The list is the
+    // management population; a single state read composes the declaration with its
+    // effective schema, regimes and mounts. Every record route addresses its subject
+    // as four percent-encoded path segments (see `stateRecordPath`).
+    listStates: (signal?: AbortSignal) => req('/api/states', s.stateList, { signal }),
+    getState: (name: string, signal?: AbortSignal) =>
+      req(`/api/states/${encodeSegment(name)}`, s.stateDetail, { signal }),
+    // A plain declaration upsert — no `replace` flag. With records present the server
+    // accepts additive schema changes and refuses a narrowing (a 409 → the guarded
+    // migrate door); a subject-kind removal that would strand records is a 409 too.
+    putState: (name: string, body: StateDeclarationBody) =>
+      req(`/api/states/${encodeSegment(name)}`, s.stateDetail, {
+        method: 'PUT',
+        body,
+      }),
+    deleteState: (name: string) =>
+      req(`/api/states/${encodeSegment(name)}`, s.stateDeleted, { method: 'DELETE' }),
+    getStateStats: (name: string, signal?: AbortSignal) =>
+      req(`/api/states/${encodeSegment(name)}/stats`, s.stateStats, { signal }),
+    // The dry-run of a declaration change over existing records: `narrowing` gates the
+    // migrate behind a confirm (a 412 without it). Preview never writes.
+    previewStateMigration: (name: string, body: StateMigrateBody) =>
+      req(`/api/states/${encodeSegment(name)}/migrate/preview`, s.stateMigratePreview, {
+        method: 'POST',
+        body,
+      }),
+    migrateState: (name: string, body: StateMigrateBody) =>
+      req(`/api/states/${encodeSegment(name)}/migrate`, s.stateMigrated, {
+        method: 'POST',
+        body,
+      }),
+    // -- state mounts --------------------------------------------------------
+    listStateMounts: (name: string, signal?: AbortSignal) =>
+      req(`/api/states/${encodeSegment(name)}/mounts`, s.stateMountList, { signal }),
+    mountStateModule: (name: string, module: string, body: StateMountBody) =>
+      req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateMounted, {
+        method: 'PUT',
+        body,
+      }),
+    patchStateMount: (name: string, module: string, body: StateMountBody) =>
+      req(
+        `/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`,
+        s.stateMountUpdated,
+        { method: 'PATCH', body },
+      ),
+    unmountStateModule: (name: string, module: string) =>
+      req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateUnmounted, {
+        method: 'DELETE',
+      }),
+    // -- state subjects + records -------------------------------------------
+    listStateSubjects: (
+      name: string,
+      params: { kind?: string } & StatePageQuery,
+      signal?: AbortSignal,
+    ) =>
+      req(`/api/states/${encodeSegment(name)}/subjects`, s.subjectPage, {
+        signal,
+        query: { kind: params.kind, limit: params.limit, cursor: params.cursor },
+      }),
+    // The content search body is a single JSONB containment document (`filters`); the
+    // server refuses an empty one, so the UI validates a non-empty object first.
+    searchStateRecords: (
+      name: string,
+      body: { filters: Record<string, unknown> } & StatePageQuery,
+      signal?: AbortSignal,
+    ) =>
+      req(`/api/states/${encodeSegment(name)}/records/search`, s.recordSearchPage, {
+        method: 'POST',
+        body,
+        signal,
+      }),
+    // A subject with no document yet reads as `null` (a 200 `{data: null}`, the record
+    // page's Create path) — never an error, so the schema is nullable.
+    getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) =>
+      req(stateRecordPath(name, subject), s.recordView.nullable(), { signal }),
+    putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) =>
+      req(stateRecordPath(name, subject), s.recordView, { method: 'PUT', body: data }),
+    patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) =>
+      req(stateRecordPath(name, subject), s.recordView, { method: 'PATCH', body: data }),
+    applyStateRecord: (
+      name: string,
+      subject: StateSubjectRef,
+      ops: readonly Record<string, unknown>[],
+    ) =>
+      req(`${stateRecordPath(name, subject)}/deltas`, s.applyResult, {
+        method: 'POST',
+        body: { ops },
+      }),
+    deleteStateRecord: (name: string, subject: StateSubjectRef) =>
+      req(stateRecordPath(name, subject), s.recordErased, { method: 'DELETE' }),
+    // `mode` is required server-side (`switch` drops, `merge` combines); the fold returns
+    // a report, not the surviving record.
+    foldStateRecord: (
+      name: string,
+      subject: StateSubjectRef,
+      into: StateSubjectRef,
+      mode: 'switch' | 'merge',
+    ) =>
+      req(`${stateRecordPath(name, subject)}/fold`, s.stateFoldReport, {
+        method: 'POST',
+        body: { into, mode },
+      }),
+    listStateWrites: (
+      name: string,
+      subject: StateSubjectRef,
+      params?: StatePageQuery,
+      signal?: AbortSignal,
+    ) =>
+      req(`${stateRecordPath(name, subject)}/writes`, s.writesPage, {
+        signal,
+        query: { limit: params?.limit, cursor: params?.cursor },
+      }),
+    stateConsumers: (name: string, signal?: AbortSignal) =>
+      req(`/api/states/${encodeSegment(name)}/consumers`, s.stateConsumers, { signal }),
+    // -- state-module documents (top-level sibling collection) ---------------
+    listStateModules: (signal?: AbortSignal) =>
+      req('/api/state-modules', s.stateModuleList, { signal }),
+    getStateModule: (name: string, signal?: AbortSignal) =>
+      req(`/api/state-modules/${encodeSegment(name)}`, s.stateModuleDocument, { signal }),
+    putStateModule: (name: string, body: StateModuleBody, replace?: boolean) =>
+      req(`/api/state-modules/${encodeSegment(name)}`, s.stateModuleDocument, {
+        method: 'PUT',
+        body,
+        query: replace === true ? { replace: 'true' } : undefined,
+      }),
+    deleteStateModule: (name: string) =>
+      req(`/api/state-modules/${encodeSegment(name)}`, s.stateModuleDeleted, { method: 'DELETE' }),
+    // -- state retention -----------------------------------------------------
+    pruneStateRetention: () =>
+      req('/api/state-retention/prune', s.stateRetentionPruned, { method: 'POST', body: {} }),
 
     // -- tool_meta (the organizational overlay) ------------------------------
     // The folder tree + per-tool overlay rows in one read; the features merge the

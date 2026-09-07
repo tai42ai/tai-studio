@@ -25,6 +25,17 @@ export interface RouteSearchByToken {
   tools: { tool?: string; tags?: string[]; q?: string };
   agents: Record<string, never>;
   presets: { preset?: string };
+  // The states surface: `state` opens one state, `tab` picks its section, and
+  // `subject` (`<kind>:<key>`, split on the FIRST `:`, key URL-encoded) with `target`
+  // (`<target_kind>:<target_name>`, same split rule) together address one subject's
+  // record page — a record's identity is all four fields, so the target rides the URL
+  // for deep-linking and reload.
+  states: {
+    state?: string;
+    tab?: 'declaration' | 'modules' | 'records' | 'consumers';
+    subject?: string;
+    target?: string;
+  };
   extensions: Record<string, never>;
   interactions: Record<string, never>;
   notifications: Record<string, never>;

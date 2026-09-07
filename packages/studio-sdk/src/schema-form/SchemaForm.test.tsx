@@ -99,6 +99,25 @@ describe('SchemaForm — primitives', () => {
     expect(input).toHaveValue('widget');
     expect(input).toBeDisabled();
   });
+
+  it('renders every scalar control through the token-styled design-system class', () => {
+    // The theming contract: a scalar field is a design-system control, never a bare
+    // native element. `.tai-input` / `.tai-select-trigger` are what carry the `--tai-*`
+    // background and text tokens, so both themes resolve; a native `<input>` would keep
+    // the UA fill and read as a light box under dark text.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        notes: { type: 'string', title: 'Notes' },
+        count: { type: 'integer', title: 'Count' },
+        size: { enum: ['xs', 's', 'm', 'l'], title: 'Size' },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveClass('tai-input');
+    expect(screen.getByRole('spinbutton', { name: 'Count' })).toHaveClass('tai-input');
+    expect(screen.getByRole('combobox', { name: 'Size' })).toHaveClass('tai-select-trigger');
+  });
 });
 
 describe('SchemaForm — enum', () => {

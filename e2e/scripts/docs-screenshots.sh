@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 22 Studio screens (light + dark = 44 PNGs) into
+# pipeline. Regenerates ALL 28 Studio screens (light + dark = 56 PNGs) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -18,8 +18,10 @@
 #      into the skeleton venv;
 #   2. waits for /health, then seeds the demo accounts, the scoped surfaces (an
 #      owned key plus its audience-addressed notification + pending question), the
-#      named settings profile the Profiles tab lists and the conversation route
-#      whose threads the Conversations screen reads;
+#      named settings profile the Profiles tab lists, the conversation route
+#      whose threads the Conversations screen reads, and the platform state store
+#      (a declared state with a mounted module, subject records and a consumer hook —
+#      its own dedicated database, created + migrated in §5b);
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
 #   4. copies the five shell screens the tai-studio README embeds into
@@ -43,6 +45,9 @@
 #   STUDIO_PORT      skeleton port (default 8765)
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist (fast reruns)
 #   KEEP_UP          set to 1 to leave the skeleton running after capture (debug)
+#   ONLY             comma-separated frame names to capture just those screens (e.g.
+#                    ONLY=states-list,states-record); unset captures every screen. The
+#                    full seed always runs — ONLY narrows only the capture shot list.
 set -euo pipefail
 
 log() { printf '\033[1;35m[docs-shots]\033[0m %s\n' "$*" >&2; }
@@ -125,6 +130,24 @@ export PROMETHEUS_MULTIPROC_DIR="${PROM_DIR}"
 export MARKETPLACE_URL="${REGISTRY_URL}"
 export MARKETPLACE_ADVISORIES_POLL="false"
 
+# Platform state store (the States screens). The kit DB component `states`
+# (TAI_DB_BINDING_STATES) DEFAULTS to the `default` database — but boot.sh applies
+# only the skeleton + accounts migration chains there, never the states chain, so the
+# store would report `active` yet answer 501 on the first read. Bind it instead to a
+# DEDICATED database on boot.sh's own compose Postgres (the `default` group's
+# TAI_DATABASE_DEFAULT_PG_* host/port, database `docs_demo_states`), which this runner
+# creates and migrates below (§5b). A distinct database name keeps the store's tables
+# off the skeleton/accounts `tai` database, so a concurrent Playwright e2e run (it
+# shares boot.sh's Postgres) is never touched. Exported BEFORE the skeleton launches so
+# its states store binds here on boot; the same vars drive the chain apply in §5b.
+STATES_DB_NAME="docs_demo_states"
+export TAI_DB_BINDING_STATES="${STATES_DB_NAME}"
+export TAI_DATABASE_DOCS_DEMO_STATES_PG_HOST="${TAI_DATABASE_DEFAULT_PG_HOST:-127.0.0.1}"
+export TAI_DATABASE_DOCS_DEMO_STATES_PG_PORT="${TAI_DATABASE_DEFAULT_PG_PORT:-55432}"
+export TAI_DATABASE_DOCS_DEMO_STATES_PG_USER="${TAI_DATABASE_DEFAULT_PG_USER:-postgres}"
+export TAI_DATABASE_DOCS_DEMO_STATES_PG_PASSWORD="${TAI_DATABASE_DEFAULT_PG_PASSWORD:-postgres}"
+export TAI_DATABASE_DOCS_DEMO_STATES_PG_DB="${STATES_DB_NAME}"
+
 # --- 3. Pre-flight: STUDIO_PORT must be free --------------------------------
 # A server already answering on STUDIO_PORT — a leftover KEEP_UP session, or a
 # prior run whose EXIT teardown never fired (e.g. kill -9) — would make the
@@ -203,6 +226,33 @@ for _ in $(seq 1 600); do
 done
 [[ "${ready}" == 1 ]] || { tail -60 "${BOOT_LOG}" >&2; die "/health never returned OK"; }
 log "skeleton is up"
+
+# --- 5b. Provision the states store database + apply its migration chain ------
+# boot.sh migrates only the skeleton + accounts chains onto its compose Postgres; the
+# states component binds to a DEDICATED database on that SAME server (§2), so create it
+# and apply the states chain here — the skeleton (already up) opens the store lazily on
+# the first states call in §7f, after this runs. Idempotent: the create is guarded on
+# pg_database and the chain runner records applied files in `tai_schema_history`, so a
+# rerun against the persisted compose Postgres is a no-op.
+log "provisioning the states store database '${STATES_DB_NAME}' + applying its chain"
+pg_admin() { docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T postgres psql -q -U "${TAI_DATABASE_DOCS_DEMO_STATES_PG_USER}" -d postgres "$@"; }
+if ! pg_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '${STATES_DB_NAME}'" | grep -q 1; then
+  pg_admin -c "CREATE DATABASE \"${STATES_DB_NAME}\"" >/dev/null \
+    || die "could not create the states database '${STATES_DB_NAME}'"
+fi
+# Apply the packaged states chain against the bound database, through the kit migration
+# runner (the same primitive boot.sh uses for the skeleton chain). The states binding
+# env exported in §2 is in scope, so states_entry() resolves to '${STATES_DB_NAME}'.
+( cd "${MONOREPO_DIR}" && uv run --no-sync python - <<'PY' >&2
+import asyncio
+
+from tai42_kit.db import apply_migrations
+from tai42_skeleton.states.db import states_entry
+
+applied = asyncio.run(apply_migrations([states_entry()]))
+print(f"[docs-shots] applied {len(applied)} states migration file(s)")
+PY
+) || die "applying the states migration chain failed"
 
 api() { curl -s -m 8 -H "x-api-key: ${DEMO_KEY}" -H "accept: application/json" "$@"; }
 
@@ -530,6 +580,151 @@ send_conversation_message "ada.lovelace@demo.tai" "Hi — where is my request? I
 CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks. Can you cancel it and refund me instead?")"
 export STUDIO_CONVERSATION_ROUTE="${CONVERSATION_ROUTE}"
 export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
+
+# --- 7f. Seed the platform state store (the six States screens) --------------
+# One declared state, one uploaded module mounted on it, two subject records (one
+# written straight through the record door, one built by a `set_by_key` delta so the
+# record page's Writes audit carries an `api`-origin row), and one consumer (a hook
+# whose subject kind the state declares, so the Consumers tab lists it). Every body is
+# built with python3 for safe JSON quoting; each step's LIST read is the authoritative
+# post-condition, so a broken seed dies here rather than shipping an empty States shot.
+#
+# Idempotent against the persisted compose Postgres: the declaration PUT and record PUT
+# are create-or-replace, the module PUT carries `?replace=true`, the delta carries a
+# fixed `op_id` the store's op-ledger dedupes, and the mount + hook are re-created after
+# a best-effort delete.
+log "seeding the state store (state + module mount + records + a consumer hook)"
+STATE_NAME="notes"
+STATE_MODULE="preferences"
+# The subject's conversation-target scope (a real demo tool; target_kind is agent|tool).
+STATE_TARGET_KIND="tool"
+STATE_TARGET_NAME="studio_demo_echo"
+REC_BASE="${BASE_URL}/api/states/${STATE_NAME}/records/${STATE_TARGET_KIND}/${STATE_TARGET_NAME}"
+
+# 1. Declare the state: a small generic schema (a keyed `items` list), the subject kinds
+#    it serves (thread + the platform `person` kind) with `thread` the default.
+declaration_body="$(python3 -c '
+import json
+print(json.dumps({
+    "name": "notes",
+    "description": "Per-subject notes — a keyed list of items, one document per subject.",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "title": "Items",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string", "title": "Id"},
+                        "text": {"type": "string", "title": "Text"},
+                    },
+                    "required": ["id"],
+                },
+            }
+        },
+    },
+    "subject_kinds": ["thread", "person"],
+    "default_subject_kind": "thread",
+}))')"
+decl_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/states/${STATE_NAME}" -d "${declaration_body}")"
+case "${decl_resp}" in
+  *'"data"'*) : ;;
+  *) die "declaring state '${STATE_NAME}' failed: ${decl_resp}" ;;
+esac
+
+# 2. Upload a module document and mount it on the state at `prefs` (a read-only subtree
+#    the Declaration tab badges and the Modules tab lists). Mount is re-created after a
+#    best-effort unmount so a rerun does not hit the already-mounted conflict.
+module_body="$(python3 -c '
+import json
+print(json.dumps({
+    "kind": "state-module",
+    "name": "preferences",
+    "description": "Per-subject display preferences.",
+    "schema": {
+        "type": "object",
+        "properties": {"locale": {"type": "string", "title": "Locale"}},
+    },
+    "parameters": {},
+    "regimes": [],
+}))')"
+module_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/state-modules/${STATE_MODULE}?replace=true" -d "${module_body}")"
+case "${module_resp}" in
+  *'"data"'*) : ;;
+  *) die "uploading state module '${STATE_MODULE}' failed: ${module_resp}" ;;
+esac
+api -X DELETE "${BASE_URL}/api/states/${STATE_NAME}/mounts/${STATE_MODULE}" >/dev/null 2>&1 || true
+mount_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/states/${STATE_NAME}/mounts/${STATE_MODULE}" \
+  -d '{"path":["prefs"],"parameters":{},"declarations":{}}')"
+case "${mount_resp}" in
+  *'"data"'*) : ;;
+  *) die "mounting module '${STATE_MODULE}' on '${STATE_NAME}' failed: ${mount_resp}" ;;
+esac
+
+# 3. Two subject records. `t-001` is written whole through the record door; `t-002` is
+#    seeded empty and then grown by a `set_by_key` delta, so its Writes audit shows both
+#    an `api` replace and an `api` delta row.
+rec1_resp="$(api -H "content-type: application/json" -X PUT "${REC_BASE}/thread/t-001" \
+  -d '{"items":[{"id":"n1","text":"Acme welcome note — captured for the docs demo."}]}')"
+case "${rec1_resp}" in
+  *'"data"'*) : ;;
+  *) die "writing record thread/t-001 failed: ${rec1_resp}" ;;
+esac
+rec2_resp="$(api -H "content-type: application/json" -X PUT "${REC_BASE}/thread/t-002" -d '{"items":[]}')"
+case "${rec2_resp}" in
+  *'"data"'*) : ;;
+  *) die "seeding record thread/t-002 failed: ${rec2_resp}" ;;
+esac
+delta_resp="$(api -H "content-type: application/json" -X POST "${REC_BASE}/thread/t-002/deltas" \
+  -d "$(python3 -c '
+import json
+print(json.dumps({
+    "op_id": "docs-demo-notes-t002-delta",
+    "ops": [
+        {"op": "set_by_key", "path": ["items"], "key_field": "id",
+         "value": {"id": "n2", "text": "Follow-up recorded through the API delta door."}}
+    ],
+}))')")"
+case "${delta_resp}" in
+  *'"data"'*) : ;;
+  *) die "applying the set_by_key delta to thread/t-002 failed: ${delta_resp}" ;;
+esac
+
+# 4. A consumer: a hook whose subject `kind` the state declares, so the Consumers tab
+#    lists it (its `Open` link points at the Hooks screen). Re-created after a best-effort
+#    delete so a rerun does not hit the duplicate-name guard. `execution_key` is the demo
+#    key's own identity (resolved in §7e); `key_expr` is unevaluated at register time.
+api -X DELETE "${BASE_URL}/api/hooks/notes-updater" >/dev/null 2>&1 || true
+hook_resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/hooks" \
+  -d "$(EXECUTION_KEY="${DEMO_USER_ID}" TARGET_KIND="${STATE_TARGET_KIND}" TARGET_NAME="${STATE_TARGET_NAME}" python3 -c '
+import json, os
+print(json.dumps({
+    "name": "notes-updater",
+    "topic": "notes",
+    "tool": "studio_demo_echo",
+    "execution_key": os.environ["EXECUTION_KEY"],
+    "subject": {
+        "target_kind": os.environ["TARGET_KIND"],
+        "target_name": os.environ["TARGET_NAME"],
+        "kind": "thread",
+        "key_expr": ".thread_id",
+    },
+}))')")"
+case "${hook_resp}" in
+  *'"data"'*) : ;;
+  *) die "registering the consumer hook 'notes-updater' failed: ${hook_resp}" ;;
+esac
+
+# Post-conditions (each shot's own read): the state is listed, the consumer hook binds
+# it, and the delta subject's Writes audit carries an `api`-origin row.
+api "${BASE_URL}/api/states" | grep -q "\"${STATE_NAME}\"" \
+  || die "state '${STATE_NAME}' is not in the states list — the States screen would be empty"
+api "${BASE_URL}/api/states/${STATE_NAME}/consumers" | grep -q "notes-updater" \
+  || die "the consumer hook is not in the state's consumers — the Consumers tab would be empty"
+api "${REC_BASE}/thread/t-002/writes" | grep -q '"api"' \
+  || die "record thread/t-002 has no api write — the record page's Writes audit would be empty"
 
 # --- 8. Capture every screen (light + dark) ---------------------------------
 log "capturing screenshots into ${OUT_DIR}"

@@ -155,7 +155,7 @@ describe('SubAgentComposer — compose/edit/remove seam', () => {
     expect(within(screen.getByTestId('subagent-0')).getByLabelText('Name')).toHaveValue('writer');
   });
 
-  it('expands a stored custom node into a chip, then removes it', async () => {
+  it('expands a stored preset into a chip, then removes it', async () => {
     const getPreset = vi.fn(() => Promise.resolve(presetDetail()));
     const seen = vi.fn();
     renderWithProviders(
@@ -167,9 +167,9 @@ describe('SubAgentComposer — compose/edit/remove seam', () => {
       stubClient({ getPreset }),
     );
 
-    await userEvent.click(await screen.findByRole('combobox', { name: 'Custom node to expand' }));
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Preset to expand' }));
     await userEvent.click(await screen.findByRole('option', { name: 'echo_pinned' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Add custom node' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Add preset' }));
 
     // The picked stored preset was resolved (via getPreset) into an inline object
     // and threaded back onto the card's `presets`.
@@ -188,7 +188,7 @@ describe('SubAgentComposer — compose/edit/remove seam', () => {
       },
     ]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Remove custom node echo_pinned' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove preset echo_pinned' }));
 
     expect(screen.queryByTestId('subagent-0-presets-entry')).toBeNull();
     const afterRemove = seen.mock.lastCall?.[0] as InlineSubAgentSpec[];

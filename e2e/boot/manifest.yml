@@ -42,6 +42,13 @@ default_routers: none
 # router is registered first; `plugins` closes the list.
 routers_modules:
   - tai42_skeleton.routers.interactions
+  # Conversations (`/api/conversations*`). The States Records tab GETs
+  # `/api/conversations/routes` to offer its "Known targets" picker; without this
+  # router that read 404s and the tab shows a loud "Could not load known targets"
+  # note beside a working free-entry lookup. Routing rows + records live in the
+  # compose Redis (boot.sh points `CONVERSATIONS_REDIS_URL` at db 5), so this needs
+  # no Postgres schema; with nothing seeded the routes read returns an empty list.
+  - tai42_skeleton.routers.conversations
   - tai42_skeleton.routers.tools
   # The tool-metadata overlay (`/api/tool-meta`). The tools page GETs this on mount
   # to merge each tool's display name / folder / user tags / visibility over the
@@ -63,6 +70,13 @@ routers_modules:
   # that GET 404s and the card errors. With no `VERSIONING_STORE_*` configured the
   # list endpoint serves an empty list (no store read), so this loads config-free.
   - tai42_skeleton.routers.presets
+  # The platform state store (`/api/states*` + `/api/state-modules*`). The States
+  # screens the states e2e suites drive read and write this surface. The `states`
+  # DB component binds to the `default` database (`TAI_DB_BINDING_STATES` unset),
+  # and boot.sh applies the packaged states migration chain there beside the
+  # skeleton chain — the store's boot gate refuses to start otherwise, so the mount
+  # and the chain apply are one change.
+  - tai42_skeleton.routers.states
   - tai42_skeleton.routers.sub_mcp
   - tai42_skeleton.routers.config
   - tai42_skeleton.routers.templates

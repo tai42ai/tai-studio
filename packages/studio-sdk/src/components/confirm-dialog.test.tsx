@@ -113,4 +113,13 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('dialog')).toHaveAccessibleName('Delete scope');
     expect(screen.getByText('This removes every binding in the scope.')).toBeInTheDocument();
   });
+
+  it('defaults the cancel label to Cancel and honours a custom one', async () => {
+    const user = userEvent.setup();
+    const { onClose } = renderConfirm({ cancelLabel: 'Keep existing' });
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    const keep = screen.getByRole('button', { name: 'Keep existing' });
+    await user.click(keep);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

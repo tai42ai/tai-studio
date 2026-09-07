@@ -205,6 +205,7 @@ describe('HooksPage — register', () => {
         tool: 'notify',
         execution_key: 'svc-events',
         tool_kwargs: { channel: 'ops' },
+        subject: null,
         condition: null,
         condition_id: null,
         condition_kwargs: {},

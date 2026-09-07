@@ -10,7 +10,11 @@
  *                  is the chosen string. A malformed options payload is a LOUD
  *                  inline error, never a silent empty control.
  *   - `form`     → the schema-driven `SchemaForm` over `format_payload.schema`,
- *                  validated before submit; the answer is the built object.
+ *                  validated before submit; the answer is the built object. Any
+ *                  per-send `data.values` prefill its controls; each field named in
+ *                  `data.options` renders as a choice of that send's values (the
+ *                  schema's enum for the property is replaced for this send); and the
+ *                  value→label mapping and the `pages` outline show as read-only context.
  *   - `external` → the external-link card: `format_payload.url` rendered via
  *                  `ExternalLinkButton`, whose href is scheme-checked (an
  *                  `http`/`https` allow-list). It has no submit — the link is
@@ -25,10 +29,11 @@
  * sink. Media images render through a per-item scheme gate (`MediaGallery`); links
  * through the scheme-gated `ExternalLinkButton`. Pinned by the XSS tests.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 
-import type { Interaction } from '@tai42/api-client';
+import { schemas } from '@tai42/api-client';
+import type { FormOption, FormPage, Interaction } from '@tai42/api-client';
 import {
   Badge,
   Button,
@@ -107,6 +112,51 @@ const malformedStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: 'var(--tai-space-2)',
+};
+
+// A read-only context block beside the form (the per-send options and the pages
+// outline): a small heading over a muted list, distinct from the answer controls.
+const formContextStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--tai-space-1)',
+};
+
+const contextHeadingStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--tai-text-sm)',
+  fontWeight: 600,
+  color: 'var(--tai-color-text)',
+};
+
+const contextListStyle: CSSProperties = {
+  margin: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--tai-space-1)',
+  fontSize: 'var(--tai-text-sm)',
+  color: 'var(--tai-color-text-muted)',
+};
+
+const pagesListStyle: CSSProperties = {
+  ...contextListStyle,
+  paddingLeft: 'var(--tai-space-5)',
+};
+
+const optionRowStyle: CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'var(--tai-space-2)',
+};
+
+const optionFieldStyle: CSSProperties = {
+  margin: 0,
+  fontFamily: 'var(--tai-font-mono)',
+  color: 'var(--tai-color-text)',
+};
+
+const optionValuesStyle: CSSProperties = {
+  margin: 0,
 };
 
 // -- helpers -----------------------------------------------------------------
@@ -269,38 +319,189 @@ export function FormAnswer({ interaction, onSubmit, disabled }: AnswerRendererPr
       <MalformedPayload message="This form question is malformed: its schema must be an object." />
     );
   }
+
+  // An absent `data`/`pages` leaves the preview exactly the bare form. A
+  // present-but-malformed block is a LOUD notice, never a silent drop: the server
+  // validates both against the schema before delivery, so a bad shape here is a
+  // corrupt frame, refused like a non-object schema rather than answered against a
+  // half-understood prefill.
+  const rawData = interaction.format_payload.data;
+  const parsedData = rawData === undefined ? null : schemas.formData.safeParse(rawData);
+  if (parsedData !== null && !parsedData.success) {
+    return (
+      <MalformedPayload message="This form question is malformed: its prefilled data is not in the expected shape." />
+    );
+  }
+
+  const rawPages = interaction.format_payload.pages;
+  const parsedPages = rawPages === undefined ? null : schemas.formPages.safeParse(rawPages);
+  if (parsedPages !== null && !parsedPages.success) {
+    return (
+      <MalformedPayload message="This form question is malformed: its pages are not in the expected shape." />
+    );
+  }
+
   // The permissive `JsonSchema` structural type is a plain record with an unknown
   // index signature; the renderer classifies each node at runtime.
-  return <SchemaFormAnswer schema={raw} onSubmit={onSubmit} disabled={disabled} />;
+  return (
+    <SchemaFormAnswer
+      schema={raw}
+      values={parsedData?.data.values ?? {}}
+      options={parsedData?.data.options ?? {}}
+      pages={parsedPages?.data ?? []}
+      onSubmit={onSubmit}
+      disabled={disabled}
+    />
+  );
+}
+
+/** Whether a property node is array-shaped (`type: "array"`, alone or in a union). */
+function isArraySchema(schema: JsonSchema): boolean {
+  const { type } = schema;
+  return Array.isArray(type) ? type.includes('array') : type === 'array';
+}
+
+/**
+ * The schema the operator actually answers against. For every top-level property the
+ * send re-optioned, its `enum` becomes that send's option VALUES — so the control
+ * renders as a choice of exactly the valid values instead of a free control that only
+ * fails at the answer door. This REPLACES any enum the published schema carried for
+ * that property, for this send only. The served payload is never mutated: a fresh
+ * derived schema is built, sharing untouched nodes. A property named in `options`
+ * always exists and is string- or array-of-strings-typed (the ask door rejects any
+ * other), so the enum lands on the property itself, or on an array's `items`.
+ */
+function schemaWithSendOptions(
+  schema: JsonSchema,
+  options: Record<string, readonly FormOption[]>,
+): JsonSchema {
+  const active = Object.entries(options).filter(([, list]) => list.length > 0);
+  const properties = schema.properties;
+  if (active.length === 0 || properties === undefined) return schema;
+  const nextProperties: Record<string, JsonSchema> = { ...properties };
+  for (const [field, list] of active) {
+    const prop = properties[field];
+    if (prop === undefined) continue;
+    const values = list.map((option) => option.value);
+    nextProperties[field] = isArraySchema(prop)
+      ? { ...prop, items: { ...prop.items, enum: values } }
+      : { ...prop, enum: values };
+  }
+  return { ...schema, properties: nextProperties };
+}
+
+/**
+ * The initial form value: the schema's defaults with any per-send `values` laid over
+ * the top-level properties. A form schema is object-shaped, so the overlay is a
+ * shallow merge; a non-object seed (no valid property to key onto) keeps the default.
+ */
+function initialFormValue(schema: JsonSchema, values: Record<string, unknown>): unknown {
+  const base = defaultValueForSchema(schema);
+  if (Object.keys(values).length === 0) return base;
+  return isPlainObject(base) ? { ...base, ...values } : base;
 }
 
 function SchemaFormAnswer({
   schema,
+  values,
+  options,
+  pages,
   onSubmit,
   disabled,
 }: {
   readonly schema: JsonSchema;
+  readonly values: Record<string, unknown>;
+  readonly options: Record<string, readonly FormOption[]>;
+  readonly pages: readonly FormPage[];
   readonly onSubmit: (answer: unknown) => void;
   readonly disabled: boolean;
 }): ReactNode {
-  const [value, setValue] = useState<unknown>(() => defaultValueForSchema(schema));
+  // The schema the controls and the validator both use: the published schema with each
+  // re-optioned property's enum set to this send's values, so the operator picks from
+  // the valid set in the control and a bad choice cannot be typed. Prefilled `values`
+  // seed the initial value on top; a prefill outside the per-send set cannot occur
+  // (the ask door validates each value against the effective schema before delivery).
+  const effectiveSchema = useMemo(() => schemaWithSendOptions(schema, options), [schema, options]);
+  const [value, setValue] = useState<unknown>(() => initialFormValue(effectiveSchema, values));
   const [errors, setErrors] = useState<SchemaFormErrors>({});
 
   const submit = (): void => {
-    const found = validateAgainstSchema(schema, value);
+    const found = validateAgainstSchema(effectiveSchema, value);
     setErrors(found);
     if (Object.keys(found).length === 0) onSubmit(value);
   };
 
   return (
     <div style={answerStackStyle}>
-      <SchemaForm schema={schema} value={value} onChange={setValue} errors={errors} />
+      <FormPagesOutline pages={pages} />
+      <SchemaForm schema={effectiveSchema} value={value} onChange={setValue} errors={errors} />
+      <FormSendOptions options={options} />
       <div>
         <Button type="button" variant="primary" disabled={disabled} onClick={submit}>
           Submit
         </Button>
       </div>
     </div>
+  );
+}
+
+/** The read-only "Pages" outline: each page's title over the fields it groups. */
+function FormPagesOutline({ pages }: { readonly pages: readonly FormPage[] }): ReactNode {
+  if (pages.length === 0) return null;
+  return (
+    <section style={formContextStyle} data-testid="form-pages" aria-label="Pages">
+      <p style={contextHeadingStyle}>Pages</p>
+      <ol style={pagesListStyle}>
+        {pages.map((page, index) => (
+          <li key={index}>
+            <span style={{ color: 'var(--tai-color-text)' }}>{page.title}</span>
+            {page.fields.length > 0 ? <span> — {page.fields.join(', ')}</span> : null}
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/**
+ * One option as text. The re-optioned control shows the VALUE, so a labelled option
+ * reads `label (value)` to make the value→label mapping legible; an unlabelled one (or
+ * a label equal to the value) is just the value, never an empty choice.
+ */
+function optionText(option: FormOption): string {
+  const label = typeof option.label === 'string' ? option.label.trim() : '';
+  return label !== '' && label !== option.value ? `${label} (${option.value})` : option.value;
+}
+
+/**
+ * The read-only "Options for this send" list: per field, the value→label mapping this
+ * send offered — the control renders the values, so this block names what each means.
+ * A field whose per-send list is empty is omitted; with no field carrying one the whole
+ * block is absent.
+ */
+function FormSendOptions({
+  options,
+}: {
+  readonly options: Record<string, readonly FormOption[]>;
+}): ReactNode {
+  const fields = Object.entries(options).filter(([, list]) => list.length > 0);
+  if (fields.length === 0) return null;
+  return (
+    <section
+      style={formContextStyle}
+      data-testid="form-send-options"
+      aria-label="Options for this send"
+    >
+      <p style={contextHeadingStyle}>Options for this send</p>
+      <dl style={contextListStyle}>
+        {fields.map(([field, list]) => (
+          <div key={field} style={optionRowStyle}>
+            <dt style={optionFieldStyle}>{field}</dt>
+            <dd style={optionValuesStyle}>{list.map(optionText).join(', ')}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 

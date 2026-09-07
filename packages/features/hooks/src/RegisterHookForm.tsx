@@ -27,6 +27,7 @@ import {
   Card,
   ErrorState,
   Field,
+  Select,
   Spinner,
   Textarea,
   TextInput,
@@ -34,7 +35,7 @@ import {
   useApi,
 } from '@tai42/studio-sdk';
 import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
-import type { HookParams } from '@tai42/api-client';
+import type { HookParams, HookSubject } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
 import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
@@ -73,6 +74,19 @@ const HOOK_EXPR_DECLARATION: JqFieldDeclaration = {
       'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
     keys: [],
     returns: 'the value the hook shapes from the event before the tool runs',
+  },
+};
+
+/** The `key_expr` field's jq shape: it is evaluated over the fire payload to a string key. */
+const HOOK_SUBJECT_KEY_DECLARATION: JqFieldDeclaration = {
+  language: 'jq',
+  shape: {
+    id: 'tai42.hooks.subject_key',
+    label: 'event',
+    blurb:
+      'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
+    keys: [],
+    returns: 'a non-empty string — the subject key the fire keys its state writes to',
   },
 };
 
@@ -131,8 +145,30 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   const [expr, setExpr] = useState(initial?.expr ?? '');
   const [executionKey, setExecutionKey] = useState(initial?.execution_key ?? '');
 
+  // The optional state subject the fire targets. Prefilled from an edited hook's stored
+  // subject; a `<target_kind>:<target_name>` string picks the conversation target.
+  const [subjectTarget, setSubjectTarget] = useState(
+    initial?.subject != null ? `${initial.subject.target_kind}:${initial.subject.target_name}` : '',
+  );
+  const [subjectKind, setSubjectKind] = useState(initial?.subject?.kind ?? '');
+  const [subjectKeyExpr, setSubjectKeyExpr] = useState(initial?.subject?.key_expr ?? '');
+
   const [submitted, setSubmitted] = useState(false);
   const [kwargsError, setKwargsError] = useState<string | null>(null);
+  const [subjectError, setSubjectError] = useState<string | null>(null);
+  // The Subject group is collapsed by default; its fields (and the targets read) mount
+  // only when expanded, or when an edited hook already carries a subject.
+  const [subjectOpen, setSubjectOpen] = useState(initial?.subject != null);
+
+  const targetsQuery = useQuery({
+    queryKey: ['hooks', 'conversation-targets'],
+    queryFn: ({ signal }) => api.listConversationRoutes(signal),
+    enabled: subjectOpen,
+  });
+  const targetOptions = (targetsQuery.data?.items ?? []).map((route) => ({
+    value: `${route.target_kind}:${route.target_name}`,
+    label: `${route.target_kind} · ${route.target_name}`,
+  }));
 
   const keysQuery = useExecutionKeys();
 
@@ -159,8 +195,12 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       setCondition('');
       setExpr('');
       setExecutionKey('');
+      setSubjectTarget('');
+      setSubjectKind('');
+      setSubjectKeyExpr('');
       setSubmitted(false);
       setKwargsError(null);
+      setSubjectError(null);
     },
   });
 
@@ -181,10 +221,16 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   const replacesExisting =
     trimmedName !== '' && trimmedName !== initial?.name && existingNames.has(trimmedName);
 
+  // The optional subject: either fully specified (target + kind + key expression) or
+  // omitted entirely. A partially-filled subject is refused loudly rather than sent.
+  const subjectTouched =
+    subjectTarget !== '' || subjectKind.trim() !== '' || subjectKeyExpr.trim() !== '';
+
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
     setSubmitted(true);
     setKwargsError(null);
+    setSubjectError(null);
     if (nameMissing || topicMissing || toolMissing || executionKeyMissing || unsatisfiable) {
       return;
     }
@@ -197,6 +243,21 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       return;
     }
 
+    let subject: HookSubject | null = null;
+    if (subjectTouched) {
+      const separator = subjectTarget.indexOf(':');
+      if (separator < 0 || subjectKind.trim() === '' || subjectKeyExpr.trim() === '') {
+        setSubjectError('A subject needs a target, a kind, and a key expression.');
+        return;
+      }
+      subject = {
+        target_kind: subjectTarget.slice(0, separator) as HookSubject['target_kind'],
+        target_name: subjectTarget.slice(separator + 1),
+        kind: subjectKind.trim(),
+        key_expr: subjectKeyExpr.trim(),
+      };
+    }
+
     // The inline condition/expr text fields are the only gates this form edits; an
     // id-based gate (`condition_id` / `expr_id`) and its kwargs ride through from
     // the edited hook untouched, so a save never wipes a gate the form never showed.
@@ -206,6 +267,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       tool: tool.trim(),
       execution_key: executionKey,
       tool_kwargs: toolKwargsValue,
+      subject,
       condition: orNull(condition),
       condition_id: initial?.condition_id ?? null,
       condition_kwargs: initial?.condition_kwargs ?? {},
@@ -280,6 +342,67 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
           }}
         />
       </Field>
+      <div className="tai-stack tai-stack-3">
+        <button
+          type="button"
+          className="tai-btn tai-btn-ghost"
+          aria-expanded={subjectOpen}
+          onClick={() => {
+            setSubjectOpen((open) => !open);
+          }}
+          style={{ alignSelf: 'flex-start' }}
+        >
+          Subject (optional)
+        </button>
+        {subjectOpen ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--tai-space-3)',
+              marginTop: 'var(--tai-space-3)',
+            }}
+          >
+            <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
+              Key this fire&rsquo;s state writes to a subject; leave blank for none.
+            </p>
+            <Field label="Target">
+              <Select
+                value={subjectTarget}
+                onValueChange={setSubjectTarget}
+                aria-label="Subject target"
+                placeholder="Choose a conversation target"
+                options={targetOptions}
+              />
+            </Field>
+            <Field
+              label="Subject kind"
+              description="The subject family the state declares (e.g. person)."
+            >
+              <TextInput
+                value={subjectKind}
+                placeholder="e.g. person"
+                onChange={(event) => {
+                  setSubjectKind(event.target.value);
+                }}
+              />
+            </Field>
+            <JqField
+              label="Key expression"
+              description="A jq over the event payload; it must yield a non-empty string key."
+              shape={HOOK_SUBJECT_KEY_DECLARATION.shape}
+              multiline={false}
+              value={subjectKeyExpr}
+              onChange={setSubjectKeyExpr}
+            />
+            {subjectError !== null ? (
+              <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
+                {subjectError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       <JqField
         label="Condition"
         description="Optional inline condition spec; blank leaves it unset."

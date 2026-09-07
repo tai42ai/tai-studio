@@ -24,6 +24,7 @@ import type { AuthState, RouteSearch } from '@tai42/studio-sdk';
 import { ToolsPage } from '@tai42/feature-tools';
 import { AgentsPage } from '@tai42/feature-agents';
 import { PresetsPage } from '@tai42/feature-presets';
+import { StatesPage } from '@tai42/feature-states';
 import { ExtensionsPage } from '@tai42/feature-extensions';
 import { InteractionsPage } from '@tai42/feature-interactions';
 import { NotificationsPage } from '@tai42/feature-notifications';
@@ -247,6 +248,20 @@ export function buildRouter(options: BuildRouterOptions) {
     },
   });
 
+  const statesRoute = createRoute({
+    getParentRoute: () => authedLayout,
+    path: '/states',
+    validateSearch: (search: Record<string, unknown>): RouteSearch<'states'> => ({
+      state: typeof search.state === 'string' ? search.state : undefined,
+      tab: parseEnum(search.tab, ['declaration', 'modules', 'records', 'consumers'] as const),
+      subject: typeof search.subject === 'string' ? search.subject : undefined,
+      target: typeof search.target === 'string' ? search.target : undefined,
+    }),
+    component: function StatesRoute(): ReactNode {
+      return <StatesPage search={useSearch({ from: '/authed/states' })} />;
+    },
+  });
+
   const extensionsRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/extensions',
@@ -389,6 +404,7 @@ export function buildRouter(options: BuildRouterOptions) {
       toolsRoute,
       agentsRoute,
       presetsRoute,
+      statesRoute,
       extensionsRoute,
       interactionsRoute,
       notificationsRoute,

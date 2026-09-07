@@ -103,6 +103,48 @@ describe(
       });
     });
 
+    it('carries an optional subject as a tool kwarg', async () => {
+      const user = userEvent.setup({ delay: null });
+      const addSchedule = vi.fn().mockResolvedValue({});
+      const client = makeClient({
+        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+        listConversationRoutes: vi.fn().mockResolvedValue({
+          items: [{ target_kind: 'agent', target_name: 'assistant' }],
+          total: 1,
+        }),
+        addSchedule,
+      });
+      renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+      const dialog = await screen.findByRole('dialog');
+      await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
+      await pickTool(user, dialog, 'run_report_schedule_task');
+      await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Subject (optional)' }));
+      await user.click(await within(dialog).findByLabelText('Target'));
+      await user.click(await screen.findByRole('option', { name: 'agent · assistant' }));
+      await user.type(within(dialog).getByLabelText('Subject kind'), 'person');
+      await user.type(within(dialog).getByLabelText('Subject key'), 'a-42');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+      await waitFor(() => {
+        expect(addSchedule).toHaveBeenCalled();
+      });
+      const body = addSchedule.mock.calls[0]?.[0] as
+        | { tool_kwargs: Record<string, unknown>; schedule_kwargs: Record<string, unknown> }
+        | undefined;
+      // The subject rides in tool_kwargs (what create_schedule validates), never a
+      // schedule-internal reserved stamp.
+      expect(body?.tool_kwargs.subject).toEqual({
+        target_kind: 'agent',
+        target_name: 'assistant',
+        kind: 'person',
+        key: 'a-42',
+      });
+      expect(body?.schedule_kwargs.backend_schedule_subject).toBeUndefined();
+    });
+
     it(
       'posts a numeric backend_schedule and empty kwargs for the interval spec',
       async () => {

@@ -48,6 +48,9 @@ export interface ConfirmDialogProps {
    */
   readonly disabledNote?: ReactNode;
   readonly confirmVariant?: 'primary' | 'danger';
+  /** The cancel button's label; defaults to `Cancel`. Set it when the negative
+   * choice reads better as a specific verb (e.g. `Keep existing`). */
+  readonly cancelLabel?: string;
   /** The prompt body — what the operator is confirming. */
   readonly children: ReactNode;
 }
@@ -62,6 +65,7 @@ export function ConfirmDialog({
   error,
   disabledNote,
   confirmVariant = 'danger',
+  cancelLabel = 'Cancel',
   children,
 }: ConfirmDialogProps): ReactNode {
   return (
@@ -76,7 +80,7 @@ export function ConfirmDialog({
       {disabledNote ?? (error != null ? <ErrorState message={errorMessage(error)} /> : null)}
       <div className="tai-dialog-actions">
         <Button type="button" onClick={onClose}>
-          Cancel
+          {cancelLabel}
         </Button>
         <Button
           type="button"

@@ -161,6 +161,54 @@ describe('interactionMediaItem schema — applied per item by the renderer', () 
   });
 });
 
+describe('form per-send data schemas — applied by the form preview', () => {
+  it('formOption accepts a value with a label, with a null label, and with none', () => {
+    expect(schemas.formOption.parse({ value: 'a', label: 'Option A' })).toEqual({
+      value: 'a',
+      label: 'Option A',
+    });
+    expect(schemas.formOption.parse({ value: 'a', label: null }).label).toBeNull();
+    expect(schemas.formOption.parse({ value: 'a' }).label).toBeUndefined();
+  });
+
+  it('formOption rejects a missing or non-string value', () => {
+    expect(() => schemas.formOption.parse({ label: 'x' })).toThrow();
+    expect(() => schemas.formOption.parse({ value: 7 })).toThrow();
+  });
+
+  it('formData defaults values and options to empty objects', () => {
+    expect(schemas.formData.parse({})).toEqual({ values: {}, options: {} });
+  });
+
+  it('formData carries prefilled values and per-field option lists', () => {
+    const parsed = schemas.formData.parse({
+      values: { count: 2, notes: 'note text' },
+      options: { date: [{ value: 'a', label: 'Option A' }, { value: 'b' }] },
+    });
+    expect(parsed.values).toEqual({ count: 2, notes: 'note text' });
+    expect(parsed.options.date).toHaveLength(2);
+  });
+
+  it('formData rejects a non-array option list and a malformed option', () => {
+    expect(() => schemas.formData.parse({ options: { date: 'x' } })).toThrow();
+    expect(() => schemas.formData.parse({ options: { date: [{ label: 'x' }] } })).toThrow();
+  });
+
+  it('formPage carries a title and its fields; formPages is the ordered list', () => {
+    const pages = schemas.formPages.parse([
+      { title: 'Basics', fields: ['date', 'count'] },
+      { title: 'Extras', fields: ['notes'] },
+    ]);
+    expect(pages).toHaveLength(2);
+    expect(pages[0]).toEqual({ title: 'Basics', fields: ['date', 'count'] });
+  });
+
+  it('formPage rejects a missing title or non-string fields', () => {
+    expect(() => schemas.formPage.parse({ fields: ['date'] })).toThrow();
+    expect(() => schemas.formPage.parse({ title: 'Basics', fields: [7] })).toThrow();
+  });
+});
+
 describe('interactionsPage schema — the paged pending inbox', () => {
   const item = {
     interaction_id: 'q1',

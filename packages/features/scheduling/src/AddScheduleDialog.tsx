@@ -23,6 +23,7 @@ import {
   Field,
   NumberInput,
   RadioGroup,
+  Select,
   Spinner,
   Textarea,
   TextInput,
@@ -101,6 +102,26 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   const [submitted, setSubmitted] = useState(false);
   const [kwargsError, setKwargsError] = useState<string | null>(null);
 
+  // The optional state subject a scheduled fire carries: the target scope, the subject
+  // kind, and a LITERAL key (a schedule fires with no payload, so the key is not a jq).
+  const [subjectTarget, setSubjectTarget] = useState('');
+  const [subjectKind, setSubjectKind] = useState('');
+  const [subjectKey, setSubjectKey] = useState('');
+  const [subjectError, setSubjectError] = useState<string | null>(null);
+  // The Subject group is collapsed by default; its fields (and the targets read) mount
+  // only when expanded, so the dialog's default shape is unchanged.
+  const [subjectOpen, setSubjectOpen] = useState(false);
+
+  const targetsQuery = useQuery({
+    queryKey: ['schedules', 'conversation-targets'],
+    queryFn: ({ signal }) => api.listConversationRoutes(signal),
+    enabled: subjectOpen,
+  });
+  const targetOptions = (targetsQuery.data?.items ?? []).map((route) => ({
+    value: `${route.target_kind}:${route.target_name}`,
+    label: `${route.target_kind} · ${route.target_name}`,
+  }));
+
   const add = useMutation({
     mutationFn: (body: {
       tool_name: string;
@@ -124,6 +145,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   const handleSubmit = useCallback(() => {
     setSubmitted(true);
     setKwargsError(null);
+    setSubjectError(null);
 
     const kwargsResult = parseKwargs(kwargs);
     if (!kwargsResult.ok) {
@@ -132,14 +154,35 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     }
     if (nameMissing || toolMissing || intervalInvalid || cronMissing) return;
 
-    const backendSchedule: number | string = mode === 'interval' ? intervalValue : cron.trim();
+    // The optional subject: either fully specified (target + kind + key) or omitted.
+    const subjectTouched =
+      subjectTarget !== '' || subjectKind.trim() !== '' || subjectKey.trim() !== '';
+    const scheduleKwargs: Record<string, unknown> = {
+      backend_schedule: mode === 'interval' ? intervalValue : cron.trim(),
+      backend_schedule_name: name.trim(),
+    };
+    const toolKwargs: Record<string, unknown> = { ...kwargsResult.value };
+    if (subjectTouched) {
+      const separator = subjectTarget.indexOf(':');
+      if (separator < 0 || subjectKind.trim() === '' || subjectKey.trim() === '') {
+        setSubjectError('A subject needs a target, a kind, and a key.');
+        return;
+      }
+      // `create_schedule` reads and validates the subject as an ordinary tool kwarg; the
+      // worker stamps it as the fire's state context (never a schedule-kwarg / internal
+      // reserved stamp).
+      toolKwargs.subject = {
+        target_kind: subjectTarget.slice(0, separator),
+        target_name: subjectTarget.slice(separator + 1),
+        kind: subjectKind.trim(),
+        key: subjectKey.trim(),
+      };
+    }
+
     add.mutate({
       tool_name: tool,
-      tool_kwargs: kwargsResult.value,
-      schedule_kwargs: {
-        backend_schedule: backendSchedule,
-        backend_schedule_name: name.trim(),
-      },
+      tool_kwargs: toolKwargs,
+      schedule_kwargs: scheduleKwargs,
     });
   }, [
     add,
@@ -151,6 +194,9 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     mode,
     name,
     nameMissing,
+    subjectKey,
+    subjectKind,
+    subjectTarget,
     tool,
     toolMissing,
   ]);
@@ -250,6 +296,71 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
             />
           </Field>
         )}
+
+        <div>
+          <button
+            type="button"
+            className="tai-btn tai-btn-ghost"
+            aria-expanded={subjectOpen}
+            onClick={() => {
+              setSubjectOpen((open) => !open);
+            }}
+          >
+            Subject (optional)
+          </button>
+          {subjectOpen ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--tai-space-3)',
+                marginTop: 'var(--tai-space-3)',
+              }}
+            >
+              <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
+                Key this schedule&rsquo;s state writes to a subject; leave blank for none.
+              </p>
+              <Field label="Target">
+                <Select
+                  value={subjectTarget}
+                  onValueChange={setSubjectTarget}
+                  aria-label="Subject target"
+                  placeholder="Choose a conversation target"
+                  options={targetOptions}
+                />
+              </Field>
+              <Field
+                label="Subject kind"
+                description="The subject family the state declares (e.g. person)."
+              >
+                <TextInput
+                  value={subjectKind}
+                  placeholder="e.g. person"
+                  onChange={(event) => {
+                    setSubjectKind(event.target.value);
+                  }}
+                />
+              </Field>
+              <Field
+                label="Subject key"
+                description="A literal key; a schedule fires with no payload to derive one."
+              >
+                <TextInput
+                  value={subjectKey}
+                  placeholder="e.g. a-42"
+                  onChange={(event) => {
+                    setSubjectKey(event.target.value);
+                  }}
+                />
+              </Field>
+              {subjectError !== null ? (
+                <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
+                  {subjectError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         {add.isError ? <ErrorState message={errorMessage(add.error)} /> : null}
 

@@ -37,6 +37,7 @@ const PAGE_SOURCES: Record<FeatureToken, string> = {
   tools: 'tools/src/ToolsPage.tsx',
   agents: 'agents/src/agents.tsx',
   presets: 'presets/src/PresetsPage.tsx',
+  states: 'states/src/StatesPage.tsx',
   extensions: 'extensions/src/extensions.tsx',
   templates: 'templates/src/TemplatesPage.tsx',
   connectors: 'connectors/src/connectors-page.tsx',

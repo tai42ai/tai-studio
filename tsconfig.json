@@ -9,6 +9,7 @@
     { "path": "packages/features/tools/tsconfig.build.json" },
     { "path": "packages/features/agents/tsconfig.build.json" },
     { "path": "packages/features/presets/tsconfig.build.json" },
+    { "path": "packages/features/states/tsconfig.build.json" },
     { "path": "packages/features/extensions/tsconfig.build.json" },
     { "path": "packages/features/interactions/tsconfig.build.json" },
     { "path": "packages/features/notifications/tsconfig.build.json" },

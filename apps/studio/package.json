@@ -39,6 +39,7 @@
     "@tai42/feature-presets": "workspace:*",
     "@tai42/feature-scheduling": "workspace:*",
     "@tai42/feature-settings": "workspace:*",
+    "@tai42/feature-states": "workspace:*",
     "@tai42/feature-storage": "workspace:*",
     "@tai42/feature-system": "workspace:*",
     "@tai42/feature-templates": "workspace:*",

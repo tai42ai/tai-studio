@@ -94,7 +94,8 @@ const INTERACTIONS_ROUTE = '/api/interactions';
 const NAV_LABELS: Record<FeatureToken, string> = {
   tools: 'Tools',
   agents: 'Agents',
-  presets: 'Custom nodes',
+  presets: 'Presets',
+  states: 'States',
   extensions: 'Extensions',
   interactions: 'Interactions',
   notifications: 'Notifications',

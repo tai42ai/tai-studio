@@ -251,6 +251,7 @@ describe('createApiClient', () => {
       tool: 'notify',
       execution_key: 'svc-notify',
       tool_kwargs: { to: '#ops' },
+      subject: null,
       condition: null,
       condition_id: null,
       condition_kwargs: {},

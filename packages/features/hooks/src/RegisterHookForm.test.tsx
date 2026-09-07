@@ -67,6 +67,46 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
       expect(registerHook).toHaveBeenCalledOnce();
     });
   });
+
+  it('attaches a subject built from the optional Subject group', async () => {
+    const user = userEvent.setup();
+    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      listConversationRoutes: vi.fn().mockResolvedValue({
+        items: [{ target_kind: 'agent', target_name: 'assistant' }],
+        total: 1,
+      }),
+      registerHook,
+    };
+    renderWithProviders(<RegisterHookForm />, { client });
+
+    await user.type(await screen.findByLabelText('Name'), 'greet');
+    await user.type(screen.getByLabelText('Topic'), 'events.created');
+    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await pickExecutionKey(user);
+
+    // Expand the Subject group and fill it.
+    await user.click(screen.getByText('Subject (optional)'));
+    await user.click(await screen.findByLabelText('Target'));
+    await user.click(await screen.findByRole('option', { name: 'agent · assistant' }));
+    await user.type(screen.getByLabelText('Subject kind'), 'person');
+    await user.type(screen.getByLabelText('Key expression'), '.actor.id');
+
+    await user.click(screen.getByRole('button', { name: 'Register' }));
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalled();
+    });
+    expect(registerHook.mock.calls[0]?.[0]).toMatchObject({
+      subject: {
+        target_kind: 'agent',
+        target_name: 'assistant',
+        kind: 'person',
+        key_expr: '.actor.id',
+      },
+    });
+  });
 });
 
 describe('RegisterHookForm — edit mode', () => {
