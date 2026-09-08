@@ -375,6 +375,12 @@ export function useInteractionsStream(options: InteractionsStreamOptions): Inter
     const aborted = () => controller.signal.aborted;
     const overlay = overlayRef.current;
     let reconnectAttempt = 0;
+    // The id of the last frame seen on this mount, sent as Last-Event-ID on each
+    // reconnect so the server resumes AFTER it and replays any frame that landed
+    // during the gap — including a card's `answered`, which heals a card that would
+    // otherwise vanish (absent from both the refetched pending base and the tail).
+    // Persists across reconnects within one mount; resets with the overlay on remount.
+    let lastEventId: string | undefined;
 
     // Age answered cards out (the server sends no removal for them): tombstone any
     // past the retention window, then — as a flood backstop — the oldest beyond the
@@ -476,7 +482,7 @@ export function useInteractionsStream(options: InteractionsStreamOptions): Inter
       while (!aborted()) {
         const openedAt = Date.now();
         try {
-          const frames = await api.streamInteractions(controller.signal);
+          const frames = await api.streamInteractions(controller.signal, lastEventId);
           if (aborted()) return;
           setConnectionState((prev) => ({
             ...prev,
@@ -499,6 +505,9 @@ export function useInteractionsStream(options: InteractionsStreamOptions): Inter
           for await (const frame of frames) {
             if (aborted()) return;
             applyFrame(frame.event, frame.data);
+            // Advance the resume cursor to every id-bearing frame (even a malformed
+            // one) so a reconnect never re-requests a frame already delivered.
+            if (frame.id !== undefined) lastEventId = frame.id;
           }
         } catch (err) {
           if (aborted()) return;

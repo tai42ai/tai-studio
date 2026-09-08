@@ -1646,14 +1646,22 @@ export function createApiClient(config: ApiConfig) {
      * `listInteractions`. The caller drives reconnect and refetches that base on
      * each (re)connect. Returns the raw frame iterator; the interactions feature
      * maps frames to typed events.
+     *
+     * `lastEventId` (the id of the last frame the caller saw) is sent as the
+     * `Last-Event-ID` header so the server resumes AFTER it and replays any frame —
+     * including a card's `answered` — that landed during a disconnect gap. It is
+     * also sent as a `?last_event_id=` query param so a proxy that strips the header
+     * still resumes; the server reads either. Omitted on a first connect.
      */
-    streamInteractions: async (signal?: AbortSignal) => {
+    streamInteractions: async (signal?: AbortSignal, lastEventId?: string) => {
       const doFetch = config.fetch ?? globalThis.fetch;
       const token = config.getToken();
       const headers: Record<string, string> = { accept: 'text/event-stream' };
       if (token) headers['x-api-key'] = token;
+      if (lastEventId) headers['last-event-id'] = lastEventId;
       // Distinct-URL per open — see the canonical constraint on `sseOpenToken`.
-      const url = `${config.baseUrl ?? ''}/api/interactions/stream?_=${sseOpenToken()}`;
+      const resume = lastEventId ? `&last_event_id=${encodeURIComponent(lastEventId)}` : '';
+      const url = `${config.baseUrl ?? ''}/api/interactions/stream?_=${sseOpenToken()}${resume}`;
       const response = await doFetch(url, {
         headers,
         signal,

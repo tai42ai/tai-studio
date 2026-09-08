@@ -7,6 +7,12 @@ export interface SseFrame {
   readonly event: string;
   /** The concatenated `data:` lines (joined by "\n"). */
   readonly data: string;
+  /**
+   * The frame's `id:` field when present — the server's resume token, echoed back
+   * as `Last-Event-ID` on reconnect so the stream resumes after it. Absent for
+   * frames without an `id:` line (e.g. the agent-run stream, which does not use it).
+   */
+  readonly id?: string;
 }
 
 // CANONICAL constraint for every SSE open in this client. Engines coalesce
@@ -55,6 +61,7 @@ export class SseFrameParser {
 
 function parseFrame(raw: string): SseFrame | null {
   let event = 'message';
+  let id: string | undefined;
   const dataLines: string[] = [];
   for (const line of raw.split(/\r?\n/)) {
     if (line.startsWith(':')) continue; // comment
@@ -65,9 +72,12 @@ function parseFrame(raw: string): SseFrame | null {
     if (value.startsWith(' ')) value = value.slice(1);
     if (field === 'event') event = value;
     else if (field === 'data') dataLines.push(value);
+    else if (field === 'id') id = value;
   }
   if (dataLines.length === 0 && event === 'message') return null;
-  return { event, data: dataLines.join('\n') };
+  return id === undefined
+    ? { event, data: dataLines.join('\n') }
+    : { event, data: dataLines.join('\n'), id };
 }
 
 /**

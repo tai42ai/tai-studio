@@ -2467,7 +2467,7 @@ state: "default" | "active" | "off";
 plugin: string | null;
 detail: string;
 }[]>;
-readonly streamInteractions: (signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame, any, any>>;
+readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
 } | null>;
 
 // @public
@@ -5977,7 +5977,7 @@ function createApiClient(config: ApiConfig): {
         plugin: string | null;
         detail: string;
     }[]>;
-    readonly streamInteractions: (signal?: AbortSignal) => Promise<AsyncGenerator<SseFrame, any, any>>;
+    readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
 };
 
 // @public
@@ -10698,6 +10698,7 @@ interface SseFrame {
     readonly data: string;
     // (undocumented)
     readonly event: string;
+    readonly id?: string;
 }
 
 // @public

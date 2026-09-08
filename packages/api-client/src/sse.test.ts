@@ -40,4 +40,21 @@ describe('SseFrameParser', () => {
     const frames = p.push(': keep-alive\ndata: real\n\n');
     expect(frames).toEqual([{ event: 'message', data: 'real' }]);
   });
+
+  it('captures the id field as the resume token', () => {
+    const p = new SseFrameParser();
+    const frames = p.push(
+      'id: 42-0\nevent: interaction.answered\ndata: {"interaction_id":"1"}\n\n',
+    );
+    expect(frames).toEqual([
+      { id: '42-0', event: 'interaction.answered', data: '{"interaction_id":"1"}' },
+    ]);
+  });
+
+  it('omits id when the frame carries none (agent-run stream stays unchanged)', () => {
+    const p = new SseFrameParser();
+    const [frame] = p.push('event: token\ndata: hi\n\n');
+    expect(frame).toEqual({ event: 'token', data: 'hi' });
+    expect(frame && 'id' in frame).toBe(false);
+  });
 });
