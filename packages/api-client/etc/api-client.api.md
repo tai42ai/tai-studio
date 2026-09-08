@@ -128,7 +128,7 @@ export function apiDownload(config: ApiConfig, path: string, options?: RequestOp
 export class ApiError extends Error {
     constructor(message: string, status: number, code?: string, retryAfterSeconds?: number);
     readonly code: string | undefined;
-    readonly retryAfterSeconds: number | undefined;
+    readonly retryAfterSeconds?: number;
     // (undocumented)
     readonly status: number;
 }

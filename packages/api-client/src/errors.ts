@@ -14,7 +14,7 @@ export class ApiError extends Error {
    * retriable reloading `503` does). A caller that retries waits this long; a
    * caller that does not ignores it.
    */
-  readonly retryAfterSeconds: number | undefined;
+  readonly retryAfterSeconds?: number;
   constructor(message: string, status: number, code?: string, retryAfterSeconds?: number) {
     super(message);
     this.name = 'ApiError';
