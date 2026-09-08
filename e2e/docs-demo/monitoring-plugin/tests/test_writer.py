@@ -141,3 +141,21 @@ def test_lifecycle_and_propagation_shims_are_inert_not_broken() -> None:
     writer.shutdown()
     with writer.scope("some-key"):
         pass
+
+
+def test_trace_attributes_accepts_platform_run_attribution_call_shape() -> None:
+    # The platform's attribute_run(writer, RunAttribution) calls trace_attributes with
+    # user_id/session_id (contract Protocol since 2026-08-31). A writer missing those
+    # kwargs raises TypeError at argument binding and breaks EVERY attributed tool
+    # dispatch through the /api/run-tool door. Born-red on the pre-fix DemoWriter
+    # signature; green once it accepts (and records) the identity dimensions.
+    from tai42_contract.monitoring import RunAttribution
+    from tai42_contract.monitoring.writer import attribute_run
+
+    writer, store = _writer()
+    with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=TraceContext(trace_id="a")):
+        with attribute_run(writer, RunAttribution(tags=["t"], user_id="u-1", session_id="s-1")):
+            pass
+    trace = store.get("a")
+    assert (trace.metadata or {}).get("user_id") == "u-1"
+    assert (trace.metadata or {}).get("session_id") == "s-1"
