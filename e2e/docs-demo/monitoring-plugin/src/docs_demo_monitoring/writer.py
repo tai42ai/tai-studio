@@ -309,9 +309,13 @@ class DemoWriter:
         name: str | None = None,
         tags: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
+        user_id: str | None = None,
+        session_id: str | None = None,
     ) -> Iterator[None]:
         # Honor disable(): emission is suppressed within the block, so trace
         # attributes are not written either (matching the other emit methods).
+        # user_id/session_id fold into the trace metadata (MonitoringTrace has no
+        # dedicated fields for them) so run attribution is not silently dropped.
         if not _DISABLED.get():
             try:
                 stack = _SPAN_STACK.get()
@@ -319,10 +323,14 @@ class DemoWriter:
                 if trace is not None:
                     if tags is not None:
                         trace.tags = list(tags)
-                    if metadata is not None or name is not None:
+                    if metadata is not None or name is not None or user_id is not None or session_id is not None:
                         extra = dict(metadata or {})
                         if name is not None:
                             extra["name"] = name
+                        if user_id is not None:
+                            extra["user_id"] = user_id
+                        if session_id is not None:
+                            extra["session_id"] = session_id
                         trace.metadata = {**(trace.metadata or {}), **extra}
             except Exception:  # fail-safe
                 logger.warning("DemoWriter.trace_attributes failed", exc_info=True)
