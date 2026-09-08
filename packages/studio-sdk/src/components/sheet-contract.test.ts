@@ -633,7 +633,7 @@ describe('component sheet contract', () => {
       },
     );
 
-    it('leaves neither list describing a boundary the sheet no longer draws', () => {
+    it('leaves neither list describing a boundary the sheet does not draw', () => {
       const derived = new Set([...RING_BEARERS, ...POINTER_CONTROLS, ...TAB_STOP_CLASSES]);
       for (const [className, reason] of Object.entries(DECORATIVE_BOUNDARY)) {
         // Live in both senses: still a surface the derivation reaches, and still

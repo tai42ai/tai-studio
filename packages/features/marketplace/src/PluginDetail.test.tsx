@@ -735,8 +735,8 @@ describe('PluginDetail — non-route env driven by the preview, not the detail',
 
     await user.click(await screen.findByRole('button', { name: 'Install' }));
     // The env dialog opened solely because the preview reported missing env — the
-    // detail carries none, so the old detail-derived path would have shown a plain
-    // confirm and installed with an empty body (the defect).
+    // detail carries none, so a detail-derived path would show a plain confirm and
+    // install with an empty body.
     const field = await screen.findByLabelText('OPENAI_API_KEY');
     const dialog = screen.getByRole('dialog');
     const toggle = within(dialog).getByRole('checkbox', { name: 'Store as secret' });

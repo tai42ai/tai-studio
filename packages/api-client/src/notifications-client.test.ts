@@ -83,9 +83,9 @@ describe('notifications client transport', () => {
     expect(parsed?.options).toEqual(['Acknowledge', 'Snooze']);
   });
 
-  it('parses an older plain record that predates the rich fields (keys omitted)', async () => {
-    // A record written before the parity wave carries no audience/media/template/
-    // options keys; each is `.nullish()`, so an absent key parses to a plain record.
+  it('parses a plain record that omits the rich fields (keys absent)', async () => {
+    // A record with no audience/media/template/options keys is valid: each is
+    // `.nullish()`, so an absent key parses to a plain record.
     const { client } = harness(() => jsonResponse({ data: { notifications: [record] } }));
     const parsed = (await client.listNotifications()).notifications[0];
     expect(parsed?.audience).toBeUndefined();

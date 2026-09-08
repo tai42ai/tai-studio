@@ -202,8 +202,8 @@ export interface CreatePresetBody {
  * sentinel is uniform: omitted carries the active version's value forward; an
  * explicit `[]` clears `extensions`, and an explicit `null` clears `output_schema`.
  * `description` carries forward when omitted; an explicit non-empty string sets it
- * (the API rejects an explicit empty one). Categorization tags are no longer a
- * version field — they live in the tool_meta overlay.
+ * (the API rejects an explicit empty one). Categorization tags are not a version
+ * field — they live in the tool_meta overlay.
  */
 export interface SavePresetVersionBody {
   readonly fixed_kwargs?: Record<string, unknown>;

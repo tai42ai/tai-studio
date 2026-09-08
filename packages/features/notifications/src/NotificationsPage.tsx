@@ -7,8 +7,8 @@
  * idiom the interactions surface uses — so each record shows its FULL stored shape:
  * the message, any display media (images inline + safe links), any tappable
  * `options` the send offered, any pre-approved `template`, and the recipient /
- * audience / timestamp metadata. The parity wave taught the sink to STORE those
- * richer forms; this page is where they surface.
+ * audience / timestamp metadata. The sink stores those richer forms; this page is
+ * where they surface.
  *
  * The view is a state machine — loading → `<Skeleton>`, error → `<ErrorState>`
  * (loud, always visible; a 401 is not special-cased), empty → `<EmptyState>` — so a

@@ -249,7 +249,7 @@ describe('emitted class names and declared rules', () => {
     }
   });
 
-  it('leaves no exemption naming a guard the sheet no longer writes', () => {
+  it('leaves no exemption naming a guard the sheet does not write', () => {
     const gated = new Set(
       [...sheetRules.matchAll(/(\.tai-[\w-]+):not\((\.tai-[\w-]+)\)/g)].map(
         (match) => `${(match[1] ?? '').slice(1)}:not(${match[2] ?? ''})`,

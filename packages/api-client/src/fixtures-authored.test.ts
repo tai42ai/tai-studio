@@ -1,9 +1,9 @@
 /**
- * Authored fixtures (Class 2) — zod-validation.
+ * Hand-authored fixtures — zod-validation.
  *
- * Unlike the captured Class-1 fixtures, these are hand-authored: MUTATION responses
+ * Unlike the captured fixtures, these are hand-authored: MUTATION responses
  * (POST/DELETE/PATCH, no live capture) and REDACTED stand-ins for the secret-bearing
- * GETs the UI reads. Both classes are pinned to the canonical `@tai42/api-client`
+ * GETs the UI reads. Both are pinned to the canonical `@tai42/api-client`
  * schemas here, so a fixture drifting from its schema fails CI.
  *
  * The redacted set covers EXCLUDED-from-capture paths BY DESIGN — so we also assert

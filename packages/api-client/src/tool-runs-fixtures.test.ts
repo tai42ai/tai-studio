@@ -1,7 +1,7 @@
 /**
  * Hand-authored tool-runs fixtures — zod-validation + secret scan.
  *
- * These are Class-2 fixtures (never captured from a live skeleton): one MUTATION
+ * These are hand-authored fixtures (never captured): one MUTATION
  * response for `POST /api/tool-runs`, and REDACTED stand-ins for the two
  * secret-bearing GETs (a run record embeds the tool's output; the list carries
  * the run ids). They are validated against THIS module's zod schemas here, and

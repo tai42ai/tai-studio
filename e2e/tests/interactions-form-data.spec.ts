@@ -8,8 +8,8 @@
  * and a per-send option list) + `pages` renders: the schema controls prefilled from
  * `data.values`; a re-optioned field (`date`) as a CHOICE of the send's values rather
  * than a free control; the "Options for this send" value→label mapping; and the
- * "Pages" outline. Abstract fixtures only. The shot pair is the evidence the
- * orchestrator reads (both themes, by tokens).
+ * "Pages" outline. Abstract fixtures only. The shot pair is captured in both themes,
+ * by tokens, for visual review.
  */
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';

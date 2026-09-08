@@ -14,7 +14,7 @@
  *  - Version history (`PresetVersions`) — hidden for a conflicted record;
  *  - Delete (confirm) — the ONLY action on a conflicted record.
  *
- * The record no longer carries categorization tags; the Tags row and the display
+ * The record does not carry categorization tags; the Tags row and the display
  * name both read the tool_meta overlay (`listToolMeta`), keyed by the preset's tool
  * name. A conflicted (quarantined) preset is not registered and is DELETE-ONLY (the
  * server 409s every other action), so its detail shows a loud note and only Delete.

@@ -225,7 +225,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const parsed = parseJsonObject(kwargsText);
   const kwargsParses = !('error' in parsed);
 
-  // Tags are NOT in the draft signature: they no longer ride the create/validate body
+  // Tags are NOT in the draft signature: they do not ride the create/validate body
   // (they land in the overlay post-create), so editing them must not clear a verdict.
   const draftSignature = JSON.stringify({
     name,

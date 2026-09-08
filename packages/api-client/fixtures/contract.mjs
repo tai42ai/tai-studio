@@ -35,7 +35,7 @@ export const FIXTURE_ENDPOINTS = [
 ];
 
 /**
- * Class 2 fixtures — hand-authored, never captured, still zod-validated in CI.
+ * Hand-authored fixtures — never captured, still zod-validated in CI.
  *
  * These carry NO live secret material, so they live outside the capture pipeline
  * and outside `assertCaptureSetSafe` (which guards only the auto-capture set). The
