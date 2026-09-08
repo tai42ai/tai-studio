@@ -202,9 +202,9 @@ describe('RadioGroup', () => {
       </Field>,
     );
     // Two names, at two levels, each true: the Field's group carries the field
-    // label, the radiogroup carries the one the caller gave it. The old shape
-    // had the inner group silently steal the outer name, so a caller could not
-    // say anything more specific than the field label.
+    // label, the radiogroup carries the one the caller gave it. An inner group
+    // that silently stole the outer name would leave a caller unable to say
+    // anything more specific than the field label.
     expect(screen.getByRole('group', { name: 'Fruit' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Variety' })).toBeInTheDocument();
   });

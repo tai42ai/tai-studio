@@ -35,9 +35,8 @@ const VIEWPORT = { width: 1440, height: 900 } as const;
 const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
 const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
 
-/** Where the PNGs are written. An absolute out-of-tree path (e.g. an `_ops/shots`
- * directory) is passed through the env; the default keeps CI artifacts inside the
- * gitignored `test-results/` tree. */
+/** Where the PNGs are written. An absolute out-of-tree path is passed through the
+ * env; the default keeps CI artifacts inside the gitignored `test-results/` tree. */
 const OUT_DIR =
   process.env.STATES_SHOTS_DIR ??
   fileURLToPath(new URL('../test-results/states-shots', import.meta.url));

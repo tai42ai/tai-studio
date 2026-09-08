@@ -2,7 +2,7 @@
  * The pure trace-rebuild helpers: span nesting with orphan and CYCLE-ISLAND
  * re-parenting (nothing vanishes), recursive start-time sort, the default
  * selection, the token allowlist (cost keys excluded, total fallback), and the
- * leaf-only token roll-up that no longer double-counts a wrapper span.
+ * leaf-only token roll-up that does not double-count a wrapper span.
  */
 import { describe, expect, it } from 'vitest';
 import type { RunSpan, RunTrace } from '@tai42/api-client';
@@ -85,7 +85,7 @@ describe('buildTree', () => {
 
   it('re-parents a CYCLE ISLAND to root so no span silently vanishes', () => {
     // A.parent=B and B.parent=A: both parents are present but the pair is
-    // unreachable from any real root. The old flatten dropped both entirely.
+    // unreachable from any real root. A naive flatten would drop both entirely.
     const spans = [
       span({ id: 'root' }),
       span({ id: 'A', parentId: 'B' }),
@@ -224,7 +224,7 @@ describe('spanTokens', () => {
   });
 
   it('never counts a cost key as tokens', () => {
-    // The old includes()-heuristic read `input_cost` as input tokens.
+    // A naive includes()-heuristic would read `input_cost` as input tokens.
     expect(spanTokens({ input_cost: 0.02, output_cost: 0.05 })).toBe(0);
     expect(spanTokens({ input_tokens: 4, input_cost: 0.02 })).toBe(4);
   });

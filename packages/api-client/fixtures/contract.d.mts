@@ -5,7 +5,7 @@ export interface FixtureEndpoint {
   readonly schema: string;
 }
 
-/** A hand-authored Class 2 fixture (mutation or redacted) bound to a zod schema. */
+/** A hand-authored fixture (mutation or redacted) bound to a zod schema. */
 export interface AuthoredFixture {
   readonly name: string;
   readonly path: string;

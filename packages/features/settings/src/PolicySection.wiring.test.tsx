@@ -16,8 +16,7 @@
  * by identity; `serverValidate` routes to the client's `validateCondition`; `value`
  * tracks the live condition state through `onChange`; and `sampleInput` reflects the
  * LIVE "Sample context (JSON)" editor — a valid object when it parses, `undefined`
- * (upstream skeleton fallback) when it is blank or malformed. This restores
- * origin/main's field-wiring test intent at the new `JqField` seam.
+ * (upstream skeleton fallback) when it is blank or malformed.
  */
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

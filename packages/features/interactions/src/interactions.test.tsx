@@ -495,7 +495,7 @@ describe('InteractionsBadge — navigation + degraded state', () => {
     const badge = screen.getByTestId('interactions-badge');
     const link = within(badge).getByRole('link');
     // A real anchor carries an href (its resolved route), so it is focusable and
-    // middle-clickable — the fix for the old non-interactive status div.
+    // middle-clickable, not an inert status div.
     expect(link).toHaveAttribute('href');
     expect(link).toHaveAttribute('aria-label', expect.stringContaining('pending question'));
   });
@@ -1738,7 +1738,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
   // id chars after the route prefix. This is the ONLY inline image form the record
   // carries now — media is stored by reference, no `data:` inside the record.
   const SERVED_MEDIA_URL = `/api/interactions/media/${'a'.repeat(43)}`;
-  // A tiny hermetic 1×1 PNG data: URI — a valid image, but no longer an accepted
+  // A tiny hermetic 1×1 PNG data: URI — a valid image, but not an accepted
   // record media url (records reference media; only the served-media test uses it).
   const PNG_DATA_URI =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
@@ -1883,7 +1883,7 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(screen.getByTestId('media-item-blocked')).toBeInTheDocument();
   });
 
-  it('blocks a data:application/pdf image src (data: URIs are no longer accepted media)', async () => {
+  it('blocks a data:application/pdf image src (data: URIs are not accepted media)', async () => {
     const { channel, container } = renderInbox();
     await emitFrame(
       channel,

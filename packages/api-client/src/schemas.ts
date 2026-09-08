@@ -1444,10 +1444,10 @@ export type WebEntryCodeRevoked = z.infer<typeof webEntryCodeRevoked>;
 // The internal notifications sink: the messages the `notify_user` operation records
 // with no channel, so they land only in the Studio inbox. Each record carries the
 // server-minted id + timestamp; `recipient` is null when the message names none.
-// The parity wave taught the sink to STORE the richer-send forms a notify carried —
-// `media` (images/links shown WITH the message), `template` (a pre-approved
-// out-of-window send), `options` (tappable option labels) — plus the `audience`
-// identity the record is addressed to; the inbox renders them.
+// The sink also stores the richer-send forms a notify carried — `media`
+// (images/links shown WITH the message), `template` (a pre-approved out-of-window
+// send), `options` (tappable option labels) — plus the `audience` identity the
+// record is addressed to; the inbox renders them.
 
 /**
  * A pre-approved channel template a notification carried, stored raw on the sink

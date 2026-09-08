@@ -82,8 +82,8 @@ a major; `chore:`, `docs:`, `test:`, `ci:`, `refactor:`, `perf:`, `build:` and
 
 You add nothing else to the PR. On every push to `main`, release-please reads the
 merged commits and opens (or updates) a release PR carrying the next version;
-merging that PR tags `v<version>` and publishes the packages, with the notes
-generated onto the GitHub Release. There is no changelog file to edit.
+merging that PR tags `v<version>` and publishes the packages, with the release
+notes generated onto the GitHub Release.
 
 Before it publishes, the release diffs the committed API reports
 (`packages/*/etc/*.api.md` — `@tai42/studio-sdk`'s three entry points and

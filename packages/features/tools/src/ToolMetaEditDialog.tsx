@@ -8,7 +8,7 @@
  * two fields' edit semantics (the pinned blank→null mapping) exist exactly once. The
  * visibility control is a three-value radio group, NOT a checkbox: a two-state box
  * cannot express "defer to the plugin declaration" (`null`), and overlay-`false`
- * unhiding a plugin-hidden tool is ruled behavior. Selecting Default writes `null`
+ * unhiding a plugin-hidden tool is supported behavior. Selecting Default writes `null`
  * WITHOUT deleting the row.
  *
  * Badges follow the tags pattern: the tool's read-only plugin-DECLARED badges render

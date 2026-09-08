@@ -223,9 +223,9 @@ describe('copy-assets dist orphans', () => {
     },
   );
 
-  it('rejects the dist/ output of a module the build no longer emits', () => {
+  it('rejects the dist/ output of a module the build does not emit', () => {
     // A module moved into scaffolding stops being compiled; whatever `tsc -b`
-    // emitted for it before is left in dist/ and would still be published.
+    // emitted for it is left in dist/ and would still be published.
     const root = makePackage({
       'index.ts': "import './theme.css';\n",
       'panel.test.ts': 'export const x = 1;\n',

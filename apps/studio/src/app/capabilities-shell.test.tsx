@@ -619,8 +619,8 @@ describe('plugin nav sections', () => {
     expect(screen.queryByRole('list', { name: 'acme' })).toBeNull();
   });
 
-  it('renders a retired section value (Integrations) in the generic Plugins section', async () => {
-    // `'Integrations'` is no longer a core section; it takes the ordinary unknown-section
+  it('renders a non-core section value (Integrations) in the generic Plugins section', async () => {
+    // `'Integrations'` is not a core section; it takes the ordinary unknown-section
     // path — the single generic Plugins section — never a core section, and never a
     // per-plugin self-named section headed by the raw id.
     landWithEntry('Integrations');

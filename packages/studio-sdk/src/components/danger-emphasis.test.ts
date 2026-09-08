@@ -7,8 +7,8 @@
  *    themes, so the button is legible;
  *  - the danger fill runs DARKER than the accent fill in both themes, so a
  *    destructive control is told apart from a primary one by lightness alone —
- *    the dark half is where the old salmon danger was LIGHTER than the pink accent
- *    and read almost identically, so this half is born red on the pre-change sheet;
+ *    the dark half is the one at risk of a danger fill reading LIGHTER than the
+ *    accent and nearly identical to it, which this half forbids;
  *  - the hover is a shade deeper than the rest, in both themes, so the pressed
  *    state reads as intent rather than a second colour.
  *
