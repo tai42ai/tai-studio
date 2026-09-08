@@ -468,6 +468,35 @@ describe('useInteractionsStream', () => {
     expect(result.current.interactions[0]?.answered).toBe(false);
   });
 
+  it('heals a gap-answered card on reconnect via the resumed Last-Event-ID', async () => {
+    // Composed path (the live report): the add lands (card pending) and the client
+    // remembers the frame id; the connection drops; the answer happens during the gap;
+    // the reconnect sends the last-seen id as Last-Event-ID so the server resumes AFTER
+    // it and replays the gap `answered` frame. The card converges to answered instead
+    // of vanishing (it is in neither the refetched pending base nor a from-tail stream).
+    const stream =
+      vi.fn<(signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame>>>();
+    stream.mockResolvedValueOnce(
+      iterate([{ event: 'interaction.add', data: addData('a'), id: '1-0' }]),
+    );
+    stream.mockResolvedValueOnce(
+      iterate([{ event: 'interaction.answered', data: idData('a'), id: '2-0' }]),
+    );
+    stream.mockImplementation(() => Promise.resolve(iterate([])));
+    const client = { streamInteractions: stream } as unknown as ApiClient;
+    const { result } = renderStream(client, {});
+
+    await flush(); // conn1: add('a') → pending; remembers id 1-0; drains → backoff
+    expect(result.current.interactions.map((i) => i.interaction_id)).toEqual(['a']);
+    expect(result.current.interactions[0]?.answered).toBe(false);
+    expect(stream).toHaveBeenNthCalledWith(1, expect.anything(), undefined);
+
+    await flush(750); // reconnect resumes AFTER 1-0 and replays the gap answered('a')
+    expect(stream).toHaveBeenNthCalledWith(2, expect.anything(), '1-0');
+    expect(result.current.interactions).toHaveLength(1);
+    expect(result.current.interactions[0]?.answered).toBe(true);
+  });
+
   it('tombstones an aged answered id so a still-stale seed cannot resurrect it', async () => {
     // a is seeded (pending) AND answered on the tail; after the retention window a
     // sweeping tick tombstones it. A seed that still lists a (stale, pre-refetch)
