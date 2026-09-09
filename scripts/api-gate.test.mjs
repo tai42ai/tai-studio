@@ -466,6 +466,141 @@ test('retyping a member of an inline object type alias is breaking', () => {
   assert.ok(found.some((f) => f.includes('T') && f.includes('type alias declaration changed')));
 });
 
+// ---------------------------------- trailing-optional-param signature growth
+// Adding a TRAILING OPTIONAL parameter to a function-typed signature is a
+// backward-compatible minor (SemVer): existing callers still type-check. The
+// line-level `isAdditive` superset check reads the single re-rendered signature line
+// as a removal, so a param-aware rule treats an appended `?`-optional param as
+// surviving. This is the 13.2.0 incident: `streamInteractions` gaining `lastEventId?`
+// and `createApiClient` gaining a trailing optional param refused a minor.
+
+test('a member arrow-fn gaining a trailing optional param is non-breaking (additive)', () => {
+  // The streamInteractions case, as an interface member.
+  const found = findings(
+    'export interface I {\n  readonly streamInteractions: (signal?: AbortSignal) => Promise<void>;\n}',
+    'export interface I {\n  readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<void>;\n}',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('a top-level function gaining a trailing optional param is non-breaking (additive)', () => {
+  // The createApiClient case, as a single-line function.
+  const found = findings(
+    'export function createApiClient(config: ApiConfig): ApiClient;',
+    'export function createApiClient(config: ApiConfig, opts?: ClientOptions): ApiClient;',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('a function whose inline-return arrow member gains a trailing optional param is non-breaking', () => {
+  // The real createApiClient shape: the changed param is on an arrow member nested
+  // inside the return object, so the multi-line raw carries one CHANGED line.
+  const found = findings(
+    'export function createApiClient(config: ApiConfig): {\n  readonly baseUrl: string;\n  readonly streamInteractions: (signal?: AbortSignal) => Promise<void>;\n};',
+    'export function createApiClient(config: ApiConfig): {\n  readonly baseUrl: string;\n  readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<void>;\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('a variable whose member gains a trailing optional param AND a new optional member is non-breaking', () => {
+  // The ApiProvider case: one member's arrow signature grows a trailing optional
+  // param and a brand-new optional member appears in the same release.
+  const found = findings(
+    'export const ApiProvider: Provider<{\n  readonly baseUrl: string;\n  readonly streamInteractions: (signal?: AbortSignal) => Promise<void>;\n}>;',
+    'export const ApiProvider: Provider<{\n  readonly baseUrl: string;\n  readonly id?: string;\n  readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<void>;\n}>;',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('a type alias member arrow-fn gaining a trailing optional param is non-breaking', () => {
+  const found = findings(
+    'export type T = {\n  run: (a: number) => void;\n};',
+    'export type T = {\n  run: (a: number, b?: string) => void;\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+// INVERSE — each must STAY breaking. Exercised for both a member (arrow-typed) and a
+// top-level function, across the seven non-additive param mutations.
+
+const memberOld = 'export interface I {\n  fn: (a: number, b: string) => void;\n}';
+const funcOld = 'export function fn(a: number, b: string): void;';
+const memberNew = (fn) => `export interface I {\n  fn: ${fn};\n}`;
+const funcNew = (sig) => `export function fn${sig};`;
+
+test('a trailing REQUIRED param stays breaking (member and function)', () => {
+  assert.ok(
+    findings(memberOld, memberNew('(a: number, b: string, c: boolean) => void')).some((f) =>
+      f.includes('"fn"'),
+    ),
+  );
+  assert.ok(
+    findings(funcOld, funcNew('(a: number, b: string, c: boolean): void')).some((f) =>
+      f.includes('overload'),
+    ),
+  );
+});
+
+test('an existing param TYPE change stays breaking (member and function)', () => {
+  assert.ok(
+    findings(memberOld, memberNew('(a: string, b: string) => void')).some((f) =>
+      f.includes('"fn"'),
+    ),
+  );
+  assert.ok(
+    findings(funcOld, funcNew('(a: string, b: string): void')).some((f) => f.includes('overload')),
+  );
+});
+
+test('a REMOVED param stays breaking (member and function)', () => {
+  assert.ok(findings(memberOld, memberNew('(a: number) => void')).some((f) => f.includes('"fn"')));
+  assert.ok(findings(funcOld, funcNew('(a: number): void')).some((f) => f.includes('overload')));
+});
+
+test('REORDERED params stay breaking (member and function)', () => {
+  assert.ok(
+    findings(memberOld, memberNew('(b: string, a: number) => void')).some((f) =>
+      f.includes('"fn"'),
+    ),
+  );
+  assert.ok(
+    findings(funcOld, funcNew('(b: string, a: number): void')).some((f) => f.includes('overload')),
+  );
+});
+
+test('an existing optional param made REQUIRED stays breaking (member and function)', () => {
+  const mOld = 'export interface I {\n  fn: (a?: number) => void;\n}';
+  const fOld = 'export function fn(a?: number): void;';
+  assert.ok(findings(mOld, memberNew('(a: number) => void')).some((f) => f.includes('"fn"')));
+  assert.ok(findings(fOld, funcNew('(a: number): void')).some((f) => f.includes('overload')));
+});
+
+test('a RETURN type change stays breaking (member and function)', () => {
+  assert.ok(
+    findings(memberOld, memberNew('(a: number, b: string) => number')).some((f) =>
+      f.includes('"fn"'),
+    ),
+  );
+  assert.ok(
+    findings(funcOld, funcNew('(a: number, b: string): number')).some((f) =>
+      f.includes('overload'),
+    ),
+  );
+});
+
+test('an added trailing REST param stays breaking (member and function)', () => {
+  assert.ok(
+    findings(memberOld, memberNew('(a: number, b: string, ...rest: unknown[]) => void')).some((f) =>
+      f.includes('"fn"'),
+    ),
+  );
+  assert.ok(
+    findings(funcOld, funcNew('(a: number, b: string, ...rest: unknown[]): void')).some((f) =>
+      f.includes('overload'),
+    ),
+  );
+});
+
 // --------------------------------------------------- real committed reports E2E
 // The gate parses the actual api-extractor reports it ships to gate. This loads
 // each real etc/*.api.md from disk, parses it with the production parseReport, and
