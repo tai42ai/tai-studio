@@ -144,7 +144,7 @@ function ComboRow({
     <div style={rowStyle} data-testid={`combo-row-${String(index)}`}>
       <div style={rowHeaderStyle}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
-          <strong>Combo {index + 1}</strong>
+          <strong>Extension set {index + 1}</strong>
           {branch !== null ? (
             <Badge variant="primary">
               <span style={monoStyle}>{branch}</span>
@@ -157,14 +157,14 @@ function ComboRow({
         </span>
         <span style={{ display: 'inline-flex', gap: 'var(--tai-space-2)' }}>
           <Button
-            aria-label={`Move combo ${String(index + 1)} up`}
+            aria-label={`Move extension set ${String(index + 1)} up`}
             disabled={disabled || index === 0}
             onClick={onMoveUp}
           >
             <ArrowUpIcon />
           </Button>
           <Button
-            aria-label={`Move combo ${String(index + 1)} down`}
+            aria-label={`Move extension set ${String(index + 1)} down`}
             disabled={disabled || index === total - 1}
             onClick={onMoveDown}
           >
@@ -172,7 +172,7 @@ function ComboRow({
           </Button>
           <Button
             variant="ghost"
-            aria-label={`Remove combo ${String(index + 1)}`}
+            aria-label={`Remove extension set ${String(index + 1)}`}
             disabled={disabled}
             onClick={onRemove}
           >
@@ -295,7 +295,7 @@ function ToolExtensionsEditor({
       {combos.length === 0 ? (
         <EmptyState
           title="No extensions applied"
-          description={`${tool} carries no extension combos. Add one to compose a branch tool.`}
+          description={`${tool} carries no extension sets. Add one to compose a branch tool.`}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
@@ -348,7 +348,7 @@ function ToolExtensionsEditor({
             update([...combos, []]);
           }}
         >
-          Add combo
+          Add extension set
         </Button>
         <Button
           variant="primary"
@@ -423,7 +423,7 @@ export function ApplyExtensionsPanel(): ReactNode {
   if (selected === null) {
     body = (
       <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-        Select a tool to view and edit its extension combos.
+        Select a tool to view and edit its extension sets.
       </p>
     );
   } else {

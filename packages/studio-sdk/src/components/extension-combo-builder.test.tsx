@@ -35,7 +35,7 @@ describe('ExtensionComboBuilder', () => {
     const user = userEvent.setup();
     render(<Controlled />);
 
-    const add = screen.getByRole('button', { name: 'Add combo' });
+    const add = screen.getByRole('button', { name: 'Add extension set' });
     expect(add).toBeDisabled();
 
     await user.click(screen.getByRole('checkbox', { name: 'marka' }));
@@ -48,11 +48,11 @@ describe('ExtensionComboBuilder', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'markb' }));
     await user.click(screen.getByRole('checkbox', { name: 'marka' }));
-    await user.click(screen.getByRole('button', { name: 'Add combo' }));
+    await user.click(screen.getByRole('button', { name: 'Add extension set' }));
 
     // Committed as bare-name elements (no config), in selection order; draft resets.
     expect(screen.getByTestId('combos')).toHaveTextContent('[["markb","marka"]]');
-    expect(screen.getByRole('button', { name: 'Add combo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add extension set' })).toBeDisabled();
     expect(screen.getByRole('checkbox', { name: 'marka' })).not.toBeChecked();
   });
 
@@ -62,15 +62,15 @@ describe('ExtensionComboBuilder', () => {
 
     await user.click(screen.getByRole('checkbox', { name: 'marka' }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent('This combo is already added.');
-    expect(screen.getByRole('button', { name: 'Add combo' })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('This extension set is already added.');
+    expect(screen.getByRole('button', { name: 'Add extension set' })).toBeDisabled();
   });
 
   it('removes a committed combo from the value', async () => {
     const user = userEvent.setup();
     render(<Controlled initial={[['marka'], ['backendx']]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Remove combo marka' }));
+    await user.click(screen.getByRole('button', { name: 'Remove extension set marka' }));
 
     expect(screen.getByTestId('combos')).toHaveTextContent('[["backendx"]]');
   });
@@ -91,7 +91,7 @@ describe('ExtensionComboBuilder', () => {
 
   it('shows the empty note when there are no combos', () => {
     render(<ExtensionComboBuilder available={CATALOG} value={[]} onChange={vi.fn()} />);
-    expect(screen.getByText('No extension combos.')).toBeInTheDocument();
+    expect(screen.getByText('No extension sets.')).toBeInTheDocument();
   });
 
   it('does not fire onChange when disabled', async () => {
@@ -105,7 +105,7 @@ describe('ExtensionComboBuilder', () => {
         disabled
       />,
     );
-    await user.click(screen.getByRole('button', { name: 'Remove combo marka' }));
+    await user.click(screen.getByRole('button', { name: 'Remove extension set marka' }));
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -131,7 +131,7 @@ describe('ExtensionComboBuilder', () => {
     const editor = screen.getByLabelText('Output schema JSON');
     fireEvent.change(editor, { target: { value: '{"type":"object","properties":{}}' } });
 
-    await user.click(screen.getByRole('button', { name: 'Add combo' }));
+    await user.click(screen.getByRole('button', { name: 'Add extension set' }));
 
     expect(screen.getByTestId('combos')).toHaveTextContent(
       JSON.stringify([
@@ -149,7 +149,7 @@ describe('ExtensionComboBuilder', () => {
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: '{"type":"object","title":"R"}' },
     });
-    await user.click(screen.getByRole('button', { name: 'Add combo' }));
+    await user.click(screen.getByRole('button', { name: 'Add extension set' }));
 
     // The plain name stays a bare element; output_schema carries its config, in order.
     expect(screen.getByTestId('combos')).toHaveTextContent(
@@ -167,8 +167,8 @@ describe('ExtensionComboBuilder', () => {
     render(<Controlled initial={[[configured, 'markb']]} />);
 
     // Pull the combo into the draft and re-commit without changing its members.
-    await user.click(screen.getByRole('button', { name: 'Edit combo marka+markb' }));
-    await user.click(screen.getByRole('button', { name: 'Update combo' }));
+    await user.click(screen.getByRole('button', { name: 'Edit extension set marka+markb' }));
+    await user.click(screen.getByRole('button', { name: 'Update extension set' }));
 
     expect(screen.getByTestId('combos')).toHaveTextContent(JSON.stringify([[configured, 'markb']]));
   });
@@ -182,7 +182,7 @@ describe('ExtensionComboBuilder', () => {
       target: { value: '{ broken' },
     });
 
-    expect(screen.getByRole('button', { name: 'Add combo' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add extension set' })).toBeDisabled();
   });
 
   it('flags an unknown extension name in a seeded combo and reports invalid with ZERO edits', () => {
@@ -241,7 +241,7 @@ describe('ExtensionComboBuilder', () => {
     render(<Controlled initial={[[{ name: 'output_schema', config: { schema: stored } }]]} />);
 
     // Pull the stored combo back into the draft; its config seeds the editor.
-    await user.click(screen.getByRole('button', { name: 'Edit combo output_schema' }));
+    await user.click(screen.getByRole('button', { name: 'Edit extension set output_schema' }));
 
     expect(screen.getByLabelText('Output schema JSON')).toHaveValue(
       JSON.stringify(stored, null, 2),
@@ -251,7 +251,7 @@ describe('ExtensionComboBuilder', () => {
     fireEvent.change(screen.getByLabelText('Output schema JSON'), {
       target: { value: '{"type":"object","title":"Edited"}' },
     });
-    await user.click(screen.getByRole('button', { name: 'Update combo' }));
+    await user.click(screen.getByRole('button', { name: 'Update extension set' }));
 
     expect(screen.getByTestId('combos')).toHaveTextContent(
       JSON.stringify([
@@ -283,7 +283,7 @@ describe('ExtensionComboBuilder', () => {
     const user = userEvent.setup();
     render(<Controlled initial={[['marka'], ['backendx']]} />);
 
-    const remove = screen.getByRole('button', { name: 'Remove combo marka' });
+    const remove = screen.getByRole('button', { name: 'Remove extension set marka' });
     expect(remove).toHaveClass('tai-btn');
     // The mark is an icon beside the word, never a Unicode glyph standing in for it.
     expect(remove.querySelector('svg')).not.toBeNull();
@@ -330,7 +330,7 @@ describe('ExtensionComboBuilder', () => {
 
     render(<Controlled initial={[['marka']]} />);
     await user.click(screen.getByRole('checkbox', { name: 'marka' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('This combo is already added.');
+    expect(screen.getByRole('alert')).toHaveTextContent('This extension set is already added.');
     expect(screen.getByRole('alert').querySelector('svg')?.innerHTML).toBe(error);
   });
 
@@ -341,15 +341,15 @@ describe('ExtensionComboBuilder', () => {
     const user = userEvent.setup();
     render(<Controlled initial={[['marka']]} />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit combo marka' }));
-    const editing = screen.getByRole('button', { name: 'Editing combo marka' });
+    await user.click(screen.getByRole('button', { name: 'Edit extension set marka' }));
+    const editing = screen.getByRole('button', { name: 'Editing extension set marka' });
     expect(editing).toHaveTextContent('Editing');
-    expect(screen.queryByRole('button', { name: 'Edit combo marka' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Edit extension set marka' })).toBeNull();
   });
 
   it('renders the no-combos note as a muted line, not a full empty-state panel', () => {
     render(<ExtensionComboBuilder available={CATALOG} value={[]} onChange={vi.fn()} />);
-    const note = screen.getByText('No extension combos.');
+    const note = screen.getByText('No extension sets.');
     expect(note).toHaveClass('tai-muted');
     expect(note).not.toHaveClass('tai-empty-state');
   });
@@ -361,8 +361,10 @@ describe('ExtensionComboBuilder', () => {
     const [row] = screen.getAllByRole('listitem');
     if (row === undefined) throw new Error('no combo row rendered');
     expect(within(row).getByText('marka')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit combo marka' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Remove combo marka' })).toHaveClass('tai-btn');
-    expect(screen.getByRole('button', { name: 'Add combo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit extension set marka' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove extension set marka' })).toHaveClass(
+      'tai-btn',
+    );
+    expect(screen.getByRole('button', { name: 'Add extension set' })).toBeInTheDocument();
   });
 });

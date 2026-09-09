@@ -84,8 +84,28 @@ describe('PresetsList', () => {
     );
     // …and the overlay tag renders in the Tags column.
     expect(within(row).getByText('geo')).toBeInTheDocument();
-    // The single extension combo → a combo count of 1.
+    // The single extension set → an extension count of 1.
     expect(within(row).getByText('1')).toBeInTheDocument();
+  });
+
+  it('labels the extension-count column Extensions (not the internal word)', async () => {
+    renderWithProviders(<PresetsList selected={undefined} />, { client: listClient([normal]) });
+
+    await screen.findByTestId('preset-row-paris_weather');
+    expect(screen.getByRole('columnheader', { name: 'Extensions' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Combos' })).toBeNull();
+  });
+
+  it('renders a tag as a static chip whose class the table keeps on one line', async () => {
+    // The chip carries `tai-chip`, which the stylesheet pins to `white-space: nowrap`
+    // inside a `.tai-table` so a hyphenated tag never splits across two lines; the
+    // wrapping-between-chips is the cell's own `.tai-row`. jsdom loads no CSS, so the
+    // class presence is what this asserts; narrow-viewport.test.ts guards the rule.
+    const client = listClient([normal], [metaRow('paris_weather', { tags: ['palette-node'] })]);
+    renderWithProviders(<PresetsList selected={undefined} />, { client });
+
+    const chip = await screen.findByText('palette-node');
+    expect(chip).toHaveClass('tai-chip', 'tai-chip-static');
   });
 
   it('omits the display-name sub-line and shows — for tags when the overlay row is absent', async () => {

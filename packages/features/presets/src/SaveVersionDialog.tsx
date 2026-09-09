@@ -74,7 +74,7 @@ export function SaveVersionDialog({
     valid: true,
   });
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
-  // Whether the extension combos carry only known names (Item 9). An unknown name
+  // Whether the extension combos carry only known names. An unknown name
   // blocks submit + validate.
   const [extensionsValid, setExtensionsValid] = useState(true);
   const extensionsLabelId = useId();
@@ -230,7 +230,7 @@ export function SaveVersionDialog({
             id={extensionsDescId}
             style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
           >
-            Ordered extension combos applied to the preset tool.
+            Ordered extension sets applied to the preset tool.
           </span>
           {extensionsQuery.isError ? (
             <ErrorState

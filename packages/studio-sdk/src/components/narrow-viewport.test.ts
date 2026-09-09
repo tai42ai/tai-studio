@@ -687,6 +687,8 @@ describe('narrow-viewport contract', () => {
         'the standard clip pattern — the text is never painted, so it cannot push anything',
       '.tai-brand-label':
         'the product name, a constant this repo owns and deliberately keeps on one line',
+      '.tai-table .tai-chip':
+        'a tag chip inside a table stays one token — the cell wraps between chips, never inside one, so a hyphenated tag does not split across two lines; outside a table the chip keeps overflow-wrap: anywhere so it cannot push the document at 320 px',
     };
     const nowrap = sheet
       .filter((rule) => /(?:^|;)\s*white-space\s*:\s*nowrap/.test(rule.body))

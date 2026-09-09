@@ -112,7 +112,7 @@ describe('SaveVersionDialog', () => {
     });
 
     // The seeded combo renders with a Remove; clearing it makes extensions dirty.
-    await user.click(await screen.findByRole('button', { name: 'Remove combo chain' }));
+    await user.click(await screen.findByRole('button', { name: 'Remove extension set chain' }));
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
     expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { extensions: [] });
@@ -143,7 +143,7 @@ describe('SaveVersionDialog', () => {
     });
 
     // Remove the SECOND combo; the first (config-bearing) combo is untouched.
-    await user.click(await screen.findByRole('button', { name: 'Remove combo batch' }));
+    await user.click(await screen.findByRole('button', { name: 'Remove extension set batch' }));
     await user.click(screen.getByRole('button', { name: 'Save as new version' }));
 
     // The untouched combo keeps its `{ name, config }` element, not a bare name.
