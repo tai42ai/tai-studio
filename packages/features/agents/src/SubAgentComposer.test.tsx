@@ -32,6 +32,7 @@ const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => ({
   active_version: 1,
   extensions: [],
   output_schema: null,
+  input_schema: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],

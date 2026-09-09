@@ -1,8 +1,8 @@
 /**
  * Schema-level tests for the single-tier preset + tool-tags contracts. Every
  * preset is store-backed and versioned, so `presetRecord` requires a numeric
- * `active_version` and carries the first-class `output_schema` field; any drift
- * from the pinned shape must throw LOUDLY rather than coerce.
+ * `active_version` and carries the first-class `output_schema` and `input_schema`
+ * fields; any drift from the pinned shape must throw LOUDLY rather than coerce.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -15,6 +15,7 @@ const record = {
   active_version: 1,
   extensions: [],
   output_schema: null,
+  input_schema: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],
@@ -35,6 +36,27 @@ describe('presetRecord — single-tier store-backed row', () => {
       output_schema: { type: 'object', properties: {} },
     });
     expect(parsed.output_schema).toEqual({ type: 'object', properties: {} });
+  });
+
+  it('parses a row carrying an object input_schema', () => {
+    const parsed = schemas.presetRecord.parse({
+      ...record,
+      input_schema: { type: 'object', properties: { city: { type: 'string' } } },
+    });
+    expect(parsed.input_schema).toEqual({
+      type: 'object',
+      properties: { city: { type: 'string' } },
+    });
+  });
+
+  it('parses a row with a null input_schema', () => {
+    const parsed = schemas.presetRecord.parse(record);
+    expect(parsed.input_schema).toBeNull();
+  });
+
+  it('throws loudly when input_schema is absent (the backend always emits it)', () => {
+    const { input_schema: _omitted, ...withoutSchema } = record;
+    expect(() => schemas.presetRecord.parse(withoutSchema)).toThrow();
   });
 
   it('parses a combo carrying a {name, config} element (config-bearing extension)', () => {
@@ -110,6 +132,7 @@ describe('presetVersion — immutable version row', () => {
       fixed_kwargs: { units: 'imperial' },
       extensions: [],
       output_schema: null,
+      input_schema: null,
     },
     tags: [],
     created_at: '2024-01-01T00:00:03+00:00',
@@ -120,11 +143,25 @@ describe('presetVersion — immutable version row', () => {
     const parsed = schemas.presetVersion.parse(version);
     expect(parsed.body.fixed_kwargs).toEqual({ units: 'imperial' });
     expect(parsed.body.output_schema).toBeNull();
+    expect(parsed.body.input_schema).toBeNull();
     expect(parsed.is_current).toBe(true);
+  });
+
+  it('parses a version whose body carries an object input_schema', () => {
+    const parsed = schemas.presetVersion.parse({
+      ...version,
+      body: { ...version.body, input_schema: { type: 'object', properties: {} } },
+    });
+    expect(parsed.body.input_schema).toEqual({ type: 'object', properties: {} });
   });
 
   it('throws loudly when the body drops a required field', () => {
     const { base_tool: _dropped, ...brokenBody } = version.body;
+    expect(() => schemas.presetVersion.parse({ ...version, body: brokenBody })).toThrow();
+  });
+
+  it('throws loudly when the body drops input_schema (the backend always emits it)', () => {
+    const { input_schema: _dropped, ...brokenBody } = version.body;
     expect(() => schemas.presetVersion.parse({ ...version, body: brokenBody })).toThrow();
   });
 });

@@ -11,6 +11,7 @@
       "properties": { "temperature_c": { "type": "number", "title": "Temperature (°C)" } },
       "required": ["temperature_c"]
     },
+    "input_schema": null,
     "conflicted": false,
     "conflicted_reason": null,
     "uses": [],
@@ -37,6 +38,7 @@
       ]
     ],
     "output_schema": null,
+    "input_schema": null,
     "conflicted": true,
     "conflicted_reason": "name 'stale_preset' collided with an existing tool at startup",
     "uses": [],

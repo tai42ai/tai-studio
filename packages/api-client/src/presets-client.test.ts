@@ -49,6 +49,7 @@ const record = {
   active_version: 1,
   extensions: [],
   output_schema: null,
+  input_schema: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],
@@ -123,6 +124,7 @@ describe('preset client transport', () => {
         fixed_kwargs: {},
         extensions: [],
         output_schema: null,
+        input_schema: null,
       },
       tags: [],
       created_at: 'now',
@@ -144,6 +146,7 @@ describe('preset client transport', () => {
         fixed_kwargs: {},
         extensions: [],
         output_schema: null,
+        input_schema: null,
       },
       tags: [],
       created_at: 'now',
@@ -204,6 +207,15 @@ describe('preset client transport', () => {
     expect(out.fixed_kwargs).toEqual({ city: 'Paris' });
   });
 
+  it('getPreset reads an author-set input_schema back off the record', async () => {
+    const input_schema = { type: 'object', properties: { city: { type: 'string' } } };
+    const { client } = harness(() =>
+      jsonResponse({ data: { ...record, input_schema, fixed_kwargs: {} } }),
+    );
+    const out = await client.getPreset('paris_weather');
+    expect(out.input_schema).toEqual(input_schema);
+  });
+
   it('listPresetVersions GETs the versions route', async () => {
     const version = {
       version: 1,
@@ -213,6 +225,7 @@ describe('preset client transport', () => {
         fixed_kwargs: {},
         extensions: [],
         output_schema: null,
+        input_schema: null,
       },
       tags: [],
       created_at: 'now',
@@ -234,6 +247,7 @@ describe('preset client transport', () => {
         fixed_kwargs: {},
         extensions: [],
         output_schema: null,
+        input_schema: null,
       },
       tags: [],
       created_at: 'now',
