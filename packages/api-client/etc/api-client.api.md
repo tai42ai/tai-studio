@@ -3439,6 +3439,8 @@ export interface CreatePresetBody {
     // (undocumented)
     readonly fixed_kwargs?: Record<string, unknown>;
     // (undocumented)
+    readonly input_schema?: Record<string, unknown> | null;
+    // (undocumented)
     readonly name: string;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
@@ -6565,6 +6567,8 @@ export interface SavePresetVersionBody {
     // (undocumented)
     readonly fixed_kwargs?: Record<string, unknown>;
     // (undocumented)
+    readonly input_schema?: Record<string, unknown> | null;
+    // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
 }
 
@@ -8259,6 +8263,8 @@ export interface ValidatePresetBody {
     readonly extensions?: readonly s.PresetExtensionElement[][];
     // (undocumented)
     readonly fixed_kwargs?: Record<string, unknown>;
+    // (undocumented)
+    readonly input_schema?: Record<string, unknown> | null;
     // (undocumented)
     readonly name: string;
     // (undocumented)
