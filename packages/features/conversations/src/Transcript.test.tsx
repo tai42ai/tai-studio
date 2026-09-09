@@ -355,10 +355,12 @@ describe('Transcript', () => {
     expect(announcer).toHaveTextContent('Stopped updating: reader exploded');
 
     fireEvent.click(within(stale).getByRole('button', { name: 'Retry' }));
+    // The banner is removed on the recovery render; the announcer is emptied by the
+    // standing-notice retract in a following effect, so both are awaited together.
     await waitFor(() => {
       expect(screen.queryByTestId('conversation-stale-read')).toBeNull();
+      expect(announcer).toBeEmptyDOMElement();
     });
-    expect(announcer).toBeEmptyDOMElement();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(TAIL_INTERVAL_MS + 10);
