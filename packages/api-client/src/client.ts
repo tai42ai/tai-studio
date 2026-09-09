@@ -183,9 +183,11 @@ export interface PinRoutePublicBody {
  * rejects an empty one with a 422); it is never the tool_meta `display_name`.
  * `extensions` is the combos list — the create flow OMITS it when there are no
  * combos (the route rejects an explicit `extensions: []`). `output_schema` is the
- * optional author-set output JSON Schema. Each combo element is a bare extension
- * name or a `{ name, config }` mapping. Categorization tags live in the tool_meta
- * overlay, written after a successful create — never in this body.
+ * optional author-set output JSON Schema; `input_schema` is the optional author-set
+ * input JSON Schema, read by the router as a top-level version field. Each combo
+ * element is a bare extension name or a `{ name, config }` mapping. Categorization
+ * tags live in the tool_meta overlay, written after a successful create — never in
+ * this body.
  */
 export interface CreatePresetBody {
   readonly name: string;
@@ -194,22 +196,26 @@ export interface CreatePresetBody {
   readonly fixed_kwargs?: Record<string, unknown>;
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
+  readonly input_schema?: Record<string, unknown> | null;
 }
 
 /**
  * Body for saving a new preset version (POST `/api/presets/{name}/versions`). At
  * least one field must be provided (an empty body is a loud 400). Each field's
  * sentinel is uniform: omitted carries the active version's value forward; an
- * explicit `[]` clears `extensions`, and an explicit `null` clears `output_schema`.
- * `description` carries forward when omitted; an explicit non-empty string sets it
- * (the API rejects an explicit empty one). Categorization tags are not a version
- * field — they live in the tool_meta overlay.
+ * explicit `[]` clears `extensions`, and an explicit `null` clears `output_schema`
+ * or `input_schema`. `input_schema` is the optional author-set input JSON Schema and
+ * follows the same carry-forward sentinel as `output_schema`. `description` carries
+ * forward when omitted; an explicit non-empty string sets it (the API rejects an
+ * explicit empty one). Categorization tags are not a version field — they live in the
+ * tool_meta overlay.
  */
 export interface SavePresetVersionBody {
   readonly fixed_kwargs?: Record<string, unknown>;
   readonly description?: string;
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
+  readonly input_schema?: Record<string, unknown> | null;
 }
 
 /**
@@ -226,6 +232,7 @@ export interface ValidatePresetBody {
   readonly fixed_kwargs?: Record<string, unknown>;
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
+  readonly input_schema?: Record<string, unknown> | null;
 }
 
 /**
