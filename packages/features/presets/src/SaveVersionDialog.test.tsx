@@ -21,6 +21,7 @@ const detail = {
   active_version: 2,
   extensions: [['chain']],
   output_schema: null,
+  input_schema: null,
   conflicted: false,
   conflicted_reason: null,
   uses: [],

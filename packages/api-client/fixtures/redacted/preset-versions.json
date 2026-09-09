@@ -20,7 +20,8 @@
           }
         ]
       ],
-      "output_schema": null
+      "output_schema": null,
+      "input_schema": null
     },
     "tags": [],
     "created_at": "2024-01-01T00:00:02+00:00",
@@ -38,7 +39,8 @@
         "title": "Weather",
         "properties": { "temperature_c": { "type": "number", "title": "Temperature (°C)" } },
         "required": ["temperature_c"]
-      }
+      },
+      "input_schema": null
     },
     "tags": [],
     "created_at": "2024-01-01T00:00:03+00:00",

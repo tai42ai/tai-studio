@@ -229,6 +229,7 @@ name: string;
 config: Record<string, unknown>;
 })[][];
 output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
 conflicted: boolean;
 conflicted_reason: string | null;
 uses: string[];
@@ -244,6 +245,7 @@ name: string;
 config: Record<string, unknown>;
 })[][];
 output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
 conflicted: boolean;
 conflicted_reason: string | null;
 uses: string[];
@@ -259,6 +261,7 @@ name: string;
 config: Record<string, unknown>;
 })[][];
 output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
 conflicted: boolean;
 conflicted_reason: string | null;
 uses: string[];
@@ -276,6 +279,7 @@ name: string;
 config: Record<string, unknown>;
 })[][];
 output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
 };
 tags: string[];
 created_at: string;
@@ -292,6 +296,7 @@ name: string;
 config: Record<string, unknown>;
 })[][];
 output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
 };
 tags: string[];
 created_at: string;
@@ -308,6 +313,7 @@ name: string;
 config: Record<string, unknown>;
 })[][];
 output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
 };
 tags: string[];
 created_at: string;
@@ -3739,6 +3745,7 @@ function createApiClient(config: ApiConfig): {
             config: Record<string, unknown>;
         })[][];
         output_schema: Record<string, unknown> | null;
+        input_schema: Record<string, unknown> | null;
         conflicted: boolean;
         conflicted_reason: string | null;
         uses: string[];
@@ -3754,6 +3761,7 @@ function createApiClient(config: ApiConfig): {
             config: Record<string, unknown>;
         })[][];
         output_schema: Record<string, unknown> | null;
+        input_schema: Record<string, unknown> | null;
         conflicted: boolean;
         conflicted_reason: string | null;
         uses: string[];
@@ -3769,6 +3777,7 @@ function createApiClient(config: ApiConfig): {
             config: Record<string, unknown>;
         })[][];
         output_schema: Record<string, unknown> | null;
+        input_schema: Record<string, unknown> | null;
         conflicted: boolean;
         conflicted_reason: string | null;
         uses: string[];
@@ -3786,6 +3795,7 @@ function createApiClient(config: ApiConfig): {
                 config: Record<string, unknown>;
             })[][];
             output_schema: Record<string, unknown> | null;
+            input_schema: Record<string, unknown> | null;
         };
         tags: string[];
         created_at: string;
@@ -3802,6 +3812,7 @@ function createApiClient(config: ApiConfig): {
                 config: Record<string, unknown>;
             })[][];
             output_schema: Record<string, unknown> | null;
+            input_schema: Record<string, unknown> | null;
         };
         tags: string[];
         created_at: string;
@@ -3818,6 +3829,7 @@ function createApiClient(config: ApiConfig): {
                 config: Record<string, unknown>;
             })[][];
             output_schema: Record<string, unknown> | null;
+            input_schema: Record<string, unknown> | null;
         };
         tags: string[];
         created_at: string;
@@ -8816,6 +8828,7 @@ const presetBody: z.ZodObject<{
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, z.core.$strip>;
 
 // @public
@@ -8838,6 +8851,7 @@ const presetDetail: z.ZodObject<{
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     conflicted: z.ZodBoolean;
     conflicted_reason: z.ZodNullable<z.ZodString>;
     uses: z.ZodArray<z.ZodString>;
@@ -8871,6 +8885,7 @@ const presetList: z.ZodArray<z.ZodObject<{
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     conflicted: z.ZodBoolean;
     conflicted_reason: z.ZodNullable<z.ZodString>;
     uses: z.ZodArray<z.ZodString>;
@@ -8891,6 +8906,7 @@ const presetRecord: z.ZodObject<{
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     conflicted: z.ZodBoolean;
     conflicted_reason: z.ZodNullable<z.ZodString>;
     uses: z.ZodArray<z.ZodString>;
@@ -8949,6 +8965,7 @@ const presetVersion: z.ZodObject<{
             config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         }, z.core.$strip>]>>>;
         output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strip>;
     tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
@@ -8967,6 +8984,7 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
             config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
         }, z.core.$strip>]>>>;
         output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strip>;
     tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;

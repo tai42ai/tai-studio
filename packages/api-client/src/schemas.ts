@@ -115,8 +115,9 @@ export const presetExtensions = z.array(z.array(presetExtensionElement));
  * One preset as `GET /api/presets` returns it. Every preset is versioned, so
  * `active_version` is always an int; `conflicted` marks a QUARANTINED row (its
  * name collided with a foreign tool at boot — delete-only). `extensions` are the
- * ACTIVE version's extension combos and `output_schema` the optional author-set
- * output JSON Schema. Categorization tags live in the tool_meta overlay
+ * ACTIVE version's extension combos, `output_schema` the optional author-set
+ * output JSON Schema, and `input_schema` the optional author-set input JSON
+ * Schema. Categorization tags live in the tool_meta overlay
  * (`GET /api/tool-meta`), never on the record. A drift throws `ApiSchemaError`;
  * nothing is coerced.
  */
@@ -127,6 +128,7 @@ export const presetRecord = z.object({
   active_version: z.number(),
   extensions: presetExtensions,
   output_schema: z.record(z.string(), z.unknown()).nullable(),
+  input_schema: z.record(z.string(), z.unknown()).nullable(),
   conflicted: z.boolean(),
   // The human-readable cause a row is quarantined (its name collided with a
   // foreign tool at boot), or `null` when the row is not conflicted. Rendered
@@ -154,6 +156,7 @@ export const presetBody = z.object({
   fixed_kwargs: z.record(z.string(), z.unknown()),
   extensions: presetExtensions,
   output_schema: z.record(z.string(), z.unknown()).nullable(),
+  input_schema: z.record(z.string(), z.unknown()).nullable(),
 });
 export type PresetBody = z.infer<typeof presetBody>;
 
