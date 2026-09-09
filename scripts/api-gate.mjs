@@ -40,7 +40,12 @@
 // changed is compared structurally by its member LINES — when every old line
 // survives and the delta is only insertions (a new member added to a client object,
 // an exported object type, or an inline function-signature return shape; a new
-// param line), it is additive and non-breaking.
+// param line), it is additive and non-breaking. A function-typed line (a top-level
+// function/overload, or an interface/class/object member whose type is a
+// function/arrow) also counts as surviving when a new line appends only trailing
+// OPTIONAL params (`name?: T`), the old param list being a prefix of the new and
+// everything else identical — a backward-compatible minor. An added trailing REST
+// param, a param made required, or any other param/return/name change errs breaking.
 //
 // Breaking classes: a removed symbol, a removed or changed interface/class
 // member (named or an index/call/construct signature), a member turned from
@@ -205,21 +210,138 @@ function lineMultiset(text) {
   return map;
 }
 
+const collapse = (text) => text.replace(/\s+/g, ' ').trim();
+
+// The index range [open, close] of the LAST top-level `(...)` group in a single
+// signature line — the function's own parameter list, whether the line is an
+// arrow-typed member (`foo: (a) => T`) or a function/method (`foo(a): T`). Depth
+// tracks `()[]{}` and generic `<>`; a `>` closing an arrow token (`=>`) is not a
+// bracket. Returns null on any imbalance or when the line has no top-level `(...)`,
+// so a caller that cannot locate a param list errs breaking rather than loosening.
+function lastTopLevelParenRange(line) {
+  let depth = 0;
+  let openIdx = -1;
+  let range = null;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '(') {
+      if (depth === 0) openIdx = i;
+      depth++;
+    } else if (c === '[' || c === '{' || c === '<') {
+      depth++;
+    } else if (c === ')') {
+      depth--;
+      if (depth < 0) return null;
+      if (depth === 0 && openIdx !== -1) {
+        range = [openIdx, i];
+        openIdx = -1;
+      }
+    } else if (c === ']' || c === '}') {
+      depth--;
+      if (depth < 0) return null;
+    } else if (c === '>') {
+      if (line[i - 1] !== '=') {
+        depth--;
+        if (depth < 0) return null;
+      }
+    }
+  }
+  if (depth !== 0) return null;
+  return range;
+}
+
+// Split a parameter-list body on TOP-LEVEL commas (depth 0 across `()[]{}` and
+// generic `<>`, so commas inside generics/object types/nested arrow types do not
+// split), returning trimmed non-empty segments; [] for an empty list. Returns null
+// on bracket imbalance so the caller errs breaking.
+function splitTopLevelParams(text) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === '(' || c === '[' || c === '{' || c === '<') {
+      depth++;
+    } else if (c === ')' || c === ']' || c === '}') {
+      depth--;
+      if (depth < 0) return null;
+    } else if (c === '>') {
+      if (text[i - 1] !== '=') {
+        depth--;
+        if (depth < 0) return null;
+      }
+    } else if (c === ',' && depth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  if (depth !== 0) return null;
+  parts.push(text.slice(start));
+  return parts.map((p) => p.trim()).filter((p) => p !== '');
+}
+
+// A top-level `?`-optional param binding: `ident?: Type` (the `?` sits on the
+// binding, before its type colon). A rest param `...args: T[]` has no such `?`, so
+// an added rest param is NOT optional here and stays breaking, as the spec requires.
+const OPTIONAL_PARAM = /^[^:?]*\?\s*:/;
+
+// True iff `newLine` is the same function signature as `oldLine` up to APPENDED
+// optional params: the text before the param list and after it is identical, the old
+// params are a textual prefix of the new ones, and every extra new param is
+// `?`-optional. Anything else — a removed/reordered/retyped param, a param made
+// required, a changed name/readonly/return type, an added required or rest param —
+// is not additive. Works on a single normalized signature line; if a param list
+// cannot be confidently located or parsed on either side, returns false (err
+// breaking, never loosen on uncertainty).
+function isFunctionParamAdditive(oldLine, newLine) {
+  const oldRange = lastTopLevelParenRange(oldLine);
+  const newRange = lastTopLevelParenRange(newLine);
+  if (!oldRange || !newRange) return false;
+  if (collapse(oldLine.slice(0, oldRange[0])) !== collapse(newLine.slice(0, newRange[0])))
+    return false;
+  if (collapse(oldLine.slice(oldRange[1] + 1)) !== collapse(newLine.slice(newRange[1] + 1)))
+    return false;
+  const oldParams = splitTopLevelParams(oldLine.slice(oldRange[0] + 1, oldRange[1]));
+  const newParams = splitTopLevelParams(newLine.slice(newRange[0] + 1, newRange[1]));
+  if (oldParams === null || newParams === null) return false;
+  if (newParams.length < oldParams.length) return false;
+  for (let i = 0; i < oldParams.length; i++) {
+    if (collapse(oldParams[i]) !== collapse(newParams[i])) return false;
+  }
+  for (let i = oldParams.length; i < newParams.length; i++) {
+    if (!OPTIONAL_PARAM.test(newParams[i])) return false;
+  }
+  return true;
+}
+
 // True when `newText` is a purely-additive superset of `oldText`: every member line
-// of the old declaration still appears in the new one with at least the same
-// multiplicity, so the change is only insertions (a new member/param line added to
-// an exported object type, client object or function overload). Any old line that
-// vanished or shrank means an existing member was removed, retyped or narrowed — not
-// additive. Deterministic and structural: it compares the api.md member lines, no
-// parsing of the type grammar. A reordering-only change is additive (all old lines
-// survive), which is correct — reordering members is not a breaking change. Known
-// blind spot: the multiset is per-declaration, so a narrowing whose removed line is
-// re-added VERBATIM elsewhere in the same declaration in the same release reads as
-// additive; every realistic breaking change carries a distinctive vanished line.
+// of the old declaration still appears in the new one — either verbatim, or as a
+// function signature that only APPENDED optional params (isFunctionParamAdditive) —
+// so the change is only insertions and backward-compatible signature growth. Any old
+// line with no verbatim survivor and no function-param-additive counterpart means an
+// existing member was removed, retyped or narrowed — not additive. Deterministic and
+// structural: it compares the api.md member lines, no parsing of the type grammar
+// beyond the trailing-optional-param rule. A reordering-only change is additive (all
+// old lines survive), which is correct. Known blind spot: the multiset is
+// per-declaration, so a narrowing whose removed line is re-added VERBATIM elsewhere
+// in the same declaration in the same release reads as additive; every realistic
+// breaking change carries a distinctive vanished line.
 function isAdditive(oldText, newText) {
   const newLines = lineMultiset(newText);
+  const leftover = [];
   for (const [line, count] of lineMultiset(oldText)) {
-    if ((newLines.get(line) ?? 0) < count) return false;
+    const have = newLines.get(line) ?? 0;
+    const consumed = Math.min(count, have);
+    if (consumed > 0) newLines.set(line, have - consumed);
+    for (let i = consumed; i < count; i++) leftover.push(line);
+  }
+  if (leftover.length === 0) return true;
+  const pool = [];
+  for (const [line, count] of newLines) for (let i = 0; i < count; i++) pool.push(line);
+  for (const oldLine of leftover) {
+    const idx = pool.findIndex((candidate) => isFunctionParamAdditive(oldLine, candidate));
+    if (idx === -1) return false;
+    pool.splice(idx, 1);
   }
   return true;
 }
@@ -442,11 +564,15 @@ function classifyMembers(add, symbol, oldMembers, newMembers) {
       add(symbol, `member "${key}" became required`);
       continue;
     }
+    const newSignatures = [...newMember.signatures];
     for (const sig of oldMember.signatures) {
-      if (!newMember.signatures.has(sig)) {
-        add(symbol, `member "${key}" signature removed or changed`);
-        break;
-      }
+      if (newMember.signatures.has(sig)) continue;
+      // A function-typed member whose signature only appended optional params is
+      // backward-compatible even though its single line re-rendered: satisfied when
+      // SOME new signature of the same member is a trailing-optional-param superset.
+      if (newSignatures.some((candidate) => isFunctionParamAdditive(sig, candidate))) continue;
+      add(symbol, `member "${key}" signature removed or changed`);
+      break;
     }
   }
   for (const [key, newMember] of newMembers) {
@@ -507,9 +633,15 @@ function classifyEntries(scope, oldEntries, newEntries) {
         // one are non-breaking; only an overload that vanished or changed
         // non-additively (a removed/retyped/narrowed member or param) is breaking.
         const newRaw = [...newEntry.signatures.values()];
+        const newSigs = [...newEntry.signatures.keys()];
         for (const [sig, oldRaw] of oldEntry.signatures) {
           if (newEntry.signatures.has(sig)) continue;
+          // isAdditive covers multi-line inline growth (a member/param line added
+          // inside the signature, including a nested arrow member that appended an
+          // optional param); the function-param-additive check covers a single-line
+          // overload whose OWN param list appended a trailing optional param.
           if (newRaw.some((candidate) => isAdditive(oldRaw, candidate))) continue;
+          if (newSigs.some((candidate) => isFunctionParamAdditive(sig, candidate))) continue;
           add(name, 'a function overload was removed or changed');
           break;
         }
