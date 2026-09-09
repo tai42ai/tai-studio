@@ -154,7 +154,7 @@ function PresetTableHead(): ReactNode {
         <TH>Description</TH>
         <TH>Active version</TH>
         <TH>Tags</TH>
-        <TH>Combos</TH>
+        <TH>Extensions</TH>
       </TR>
     </THead>
   );

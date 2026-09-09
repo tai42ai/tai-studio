@@ -113,7 +113,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const [kwargsText, setKwargsText] = useState('{}');
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
   const [submitted, setSubmitted] = useState(false);
-  // Whether the extension combos carry only known names (Item 9). The builder reports
+  // Whether the extension combos carry only known names. The builder reports
   // this; an unknown name blocks submit + validate.
   const [extensionsValid, setExtensionsValid] = useState(true);
   const extensionsLabelId = useId();
@@ -452,7 +452,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
             id={extensionsDescId}
             style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
           >
-            Ordered extension combos applied to the preset tool.
+            Ordered extension sets applied to the preset tool.
           </span>
           {extensionsQuery.isError ? (
             <ErrorState

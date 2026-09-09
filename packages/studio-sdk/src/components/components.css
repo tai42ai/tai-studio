@@ -1246,6 +1246,16 @@
     overflow-wrap: normal;
   }
 
+  /* A tag chip in a table cell reads as one token: it never breaks inside itself,
+     not even at a hyphen (`overflow-wrap: normal` above still takes that soft-wrap
+     opportunity, so `palette-node` would split across two lines). The chip stays
+     whole; the cell's own `.tai-row` wraps BETWEEN chips instead. This holds only
+     inside a table — outside one a chip keeps `overflow-wrap: anywhere` so a long
+     unbroken tag breaks inside the chip rather than pushing the document at 320 px. */
+  .tai-table .tai-chip {
+    white-space: nowrap;
+  }
+
   .tai-table {
     width: 100%;
     border-collapse: collapse;

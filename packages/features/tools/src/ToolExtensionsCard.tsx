@@ -159,7 +159,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
         }}
       >
         <h3 id="tool-extensions-heading" className="tai-card-title">
-          Extension combos
+          Extension sets
         </h3>
         {!isPresetTool ? (
           <Button
@@ -168,7 +168,7 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
               openEditor(combos);
             }}
           >
-            Edit combos
+            Edit extension sets
           </Button>
         ) : null}
       </div>
@@ -199,7 +199,8 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
 
       {isPresetTool ? (
         <p className="tai-muted" style={{ margin: 0 }}>
-          <Badge variant="success">preset</Badge> Preset tools carry their combos on the preset —{' '}
+          <Badge variant="success">preset</Badge> Preset tools carry their extension sets on the
+          preset —{' '}
           {/* The link names itself from its own visible text (WCAG 2.5.3, Label in
               Name): an `aria-label` naming the tool and the destination said none of
               the words the link shows. */}
@@ -210,8 +211,8 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
         </p>
       ) : combos.length === 0 ? (
         <EmptyState
-          title="No extension combos"
-          description={`${tool} carries no extension combos. Add one to compose a branch tool.`}
+          title="No extension sets"
+          description={`${tool} carries no extension sets. Add one to compose a branch tool.`}
         />
       ) : (
         <div className="tai-stack tai-stack-2">
@@ -227,8 +228,8 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
       )}
 
       <Dialog
-        title={`Edit extension combos — ${tool}`}
-        description="Author the full list of extension combos for this tool. Each combo composes a branch tool; saving replaces the whole list."
+        title={`Edit extension sets — ${tool}`}
+        description="Author the full list of extension sets for this tool. Each extension set composes a branch tool; saving replaces the whole list."
         open={open}
         onOpenChange={(next) => {
           if (save.isPending) return;
@@ -254,8 +255,8 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
 
           {confirmingClear ? (
             <p role="alert" className="tai-status-err" style={{ margin: 0 }}>
-              Saving an empty list clears every combo and drops all of {tool}&apos;s branch tools.
-              Confirm to proceed.
+              Saving an empty list clears every extension set and drops all of {tool}&apos;s branch
+              tools. Confirm to proceed.
             </p>
           ) : null}
 

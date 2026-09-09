@@ -83,7 +83,7 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     await selectTool(user, 'shout');
 
     // The one combo loads; its branch tool preview shows.
-    expect(await screen.findByText('Combo 1')).toBeInTheDocument();
+    expect(await screen.findByText('Extension set 1')).toBeInTheDocument();
     expect(screen.getByText('shout_marka')).toBeInTheDocument();
 
     // Add `markb` to the combo → the branch tool name updates.
@@ -104,7 +104,7 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     renderWithProviders(<ApplyExtensionsPanel />, { client: makeClient({ setToolExtensions }) });
 
     await selectTool(user, 'shout');
-    await screen.findByText('Combo 1');
+    await screen.findByText('Extension set 1');
     await user.click(screen.getByRole('button', { name: 'Save extensions' }));
 
     // A combo save rebinds branch tools, so the catalog families and the registered-tool
@@ -167,7 +167,7 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     expect(screen.getByTestId('combo-row-1')).toBeInTheDocument();
 
     // Move combo 1 down → the order swaps.
-    await user.click(screen.getByRole('button', { name: 'Move combo 1 down' }));
+    await user.click(screen.getByRole('button', { name: 'Move extension set 1 down' }));
     await user.click(screen.getByRole('button', { name: 'Save extensions' }));
 
     await waitFor(() => {
@@ -192,7 +192,7 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
 
     // Remove the SECOND combo → ONLY the first remains. Pins the exact remaining list
     // (a wrong-index removal would leave the wrong combo and fail this).
-    await user.click(screen.getByRole('button', { name: 'Remove combo 2' }));
+    await user.click(screen.getByRole('button', { name: 'Remove extension set 2' }));
     await user.click(screen.getByRole('button', { name: 'Save extensions' }));
 
     await waitFor(() => {
@@ -214,7 +214,7 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
 
     // The per-combo Remove is a routine list-item control sitting beside the quiet
     // reorder arrows; it stays low-emphasis, never filled danger.
-    const rowRemove = screen.getByRole('button', { name: 'Remove combo 1' });
+    const rowRemove = screen.getByRole('button', { name: 'Remove extension set 1' });
     expect(rowRemove).toHaveClass('tai-btn-ghost');
     expect(rowRemove).not.toHaveClass('tai-btn-danger');
   });
@@ -230,10 +230,10 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     });
 
     await selectTool(user, 'shout');
-    await screen.findByText('Combo 1');
+    await screen.findByText('Extension set 1');
 
     // Add a second combo row and fill it with `markb`.
-    await user.click(screen.getByRole('button', { name: 'Add combo' }));
+    await user.click(screen.getByRole('button', { name: 'Add extension set' }));
     const secondRow = screen.getByTestId('combo-row-1');
     await user.click(within(secondRow).getByRole('checkbox', { name: 'markb' }));
 
@@ -250,9 +250,9 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     renderWithProviders(<ApplyExtensionsPanel />, { client: makeClient({ setToolExtensions }) });
 
     await selectTool(user, 'shout');
-    await screen.findByText('Combo 1');
+    await screen.findByText('Extension set 1');
 
-    await user.click(screen.getByRole('button', { name: 'Remove combo 1' }));
+    await user.click(screen.getByRole('button', { name: 'Remove extension set 1' }));
     expect(await screen.findByText('No extensions applied')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Save extensions' }));
@@ -269,10 +269,10 @@ describe('ApplyExtensionsPanel — manifest tool', () => {
     renderWithProviders(<ApplyExtensionsPanel />, { client: makeClient({ setToolExtensions }) });
 
     await selectTool(user, 'shout');
-    await screen.findByText('Combo 1');
+    await screen.findByText('Extension set 1');
 
     // Add an empty combo row and save it — the server rejects; the UI shows it.
-    await user.click(screen.getByRole('button', { name: 'Add combo' }));
+    await user.click(screen.getByRole('button', { name: 'Add extension set' }));
     await user.click(screen.getByRole('button', { name: 'Save extensions' }));
 
     const alert = await screen.findByRole('alert');
@@ -333,7 +333,7 @@ describe('ApplyExtensionsPanel — origin branch', () => {
     });
 
     await selectTool(user, 'shout');
-    await screen.findByText('Combo 1');
+    await screen.findByText('Extension set 1');
 
     expect(getToolExtensions).toHaveBeenCalledWith('shout', expect.anything());
     expect(getPreset).not.toHaveBeenCalled();
@@ -373,7 +373,7 @@ describe('ApplyExtensionsPanel — origin branch', () => {
     });
 
     await selectTool(user, 'clash');
-    await screen.findByText('Combo 1');
+    await screen.findByText('Extension set 1');
 
     expect(getToolExtensions).toHaveBeenCalledWith('clash', expect.anything());
     expect(getPreset).not.toHaveBeenCalled();

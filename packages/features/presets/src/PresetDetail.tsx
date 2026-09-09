@@ -484,7 +484,7 @@ export function PresetDetail({
             <dd style={{ margin: 0 }}>
               {overlayTags.length > 0 ? <TagChips tags={overlayTags} /> : '—'}
             </dd>
-            <dt style={{ color: 'var(--tai-color-text-muted)' }}>Extension combos</dt>
+            <dt style={{ color: 'var(--tai-color-text-muted)' }}>Extension sets</dt>
             <dd style={{ margin: 0 }}>{preset.extensions.length}</dd>
           </dl>
 

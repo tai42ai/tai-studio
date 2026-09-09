@@ -69,14 +69,14 @@ describe('ExtensionsPage', () => {
     // The `search` family's card links to the tools page for the base tool so the
     // read-only catalog reaches the combo-authoring surface.
     const link = await screen.findByRole('link', {
-      name: 'Author search extension combos on the tools page',
+      name: 'Author search extension sets on the tools page',
     });
     expect(link).toBeInTheDocument();
     // `←`/`→` are in NO shipped font subset, so a literal arrow paints in a
     // platform fallback face beside Inter. The icon set carries the mark instead.
     expect(document.body.textContent).not.toMatch(/[\u2190\u2192]/u);
     expect(
-      screen.getByRole('link', { name: 'Author notify extension combos on the tools page' }),
+      screen.getByRole('link', { name: 'Author notify extension sets on the tools page' }),
     ).toBeInTheDocument();
   });
 

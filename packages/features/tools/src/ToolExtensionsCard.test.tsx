@@ -38,18 +38,22 @@ describe('ToolExtensionsCard', () => {
 
     expect(await screen.findByText('marka')).toBeInTheDocument();
     expect(screen.getByText('markb')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit extension sets' })).toBeInTheDocument();
   });
 
   it('seeds the builder with the current combos when the dialog opens', async () => {
     const user = userEvent.setup();
     renderWithProviders(<ToolExtensionsCard tool="shout" />, { client: baseClient() });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     // The builder seeds one removable row per current combo.
-    expect(within(dialog).getByRole('button', { name: 'Remove combo marka' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Remove combo markb' })).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Remove extension set marka' }),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: 'Remove extension set markb' }),
+    ).toBeInTheDocument();
   });
 
   it('does not flag an unknown extension name while the catalog is still loading', () => {
@@ -73,7 +77,7 @@ describe('ToolExtensionsCard', () => {
       }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Unknown extension: gone.')).toBeInTheDocument();
   });
@@ -85,7 +89,7 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ setToolExtensions }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -110,7 +114,7 @@ describe('ToolExtensionsCard', () => {
 
     // The read-only row shows the element NAME; opening the dialog seeds the builder.
     expect(await screen.findByText('output_schema')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Edit combos' }));
+    await user.click(screen.getByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -127,10 +131,10 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ setToolExtensions }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Remove combo marka' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Remove combo markb' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Remove extension set marka' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Remove extension set markb' }));
 
     // First Save asks to confirm the clear; it does NOT post yet.
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
@@ -153,7 +157,7 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ setToolExtensions }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -168,7 +172,7 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ setToolExtensions }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -182,7 +186,7 @@ describe('ToolExtensionsCard', () => {
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -222,7 +226,7 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ setToolExtensions }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -253,7 +257,7 @@ describe('ToolExtensionsCard', () => {
     });
 
     expect(await screen.findByText(/manage shout on the presets page/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Edit combos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit extension sets' })).not.toBeInTheDocument();
     const link = screen.getByRole('link', { name: /manage shout on the presets page/i });
     expect(link).toBeInTheDocument();
     // WCAG 2.5.3 (Label in Name): a voice-control user says what they can read, so
@@ -293,7 +297,7 @@ describe('ToolExtensionsCard', () => {
     });
 
     // The editor path renders — current combos plus the Edit button — and no hint.
-    expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Edit extension sets' })).toBeInTheDocument();
     expect(screen.getByText('marka')).toBeInTheDocument();
     expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
 
@@ -312,7 +316,7 @@ describe('ToolExtensionsCard', () => {
     const user = userEvent.setup();
     renderWithProviders(<ToolExtensionsCard tool="shout" />, { client: baseClient() });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
@@ -343,7 +347,7 @@ describe('ToolExtensionsCard', () => {
 
     // A conflicted (quarantined) preset name is a foreign live tool authored through the
     // manifest route, so the card must NOT show the presets hint — it shows the editor.
-    expect(await screen.findByRole('button', { name: 'Edit combos' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Edit extension sets' })).toBeInTheDocument();
     expect(screen.queryByText(/manage shout on the presets page/i)).not.toBeInTheDocument();
   });
 
@@ -354,10 +358,10 @@ describe('ToolExtensionsCard', () => {
       client: baseClient({ setToolExtensions }),
     });
 
-    await user.click(await screen.findByRole('button', { name: 'Edit combos' }));
+    await user.click(await screen.findByRole('button', { name: 'Edit extension sets' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Remove combo marka' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Remove combo markb' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Remove extension set marka' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Remove extension set markb' }));
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
 
     // The clear-confirm is pending.
@@ -366,7 +370,7 @@ describe('ToolExtensionsCard', () => {
     // Compose and add a combo back → the confirm resets, the button reverts to Save, and
     // nothing is posted (the empty-clear is no longer what would be saved).
     await user.click(within(dialog).getByRole('checkbox', { name: 'chain' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Add combo' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Add extension set' }));
 
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Save' })).toBeInTheDocument();

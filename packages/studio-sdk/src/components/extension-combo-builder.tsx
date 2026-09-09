@@ -225,7 +225,7 @@ export function ExtensionComboBuilder({
                     // is what WCAG 2.5.3 (Label in Name) asks: a constant "Edit …"
                     // would leave a button reading "Editing" named "Edit", and a
                     // voice-control user naming a control they cannot see.
-                    aria-label={`${editing === index ? 'Editing' : 'Edit'} combo ${names.join('+')}`}
+                    aria-label={`${editing === index ? 'Editing' : 'Edit'} extension set ${names.join('+')}`}
                     disabled={disabled === true || editing === index}
                     onClick={() => {
                       startEdit(index);
@@ -235,7 +235,7 @@ export function ExtensionComboBuilder({
                   </Button>
                   <Button
                     type="button"
-                    aria-label={`Remove combo ${names.join('+')}`}
+                    aria-label={`Remove extension set ${names.join('+')}`}
                     disabled={disabled}
                     onClick={() => {
                       removeCombo(index);
@@ -257,7 +257,7 @@ export function ExtensionComboBuilder({
           })}
         </ul>
       ) : (
-        <p className="tai-muted">No extension combos.</p>
+        <p className="tai-muted">No extension sets.</p>
       )}
 
       <div className="tai-stack tai-stack-2">
@@ -275,7 +275,7 @@ export function ExtensionComboBuilder({
             onChange={setDraftConfig}
             requireTitle={false}
             label="Output schema"
-            description="The JSON Schema the output_schema extension enforces on this combo's result."
+            description="The JSON Schema the output_schema extension enforces on this extension set's result."
             disabled={disabled}
             idPrefix={`${idPrefix}-output-schema`}
             // Re-seed the editor when the draft target changes (a new draft vs a
@@ -287,13 +287,13 @@ export function ExtensionComboBuilder({
         {isDuplicate ? (
           <p role="alert" className="tai-field-error">
             <XCircleIcon />
-            This combo is already added.
+            This extension set is already added.
           </p>
         ) : null}
 
         <div className="tai-row">
           <Button type="button" variant="primary" onClick={commitCombo} disabled={!canAdd}>
-            {editing === null ? 'Add combo' : 'Update combo'}
+            {editing === null ? 'Add extension set' : 'Update extension set'}
           </Button>
           {editing !== null ? (
             <Button type="button" onClick={resetDraft} disabled={disabled}>

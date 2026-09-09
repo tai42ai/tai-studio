@@ -113,9 +113,9 @@ export function ExtensionFamilyCard({ family }: { family: ExtensionFamily }): Re
         <AppLink
           to="tools"
           search={{ tool: family.base }}
-          aria-label={`Author ${family.base} extension combos on the tools page`}
+          aria-label={`Author ${family.base} extension sets on the tools page`}
         >
-          Author combos
+          Author extension sets
           <ChevronRightIcon />
         </AppLink>
       </div>
