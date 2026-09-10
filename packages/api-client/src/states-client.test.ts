@@ -9,11 +9,12 @@
  * (`core/skeleton/src/tai42_skeleton/operations/states.py` + `states/service.py`): the
  * list rows are dumped declarations + `updated_at`; stats is `{records, per_field,
  * per_kind, consumers}`; the paged reads key on `subjects` / `matches`; a fold returns
- * a report; mount/patch/unmount return acknowledgements; prune returns per-state counts.
+ * a report; attach/patch/detach return acknowledgements; prune returns per-state counts.
  */
 import { describe, expect, it, vi } from 'vitest';
 
 import { createApiClient } from './client';
+import * as schemas from './schemas';
 import { ApiSchemaError, type ApiConfig } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -87,23 +88,23 @@ describe('states client transport', () => {
     expect(out[0]?.updated_at).toBe('2026-01-01T00:00:00Z');
   });
 
-  it('getState() composes declaration + mounts', async () => {
+  it('getState() composes declaration + attachments', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
           ...declaration,
-          mounts: [{ module: 'notes', path: ['notes'], parameters: {}, declarations: {} }],
+          attachments: [{ template: 'notes', path: ['notes'], parameters: {}, declarations: {} }],
         },
       }),
     );
     const out = await client.getState('profile');
     expect(captured[0]?.url).toBe('/api/states/profile');
-    expect(out.mounts[0]?.module).toBe('notes');
+    expect(out.attachments[0]?.template).toBe('notes');
   });
 
   it('putState() PUTs the declaration with no replace query', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { ...declaration, mounts: [] } }),
+      jsonResponse({ data: { ...declaration, attachments: [] } }),
     );
     await client.putState('profile', {
       name: 'profile',
@@ -168,35 +169,37 @@ describe('states client transport', () => {
     expect(page.matches[0]?.updated_at).toBe(1767225600);
   });
 
-  it('mountStateModule() PUTs the mount and parses the acknowledgement', async () => {
+  it('attachStateTemplate() PUTs the attachment and parses the acknowledgement', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { mounted: true, state: 'profile', module: 'notes' } }),
+      jsonResponse({ data: { attached: true, state: 'profile', template: 'notes' } }),
     );
-    const out = await client.mountStateModule('profile', 'notes', {
+    const out = await client.attachStateTemplate('profile', 'notes', {
       path: ['notes'],
       parameters: {},
     });
     expect(captured[0]?.method).toBe('PUT');
-    expect(captured[0]?.url).toBe('/api/states/profile/mounts/notes');
-    expect(out.mounted).toBe(true);
+    expect(captured[0]?.url).toBe('/api/states/profile/attachments/notes');
+    expect(out.attached).toBe(true);
   });
 
-  it('patchStateMount() PATCHes the declarations and parses the acknowledgement', async () => {
+  it('patchStateAttachment() PATCHes the declarations and parses the acknowledgement', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { updated: true, state: 'profile', module: 'notes' } }),
+      jsonResponse({ data: { updated: true, state: 'profile', template: 'notes' } }),
     );
-    const out = await client.patchStateMount('profile', 'notes', { declarations: { cap: 5 } });
+    const out = await client.patchStateAttachment('profile', 'notes', {
+      declarations: { cap: 5 },
+    });
     expect(captured[0]?.method).toBe('PATCH');
     expect(out.updated).toBe(true);
   });
 
-  it('unmountStateModule() DELETEs the mount and parses the acknowledgement', async () => {
+  it('detachStateTemplate() DELETEs the attachment and parses the acknowledgement', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { unmounted: true, state: 'profile', module: 'notes' } }),
+      jsonResponse({ data: { detached: true, state: 'profile', template: 'notes' } }),
     );
-    const out = await client.unmountStateModule('profile', 'notes');
+    const out = await client.detachStateTemplate('profile', 'notes');
     expect(captured[0]?.method).toBe('DELETE');
-    expect(out.unmounted).toBe(true);
+    expect(out.detached).toBe(true);
   });
 
   it('foldStateRecord() posts the fold target + mode and parses the report', async () => {
@@ -259,22 +262,22 @@ describe('states client transport', () => {
     expect(out[0]?.unavailable).toBe('no scheduling backend');
   });
 
-  it('listStateModules() reads the module catalog', async () => {
+  it('listStateTemplates() reads the template catalog', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: [
           {
-            kind: 'state-module',
+            kind: 'state-template',
             name: 'notes',
             schema: { type: 'object' },
-            mounted_on: 1,
+            attached_to: 1,
             shipped_default: true,
           },
         ],
       }),
     );
-    const out = await client.listStateModules();
-    expect(captured[0]?.url).toBe('/api/state-modules');
+    const out = await client.listStateTemplates();
+    expect(captured[0]?.url).toBe('/api/state-templates');
     expect(out[0]?.shipped_default).toBe(true);
   });
 
@@ -296,29 +299,29 @@ describe('states client transport', () => {
     expect(out.deleted).toBe(true);
   });
 
-  it('listStateMounts() reads the mounts under the state and parses each row', async () => {
+  it('listStateAttachments() reads the attachments under the state and parses each row', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: [{ module: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} }],
+        data: [{ template: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} }],
       }),
     );
-    const out = await client.listStateMounts('profile');
+    const out = await client.listStateAttachments('profile');
     expect(captured[0]?.method).toBe('GET');
-    expect(captured[0]?.url).toBe('/api/states/profile/mounts');
-    expect(out[0]?.module).toBe('notes');
+    expect(captured[0]?.url).toBe('/api/states/profile/attachments');
+    expect(out[0]?.template).toBe('notes');
     expect(out[0]?.parameters).toEqual({ cap: 5 });
   });
 
-  it('getStateMount() reads the single mount row under the state', async () => {
+  it('getStateAttachment() reads the single attachment row under the state', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
-        data: { module: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} },
+        data: { template: 'notes', path: ['notes'], parameters: { cap: 5 }, declarations: {} },
       }),
     );
-    const out = await client.getStateMount('profile', 'notes');
+    const out = await client.getStateAttachment('profile', 'notes');
     expect(captured[0]?.method).toBe('GET');
-    expect(captured[0]?.url).toBe('/api/states/profile/mounts/notes');
-    expect(out.module).toBe('notes');
+    expect(captured[0]?.url).toBe('/api/states/profile/attachments/notes');
+    expect(out.template).toBe('notes');
     expect(out.parameters).toEqual({ cap: 5 });
   });
 
@@ -353,54 +356,279 @@ describe('states client transport', () => {
     expect(out.seq).toBe(4);
   });
 
-  it('getStateModule() reads one module document from the sibling collection', async () => {
+  it('evalTemplateJq() JSON-encodes each param into the query and parses {name, purpose, value}', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { name: 'active', purpose: 'input', value: [{ id: 'a-1' }] } }),
+    );
+    const out = await client.evalTemplateJq('profile', subject, 'active', {
+      since: 'p-1',
+      limit: 5,
+    });
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe(
+      '/api/states/profile/records/agent/assistant/person/p-1/template-jq/active?since=%22p-1%22&limit=5',
+    );
+    expect(out.name).toBe('active');
+    expect(out.purpose).toBe('input');
+    expect(out.value).toEqual([{ id: 'a-1' }]);
+  });
+
+  it('evalTemplateJq() sends no query string when no params are given', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { name: 'active', purpose: 'input', value: null } }),
+    );
+    const out = await client.evalTemplateJq('profile', subject, 'active');
+    expect(captured[0]?.url).toBe(
+      '/api/states/profile/records/agent/assistant/person/p-1/template-jq/active',
+    );
+    expect(out.value).toBeNull();
+  });
+
+  it('applyTemplateJq() POSTs {input, op_id} to the template-jq path and parses the outcome', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
-          kind: 'state-module',
+          name: 'append',
+          applied: true,
+          data: { count: 1 },
+          seq: 5,
+          skipped: [],
+        },
+      }),
+    );
+    const out = await client.applyTemplateJq('profile', subject, 'append', {
+      input: { note: 'hi' },
+      op_id: 'op-1',
+    });
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe(
+      '/api/states/profile/records/agent/assistant/person/p-1/template-jq/append',
+    );
+    expect(captured[0]?.body).toEqual({ input: { note: 'hi' }, op_id: 'op-1' });
+    expect(out.applied).toBe(true);
+    expect(out.seq).toBe(5);
+  });
+
+  it('applyTemplateJq() posts an empty body when none is given', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: { name: 'active', applied: false, data: null, seq: null, skipped: [] },
+      }),
+    );
+    const out = await client.applyTemplateJq('profile', subject, 'active');
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.body).toEqual({});
+    expect(out.applied).toBe(false);
+    expect(out.name).toBe('active');
+  });
+
+  it('getStateTemplate() reads one template document from the sibling collection', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          kind: 'state-template',
           name: 'notes',
           schema: { type: 'object' },
           declarations: null,
         },
       }),
     );
-    const out = await client.getStateModule('notes');
+    const out = await client.getStateTemplate('notes');
     expect(captured[0]?.method).toBe('GET');
-    expect(captured[0]?.url).toBe('/api/state-modules/notes');
+    expect(captured[0]?.url).toBe('/api/state-templates/notes');
     expect(out.name).toBe('notes');
     expect(out.declarations).toBeNull();
   });
 
-  it('putStateModule() PUTs the document, adding replace=true only when asked', async () => {
+  it('putStateTemplate() PUTs the document, adding replace=true only when asked', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { kind: 'state-module', name: 'notes', schema: { type: 'object' } } }),
+      jsonResponse({ data: { kind: 'state-template', name: 'notes', schema: { type: 'object' } } }),
     );
-    await client.putStateModule('notes', { name: 'notes', schema: { type: 'object' } }, true);
+    await client.putStateTemplate('notes', { name: 'notes', schema: { type: 'object' } }, true);
     expect(captured[0]?.method).toBe('PUT');
-    expect(captured[0]?.url).toBe('/api/state-modules/notes?replace=true');
+    expect(captured[0]?.url).toBe('/api/state-templates/notes?replace=true');
     expect(captured[0]?.body).toEqual({ name: 'notes', schema: { type: 'object' } });
   });
 
-  it('putStateModule() omits the replace query when replace is not requested', async () => {
+  it('putStateTemplate() omits the replace query when replace is not requested', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { kind: 'state-module', name: 'notes', schema: { type: 'object' } } }),
+      jsonResponse({ data: { kind: 'state-template', name: 'notes', schema: { type: 'object' } } }),
     );
-    await client.putStateModule('notes', { name: 'notes', schema: { type: 'object' } });
-    expect(captured[0]?.url).toBe('/api/state-modules/notes');
+    await client.putStateTemplate('notes', { name: 'notes', schema: { type: 'object' } });
+    expect(captured[0]?.url).toBe('/api/state-templates/notes');
   });
 
-  it('deleteStateModule() DELETEs the module document and parses the deleted marker', async () => {
+  it('deleteStateTemplate() DELETEs the template document and parses the deleted marker', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { name: 'notes', deleted: true } }),
     );
-    const out = await client.deleteStateModule('notes');
+    const out = await client.deleteStateTemplate('notes');
     expect(captured[0]?.method).toBe('DELETE');
-    expect(captured[0]?.url).toBe('/api/state-modules/notes');
+    expect(captured[0]?.url).toBe('/api/state-templates/notes');
     expect(out.deleted).toBe(true);
   });
 
   it('a drifting state row throws ApiSchemaError (never a silent coerce)', async () => {
     const { client } = harness(() => jsonResponse({ data: [{ name: 'profile' }] }));
     await expect(client.listStates()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('state-template document + record-result schemas', () => {
+  it('parses a document carrying template_jq/reconcile', () => {
+    const doc = schemas.stateTemplateDocument.parse({
+      name: 'notes',
+      schema: { type: 'object' },
+      template_jq: {
+        active: { description: 'open items', purpose: 'input', params: ['since'], jq: '.items' },
+        append: {
+          description: 'add one',
+          purpose: 'update',
+          reads: [['items']],
+          writes: [['items']],
+          jq: '[{op:"set"}]',
+        },
+      },
+      reconcile: { view: '.open', close: '[]', resolutions: '.names' },
+    });
+    expect(doc.template_jq?.active?.jq).toBe('.items');
+    expect(doc.template_jq?.active?.purpose).toBe('input');
+    expect(doc.template_jq?.active?.params).toEqual(['since']);
+    expect(doc.template_jq?.append?.writes).toEqual([['items']]);
+    expect(doc.reconcile?.resolutions).toBe('.names');
+  });
+
+  it('defaults template_jq/reconcile to null when the document omits them', () => {
+    const doc = schemas.stateTemplateDocument.parse({ name: 'notes', schema: { type: 'object' } });
+    expect(doc.template_jq).toBeNull();
+    expect(doc.reconcile).toBeNull();
+  });
+
+  it('fills the optional fields of a template jq with their defaults', () => {
+    const read = schemas.templateJq.parse({ purpose: 'input', jq: '.x' });
+    expect(read.description).toBe('');
+    expect(read.params).toEqual([]);
+    const update = schemas.templateJq.parse({ purpose: 'update', jq: '.x' });
+    expect(update.description).toBe('');
+    expect(update.reads).toEqual([]);
+    expect(update.writes).toEqual([]);
+  });
+
+  it('throws on a template jq missing its purpose (never a silent coerce)', () => {
+    expect(() => schemas.templateJq.parse({ jq: '.x' })).toThrow();
+  });
+
+  it('parses an eval result and an apply result', () => {
+    const evaluated = schemas.templateJqResult.parse({
+      name: 'active',
+      purpose: 'input',
+      value: [1, 2],
+    });
+    expect(evaluated.value).toEqual([1, 2]);
+    const applied = schemas.templateJqApplyResult.parse({
+      name: 'append',
+      applied: true,
+      data: { n: 1 },
+      seq: 2,
+      skipped: [],
+    });
+    expect(applied.seq).toBe(2);
+    expect(applied.name).toBe('append');
+  });
+
+  it('throws on a reconcile missing a required jq program (never a silent coerce)', () => {
+    expect(() => schemas.templateReconcile.parse({ view: '.open', close: '[]' })).toThrow();
+  });
+});
+
+describe('state-binding schema', () => {
+  it('round-trips a full binding (states, templates, injections, updates)', () => {
+    const binding = schemas.stateBinding.parse({
+      states: [
+        {
+          state: 'counters',
+          templates: ['tally'],
+          subject_expr: '.counter_id',
+          scope_expr: '.group',
+          input_injections: [{ template_jq: 'tally.current', into: 'baseline' }],
+          updates: [
+            { template_jq: 'tally.bump', adapter: '{ total: .output.total }', op_id: '.id' },
+          ],
+        },
+      ],
+    });
+    expect(binding.states).toHaveLength(1);
+    const [attach] = binding.states;
+    if (attach === undefined) throw new Error('expected one attached state');
+    expect(attach.templates).toEqual(['tally']);
+    expect(attach.subject_expr).toBe('.counter_id');
+    const [injection] = attach.input_injections;
+    const [update] = attach.updates;
+    if (injection === undefined || update === undefined) throw new Error('expected rows');
+    expect(injection.into).toBe('baseline');
+    expect(update.template_jq).toBe('tally.bump');
+    expect(update.adapter).toBe('{ total: .output.total }');
+  });
+
+  it('fills the optional fields of an attach/injection/update with their defaults', () => {
+    const attach = schemas.stateAttach.parse({ state: 'notes', subject_expr: '.id' });
+    expect(attach.templates).toEqual([]);
+    expect(attach.scope_expr).toBeNull();
+    expect(attach.input_injections).toEqual([]);
+    expect(attach.updates).toEqual([]);
+
+    const injection = schemas.stateInjection.parse({ jq: '.x', into: 'field' });
+    expect(injection.template_jq).toBeNull();
+    expect(injection.jq).toBe('.x');
+
+    const update = schemas.stateUpdate.parse({ jq: '[{op:"set"}]' });
+    expect(update.template_jq).toBeNull();
+    expect(update.adapter).toBeNull();
+    expect(update.op_id).toBeNull();
+  });
+
+  it('refuses a zero-state binding — "no binding" is spelled null, never { states: [] }', () => {
+    // The platform contract enforces at least one attached state; a binding with none is
+    // not a representation the SDK accepts (the definition carries `null` instead).
+    expect(() => schemas.stateBinding.parse({})).toThrow();
+    expect(() => schemas.stateBinding.parse({ states: [] })).toThrow();
+    expect(
+      schemas.stateBinding.parse({ states: [{ state: 'notes', subject_expr: '.id' }] }).states,
+    ).toHaveLength(1);
+  });
+
+  it('throws on an injection missing its `into` target (never a silent coerce)', () => {
+    expect(() => schemas.stateInjection.parse({ template_jq: 'balance.current' })).toThrow();
+  });
+
+  it('throws on an attach missing its subject expression', () => {
+    expect(() => schemas.stateAttach.parse({ state: 'notes' })).toThrow();
+  });
+
+  it('throws on an EMPTY subject expression — parity with the contract min_length=1', () => {
+    expect(() => schemas.stateAttach.parse({ state: 'notes', subject_expr: '' })).toThrow();
+  });
+
+  it('carries the binding onto the door bodies (preset, route, hook)', () => {
+    const preset = schemas.presetBody.parse({
+      base_tool: 'echo',
+      description: 'd',
+      fixed_kwargs: {},
+      extensions: [],
+      output_schema: null,
+      input_schema: null,
+      state_binding: { states: [{ state: 'notes', subject_expr: '.id' }] },
+    });
+    expect(preset.state_binding?.states[0]?.state).toBe('notes');
+
+    const routeless = schemas.presetBody.parse({
+      base_tool: 'echo',
+      description: 'd',
+      fixed_kwargs: {},
+      extensions: [],
+      output_schema: null,
+      input_schema: null,
+    });
+    expect(routeless.state_binding).toBeNull();
   });
 });

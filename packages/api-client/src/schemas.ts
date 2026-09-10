@@ -149,6 +149,75 @@ export const presetDetail = presetRecord.extend({
 });
 export type PresetDetail = z.infer<typeof presetDetail>;
 
+/**
+ * One input injection of a state binding: BEFORE the run, a value is produced and
+ * placed into the run input under `into` (the run-input field name). A template
+ * `input` jq (`template_jq`, named `name` or attachment-qualified `template.name`) reads the
+ * record — its input is the record (`.`), with declared params bound as `$params`; a
+ * custom `jq` reads `{record, input}` → the value. Exactly one of `template_jq`/`jq`
+ * carries the program; the other is `null`.
+ */
+export const stateInjection = z.object({
+  template_jq: z.string().nullable().default(null),
+  jq: z.string().nullable().default(null),
+  into: z.string(),
+});
+export type StateInjection = z.infer<typeof stateInjection>;
+
+/**
+ * One update of a state binding: AFTER the run, a template-relative op batch is
+ * applied through the store. A NAMED update (`template_jq`) runs the template `update`
+ * jq over `{record, input}` where `input` is built by `adapter` — a jq over
+ * `{output, input}` that constructs the update jq's declared input object. A custom
+ * `jq` runs over `{record, output, input}` → `[{op, path, value}]` and carries no
+ * adapter. `op_id` is an optional idempotency-key expression. Exactly one of
+ * `template_jq`/`jq` carries the program.
+ */
+export const stateUpdate = z.object({
+  template_jq: z.string().nullable().default(null),
+  jq: z.string().nullable().default(null),
+  // A named update's adapter is either a non-empty jq or `null` (no adapter — the
+  // run input passes through). `min(1)` makes the empty string impossible to
+  // round-trip: the platform compile-checks any non-null adapter and refuses `''`.
+  adapter: z.string().min(1).nullable().default(null),
+  op_id: z.string().nullable().default(null),
+});
+export type StateUpdate = z.infer<typeof stateUpdate>;
+
+/**
+ * One attached state of a binding: the `state`, one or more `templates`
+ * (attach-on-use — attached to the state on the binding's save), the `subject_expr`
+ * (a jq yielding the record KEY — a bare key string OR a full subject object — that
+ * this binding reads and updates), an optional `scope_expr` (a boolean jq predicate;
+ * when it is false this state is skipped for the run), and the ordered
+ * `input_injections` (before the run) and `updates` (after it).
+ */
+export const stateAttach = z.object({
+  state: z.string(),
+  templates: z.array(z.string()).default([]),
+  // The platform contract enforces a non-empty subject (min_length=1); an empty
+  // expression is rejected here, never sent for the server to refuse.
+  subject_expr: z.string().min(1),
+  scope_expr: z.string().nullable().default(null),
+  input_injections: z.array(stateInjection).default([]),
+  updates: z.array(stateUpdate).default([]),
+});
+export type StateAttach = z.infer<typeof stateAttach>;
+
+/**
+ * The one generic binding shape carried, optionally, on every runnable definition
+ * (a preset, a channel route, a schedule, a hook) and repeated per node by the
+ * flow engine. It attaches one or more states, each with its templates, subject,
+ * injections and updates. `null` on a definition means no binding. Mirrors the
+ * platform `StateBinding` document.
+ */
+export const stateBinding = z.object({
+  // At least one attached state: the platform contract refuses a zero-state binding, so
+  // "no binding" is spelled `null` on the definition, never `{ states: [] }`.
+  states: z.array(stateAttach).min(1),
+});
+export type StateBinding = z.infer<typeof stateBinding>;
+
 /** The full version body a preset stores under `kind="preset"`. */
 export const presetBody = z.object({
   base_tool: z.string(),
@@ -157,6 +226,9 @@ export const presetBody = z.object({
   extensions: presetExtensions,
   output_schema: z.record(z.string(), z.unknown()).nullable(),
   input_schema: z.record(z.string(), z.unknown()).nullable(),
+  // The optional door-layer state binding this preset applies around every run
+  // (`null` when the preset touches no state).
+  state_binding: stateBinding.nullable().default(null),
 });
 export type PresetBody = z.infer<typeof presetBody>;
 
@@ -1143,6 +1215,9 @@ export const conversationRoute = z.object({
   turns_per_hour_override: z.number().int().nullable().default(null),
   error_reply_text: z.string().nullable().default(null),
   execution_key_fingerprint: z.string(),
+  // The door-layer state binding the backend stores on the route's target config and
+  // returns on read (`null` when the route touches no state) — the edit form prefills it.
+  state_binding: stateBinding.nullable().default(null),
 });
 export type ConversationRoute = z.infer<typeof conversationRoute>;
 
@@ -1179,6 +1254,9 @@ export const conversationRouteCreate = z.object({
   callback_url: z.string().nullable().default(null),
   turns_per_hour_override: z.number().int().positive().nullable().default(null),
   error_reply_text: z.string().min(1).max(2000).nullable().default(null),
+  // The optional door-layer state binding this route applies around every turn's
+  // tool run (`null` when the route touches no state).
+  state_binding: stateBinding.nullable().default(null),
 });
 export type ConversationRouteCreate = z.infer<typeof conversationRouteCreate>;
 
@@ -1543,6 +1621,9 @@ export const hookParams = z.object({
   expr: z.string().nullable().default(null),
   expr_id: z.string().nullable().default(null),
   expr_kwargs: z.record(z.string(), z.unknown()).default({}),
+  // The optional door-layer state binding this hook applies around its fire's tool
+  // run (`null` when the hook touches no state).
+  state_binding: stateBinding.nullable().default(null),
 });
 export type HookParams = z.infer<typeof hookParams>;
 
@@ -2616,11 +2697,11 @@ export { toolRunSubmitResult, toolRunRecord, toolRunList } from './tool-runs';
 
 // -- states ------------------------------------------------------------------
 // Shapes mirror tai42_contract.states.models: a declared JSON document, one per
-// subject. The base document, module fragments, write regimes and effective schema
+// subject. The base document, template fragments, write regimes and effective schema
 // are permissive JSON records — the auto-form and JsonTree interpret them at runtime;
-// a drift throws ApiSchemaError. Fields that WP-3's router is finishing concurrently
-// (`effective_schema`, `regimes`, list/stats derived columns) are modelled optional so
-// a server that has not yet composed them still parses.
+// a drift throws ApiSchemaError. Server-composed fields (`effective_schema`, `regimes`,
+// list/stats derived columns) are modelled optional so a response that omits them still
+// parses.
 
 /** One addressed subject: the conversation-target scope plus the (kind, key) within it. */
 export const stateSubject = z.object({
@@ -2631,12 +2712,12 @@ export const stateSubject = z.object({
 });
 export type StateSubject = z.infer<typeof stateSubject>;
 
-/** One absolute write-regime rule composed over the mounts: `{path, regime}`, permissive. */
+/** One absolute write-regime rule composed over the attachments: `{path, regime}`, permissive. */
 export const stateRegime = z.record(z.string(), z.unknown());
 
 /**
  * A declared state served on every read. `schema` is the base JSON Schema;
- * `effective_schema` (the base composed with every mounted module's fragment) and
+ * `effective_schema` (the base composed with every attached template's fragment) and
  * `regimes` (the absolute write-regime rules) are platform-COMPUTED and served on every
  * read — modelled optional so a write body that omits them, or a server yet to compose
  * them, still parses. A drift throws ApiSchemaError.
@@ -2665,19 +2746,19 @@ export const stateListItem = stateDeclaration.extend({
 export type StateListItem = z.infer<typeof stateListItem>;
 export const stateList = z.array(stateListItem);
 
-/** One module mount on a state: where the fragment lands + its param/declaration values. */
-export const stateMount = z.object({
-  module: z.string(),
+/** One template attachment on a state: where the fragment lands + its param/declaration values. */
+export const stateAttachment = z.object({
+  template: z.string(),
   path: z.array(z.string()),
   parameters: z.record(z.string(), z.unknown()).default({}),
   declarations: z.record(z.string(), z.unknown()).default({}),
 });
-export type StateMount = z.infer<typeof stateMount>;
-export const stateMountList = z.array(stateMount);
+export type StateAttachment = z.infer<typeof stateAttachment>;
+export const stateAttachmentList = z.array(stateAttachment);
 
-/** `GET /api/states/{name}` — the declaration (with effective schema + regimes) plus mounts. */
+/** `GET /api/states/{name}` — the declaration (with effective schema + regimes) plus attachments. */
 export const stateDetail = stateDeclaration.extend({
-  mounts: z.array(stateMount).default([]),
+  attachments: z.array(stateAttachment).default([]),
 });
 export type StateDetail = z.infer<typeof stateDetail>;
 
@@ -2695,9 +2776,43 @@ export const stateStats = z.object({
 });
 export type StateStats = z.infer<typeof stateStats>;
 
-/** The platform half of a state-module document (mirrors StateModuleDocument). */
-export const stateModuleDocument = z.object({
-  kind: z.literal('state-module').default('state-module'),
+/**
+ * One template jq: `jq` is a program over the subject's attached subtree, its `purpose`
+ * either `input` (a read-only program feeding a tool argument) or `update` (a program
+ * returning an op batch that mutates the record). `params` are its declared argument
+ * names; `reads`/`writes` are the template-relative record paths an `update` declares,
+ * each a list of key segments; `description` is the human label.
+ */
+export const templateJq = z.object({
+  description: z.string().default(''),
+  purpose: z.enum(['input', 'update']),
+  params: z.array(z.string()).default([]),
+  reads: z.array(z.array(z.string())).default([]),
+  writes: z.array(z.array(z.string())).default([]),
+  jq: z.string(),
+});
+export type TemplateJq = z.infer<typeof templateJq>;
+
+/**
+ * How a declarations edit settles open records: `view` reads the record, `close`
+ * builds the op batch that settles it, `resolutions` names the resolutions a close
+ * may name — each a jq program.
+ */
+export const templateReconcile = z.object({
+  view: z.string(),
+  close: z.string(),
+  resolutions: z.string(),
+});
+export type TemplateReconcile = z.infer<typeof templateReconcile>;
+
+/**
+ * The platform half of a state-template document (mirrors StateTemplateDocument).
+ * `template_jq` maps a name to its definition (each carrying its `purpose`);
+ * `reconcile` is the settle policy — both optional (`null` when the template declares
+ * none).
+ */
+export const stateTemplateDocument = z.object({
+  kind: z.literal('state-template').default('state-template'),
   name: z.string(),
   description: z.string().default(''),
   parameters: z.record(z.string(), z.unknown()).default({}),
@@ -2705,24 +2820,26 @@ export const stateModuleDocument = z.object({
   regimes: z.array(stateRegime).default([]),
   declarations: z.record(z.string(), z.unknown()).nullable().default(null),
   trace: z.record(z.string(), z.unknown()).default({}),
+  template_jq: z.record(z.string(), templateJq).nullable().default(null),
+  reconcile: templateReconcile.nullable().default(null),
 });
-export type StateModuleDocument = z.infer<typeof stateModuleDocument>;
+export type StateTemplateDocument = z.infer<typeof stateTemplateDocument>;
 
 /**
- * One row of `GET /api/state-modules`. The module document plus the two derived columns
- * the Modules tab shows: `mounted_on` (how many states mount it — a delete is refused
- * while > 0) and `shipped_default` (a platform-shipped module). ASSUMED derived fields
- * (WP-3 owns the list router); the document fields are verbatim.
+ * One row of `GET /api/state-templates`. The template document plus the two derived columns
+ * the Templates tab shows: `attached_to` (how many states attach it — a delete is refused
+ * while > 0) and `shipped_default` (a platform-shipped template). Both are server-derived
+ * columns; the document fields are verbatim.
  */
-export const stateModuleListItem = stateModuleDocument.extend({
-  mounted_on: z.number().default(0),
+export const stateTemplateListItem = stateTemplateDocument.extend({
+  attached_to: z.number().default(0),
   shipped_default: z.boolean().default(false),
 });
-export type StateModuleListItem = z.infer<typeof stateModuleListItem>;
-export const stateModuleList = z.array(stateModuleListItem);
+export type StateTemplateListItem = z.infer<typeof stateTemplateListItem>;
+export const stateTemplateList = z.array(stateTemplateListItem);
 
 /** A read record: the state, its subject, the document + monotonic seq, and any fold. */
-export const recordView = z.object({
+export const stateRecord = z.object({
   state: z.string(),
   subject: stateSubject,
   data: z.record(z.string(), z.unknown()).default({}),
@@ -2730,7 +2847,7 @@ export const recordView = z.object({
   canonical_subject: stateSubject,
   folded_from: z.array(stateSubject).default([]),
 });
-export type RecordView = z.infer<typeof recordView>;
+export type StateRecord = z.infer<typeof stateRecord>;
 
 /** The outcome of an `apply` (a delta batch): whether it applied + the resulting doc. */
 export const applyResult = z.object({
@@ -2740,6 +2857,33 @@ export const applyResult = z.object({
   skipped: z.array(z.record(z.string(), z.unknown())).default([]),
 });
 export type ApplyResult = z.infer<typeof applyResult>;
+
+/**
+ * `GET …/template-jq/{name}` — the evaluated template jq's `name`, its `purpose`, and
+ * its `value` (the `input` jq's read). GET evaluates ONLY an `input`-purpose jq; a GET
+ * on an `update`-purpose name is refused with 422, so the result's purpose is always
+ * `input`.
+ */
+export const templateJqResult = z.object({
+  name: z.string(),
+  purpose: z.literal('input'),
+  value: z.unknown(),
+});
+export type TemplateJqResult = z.infer<typeof templateJqResult>;
+
+/**
+ * `POST …/template-jq/{name}` — the applied template jq's outcome. The jq lands an op
+ * batch through the same `apply` chokepoint as a delta, so `applied`/`data`/`seq`/`skipped`
+ * carry that outcome.
+ */
+export const templateJqApplyResult = z.object({
+  name: z.string(),
+  applied: z.boolean(),
+  data: z.record(z.string(), z.unknown()).nullable().default(null),
+  seq: z.number().nullable().default(null),
+  skipped: z.array(z.record(z.string(), z.unknown())).default([]),
+});
+export type TemplateJqApplyResult = z.infer<typeof templateJqApplyResult>;
 
 /**
  * One paged subject row: the addressed `subject` plus its record's last-write
@@ -2834,29 +2978,29 @@ export type StateConsumers = z.infer<typeof stateConsumers>;
 /** `DELETE /api/states/{name}` — the removed state. */
 export const stateDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
 
-/** `PUT /api/states/{name}/mounts/{module}` — the module now mounted on the state. */
-export const stateMounted = z.object({
-  mounted: z.literal(true),
+/** `PUT /api/states/{name}/attachments/{template}` — the template now attached to the state. */
+export const stateAttached = z.object({
+  attached: z.literal(true),
   state: z.string(),
-  module: z.string(),
+  template: z.string(),
 });
-export type StateMounted = z.infer<typeof stateMounted>;
+export type StateAttached = z.infer<typeof stateAttached>;
 
-/** `PATCH /api/states/{name}/mounts/{module}` — the mount whose declarations were rewritten. */
-export const stateMountUpdated = z.object({
+/** `PATCH /api/states/{name}/attachments/{template}` — the attachment whose declarations were rewritten. */
+export const stateAttachmentUpdated = z.object({
   updated: z.literal(true),
   state: z.string(),
-  module: z.string(),
+  template: z.string(),
 });
-export type StateMountUpdated = z.infer<typeof stateMountUpdated>;
+export type StateAttachmentUpdated = z.infer<typeof stateAttachmentUpdated>;
 
-/** `DELETE /api/states/{name}/mounts/{module}` — the module unmounted from the state. */
-export const stateUnmounted = z.object({
-  unmounted: z.literal(true),
+/** `DELETE /api/states/{name}/attachments/{template}` — the template detached from the state. */
+export const stateDetached = z.object({
+  detached: z.literal(true),
   state: z.string(),
-  module: z.string(),
+  template: z.string(),
 });
-export type StateUnmounted = z.infer<typeof stateUnmounted>;
+export type StateDetached = z.infer<typeof stateDetached>;
 
 /**
  * `POST /api/states/{name}/records/.../fold` — the fold report: the `mode`, the
@@ -2872,8 +3016,8 @@ export const stateFoldReport = z.object({
 });
 export type StateFoldReport = z.infer<typeof stateFoldReport>;
 
-/** `DELETE /api/state-modules/{name}` — the removed module document. */
-export const stateModuleDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
+/** `DELETE /api/state-templates/{name}` — the removed template document. */
+export const stateTemplateDeleted = z.object({ name: z.string(), deleted: z.literal(true) });
 
 /** `DELETE /api/states/{name}/records/...` — the erased record marker. */
 export const recordErased = z.object({ erased: z.literal(true) });

@@ -2,7 +2,7 @@
  * The States docs frames, captured against the LIVE boot skeleton. This is the
  * e2e-suite twin of the docs-screenshot pipeline's six States frames
  * (`e2e/scripts/docs-screenshots.mjs`): it seeds the platform state store through the
- * real HTTP API — the same bodies `docs-screenshots.sh` §7f writes — then captures
+ * real HTTP API — the same bodies the `docs-screenshots.sh` state-store seeding writes — then captures
  * each of the six frames the docs "## States" section shows, in BOTH themes at
  * 1440×900. Every frame waits on a POPULATED signal (a seeded row, a tab's own
  * control, the record's audit) and refuses to ship an error card, so a broken screen
@@ -41,9 +41,9 @@ const OUT_DIR =
   process.env.STATES_SHOTS_DIR ??
   fileURLToPath(new URL('../test-results/states-shots', import.meta.url));
 
-/** The seeded state and its module — the same names the docs demo uses. */
+/** The seeded state and its template — the same names the docs demo uses. */
 const STATE = 'notes';
-const MODULE = 'preferences';
+const TEMPLATE = 'preferences';
 const TARGET_KIND = 'tool';
 const TARGET_NAME = 'studio_demo_echo';
 const REC_BASE = `/api/states/${STATE}/records/${TARGET_KIND}/${TARGET_NAME}`;
@@ -54,11 +54,11 @@ const ERROR_CARD = '[role="alert"]:has-text("Something went wrong")';
 
 /**
  * Seed the platform state store exactly as the docs pipeline does: one declared state,
- * one module document mounted on it, two subject records (one written whole, one grown
+ * one template document attached to it, two subject records (one written whole, one grown
  * by a `set_by_key` delta so its Writes audit carries an `api`-origin row), and one
  * consumer hook whose subject kind the state declares. Idempotent against a persisted
- * backend — the declaration/record PUTs upsert, the module PUT carries `replace=true`,
- * the delta's fixed `op_id` dedupes, and the mount + hook are re-created after a
+ * backend — the declaration/record PUTs upsert, the template PUT carries `replace=true`,
+ * the delta's fixed `op_id` dedupes, and the attachment + hook are re-created after a
  * best-effort delete. Each step's response is asserted, so a broken seed fails here.
  */
 async function seedStateStore(api: APIRequestContext): Promise<void> {
@@ -101,25 +101,25 @@ async function seedStateStore(api: APIRequestContext): Promise<void> {
   );
 
   await ok(
-    await api.put(`/api/state-modules/${MODULE}?replace=true`, {
+    await api.put(`/api/state-templates/${TEMPLATE}?replace=true`, {
       data: {
-        kind: 'state-module',
-        name: MODULE,
+        kind: 'state-template',
+        name: TEMPLATE,
         description: 'Per-subject display preferences.',
         schema: { type: 'object', properties: { locale: { type: 'string', title: 'Locale' } } },
         parameters: {},
         regimes: [],
       },
     }),
-    'upload module document',
+    'upload template document',
   );
 
-  await api.delete(`/api/states/${STATE}/mounts/${MODULE}`).catch(() => undefined);
+  await api.delete(`/api/states/${STATE}/attachments/${TEMPLATE}`).catch(() => undefined);
   await ok(
-    await api.put(`/api/states/${STATE}/mounts/${MODULE}`, {
+    await api.put(`/api/states/${STATE}/attachments/${TEMPLATE}`, {
       data: { path: ['prefs'], parameters: {}, declarations: {} },
     }),
-    'mount module',
+    'attach template',
   );
 
   await ok(
@@ -221,15 +221,15 @@ const FRAMES: readonly Frame[] = [
   },
   {
     // The Declaration tab: the base schema field tree beside the subject section (the
-    // mounted `preferences` subtree read-only). Waits on the subject-kinds control.
+    // attached `preferences` subtree read-only). Waits on the subject-kinds control.
     name: 'states-declaration',
     path: '/states?state=notes',
     ready: (page) => page.locator('[aria-label="Subject kinds"]'),
   },
   {
-    // The Modules tab: the state's mounts above the platform module documents.
-    name: 'states-modules',
-    path: '/states?state=notes&tab=modules',
+    // The Templates tab: the state's attachments above the platform state templates.
+    name: 'states-templates',
+    path: '/states?state=notes&tab=templates',
     ready: (page) => page.getByText('preferences').first(),
   },
   {

@@ -140,7 +140,14 @@ export { isFeatureDisabled, featureDisabledMessage, FeatureDisabled } from './fe
 export type { FeatureDisabledProps } from './feature-disabled';
 
 // -- Cross-feature query keys ------------------------------------------------
-export { toolsListKey, extensionsQueryKey, subMcpKey, tokensPayloadKey } from './query-keys';
+export {
+  toolsListKey,
+  extensionsQueryKey,
+  subMcpKey,
+  tokensPayloadKey,
+  statesListKey,
+  stateTemplatesKey,
+} from './query-keys';
 
 // -- Extension-combo editing helpers -----------------------------------------
 export { comboElementNames, extensionElementName } from './extension-combos';
@@ -345,6 +352,7 @@ export {
   ChevronRightIcon,
   CheckIcon,
   MinusIcon,
+  PlusIcon,
   EditIcon,
   UnplugIcon,
   CopyIcon,
@@ -399,6 +407,60 @@ export type {
 // -- Schema-editor (validated JSON-Schema authoring control) -----------------
 export { SchemaEditor, lintSchemaText } from './schema-editor';
 export type { SchemaEditorProps, SchemaEditorChange, SchemaLintResult } from './schema-editor';
+
+// -- State-binding editor (the one binding shape every door + flow node authors) --
+export {
+  StateBindingEditor,
+  StateBindingSection,
+  StateAttachRow,
+  InjectionList,
+  UpdateList,
+  AdapterMapping,
+  SubjectScopeFields,
+  BindingJqField,
+  appendTjq,
+  resolveTemplateJq,
+  findByRef,
+  resolveCallName,
+  templatesCatalogFromList,
+  statesCatalogFromList,
+  fieldPathsFromSchema,
+  compileAdapter,
+  rowValueJq,
+  fieldPathToJq,
+  jqKey,
+  defaultRowsForInput,
+  parseAdapter,
+  parseFieldPath,
+  generateTemplateCall,
+  parseTemplateCall,
+  encodeTemplateSegment,
+} from './state-binding';
+export type {
+  StateBindingEditorProps,
+  StateBindingSectionProps,
+  StateAttachRowProps,
+  InheritedSubject,
+  InjectionListProps,
+  UpdateListProps,
+  AdapterMappingProps,
+  SubjectScopeFieldsProps,
+  BindingJqFieldProps,
+  TemplateJqSuggestion,
+  ResolvedTemplateJq,
+  MappingRow,
+  MappingSource,
+  FieldSource,
+  LiteralSource,
+  JqSource,
+  FieldRoot,
+  AdapterCompileResult,
+  BindingStateOption,
+  BindingTemplateOption,
+  BindingTemplateJqOption,
+  BindingSourceSchemas,
+  SchemaFieldPath,
+} from './state-binding';
 
 // -- MCP context widgets (elicitation / progress / completions / output) -----
 export { ProgressBar } from './components/progress-bar';

@@ -1,6 +1,6 @@
 /**
  * The per-state detail pane: the header (name, description, subject-kind badges, and a
- * Delete-state danger action) over the four tabs — Declaration, Modules, Records,
+ * Delete-state danger action) over the four tabs — Declaration, Templates, Records,
  * Consumers — driven by `?tab=`. The composite read (`GET /api/states/{name}`) feeds
  * every tab, so a feature that is OFF surfaces once here as the muted `FeatureDisabled`
  * note; a name that does not resolve shows a not-found empty state.
@@ -29,7 +29,7 @@ import {
 import { ApiError } from '@tai42/api-client';
 
 import { DeclarationTab } from './DeclarationTab';
-import { ModulesTab } from './ModulesTab';
+import { TemplatesTab } from './TemplatesTab';
 import { RecordsTab } from './RecordsTab';
 import { ConsumersTab } from './ConsumersTab';
 import { stateDetailKey, statesListKey } from './keys';
@@ -156,7 +156,7 @@ export function StateDetail({
             label: 'Declaration',
             content: <DeclarationTab state={state} />,
           },
-          { value: 'modules', label: 'Modules', content: <ModulesTab state={state} /> },
+          { value: 'templates', label: 'Templates', content: <TemplatesTab state={state} /> },
           { value: 'records', label: 'Records', content: <RecordsTab state={state} /> },
           { value: 'consumers', label: 'Consumers', content: <ConsumersTab state={state} /> },
         ]}
@@ -202,7 +202,7 @@ function DeleteStateButton({
             if (!pending) setOpen(false);
           }}
         >
-          Records and mounts are deleted. This can not be undone.
+          Records and attachments are deleted. This can not be undone.
         </ConfirmDialog>
       ) : null}
     </>

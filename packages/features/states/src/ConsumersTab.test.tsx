@@ -19,7 +19,7 @@ const state = {
   subject_kinds: ['person'],
   default_subject_kind: 'person',
   retention_days: null,
-  mounts: [],
+  attachments: [],
 } as unknown as StateDetail;
 
 function row(over: Record<string, unknown>) {

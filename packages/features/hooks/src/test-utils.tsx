@@ -110,6 +110,7 @@ export function hook(overrides: Partial<HookParams> = {}): HookParams {
     expr: null,
     expr_id: null,
     expr_kwargs: {},
+    state_binding: null,
     ...overrides,
   };
 }

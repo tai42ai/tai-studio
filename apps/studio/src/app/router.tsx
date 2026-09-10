@@ -253,9 +253,10 @@ export function buildRouter(options: BuildRouterOptions) {
     path: '/states',
     validateSearch: (search: Record<string, unknown>): RouteSearch<'states'> => ({
       state: typeof search.state === 'string' ? search.state : undefined,
-      tab: parseEnum(search.tab, ['declaration', 'modules', 'records', 'consumers'] as const),
+      tab: parseEnum(search.tab, ['declaration', 'templates', 'records', 'consumers'] as const),
       subject: typeof search.subject === 'string' ? search.subject : undefined,
       target: typeof search.target === 'string' ? search.target : undefined,
+      template: typeof search.template === 'string' ? search.template : undefined,
     }),
     component: function StatesRoute(): ReactNode {
       return <StatesPage search={useSearch({ from: '/authed/states' })} />;

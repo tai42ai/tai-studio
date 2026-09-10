@@ -282,6 +282,7 @@ describe('createApiClient', () => {
       expr: null,
       expr_id: null,
       expr_kwargs: {},
+      state_binding: null,
     });
     expect(out).toEqual({ registered: true, name: 'h' });
     expect(capturedBody).toMatchObject({

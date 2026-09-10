@@ -56,7 +56,7 @@ routers_modules:
   - tai42_skeleton.routers.extensions
   - tai42_skeleton.routers.tool_extensions
   - tai42_skeleton.routers.presets
-  - tai42_skeleton.routers.states # /api/states* + /api/state-modules* (States screens)
+  - tai42_skeleton.routers.states # /api/states* + /api/state-templates* (States screens)
   - tai42_skeleton.routers.sub_mcp
   - tai42_skeleton.routers.config
   - tai42_skeleton.routers.templates

@@ -29,13 +29,19 @@ import {
   Field,
   Select,
   Spinner,
+  StateBindingSection,
   Textarea,
   TextInput,
   errorMessage,
+  fieldPathsFromSchema,
+  statesCatalogFromList,
+  templatesCatalogFromList,
+  statesListKey,
+  stateTemplatesKey,
   useApi,
 } from '@tai42/studio-sdk';
 import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
-import type { HookParams, HookSubject } from '@tai42/api-client';
+import type { HookParams, HookSubject, StateBinding } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
 import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
@@ -159,6 +165,38 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   // The Subject group is collapsed by default; its fields (and the targets read) mount
   // only when expanded, or when an edited hook already carries a subject.
   const [subjectOpen, setSubjectOpen] = useState(initial?.subject != null);
+  // The optional door-layer state binding applied around this hook's fire.
+  const [stateBinding, setStateBinding] = useState<StateBinding | null>(
+    initial?.state_binding ?? null,
+  );
+  const bindingStatesQuery = useQuery({
+    queryKey: statesListKey,
+    queryFn: ({ signal }) => api.listStates(signal),
+  });
+  const bindingTemplatesQuery = useQuery({
+    queryKey: stateTemplatesKey,
+    queryFn: ({ signal }) => api.listStateTemplates(signal),
+  });
+  // The hook's tool schema feeds the binding editor's field pickers.
+  const toolSchemaQuery = useQuery({
+    queryKey: ['state-binding', 'tool-schema', tool],
+    queryFn: ({ signal }) => api.getToolSchema(tool.trim(), signal),
+    enabled: tool.trim() !== '',
+  });
+  // When the hook tool is a preset, its own binding is inherited (this door's binding
+  // overrides it per state).
+  const bindingPresetsQuery = useQuery({
+    queryKey: ['state-binding', 'presets'],
+    queryFn: ({ signal }) => api.listPresets(signal),
+  });
+  const toolIsPreset = bindingPresetsQuery.data?.some((p) => p.name === tool.trim()) ?? false;
+  const toolVersionsQuery = useQuery({
+    queryKey: ['state-binding', 'preset-versions', tool.trim()],
+    queryFn: ({ signal }) => api.listPresetVersions(tool.trim(), signal),
+    enabled: toolIsPreset && tool.trim() !== '',
+  });
+  const inheritedBinding =
+    toolVersionsQuery.data?.find((v) => v.is_current)?.body.state_binding ?? null;
 
   const targetsQuery = useQuery({
     queryKey: ['hooks', 'conversation-targets'],
@@ -274,6 +312,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       expr: orNull(expr),
       expr_id: initial?.expr_id ?? null,
       expr_kwargs: initial?.expr_kwargs ?? {},
+      state_binding: stateBinding,
     };
     mutation.mutate(params);
   };
@@ -418,6 +457,25 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         multiline={false}
         value={expr}
         onChange={setExpr}
+      />
+      <StateBindingSection
+        value={stateBinding}
+        onChange={setStateBinding}
+        statesCatalog={statesCatalogFromList(bindingStatesQuery.data ?? [])}
+        templatesCatalog={templatesCatalogFromList(bindingTemplatesQuery.data ?? [])}
+        inherited={inheritedBinding}
+        sources={{
+          input: fieldPathsFromSchema(toolSchemaQuery.data?.input),
+          output: fieldPathsFromSchema(toolSchemaQuery.data?.output),
+          loading: tool.trim() !== '' && toolSchemaQuery.isPending,
+          error: toolSchemaQuery.isError ? "Couldn't load the tool's fields." : undefined,
+        }}
+        loading={bindingStatesQuery.isPending || bindingTemplatesQuery.isPending}
+        error={
+          bindingStatesQuery.isError || bindingTemplatesQuery.isError
+            ? errorMessage(bindingStatesQuery.error ?? bindingTemplatesQuery.error)
+            : undefined
+        }
       />
       {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>

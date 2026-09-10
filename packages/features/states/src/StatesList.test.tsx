@@ -29,6 +29,10 @@ function listClient(rows: readonly unknown[], over: Partial<StubApiClient> = {})
   return {
     listStates: vi.fn().mockResolvedValue(rows),
     getStateStats: vi.fn().mockResolvedValue({ records: 4 }),
+    listStateAttachments: vi.fn().mockResolvedValue([
+      { template: 'notes', path: [], parameters: {}, declarations: {} },
+      { template: 'flags', path: ['meta'], parameters: {}, declarations: {} },
+    ]),
     stateConsumers: vi
       .fn()
       .mockResolvedValue([
@@ -49,6 +53,41 @@ describe('StatesList', () => {
     expect(await within(row).findByText('4')).toBeInTheDocument();
     // The lazy consumers cell resolves to its bound count (1).
     expect(await within(row).findByText('1')).toBeInTheDocument();
+  });
+
+  it('the lazy Templates cell renders the attachments count', async () => {
+    renderWithProviders(<StatesList selected={undefined} />, { client: listClient([stateRow()]) });
+    const row = await screen.findByTestId('state-row-profile');
+    expect(screen.getByRole('columnheader', { name: 'Templates' })).toBeInTheDocument();
+    // The stub attaches two templates; the cell resolves to that count.
+    expect(await within(row).findByText('2')).toBeInTheDocument();
+  });
+
+  it('the Templates cell shows a skeleton while the attachments read is pending', async () => {
+    let resolveAttachments!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveAttachments = resolve;
+    });
+    renderWithProviders(<StatesList selected={undefined} />, {
+      client: listClient([stateRow()], {
+        listStateAttachments: vi.fn().mockReturnValue(pending),
+      }),
+    });
+    const row = await screen.findByTestId('state-row-profile');
+    // The records/consumers cells have settled; the only skeleton left is Templates.
+    await within(row).findByText('1');
+    expect(row.querySelector('.tai-skeleton')).not.toBeNull();
+    resolveAttachments([]);
+  });
+
+  it('a failing attachments read degrades the Templates cell to — with the error on title', async () => {
+    renderWithProviders(<StatesList selected={undefined} />, {
+      client: listClient([stateRow()], {
+        listStateAttachments: vi.fn().mockRejectedValue(new Error('attachments down')),
+      }),
+    });
+    const row = await screen.findByTestId('state-row-profile');
+    expect(await within(row).findByTitle('attachments down')).toHaveTextContent('—');
   });
 
   it('a failing consumers read degrades that cell to — with the error on title', async () => {
@@ -86,6 +125,7 @@ describe('StatesList', () => {
       client: {
         listStates,
         getStateStats: vi.fn().mockResolvedValue({ records: 4 }),
+        listStateAttachments: vi.fn().mockResolvedValue([]),
         stateConsumers: vi.fn().mockResolvedValue([]),
       },
     });
@@ -106,7 +146,7 @@ describe('StatesList', () => {
     });
     await user.upload(input, file);
     expect(
-      await screen.findByText('This file has no `kind` — expected state or state-module.'),
+      await screen.findByText('This file has no `kind` — expected state or state-template.'),
     ).toBeInTheDocument();
     expect(putState).not.toHaveBeenCalled();
   });
@@ -138,19 +178,19 @@ describe('StatesList', () => {
     expect(putState).toHaveBeenCalledTimes(1);
   });
 
-  it('a state-module upload prompts Replace on a 409 and retries with replace=true', async () => {
+  it('a state-template upload prompts Replace on a 409 and retries with replace=true', async () => {
     const user = userEvent.setup();
-    const putStateModule = vi
+    const putStateTemplate = vi
       .fn()
-      .mockRejectedValueOnce(new ApiError('module_exists', 409))
-      .mockResolvedValueOnce({ kind: 'state-module', name: 'notes' });
+      .mockRejectedValueOnce(new ApiError('template_exists', 409))
+      .mockResolvedValueOnce({ kind: 'state-template', name: 'notes' });
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
-      client: listClient([stateRow()], { putStateModule }),
+      client: listClient([stateRow()], { putStateTemplate }),
     });
     await screen.findByTestId('state-row-profile');
     const input = fileInput(container);
     const file = new File(
-      [JSON.stringify({ kind: 'state-module', name: 'notes', schema: {} })],
+      [JSON.stringify({ kind: 'state-template', name: 'notes', schema: {} })],
       'notes.json',
       { type: 'application/json' },
     );
@@ -158,22 +198,22 @@ describe('StatesList', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Replace' }));
     await waitFor(() => {
-      expect(putStateModule).toHaveBeenCalledTimes(2);
+      expect(putStateTemplate).toHaveBeenCalledTimes(2);
     });
     // The second call carried the replace flag.
-    expect(putStateModule.mock.calls[1]?.[2]).toBe(true);
+    expect(putStateTemplate.mock.calls[1]?.[2]).toBe(true);
   });
 
-  it('Upload routes a state-module document to putStateModule', async () => {
+  it('Upload routes a state-template document to putStateTemplate', async () => {
     const user = userEvent.setup();
-    const putStateModule = vi.fn().mockResolvedValue({ kind: 'state-module', name: 'notes' });
+    const putStateTemplate = vi.fn().mockResolvedValue({ kind: 'state-template', name: 'notes' });
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
-      client: listClient([stateRow()], { putStateModule }),
+      client: listClient([stateRow()], { putStateTemplate }),
     });
     await screen.findByTestId('state-row-profile');
     const input = fileInput(container);
     const file = new File(
-      [JSON.stringify({ kind: 'state-module', name: 'notes', schema: {} })],
+      [JSON.stringify({ kind: 'state-template', name: 'notes', schema: {} })],
       'notes.json',
       {
         type: 'application/json',
@@ -181,9 +221,9 @@ describe('StatesList', () => {
     );
     await user.upload(input, file);
     await waitFor(() => {
-      expect(putStateModule).toHaveBeenCalled();
+      expect(putStateTemplate).toHaveBeenCalled();
     });
-    expect(putStateModule.mock.calls[0]?.[0]).toBe('notes');
+    expect(putStateTemplate.mock.calls[0]?.[0]).toBe('notes');
   });
 
   it("the consumers count excludes families that can't be listed", async () => {
@@ -210,6 +250,7 @@ describe('StatesList', () => {
     expect(within(row).getByText('person')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Updated' })).toBeNull();
     expect(screen.queryByRole('columnheader', { name: 'Records' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Templates' })).toBeNull();
     expect(screen.queryByRole('columnheader', { name: 'Consumers' })).toBeNull();
   });
 
@@ -238,7 +279,7 @@ describe('StatesList', () => {
 
   it('Declare state opens the create dialog and navigates on success', async () => {
     const user = userEvent.setup();
-    const putState = vi.fn().mockResolvedValue({ name: 'newone', mounts: [] });
+    const putState = vi.fn().mockResolvedValue({ name: 'newone', attachments: [] });
     const { navigate } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()], { putState }),
     });
@@ -274,18 +315,18 @@ describe('StatesList', () => {
     expect(await screen.findByText(/not valid JSON/)).toBeInTheDocument();
   });
 
-  it('a failed module Replace renders its error in the dialog', async () => {
+  it('a failed template Replace renders its error in the dialog', async () => {
     const user = userEvent.setup();
-    const putStateModule = vi
+    const putStateTemplate = vi
       .fn()
-      .mockRejectedValueOnce(new ApiError('module_exists', 409))
+      .mockRejectedValueOnce(new ApiError('template_exists', 409))
       .mockRejectedValueOnce(new Error('replace denied'));
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
-      client: listClient([stateRow()], { putStateModule }),
+      client: listClient([stateRow()], { putStateTemplate }),
     });
     await screen.findByTestId('state-row-profile');
     const input = fileInput(container);
-    const doc = { kind: 'state-module', name: 'notes', schema: {} };
+    const doc = { kind: 'state-template', name: 'notes', schema: {} };
     await user.upload(
       input,
       new File([JSON.stringify(doc)], 'notes.json', { type: 'application/json' }),

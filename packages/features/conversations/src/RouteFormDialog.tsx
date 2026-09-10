@@ -21,7 +21,7 @@
  * style follows the hooks `RegisterHookForm`.
  */
 import { useMemo, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   CopyField,
@@ -29,12 +29,18 @@ import {
   ErrorState,
   SchemaForm,
   Spinner,
+  StateBindingSection,
   errorMessage,
+  fieldPathsFromSchema,
+  statesCatalogFromList,
+  templatesCatalogFromList,
+  statesListKey,
+  stateTemplatesKey,
   useApi,
   validateAgainstSchema,
   type SchemaFormErrors,
 } from '@tai42/studio-sdk';
-import type { ConversationRoute } from '@tai42/api-client';
+import type { ConversationRoute, StateBinding } from '@tai42/api-client';
 
 import { conversationRoutesKey } from './keys';
 import {
@@ -65,9 +71,49 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
   const [errors, setErrors] = useState<SchemaFormErrors | undefined>(undefined);
   // The api-door secret, held only here after a successful write (shown once).
   const [secret, setSecret] = useState<string | null>(null);
+  // The optional door-layer state binding this route applies around every turn —
+  // prefilled from the route read when editing (the backend returns it on the model).
+  const [stateBinding, setStateBinding] = useState<StateBinding | null>(
+    initial?.state_binding ?? null,
+  );
+
+  const statesQuery = useQuery({
+    queryKey: statesListKey,
+    queryFn: ({ signal }) => api.listStates(signal),
+  });
+  const templatesQuery = useQuery({
+    queryKey: stateTemplatesKey,
+    queryFn: ({ signal }) => api.listStateTemplates(signal),
+  });
+  // The route's target tool schema (a preset is served as a tool) feeds the field pickers.
+  const targetName = value.target?.target_name ?? '';
+  const toolSchemaQuery = useQuery({
+    queryKey: ['state-binding', 'tool-schema', targetName],
+    queryFn: ({ signal }) => api.getToolSchema(targetName, signal),
+    enabled: targetName !== '',
+  });
+  // When the target is a preset, its own binding is the inherited one (the route's
+  // binding overrides it per state). Detect via the presets list, read the current
+  // version's body for its `state_binding`.
+  const bindingPresetsQuery = useQuery({
+    queryKey: ['state-binding', 'presets'],
+    queryFn: ({ signal }) => api.listPresets(signal),
+  });
+  const targetIsPreset = bindingPresetsQuery.data?.some((p) => p.name === targetName) ?? false;
+  const targetVersionsQuery = useQuery({
+    queryKey: ['state-binding', 'preset-versions', targetName],
+    queryFn: ({ signal }) => api.listPresetVersions(targetName, signal),
+    enabled: targetIsPreset && targetName !== '',
+  });
+  const inheritedBinding =
+    targetVersionsQuery.data?.find((v) => v.is_current)?.body.state_binding ?? null;
 
   const mutation = useMutation({
-    mutationFn: () => api.createOrReplaceConversationRoute(formValueToBody(value)),
+    mutationFn: () =>
+      api.createOrReplaceConversationRoute({
+        ...formValueToBody(value),
+        state_binding: stateBinding,
+      }),
     onSuccess: (written) => {
       void queryClient.invalidateQueries({ queryKey: conversationRoutesKey });
       if (written.callback_secret !== null) {
@@ -132,6 +178,25 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
             }}
             errors={errors}
             idPrefix="route-form"
+          />
+          <StateBindingSection
+            value={stateBinding}
+            onChange={setStateBinding}
+            statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
+            templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
+            inherited={inheritedBinding}
+            sources={{
+              input: fieldPathsFromSchema(toolSchemaQuery.data?.input),
+              output: fieldPathsFromSchema(toolSchemaQuery.data?.output),
+              loading: targetName !== '' && toolSchemaQuery.isPending,
+              error: toolSchemaQuery.isError ? "Couldn't load the tool's fields." : undefined,
+            }}
+            loading={statesQuery.isPending || templatesQuery.isPending}
+            error={
+              statesQuery.isError || templatesQuery.isError
+                ? errorMessage(statesQuery.error ?? templatesQuery.error)
+                : undefined
+            }
           />
           {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
           <div className="tai-dialog-actions">

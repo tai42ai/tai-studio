@@ -1,13 +1,23 @@
 /**
  * The SAVE-NEW-VERSION dialog. Pre-fills `fixed_kwargs` (JSON textarea),
- * `description` (text), and `extensions` (the `ExtensionComboBuilder`) from the
+ * `description` (text), `extensions` (the `ExtensionComboBuilder`), `output_schema`
+ * (the `SchemaEditor`) and `state_binding` (the `StateBindingSection`) from the
  * preset's ACTIVE body, then sends ONLY the fields the user changed:
  *  - an untouched field is OMITTED (the route carries the active value forward);
  *  - extensions the user cleared are sent as an explicit `[]` (the route clears them);
+ *  - an output schema the user cleared is sent as an explicit `null`;
+ *  - a state binding the user removed is sent as an explicit `null` (the route clears
+ *    it), and a set/edited one is sent verbatim; leaving it untouched carries the
+ *    active binding forward.
  *  - an edited `description` sends its new value; an emptied one is rejected client
  *    side (loud inline error, submit blocked), mirroring the API's own rule (the
  *    route rejects an explicit empty description with a 422).
  * Submit is disabled until at least one field is dirty (an empty body is a loud 400).
+ *
+ * The active binding is not on the preset RECORD; it rides the current version body,
+ * so the dialog reads the version list and prefills from the `is_current` row. The
+ * base tool's input/output schemas and the states/templates catalogs feed the binding
+ * editor's field pickers, exactly as the create form wires them.
  *
  * Overlay categorization tags are NOT a version field — they live in the tool_meta
  * overlay and are edited on the detail pane, not here. The per-version generic label
@@ -23,6 +33,7 @@ import type {
   PresetDetail,
   PresetExtensionElement,
   SavePresetVersionBody,
+  StateBinding,
   ValidatePresetBody,
 } from '@tai42/api-client';
 import {
@@ -33,11 +44,18 @@ import {
   Field,
   SchemaEditor,
   Spinner,
+  StateBindingSection,
   TextInput,
   Textarea,
   errorMessage,
+  fieldPathsFromSchema,
+  statesCatalogFromList,
+  templatesCatalogFromList,
+  statesListKey,
+  stateTemplatesKey,
   toolsListKey,
   useApi,
+  type BindingSourceSchemas,
   type SchemaEditorChange,
 } from '@tai42/studio-sdk';
 
@@ -61,6 +79,34 @@ export function SaveVersionDialog({
     queryFn: () => api.listExtensions(),
   });
 
+  // The active binding is not on the record — it rides the current version body, so the
+  // dialog reads the version list (already cached by the version-history panel) and seeds
+  // from the `is_current` row. A failed read is surfaced loudly in the binding section.
+  const versionsQuery = useQuery({
+    queryKey: presetVersionsKey(name),
+    queryFn: ({ signal }) => api.listPresetVersions(name, signal),
+  });
+  const seedBinding = useMemo<StateBinding | null>(
+    () => (versionsQuery.data ?? []).find((row) => row.is_current)?.body.state_binding ?? null,
+    [versionsQuery.data],
+  );
+
+  // The states + templates catalogs and the base tool's declared schemas feed the
+  // binding editor's field pickers, mirroring the create form's wiring.
+  const statesQuery = useQuery({
+    queryKey: statesListKey,
+    queryFn: ({ signal }) => api.listStates(signal),
+  });
+  const templatesQuery = useQuery({
+    queryKey: stateTemplatesKey,
+    queryFn: ({ signal }) => api.listStateTemplates(signal),
+  });
+  const baseSchemaQuery = useQuery({
+    queryKey: ['state-binding', 'tool-schema', detail.base_tool],
+    queryFn: ({ signal }) => api.getToolSchema(detail.base_tool, signal),
+    enabled: detail.base_tool !== '',
+  });
+
   const seedKwargsText = useMemo(() => JSON.stringify(detail.fixed_kwargs, null, 2), [detail]);
   // The active version's combos carry their author config verbatim; the config-aware
   // builder edits them directly, so no name-only projection or carry-forward is needed.
@@ -73,6 +119,17 @@ export function SaveVersionDialog({
     schema: detail.output_schema,
     valid: true,
   });
+  // The binding seeds asynchronously (from the version list, not the prop), so it is
+  // seeded once via an effect. `bindingSeeded` gates its dirtiness check so the pre-seed
+  // `null` is never mistaken for a user clear of a carried-forward binding.
+  const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
+  const [bindingSeeded, setBindingSeeded] = useState(false);
+  useEffect(() => {
+    if (versionsQuery.isSuccess && !bindingSeeded) {
+      setStateBinding(seedBinding);
+      setBindingSeeded(true);
+    }
+  }, [versionsQuery.isSuccess, bindingSeeded, seedBinding]);
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
   // Whether the extension combos carry only known names. An unknown name
   // blocks submit + validate.
@@ -90,7 +147,15 @@ export function SaveVersionDialog({
   const descriptionInvalid = descriptionChanged && description.trim() === '';
   const extensionsChanged = !jsonEqual(combos, detail.extensions);
   const outputSchemaChanged = !jsonEqual(outputSchema.schema, detail.output_schema);
-  const dirty = kwargsChanged || descriptionChanged || extensionsChanged || outputSchemaChanged;
+  // Only compared once the binding has seeded from the version list — a pre-seed `null`
+  // must not read as a clear of a carried-forward binding.
+  const stateBindingChanged = bindingSeeded && !jsonEqual(stateBinding, seedBinding);
+  const dirty =
+    kwargsChanged ||
+    descriptionChanged ||
+    extensionsChanged ||
+    outputSchemaChanged ||
+    stateBindingChanged;
 
   const save = useMutation({
     mutationFn: (body: SavePresetVersionBody) => api.savePresetVersion(name, body),
@@ -116,6 +181,7 @@ export function SaveVersionDialog({
     description,
     combos,
     outputSchema: outputSchema.schema,
+    stateBinding,
   });
   useEffect(() => {
     resetValidate();
@@ -142,6 +208,9 @@ export function SaveVersionDialog({
       // empty list means "no combos", read under save-version (edit) semantics.
       extensions: combos,
       output_schema: outputSchema.schema,
+      // Mirror the write's binding sentinel: send the edited binding (null when cleared)
+      // only when it changed, so an untouched one is validated as carried-forward.
+      ...(stateBindingChanged ? { state_binding: stateBinding } : {}),
     });
   };
 
@@ -167,6 +236,9 @@ export function SaveVersionDialog({
       ...(extensionsChanged ? { extensions: combos } : {}),
       // An untouched schema carries forward (omitted); an explicit clear sends `null`.
       ...(outputSchemaChanged ? { output_schema: outputSchema.schema } : {}),
+      // An untouched binding carries forward (omitted); a removed one sends an explicit
+      // `null` (the route clears it), a set/edited one sends the binding verbatim.
+      ...(stateBindingChanged ? { state_binding: stateBinding } : {}),
     };
     save.mutate(body);
   };
@@ -257,6 +329,43 @@ export function SaveVersionDialog({
           description="The JSON Schema enforced on this tool's structured output. Clear it to drop the schema; leave it to carry the current one forward."
           idPrefix="save-version-output-schema"
         />
+
+        {/* The active binding rides the current version body; a failed version read
+            leaves it unseedable, so the binding editor is withheld behind a loud error
+            with retry rather than shown empty (which would read as "no binding"). The
+            rest of the form still saves — an omitted binding carries the active one
+            forward. The section is mounted only once the binding has seeded, so its
+            disclosure opens correctly when the active binding is non-empty (its
+            open/closed state is fixed at mount from the value it is first handed). */}
+        {versionsQuery.isError ? (
+          <ErrorState
+            message={errorMessage(versionsQuery.error)}
+            onRetry={() => void versionsQuery.refetch()}
+          />
+        ) : bindingSeeded ? (
+          <StateBindingSection
+            value={stateBinding}
+            onChange={setStateBinding}
+            statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
+            templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
+            sources={
+              {
+                input: fieldPathsFromSchema(baseSchemaQuery.data?.input),
+                output: fieldPathsFromSchema(outputSchema.schema ?? baseSchemaQuery.data?.output),
+                loading: baseSchemaQuery.isPending,
+                error: baseSchemaQuery.isError ? "Couldn't load the tool's fields." : undefined,
+              } satisfies BindingSourceSchemas
+            }
+            loading={statesQuery.isPending || templatesQuery.isPending}
+            error={
+              statesQuery.isError || templatesQuery.isError
+                ? errorMessage(statesQuery.error ?? templatesQuery.error)
+                : undefined
+            }
+          />
+        ) : (
+          <Spinner label="Loading state binding" />
+        )}
 
         {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
 

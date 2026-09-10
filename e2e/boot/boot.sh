@@ -56,14 +56,18 @@ export STUDIO_API_KEY="${STUDIO_API_KEY:-sk-e2e-DO-NOT-USE-IN-PRODUCTION-000}"
 STUDIO_PORT="${STUDIO_PORT:-8765}"
 export STUDIO_USER_ID="${STUDIO_USER_ID:-studio-e2e}"
 
-REDIS_HOST_PORT=6380
+# Loopback host ports for the compose Redis/Postgres. Default to 6380/55432 (not
+# 6379/5432) so the recipe never collides with a Redis/Postgres a developer runs
+# locally; export REDIS_HOST_PORT / PG_HOST_PORT to bind elsewhere when those
+# defaults are taken. Exported so compose.yaml reads them at `docker compose up`.
+export REDIS_HOST_PORT="${REDIS_HOST_PORT:-6380}"
 REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/0"
 CONNECTOR_STORE_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/1"
 INTERACTIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/2"
 TOOL_RUNS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/3"
 HOOKS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/4"
 CONVERSATIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/5"
-PG_HOST_PORT=55432
+export PG_HOST_PORT="${PG_HOST_PORT:-55432}"
 
 # The one named "default" database every store binds to (TAI_DB_BINDING_* unset, so
 # each component's chain, guard, and stores resolve to `default`): the access-control

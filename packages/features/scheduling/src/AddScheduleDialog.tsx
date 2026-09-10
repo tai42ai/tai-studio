@@ -25,15 +25,22 @@ import {
   RadioGroup,
   Select,
   Spinner,
+  StateBindingSection,
   Textarea,
   TextInput,
   ToolPicker,
   errorMessage,
+  fieldPathsFromSchema,
   hiddenToolNames,
+  statesCatalogFromList,
+  templatesCatalogFromList,
+  statesListKey,
+  stateTemplatesKey,
   toolBadgesByName,
   useApi,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
+import type { StateBinding } from '@tai42/api-client';
 
 import { scheduleToolMetaKey, scheduleToolTagsKey, scheduleToolsKey, schedulesKey } from './keys';
 
@@ -111,6 +118,36 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   // The Subject group is collapsed by default; its fields (and the targets read) mount
   // only when expanded, so the dialog's default shape is unchanged.
   const [subjectOpen, setSubjectOpen] = useState(false);
+  // The optional door-layer state binding applied around every fire of this schedule.
+  const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
+  const bindingStatesQuery = useQuery({
+    queryKey: statesListKey,
+    queryFn: ({ signal }) => api.listStates(signal),
+  });
+  const bindingTemplatesQuery = useQuery({
+    queryKey: stateTemplatesKey,
+    queryFn: ({ signal }) => api.listStateTemplates(signal),
+  });
+  // The scheduled tool's schema feeds the binding editor's field pickers.
+  const toolSchemaQuery = useQuery({
+    queryKey: ['state-binding', 'tool-schema', tool],
+    queryFn: ({ signal }) => api.getToolSchema(tool ?? '', signal),
+    enabled: tool !== null && tool !== '',
+  });
+  // When the scheduled tool is a preset, its own binding is inherited (this door's
+  // binding overrides it per state).
+  const bindingPresetsQuery = useQuery({
+    queryKey: ['state-binding', 'presets'],
+    queryFn: ({ signal }) => api.listPresets(signal),
+  });
+  const toolIsPreset = bindingPresetsQuery.data?.some((p) => p.name === tool) ?? false;
+  const toolVersionsQuery = useQuery({
+    queryKey: ['state-binding', 'preset-versions', tool],
+    queryFn: ({ signal }) => api.listPresetVersions(tool ?? '', signal),
+    enabled: toolIsPreset && tool !== null && tool !== '',
+  });
+  const inheritedBinding =
+    toolVersionsQuery.data?.find((v) => v.is_current)?.body.state_binding ?? null;
 
   const targetsQuery = useQuery({
     queryKey: ['schedules', 'conversation-targets'],
@@ -127,6 +164,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
       tool_name: string;
       tool_kwargs: Record<string, unknown>;
       schedule_kwargs: Record<string, unknown>;
+      state_binding?: StateBinding | null;
     }) => api.addSchedule(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: schedulesKey });
@@ -183,6 +221,8 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
       tool_name: tool,
       tool_kwargs: toolKwargs,
       schedule_kwargs: scheduleKwargs,
+      // OMIT state_binding unless the author bound a state.
+      ...(stateBinding !== null ? { state_binding: stateBinding } : {}),
     });
   }, [
     add,
@@ -194,6 +234,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     mode,
     name,
     nameMissing,
+    stateBinding,
     subjectKey,
     subjectKind,
     subjectTarget,
@@ -361,6 +402,26 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
             </div>
           ) : null}
         </div>
+
+        <StateBindingSection
+          value={stateBinding}
+          onChange={setStateBinding}
+          statesCatalog={statesCatalogFromList(bindingStatesQuery.data ?? [])}
+          templatesCatalog={templatesCatalogFromList(bindingTemplatesQuery.data ?? [])}
+          inherited={inheritedBinding}
+          sources={{
+            input: fieldPathsFromSchema(toolSchemaQuery.data?.input),
+            output: fieldPathsFromSchema(toolSchemaQuery.data?.output),
+            loading: tool !== null && tool !== '' && toolSchemaQuery.isPending,
+            error: toolSchemaQuery.isError ? "Couldn't load the tool's fields." : undefined,
+          }}
+          loading={bindingStatesQuery.isPending || bindingTemplatesQuery.isPending}
+          error={
+            bindingStatesQuery.isError || bindingTemplatesQuery.isError
+              ? errorMessage(bindingStatesQuery.error ?? bindingTemplatesQuery.error)
+              : undefined
+          }
+        />
 
         {add.isError ? <ErrorState message={errorMessage(add.error)} /> : null}
 

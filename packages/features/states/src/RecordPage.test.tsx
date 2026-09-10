@@ -26,7 +26,7 @@ function detail(): StateDetail {
     // An empty schema is not representable, so the editor uses the JSON textarea.
     effective_schema: {},
     regimes: [],
-    mounts: [],
+    attachments: [],
   };
 }
 

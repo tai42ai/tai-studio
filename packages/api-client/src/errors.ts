@@ -15,12 +15,26 @@ export class ApiError extends Error {
    * caller that does not ignores it.
    */
   readonly retryAfterSeconds?: number;
-  constructor(message: string, status: number, code?: string, retryAfterSeconds?: number) {
+  /**
+   * The full parsed error body (`{ error, code, …extra }`), when the failure carried a
+   * JSON body. Operations spread structured follow-up data beside the message (e.g. a
+   * reconcile refusal's `{ reconcile: true, orphans: [...] }`), so a UI keys its
+   * follow-up on this DATA, not on the prose. `undefined` when the body was not JSON.
+   */
+  readonly body?: unknown;
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    retryAfterSeconds?: number,
+    body?: unknown,
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
     this.retryAfterSeconds = retryAfterSeconds;
+    this.body = body;
   }
 }
 
@@ -34,8 +48,8 @@ export class ApiUnauthorizedError extends ApiError {
 
 /** A duplicate answer / alias collision etc. (HTTP 409). */
 export class ApiConflictError extends ApiError {
-  constructor(message: string) {
-    super(message, 409);
+  constructor(message: string, body?: unknown) {
+    super(message, 409, undefined, undefined, body);
     this.name = 'ApiConflictError';
   }
 }

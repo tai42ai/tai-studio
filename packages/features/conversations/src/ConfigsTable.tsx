@@ -94,7 +94,7 @@ export function ConfigsTable(): ReactNode {
     body = (
       <EmptyState
         title="No per-target configs"
-        description="A config sets a target's first-contact greeting and whether it links a guest across channels. Create one to override the defaults for an agent or tool."
+        description="A config sets a target's first-contact greeting and whether it links a participant across channels. Create one to override the defaults for an agent or tool."
       />
     );
   } else {

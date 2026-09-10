@@ -13,7 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { ExpressionFieldContext, type ExpressionFieldProps } from '@tai42/studio-sdk';
 
 import { RouteFormDialog } from './RouteFormDialog';
-import { makeRoute, renderWithProviders } from './test-utils';
+import { makeRoute, renderWithProviders, type StubApiClient } from './test-utils';
 
 /**
  * A stable stub expression door: it satisfies `ExpressionFieldProps` and renders a
@@ -151,6 +151,7 @@ describe('RouteFormDialog — create', () => {
         callback_url: null,
         turns_per_hour_override: null,
         error_reply_text: null,
+        state_binding: null,
       });
     });
   });
@@ -342,5 +343,155 @@ describe('RouteFormDialog — edit', () => {
     });
     // An api-door save rotates the secret — the reveal shows the new one.
     expect(await screen.findByText('rotated-secret')).toBeInTheDocument();
+  });
+});
+
+describe('RouteFormDialog — state binding', () => {
+  it("resolves the route target's tool schema into the binding field pickers", async () => {
+    const getToolSchema = vi.fn().mockResolvedValue({
+      input: { type: 'object', properties: { memo: { type: 'string' } } },
+      output: { type: 'object', properties: { total: { type: 'number' } } },
+      description: null,
+    });
+    renderWithProviders(<RouteFormDialog initial={makeRoute()} onClose={vi.fn()} />, {
+      client: {
+        listStates: vi.fn().mockResolvedValue([]),
+        listStateTemplates: vi.fn().mockResolvedValue([]),
+        getToolSchema,
+      },
+    });
+    await waitFor(() => {
+      expect(getToolSchema.mock.calls.some((call) => call[0] === 'assistant')).toBe(true);
+    });
+  });
+
+  it('prefills the binding from the route read model when editing', async () => {
+    renderWithProviders(
+      <RouteFormDialog
+        initial={makeRoute({
+          state_binding: {
+            states: [
+              {
+                state: 'counters',
+                templates: [],
+                subject_expr: '.k',
+                scope_expr: null,
+                input_injections: [],
+                updates: [],
+              },
+            ],
+          },
+        })}
+        onClose={vi.fn()}
+      />,
+      {
+        client: {
+          listStates: vi.fn().mockResolvedValue([]),
+          listStateTemplates: vi.fn().mockResolvedValue([]),
+        },
+      },
+    );
+    // The section opens expanded (a binding exists); with the state absent from the
+    // (empty) catalog the card shows its raw jq, proving the binding prefilled.
+    expect(await screen.findByText(/subject: \.k/)).toBeInTheDocument();
+  });
+});
+
+describe('RouteFormDialog — inherited advisory + binding serialization', () => {
+  const boundRoute = () =>
+    makeRoute({
+      route_name: 'tally-route',
+      target_kind: 'tool',
+      target_name: 'tally-preset',
+      state_binding: {
+        states: [
+          {
+            state: 'counters',
+            templates: [],
+            subject_expr: '.k',
+            scope_expr: null,
+            input_injections: [],
+            updates: [],
+          },
+        ],
+      },
+    });
+
+  const presetClient = (
+    createOrReplaceConversationRoute: NonNullable<
+      StubApiClient['createOrReplaceConversationRoute']
+    >,
+  ): StubApiClient => ({
+    createOrReplaceConversationRoute,
+    listStates: vi.fn().mockResolvedValue([]),
+    listStateTemplates: vi.fn().mockResolvedValue([]),
+    listPresets: vi.fn().mockResolvedValue([{ name: 'tally-preset' }]),
+    listPresetVersions: vi.fn().mockResolvedValue([
+      {
+        version: 1,
+        is_current: true,
+        tags: [],
+        created_at: '',
+        body: {
+          base_tool: 'echo',
+          description: '',
+          fixed_kwargs: {},
+          extensions: [],
+          output_schema: null,
+          input_schema: null,
+          state_binding: {
+            states: [
+              {
+                state: 'counters',
+                templates: [],
+                subject_expr: '.preset_key',
+                scope_expr: null,
+                input_injections: [],
+                updates: [],
+              },
+            ],
+          },
+        },
+      },
+    ]),
+    getToolSchema: vi.fn().mockResolvedValue({ input: {}, output: null, description: null }),
+  });
+
+  it('shows the override advisory when the route and the target preset name the same state', async () => {
+    renderWithProviders(<RouteFormDialog initial={boundRoute()} onClose={vi.fn()} />, {
+      client: presetClient(vi.fn()),
+    });
+    expect(await screen.findByText('Overrides the preset’s subject')).toBeInTheDocument();
+    expect(screen.getByText('Preset default:')).toBeInTheDocument();
+  });
+
+  it('serializes a SET binding into the route body', async () => {
+    const user = userEvent.setup();
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: false,
+      route_name: 'tally-route',
+      route: boundRoute(),
+      callback_secret: null,
+    });
+    renderWithProviders(<RouteFormDialog initial={boundRoute()} onClose={vi.fn()} />, {
+      client: presetClient(createOrReplaceConversationRoute),
+    });
+    await user.click(await screen.findByRole('button', { name: 'Save changes' }));
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalled();
+    });
+    const body = createOrReplaceConversationRoute.mock.calls[0]?.[0] as { state_binding: unknown };
+    expect(body.state_binding).toEqual({
+      states: [
+        {
+          state: 'counters',
+          templates: [],
+          subject_expr: '.k',
+          scope_expr: null,
+          input_injections: [],
+          updates: [],
+        },
+      ],
+    });
   });
 });

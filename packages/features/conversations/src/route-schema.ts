@@ -65,12 +65,12 @@ const PAYLOAD_EXPR_ANNOTATION = {
 
 /**
  * What `.` is for `reply_expr`: the tool's raw result. The program maps it to the
- * guest-facing reply.
+ * participant-facing reply.
  */
 const REPLY_EXPR_ANNOTATION = {
   language: 'jq',
   label: 'tool result',
-  blurb: "The tool's raw result. Map it to the guest-facing reply.",
+  blurb: "The tool's raw result. Map it to the participant-facing reply.",
   keys: [],
   returns: 'null (no reply), a string, or an array of reply parts',
 } as const;
@@ -213,7 +213,7 @@ export function routeFormSchema(fixedRouteName?: string): JsonSchema {
         maxLength: 2000,
         title: 'Error reply text',
         description:
-          'The guest-facing reply sent when a turn fails; blank uses the built-in default.',
+          'The participant-facing reply sent when a turn fails; blank uses the built-in default.',
       },
     },
   };
@@ -347,5 +347,7 @@ export function formValueToBody(value: RouteFormValue): ConversationRouteCreate 
     callback_url: isApi ? (delivery.callback_url ?? null) : null,
     turns_per_hour_override: value.turns_per_hour_override ?? null,
     error_reply_text: value.error_reply_text ?? null,
+    // The door screen supplies the state binding; the schema-driven body carries none.
+    state_binding: null,
   };
 }

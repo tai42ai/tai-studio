@@ -29,9 +29,29 @@ const detail = {
   fixed_kwargs: { city: 'Paris' },
 };
 
+/** One version row whose current body carries `state_binding` (default: none). */
+function currentVersion(stateBinding: unknown = null) {
+  return {
+    version: 2,
+    body: { ...detail, state_binding: stateBinding },
+    tags: [],
+    created_at: 'now',
+    is_current: true,
+  };
+}
+
 function client(overrides: StubApiClient = {}): StubApiClient {
   return {
     listExtensions: vi.fn().mockResolvedValue([{ name: 'chain', kind: 'wrapper' }]),
+    // The active binding rides the current version body; the dialog reads it from here.
+    listPresetVersions: vi.fn().mockResolvedValue([currentVersion(null)]),
+    listStates: vi.fn().mockResolvedValue([]),
+    listStateTemplates: vi.fn().mockResolvedValue([]),
+    getToolSchema: vi.fn().mockResolvedValue({
+      input: { type: 'object', properties: {}, required: [] },
+      output: null,
+      description: null,
+    }),
     savePresetVersion: vi.fn().mockResolvedValue({
       version: 3,
       body: { ...detail, output_schema: null },
@@ -326,5 +346,146 @@ describe('SaveVersionDialog', () => {
     });
 
     expect(screen.queryByText(/unknown extension/i)).toBeNull();
+  });
+
+  describe('state binding', () => {
+    const boundAttach = {
+      state: 'counters',
+      templates: [],
+      subject_expr: '.subject',
+      scope_expr: null,
+      input_injections: [],
+      updates: [],
+    };
+
+    it('prefills the editor from the current version body binding', async () => {
+      // The active binding rides the version body, not the record — the dialog reads it
+      // from the `is_current` row and opens the disclosure on a non-empty binding.
+      renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+        client: client({
+          listPresetVersions: vi
+            .fn()
+            .mockResolvedValue([currentVersion({ states: [boundAttach] })]),
+          listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
+        }),
+      });
+
+      // The seeded state row is present (its Remove control names the bound state).
+      expect(
+        await screen.findByRole('button', { name: 'Remove state counters' }),
+      ).toBeInTheDocument();
+    });
+
+    it('carries an edited binding into the save-version body', async () => {
+      const user = userEvent.setup();
+      const savePresetVersion = vi.fn().mockResolvedValue({
+        version: 3,
+        body: { ...detail, state_binding: null },
+        tags: [],
+        created_at: 'now',
+        is_current: true,
+      });
+      renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+        client: client({
+          savePresetVersion,
+          listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
+        }),
+      });
+
+      // Seed is empty (no binding); attach a state, then save.
+      await user.click(await screen.findByRole('button', { name: 'Bind state (optional)' }));
+      await user.click(screen.getByRole('button', { name: 'Attach a state' }));
+      await user.click(screen.getByRole('combobox', { name: 'State' }));
+      await user.click(await screen.findByRole('option', { name: 'counters' }));
+      await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+
+      expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', {
+        state_binding: {
+          states: [
+            {
+              state: 'counters',
+              templates: [],
+              subject_expr: '',
+              scope_expr: null,
+              input_injections: [],
+              updates: [],
+            },
+          ],
+        },
+      });
+    });
+
+    it('sends an explicit null when the seeded binding is removed', async () => {
+      const user = userEvent.setup();
+      const savePresetVersion = vi.fn().mockResolvedValue({
+        version: 3,
+        body: { ...detail, state_binding: null },
+        tags: [],
+        created_at: 'now',
+        is_current: true,
+      });
+      renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+        client: client({
+          savePresetVersion,
+          listPresetVersions: vi
+            .fn()
+            .mockResolvedValue([currentVersion({ states: [boundAttach] })]),
+          listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
+        }),
+      });
+
+      // Remove the seeded state → the editor emits null → the save sends an explicit
+      // clear (distinct from an omitted key, which would carry the active binding forward).
+      await user.click(await screen.findByRole('button', { name: 'Remove state counters' }));
+      await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+
+      expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', { state_binding: null });
+    });
+
+    it('validate — sends an explicit null state_binding when the seeded binding is cleared', async () => {
+      const user = userEvent.setup();
+      const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
+      renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+        client: client({
+          validatePreset,
+          listPresetVersions: vi
+            .fn()
+            .mockResolvedValue([currentVersion({ states: [boundAttach] })]),
+          listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
+        }),
+      });
+
+      // Remove the seeded binding, then validate: the changed binding rides the draft as
+      // an explicit clear (an untouched one would be omitted → carried forward).
+      await user.click(await screen.findByRole('button', { name: 'Remove state counters' }));
+      await user.click(screen.getByRole('button', { name: 'Validate' }));
+
+      expect(validatePreset).toHaveBeenCalledWith({
+        name: 'paris_weather',
+        fixed_kwargs: { city: 'Paris' },
+        extensions: [['chain']],
+        output_schema: null,
+        state_binding: null,
+      });
+    });
+
+    it('validate — renders a state_binding verdict issue verbatim', async () => {
+      const user = userEvent.setup();
+      const validatePreset = vi.fn().mockResolvedValue({
+        valid: false,
+        error: 'invalid state_binding: state "counters" is not declared',
+      });
+      renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+        client: client({ validatePreset }),
+      });
+
+      await user.click(await screen.findByRole('button', { name: 'Validate' }));
+
+      const verdict = await screen.findByText(
+        'invalid state_binding: state "counters" is not declared',
+      );
+      expect(verdict.closest('[role="status"]')).not.toBeNull();
+      expect(screen.getByText('Draft is invalid')).toBeInTheDocument();
+    });
   });
 });

@@ -4,13 +4,20 @@
  * same tuples — no drift.
  *
  * The management list is keyed `['states', 'list']`; a single state's composite read
- * (declaration + mounts + regimes) `['states', 'detail', name]`, its stats
+ * (declaration + attachments + regimes) `['states', 'detail', name]`, its stats
  * `['states', 'stats', name]`, and its consumers `['states', 'consumers', name]`. A
  * per-subject record and its audit trail carry the subject's four-part identity in the
- * key so two subjects of the same state never share a cache slot. The module-document
+ * key so two subjects of the same state never share a cache slot. The template-document
  * catalog and the conversation-target list are SIBLINGS of the state list, so
  * invalidating one state never refetches them.
  */
+// The state list and state-template catalogs are also read by every state-binding door
+// screen (presets, routes, hooks, schedules), which cannot import this feature — so the
+// two shared keys live in the SDK seam and are re-exported here for the states feature's
+// own reads and invalidations. Their values stay `['states','list']` /
+// `['states','state-templates']`, siblings under this file's root.
+export { statesListKey, stateTemplatesKey } from '@tai42/studio-sdk';
+
 /** The root segment every states query key shares. */
 export const STATES_KEY_ROOT = 'states';
 
@@ -22,10 +29,7 @@ interface SubjectLike {
   readonly key: string;
 }
 
-/** Key for the state management list. */
-export const statesListKey = [STATES_KEY_ROOT, 'list'] as const;
-
-/** Key for one state's composite read (declaration + mounts + regimes), by name. */
+/** Key for one state's composite read (declaration + attachments + regimes), by name. */
 export function stateDetailKey(name: string): readonly [typeof STATES_KEY_ROOT, 'detail', string] {
   return [STATES_KEY_ROOT, 'detail', name];
 }
@@ -35,6 +39,13 @@ export function stateStatsKey(name: string): readonly [typeof STATES_KEY_ROOT, '
   return [STATES_KEY_ROOT, 'stats', name];
 }
 
+/** Key for one state's template attachments (`GET /api/states/{name}/attachments`), by name. */
+export function stateAttachmentsKey(
+  name: string,
+): readonly [typeof STATES_KEY_ROOT, 'attachments', string] {
+  return [STATES_KEY_ROOT, 'attachments', name];
+}
+
 /** Key for one state's consumers (the union of registered listers), by name. */
 export function stateConsumersKey(
   name: string,
@@ -42,8 +53,12 @@ export function stateConsumersKey(
   return [STATES_KEY_ROOT, 'consumers', name];
 }
 
-/** Key for the state-module document catalog (`GET /api/state-modules`). */
-export const stateModulesKey = [STATES_KEY_ROOT, 'modules'] as const;
+/** Key for one state-template document (`GET /api/state-templates/{name}`), by name. */
+export function stateTemplateDetailKey(
+  name: string,
+): readonly [typeof STATES_KEY_ROOT, 'state-template', string] {
+  return [STATES_KEY_ROOT, 'state-template', name];
+}
 
 /** Key for a keyset page of a state's subjects of one kind. */
 export function stateSubjectsKey(

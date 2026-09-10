@@ -21,7 +21,7 @@ function detail(over: Record<string, unknown> = {}): StateDetail {
     retention_days: null,
     effective_schema: { type: 'object' },
     regimes: [],
-    mounts: [],
+    attachments: [],
     ...over,
   };
 }
@@ -105,14 +105,14 @@ describe('DeclarationTab', () => {
     });
   });
 
-  it('shows the mounted subtrees read-only and gates on a 501', async () => {
-    const withMount = detail({
-      mounts: [{ module: 'notes', path: ['notes'], parameters: {}, declarations: {} }],
+  it('shows the attached subtrees read-only and gates on a 501', async () => {
+    const withAttachment = detail({
+      attachments: [{ template: 'notes', path: ['notes'], parameters: {}, declarations: {} }],
     });
-    renderWithProviders(<DeclarationTab state={withMount} />, {
+    renderWithProviders(<DeclarationTab state={withAttachment} />, {
       client: { getStateStats: vi.fn().mockResolvedValue({ records: 0 }) },
     });
-    expect(await screen.findByText('Mounted subtrees')).toBeInTheDocument();
+    expect(await screen.findByText('Attached subtrees')).toBeInTheDocument();
     expect(screen.getAllByText('notes').length).toBeGreaterThan(0);
   });
 

@@ -32,9 +32,12 @@ export interface RouteSearchByToken {
   // for deep-linking and reload.
   states: {
     state?: string;
-    tab?: 'declaration' | 'modules' | 'records' | 'consumers';
+    tab?: 'declaration' | 'templates' | 'records' | 'consumers';
     subject?: string;
     target?: string;
+    // `template` opens one state-template document (its Template / Jq tabs) in place
+    // of the state list — a read-only view of the whole uploaded document.
+    template?: string;
   };
   extensions: Record<string, never>;
   interactions: Record<string, never>;

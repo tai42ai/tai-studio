@@ -197,6 +197,8 @@ export interface CreatePresetBody {
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
+  // The optional door-layer state binding applied around every run of this preset.
+  readonly state_binding?: s.StateBinding | null;
 }
 
 /**
@@ -205,10 +207,11 @@ export interface CreatePresetBody {
  * sentinel is uniform: omitted carries the active version's value forward; an
  * explicit `[]` clears `extensions`, and an explicit `null` clears `output_schema`
  * or `input_schema`. `input_schema` is the optional author-set input JSON Schema and
- * follows the same carry-forward sentinel as `output_schema`. `description` carries
- * forward when omitted; an explicit non-empty string sets it (the API rejects an
- * explicit empty one). Categorization tags are not a version field — they live in the
- * tool_meta overlay.
+ * follows the same carry-forward sentinel as `output_schema`. `state_binding` is the
+ * optional door-layer binding and follows the same sentinel: omitted carries the active
+ * one forward, an explicit `null` clears it. `description` carries forward when omitted;
+ * an explicit non-empty string sets it (the API rejects an explicit empty one).
+ * Categorization tags are not a version field — they live in the tool_meta overlay.
  */
 export interface SavePresetVersionBody {
   readonly fixed_kwargs?: Record<string, unknown>;
@@ -216,6 +219,7 @@ export interface SavePresetVersionBody {
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
+  readonly state_binding?: s.StateBinding | null;
 }
 
 /**
@@ -233,6 +237,10 @@ export interface ValidatePresetBody {
   readonly extensions?: readonly s.PresetExtensionElement[][];
   readonly output_schema?: Record<string, unknown> | null;
   readonly input_schema?: Record<string, unknown> | null;
+  // The optional door-layer state binding to dry-run — validated (never mounted) by the
+  // same checks the write would run. In VERSION mode it follows the save-version sentinel:
+  // omitted carries the active binding forward, an explicit `null` clears it.
+  readonly state_binding?: s.StateBinding | null;
 }
 
 /**
@@ -520,8 +528,8 @@ export interface StateDeclarationBody {
   readonly retention_days?: number | null;
 }
 
-/** A state-module document write body (`PUT /api/state-modules/{name}`, the platform half). */
-export interface StateModuleBody {
+/** A state-template document write body (`PUT /api/state-templates/{name}`, the platform half). */
+export interface StateTemplateBody {
   readonly name: string;
   readonly description?: string;
   readonly parameters?: Record<string, unknown>;
@@ -531,11 +539,15 @@ export interface StateModuleBody {
   readonly trace?: Record<string, unknown>;
 }
 
-/** A module mount / re-mount body (`PUT|PATCH /api/states/{name}/mounts/{module}`). */
-export interface StateMountBody {
+/** A template attach / re-attach body (`PUT|PATCH /api/states/{name}/attachments/{template}`). */
+export interface StateAttachmentBody {
   readonly path?: string[];
   readonly parameters?: Record<string, unknown>;
   readonly declarations?: Record<string, unknown>;
+  // Reconcile directive for a re-attach that would orphan open records: retry with
+  // `{ orphans: "close", resolution: "<name>" }` to close them (the server refuses
+  // without it). Omitted on a first attach.
+  readonly options?: Record<string, unknown>;
 }
 
 /** The four-part subject a record route addresses in its path. */
@@ -563,6 +575,22 @@ function stateRecordPath(name: string, subject: StateSubjectRef): string {
     `${encodeSegment(subject.target_kind)}/${encodeSegment(subject.target_name)}/` +
     `${encodeSegment(subject.kind)}/${encodeSegment(subject.key)}`
   );
+}
+
+/**
+ * Encode a template jq's declared params as JSON query values: the record `template-jq`
+ * route reads each `?<param>=<json>` as a JSON-decoded argument, so a string, number,
+ * array or object round-trips faithfully. An `undefined` value is dropped (an
+ * omitted optional param).
+ */
+function encodeJqParams(params?: Record<string, unknown>): Record<string, string> | undefined {
+  if (params === undefined) return undefined;
+  const query: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue;
+    query[key] = JSON.stringify(value);
+  }
+  return query;
 }
 
 export function createApiClient(config: ApiConfig) {
@@ -676,7 +704,7 @@ export function createApiClient(config: ApiConfig) {
     // -- states --------------------------------------------------------------
     // A state is a declared JSON document, one per subject. The list is the
     // management population; a single state read composes the declaration with its
-    // effective schema, regimes and mounts. Every record route addresses its subject
+    // effective schema, regimes and attachments. Every record route addresses its subject
     // as four percent-encoded path segments (see `stateRecordPath`).
     listStates: (signal?: AbortSignal) => req('/api/states', s.stateList, { signal }),
     getState: (name: string, signal?: AbortSignal) =>
@@ -693,28 +721,33 @@ export function createApiClient(config: ApiConfig) {
       req(`/api/states/${encodeSegment(name)}`, s.stateDeleted, { method: 'DELETE' }),
     getStateStats: (name: string, signal?: AbortSignal) =>
       req(`/api/states/${encodeSegment(name)}/stats`, s.stateStats, { signal }),
-    // -- state mounts --------------------------------------------------------
-    listStateMounts: (name: string, signal?: AbortSignal) =>
-      req(`/api/states/${encodeSegment(name)}/mounts`, s.stateMountList, { signal }),
-    getStateMount: (name: string, module: string, signal?: AbortSignal) =>
-      req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateMount, {
-        signal,
-      }),
-    mountStateModule: (name: string, module: string, body: StateMountBody) =>
-      req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateMounted, {
-        method: 'PUT',
-        body,
-      }),
-    patchStateMount: (name: string, module: string, body: StateMountBody) =>
+    // -- state template attachments ------------------------------------------
+    listStateAttachments: (name: string, signal?: AbortSignal) =>
+      req(`/api/states/${encodeSegment(name)}/attachments`, s.stateAttachmentList, { signal }),
+    getStateAttachment: (name: string, template: string, signal?: AbortSignal) =>
       req(
-        `/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`,
-        s.stateMountUpdated,
+        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        s.stateAttachment,
+        { signal },
+      ),
+    attachStateTemplate: (name: string, template: string, body: StateAttachmentBody) =>
+      req(
+        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        s.stateAttached,
+        { method: 'PUT', body },
+      ),
+    patchStateAttachment: (name: string, template: string, body: StateAttachmentBody) =>
+      req(
+        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        s.stateAttachmentUpdated,
         { method: 'PATCH', body },
       ),
-    unmountStateModule: (name: string, module: string) =>
-      req(`/api/states/${encodeSegment(name)}/mounts/${encodeSegment(module)}`, s.stateUnmounted, {
-        method: 'DELETE',
-      }),
+    detachStateTemplate: (name: string, template: string) =>
+      req(
+        `/api/states/${encodeSegment(name)}/attachments/${encodeSegment(template)}`,
+        s.stateDetached,
+        { method: 'DELETE' },
+      ),
     // -- state subjects + records -------------------------------------------
     listStateSubjects: (
       name: string,
@@ -740,11 +773,11 @@ export function createApiClient(config: ApiConfig) {
     // A subject with no document yet reads as `null` (a 200 `{data: null}`, the record
     // page's Create path) — never an error, so the schema is nullable.
     getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) =>
-      req(stateRecordPath(name, subject), s.recordView.nullable(), { signal }),
+      req(stateRecordPath(name, subject), s.stateRecord.nullable(), { signal }),
     putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) =>
-      req(stateRecordPath(name, subject), s.recordView, { method: 'PUT', body: data }),
+      req(stateRecordPath(name, subject), s.stateRecord, { method: 'PUT', body: data }),
     patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) =>
-      req(stateRecordPath(name, subject), s.recordView, { method: 'PATCH', body: data }),
+      req(stateRecordPath(name, subject), s.stateRecord, { method: 'PATCH', body: data }),
     applyStateRecord: (
       name: string,
       subject: StateSubjectRef,
@@ -754,6 +787,35 @@ export function createApiClient(config: ApiConfig) {
         method: 'POST',
         body: { ops },
       }),
+    // Evaluate a template jq over the subject: each declared param is JSON-encoded into
+    // the query string (`?<param>=<json>`); the response is `{name, purpose, value}`. An
+    // `attachment.name` jq is percent-encoded as one path segment.
+    evalTemplateJq: (
+      name: string,
+      subject: StateSubjectRef,
+      jqName: string,
+      params?: Record<string, unknown>,
+      signal?: AbortSignal,
+    ) =>
+      req(
+        `${stateRecordPath(name, subject)}/template-jq/${encodeSegment(jqName)}`,
+        s.templateJqResult,
+        { signal, query: encodeJqParams(params) },
+      ),
+    // Apply an `update`-purpose template jq to the subject: `input` is the jq's argument,
+    // `op_id` its idempotency key (a replay is a no-op). The jq lands its op batch through
+    // the apply chokepoint. An `attachment.name` jq is percent-encoded as one path segment.
+    applyTemplateJq: (
+      name: string,
+      subject: StateSubjectRef,
+      jqName: string,
+      body?: { input?: unknown; op_id?: string },
+    ) =>
+      req(
+        `${stateRecordPath(name, subject)}/template-jq/${encodeSegment(jqName)}`,
+        s.templateJqApplyResult,
+        { method: 'POST', body: body ?? {} },
+      ),
     deleteStateRecord: (name: string, subject: StateSubjectRef) =>
       req(stateRecordPath(name, subject), s.recordErased, { method: 'DELETE' }),
     // `mode` is required server-side (`switch` drops, `merge` combines); the fold returns
@@ -780,19 +842,21 @@ export function createApiClient(config: ApiConfig) {
       }),
     stateConsumers: (name: string, signal?: AbortSignal) =>
       req(`/api/states/${encodeSegment(name)}/consumers`, s.stateConsumers, { signal }),
-    // -- state-module documents (top-level sibling collection) ---------------
-    listStateModules: (signal?: AbortSignal) =>
-      req('/api/state-modules', s.stateModuleList, { signal }),
-    getStateModule: (name: string, signal?: AbortSignal) =>
-      req(`/api/state-modules/${encodeSegment(name)}`, s.stateModuleDocument, { signal }),
-    putStateModule: (name: string, body: StateModuleBody, replace?: boolean) =>
-      req(`/api/state-modules/${encodeSegment(name)}`, s.stateModuleDocument, {
+    // -- state-template documents (top-level sibling collection) ---------------
+    listStateTemplates: (signal?: AbortSignal) =>
+      req('/api/state-templates', s.stateTemplateList, { signal }),
+    getStateTemplate: (name: string, signal?: AbortSignal) =>
+      req(`/api/state-templates/${encodeSegment(name)}`, s.stateTemplateDocument, { signal }),
+    putStateTemplate: (name: string, body: StateTemplateBody, replace?: boolean) =>
+      req(`/api/state-templates/${encodeSegment(name)}`, s.stateTemplateDocument, {
         method: 'PUT',
         body,
         query: replace === true ? { replace: 'true' } : undefined,
       }),
-    deleteStateModule: (name: string) =>
-      req(`/api/state-modules/${encodeSegment(name)}`, s.stateModuleDeleted, { method: 'DELETE' }),
+    deleteStateTemplate: (name: string) =>
+      req(`/api/state-templates/${encodeSegment(name)}`, s.stateTemplateDeleted, {
+        method: 'DELETE',
+      }),
     // -- state retention -----------------------------------------------------
     pruneStateRetention: () =>
       req('/api/state-retention/prune', s.stateRetentionPruned, { method: 'POST', body: {} }),
@@ -1555,6 +1619,8 @@ export function createApiClient(config: ApiConfig) {
       tool_name: string;
       tool_kwargs: Record<string, unknown>;
       schedule_kwargs: Record<string, unknown>;
+      // The optional door-layer state binding applied around every fire of this schedule.
+      state_binding?: s.StateBinding | null;
     }) => req('/api/schedules', s.jsonValue, { method: 'POST', body }),
     deleteSchedule: (name: string) =>
       req(`/api/schedules/${encodeSegment(name)}`, s.jsonValue, { method: 'DELETE' }),

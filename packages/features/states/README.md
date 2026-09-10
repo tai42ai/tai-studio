@@ -2,7 +2,7 @@
 
 The States surface for the Studio: a master/detail page over the platform's
 subject-keyed state store. Declare a state (base JSON schema, subject kinds,
-retention), mount reusable module documents, look up and edit a subject's record,
+retention), attach reusable state-template documents, look up and edit a subject's record,
 fold subjects together, and read a record's write audit trail. A Consumers tab
 lists everything that binds a state (flows, hooks, schedules, agents). Depends only
 on `@tai42/studio-sdk`, `@tai42/api-client`, and TanStack Query.

@@ -27,7 +27,7 @@
  */
 import { useEffect, useId, useMemo, useState, type ReactNode, type SyntheticEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreatePresetBody, PresetExtensionElement } from '@tai42/api-client';
+import type { CreatePresetBody, PresetExtensionElement, StateBinding } from '@tai42/api-client';
 import {
   Button,
   Dialog,
@@ -37,14 +37,21 @@ import {
   Field,
   SchemaEditor,
   Spinner,
+  StateBindingSection,
   Textarea,
   TextInput,
   ToolPicker,
   XCircleIcon,
   errorMessage,
   featureDisabledMessage,
+  fieldPathsFromSchema,
   hiddenToolNames,
   isFeatureDisabled,
+  statesCatalogFromList,
+  templatesCatalogFromList,
+  statesListKey,
+  stateTemplatesKey,
+  type BindingSourceSchemas,
   toolBadgesByName,
   toolsListKey,
   useApi,
@@ -109,6 +116,24 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const [outputSchema, setOutputSchema] = useState<SchemaEditorChange>({
     schema: null,
     valid: true,
+  });
+  // The optional door-layer state binding applied around every run of this preset.
+  const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
+  const statesQuery = useQuery({
+    queryKey: statesListKey,
+    queryFn: ({ signal }) => api.listStates(signal),
+  });
+  const templatesQuery = useQuery({
+    queryKey: stateTemplatesKey,
+    queryFn: ({ signal }) => api.listStateTemplates(signal),
+  });
+  // The base tool's declared input/output schema feeds the binding editor's field
+  // pickers (the run output/input roots). The preset's own output_schema, when set,
+  // narrows the output root.
+  const baseSchemaQuery = useQuery({
+    queryKey: ['state-binding', 'tool-schema', base],
+    queryFn: ({ signal }) => api.getToolSchema(base ?? '', signal),
+    enabled: base !== null && base !== '',
   });
   const [kwargsText, setKwargsText] = useState('{}');
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
@@ -234,6 +259,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
     combos,
     kwargsText,
     outputSchema: outputSchema.schema,
+    stateBinding,
   });
   useEffect(() => {
     resetValidate();
@@ -258,6 +284,8 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
       ...(combos.length > 0 ? { extensions: combos } : {}),
       // OMIT output_schema unless the author set one (a create carries none by default).
       ...(outputSchema.schema !== null ? { output_schema: outputSchema.schema } : {}),
+      // OMIT state_binding unless the author bound a state.
+      ...(stateBinding !== null ? { state_binding: stateBinding } : {}),
     };
   };
 
@@ -478,6 +506,27 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           label="Output schema"
           description="An optional JSON Schema the preset enforces on its tool's structured output."
           idPrefix="create-preset-output-schema"
+        />
+
+        <StateBindingSection
+          value={stateBinding}
+          onChange={setStateBinding}
+          statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
+          templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
+          sources={
+            {
+              input: fieldPathsFromSchema(baseSchemaQuery.data?.input),
+              output: fieldPathsFromSchema(outputSchema.schema ?? baseSchemaQuery.data?.output),
+              loading: base !== null && base !== '' && baseSchemaQuery.isPending,
+              error: baseSchemaQuery.isError ? "Couldn't load the tool's fields." : undefined,
+            } satisfies BindingSourceSchemas
+          }
+          loading={statesQuery.isPending || templatesQuery.isPending}
+          error={
+            statesQuery.isError || templatesQuery.isError
+              ? errorMessage(statesQuery.error ?? templatesQuery.error)
+              : undefined
+          }
         />
 
         {/* A store-off refusal renders the muted OFF note below, never here: the red

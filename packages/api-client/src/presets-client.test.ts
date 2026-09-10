@@ -161,6 +161,84 @@ describe('preset client transport', () => {
     });
   });
 
+  it('savePresetVersion serializes a SET state_binding exactly', async () => {
+    const version = {
+      version: 5,
+      body: {
+        base_tool: 'weather',
+        description: '',
+        fixed_kwargs: {},
+        extensions: [],
+        output_schema: null,
+        input_schema: null,
+        state_binding: null,
+      },
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    };
+    const binding = {
+      states: [
+        {
+          state: 'account',
+          templates: [],
+          subject_expr: '.subject',
+          scope_expr: null,
+          input_injections: [],
+          updates: [],
+        },
+      ],
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: version }));
+    await client.savePresetVersion('paris_weather', { state_binding: binding });
+    expect(captured[0]?.body).toEqual({ state_binding: binding });
+  });
+
+  it('savePresetVersion omits state_binding from the body when the key is absent (carry-forward)', async () => {
+    const version = {
+      version: 6,
+      body: {
+        base_tool: 'weather',
+        description: '',
+        fixed_kwargs: {},
+        extensions: [],
+        output_schema: null,
+        input_schema: null,
+        state_binding: null,
+      },
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: version }));
+    await client.savePresetVersion('paris_weather', { description: 'refreshed' });
+    expect(captured[0]?.body).not.toHaveProperty('state_binding');
+  });
+
+  it('savePresetVersion sends an explicit null state_binding when clearing', async () => {
+    const version = {
+      version: 7,
+      body: {
+        base_tool: 'weather',
+        description: '',
+        fixed_kwargs: {},
+        extensions: [],
+        output_schema: null,
+        input_schema: null,
+        state_binding: null,
+      },
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: version }));
+    await client.savePresetVersion('paris_weather', { state_binding: null });
+    expect(captured[0]?.body).toEqual({ state_binding: null });
+    expect(Object.prototype.hasOwnProperty.call(captured[0]?.body as object, 'state_binding')).toBe(
+      true,
+    );
+  });
+
   it('rollbackPreset POSTs {version} to the rollback route', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({ data: { name: 'paris_weather', active_version: 2 } }),
@@ -279,6 +357,53 @@ describe('preset client transport', () => {
     expect(captured[0]?.url).toBe('/api/presets/validate');
     expect(captured[0]?.body).toEqual({ name: 'paris_weather', base_tool: 'weather' });
     expect(out).toEqual({ valid: false, error: 'base tool missing' });
+  });
+
+  it('validatePreset carries a SET state_binding through the draft body', async () => {
+    const binding = {
+      states: [
+        {
+          state: 'account',
+          templates: [],
+          subject_expr: '.subject',
+          scope_expr: null,
+          input_injections: [],
+          updates: [],
+        },
+      ],
+    };
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { valid: true, error: null } }),
+    );
+    await client.validatePreset({
+      name: 'paris_weather',
+      base_tool: 'weather',
+      state_binding: binding,
+    });
+    expect(captured[0]?.body).toEqual({
+      name: 'paris_weather',
+      base_tool: 'weather',
+      state_binding: binding,
+    });
+  });
+
+  it('validatePreset omits state_binding from the body when the key is absent', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { valid: true, error: null } }),
+    );
+    await client.validatePreset({ name: 'paris_weather', base_tool: 'weather' });
+    expect(captured[0]?.body).not.toHaveProperty('state_binding');
+  });
+
+  it('validatePreset sends an explicit null state_binding when clearing (version mode)', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { valid: true, error: null } }),
+    );
+    await client.validatePreset({ name: 'paris_weather', state_binding: null });
+    expect(captured[0]?.body).toEqual({ name: 'paris_weather', state_binding: null });
+    expect(Object.prototype.hasOwnProperty.call(captured[0]?.body as object, 'state_binding')).toBe(
+      true,
+    );
   });
 
   it('setPresetVersionTags PUTs {tags} to the version-tags route', async () => {

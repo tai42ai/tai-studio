@@ -132,8 +132,10 @@ export async function apiRequest<S extends z.ZodType>(
   if (!response.ok) {
     const { message, code } = extractError(payload);
     const text = message ?? (response.statusText || 'request failed');
-    if (response.status === 409) throw new ApiConflictError(text);
-    throw new ApiError(text, response.status, code, retryAfter);
+    // The parsed body rides the error so a caller can key a follow-up on its structured
+    // fields (e.g. a reconcile refusal's `orphans`), never on the message prose.
+    if (response.status === 409) throw new ApiConflictError(text, payload);
+    throw new ApiError(text, response.status, code, retryAfter, payload);
   }
 
   if (!isDataEnvelope(payload)) {

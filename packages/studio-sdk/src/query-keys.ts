@@ -32,3 +32,18 @@ export const subMcpKey = ['sub-mcp'] as const;
 
 /** The api-key payloads; read by settings AND the hooks execution-key picker. */
 export const tokensPayloadKey = ['auth-tokens-payload'] as const;
+
+/**
+ * The state catalog (`GET /api/states`). The states feature owns it, and every door
+ * screen that hosts the state-binding editor (a preset, a route, a hook, a schedule)
+ * reads the same catalog to populate the binding's state picker — so both key the one
+ * authoritative tuple and a single fetch serves both.
+ */
+export const statesListKey = ['states', 'list'] as const;
+
+/**
+ * The state-template document catalog (`GET /api/state-templates`). Read by the states
+ * feature AND every state-binding door screen (the templates a binding attaches),
+ * keyed here so the two never fetch the same catalog under diverging tuples.
+ */
+export const stateTemplatesKey = ['states', 'state-templates'] as const;

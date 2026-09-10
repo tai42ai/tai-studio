@@ -22,7 +22,7 @@ function client(over: Partial<StubApiClient> = {}): StubApiClient {
       retention_days: null,
       effective_schema: {},
       regimes: [],
-      mounts: [],
+      attachments: [],
     }),
     getStateStats: vi.fn().mockResolvedValue({ records: 0 }),
     getStateRecord: vi.fn().mockResolvedValue({
