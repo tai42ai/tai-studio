@@ -19,7 +19,7 @@ const state = {
   subject_kinds: ['person', 'thread'],
   default_subject_kind: 'person',
   retention_days: null,
-  mounts: [],
+  attachments: [],
 } as unknown as StateDetail;
 
 const subject = { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'p-1' };

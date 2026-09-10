@@ -21,7 +21,7 @@ function detail(over: Record<string, unknown> = {}) {
     retention_days: null,
     effective_schema: { type: 'object' },
     regimes: [],
-    mounts: [],
+    attachments: [],
     ...over,
   };
 }

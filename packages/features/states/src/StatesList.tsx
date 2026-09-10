@@ -6,7 +6,7 @@
  * read never walls the list.
  *
  * `Declare state` opens the create form (the declaration editor in create mode).
- * `Upload` reads a `.json` state or state-module document and PUTs it by its `kind`; a
+ * `Upload` reads a `.json` state or state-template document and PUTs it by its `kind`; a
  * name clash (409) prompts a danger Replace confirm. A feature that is OFF (no store)
  * shows the muted `FeatureDisabled` note in place of the list.
  */
@@ -34,10 +34,10 @@ import {
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
-import { ApiError, type StateListItem, type StateModuleBody } from '@tai42/api-client';
+import { ApiError, type StateListItem, type StateTemplateBody } from '@tai42/api-client';
 
 import { DeclareStateDialog } from './DeclarationTab';
-import { stateConsumersKey, stateStatsKey, statesListKey } from './keys';
+import { stateAttachmentsKey, stateConsumersKey, stateStatsKey, statesListKey } from './keys';
 
 /** The one platform-validated subject kind; rendered as a primary badge. */
 const PERSON_KIND = 'person';
@@ -54,7 +54,7 @@ function formatWhen(value: string | null): string {
 /** A parsed upload awaiting a name-clash decision (a 409 the operator must confirm). */
 interface PendingReplace {
   readonly name: string;
-  readonly document: 'state' | 'state-module';
+  readonly document: 'state' | 'state-template';
   readonly body: Record<string, unknown>;
 }
 
@@ -94,6 +94,25 @@ function RecordsCell({ name }: { readonly name: string }): ReactNode {
     return <span title={errorMessage(query.error)}>—</span>;
   }
   return <>{query.data.records}</>;
+}
+
+/**
+ * The lazy Templates cell: one attachments read per visible row (`GET …/attachments`) —
+ * the list row carries no count. A `Skeleton` shows while it loads; a failure renders `—`
+ * with the error on `title` rather than walling the list. Its query key is invalidated by
+ * the Templates tab on every attach/detach, so the count stays live.
+ */
+function TemplatesCell({ name }: { readonly name: string }): ReactNode {
+  const api = useApi();
+  const query = useQuery({
+    queryKey: stateAttachmentsKey(name),
+    queryFn: ({ signal }) => api.listStateAttachments(name, signal),
+  });
+  if (query.isPending) return <Skeleton height={16} />;
+  if (query.isError) {
+    return <span title={errorMessage(query.error)}>—</span>;
+  }
+  return <>{query.data.length}</>;
 }
 
 function StateRow({
@@ -160,6 +179,9 @@ function StateRow({
             <RecordsCell name={state.name} />
           </TD>
           <TD>
+            <TemplatesCell name={state.name} />
+          </TD>
+          <TD>
             <ConsumersCell name={state.name} />
           </TD>
           <TD style={{ whiteSpace: 'nowrap' }} title={state.updated_at ?? undefined}>
@@ -203,13 +225,13 @@ export function StatesList({ selected }: { readonly selected: string | undefined
   const fileRef = useRef<HTMLInputElement>(null);
 
   const putDocument = async (
-    document: 'state' | 'state-module',
+    document: 'state' | 'state-template',
     name: string,
     body: Record<string, unknown>,
     replace: boolean,
   ): Promise<void> => {
-    if (document === 'state-module') {
-      await api.putStateModule(name, body as unknown as StateModuleBody, replace);
+    if (document === 'state-template') {
+      await api.putStateTemplate(name, body as unknown as StateTemplateBody, replace);
     } else {
       // The declaration PUT is a plain upsert (no replace flag); it overwrites an
       // additive change and refuses a narrowing over records with a 409.
@@ -240,21 +262,21 @@ export function StatesList({ selected }: { readonly selected: string | undefined
       if (name === '') {
         throw new Error('This file has no `name`.');
       }
-      let document: 'state' | 'state-module';
-      if (kind === 'state-module') {
-        document = 'state-module';
+      let document: 'state' | 'state-template';
+      if (kind === 'state-template') {
+        document = 'state-template';
       } else if (kind === 'state') {
         document = 'state';
       } else {
-        throw new Error('This file has no `kind` — expected state or state-module.');
+        throw new Error('This file has no `kind` — expected state or state-template.');
       }
       try {
         await putDocument(document, name, body, false);
       } catch (error) {
-        // Only a module document has a force-replace door (a 409 `module_exists` the
-        // operator confirms). A state's 409 is a genuine conflict (a narrowing over
+        // Only a state-template document has a force-replace door (a 409 `template_exists`
+        // the operator confirms). A state's 409 is a genuine conflict (a narrowing over
         // records, or a stranding kind removal) with no replace flag — surface it.
-        if (error instanceof ApiError && error.status === 409 && document === 'state-module') {
+        if (error instanceof ApiError && error.status === 409 && document === 'state-template') {
           setPendingReplace({ name, document, body });
           return;
         }
@@ -347,6 +369,7 @@ export function StatesList({ selected }: { readonly selected: string | undefined
                   {compact ? null : (
                     <>
                       <TH>Records</TH>
+                      <TH>Templates</TH>
                       <TH>Consumers</TH>
                       <TH>Updated</TH>
                     </>
@@ -434,7 +457,7 @@ function ReplaceConfirm({
         if (!busy) onClose();
       }}
     >
-      A {pending.document === 'state-module' ? 'state-module' : 'state'} named{' '}
+      A {pending.document === 'state-template' ? 'state-template' : 'state'} named{' '}
       <strong>{pending.name}</strong> already exists. Replace it with the uploaded document?
     </ConfirmDialog>
   );

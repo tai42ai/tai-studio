@@ -13,7 +13,7 @@ catalog:
   '@testing-library/user-event': ^14.6.6
   '@types/node': ^22.10.5
   '@types/react': ^19.2.18
-  '@types/react-dom': ^19.2.5
+  '@types/react-dom': ^19.2.7
   '@vitejs/plugin-react': ^4.7.0
   '@vitest/coverage-v8': ^5.0.0
   eslint: ^9.17.0
@@ -47,8 +47,11 @@ overrides:
   # postcss source-map path traversal, patched at 8.5.18.
   postcss: '>=8.5.18'
   # js-yaml prototype-pollution / special-key handling in the 4.x line, patched
-  # at 4.3.1. Dev-only, reached transitively through eslint -> @eslint/eslintrc.
-  'js-yaml@4': '4.3.1'
+  # at 4.3.2. Dev-only, reached transitively through eslint -> @eslint/eslintrc.
+  'js-yaml@4': '4.3.2'
+  # baseline-browser-mapping data-integrity advisory in the 2.x line, patched at
+  # 2.11.0. Dev-only, reached transitively through browserslist.
+  'baseline-browser-mapping': '>=2.11.0'
 
 minimumReleaseAgeExclude:
   - '@tai42/jq-studio@0.1.0 || 0.1.1 || 0.1.2 || 0.1.3'

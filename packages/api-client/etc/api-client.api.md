@@ -118,7 +118,7 @@ export interface ApiConfig {
 
 // @public
 export class ApiConflictError extends ApiError {
-    constructor(message: string);
+    constructor(message: string, body?: unknown);
 }
 
 // @public
@@ -126,7 +126,8 @@ export function apiDownload(config: ApiConfig, path: string, options?: RequestOp
 
 // @public
 export class ApiError extends Error {
-    constructor(message: string, status: number, code?: string, retryAfterSeconds?: number);
+    constructor(message: string, status: number, code?: string, retryAfterSeconds?: number, body?: unknown);
+    readonly body?: unknown;
     readonly code: string | undefined;
     readonly retryAfterSeconds?: number;
     // (undocumented)
@@ -805,6 +806,25 @@ const conversationRoute: z.ZodObject<{
     turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     execution_key_fingerprint: z.ZodString;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        states: z.ZodArray<z.ZodObject<{
+            state: z.ZodString;
+            templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            subject_expr: z.ZodString;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                into: z.ZodString;
+            }, z.core.$strip>>>;
+            updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -834,6 +854,25 @@ const conversationRouteCreate: z.ZodObject<{
     callback_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        states: z.ZodArray<z.ZodObject<{
+            state: z.ZodString;
+            templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            subject_expr: z.ZodString;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                into: z.ZodString;
+            }, z.core.$strip>>>;
+            updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -874,6 +913,25 @@ const conversationRoutes: z.ZodObject<{
         turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
         error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key_fingerprint: z.ZodString;
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            states: z.ZodArray<z.ZodObject<{
+                state: z.ZodString;
+                templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+                subject_expr: z.ZodString;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    into: z.ZodString;
+                }, z.core.$strip>>>;
+                updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>>;
     }, z.core.$strip>>;
     total: z.ZodNumber;
 }, z.core.$strip>;
@@ -909,6 +967,25 @@ const conversationRouteWritten: z.ZodObject<{
         turns_per_hour_override: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
         error_reply_text: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         execution_key_fingerprint: z.ZodString;
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            states: z.ZodArray<z.ZodObject<{
+                state: z.ZodString;
+                templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+                subject_expr: z.ZodString;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    into: z.ZodString;
+                }, z.core.$strip>>>;
+                updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>>;
     }, z.core.$strip>;
     callback_secret: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
@@ -1229,6 +1306,25 @@ export function createApiClient(config: ApiConfig): {
             })[][];
             output_schema: Record<string, unknown> | null;
             input_schema: Record<string, unknown> | null;
+            state_binding: {
+                states: {
+                    state: string;
+                    templates: string[];
+                    subject_expr: string;
+                    scope_expr: string | null;
+                    input_injections: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        into: string;
+                    }[];
+                    updates: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        adapter: string | null;
+                        op_id: string | null;
+                    }[];
+                }[];
+            } | null;
         };
         tags: string[];
         created_at: string;
@@ -1246,6 +1342,25 @@ export function createApiClient(config: ApiConfig): {
             })[][];
             output_schema: Record<string, unknown> | null;
             input_schema: Record<string, unknown> | null;
+            state_binding: {
+                states: {
+                    state: string;
+                    templates: string[];
+                    subject_expr: string;
+                    scope_expr: string | null;
+                    input_injections: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        into: string;
+                    }[];
+                    updates: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        adapter: string | null;
+                        op_id: string | null;
+                    }[];
+                }[];
+            } | null;
         };
         tags: string[];
         created_at: string;
@@ -1263,6 +1378,25 @@ export function createApiClient(config: ApiConfig): {
             })[][];
             output_schema: Record<string, unknown> | null;
             input_schema: Record<string, unknown> | null;
+            state_binding: {
+                states: {
+                    state: string;
+                    templates: string[];
+                    subject_expr: string;
+                    scope_expr: string | null;
+                    input_injections: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        into: string;
+                    }[];
+                    updates: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        adapter: string | null;
+                        op_id: string | null;
+                    }[];
+                }[];
+            } | null;
         };
         tags: string[];
         created_at: string;
@@ -1312,8 +1446,8 @@ export function createApiClient(config: ApiConfig): {
         subject_kinds: string[];
         default_subject_kind: string;
         retention_days: number | null;
-        mounts: {
-            module: string;
+        attachments: {
+            template: string;
             path: string[];
             parameters: Record<string, unknown>;
             declarations: Record<string, unknown>;
@@ -1328,8 +1462,8 @@ export function createApiClient(config: ApiConfig): {
         subject_kinds: string[];
         default_subject_kind: string;
         retention_days: number | null;
-        mounts: {
-            module: string;
+        attachments: {
+            template: string;
             path: string[];
             parameters: Record<string, unknown>;
             declarations: Record<string, unknown>;
@@ -1347,32 +1481,32 @@ export function createApiClient(config: ApiConfig): {
         per_kind: Record<string, number>;
         consumers: number;
     }>;
-    readonly listStateMounts: (name: string, signal?: AbortSignal) => Promise<{
-        module: string;
+    readonly listStateAttachments: (name: string, signal?: AbortSignal) => Promise<{
+        template: string;
         path: string[];
         parameters: Record<string, unknown>;
         declarations: Record<string, unknown>;
     }[]>;
-    readonly getStateMount: (name: string, module: string, signal?: AbortSignal) => Promise<{
-        module: string;
+    readonly getStateAttachment: (name: string, template: string, signal?: AbortSignal) => Promise<{
+        template: string;
         path: string[];
         parameters: Record<string, unknown>;
         declarations: Record<string, unknown>;
     }>;
-    readonly mountStateModule: (name: string, module: string, body: StateMountBody) => Promise<{
-        mounted: true;
+    readonly attachStateTemplate: (name: string, template: string, body: StateAttachmentBody) => Promise<{
+        attached: true;
         state: string;
-        module: string;
+        template: string;
     }>;
-    readonly patchStateMount: (name: string, module: string, body: StateMountBody) => Promise<{
+    readonly patchStateAttachment: (name: string, template: string, body: StateAttachmentBody) => Promise<{
         updated: true;
         state: string;
-        module: string;
+        template: string;
     }>;
-    readonly unmountStateModule: (name: string, module: string) => Promise<{
-        unmounted: true;
+    readonly detachStateTemplate: (name: string, template: string) => Promise<{
+        detached: true;
         state: string;
-        module: string;
+        template: string;
     }>;
     readonly listStateSubjects: (name: string, params: {
         kind?: string;
@@ -1477,6 +1611,21 @@ export function createApiClient(config: ApiConfig): {
         seq: number | null;
         skipped: Record<string, unknown>[];
     }>;
+    readonly evalTemplateJq: (name: string, subject: StateSubjectRef, jqName: string, params?: Record<string, unknown>, signal?: AbortSignal) => Promise<{
+        name: string;
+        purpose: "input";
+        value: unknown;
+    }>;
+    readonly applyTemplateJq: (name: string, subject: StateSubjectRef, jqName: string, body?: {
+        input?: unknown;
+        op_id?: string;
+    }) => Promise<{
+        name: string;
+        applied: boolean;
+        data: Record<string, unknown> | null;
+        seq: number | null;
+        skipped: Record<string, unknown>[];
+    }>;
     readonly deleteStateRecord: (name: string, subject: StateSubjectRef) => Promise<{
         erased: true;
     }>;
@@ -1522,8 +1671,8 @@ export function createApiClient(config: ApiConfig): {
         } | null;
         unavailable: string | null;
     }[]>;
-    readonly listStateModules: (signal?: AbortSignal) => Promise<{
-        kind: "state-module";
+    readonly listStateTemplates: (signal?: AbortSignal) => Promise<{
+        kind: "state-template";
         name: string;
         description: string;
         parameters: Record<string, unknown>;
@@ -1531,11 +1680,24 @@ export function createApiClient(config: ApiConfig): {
         regimes: Record<string, unknown>[];
         declarations: Record<string, unknown> | null;
         trace: Record<string, unknown>;
-        mounted_on: number;
+        template_jq: Record<string, {
+            description: string;
+            purpose: "input" | "update";
+            params: string[];
+            reads: string[][];
+            writes: string[][];
+            jq: string;
+        }> | null;
+        reconcile: {
+            view: string;
+            close: string;
+            resolutions: string;
+        } | null;
+        attached_to: number;
         shipped_default: boolean;
     }[]>;
-    readonly getStateModule: (name: string, signal?: AbortSignal) => Promise<{
-        kind: "state-module";
+    readonly getStateTemplate: (name: string, signal?: AbortSignal) => Promise<{
+        kind: "state-template";
         name: string;
         description: string;
         parameters: Record<string, unknown>;
@@ -1543,9 +1705,22 @@ export function createApiClient(config: ApiConfig): {
         regimes: Record<string, unknown>[];
         declarations: Record<string, unknown> | null;
         trace: Record<string, unknown>;
+        template_jq: Record<string, {
+            description: string;
+            purpose: "input" | "update";
+            params: string[];
+            reads: string[][];
+            writes: string[][];
+            jq: string;
+        }> | null;
+        reconcile: {
+            view: string;
+            close: string;
+            resolutions: string;
+        } | null;
     }>;
-    readonly putStateModule: (name: string, body: StateModuleBody, replace?: boolean) => Promise<{
-        kind: "state-module";
+    readonly putStateTemplate: (name: string, body: StateTemplateBody, replace?: boolean) => Promise<{
+        kind: "state-template";
         name: string;
         description: string;
         parameters: Record<string, unknown>;
@@ -1553,8 +1728,21 @@ export function createApiClient(config: ApiConfig): {
         regimes: Record<string, unknown>[];
         declarations: Record<string, unknown> | null;
         trace: Record<string, unknown>;
+        template_jq: Record<string, {
+            description: string;
+            purpose: "input" | "update";
+            params: string[];
+            reads: string[][];
+            writes: string[][];
+            jq: string;
+        }> | null;
+        reconcile: {
+            view: string;
+            close: string;
+            resolutions: string;
+        } | null;
     }>;
-    readonly deleteStateModule: (name: string) => Promise<{
+    readonly deleteStateTemplate: (name: string) => Promise<{
         name: string;
         deleted: true;
     }>;
@@ -2508,6 +2696,25 @@ export function createApiClient(config: ApiConfig): {
             turns_per_hour_override: number | null;
             error_reply_text: string | null;
             execution_key_fingerprint: string;
+            state_binding: {
+                states: {
+                    state: string;
+                    templates: string[];
+                    subject_expr: string;
+                    scope_expr: string | null;
+                    input_injections: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        into: string;
+                    }[];
+                    updates: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        adapter: string | null;
+                        op_id: string | null;
+                    }[];
+                }[];
+            } | null;
         }[];
         total: number;
     }>;
@@ -2529,6 +2736,25 @@ export function createApiClient(config: ApiConfig): {
             turns_per_hour_override: number | null;
             error_reply_text: string | null;
             execution_key_fingerprint: string;
+            state_binding: {
+                states: {
+                    state: string;
+                    templates: string[];
+                    subject_expr: string;
+                    scope_expr: string | null;
+                    input_injections: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        into: string;
+                    }[];
+                    updates: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        adapter: string | null;
+                        op_id: string | null;
+                    }[];
+                }[];
+            } | null;
         };
         callback_secret: string | null;
     }>;
@@ -2764,6 +2990,25 @@ export function createApiClient(config: ApiConfig): {
             expr: string | null;
             expr_id: string | null;
             expr_kwargs: Record<string, unknown>;
+            state_binding: {
+                states: {
+                    state: string;
+                    templates: string[];
+                    subject_expr: string;
+                    scope_expr: string | null;
+                    input_injections: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        into: string;
+                    }[];
+                    updates: {
+                        template_jq: string | null;
+                        jq: string | null;
+                        adapter: string | null;
+                        op_id: string | null;
+                    }[];
+                }[];
+            } | null;
         }[];
         total: number;
         topic_verifiers: Record<string, {
@@ -3127,6 +3372,7 @@ export function createApiClient(config: ApiConfig): {
         tool_name: string;
         tool_kwargs: Record<string, unknown>;
         schedule_kwargs: Record<string, unknown>;
+        state_binding?: s.StateBinding | null;
     }) => Promise<unknown>;
     readonly deleteSchedule: (name: string) => Promise<unknown>;
     readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
@@ -3450,6 +3696,8 @@ export interface CreatePresetBody {
     readonly name: string;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
+    // (undocumented)
+    readonly state_binding?: s.StateBinding | null;
 }
 
 // @public (undocumented)
@@ -3900,6 +4148,25 @@ const hookList: z.ZodObject<{
         expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         expr_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         expr_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            states: z.ZodArray<z.ZodObject<{
+                state: z.ZodString;
+                templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+                subject_expr: z.ZodString;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    into: z.ZodString;
+                }, z.core.$strip>>>;
+                updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>>;
     }, z.core.$strip>>;
     total: z.ZodNumber;
     topic_verifiers: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
@@ -3940,6 +4207,25 @@ const hookParams: z.ZodObject<{
     expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     expr_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     expr_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        states: z.ZodArray<z.ZodObject<{
+            state: z.ZodString;
+            templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            subject_expr: z.ZodString;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                into: z.ZodString;
+            }, z.core.$strip>>>;
+            updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -5296,6 +5582,25 @@ const presetBody: z.ZodObject<{
     }, z.core.$strip>]>>>;
     output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        states: z.ZodArray<z.ZodObject<{
+            state: z.ZodString;
+            templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            subject_expr: z.ZodString;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                into: z.ZodString;
+            }, z.core.$strip>>>;
+            updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public
@@ -5430,6 +5735,25 @@ const presetVersion: z.ZodObject<{
         }, z.core.$strip>]>>>;
         output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            states: z.ZodArray<z.ZodObject<{
+                state: z.ZodString;
+                templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+                subject_expr: z.ZodString;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    into: z.ZodString;
+                }, z.core.$strip>>>;
+                updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>>;
     }, z.core.$strip>;
     tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
@@ -5449,6 +5773,25 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
         }, z.core.$strip>]>>>;
         output_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         input_schema: z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            states: z.ZodArray<z.ZodObject<{
+                state: z.ZodString;
+                templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+                subject_expr: z.ZodString;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    into: z.ZodString;
+                }, z.core.$strip>>>;
+                updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+                    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                }, z.core.$strip>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>>;
     }, z.core.$strip>;
     tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
@@ -5650,43 +5993,6 @@ const recordSearchPage: z.ZodObject<{
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
     next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type RecordView = z.infer<typeof recordView>;
-
-// @public
-const recordView: z.ZodObject<{
-    state: z.ZodString;
-    subject: z.ZodObject<{
-        target_kind: z.ZodEnum<{
-            tool: "tool";
-            agent: "agent";
-        }>;
-        target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
-    data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    seq: z.ZodNumber;
-    canonical_subject: z.ZodObject<{
-        target_kind: z.ZodEnum<{
-            tool: "tool";
-            agent: "agent";
-        }>;
-        target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>;
-    folded_from: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        target_kind: z.ZodEnum<{
-            tool: "tool";
-            agent: "agent";
-        }>;
-        target_name: z.ZodString;
-        kind: z.ZodString;
-        key: z.ZodString;
-    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -6127,6 +6433,14 @@ declare namespace s {
         presetList,
         presetDetail,
         PresetDetail,
+        stateInjection,
+        StateInjection,
+        stateUpdate,
+        StateUpdate,
+        stateAttach,
+        StateAttach,
+        stateBinding,
+        StateBinding,
         presetBody,
         PresetBody,
         presetVersion,
@@ -6520,22 +6834,30 @@ declare namespace s {
         stateListItem,
         StateListItem,
         stateList,
-        stateMount,
-        StateMount,
-        stateMountList,
+        stateAttachment,
+        StateAttachment,
+        stateAttachmentList,
         stateDetail,
         StateDetail,
         stateStats,
         StateStats,
-        stateModuleDocument,
-        StateModuleDocument,
-        stateModuleListItem,
-        StateModuleListItem,
-        stateModuleList,
-        recordView,
-        RecordView,
+        templateJq,
+        TemplateJq,
+        templateReconcile,
+        TemplateReconcile,
+        stateTemplateDocument,
+        StateTemplateDocument,
+        stateTemplateListItem,
+        StateTemplateListItem,
+        stateTemplateList,
+        stateRecord,
+        StateRecord,
         applyResult,
         ApplyResult,
+        templateJqResult,
+        TemplateJqResult,
+        templateJqApplyResult,
+        TemplateJqApplyResult,
         subjectRow,
         SubjectRow,
         subjectPage,
@@ -6555,15 +6877,15 @@ declare namespace s {
         stateConsumers,
         StateConsumers,
         stateDeleted,
-        stateMounted,
-        StateMounted,
-        stateMountUpdated,
-        StateMountUpdated,
-        stateUnmounted,
-        StateUnmounted,
+        stateAttached,
+        StateAttached,
+        stateAttachmentUpdated,
+        StateAttachmentUpdated,
+        stateDetached,
+        StateDetached,
         stateFoldReport,
         StateFoldReport,
-        stateModuleDeleted,
+        stateTemplateDeleted,
         recordErased,
         stateRetentionPruned,
         StateRetentionPruned
@@ -6582,6 +6904,8 @@ export interface SavePresetVersionBody {
     readonly input_schema?: Record<string, unknown> | null;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
+    // (undocumented)
+    readonly state_binding?: s.StateBinding | null;
 }
 
 // @public (undocumented)
@@ -6634,6 +6958,14 @@ declare namespace schemas {
         presetList,
         presetDetail,
         PresetDetail,
+        stateInjection,
+        StateInjection,
+        stateUpdate,
+        StateUpdate,
+        stateAttach,
+        StateAttach,
+        stateBinding,
+        StateBinding,
         presetBody,
         PresetBody,
         presetVersion,
@@ -7027,22 +7359,30 @@ declare namespace schemas {
         stateListItem,
         StateListItem,
         stateList,
-        stateMount,
-        StateMount,
-        stateMountList,
+        stateAttachment,
+        StateAttachment,
+        stateAttachmentList,
         stateDetail,
         StateDetail,
         stateStats,
         StateStats,
-        stateModuleDocument,
-        StateModuleDocument,
-        stateModuleListItem,
-        StateModuleListItem,
-        stateModuleList,
-        recordView,
-        RecordView,
+        templateJq,
+        TemplateJq,
+        templateReconcile,
+        TemplateReconcile,
+        stateTemplateDocument,
+        StateTemplateDocument,
+        stateTemplateListItem,
+        StateTemplateListItem,
+        stateTemplateList,
+        stateRecord,
+        StateRecord,
         applyResult,
         ApplyResult,
+        templateJqResult,
+        TemplateJqResult,
+        templateJqApplyResult,
+        TemplateJqApplyResult,
         subjectRow,
         SubjectRow,
         subjectPage,
@@ -7062,15 +7402,15 @@ declare namespace schemas {
         stateConsumers,
         StateConsumers,
         stateDeleted,
-        stateMounted,
-        StateMounted,
-        stateMountUpdated,
-        StateMountUpdated,
-        stateUnmounted,
-        StateUnmounted,
+        stateAttached,
+        StateAttached,
+        stateAttachmentUpdated,
+        StateAttachmentUpdated,
+        stateDetached,
+        StateDetached,
         stateFoldReport,
         StateFoldReport,
-        stateModuleDeleted,
+        stateTemplateDeleted,
         recordErased,
         stateRetentionPruned,
         StateRetentionPruned
@@ -7302,6 +7642,103 @@ const startConnectResult: z.ZodUnion<readonly [z.ZodObject<{
 }, z.core.$strip>]>;
 
 // @public (undocumented)
+export type StateAttach = z.infer<typeof stateAttach>;
+
+// @public
+const stateAttach: z.ZodObject<{
+    state: z.ZodString;
+    templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    subject_expr: z.ZodString;
+    scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        into: z.ZodString;
+    }, z.core.$strip>>>;
+    updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type StateAttached = z.infer<typeof stateAttached>;
+
+// @public
+const stateAttached: z.ZodObject<{
+    attached: z.ZodLiteral<true>;
+    state: z.ZodString;
+    template: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type StateAttachment = z.infer<typeof stateAttachment>;
+
+// @public
+const stateAttachment: z.ZodObject<{
+    template: z.ZodString;
+    path: z.ZodArray<z.ZodString>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strip>;
+
+// @public
+export interface StateAttachmentBody {
+    // (undocumented)
+    readonly declarations?: Record<string, unknown>;
+    // (undocumented)
+    readonly options?: Record<string, unknown>;
+    // (undocumented)
+    readonly parameters?: Record<string, unknown>;
+    // (undocumented)
+    readonly path?: string[];
+}
+
+// @public (undocumented)
+const stateAttachmentList: z.ZodArray<z.ZodObject<{
+    template: z.ZodString;
+    path: z.ZodArray<z.ZodString>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strip>>;
+
+// @public (undocumented)
+export type StateAttachmentUpdated = z.infer<typeof stateAttachmentUpdated>;
+
+// @public
+const stateAttachmentUpdated: z.ZodObject<{
+    updated: z.ZodLiteral<true>;
+    state: z.ZodString;
+    template: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type StateBinding = z.infer<typeof stateBinding>;
+
+// @public
+const stateBinding: z.ZodObject<{
+    states: z.ZodArray<z.ZodObject<{
+        state: z.ZodString;
+        templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        subject_expr: z.ZodString;
+        scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            into: z.ZodString;
+        }, z.core.$strip>>>;
+        updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type StateConsumers = z.infer<typeof stateConsumers>;
 
 // @public
@@ -7355,6 +7792,16 @@ const stateDeleted: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type StateDetached = z.infer<typeof stateDetached>;
+
+// @public
+const stateDetached: z.ZodObject<{
+    detached: z.ZodLiteral<true>;
+    state: z.ZodString;
+    template: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type StateDetail = z.infer<typeof stateDetail>;
 
 // @public
@@ -7367,8 +7814,8 @@ const stateDetail: z.ZodObject<{
     retention_days: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
     effective_schema: z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
     regimes: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
-    mounts: z.ZodDefault<z.ZodArray<z.ZodObject<{
-        module: z.ZodString;
+    attachments: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        template: z.ZodString;
         path: z.ZodArray<z.ZodString>;
         parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
@@ -7394,6 +7841,16 @@ const stateFoldReport: z.ZodObject<{
     }, z.core.$strip>;
     already: z.ZodBoolean;
     flattened: z.ZodDefault<z.ZodNumber>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type StateInjection = z.infer<typeof stateInjection>;
+
+// @public
+const stateInjection: z.ZodObject<{
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    into: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -7426,131 +7883,49 @@ const stateListItem: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public
-export interface StateModuleBody {
-    // (undocumented)
-    readonly declarations?: Record<string, unknown> | null;
-    // (undocumented)
-    readonly description?: string;
-    // (undocumented)
-    readonly name: string;
-    // (undocumented)
-    readonly parameters?: Record<string, unknown>;
-    // (undocumented)
-    readonly regimes?: Record<string, unknown>[];
-    // (undocumented)
-    readonly schema: Record<string, unknown>;
-    // (undocumented)
-    readonly trace?: Record<string, unknown>;
-}
-
-// @public
-const stateModuleDeleted: z.ZodObject<{
-    name: z.ZodString;
-    deleted: z.ZodLiteral<true>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type StateModuleDocument = z.infer<typeof stateModuleDocument>;
-
-// @public
-const stateModuleDocument: z.ZodObject<{
-    kind: z.ZodDefault<z.ZodLiteral<"state-module">>;
-    name: z.ZodString;
-    description: z.ZodDefault<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    declarations: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-const stateModuleList: z.ZodArray<z.ZodObject<{
-    kind: z.ZodDefault<z.ZodLiteral<"state-module">>;
-    name: z.ZodString;
-    description: z.ZodDefault<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    declarations: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    mounted_on: z.ZodDefault<z.ZodNumber>;
-    shipped_default: z.ZodDefault<z.ZodBoolean>;
-}, z.core.$strip>>;
-
-// @public (undocumented)
-export type StateModuleListItem = z.infer<typeof stateModuleListItem>;
-
-// @public
-const stateModuleListItem: z.ZodObject<{
-    kind: z.ZodDefault<z.ZodLiteral<"state-module">>;
-    name: z.ZodString;
-    description: z.ZodDefault<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    declarations: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    mounted_on: z.ZodDefault<z.ZodNumber>;
-    shipped_default: z.ZodDefault<z.ZodBoolean>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type StateMount = z.infer<typeof stateMount>;
-
-// @public
-const stateMount: z.ZodObject<{
-    module: z.ZodString;
-    path: z.ZodArray<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, z.core.$strip>;
-
-// @public
-export interface StateMountBody {
-    // (undocumented)
-    readonly declarations?: Record<string, unknown>;
-    // (undocumented)
-    readonly parameters?: Record<string, unknown>;
-    // (undocumented)
-    readonly path?: string[];
-}
-
-// @public (undocumented)
-export type StateMounted = z.infer<typeof stateMounted>;
-
-// @public
-const stateMounted: z.ZodObject<{
-    mounted: z.ZodLiteral<true>;
-    state: z.ZodString;
-    module: z.ZodString;
-}, z.core.$strip>;
-
-// @public (undocumented)
-const stateMountList: z.ZodArray<z.ZodObject<{
-    module: z.ZodString;
-    path: z.ZodArray<z.ZodString>;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    declarations: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-}, z.core.$strip>>;
-
-// @public (undocumented)
-export type StateMountUpdated = z.infer<typeof stateMountUpdated>;
-
-// @public
-const stateMountUpdated: z.ZodObject<{
-    updated: z.ZodLiteral<true>;
-    state: z.ZodString;
-    module: z.ZodString;
-}, z.core.$strip>;
-
-// @public
 export interface StatePageQuery {
     // (undocumented)
     readonly cursor?: string;
     // (undocumented)
     readonly limit?: number;
 }
+
+// @public (undocumented)
+export type StateRecord = z.infer<typeof stateRecord>;
+
+// @public
+const stateRecord: z.ZodObject<{
+    state: z.ZodString;
+    subject: z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        kind: z.ZodString;
+        key: z.ZodString;
+    }, z.core.$strip>;
+    data: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    seq: z.ZodNumber;
+    canonical_subject: z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        kind: z.ZodString;
+        key: z.ZodString;
+    }, z.core.$strip>;
+    folded_from: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            tool: "tool";
+            agent: "agent";
+        }>;
+        target_name: z.ZodString;
+        kind: z.ZodString;
+        key: z.ZodString;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
 
 // @public
 const stateRegime: z.ZodRecord<z.ZodString, z.ZodUnknown>;
@@ -7600,14 +7975,133 @@ export interface StateSubjectRef {
     readonly target_name: string;
 }
 
-// @public (undocumented)
-export type StateUnmounted = z.infer<typeof stateUnmounted>;
+// @public
+export interface StateTemplateBody {
+    // (undocumented)
+    readonly declarations?: Record<string, unknown> | null;
+    // (undocumented)
+    readonly description?: string;
+    // (undocumented)
+    readonly name: string;
+    // (undocumented)
+    readonly parameters?: Record<string, unknown>;
+    // (undocumented)
+    readonly regimes?: Record<string, unknown>[];
+    // (undocumented)
+    readonly schema: Record<string, unknown>;
+    // (undocumented)
+    readonly trace?: Record<string, unknown>;
+}
 
 // @public
-const stateUnmounted: z.ZodObject<{
-    unmounted: z.ZodLiteral<true>;
-    state: z.ZodString;
-    module: z.ZodString;
+const stateTemplateDeleted: z.ZodObject<{
+    name: z.ZodString;
+    deleted: z.ZodLiteral<true>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type StateTemplateDocument = z.infer<typeof stateTemplateDocument>;
+
+// @public
+const stateTemplateDocument: z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
+    name: z.ZodString;
+    description: z.ZodDefault<z.ZodString>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    declarations: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
+        description: z.ZodDefault<z.ZodString>;
+        purpose: z.ZodEnum<{
+            input: "input";
+            update: "update";
+        }>;
+        params: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        jq: z.ZodString;
+    }, z.core.$strip>>>>;
+    reconcile: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        view: z.ZodString;
+        close: z.ZodString;
+        resolutions: z.ZodString;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+const stateTemplateList: z.ZodArray<z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
+    name: z.ZodString;
+    description: z.ZodDefault<z.ZodString>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    declarations: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
+        description: z.ZodDefault<z.ZodString>;
+        purpose: z.ZodEnum<{
+            input: "input";
+            update: "update";
+        }>;
+        params: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        jq: z.ZodString;
+    }, z.core.$strip>>>>;
+    reconcile: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        view: z.ZodString;
+        close: z.ZodString;
+        resolutions: z.ZodString;
+    }, z.core.$strip>>>;
+    attached_to: z.ZodDefault<z.ZodNumber>;
+    shipped_default: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strip>>;
+
+// @public (undocumented)
+export type StateTemplateListItem = z.infer<typeof stateTemplateListItem>;
+
+// @public
+const stateTemplateListItem: z.ZodObject<{
+    kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
+    name: z.ZodString;
+    description: z.ZodDefault<z.ZodString>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    declarations: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodObject<{
+        description: z.ZodDefault<z.ZodString>;
+        purpose: z.ZodEnum<{
+            input: "input";
+            update: "update";
+        }>;
+        params: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+        jq: z.ZodString;
+    }, z.core.$strip>>>>;
+    reconcile: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        view: z.ZodString;
+        close: z.ZodString;
+        resolutions: z.ZodString;
+    }, z.core.$strip>>>;
+    attached_to: z.ZodDefault<z.ZodNumber>;
+    shipped_default: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type StateUpdate = z.infer<typeof stateUpdate>;
+
+// @public
+const stateUpdate: z.ZodObject<{
+    template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public
@@ -7830,7 +8324,55 @@ const templateDirDeleted: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type TemplateJq = z.infer<typeof templateJq>;
+
+// @public
+const templateJq: z.ZodObject<{
+    description: z.ZodDefault<z.ZodString>;
+    purpose: z.ZodEnum<{
+        input: "input";
+        update: "update";
+    }>;
+    params: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+    writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
+    jq: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type TemplateJqApplyResult = z.infer<typeof templateJqApplyResult>;
+
+// @public
+const templateJqApplyResult: z.ZodObject<{
+    name: z.ZodString;
+    applied: z.ZodBoolean;
+    data: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    seq: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+    skipped: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type TemplateJqResult = z.infer<typeof templateJqResult>;
+
+// @public
+const templateJqResult: z.ZodObject<{
+    name: z.ZodString;
+    purpose: z.ZodLiteral<"input">;
+    value: z.ZodUnknown;
+}, z.core.$strip>;
+
+// @public (undocumented)
 const templateNames: z.ZodArray<z.ZodString>;
+
+// @public (undocumented)
+export type TemplateReconcile = z.infer<typeof templateReconcile>;
+
+// @public
+const templateReconcile: z.ZodObject<{
+    view: z.ZodString;
+    close: z.ZodString;
+    resolutions: z.ZodString;
+}, z.core.$strip>;
 
 // @public (undocumented)
 const templateRendered: z.ZodObject<{
@@ -8281,6 +8823,8 @@ export interface ValidatePresetBody {
     readonly name: string;
     // (undocumented)
     readonly output_schema?: Record<string, unknown> | null;
+    // (undocumented)
+    readonly state_binding?: s.StateBinding | null;
 }
 
 // @public (undocumented)

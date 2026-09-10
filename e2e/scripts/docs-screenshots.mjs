@@ -37,9 +37,9 @@
  *                  `studio_demo_echo` presets, the master pane rendered full-width (no
  *                  selection). The version detail is NOT shot — its version panel stamps
  *                  a server `created_at` that would churn every run.
- *   - states-{list,declaration,modules,records,consumers,record} — the platform state
- *                  store (`GET /api/states*`, `/api/state-modules`): the seeded `notes`
- *                  state's list row, its Declaration / Modules / Records / Consumers
+ *   - states-{list,declaration,templates,records,consumers,record} — the platform state
+ *                  store (`GET /api/states*`, `/api/state-templates`): the seeded `notes`
+ *                  state's list row, its Declaration / Templates / Records / Consumers
  *                  tabs, and one subject's record page (document + `api` Writes audit).
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
@@ -229,7 +229,7 @@ const AUTHED_PAGES = [
   },
   // --- States screens (the platform state store) -------------------------------
   // The six frames the docs "## States" section shows, all under the seeded `notes`
-  // state (docs-screenshots.sh §7f declares it, mounts a module, writes two subject
+  // state (the `docs-screenshots.sh` state-store seeding declares it, attaches a template, writes two subject
   // records and registers a consumer hook). Each waits on a stable, populated element —
   // a table row, a tab's populated control, or the record page's own document/audit —
   // never a bare timeout. The content is deterministic (no server timestamp is in
@@ -243,17 +243,17 @@ const AUTHED_PAGES = [
   },
   {
     // The Declaration tab: the base schema field tree beside the subject section (the
-    // mounted `preferences` subtree shows read-only). Waits on the subject-kinds control,
+    // attached `preferences` subtree shows read-only). Waits on the subject-kinds control,
     // which only the loaded declaration renders.
     name: 'states-declaration',
     path: '/states?state=notes',
     wait: '[aria-label="Subject kinds"]',
   },
   {
-    // The Modules tab: the state's mounts above the platform module documents. Waits on
-    // the mounted module name, rendered only for a non-empty mounts table.
-    name: 'states-modules',
-    path: '/states?state=notes&tab=modules',
+    // The Templates tab: the state's attachments above the platform state templates. Waits on
+    // the attached template name, rendered only for a non-empty attachments table.
+    name: 'states-templates',
+    path: '/states?state=notes&tab=templates',
     wait: 'text=preferences',
   },
   {
@@ -770,10 +770,11 @@ async function main() {
     for (const context of authedContexts.values()) await context.close();
 
     // Signed-out context for the login screen — no shell, so no plugin sidebar.
-    const guest = await browser.newContext({ viewport: VIEWPORT, colorScheme: theme });
-    const guestPage = await guest.newPage();
-    for (const entry of PUBLIC_RUN) await shoot(guestPage, entry, theme, { awaitPluginNav: false });
-    await guest.close();
+    const participant = await browser.newContext({ viewport: VIEWPORT, colorScheme: theme });
+    const participantPage = await participant.newPage();
+    for (const entry of PUBLIC_RUN)
+      await shoot(participantPage, entry, theme, { awaitPluginNav: false });
+    await participant.close();
   }
 
   await browser.close();

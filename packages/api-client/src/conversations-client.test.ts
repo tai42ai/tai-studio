@@ -171,6 +171,7 @@ describe('conversation route write transport', () => {
       callback_url: 'https://sink.example/answers',
       turns_per_hour_override: null,
       error_reply_text: null,
+      state_binding: null,
     });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/conversations/account');
@@ -203,6 +204,7 @@ describe('conversation route write transport', () => {
       callback_url: null,
       turns_per_hour_override: null,
       error_reply_text: null,
+      state_binding: null,
     });
     expect(captured[0]?.url).toBe('/api/conversations/a%20b%2Fc');
   });
@@ -236,6 +238,7 @@ describe('conversation route write transport', () => {
         callback_url: null,
         turns_per_hour_override: null,
         error_reply_text: null,
+        state_binding: null,
       }),
     ).rejects.toBeInstanceOf(ApiSchemaError);
   });

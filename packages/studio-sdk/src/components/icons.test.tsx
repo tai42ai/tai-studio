@@ -90,6 +90,7 @@ const REQUIRED_ICONS = [
   'ChevronRightIcon',
   'CheckIcon',
   'MinusIcon',
+  'PlusIcon',
   'EditIcon',
   'UnplugIcon',
   'SortAscIcon',

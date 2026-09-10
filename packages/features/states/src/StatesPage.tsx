@@ -2,7 +2,7 @@
  * States page — the master/detail surface over the subject-keyed state store. The
  * left pane is the states table (`StatesList`); selecting a row sets `?state=`
  * (shell-owned routing via `AppLink`), which drives the right-pane detail
- * (`StateDetail`: the Declaration / Modules / Records / Consumers tabs). Adding
+ * (`StateDetail`: the Declaration / Templates / Records / Consumers tabs). Adding
  * `?subject=` + `?target=` opens one subject's record page (`RecordPage`) in place of
  * the tabs. Mirrors the presets page's `?preset=` master/detail shape.
  *
@@ -23,10 +23,12 @@ import {
 
 import { StatesList } from './StatesList';
 import { StateDetail } from './StateDetail';
+import { StateTemplateDetail } from './StateTemplateDetail';
 import { RecordPage } from './RecordPage';
 
 export function StatesPage({ search }: PageProps<'states'>): ReactNode {
   const selected = search.state;
+  const templateName = search.template;
   const recordMode = selected !== undefined && search.subject !== undefined;
   const pane = selected !== undefined ? 'detail' : 'list';
 
@@ -47,6 +49,8 @@ export function StatesPage({ search }: PageProps<'states'>): ReactNode {
         <Card>
           <FeatureDisabled feature="States" message={offMessage} />
         </Card>
+      ) : templateName !== undefined ? (
+        <StateTemplateDetail key={templateName} name={templateName} />
       ) : recordMode ? (
         <RecordPage
           stateName={selected}
@@ -66,7 +70,7 @@ export function StatesPage({ search }: PageProps<'states'>): ReactNode {
               <Card>
                 <EmptyState
                   title="No state selected"
-                  description="Choose a state from the list to view its declaration, modules, records and consumers."
+                  description="Choose a state from the list to view its declaration, templates, records and consumers."
                 />
               </Card>
             )}

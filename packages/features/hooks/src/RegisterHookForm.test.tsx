@@ -283,3 +283,120 @@ describe('RegisterHookForm — charset rule', () => {
     expect(await screen.findByText(message)).toBeInTheDocument();
   });
 });
+
+describe('RegisterHookForm — state binding source resolution', () => {
+  it("resolves the hook tool's schema into the binding field pickers", async () => {
+    const user = userEvent.setup();
+    const getToolSchema = vi.fn().mockResolvedValue({
+      input: { type: 'object', properties: { memo: { type: 'string' } } },
+      output: { type: 'object', properties: { total: { type: 'number' } } },
+      description: null,
+    });
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      listStates: vi.fn().mockResolvedValue([]),
+      listStateTemplates: vi.fn().mockResolvedValue([]),
+      getToolSchema,
+    };
+    renderWithProviders(<RegisterHookForm />, { client });
+    await user.type(screen.getByLabelText('Tool'), 'notify');
+    await waitFor(() => {
+      expect(getToolSchema.mock.calls.some((call) => call[0] === 'notify')).toBe(true);
+    });
+  });
+});
+
+describe('RegisterHookForm — inherited advisory + binding serialization', () => {
+  const boundHook = () =>
+    hook({
+      name: 'tally-hook',
+      tool: 'tally-preset',
+      state_binding: {
+        states: [
+          {
+            state: 'counters',
+            templates: [],
+            subject_expr: '.k',
+            scope_expr: null,
+            input_injections: [],
+            updates: [],
+          },
+        ],
+      },
+    });
+
+  const presetClient = (
+    registerHook: NonNullable<StubApiClient['registerHook']>,
+  ): StubApiClient => ({
+    listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+    listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    listStates: vi.fn().mockResolvedValue([]),
+    listStateTemplates: vi.fn().mockResolvedValue([]),
+    listPresets: vi.fn().mockResolvedValue([{ name: 'tally-preset' }]),
+    listPresetVersions: vi.fn().mockResolvedValue([
+      {
+        version: 1,
+        is_current: true,
+        tags: [],
+        created_at: '',
+        body: {
+          base_tool: 'echo',
+          description: '',
+          fixed_kwargs: {},
+          extensions: [],
+          output_schema: null,
+          input_schema: null,
+          state_binding: {
+            states: [
+              {
+                state: 'counters',
+                templates: [],
+                subject_expr: '.preset_key',
+                scope_expr: null,
+                input_injections: [],
+                updates: [],
+              },
+            ],
+          },
+        },
+      },
+    ]),
+    getToolSchema: vi.fn().mockResolvedValue({ input: {}, output: null, description: null }),
+    registerHook,
+  });
+
+  it('shows the override advisory when the hook and the target preset name the same state', async () => {
+    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'tally-hook' });
+    renderWithProviders(<RegisterHookForm initial={boundHook()} onClose={vi.fn()} />, {
+      client: presetClient(registerHook),
+    });
+    expect(await screen.findByText('Overrides the preset’s subject')).toBeInTheDocument();
+    expect(screen.getByText('Preset default:')).toBeInTheDocument();
+  });
+
+  it('serializes a SET binding into the register body', async () => {
+    const user = userEvent.setup();
+    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'tally-hook' });
+    renderWithProviders(<RegisterHookForm initial={boundHook()} onClose={vi.fn()} />, {
+      client: presetClient(registerHook),
+    });
+    await user.click(await screen.findByRole('button', { name: 'Save changes' }));
+    await waitFor(() => {
+      expect(registerHook).toHaveBeenCalled();
+    });
+    const params = registerHook.mock.calls[0]?.[0] as { state_binding: unknown };
+    expect(params.state_binding).toEqual({
+      states: [
+        {
+          state: 'counters',
+          templates: [],
+          subject_expr: '.k',
+          scope_expr: null,
+          input_injections: [],
+          updates: [],
+        },
+      ],
+    });
+  });
+});

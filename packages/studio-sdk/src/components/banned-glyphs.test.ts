@@ -84,7 +84,20 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..')
  * out made "repository-wide" a claim about two thirds of the repository.
  */
 const SCAN_ROOTS = ['packages', 'apps', 'e2e'];
-const SKIP_DIRECTORIES = new Set(['node_modules', 'dist', 'coverage', '.turbo', 'build']);
+// Generated output, never source: the build outputs plus the e2e runner's report and
+// result dirs (a playwright report is a minified vendored bundle whose box-drawing
+// glyphs are not this repo's prose). All are gitignored, so a clean CI checkout never
+// has them; the skip keeps a local e2e run from reddening this scan.
+const SKIP_DIRECTORIES = new Set([
+  'node_modules',
+  'dist',
+  'coverage',
+  '.turbo',
+  'build',
+  'playwright-report',
+  'blob-report',
+  'test-results',
+]);
 
 /**
  * The file kinds a glyph can be painted from.

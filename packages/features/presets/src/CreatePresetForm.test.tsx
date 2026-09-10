@@ -593,3 +593,121 @@ describe('CreatePresetForm', () => {
     }
   });
 });
+
+describe('CreatePresetForm — state binding source resolution', () => {
+  it("resolves the base tool's schema into the binding field pickers", async () => {
+    const user = userEvent.setup();
+    const getToolSchema = vi.fn().mockResolvedValue({
+      input: { type: 'object', properties: { memo: { type: 'string' } } },
+      output: { type: 'object', properties: { total: { type: 'number' } } },
+      description: null,
+    });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({
+        getToolSchema,
+        listStates: vi.fn().mockResolvedValue([]),
+        listStateTemplates: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    await fillNameAndBase(user);
+    await waitFor(() => {
+      expect(getToolSchema.mock.calls.some((call) => call[0] === 'weather')).toBe(true);
+    });
+  });
+});
+
+describe('CreatePresetForm — binding serialization', () => {
+  it('serializes a SET binding into the create body', async () => {
+    const user = userEvent.setup();
+    const createPreset = vi.fn().mockResolvedValue(record);
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({
+        createPreset,
+        listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
+        listStateTemplates: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    await fillCreatable(user);
+
+    await user.click(screen.getByRole('button', { name: 'Bind state (optional)' }));
+    await user.click(screen.getByRole('button', { name: 'Attach a state' }));
+    await user.click(screen.getByRole('combobox', { name: 'State' }));
+    await user.click(await screen.findByRole('option', { name: 'counters' }));
+
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalled();
+    });
+    const body = createPreset.mock.calls[0]?.[0] as { state_binding?: unknown };
+    expect(body.state_binding).toEqual({
+      states: [
+        {
+          state: 'counters',
+          templates: [],
+          subject_expr: '',
+          scope_expr: null,
+          input_injections: [],
+          updates: [],
+        },
+      ],
+    });
+  });
+});
+
+describe('CreatePresetForm — binding validation', () => {
+  it('validate — sends the current binding editor value in the draft body', async () => {
+    const user = userEvent.setup();
+    const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({
+        validatePreset,
+        listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
+        listStateTemplates: vi.fn().mockResolvedValue([]),
+      }),
+    });
+    await fillNameAndBase(user);
+
+    await user.click(screen.getByRole('button', { name: 'Bind state (optional)' }));
+    await user.click(screen.getByRole('button', { name: 'Attach a state' }));
+    await user.click(screen.getByRole('combobox', { name: 'State' }));
+    await user.click(await screen.findByRole('option', { name: 'counters' }));
+
+    await user.click(screen.getByRole('button', { name: 'Validate' }));
+    await waitFor(() => {
+      expect(validatePreset).toHaveBeenCalled();
+    });
+    const body = validatePreset.mock.calls[0]?.[0] as { state_binding?: unknown };
+    expect(body.state_binding).toEqual({
+      states: [
+        {
+          state: 'counters',
+          templates: [],
+          subject_expr: '',
+          scope_expr: null,
+          input_injections: [],
+          updates: [],
+        },
+      ],
+    });
+  });
+
+  it('validate — renders a state_binding verdict issue verbatim', async () => {
+    const user = userEvent.setup();
+    const validatePreset = vi.fn().mockResolvedValue({
+      valid: false,
+      error: 'invalid state_binding: state "counters" is not declared',
+    });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ validatePreset }),
+    });
+
+    await fillNameAndBase(user);
+    await user.click(screen.getByRole('button', { name: 'Validate' }));
+
+    const verdict = await screen.findByText(
+      'invalid state_binding: state "counters" is not declared',
+    );
+    expect(verdict.closest('[role="status"]')).not.toBeNull();
+    expect(screen.getByText('Draft is invalid')).toBeInTheDocument();
+  });
+});

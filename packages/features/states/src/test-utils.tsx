@@ -99,7 +99,7 @@ export function fileInput(container: HTMLElement): HTMLInputElement {
   return el;
 }
 
-/** The last hidden file input under `container` (the module upload sits after the list one). */
+/** The last hidden file input under `container` (the template upload sits after the list one). */
 export function lastFileInput(container: HTMLElement): HTMLInputElement {
   const els = container.querySelectorAll<HTMLInputElement>('input[type="file"]');
   const el = els[els.length - 1];

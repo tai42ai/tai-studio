@@ -145,6 +145,7 @@ describe('formValueToBody', () => {
       callback_url: null,
       turns_per_hour_override: 12,
       error_reply_text: 'oops',
+      state_binding: null,
     });
   });
 
@@ -185,6 +186,7 @@ describe('formValueToBody', () => {
       callback_url: null,
       turns_per_hour_override: null,
       error_reply_text: null,
+      state_binding: null,
     });
   });
 });

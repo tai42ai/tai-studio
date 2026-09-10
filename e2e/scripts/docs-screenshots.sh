@@ -20,7 +20,7 @@
 #      owned key plus its audience-addressed notification + pending question), the
 #      named settings profile the Profiles tab lists, the conversation route
 #      whose threads the Conversations screen reads, and the platform state store
-#      (a declared state with a mounted module, subject records and a consumer hook —
+#      (a declared state with an attached template, subject records and a consumer hook —
 #      its own dedicated database, created in §3b and migrated by boot.sh);
 #   3. captures every screen in both themes with e2e/scripts/docs-screenshots.mjs
 #      (which FAILS the run rather than shipping an empty/broken shot); and
@@ -512,10 +512,10 @@ DEMO_USER_ID="$(api "${BASE_URL}/api/auth/me" \
 
 # A reply per inbound message, mapped from the echoed text, so the transcript reads
 # as a conversation and not as an echo of itself.
-CONVERSATION_REPLY_EXPR='if (.original | test("where|track"; "i")) then
-  "Your request completed this morning — reference is TAI42-99183, and the summary is due on Thursday."
-elif (.original | test("cancel|refund"; "i")) then
-  "That is cancelled now, and the refund is on its way: it lands back on your account in 3–5 working days."
+CONVERSATION_REPLY_EXPR='if (.original | test("where|status"; "i")) then
+  "Your task completed this morning — reference is TAI42-99183, and the summary is ready to view."
+elif (.original | test("restart|rerun"; "i")) then
+  "Done — I have restarted it for you; it is running again now and the fresh summary is due shortly."
 else
   "Thanks for getting in touch — I have passed this to the team and someone will reply here shortly."
 end'
@@ -566,12 +566,12 @@ print(json.dumps({"external_user_id": os.environ["EXTERNAL_USER_ID"], "text": os
 send_conversation_message "grace.hopper@demo.tai" "Are you available in the Netherlands?" >/dev/null
 send_conversation_message "alan.turing@demo.tai" "Where has my request got to?" >/dev/null
 send_conversation_message "ada.lovelace@demo.tai" "Hi — where is my request? It should have completed on Tuesday." >/dev/null
-CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks. Can you cancel it and refund me instead?")"
+CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks. Can you restart it for me instead?")"
 export STUDIO_CONVERSATION_ROUTE="${CONVERSATION_ROUTE}"
 export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
 
 # --- 7f. Seed the platform state store (the six States screens) --------------
-# One declared state, one uploaded module mounted on it, two subject records (one
+# One declared state, one uploaded template attached to it, two subject records (one
 # written straight through the record door, one built by a `set_by_key` delta so the
 # record page's Writes audit carries an `api`-origin row), and one consumer (a hook
 # whose subject kind the state declares, so the Consumers tab lists it). Every body is
@@ -580,11 +580,11 @@ export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
 #
 # Idempotent against the persisted compose Postgres: the declaration PUT and record PUT
 # are create-or-replace, the module PUT carries `?replace=true`, the delta carries a
-# fixed `op_id` the store's op-ledger dedupes, and the mount + hook are re-created after
+# fixed `op_id` the store's op-ledger dedupes, and the attachment + hook are re-created after
 # a best-effort delete.
-log "seeding the state store (state + module mount + records + a consumer hook)"
+log "seeding the state store (state + template attachment + records + a consumer hook)"
 STATE_NAME="notes"
-STATE_MODULE="preferences"
+STATE_TEMPLATE="preferences"
 # The subject's conversation-target scope (a real demo tool; target_kind is agent|tool).
 STATE_TARGET_KIND="tool"
 STATE_TARGET_NAME="studio_demo_echo"
@@ -623,13 +623,13 @@ case "${decl_resp}" in
   *) die "declaring state '${STATE_NAME}' failed: ${decl_resp}" ;;
 esac
 
-# 2. Upload a module document and mount it on the state at `prefs` (a read-only subtree
+# 2. Upload a template document and attach it on the state at `prefs` (a read-only subtree
 #    the Declaration tab badges and the Modules tab lists). Mount is re-created after a
-#    best-effort unmount so a rerun does not hit the already-mounted conflict.
-module_body="$(python3 -c '
+#    best-effort detach so a rerun does not hit the already-attached conflict.
+template_body="$(python3 -c '
 import json
 print(json.dumps({
-    "kind": "state-module",
+    "kind": "state-template",
     "name": "preferences",
     "description": "Per-subject display preferences.",
     "schema": {
@@ -639,17 +639,17 @@ print(json.dumps({
     "parameters": {},
     "regimes": [],
 }))')"
-module_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/state-modules/${STATE_MODULE}?replace=true" -d "${module_body}")"
-case "${module_resp}" in
+template_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/state-templates/${STATE_TEMPLATE}?replace=true" -d "${template_body}")"
+case "${template_resp}" in
   *'"data"'*) : ;;
-  *) die "uploading state module '${STATE_MODULE}' failed: ${module_resp}" ;;
+  *) die "uploading state template '${STATE_TEMPLATE}' failed: ${template_resp}" ;;
 esac
-api -X DELETE "${BASE_URL}/api/states/${STATE_NAME}/mounts/${STATE_MODULE}" >/dev/null 2>&1 || true
-mount_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/states/${STATE_NAME}/mounts/${STATE_MODULE}" \
+api -X DELETE "${BASE_URL}/api/states/${STATE_NAME}/attachments/${STATE_TEMPLATE}" >/dev/null 2>&1 || true
+attach_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/states/${STATE_NAME}/attachments/${STATE_TEMPLATE}" \
   -d '{"path":["prefs"],"parameters":{},"declarations":{}}')"
-case "${mount_resp}" in
+case "${attach_resp}" in
   *'"data"'*) : ;;
-  *) die "mounting module '${STATE_MODULE}' on '${STATE_NAME}' failed: ${mount_resp}" ;;
+  *) die "attaching template '${STATE_TEMPLATE}' on '${STATE_NAME}' failed: ${attach_resp}" ;;
 esac
 
 # 3. Two subject records. `t-001` is written whole through the record door; `t-002` is

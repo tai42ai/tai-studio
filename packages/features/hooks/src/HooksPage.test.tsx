@@ -212,6 +212,7 @@ describe('HooksPage — register', () => {
         expr: null,
         expr_id: null,
         expr_kwargs: {},
+        state_binding: null,
       });
     });
     // Invalidation refetches the list: the first call was the initial load.

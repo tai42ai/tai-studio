@@ -281,101 +281,142 @@ function countInlineElements(nodes: readonly ReactNode[], tag: string): number {
   return nodes.filter((node) => isValidElement(node) && node.type === tag).length;
 }
 
-// These guards watch the inline scanner's growth curve, not render cost. They run
-// the scanner directly (`scanInline`) so no DOM is mounted or serialized and the
-// only thing measured is the scan. The signal is complexity: a near-linear scan
-// stays cheap and grows ~2x when its input doubles; a superlinear one blows up.
+// These guards watch the inline scanner's growth curve. They run the scanner
+// directly (`scanInline`) over a read-counting view of the source, so the only
+// thing measured is how many characters the scan visits — a deterministic
+// operation count, unaffected by coverage instrumentation or machine speed (as a
+// wall-clock bound would be). A near-linear scan visits ~c·n characters and
+// quadruples that work when its input quadruples; a superlinear one grows far
+// faster, so a 4x input costs far more than 4x the visits.
+
+/** Property keys that are canonical array indices — the character reads to tally. */
+const CHAR_INDEX = /^\d+$/;
+
+/**
+ * A read-counting view over `source`. It answers `length`, indexed character reads
+ * (`view[i]`), `slice`, `indexOf`, and string coercion exactly as the primitive
+ * would, and tallies every indexed character read. The inline scanner reaches each
+ * character of its input through an indexed read, so the tally is the scanner's
+ * character-visit count — the work a tail re-walk would multiply.
+ */
+function readCountingView(source: string): { readonly text: string; readonly reads: () => number } {
+  let count = 0;
+  const view = new Proxy(
+    {},
+    {
+      get(_target, key) {
+        if (typeof key === 'string' && CHAR_INDEX.test(key)) {
+          count += 1;
+          return source[Number(key)];
+        }
+        if (key === 'length') return source.length;
+        if (key === 'slice') {
+          return (start?: number, end?: number) => source.slice(start, end);
+        }
+        if (key === 'indexOf') {
+          return (search: string, from?: number) => source.indexOf(search, from);
+        }
+        if (key === Symbol.toPrimitive || key === 'toString' || key === 'valueOf') {
+          return () => source;
+        }
+        return undefined;
+      },
+    },
+  );
+  return { text: view as unknown as string, reads: () => count };
+}
+
+/** Resolves `source` through the scanner and reports the characters it visited. */
+function scanWork(source: string): {
+  readonly reads: number;
+  readonly nodes: readonly ReactNode[];
+} {
+  const { text, reads } = readCountingView(source);
+  const nodes = scanInline(text);
+  return { reads: reads(), nodes };
+}
+
+// Linear growth quadruples the visited characters for a 4x input (measured ~4.0x);
+// this ceiling clears that with headroom yet sits far below the ~16x a superlinear
+// scan would cost, so it separates the two without racing machine speed.
+const NEAR_LINEAR = 6;
+
 describe('Markdown — inline scanner scans in near-linear time', () => {
-  // An all-literal wall of emphasis openers with no reachable closer. The scan
-  // resolves it to a single text node, so its whole cost is the character walk. A
-  // near-linear walk finishes in single-digit milliseconds; a superlinear one
-  // runs for hundreds. The ceiling is loose enough to ignore machine speed yet far
-  // below any superlinear regression.
+  // An all-literal wall of emphasis openers with no reachable closer resolves to a
+  // single text node, so the scan's whole cost is the character walk. The characters
+  // it visits must grow linearly with the wall's length.
   it('scans a wall of unclosed emphasis openers as literal text', () => {
-    const source = ' *a'.repeat(40000);
-    const start = performance.now();
-    const nodes = scanInline(source);
-    const elapsed = performance.now() - start;
-    expect(countInlineElements(nodes, 'em')).toBe(0);
-    expect(countInlineElements(nodes, 'strong')).toBe(0);
-    expect(elapsed).toBeLessThan(200);
+    const small = scanWork(' *a'.repeat(2000));
+    const large = scanWork(' *a'.repeat(8000));
+    expect(countInlineElements(small.nodes, 'em')).toBe(0);
+    expect(countInlineElements(small.nodes, 'strong')).toBe(0);
+    expect(large.reads).toBeLessThan(small.reads * NEAR_LINEAR);
   });
 
-  // An all-literal wall of link openers with no closer: same shape, exercising the
-  // bracket scanner instead of the emphasis scanner.
+  // A wall of link openers with no closer: same shape, exercising the bracket
+  // scanner, which bails at the first missing `]`.
   it('scans a wall of unmatched brackets as literal text', () => {
-    const source = '['.repeat(40000);
-    const start = performance.now();
-    const nodes = scanInline(source);
-    const elapsed = performance.now() - start;
-    expect(countInlineElements(nodes, 'a')).toBe(0);
-    expect(nodes).toEqual([source]);
-    expect(elapsed).toBeLessThan(200);
+    const smallSource = '['.repeat(2000);
+    const small = scanWork(smallSource);
+    const large = scanWork('['.repeat(8000));
+    expect(countInlineElements(small.nodes, 'a')).toBe(0);
+    expect(small.nodes).toEqual([smallSource]);
+    expect(large.reads).toBeLessThan(small.reads * NEAR_LINEAR);
   });
 
-  // A wall of link openers each carrying a label and an open destination that
-  // never closes: '[a]([a](...'. Unlike a bare '[' wall — which bails at the first
-  // missing ']' — every candidate here reaches the destination scanner, the one
-  // path that can go quadratic. The whole input still resolves to a single literal
-  // text node, so a linear scan stays in single-digit milliseconds while a
-  // quadratic one runs for seconds.
+  // A wall of link openers each carrying a label and an open destination that never
+  // closes: '[a]([a](...'. Every candidate reaches the destination scanner — the one
+  // path that can go quadratic — yet the whole input resolves to a single literal
+  // node. The destination memo keeps the visited characters linear; a scan that
+  // re-walked the destination per candidate would grow quadratically.
   it('scans a wall of unterminated bracket destinations as literal text', () => {
-    const source = '[a]('.repeat(40000);
-    const start = performance.now();
-    const nodes = scanInline(source);
-    const elapsed = performance.now() - start;
-    expect(countInlineElements(nodes, 'a')).toBe(0);
-    expect(nodes).toEqual([source]);
-    expect(elapsed).toBeLessThan(200);
+    const smallSource = '[a]('.repeat(2000);
+    const small = scanWork(smallSource);
+    const large = scanWork('[a]('.repeat(8000));
+    expect(countInlineElements(small.nodes, 'a')).toBe(0);
+    expect(small.nodes).toEqual([smallSource]);
+    expect(large.reads).toBeLessThan(small.reads * NEAR_LINEAR);
   });
 
-  // The same '[a](' wall, but terminated by a single trailing space rather than
-  // end-of-text. Every candidate's destination scan now runs off to the SAME
-  // trailing whitespace, so a memo keyed only on end-of-text would rescan it per
-  // candidate and go quadratic; the generalized no-`)` memo covers the whitespace
-  // stop too, keeping the whole input a single literal node in near-linear time.
+  // The same '[a](' wall terminated by a single trailing space rather than
+  // end-of-text: every candidate's destination scan runs off to the SAME trailing
+  // whitespace, so a memo keyed only on end-of-text would rescan it per candidate.
+  // The generalized no-`)` memo covers the whitespace stop, keeping the visits
+  // linear.
   it('scans a wall of bracket destinations ending at a trailing space as literal text', () => {
-    const source = '[a]('.repeat(40000) + ' ';
-    const start = performance.now();
-    const nodes = scanInline(source);
-    const elapsed = performance.now() - start;
-    expect(countInlineElements(nodes, 'a')).toBe(0);
-    expect(nodes).toEqual([source]);
-    expect(elapsed).toBeLessThan(200);
+    const smallSource = '[a]('.repeat(2000) + ' ';
+    const small = scanWork(smallSource);
+    const large = scanWork('[a]('.repeat(8000) + ' ');
+    expect(countInlineElements(small.nodes, 'a')).toBe(0);
+    expect(small.nodes).toEqual([smallSource]);
+    expect(large.reads).toBeLessThan(small.reads * NEAR_LINEAR);
   });
 
   // The same shape terminated by a trailing newline instead of a space: another
   // whitespace stop the end-of-text-only memo would miss.
   it('scans a wall of bracket destinations ending at a trailing newline as literal text', () => {
-    const source = '[a]('.repeat(40000) + '\n';
-    const start = performance.now();
-    const nodes = scanInline(source);
-    const elapsed = performance.now() - start;
-    expect(countInlineElements(nodes, 'a')).toBe(0);
-    expect(nodes).toEqual([source]);
-    expect(elapsed).toBeLessThan(200);
+    const smallSource = '[a]('.repeat(2000) + '\n';
+    const small = scanWork(smallSource);
+    const large = scanWork('[a]('.repeat(8000) + '\n');
+    expect(countInlineElements(small.nodes, 'a')).toBe(0);
+    expect(small.nodes).toEqual([smallSource]);
+    expect(large.reads).toBeLessThan(small.reads * NEAR_LINEAR);
   });
 
-  // A many-matches input: every `*a*` run is a distinct match, so the scan emits
-  // one node per run and its cost has an unavoidable linear floor from building
-  // that many nodes (allocation- and GC-heavy, so timings are noisy). The signal
-  // guarded here is that resolving each match does NOT re-walk the remaining tail:
-  // a per-match cursor keeps the whole scan near-linear, so a large input clears a
-  // generous absolute ceiling with wide headroom, whereas a scan that re-walks the
-  // tail per match runs for seconds. The ceiling sits far above the linear floor
-  // and far below that quadratic, and the minimum over several attempts drops the
-  // GC-inflated runs, so the bound is robust rather than a machine-speed race.
+  // A many-matches input: every `*a*` run is a distinct match, so the scan emits one
+  // node per run. The property guarded is that resolving each match does NOT re-walk
+  // the remaining tail — a per-match cursor keeps the characters visited linear in
+  // the run count, whereas a scan that re-walked the tail per match would visit ~n²
+  // characters.
   it('resolves many adjacent emphasis runs without re-walking the tail', () => {
-    const runCount = 40000;
-    const source = '*a* '.repeat(runCount);
-    let best = Infinity;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const start = performance.now();
-      const nodes = scanInline(source);
-      best = Math.min(best, performance.now() - start);
+    const scan = (runCount: number): number => {
+      const { reads, nodes } = scanWork('*a* '.repeat(runCount));
       expect(countInlineElements(nodes, 'em')).toBe(runCount);
-    }
-    expect(best).toBeLessThan(3000);
+      return reads;
+    };
+    const small = scan(2000);
+    const large = scan(8000);
+    expect(large).toBeLessThan(small * NEAR_LINEAR);
   });
 });
 

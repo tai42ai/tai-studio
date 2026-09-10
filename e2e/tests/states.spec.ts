@@ -2,11 +2,11 @@
  * The platform state store, driven end to end through the Studio against the LIVE boot
  * skeleton (the `states` router + the packaged states chain the boot recipe now serves).
  * One composed scenario, several serial legs: declare a state through the Declare dialog;
- * upload a module document and mount it (the Mount dialog's Declarations group); look up a
+ * upload a template document and attach it (the Attach dialog's Declarations group); look up a
  * subject and CREATE its record through the schema form; EDIT it and read the `api`-door
  * write back off the Writes audit with the platform-stamped actor; FOLD the subject into
  * another; see a hook bind the state on the Consumers tab with its Open link; confirm the
- * 409 Replace on a duplicate module upload; and ERASE the record behind its danger confirm.
+ * 409 Replace on a duplicate template upload; and ERASE the record behind its danger confirm.
  *
  * Serial: each leg builds on the state the previous one left on the shared skeleton, so a
  * failing leg skips the rest (the composed scenario's own semantics). `beforeAll` clears a
@@ -20,11 +20,11 @@ import { API_KEY, EXECUTION_KEY_ID, seedCredential } from './helpers';
 const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
 const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
 
-/** The state, module, subject and consumer this scenario authors. Distinct from the
+/** The state, template, subject and consumer this scenario authors. Distinct from the
  * docs-shot fixtures (`states-shots.spec.ts` seeds `notes`/`preferences`), so the two
  * suites never collide on the shared backend. */
 const STATE = 'e2e_notes';
-const MODULE = 'reminders';
+const TEMPLATE = 'reminders';
 const TARGET_KIND = 'agent';
 const TARGET_NAME = 'assistant';
 const SUBJECT_KEY = 'e2e-t-1';
@@ -32,7 +32,7 @@ const FOLD_INTO_KEY = 'e2e-t-2';
 const CONSUMER_HOOK = 'e2e-notes-updater';
 
 /** The base schema the Declare dialog authors: one `note` string, so the record form is a
- * single simple field over the effective schema the mounted module composes into. */
+ * single simple field over the effective schema the attached template composes into. */
 const BASE_SCHEMA = {
   type: 'object',
   properties: {
@@ -40,11 +40,11 @@ const BASE_SCHEMA = {
   },
 };
 
-/** The module document uploaded through the catalog. It declares a `channel` field, so the
- * Mount dialog renders its Declarations group. */
-const MODULE_DOC = {
-  kind: 'state-module',
-  name: MODULE,
+/** The template document uploaded through the catalog. It declares a `channel` field, so the
+ * Attach dialog renders its Declarations group. */
+const TEMPLATE_DOC = {
+  kind: 'state-template',
+  name: TEMPLATE,
   description: 'Per-subject reminder settings.',
   schema: {
     type: 'object',
@@ -60,16 +60,16 @@ const MODULE_DOC = {
 /** The record-page URL for the authored subject (`<kind>:<key>` + `<target_kind>:<name>`). */
 const RECORD_PATH = `/states?state=${STATE}&subject=thread:${SUBJECT_KEY}&target=${TARGET_KIND}:${TARGET_NAME}`;
 
-/** The catalog's file input (the `Upload module` label wraps it). Scoped past the master
+/** The catalog's file input (the `Upload template` label wraps it). Scoped past the master
  * list's own hidden upload input, which is also on the page in split mode. */
 function catalogUploadInput(page: Page) {
-  return page.locator('label:has-text("Upload module") input[type="file"]');
+  return page.locator('label:has-text("Upload template") input[type="file"]');
 }
 
-/** A module document as a Playwright upload payload. */
-function moduleFile(doc: Record<string, unknown> = MODULE_DOC) {
+/** A template document as a Playwright upload payload. */
+function templateFile(doc: Record<string, unknown> = TEMPLATE_DOC) {
   return {
-    name: `${MODULE}.json`,
+    name: `${TEMPLATE}.json`,
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(doc)),
   };
@@ -79,7 +79,7 @@ test.describe.serial('the platform state store, end to end', () => {
   test.beforeAll(async () => {
     // Clear a prior run so a re-run against a persisted backend starts clean: the hook
     // must go before the state (a bound consumer refuses the declaration delete), and the
-    // module after the state (a mounted module refuses its delete).
+    // template after the state (an attached template refuses its delete).
     const api = await apiRequest.newContext({
       baseURL: BASE_URL,
       extraHTTPHeaders: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
@@ -87,7 +87,7 @@ test.describe.serial('the platform state store, end to end', () => {
     try {
       await api.delete(`/api/hooks/${CONSUMER_HOOK}`).catch(() => undefined);
       await api.delete(`/api/states/${STATE}`).catch(() => undefined);
-      await api.delete(`/api/state-modules/${MODULE}`).catch(() => undefined);
+      await api.delete(`/api/state-templates/${TEMPLATE}`).catch(() => undefined);
     } finally {
       await api.dispose();
     }
@@ -126,39 +126,41 @@ test.describe.serial('the platform state store, end to end', () => {
     await expect(detail.getByText('person', { exact: true }).first()).toBeVisible();
   });
 
-  test('uploads a module document and mounts it with its declarations group', async ({ page }) => {
+  test('uploads a template document and attaches it with its declarations group', async ({
+    page,
+  }) => {
     await seedCredential(page);
-    await page.goto(`/states?state=${STATE}&tab=modules`);
+    await page.goto(`/states?state=${STATE}&tab=templates`);
 
-    // Upload the module document into the catalog; its row then lists it.
-    await catalogUploadInput(page).setInputFiles(moduleFile());
-    await expect(page.getByText(MODULE).first()).toBeVisible();
+    // Upload the template document into the catalog; its row then lists it.
+    await catalogUploadInput(page).setInputFiles(templateFile());
+    await expect(page.getByText(TEMPLATE).first()).toBeVisible();
 
-    // Mount it: pick the module + a non-root path, and prove the Declarations group renders
-    // (the module declares a `channel`), then commit. Scope past the master list's own
-    // table/buttons in the split's left pane — the detail pane owns the Modules tab.
+    // Attach it: pick the template + a non-root path, and prove the Declarations group renders
+    // (the template declares a `channel`), then commit. Scope past the master list's own
+    // table/buttons in the split's left pane — the detail pane owns the Templates tab.
     const detail = page.getByTestId('state-detail');
-    await detail.getByRole('button', { name: 'Mount module' }).first().click();
-    const dialog = page.getByRole('dialog', { name: `Mount module on '${STATE}'` });
+    await detail.getByRole('button', { name: 'Attach template' }).first().click();
+    const dialog = page.getByRole('dialog', { name: `Attach template to '${STATE}'` });
     await expect(dialog).toBeVisible();
 
-    await dialog.getByLabel('Module').click();
-    await page.getByRole('option', { name: new RegExp(`^${MODULE}\\b`) }).click();
-    // Mount at the document root: the module's fragment composes a NEW subtree at its path,
+    await dialog.getByLabel('Template').click();
+    await page.getByRole('option', { name: new RegExp(`^${TEMPLATE}\\b`) }).click();
+    // Attach at the document root: the template's fragment composes a NEW subtree at its path,
     // so the picker's default (root) never shadows an existing property.
-    await dialog.getByLabel('Mount path').click();
+    await dialog.getByLabel('Attachment path').click();
     await page.getByRole('option', { name: '(root)', exact: true }).click();
-    // The module's declaration schema renders as its own group.
+    // The template's declaration schema renders as its own group.
     await expect(dialog.getByText('Declarations', { exact: true })).toBeVisible();
     await expect(dialog.getByLabel('Channel')).toBeVisible();
 
-    await dialog.getByRole('button', { name: 'Mount', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Attach', exact: true }).click();
     await expect(dialog).toBeHidden();
 
-    // The mounts table (the first table in the detail pane) now carries the module at root.
-    const mounts = detail.getByRole('table').first();
-    await expect(mounts.getByText(MODULE)).toBeVisible();
-    await expect(mounts.getByText('(root)')).toBeVisible();
+    // The attachments table (the first table in the detail pane) now carries the template at root.
+    const attachments = detail.getByRole('table').first();
+    await expect(attachments.getByText(TEMPLATE)).toBeVisible();
+    await expect(attachments.getByText('(root)')).toBeVisible();
   });
 
   test('looks up a subject and creates its record through the schema form', async ({ page }) => {
@@ -254,17 +256,17 @@ test.describe.serial('the platform state store, end to end', () => {
     await page.waitForURL('**/hooks');
   });
 
-  test('prompts the 409 Replace confirm on a duplicate module upload', async ({ page }) => {
+  test('prompts the 409 Replace confirm on a duplicate template upload', async ({ page }) => {
     await seedCredential(page);
-    await page.goto(`/states?state=${STATE}&tab=modules`);
-    await expect(page.getByText(MODULE).first()).toBeVisible();
+    await page.goto(`/states?state=${STATE}&tab=templates`);
+    await expect(page.getByText(TEMPLATE).first()).toBeVisible();
 
     // Re-uploading the same name is a first-write clash: the catalog surfaces the deliberate
     // Replace confirm rather than a silent overwrite, and a confirm applies the replace.
-    await catalogUploadInput(page).setInputFiles(moduleFile());
-    const dialog = page.getByRole('dialog', { name: `Replace module '${MODULE}'?` });
+    await catalogUploadInput(page).setInputFiles(templateFile());
+    const dialog = page.getByRole('dialog', { name: `Replace template '${TEMPLATE}'?` });
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Replace module' }).click();
+    await dialog.getByRole('button', { name: 'Replace template' }).click();
     await expect(dialog).toBeHidden();
   });
 

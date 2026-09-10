@@ -360,6 +360,14 @@ export const MinusIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** Add / insert: the dash crossed by an upright, for an append or attach affordance. */
+export const PlusIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <path d="M5.5 12h13" />
+    <path d="M12 5.5v13" />
+  </Icon>
+);
+
 /** Edit: a pencil laid across the surface it writes on. */
 export const EditIcon: IconComponent = (props) => (
   <Icon {...props}>

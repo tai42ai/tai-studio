@@ -1,10 +1,10 @@
 /**
  * The Declaration tab and the Declare-state create dialog. Both author a state's base
  * JSON schema (through `SchemaEditor`), the subject kinds it serves (`TagsInput`) with a
- * default kind (`Select`), and an optional retention window. The mounted subtrees a
- * module contributes are shown read-only with a `module` badge — they are edited on the
- * Modules tab, never here (a mount composes into the effective schema, so editing the
- * base never rewrites a module's fragment).
+ * default kind (`Select`), and an optional retention window. The attached subtrees a
+ * template contributes are shown read-only with a `template` badge — they are edited on
+ * the Templates tab, never here (an attachment composes into the effective schema, so
+ * editing the base never rewrites a template's fragment).
  *
  * A save is a plain declaration PUT. With records present the server accepts only
  * additive schema changes; a change that removes or alters an existing field (or a
@@ -200,11 +200,11 @@ export function DeclareStateDialog({
 function DeclarationEditorBody({
   draft,
   onDraft,
-  mounts,
+  attachments,
 }: {
   readonly draft: DeclarationDraft;
   readonly onDraft: (updater: (d: DeclarationDraft) => DeclarationDraft) => void;
-  readonly mounts?: readonly { module: string; path: string[] }[];
+  readonly attachments?: readonly { template: string; path: string[] }[];
 }): ReactNode {
   const onSchema = (change: SchemaEditorChange): void => {
     onDraft((d) => ({ ...d, schema: change.schema, schemaValid: change.valid }));
@@ -216,23 +216,23 @@ function DeclarationEditorBody({
         onChange={onSchema}
         requireTitle={false}
         label="Base schema"
-        description="The document shape for a subject before any module is mounted."
+        description="The document shape for a subject before any template is attached."
       />
-      {mounts !== undefined && mounts.length > 0 ? (
+      {attachments !== undefined && attachments.length > 0 ? (
         <Field
-          label="Mounted subtrees"
-          description="Edited on the Modules tab; read-only here."
+          label="Attached subtrees"
+          description="Edited on the Templates tab; read-only here."
           group
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
-            {mounts.map((mount) => (
+            {attachments.map((attachment) => (
               <div
-                key={`${mount.module}:${mount.path.join('/')}`}
+                key={`${attachment.template}:${attachment.path.join('/')}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}
               >
-                <Badge variant="primary">{mount.module}</Badge>
+                <Badge variant="primary">{attachment.template}</Badge>
                 <span style={{ fontFamily: 'var(--tai-font-mono)' }}>
-                  {mount.path.length > 0 ? mount.path.join(' / ') : '(root)'}
+                  {attachment.path.length > 0 ? attachment.path.join(' / ') : '(root)'}
                 </span>
               </div>
             ))}
@@ -317,7 +317,7 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
       <DeclarationEditorBody
         draft={draft}
         onDraft={setDraft}
-        mounts={state.mounts.map((m) => ({ module: m.module, path: m.path }))}
+        attachments={state.attachments.map((a) => ({ template: a.template, path: a.path }))}
       />
       {saveMutation.isError ? <ErrorState message={errorMessage(saveMutation.error)} /> : null}
       <div>

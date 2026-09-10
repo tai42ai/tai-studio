@@ -2,7 +2,7 @@
   "name": "@tai42/feature-states",
   "version": "0.1.0",
   "private": true,
-  "description": "States surface: declare subject-keyed state documents, mount modules, and manage records.",
+  "description": "States surface: declare subject-keyed state documents, attach templates, and manage records.",
   "license": "Apache-2.0",
   "author": "tai42 <oss@tai42.ai>",
   "homepage": "https://tai42.ai",

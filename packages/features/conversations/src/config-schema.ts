@@ -91,7 +91,7 @@ export function configFormSchema(fixedKey?: ConfigKey): JsonSchema {
         default: false,
         title: 'Multichannel',
         description:
-          'Opt this target into person linking, so one guest reached across several channels is one conversation.',
+          'Opt this target into person linking, so one participant reached across several channels is one conversation.',
       },
       greeting_template: {
         type: ['string', 'null'],

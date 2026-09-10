@@ -47,7 +47,7 @@ import {
   useApi,
   type JsonSchema,
 } from '@tai42/studio-sdk';
-import { type RecordView, type StateSubjectRef, type WriteEntry } from '@tai42/api-client';
+import { type StateRecord, type StateSubjectRef, type WriteEntry } from '@tai42/api-client';
 
 import { stateDetailKey, stateRecordKey, stateWritesKey } from './keys';
 
@@ -157,7 +157,7 @@ function RecordPageBody({
     queryKey: stateRecordKey(stateName, subject),
     // No document yet reads as `null` (a first-class state the empty-document affordance
     // shows), never an error — the read door returns it directly.
-    queryFn: ({ signal }): Promise<RecordView | null> =>
+    queryFn: ({ signal }): Promise<StateRecord | null> =>
       api.getStateRecord(stateName, subject, signal),
   });
 

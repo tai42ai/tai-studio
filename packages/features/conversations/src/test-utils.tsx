@@ -255,6 +255,7 @@ export function makeRoute(overrides: Partial<ConversationRoute> = {}): Conversat
     turns_per_hour_override: null,
     error_reply_text: null,
     execution_key_fingerprint: 'fp-1',
+    state_binding: null,
     ...overrides,
   };
 }

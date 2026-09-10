@@ -70,7 +70,7 @@ routers_modules:
   # that GET 404s and the card errors. With no `VERSIONING_STORE_*` configured the
   # list endpoint serves an empty list (no store read), so this loads config-free.
   - tai42_skeleton.routers.presets
-  # The platform state store (`/api/states*` + `/api/state-modules*`). The States
+  # The platform state store (`/api/states*` + `/api/state-templates*`). The States
   # screens the states e2e suites drive read and write this surface. The `states`
   # DB component binds to the `default` database (`TAI_DB_BINDING_STATES` unset),
   # and boot.sh applies the packaged states migration chain there beside the

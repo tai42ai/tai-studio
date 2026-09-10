@@ -21,7 +21,7 @@ const failedRecord = makeMessage({
   message_id: 'f1',
   route_name: 'support',
   client_address: '+15559990000',
-  inbound_text: 'my order never arrived',
+  inbound_text: 'my request never completed',
   answer: 'Let me check that for you.',
   delivery_status: 'failed',
   error: 'provider 500: connection reset',
@@ -44,7 +44,7 @@ describe('FailedMessages', () => {
     const list = await screen.findByTestId('conversation-failed-list');
     expect(within(list).getByText('support')).toBeInTheDocument();
     expect(within(list).getByText('+15559990000')).toBeInTheDocument();
-    expect(within(list).getByText('my order never arrived')).toBeInTheDocument();
+    expect(within(list).getByText('my request never completed')).toBeInTheDocument();
     // The failure carries the danger delivery chip.
     expect(within(list).getByText('Failed')).toBeInTheDocument();
   });

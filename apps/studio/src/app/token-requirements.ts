@@ -31,7 +31,7 @@ export const TOKEN_REQUIREMENTS = {
   tools: { anyOf: ['/api/tools'] },
   agents: { anyOf: ['/api/agents'] },
   presets: { anyOf: ['/api/presets'] },
-  states: { anyOf: ['/api/states', '/api/state-modules'] },
+  states: { anyOf: ['/api/states', '/api/state-templates'] },
   extensions: { anyOf: ['/api/extensions'] },
   interactions: { anyOf: ['/api/interactions'] },
   notifications: { anyOf: ['/api/notifications'] },
