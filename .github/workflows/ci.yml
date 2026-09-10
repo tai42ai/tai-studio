@@ -31,6 +31,83 @@ jobs:
           skip_after_successful_duplicate: 'true'
           do_not_skip: '["pull_request", "workflow_dispatch", "schedule"]'
 
+  # Classify the change so the heavy jobs (the Playwright e2e boot and the fleet
+  # e2e dispatch) can skip a change that alters no runtime behaviour. Two shapes
+  # qualify: a release-please train branch (it only ever carries version-bump
+  # bookkeeping), and any push/PR whose entire diff is the release-please-managed
+  # version fields plus the manifest. Everything else runs the full matrix; when
+  # in doubt this outputs `false` so the heavy jobs run.
+  changes:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version_only: ${{ steps.classify.outputs.version_only }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0 # the classifier diffs the change against its base
+      - id: classify
+        env:
+          HEAD_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+
+          # A release-please train branch never carries anything but version-bump
+          # bookkeeping, so it is version-only by construction.
+          if [[ "$HEAD_REF" == release-please--branches--* ]]; then
+            echo "train branch '$HEAD_REF' -> version-only"
+            echo "version_only=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # No usable base (a brand-new branch reports an all-zero `before`) means
+          # the diff cannot be trusted -> run the full matrix.
+          if [[ -z "${BASE_SHA:-}" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "no usable base sha -> run full matrix"
+            echo "version_only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --no-tags --quiet origin "$BASE_SHA" 2>/dev/null || true
+
+          mapfile -t files < <(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "empty diff -> nothing to test -> version-only"
+            echo "version_only=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version_only=true
+          for f in "${files[@]}"; do
+            case "$f" in
+              .release-please-manifest.json | CHANGELOG.md | */CHANGELOG.md)
+                # Wholly release-please-managed bookkeeping.
+                ;;
+              package.json | */package.json)
+                # Version-only iff the file's diff moves the "version" field and
+                # nothing else; any other changed line is real content.
+                if git diff --unified=0 "$BASE_SHA" "$HEAD_SHA" -- "$f" \
+                    | grep -E '^[+-]' \
+                    | grep -Ev '^(\+\+\+|---) ' \
+                    | grep -Evq '^[+-][[:space:]]*"version":[[:space:]]*"[^"]+",?[[:space:]]*$'; then
+                  echo "non-version change in $f -> full matrix"
+                  version_only=false
+                fi
+                ;;
+              *)
+                # Anything else (source, config, the lockfile) is a real change.
+                echo "non-version file $f -> full matrix"
+                version_only=false
+                ;;
+            esac
+          done
+          echo "version_only=$version_only"
+          echo "version_only=$version_only" >> "$GITHUB_OUTPUT"
+
   # Fast gate: static checks + unit/component tests + build. Self-contained
   # (no backend), so it needs no sibling checkouts.
   check:
@@ -179,8 +256,8 @@ jobs:
   # gated to pushes and same-repo, non-Dependabot pull requests; forks and
   # Dependabot fall back to the ``check`` job only.
   e2e:
-    needs: reuse
-    if: needs.reuse.outputs.should_skip != 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
+    needs: [reuse, changes]
+    if: needs.reuse.outputs.should_skip != 'true' && needs.changes.outputs.version_only != 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -236,21 +313,41 @@ jobs:
   # guarded steps skip on the empty token and the required status stays unset for
   # a maintainer to run.
   trigger-e2e:
-    needs: [reuse, check]
+    needs: [reuse, changes, check]
     # Dependabot cannot access the fleet-e2e dispatch secret (GitHub scopes
     # secrets away from dependabot), so this job would always red on a
     # Bad-credentials dispatch. Dependabot dep bumps don't need fleet-e2e.
     if: needs.reuse.outputs.should_skip != 'true' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
-    permissions: {}
+    permissions:
+      statuses: write # post the vacuous fleet-e2e status for a version-only change
     env:
       E2E_DISPATCH_TOKEN: ${{ secrets.TAI_E2E_DISPATCH_TOKEN }}
     steps:
+      # A version-only change (a release-please train, or a push/PR whose whole
+      # diff is version-bump bookkeeping) alters no runtime behaviour, so the
+      # heavy fleet e2e suite is not dispatched. Branch protection still requires
+      # the `fleet-e2e` status, so post it success directly: the tree the suite
+      # would run is behaviourally identical to the code that already passed it.
+      # Only same-repo events can write statuses; a fork keeps the existing
+      # behaviour of leaving fleet-e2e unset for a maintainer.
+      - name: Mark fleet-e2e vacuously green (version-only change)
+        if: needs.changes.outputs.version_only == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/$REPO/statuses/$SHA" \
+            -f state=success \
+            -f context=fleet-e2e \
+            -f description='skipped: version-only change (no runtime behaviour changed)'
       # Build the payload with jq so the branch name (untrusted) is JSON-escaped,
       # never interpolated into a shell or into the payload text.
       - name: Build dispatch payload
         id: payload
-        if: env.E2E_DISPATCH_TOKEN != ''
+        if: needs.changes.outputs.version_only != 'true' && env.E2E_DISPATCH_TOKEN != ''
         env:
           SRC_REPO: tai-studio
           SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -266,7 +363,7 @@ jobs:
             '{repo: $repo, ref: $ref, ref_name: $ref_name} + (if $legs == "" then {} else {legs: $legs} end)')"
           echo "json=$payload" >> "$GITHUB_OUTPUT"
       - name: Dispatch fleet-e2e
-        if: env.E2E_DISPATCH_TOKEN != ''
+        if: needs.changes.outputs.version_only != 'true' && env.E2E_DISPATCH_TOKEN != ''
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
           token: ${{ env.E2E_DISPATCH_TOKEN }}
