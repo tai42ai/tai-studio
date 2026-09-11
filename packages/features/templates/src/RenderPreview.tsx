@@ -44,8 +44,7 @@ export function RenderPreview({ templateId }: { templateId: string }): ReactNode
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
 
   const mutation = useMutation({
-    mutationFn: (kwargs: Record<string, unknown>) =>
-      api.renderTemplate({ template_id: templateId, kwargs }),
+    mutationFn: (kwargs: Record<string, unknown>) => api.renderTemplate({ id: templateId, kwargs }),
   });
 
   const onSubmit = (event: SyntheticEvent): void => {

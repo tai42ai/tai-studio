@@ -518,7 +518,7 @@ describe('AddScheduleDialog — state binding advisory + serialization', () => {
             {
               state: 'counters',
               templates: [],
-              subject_expr: '.preset_key',
+              subject_expr: { content: '.preset_key' },
               scope_expr: null,
               input_injections: [],
               updates: [],
@@ -567,7 +567,7 @@ describe('AddScheduleDialog — state binding advisory + serialization', () => {
           {
             state: 'counters',
             templates: [],
-            subject_expr: '',
+            subject_expr: { content: '' },
             scope_expr: null,
             input_injections: [],
             updates: [],

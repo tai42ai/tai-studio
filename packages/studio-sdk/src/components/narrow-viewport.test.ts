@@ -685,6 +685,8 @@ describe('narrow-viewport contract', () => {
     const NOWRAP_ALLOWED: Readonly<Record<string, string>> = {
       '.tai-visually-hidden':
         'the standard clip pattern — the text is never painted, so it cannot push anything',
+      '.tai-templated-inline--grouped > .jqs-field > .jqs-field__label':
+        'the same clip pattern applied to a grouped jq field label — never painted, so it cannot push anything',
       '.tai-brand-label':
         'the product name, a constant this repo owns and deliberately keeps on one line',
       '.tai-table .tai-chip':

@@ -9,10 +9,10 @@
  *
  * Two modes on one form. With no `initial` it is the blank create form. With an
  * `initial` hook (the per-row Edit door) it starts prefilled from that hook and
- * saves back over it — its id-based gate fields (`condition_id` / `expr_id` and
- * their `*_kwargs`) are carried through untouched, so editing the inline fields
- * never silently wipes an id gate. In edit mode the form is chrome-free (its host
- * `Dialog` supplies the surface and title) and closes via `onClose` on success.
+ * saves back over it. `condition` and `expr` are authored templated-text values
+ * (inline jq or a stored template id, with render kwargs). In edit mode the form is
+ * chrome-free (its host `Dialog` supplies the surface and title) and closes via
+ * `onClose` on success.
  *
  * A register POST is an upsert: an existing name silently replaces that hook. The
  * form watches the full hooks list and shows an inline replace notice the moment
@@ -30,6 +30,7 @@ import {
   Select,
   Spinner,
   StateBindingSection,
+  TemplatedTextField,
   Textarea,
   TextInput,
   errorMessage,
@@ -39,9 +40,10 @@ import {
   statesListKey,
   stateTemplatesKey,
   useApi,
+  type TemplatedTextCatalog,
 } from '@tai42/studio-sdk';
 import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
-import type { HookParams, HookSubject, StateBinding } from '@tai42/api-client';
+import type { HookParams, HookSubject, StateBinding, TemplatedText } from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
 import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
@@ -117,11 +119,6 @@ function serializeToolKwargs(kwargs: Record<string, unknown>): string {
   return Object.keys(kwargs).length === 0 ? '' : JSON.stringify(kwargs, null, 2);
 }
 
-function orNull(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed === '' ? null : trimmed;
-}
-
 export interface RegisterHookFormProps {
   /**
    * A hook to edit: the form starts prefilled from it and saves back over it.
@@ -147,8 +144,8 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   const [toolKwargs, setToolKwargs] = useState(() =>
     initial === undefined ? '' : serializeToolKwargs(initial.tool_kwargs),
   );
-  const [condition, setCondition] = useState(initial?.condition ?? '');
-  const [expr, setExpr] = useState(initial?.expr ?? '');
+  const [condition, setCondition] = useState<TemplatedText | null>(initial?.condition ?? null);
+  const [expr, setExpr] = useState<TemplatedText | null>(initial?.expr ?? null);
   const [executionKey, setExecutionKey] = useState(initial?.execution_key ?? '');
 
   // The optional state subject the fire targets. Prefilled from an edited hook's stored
@@ -169,6 +166,19 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   const [stateBinding, setStateBinding] = useState<StateBinding | null>(
     initial?.state_binding ?? null,
   );
+  // Bumped on a successful create so the seeded-once condition/expr controls remount blank.
+  const [formResetToken, setFormResetToken] = useState(0);
+  // The stored templates the condition/expr id pickers (and the binding's jq slots) offer.
+  const templatesQuery = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+  });
+  const templatedTextTemplates: TemplatedTextCatalog = {
+    templates: (templatesQuery.data ?? []).map((id) => ({ id })),
+    loading: templatesQuery.isPending,
+    error: templatesQuery.isError ? errorMessage(templatesQuery.error) : undefined,
+    onRetry: () => void templatesQuery.refetch(),
+  };
   const bindingStatesQuery = useQuery({
     queryKey: statesListKey,
     queryFn: ({ signal }) => api.listStates(signal),
@@ -230,8 +240,8 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       setTopic('');
       setTool('');
       setToolKwargs('');
-      setCondition('');
-      setExpr('');
+      setCondition(null);
+      setExpr(null);
       setExecutionKey('');
       setSubjectTarget('');
       setSubjectKind('');
@@ -239,6 +249,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       setSubmitted(false);
       setKwargsError(null);
       setSubjectError(null);
+      setFormResetToken((token) => token + 1);
     },
   });
 
@@ -296,9 +307,6 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       };
     }
 
-    // The inline condition/expr text fields are the only gates this form edits; an
-    // id-based gate (`condition_id` / `expr_id`) and its kwargs ride through from
-    // the edited hook untouched, so a save never wipes a gate the form never showed.
     const params: HookParams = {
       name: trimmedName,
       topic: topic.trim(),
@@ -306,12 +314,8 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       execution_key: executionKey,
       tool_kwargs: toolKwargsValue,
       subject,
-      condition: orNull(condition),
-      condition_id: initial?.condition_id ?? null,
-      condition_kwargs: initial?.condition_kwargs ?? {},
-      expr: orNull(expr),
-      expr_id: initial?.expr_id ?? null,
-      expr_kwargs: initial?.expr_kwargs ?? {},
+      condition,
+      expr,
       state_binding: stateBinding,
     };
     mutation.mutate(params);
@@ -442,27 +446,56 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
           </div>
         ) : null}
       </div>
-      <JqField
+      <TemplatedTextField
+        key={`condition-${String(formResetToken)}`}
         label="Condition"
-        description="Optional inline condition spec; blank leaves it unset."
-        shape={HOOK_CONDITION_DECLARATION.shape}
-        multiline={false}
+        description="Optional. Gates whether the hook fires; blank leaves it unset."
         value={condition}
+        templates={templatedTextTemplates.templates}
+        templatesLoading={templatedTextTemplates.loading}
+        templatesError={templatedTextTemplates.error}
+        onTemplatesRetry={templatedTextTemplates.onRetry}
         onChange={setCondition}
+        renderInline={({ label, value, onChange, hideLabel }) => (
+          <div className={hideLabel ? 'tai-templated-inline--grouped' : undefined}>
+            <JqField
+              label={label}
+              shape={HOOK_CONDITION_DECLARATION.shape}
+              multiline={false}
+              value={value}
+              onChange={onChange}
+            />
+          </div>
+        )}
       />
-      <JqField
+      <TemplatedTextField
+        key={`expr-${String(formResetToken)}`}
         label="Expr"
-        description="Optional inline expression spec; blank leaves it unset."
-        shape={HOOK_EXPR_DECLARATION.shape}
-        multiline={false}
+        description="Optional. Shapes the event before the tool runs; blank leaves it unset."
         value={expr}
+        templates={templatedTextTemplates.templates}
+        templatesLoading={templatedTextTemplates.loading}
+        templatesError={templatedTextTemplates.error}
+        onTemplatesRetry={templatedTextTemplates.onRetry}
         onChange={setExpr}
+        renderInline={({ label, value, onChange, hideLabel }) => (
+          <div className={hideLabel ? 'tai-templated-inline--grouped' : undefined}>
+            <JqField
+              label={label}
+              shape={HOOK_EXPR_DECLARATION.shape}
+              multiline={false}
+              value={value}
+              onChange={onChange}
+            />
+          </div>
+        )}
       />
       <StateBindingSection
         value={stateBinding}
         onChange={setStateBinding}
         statesCatalog={statesCatalogFromList(bindingStatesQuery.data ?? [])}
         templatesCatalog={templatesCatalogFromList(bindingTemplatesQuery.data ?? [])}
+        templatedTextTemplates={templatedTextTemplates}
         inherited={inheritedBinding}
         sources={{
           input: fieldPathsFromSchema(toolSchemaQuery.data?.input),

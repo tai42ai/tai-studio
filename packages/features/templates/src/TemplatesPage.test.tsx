@@ -504,7 +504,7 @@ describe('TemplatesPage — render preview', () => {
 
     await waitFor(() => {
       expect(renderTemplate).toHaveBeenCalledWith({
-        template_id: 'prompts/a.md',
+        id: 'prompts/a.md',
         kwargs: { name: 'Ada' },
       });
     });

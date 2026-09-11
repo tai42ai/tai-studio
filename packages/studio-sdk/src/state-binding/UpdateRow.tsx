@@ -10,11 +10,13 @@ import { Badge } from '../components/badge';
 import { Button } from '../components/primitives';
 import { Field } from '../components/field';
 import { Select } from '../components/select';
+import { TemplatedTextField } from '../components/templated-text-field';
 import { CloseIcon } from '../components/icons';
 import { AdapterMapping } from './AdapterMapping';
-import { BindingJqField, type TemplateJqSuggestion } from './BindingJqField';
+import { BindingTemplatedJqField } from './BindingTemplatedJqField';
+import type { TemplateJqSuggestion } from './BindingJqField';
 import { findByRef, type ResolvedTemplateJq } from './catalog';
-import type { BindingSourceSchemas, StateUpdate } from './types';
+import type { BindingSourceSchemas, StateUpdate, TemplatedTextCatalog } from './types';
 
 const CUSTOM = '__custom__';
 
@@ -35,6 +37,7 @@ function UpdateRowEditor({
   updateJq,
   sources,
   suggestions,
+  templates,
   onChange,
   onRemove,
 }: {
@@ -43,6 +46,7 @@ function UpdateRowEditor({
   readonly updateJq: readonly ResolvedTemplateJq[];
   readonly sources?: BindingSourceSchemas;
   readonly suggestions?: readonly TemplateJqSuggestion[];
+  readonly templates?: TemplatedTextCatalog;
   readonly onChange: (update: StateUpdate) => void;
   readonly onRemove: () => void;
 }): ReactNode {
@@ -78,7 +82,12 @@ function UpdateRowEditor({
             value={selectValue}
             onValueChange={(next) => {
               if (next === CUSTOM)
-                onChange({ template_jq: null, jq: '', adapter: null, op_id: update.op_id });
+                onChange({
+                  template_jq: null,
+                  jq: { content: '' },
+                  adapter: null,
+                  op_id: update.op_id,
+                });
               else onChange({ template_jq: next, jq: null, adapter: null, op_id: update.op_id });
             }}
             groups={[
@@ -102,40 +111,59 @@ function UpdateRowEditor({
       </div>
 
       {isCustom ? (
-        <BindingJqField
+        <BindingTemplatedJqField
           label={`Custom update jq ${String(index + 1)}`}
+          required
           description="A jq over `{ record, output, input }` returning a template-relative op batch."
-          value={update.jq ?? ''}
+          value={update.jq}
           onChange={(next) => {
-            onChange({ template_jq: null, jq: next, adapter: null, op_id: update.op_id });
+            onChange({
+              template_jq: null,
+              jq: next ?? { content: '' },
+              adapter: null,
+              op_id: update.op_id,
+            });
           }}
           suggestions={suggestions}
+          templates={templates}
         />
       ) : (
-        <Field label="Adapter" group>
-          <AdapterMapping
-            // Remount on a template change so the mapping rebuilds from the newly
-            // declared input (and re-seeds its shown default) instead of stale rows.
-            key={resolved?.ref ?? '__none__'}
-            declaredInput={resolved?.params ?? []}
-            value={update.adapter ?? ''}
-            sources={sources}
-            suggestions={suggestions}
-            onChange={(adapterJq) => {
-              onChange({ ...update, adapter: adapterJq });
-            }}
-          />
-        </Field>
+        <TemplatedTextField
+          // Remount on a template change so the mapping rebuilds from the newly
+          // declared input (and re-seeds its shown default) instead of stale rows.
+          key={resolved?.ref ?? '__none__'}
+          label="Adapter"
+          value={update.adapter}
+          templates={templates?.templates}
+          templatesLoading={templates?.loading}
+          templatesError={templates?.error}
+          onTemplatesRetry={templates?.onRetry}
+          onChange={(next) => {
+            onChange({ ...update, adapter: next });
+          }}
+          renderInline={({ value: inlineValue, onChange: onInline }) => (
+            <AdapterMapping
+              declaredInput={resolved?.params ?? []}
+              value={inlineValue}
+              sources={sources}
+              suggestions={suggestions}
+              onChange={(adapterJq) => {
+                onInline(adapterJq ?? '');
+              }}
+            />
+          )}
+        />
       )}
 
-      <BindingJqField
+      <BindingTemplatedJqField
         label="Op id"
         description="Optional — an idempotency-key expression."
-        value={update.op_id ?? ''}
+        value={update.op_id}
         onChange={(next) => {
-          onChange({ ...update, op_id: next.trim() === '' ? null : next });
+          onChange({ ...update, op_id: next });
         }}
         suggestions={suggestions}
+        templates={templates}
       />
     </div>
   );
@@ -147,6 +175,7 @@ export interface UpdateListProps {
   readonly updateJq: readonly ResolvedTemplateJq[];
   readonly sources?: BindingSourceSchemas;
   readonly suggestions?: readonly TemplateJqSuggestion[];
+  readonly templates?: TemplatedTextCatalog;
 }
 
 export function UpdateList({
@@ -155,13 +184,14 @@ export function UpdateList({
   updateJq,
   sources,
   suggestions,
+  templates,
 }: UpdateListProps): ReactNode {
   const add = (): void => {
     const first = updateJq[0];
     const next: StateUpdate =
       first !== undefined
         ? { template_jq: first.ref, jq: null, adapter: null, op_id: null }
-        : { template_jq: null, jq: '', adapter: null, op_id: null };
+        : { template_jq: null, jq: { content: '' }, adapter: null, op_id: null };
     onChange([...updates, next]);
   };
 
@@ -176,6 +206,7 @@ export function UpdateList({
           updateJq={updateJq}
           sources={sources}
           suggestions={suggestions}
+          templates={templates}
           onChange={(next) => {
             onChange(updates.map((current, position) => (position === index ? next : current)));
           }}

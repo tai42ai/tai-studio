@@ -548,11 +548,15 @@ describe('state-binding schema', () => {
         {
           state: 'counters',
           templates: ['tally'],
-          subject_expr: '.counter_id',
-          scope_expr: '.group',
+          subject_expr: { content: '.counter_id' },
+          scope_expr: { content: '.group' },
           input_injections: [{ template_jq: 'tally.current', into: 'baseline' }],
           updates: [
-            { template_jq: 'tally.bump', adapter: '{ total: .output.total }', op_id: '.id' },
+            {
+              template_jq: 'tally.bump',
+              adapter: { content: '{ total: .output.total }' },
+              op_id: { content: '.id' },
+            },
           ],
         },
       ],
@@ -561,27 +565,27 @@ describe('state-binding schema', () => {
     const [attach] = binding.states;
     if (attach === undefined) throw new Error('expected one attached state');
     expect(attach.templates).toEqual(['tally']);
-    expect(attach.subject_expr).toBe('.counter_id');
+    expect(attach.subject_expr).toEqual({ content: '.counter_id' });
     const [injection] = attach.input_injections;
     const [update] = attach.updates;
     if (injection === undefined || update === undefined) throw new Error('expected rows');
     expect(injection.into).toBe('baseline');
     expect(update.template_jq).toBe('tally.bump');
-    expect(update.adapter).toBe('{ total: .output.total }');
+    expect(update.adapter).toEqual({ content: '{ total: .output.total }' });
   });
 
   it('fills the optional fields of an attach/injection/update with their defaults', () => {
-    const attach = schemas.stateAttach.parse({ state: 'notes', subject_expr: '.id' });
+    const attach = schemas.stateAttach.parse({ state: 'notes', subject_expr: { content: '.id' } });
     expect(attach.templates).toEqual([]);
     expect(attach.scope_expr).toBeNull();
     expect(attach.input_injections).toEqual([]);
     expect(attach.updates).toEqual([]);
 
-    const injection = schemas.stateInjection.parse({ jq: '.x', into: 'field' });
+    const injection = schemas.stateInjection.parse({ jq: { content: '.x' }, into: 'field' });
     expect(injection.template_jq).toBeNull();
-    expect(injection.jq).toBe('.x');
+    expect(injection.jq).toEqual({ content: '.x' });
 
-    const update = schemas.stateUpdate.parse({ jq: '[{op:"set"}]' });
+    const update = schemas.stateUpdate.parse({ jq: { content: '[{op:"set"}]' } });
     expect(update.template_jq).toBeNull();
     expect(update.adapter).toBeNull();
     expect(update.op_id).toBeNull();
@@ -593,7 +597,8 @@ describe('state-binding schema', () => {
     expect(() => schemas.stateBinding.parse({})).toThrow();
     expect(() => schemas.stateBinding.parse({ states: [] })).toThrow();
     expect(
-      schemas.stateBinding.parse({ states: [{ state: 'notes', subject_expr: '.id' }] }).states,
+      schemas.stateBinding.parse({ states: [{ state: 'notes', subject_expr: { content: '.id' } }] })
+        .states,
     ).toHaveLength(1);
   });
 
@@ -606,7 +611,11 @@ describe('state-binding schema', () => {
   });
 
   it('throws on an EMPTY subject expression — parity with the contract min_length=1', () => {
-    expect(() => schemas.stateAttach.parse({ state: 'notes', subject_expr: '' })).toThrow();
+    expect(() =>
+      schemas.stateAttach.parse({ state: 'notes', subject_expr: { content: '' } }),
+    ).toThrow();
+    // A required templated-text with a chosen-but-empty stored id is empty too.
+    expect(() => schemas.stateAttach.parse({ state: 'notes', subject_expr: { id: '' } })).toThrow();
   });
 
   it('carries the binding onto the door bodies (preset, route, hook)', () => {
@@ -617,7 +626,7 @@ describe('state-binding schema', () => {
       extensions: [],
       output_schema: null,
       input_schema: null,
-      state_binding: { states: [{ state: 'notes', subject_expr: '.id' }] },
+      state_binding: { states: [{ state: 'notes', subject_expr: { content: '.id' } }] },
     });
     expect(preset.state_binding?.states[0]?.state).toBe('notes');
 

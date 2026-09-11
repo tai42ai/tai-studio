@@ -48,9 +48,7 @@ const version1 = {
   body: {
     scopes: ['deploy'],
     policy_data: { limit: 7 },
-    condition: '.context.used < .policy.limit',
-    condition_id: null,
-    condition_kwargs: { tier: 'pro' },
+    condition: { content: '.context.used < .policy.limit', kwargs: { tier: 'pro' } },
   },
   tags: [],
   created_at: '2024-01-01T00:00:01+00:00',
@@ -84,7 +82,10 @@ describe('policy client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/auth/api-keys/u1/policy/versions');
     expect(out[0]?.is_current).toBe(true);
-    expect(out[0]?.body.condition).toBe('.context.used < .policy.limit');
+    expect(out[0]?.body.condition).toEqual({
+      content: '.context.used < .policy.limit',
+      kwargs: { tier: 'pro' },
+    });
   });
 
   it('rollbackPolicy POSTs {version} and parses the re-pointed active_version', async () => {

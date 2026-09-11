@@ -558,3 +558,60 @@ describe('run row schema — summary-projected, no per-trace fetchError', () => 
     expect('fetchError' in parsed).toBe(false);
   });
 });
+
+describe('templatedText schema — one-source guard and strict keys', () => {
+  it('accepts an inline content source', () => {
+    expect(schemas.templatedText.parse({ content: '.x' })).toEqual({ content: '.x' });
+  });
+
+  it('accepts a stored template id source', () => {
+    expect(schemas.templatedText.parse({ id: 'tmpl_a' })).toEqual({ id: 'tmpl_a' });
+  });
+
+  it('carries kwargs alongside either source', () => {
+    expect(schemas.templatedText.parse({ content: '.x', kwargs: { n: 1 } })).toEqual({
+      content: '.x',
+      kwargs: { n: 1 },
+    });
+    expect(schemas.templatedText.parse({ id: 'tmpl_a', kwargs: { n: 1 } })).toEqual({
+      id: 'tmpl_a',
+      kwargs: { n: 1 },
+    });
+  });
+
+  it('rejects both sources at once (the exactly-one refine)', () => {
+    expect(() => schemas.templatedText.parse({ content: '.x', id: 'tmpl_a' })).toThrow();
+  });
+
+  it('rejects neither source (the exactly-one refine)', () => {
+    expect(() => schemas.templatedText.parse({ kwargs: { n: 1 } })).toThrow();
+  });
+
+  it('rejects an unknown key (the .strict() guard)', () => {
+    expect(() => schemas.templatedText.parse({ content: '.x', extra: true })).toThrow();
+  });
+
+  it('rejects a null source (a source is a string or absent, never null)', () => {
+    expect(() => schemas.templatedText.parse({ content: null })).toThrow();
+    expect(() => schemas.templatedText.parse({ id: null })).toThrow();
+  });
+});
+
+describe('requiredTemplatedText schema — a non-empty source is mandatory', () => {
+  it('accepts a non-empty inline content and a non-empty stored id', () => {
+    expect(schemas.requiredTemplatedText.parse({ content: '.x' })).toEqual({ content: '.x' });
+    expect(schemas.requiredTemplatedText.parse({ id: 'tmpl_a' })).toEqual({ id: 'tmpl_a' });
+  });
+
+  it('rejects an empty content and an empty id that templatedText would allow', () => {
+    expect(schemas.templatedText.parse({ content: '' })).toEqual({ content: '' });
+    expect(() => schemas.requiredTemplatedText.parse({ content: '' })).toThrow();
+    expect(() => schemas.requiredTemplatedText.parse({ id: '' })).toThrow();
+  });
+
+  it('rejects both sources, neither source, and an unknown key (inherited guards)', () => {
+    expect(() => schemas.requiredTemplatedText.parse({ content: '.x', id: 'tmpl_a' })).toThrow();
+    expect(() => schemas.requiredTemplatedText.parse({ kwargs: { n: 1 } })).toThrow();
+    expect(() => schemas.requiredTemplatedText.parse({ content: '.x', extra: true })).toThrow();
+  });
+});

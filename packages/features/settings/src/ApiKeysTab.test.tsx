@@ -39,9 +39,7 @@ function seededTokens(): TokensPayload {
       description: 'Alice key',
       scopes: ['admin'],
       policy_data: { limit: 5 },
-      condition: '.policy.limit > 0',
-      condition_id: null,
-      condition_kwargs: null,
+      condition: { content: '.policy.limit > 0' },
     },
   ];
 }
@@ -215,7 +213,7 @@ describe('ApiKeysTab', () => {
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
     await user.type(screen.getByLabelText('User ID'), 'bob');
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit >');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit >');
 
     // A failed Test surfaces the guard's compiler error verbatim…
     await user.click(screen.getByRole('button', { name: 'Test condition' }));
@@ -229,8 +227,7 @@ describe('ApiKeysTab', () => {
       expect(createApiKey).toHaveBeenCalledWith(
         expect.objectContaining({
           user_id: 'bob',
-          condition: '.policy.limit >',
-          condition_id: null,
+          condition: { content: '.policy.limit >' },
         }),
       );
     });
@@ -247,12 +244,12 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit >');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit >');
     await user.click(screen.getByRole('button', { name: 'Test condition' }));
     expect(await screen.findByText(/failed its last test/)).toBeInTheDocument();
 
     // Editing the condition clears the last Test result and its Save warning.
-    await user.type(screen.getByLabelText('jq condition'), ' 0');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), ' 0');
     expect(screen.queryByText(/failed its last test/)).not.toBeInTheDocument();
   });
 
@@ -265,7 +262,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit > 0');
     await user.click(screen.getByRole('button', { name: 'Test condition' }));
 
     expect(await screen.findByText('allows sample')).toBeInTheDocument();
@@ -273,11 +270,11 @@ describe('ApiKeysTab', () => {
       expect(validateCondition).toHaveBeenCalled();
     });
     const body = validateCondition.mock.calls[0]?.[0] as Record<string, unknown>;
+    // The Test compiles the inline jq the author typed, with the sample context so an
+    // enforcement-faithful allow/deny is evaluated — and carries nothing else.
     expect(body.condition).toBe('.policy.limit > 0');
-    // The sample context is sent so enforcement-faithful allow/deny is evaluated…
     expect(body.sample_context).toMatchObject({ sub: 'anon', scopes: [] });
-    // …and the inline/template either-or is honored by construction (no condition_id).
-    expect(body).not.toHaveProperty('condition_id');
+    expect(Object.keys(body).sort()).toEqual(['condition', 'sample_context']);
   });
 
   it('the Test button badges a denied sample when the guard returns result false', async () => {
@@ -289,7 +286,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit > 0');
     await user.click(screen.getByRole('button', { name: 'Test condition' }));
 
     expect(await screen.findByText('denies sample')).toBeInTheDocument();
@@ -304,7 +301,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit > 0');
     await user.clear(screen.getByLabelText('Sample context (JSON)'));
     await user.click(screen.getByRole('button', { name: 'Test condition' }));
 
@@ -326,7 +323,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.missing');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.missing');
     await user.click(screen.getByRole('button', { name: 'Test condition' }));
 
     expect(await screen.findByText(lockout)).toBeInTheDocument();
@@ -341,7 +338,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit > 0');
     const sample = screen.getByLabelText('Sample context (JSON)');
     await user.clear(sample);
     await user.type(sample, 'not json');
@@ -351,7 +348,7 @@ describe('ApiKeysTab', () => {
     expect(validateCondition).not.toHaveBeenCalled();
   });
 
-  it('template mode sends condition_id + condition_kwargs and never an inline condition', async () => {
+  it('stored-template mode sends a condition with an id + kwargs and no inline content', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');
     renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
@@ -359,28 +356,26 @@ describe('ApiKeysTab', () => {
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
     await user.type(screen.getByLabelText('User ID'), 'bob');
-    await user.click(screen.getByRole('radio', { name: 'Named template' }));
+    await user.click(screen.getByRole('radio', { name: 'Stored template' }));
 
-    await user.click(await screen.findByRole('combobox', { name: 'Condition template' }));
+    await user.click(await screen.findByRole('combobox', { name: 'Condition' }));
     await user.click(await screen.findByRole('option', { name: 'ac_tier' }));
 
-    await user.click(screen.getByRole('button', { name: 'Add Condition kwargs row' }));
-    await user.type(screen.getByLabelText('Condition kwargs key 1'), 'tier');
-    await user.type(screen.getByLabelText('Condition kwargs value 1'), 'pro');
+    await user.click(screen.getByRole('button', { name: 'Add render parameters' }));
+    await user.type(screen.getByLabelText('Condition render parameters key 1'), 'tier');
+    await user.type(screen.getByLabelText('Condition render parameters value 1'), 'pro');
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
       expect(createApiKey).toHaveBeenCalledWith(
         expect.objectContaining({
-          condition_id: 'ac_tier',
-          condition: null,
-          condition_kwargs: { tier: 'pro' },
+          condition: { id: 'ac_tier', kwargs: { tier: 'pro' } },
         }),
       );
     });
-    // Mutually exclusive: the inline condition is never a string alongside a template.
-    const body = createApiKey.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(body.condition).toBeNull();
+    // Mutually exclusive by construction: no inline content rides alongside the id.
+    const body = createApiKey.mock.calls[0]?.[0] as { condition: { content?: string } };
+    expect(body.condition.content).toBeUndefined();
   });
 
   it('pre-fills the edit dialog from the stored policy fields', async () => {
@@ -391,9 +386,7 @@ describe('ApiKeysTab', () => {
         description: 'Alice key',
         scopes: ['admin'],
         policy_data: { limit: 5 },
-        condition: '.policy.limit > 0',
-        condition_id: null,
-        condition_kwargs: null,
+        condition: { content: '.policy.limit > 0' },
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -403,7 +396,7 @@ describe('ApiKeysTab', () => {
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
 
-    expect(screen.getByLabelText('jq condition')).toHaveValue('.policy.limit > 0');
+    expect(screen.getByRole('textbox', { name: 'Condition' })).toHaveValue('.policy.limit > 0');
     expect(screen.getByLabelText('Policy data key 1')).toHaveValue('limit');
     expect(screen.getByLabelText('Policy data value 1')).toHaveValue('5');
   });
@@ -449,7 +442,7 @@ describe('ApiKeysTab', () => {
     await waitFor(() => {
       expect(editApiKey).toHaveBeenCalledWith(
         'alice',
-        expect.objectContaining({ condition: null, condition_id: null, condition_kwargs: null }),
+        expect.objectContaining({ condition: null }),
       );
     });
   });
@@ -468,7 +461,7 @@ describe('ApiKeysTab', () => {
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
 
     // Emptying the textarea alone is NOT a delete — the field is omitted, not nulled.
-    await user.clear(screen.getByLabelText('jq condition'));
+    await user.clear(screen.getByRole('textbox', { name: 'Condition' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
@@ -476,7 +469,6 @@ describe('ApiKeysTab', () => {
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(body).not.toHaveProperty('condition');
-    expect(body).not.toHaveProperty('condition_id');
   });
 
   it('"Clear policy data" sends an explicit policy_data null clear', async () => {
@@ -541,8 +533,6 @@ describe('ApiKeysTab', () => {
         scopes: ['admin'],
         policy_data: { limit: '7' },
         condition: null,
-        condition_id: null,
-        condition_kwargs: null,
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -564,7 +554,7 @@ describe('ApiKeysTab', () => {
     expect(body.policy_data).toEqual({ limit: '7' });
   });
 
-  it('re-emits untouched template condition_kwargs VERBATIM (no JSON-type coercion)', async () => {
+  it('omits an untouched stored-template condition on a description-only save', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
@@ -573,9 +563,7 @@ describe('ApiKeysTab', () => {
         description: 'Alice key',
         scopes: ['admin'],
         policy_data: {},
-        condition: null,
-        condition_id: 'ac_tier',
-        condition_kwargs: { min: '7' },
+        condition: { id: 'ac_tier', kwargs: { min: '7' } },
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -597,10 +585,9 @@ describe('ApiKeysTab', () => {
       expect(editApiKey).toHaveBeenCalled();
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(body.condition_id).toBe('ac_tier');
-    expect(body.condition).toBeNull();
-    // The string "7" survives as a string — never coerced to the number 7.
-    expect(body.condition_kwargs).toEqual({ min: '7' });
+    // The condition is OMITTED, so the PATCH preserves the stored { id, kwargs } byte
+    // for byte — its string "7" is never re-serialized into the number 7.
+    expect(body).not.toHaveProperty('condition');
   });
 
   it('re-emits an untouched inline condition VERBATIM (no whitespace normalization)', async () => {
@@ -614,9 +601,7 @@ describe('ApiKeysTab', () => {
         description: 'Alice key',
         scopes: ['admin'],
         policy_data: {},
-        condition: '  .policy.limit > 0  ',
-        condition_id: null,
-        condition_kwargs: null,
+        condition: { content: '  .policy.limit > 0  ' },
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -635,28 +620,24 @@ describe('ApiKeysTab', () => {
       expect(editApiKey).toHaveBeenCalled();
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
-    // The stored whitespace survives verbatim — not normalized on a save that never
-    // touched the condition.
-    expect(body.condition).toBe('  .policy.limit > 0  ');
+    // The condition is OMITTED, so the PATCH preserves the stored whitespace verbatim —
+    // a save that never touched the condition cannot normalize it into a phantom version.
+    expect(body).not.toHaveProperty('condition');
   });
 
   it('preserves an inline condition AND its stored kwargs on a pristine save', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    // An INLINE condition can be Jinja-templated and legitimately carry condition_kwargs
-    // (enforcement renders inline conditions with kwargs). A description-only save must
-    // re-emit the condition verbatim and OMIT condition_kwargs (the PATCH preserves the
-    // stored kwargs) — nulling them would wipe the inline condition's variables, alter
-    // the enforced body, and append a phantom version.
+    // An INLINE condition can be Jinja-templated and legitimately carry render kwargs.
+    // A description-only save must OMIT the whole condition (the PATCH preserves the
+    // stored content and its kwargs) — re-serializing would risk a phantom version.
     const seed: TokensPayload = [
       {
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
         policy_data: {},
-        condition: '.policy.limit > {{ min }}',
-        condition_id: null,
-        condition_kwargs: { min: '7' },
+        condition: { content: '.policy.limit > {{ min }}', kwargs: { min: '7' } },
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -675,28 +656,23 @@ describe('ApiKeysTab', () => {
       expect(editApiKey).toHaveBeenCalled();
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(body.condition).toBe('.policy.limit > {{ min }}');
-    expect(body.condition_id).toBeNull();
-    // condition_kwargs is OMITTED, so the PATCH preserves the stored { min: '7' } — the
-    // enforced body is unchanged and no phantom version is appended.
-    expect(body).not.toHaveProperty('condition_kwargs');
+    // The whole condition is OMITTED, so the PATCH preserves the stored inline content
+    // AND its render kwargs byte for byte — no phantom version, no lost variables.
+    expect(body).not.toHaveProperty('condition');
   });
 
-  it('omits condition_kwargs on a pristine template whose stored kwargs are null', async () => {
+  it('omits a pristine stored-template condition that carries no kwargs', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
-    // A template-mode key whose stored condition_kwargs is null: a description-only save
-    // must OMIT condition_kwargs (the PATCH preserves the stored null) rather than send
-    // `{}`, which would coerce null→{} and append a phantom version.
+    // A stored-template condition with no kwargs: a description-only save must OMIT the
+    // whole condition (the PATCH preserves it) rather than re-send a re-serialized copy.
     const seed: TokensPayload = [
       {
         user_id: 'alice',
         description: 'Alice key',
         scopes: ['admin'],
         policy_data: {},
-        condition: null,
-        condition_id: 'ac_tier',
-        condition_kwargs: null,
+        condition: { id: 'ac_tier' },
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -715,11 +691,10 @@ describe('ApiKeysTab', () => {
       expect(editApiKey).toHaveBeenCalled();
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(body.condition_id).toBe('ac_tier');
-    expect(body).not.toHaveProperty('condition_kwargs');
+    expect(body).not.toHaveProperty('condition');
   });
 
-  it('switching a seeded template condition to inline mode clears the orphaned kwargs', async () => {
+  it('switching a seeded stored-template condition to inline keeps the shared render kwargs', async () => {
     const user = userEvent.setup({ delay: null });
     const editApiKey = vi.fn().mockResolvedValue({ user_id: 'alice', updated: true });
     const templateSeed: TokensPayload = [
@@ -728,9 +703,7 @@ describe('ApiKeysTab', () => {
         description: 'Alice key',
         scopes: ['admin'],
         policy_data: {},
-        condition: null,
-        condition_id: 'ac_tier',
-        condition_kwargs: { min: '7' },
+        condition: { id: 'ac_tier', kwargs: { min: '7' } },
       },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
@@ -742,23 +715,19 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
-    // The Condition group is NAMED — a bare heading beside it left the radiogroup
-    // with an empty accessible name, so a reader entering it heard two unattributed
-    // choices.
-    expect(screen.getByRole('radiogroup')).toHaveAccessibleName('Condition');
-    // Switch to inline mode and author an inline condition.
-    await user.click(screen.getByRole('radio', { name: 'Inline jq expression' }));
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
+    // The source toggle is NAMED so a reader entering it hears what the choice is for.
+    expect(screen.getByRole('radiogroup')).toHaveAccessibleName('Condition source');
+    // Switch to inline mode and author an inline condition; the render kwargs are shared
+    // across both sources, so they ride with the now-inline content.
+    await user.click(screen.getByRole('radio', { name: 'Inline text' }));
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit > 0');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(editApiKey).toHaveBeenCalled();
     });
     const body = editApiKey.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(body.condition).toBe('.policy.limit > 0');
-    expect(body.condition_id).toBeNull();
-    // The template's kwargs are not left orphaned alongside the inline condition.
-    expect(body.condition_kwargs).toBeNull();
+    expect(body.condition).toEqual({ content: '.policy.limit > 0', kwargs: { min: '7' } });
   });
 
   it('the clear affordances are absent in create mode (nothing to clear)', async () => {

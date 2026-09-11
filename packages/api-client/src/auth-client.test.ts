@@ -190,7 +190,7 @@ describe('auth api-key client transport', () => {
             description: 'deploy key',
             scopes: ['deploy'],
             policy_data: { limit: 5 },
-            condition: '.context.used < .policy.limit',
+            condition: { content: '.context.used < .policy.limit' },
           },
         ],
       }),
@@ -233,9 +233,7 @@ describe('auth api-key client transport', () => {
       description: 'deploy key',
       scopes: ['deploy', 'read'],
       policy_data: { limit: 5 },
-      condition: '.context.used < .policy.limit',
-      condition_id: null,
-      condition_kwargs: { tier: 'pro' },
+      condition: { content: '.context.used < .policy.limit', kwargs: { tier: 'pro' } },
     };
     // The mint reply carries the raw key AND its per-mint fingerprint; createApiKey
     // returns just the raw key string (the fingerprint is read from the tokens payload).
@@ -260,7 +258,7 @@ describe('auth api-key client transport', () => {
         user_id: 'u1',
         description: 'x',
         scopes: [],
-        condition: '.broken (',
+        condition: { content: '.broken (' },
       }),
     ).rejects.toBeInstanceOf(ApiError);
   });
@@ -270,9 +268,7 @@ describe('auth api-key client transport', () => {
       description: 'rotated',
       scopes: ['deploy'],
       policy_data: null,
-      condition: null,
-      condition_id: 'tmpl_1',
-      condition_kwargs: { tier: 'free' },
+      condition: { id: 'tmpl_1', kwargs: { tier: 'free' } },
     };
     const { client, captured } = harness(() =>
       jsonResponse({ data: { user_id: 'u 1', updated: true } }),
@@ -287,7 +283,7 @@ describe('auth api-key client transport', () => {
   it('editApiKey surfaces a 400 policy-validation failure as a LOUD ApiError', async () => {
     const { client } = harness(() => jsonResponse({ error: 'invalid condition template id' }, 400));
     await expect(
-      client.editApiKey('u1', { description: 'x', scopes: [], condition_id: 'ghost' }),
+      client.editApiKey('u1', { description: 'x', scopes: [], condition: { id: 'ghost' } }),
     ).rejects.toBeInstanceOf(ApiError);
   });
 
@@ -333,9 +329,7 @@ describe('auth roles client transport', () => {
     name: 'editor',
     description: 'read + write on granted feature groups',
     scopes: ['*'],
-    condition: '.foo',
-    condition_id: null,
-    condition_kwargs: null,
+    condition: { content: '.foo' },
     base_tier: 'editor',
     allow_all: false,
     grants: { tools: 'write', config: 'read' },
@@ -351,8 +345,6 @@ describe('auth roles client transport', () => {
             description: 'full access',
             scopes: ['*'],
             condition: null,
-            condition_id: null,
-            condition_kwargs: null,
             base_tier: null,
             allow_all: true,
             grants: {},

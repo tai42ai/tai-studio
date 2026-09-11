@@ -137,11 +137,7 @@ export class ApiError extends Error {
 // @public
 export interface ApiKeyBody {
     // (undocumented)
-    readonly condition?: string | null;
-    // (undocumented)
-    readonly condition_id?: string | null;
-    // (undocumented)
-    readonly condition_kwargs?: Record<string, unknown> | null;
+    readonly condition?: s.TemplatedText | null;
     // (undocumented)
     readonly description: string;
     // (undocumented)
@@ -810,18 +806,42 @@ const conversationRoute: z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             state: z.ZodString;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-            subject_expr: z.ZodString;
-            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            subject_expr: z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 into: z.ZodString;
             }, z.core.$strip>>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
             }, z.core.$strip>>>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
@@ -858,18 +878,42 @@ const conversationRouteCreate: z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             state: z.ZodString;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-            subject_expr: z.ZodString;
-            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            subject_expr: z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 into: z.ZodString;
             }, z.core.$strip>>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
             }, z.core.$strip>>>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
@@ -917,18 +961,42 @@ const conversationRoutes: z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 state: z.ZodString;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-                subject_expr: z.ZodString;
-                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                subject_expr: z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                     into: z.ZodString;
                 }, z.core.$strip>>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                 }, z.core.$strip>>>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
@@ -971,18 +1039,42 @@ const conversationRouteWritten: z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 state: z.ZodString;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-                subject_expr: z.ZodString;
-                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                subject_expr: z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                     into: z.ZodString;
                 }, z.core.$strip>>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                 }, z.core.$strip>>>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
@@ -1310,18 +1402,42 @@ export function createApiClient(config: ApiConfig): {
                 states: {
                     state: string;
                     templates: string[];
-                    subject_expr: string;
-                    scope_expr: string | null;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
                     input_injections: {
                         template_jq: string | null;
-                        jq: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                         into: string;
                     }[];
                     updates: {
                         template_jq: string | null;
-                        jq: string | null;
-                        adapter: string | null;
-                        op_id: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                     }[];
                 }[];
             } | null;
@@ -1346,18 +1462,42 @@ export function createApiClient(config: ApiConfig): {
                 states: {
                     state: string;
                     templates: string[];
-                    subject_expr: string;
-                    scope_expr: string | null;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
                     input_injections: {
                         template_jq: string | null;
-                        jq: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                         into: string;
                     }[];
                     updates: {
                         template_jq: string | null;
-                        jq: string | null;
-                        adapter: string | null;
-                        op_id: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                     }[];
                 }[];
             } | null;
@@ -1382,18 +1522,42 @@ export function createApiClient(config: ApiConfig): {
                 states: {
                     state: string;
                     templates: string[];
-                    subject_expr: string;
-                    scope_expr: string | null;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
                     input_injections: {
                         template_jq: string | null;
-                        jq: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                         into: string;
                     }[];
                     updates: {
                         template_jq: string | null;
-                        jq: string | null;
-                        adapter: string | null;
-                        op_id: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                     }[];
                 }[];
             } | null;
@@ -1920,11 +2084,7 @@ export function createApiClient(config: ApiConfig): {
         path: string;
         deleted: true;
     }>;
-    readonly renderTemplate: (body: {
-        content?: string;
-        template_id?: string;
-        kwargs?: Record<string, unknown>;
-    }) => Promise<{
+    readonly renderTemplate: (text: s.TemplatedText) => Promise<{
         rendered: string;
     }>;
     readonly clearTemplatesCache: () => Promise<{
@@ -2700,18 +2860,42 @@ export function createApiClient(config: ApiConfig): {
                 states: {
                     state: string;
                     templates: string[];
-                    subject_expr: string;
-                    scope_expr: string | null;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
                     input_injections: {
                         template_jq: string | null;
-                        jq: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                         into: string;
                     }[];
                     updates: {
                         template_jq: string | null;
-                        jq: string | null;
-                        adapter: string | null;
-                        op_id: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                     }[];
                 }[];
             } | null;
@@ -2740,18 +2924,42 @@ export function createApiClient(config: ApiConfig): {
                 states: {
                     state: string;
                     templates: string[];
-                    subject_expr: string;
-                    scope_expr: string | null;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
                     input_injections: {
                         template_jq: string | null;
-                        jq: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                         into: string;
                     }[];
                     updates: {
                         template_jq: string | null;
-                        jq: string | null;
-                        adapter: string | null;
-                        op_id: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                     }[];
                 }[];
             } | null;
@@ -2984,28 +3192,56 @@ export function createApiClient(config: ApiConfig): {
                 kind: string;
                 key_expr: string;
             } | null;
-            condition: string | null;
-            condition_id: string | null;
-            condition_kwargs: Record<string, unknown>;
-            expr: string | null;
-            expr_id: string | null;
-            expr_kwargs: Record<string, unknown>;
+            condition: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
             state_binding: {
                 states: {
                     state: string;
                     templates: string[];
-                    subject_expr: string;
-                    scope_expr: string | null;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
                     input_injections: {
                         template_jq: string | null;
-                        jq: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                         into: string;
                     }[];
                     updates: {
                         template_jq: string | null;
-                        jq: string | null;
-                        adapter: string | null;
-                        op_id: string | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
                     }[];
                 }[];
             } | null;
@@ -3112,9 +3348,11 @@ export function createApiClient(config: ApiConfig): {
         name: string;
         description: string;
         scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs: unknown;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
@@ -3123,9 +3361,11 @@ export function createApiClient(config: ApiConfig): {
         name: string;
         description: string;
         scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs: unknown;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
@@ -3134,9 +3374,11 @@ export function createApiClient(config: ApiConfig): {
         name: string;
         description: string;
         scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs: unknown;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
@@ -3152,9 +3394,11 @@ export function createApiClient(config: ApiConfig): {
                 name: string;
                 description: string;
                 scopes: string[];
-                condition: string | null;
-                condition_id: string | null;
-                condition_kwargs: unknown;
+                condition: {
+                    content?: string | undefined;
+                    id?: string | undefined;
+                    kwargs?: Record<string, unknown> | undefined;
+                } | null;
                 base_tier: string | null;
                 allow_all: boolean;
                 grants: Record<string, "none" | "read" | "write">;
@@ -3180,9 +3424,11 @@ export function createApiClient(config: ApiConfig): {
         name: string;
         description: string;
         scopes: string[];
-        condition: string | null;
-        condition_id: string | null;
-        condition_kwargs: unknown;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
         base_tier: string | null;
         allow_all: boolean;
         grants: Record<string, "none" | "read" | "write">;
@@ -3192,9 +3438,11 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         scopes: string[];
         policy_data: unknown;
-        condition?: string | null | undefined;
-        condition_id?: string | null | undefined;
-        condition_kwargs?: unknown;
+        condition?: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null | undefined;
     }[]>;
     readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
     readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
@@ -3289,9 +3537,11 @@ export function createApiClient(config: ApiConfig): {
         body: {
             scopes: string[];
             policy_data: unknown;
-            condition: string | null;
-            condition_id: string | null;
-            condition_kwargs: unknown;
+            condition: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
         };
         tags: string[];
         created_at: string;
@@ -4142,28 +4392,56 @@ const hookList: z.ZodObject<{
             kind: z.ZodString;
             key_expr: z.ZodString;
         }, z.core.$strip>>>;
-        condition: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        condition_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        condition_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-        expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        expr_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        expr_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
         state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 state: z.ZodString;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-                subject_expr: z.ZodString;
-                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                subject_expr: z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                     into: z.ZodString;
                 }, z.core.$strip>>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                 }, z.core.$strip>>>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
@@ -4201,28 +4479,56 @@ const hookParams: z.ZodObject<{
         kind: z.ZodString;
         key_expr: z.ZodString;
     }, z.core.$strip>>>;
-    condition: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    condition_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    condition_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
-    expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    expr_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    expr_kwargs: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    condition: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
     state_binding: z.ZodDefault<z.ZodNullable<z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             state: z.ZodString;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-            subject_expr: z.ZodString;
-            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            subject_expr: z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 into: z.ZodString;
             }, z.core.$strip>>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
             }, z.core.$strip>>>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
@@ -5524,9 +5830,11 @@ export type PolicyBody = z.infer<typeof policyBody>;
 const policyBody: z.ZodObject<{
     scopes: z.ZodArray<z.ZodString>;
     policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    condition: z.ZodNullable<z.ZodString>;
-    condition_id: z.ZodNullable<z.ZodString>;
-    condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    condition: z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>;
 }, z.core.$strip>;
 
 // @public
@@ -5544,9 +5852,11 @@ const policyVersion: z.ZodObject<{
     body: z.ZodObject<{
         scopes: z.ZodArray<z.ZodString>;
         policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        condition: z.ZodNullable<z.ZodString>;
-        condition_id: z.ZodNullable<z.ZodString>;
-        condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        condition: z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>;
     }, z.core.$strip>;
     tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
@@ -5559,9 +5869,11 @@ const policyVersionList: z.ZodArray<z.ZodObject<{
     body: z.ZodObject<{
         scopes: z.ZodArray<z.ZodString>;
         policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        condition: z.ZodNullable<z.ZodString>;
-        condition_id: z.ZodNullable<z.ZodString>;
-        condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        condition: z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>;
     }, z.core.$strip>;
     tags: z.ZodArray<z.ZodString>;
     created_at: z.ZodString;
@@ -5586,18 +5898,42 @@ const presetBody: z.ZodObject<{
         states: z.ZodArray<z.ZodObject<{
             state: z.ZodString;
             templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-            subject_expr: z.ZodString;
-            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            subject_expr: z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>;
+            scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
             input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 into: z.ZodString;
             }, z.core.$strip>>>;
             updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                 template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
+                op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
             }, z.core.$strip>>>;
         }, z.core.$strip>>;
     }, z.core.$strip>>>;
@@ -5739,18 +6075,42 @@ const presetVersion: z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 state: z.ZodString;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-                subject_expr: z.ZodString;
-                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                subject_expr: z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                     into: z.ZodString;
                 }, z.core.$strip>>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                 }, z.core.$strip>>>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
@@ -5777,18 +6137,42 @@ const presetVersionList: z.ZodArray<z.ZodObject<{
             states: z.ZodArray<z.ZodObject<{
                 state: z.ZodString;
                 templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-                subject_expr: z.ZodString;
-                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                subject_expr: z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>;
+                scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                    content: z.ZodOptional<z.ZodString>;
+                    id: z.ZodOptional<z.ZodString>;
+                    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                }, z.core.$strict>>>;
                 input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                     into: z.ZodString;
                 }, z.core.$strip>>>;
                 updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
                     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-                    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
+                    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                        content: z.ZodOptional<z.ZodString>;
+                        id: z.ZodOptional<z.ZodString>;
+                        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+                    }, z.core.$strict>>>;
                 }, z.core.$strip>>>;
             }, z.core.$strip>>;
         }, z.core.$strip>>>;
@@ -6075,6 +6459,13 @@ export interface RequestOptions {
     readonly signal?: AbortSignal;
 }
 
+// @public
+const requiredTemplatedText: z.ZodObject<{
+    content: z.ZodOptional<z.ZodString>;
+    id: z.ZodOptional<z.ZodString>;
+    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strict>;
+
 // @public (undocumented)
 const revokeApiKeyResult: z.ZodObject<{
     user_id: z.ZodString;
@@ -6106,9 +6497,11 @@ const roleBody: z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
     scopes: z.ZodArray<z.ZodString>;
-    condition: z.ZodNullable<z.ZodString>;
-    condition_id: z.ZodNullable<z.ZodString>;
-    condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    condition: z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>;
     base_tier: z.ZodNullable<z.ZodString>;
     allow_all: z.ZodBoolean;
     grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
@@ -6151,9 +6544,11 @@ const roleList: z.ZodArray<z.ZodObject<{
     name: z.ZodString;
     description: z.ZodString;
     scopes: z.ZodArray<z.ZodString>;
-    condition: z.ZodNullable<z.ZodString>;
-    condition_id: z.ZodNullable<z.ZodString>;
-    condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    condition: z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>;
     base_tier: z.ZodNullable<z.ZodString>;
     allow_all: z.ZodBoolean;
     grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
@@ -6181,9 +6576,11 @@ const roleVersion: z.ZodObject<{
         name: z.ZodString;
         description: z.ZodString;
         scopes: z.ZodArray<z.ZodString>;
-        condition: z.ZodNullable<z.ZodString>;
-        condition_id: z.ZodNullable<z.ZodString>;
-        condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        condition: z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>;
         base_tier: z.ZodNullable<z.ZodString>;
         allow_all: z.ZodBoolean;
         grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
@@ -6208,9 +6605,11 @@ const roleVersions: z.ZodObject<{
             name: z.ZodString;
             description: z.ZodString;
             scopes: z.ZodArray<z.ZodString>;
-            condition: z.ZodNullable<z.ZodString>;
-            condition_id: z.ZodNullable<z.ZodString>;
-            condition_kwargs: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+            condition: z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>;
             base_tier: z.ZodNullable<z.ZodString>;
             allow_all: z.ZodBoolean;
             grants: z.ZodRecord<z.ZodString, z.ZodEnum<{
@@ -6410,6 +6809,9 @@ declare namespace s {
     export {
         jsonValue,
         jsonSchema,
+        templatedText,
+        TemplatedText,
+        requiredTemplatedText,
         toolNames,
         toolSchema,
         ToolSchema,
@@ -6935,6 +7337,9 @@ declare namespace schemas {
     export {
         jsonValue,
         jsonSchema,
+        templatedText,
+        TemplatedText,
+        requiredTemplatedText,
         toolNames,
         toolSchema,
         ToolSchema,
@@ -7648,18 +8053,42 @@ export type StateAttach = z.infer<typeof stateAttach>;
 const stateAttach: z.ZodObject<{
     state: z.ZodString;
     templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    subject_expr: z.ZodString;
-    scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    subject_expr: z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>;
+    scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
     input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
         template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
         into: z.ZodString;
     }, z.core.$strip>>>;
     updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
         template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
+        op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
     }, z.core.$strip>>>;
 }, z.core.$strip>;
 
@@ -7722,18 +8151,42 @@ const stateBinding: z.ZodObject<{
     states: z.ZodArray<z.ZodObject<{
         state: z.ZodString;
         templates: z.ZodDefault<z.ZodArray<z.ZodString>>;
-        subject_expr: z.ZodString;
-        scope_expr: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        subject_expr: z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>;
+        scope_expr: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            content: z.ZodOptional<z.ZodString>;
+            id: z.ZodOptional<z.ZodString>;
+            kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+        }, z.core.$strict>>>;
         input_injections: z.ZodDefault<z.ZodArray<z.ZodObject<{
             template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
             into: z.ZodString;
         }, z.core.$strip>>>;
         updates: z.ZodDefault<z.ZodArray<z.ZodObject<{
             template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-            op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
+            adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
+            op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                content: z.ZodOptional<z.ZodString>;
+                id: z.ZodOptional<z.ZodString>;
+                kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+            }, z.core.$strict>>>;
         }, z.core.$strip>>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
@@ -7849,7 +8302,11 @@ export type StateInjection = z.infer<typeof stateInjection>;
 // @public
 const stateInjection: z.ZodObject<{
     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
     into: z.ZodString;
 }, z.core.$strip>;
 
@@ -8099,9 +8556,21 @@ export type StateUpdate = z.infer<typeof stateUpdate>;
 // @public
 const stateUpdate: z.ZodObject<{
     template_jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    jq: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    adapter: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-    op_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    jq: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    adapter: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
+    op_id: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
 }, z.core.$strip>;
 
 // @public
@@ -8324,6 +8793,16 @@ const templateDirDeleted: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type TemplatedText = z.infer<typeof templatedText>;
+
+// @public
+const templatedText: z.ZodObject<{
+    content: z.ZodOptional<z.ZodString>;
+    id: z.ZodOptional<z.ZodString>;
+    kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strict>;
+
+// @public (undocumented)
 export type TemplateJq = z.infer<typeof templateJq>;
 
 // @public
@@ -8394,9 +8873,11 @@ const tokensPayload: z.ZodArray<z.ZodObject<{
     description: z.ZodString;
     scopes: z.ZodArray<z.ZodString>;
     policy_data: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    condition: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    condition_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    condition_kwargs: z.ZodOptional<z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>>;
+    condition: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>>>;
 }, z.core.$strip>>;
 
 // @public
@@ -8790,10 +9271,6 @@ const unpinPublicResult: z.ZodObject<{
 export interface ValidateConditionBody {
     // (undocumented)
     readonly condition?: string;
-    // (undocumented)
-    readonly condition_id?: string;
-    // (undocumented)
-    readonly condition_kwargs?: Record<string, unknown>;
     // (undocumented)
     readonly sample_context?: Record<string, unknown>;
 }

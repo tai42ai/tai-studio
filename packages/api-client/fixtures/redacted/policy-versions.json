@@ -4,9 +4,7 @@
     "body": {
       "scopes": ["deploy"],
       "policy_data": { "limit": 7 },
-      "condition": ".context.used < .policy.limit",
-      "condition_id": null,
-      "condition_kwargs": { "tier": "pro" }
+      "condition": { "content": ".context.used < .policy.limit", "kwargs": { "tier": "pro" } }
     },
     "tags": [],
     "created_at": "2024-01-01T00:00:01+00:00",
@@ -17,9 +15,10 @@
     "body": {
       "scopes": ["deploy"],
       "policy_data": { "limit": 7 },
-      "condition": ".context.used < .policy.limit and (.scopes | index(\"deploy\"))",
-      "condition_id": null,
-      "condition_kwargs": { "tier": "pro" }
+      "condition": {
+        "content": ".context.used < .policy.limit and (.scopes | index(\"deploy\"))",
+        "kwargs": { "tier": "pro" }
+      }
     },
     "tags": [],
     "created_at": "2024-01-01T00:00:02+00:00",

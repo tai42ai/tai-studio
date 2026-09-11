@@ -87,7 +87,7 @@ describe('StateBindingEditor', () => {
     const attach = {
       state: 'counters',
       templates: [],
-      subject_expr: '',
+      subject_expr: { content: '' },
       scope_expr: null,
       input_injections: [],
       updates: [],
@@ -103,7 +103,7 @@ describe('StateBindingEditor', () => {
     expect(screen.getByText('Subject is required.')).toBeInTheDocument();
     rerender(
       <StateBindingEditor
-        value={{ states: [{ ...attach, subject_expr: '.subject_id' }] }}
+        value={{ states: [{ ...attach, subject_expr: { content: '.subject_id' } }] }}
         statesCatalog={STATES}
         templatesCatalog={TEMPLATES}
         onChange={vi.fn()}

@@ -277,11 +277,7 @@ describe('createApiClient', () => {
       tool_kwargs: { to: '#ops' },
       subject: null,
       condition: null,
-      condition_id: null,
-      condition_kwargs: {},
       expr: null,
-      expr_id: null,
-      expr_kwargs: {},
       state_binding: null,
     });
     expect(out).toEqual({ registered: true, name: 'h' });

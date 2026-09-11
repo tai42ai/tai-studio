@@ -190,6 +190,12 @@ export { Checkbox } from './components/checkbox';
 export type { CheckboxProps } from './components/checkbox';
 export { RadioGroup } from './components/radio-group';
 export type { RadioGroupProps, RadioOption } from './components/radio-group';
+export { TemplatedTextField, templatedTextSummary } from './components/templated-text-field';
+export type {
+  TemplatedTextFieldProps,
+  TemplatedTextInlineProps,
+  TemplatedTextTemplateOption,
+} from './components/templated-text-field';
 export { Badge } from './components/badge';
 export type { BadgeProps } from './components/badge';
 export { Tabs } from './components/tabs';
@@ -418,6 +424,7 @@ export {
   AdapterMapping,
   SubjectScopeFields,
   BindingJqField,
+  BindingTemplatedJqField,
   appendTjq,
   resolveTemplateJq,
   findByRef,
@@ -446,6 +453,7 @@ export type {
   AdapterMappingProps,
   SubjectScopeFieldsProps,
   BindingJqFieldProps,
+  BindingTemplatedJqFieldProps,
   TemplateJqSuggestion,
   ResolvedTemplateJq,
   MappingRow,
@@ -460,6 +468,8 @@ export type {
   BindingTemplateJqOption,
   BindingSourceSchemas,
   SchemaFieldPath,
+  TemplatedText,
+  TemplatedTextCatalog,
 } from './state-binding';
 
 // -- MCP context widgets (elicitation / progress / completions / output) -----

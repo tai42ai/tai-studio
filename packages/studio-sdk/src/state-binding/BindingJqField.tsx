@@ -38,6 +38,13 @@ export interface BindingJqFieldProps {
   readonly placeholder?: string;
   /** Template jq offered as `tjq_<name>({…})` inserts under the field. */
   readonly suggestions?: readonly TemplateJqSuggestion[];
+  /**
+   * Render the field's own visible label visually hidden while keeping it as the
+   * control's accessible name — for a field mounted under a group header that
+   * already shows the label (a `TemplatedTextField` slot). Off by default, so a
+   * bare use (a mapping row's jq) keeps its visible label.
+   */
+  readonly hideLabel?: boolean;
 }
 
 /** Append a `tjq_<name>({…})` template call to the current expression (space-separated when non-empty). */
@@ -55,6 +62,7 @@ export function BindingJqField({
   error,
   placeholder,
   suggestions = [],
+  hideLabel = false,
 }: BindingJqFieldProps): ReactNode {
   const Door = useContext(ExpressionFieldContext);
   // A stable hook for e2e: the injected jq editor owns its own DOM, so the wrapper
@@ -67,6 +75,9 @@ export function BindingJqField({
   return (
     <div
       data-testid={testId}
+      // The label-hide is scoped to a direct-child jq editor: the injected door is a
+      // direct child here, so a group header above it becomes the single visible label.
+      className={hideLabel ? 'tai-templated-inline--grouped' : undefined}
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}
     >
       {Door !== undefined ? (
@@ -81,6 +92,7 @@ export function BindingJqField({
       ) : (
         <Field
           label={label}
+          hideLabel={hideLabel}
           description={typeof description === 'string' ? description : undefined}
           error={error}
         >

@@ -352,7 +352,7 @@ describe('SaveVersionDialog', () => {
     const boundAttach = {
       state: 'counters',
       templates: [],
-      subject_expr: '.subject',
+      subject_expr: { content: '.subject' },
       scope_expr: null,
       input_injections: [],
       updates: [],
@@ -405,7 +405,7 @@ describe('SaveVersionDialog', () => {
             {
               state: 'counters',
               templates: [],
-              subject_expr: '',
+              subject_expr: { content: '' },
               scope_expr: null,
               input_injections: [],
               updates: [],

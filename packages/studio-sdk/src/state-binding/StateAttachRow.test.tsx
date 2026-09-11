@@ -29,7 +29,7 @@ function blank(): StateAttach {
   return {
     state: '',
     templates: [],
-    subject_expr: '',
+    subject_expr: { content: '' },
     scope_expr: null,
     input_injections: [],
     updates: [],
@@ -61,7 +61,7 @@ describe('StateAttachRow', () => {
     await user.click(screen.getByRole('combobox', { name: 'State' }));
     await user.click(await screen.findByRole('option', { name: 'counters' }));
     expect(screen.getByText('Templates')).toBeInTheDocument();
-    expect(screen.getByLabelText('Subject')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Subject' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add input' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add update' })).toBeInTheDocument();
   });
@@ -123,7 +123,7 @@ describe('StateAttachRow', () => {
         attach={{
           state: 'counters',
           templates: [],
-          subject_expr: '.a',
+          subject_expr: { content: '.a' },
           scope_expr: null,
           input_injections: [],
           updates: [],
@@ -132,7 +132,7 @@ describe('StateAttachRow', () => {
         templatesCatalog={TEMPLATES}
         onChange={vi.fn()}
         onRemove={vi.fn()}
-        inherited={{ subject_expr: '.preset_key', scope_expr: '.region' }}
+        inherited={{ subject_expr: { content: '.preset_key' }, scope_expr: { content: '.region' } }}
       />,
     );
     expect(screen.getByText('Overrides the preset’s subject')).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('StateAttachRow', () => {
         attach={{
           state: 'counters',
           templates: ['ghost'],
-          subject_expr: '.a',
+          subject_expr: { content: '.a' },
           scope_expr: null,
           input_injections: [{ template_jq: 'ghost.read', jq: null, into: 'x' }],
           updates: [],
@@ -171,7 +171,7 @@ describe('StateAttachRow', () => {
         attach={{
           state: 'vanished',
           templates: [],
-          subject_expr: '.a',
+          subject_expr: { content: '.a' },
           scope_expr: null,
           input_injections: [],
           updates: [],
@@ -203,6 +203,6 @@ describe('StateAttachRow', () => {
     await user.click(screen.getByRole('combobox', { name: 'State' }));
     await user.click(await screen.findByRole('option', { name: 'counters' }));
     const card = screen.getByTestId('state-attach-counters');
-    expect(within(card).getByLabelText('Scope')).toBeInTheDocument();
+    expect(within(card).getByRole('textbox', { name: 'Scope' })).toBeInTheDocument();
   });
 });

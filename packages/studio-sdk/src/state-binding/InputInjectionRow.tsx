@@ -10,9 +10,10 @@ import { Field } from '../components/field';
 import { Select } from '../components/select';
 import { TextInput } from '../components/inputs';
 import { CloseIcon } from '../components/icons';
-import { BindingJqField, type TemplateJqSuggestion } from './BindingJqField';
+import { BindingTemplatedJqField } from './BindingTemplatedJqField';
+import type { TemplateJqSuggestion } from './BindingJqField';
 import type { ResolvedTemplateJq } from './catalog';
-import type { StateInjection } from './types';
+import type { StateInjection, TemplatedTextCatalog } from './types';
 
 function optionLabel(entry: ResolvedTemplateJq): string {
   return entry.description !== undefined && entry.description !== ''
@@ -27,6 +28,7 @@ function InjectionRow({
   index,
   inputJq,
   suggestions,
+  templates,
   onChange,
   onRemove,
 }: {
@@ -34,6 +36,7 @@ function InjectionRow({
   readonly index: number;
   readonly inputJq: readonly ResolvedTemplateJq[];
   readonly suggestions?: readonly TemplateJqSuggestion[];
+  readonly templates?: TemplatedTextCatalog;
   readonly onChange: (injection: StateInjection) => void;
   readonly onRemove: () => void;
 }): ReactNode {
@@ -55,7 +58,8 @@ function InjectionRow({
           placeholder="Choose a template jq"
           value={selectValue}
           onValueChange={(next) => {
-            if (next === CUSTOM) onChange({ template_jq: null, jq: '', into: injection.into });
+            if (next === CUSTOM)
+              onChange({ template_jq: null, jq: { content: '' }, into: injection.into });
             else onChange({ template_jq: next, jq: null, into: injection.into });
           }}
           groups={[
@@ -68,13 +72,15 @@ function InjectionRow({
         />
       </Field>
       {isCustom ? (
-        <BindingJqField
+        <BindingTemplatedJqField
           label={`Custom injection jq ${String(index + 1)}`}
-          value={injection.jq ?? ''}
+          required
+          value={injection.jq}
           onChange={(next) => {
-            onChange({ template_jq: null, jq: next, into: injection.into });
+            onChange({ template_jq: null, jq: next ?? { content: '' }, into: injection.into });
           }}
           suggestions={suggestions}
+          templates={templates}
         />
       ) : null}
       <Field label={`Into field ${String(index + 1)}`} hideLabel>
@@ -103,6 +109,7 @@ export interface InjectionListProps {
   readonly onChange: (injections: readonly StateInjection[]) => void;
   readonly inputJq: readonly ResolvedTemplateJq[];
   readonly suggestions?: readonly TemplateJqSuggestion[];
+  readonly templates?: TemplatedTextCatalog;
 }
 
 export function InjectionList({
@@ -110,13 +117,14 @@ export function InjectionList({
   onChange,
   inputJq,
   suggestions,
+  templates,
 }: InjectionListProps): ReactNode {
   const add = (): void => {
     const first = inputJq[0];
     const next: StateInjection =
       first !== undefined
         ? { template_jq: first.ref, jq: null, into: '' }
-        : { template_jq: null, jq: '', into: '' };
+        : { template_jq: null, jq: { content: '' }, into: '' };
     onChange([...injections, next]);
   };
 
@@ -130,6 +138,7 @@ export function InjectionList({
           index={index}
           inputJq={inputJq}
           suggestions={suggestions}
+          templates={templates}
           onChange={(next) => {
             onChange(injections.map((current, position) => (position === index ? next : current)));
           }}

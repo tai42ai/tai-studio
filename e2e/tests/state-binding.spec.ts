@@ -146,8 +146,11 @@ test.describe('state binding on a door form (composed path)', () => {
         states: {
           state: string;
           templates: string[];
-          subject_expr: string;
-          updates: { template_jq: string | null; adapter: string | null }[];
+          subject_expr: { content?: string; id?: string };
+          updates: {
+            template_jq: string | null;
+            adapter: { content?: string; id?: string } | null;
+          }[];
         }[];
       }
       // Store the first non-null read the poll observes and assert on THAT, so a
@@ -171,10 +174,10 @@ test.describe('state binding on a door form (composed path)', () => {
       if (attach === undefined) throw new Error('expected one attached state');
       expect(attach.state).toBe(STATE);
       expect(attach.templates).toContain(TEMPLATE);
-      expect(attach.subject_expr).toBe('.subject_id');
+      expect(attach.subject_expr).toEqual({ content: '.subject_id' });
       expect(attach.updates[0]?.template_jq).toBe('bump');
       // The generated adapter is the canonical, parseable shape the editor emits.
-      expect(attach.updates[0]?.adapter).toBe('{ total: (.output.total) }');
+      expect(attach.updates[0]?.adapter).toEqual({ content: '{ total: (.output.total) }' });
     } finally {
       await api.delete(`/api/presets/${PRESET}`).catch(() => undefined);
       await api.dispose();
@@ -215,7 +218,10 @@ test.describe('state binding on a door form (composed path)', () => {
 
       interface PersistedBinding {
         states: {
-          updates: { template_jq: string | null; adapter: string | null }[];
+          updates: {
+            template_jq: string | null;
+            adapter: { content?: string; id?: string } | null;
+          }[];
         }[];
       }
       const captured: { value: PersistedBinding | null } = { value: null };
@@ -236,7 +242,7 @@ test.describe('state binding on a door form (composed path)', () => {
       expect(update?.template_jq).toBe('bump');
       // The accepted-as-shown default is stored (WYSIWYG); an empty adapter would have
       // failed the platform's save-time compile check and left no persisted binding.
-      expect(update?.adapter).toBe('{ total: (.output) }');
+      expect(update?.adapter).toEqual({ content: '{ total: (.output) }' });
     } finally {
       await api.delete(`/api/presets/${PRESET_DEFAULT}`).catch(() => undefined);
       await api.dispose();

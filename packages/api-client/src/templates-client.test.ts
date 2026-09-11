@@ -105,12 +105,12 @@ describe('templates client transport', () => {
     await expect(client.deleteTemplateDir('ghost')).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('renderTemplate POSTs the render body and parses the rendered output', async () => {
+  it('renderTemplate POSTs the templated text under `text` and parses the rendered output', async () => {
     const { client, captured } = harness(() => jsonResponse({ data: { rendered: 'Hi Ada' } }));
-    const out = await client.renderTemplate({ template_id: 'welcome', kwargs: { name: 'Ada' } });
+    const out = await client.renderTemplate({ id: 'welcome', kwargs: { name: 'Ada' } });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/render-template');
-    expect(captured[0]?.body).toEqual({ template_id: 'welcome', kwargs: { name: 'Ada' } });
+    expect(captured[0]?.body).toEqual({ text: { id: 'welcome', kwargs: { name: 'Ada' } } });
     expect(out.rendered).toBe('Hi Ada');
   });
 
@@ -124,7 +124,7 @@ describe('templates client transport', () => {
 
   it('surfaces a 4xx { error } from a render failure as a LOUD ApiError', async () => {
     const { client } = harness(() => jsonResponse({ error: "template 'ghost' not found" }, 404));
-    await expect(client.renderTemplate({ template_id: 'ghost' })).rejects.toBeInstanceOf(ApiError);
+    await expect(client.renderTemplate({ id: 'ghost' })).rejects.toBeInstanceOf(ApiError);
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting upload receipt (uploaded not true)', async () => {

@@ -85,6 +85,11 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
+  // The stored templates a binding's templated-text jq slots may reference by id.
+  const authoredTemplatesQuery = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+  });
   // The route's target tool schema (a preset is served as a tool) feeds the field pickers.
   const targetName = value.target?.target_name ?? '';
   const toolSchemaQuery = useQuery({
@@ -184,6 +189,14 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
             onChange={setStateBinding}
             statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
             templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
+            templatedTextTemplates={{
+              templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
+              loading: authoredTemplatesQuery.isPending,
+              error: authoredTemplatesQuery.isError
+                ? errorMessage(authoredTemplatesQuery.error)
+                : undefined,
+              onRetry: () => void authoredTemplatesQuery.refetch(),
+            }}
             inherited={inheritedBinding}
             sources={{
               input: fieldPathsFromSchema(toolSchemaQuery.data?.input),

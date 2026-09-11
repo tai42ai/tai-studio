@@ -2,7 +2,7 @@
  * Direct behaviour tests for the render-preview form: kwargs JSON is parsed to a
  * plain object BEFORE any request, so an empty box renders with `{}`, malformed
  * JSON and non-object JSON are LOUD inline field errors that never reach the
- * network, and a valid object posts the exact `{ template_id, kwargs }` body.
+ * network, and a valid object renders the stored template by `{ id, kwargs }`.
  * Rendered output is shown as ESCAPED text — a `<script>` payload is displayed
  * verbatim, never injected — and a rejected render surfaces in an `ErrorState`.
  */
@@ -27,7 +27,7 @@ describe('RenderPreview', () => {
 
     await waitFor(() => {
       expect(renderTemplate).toHaveBeenCalledWith({
-        template_id: 'prompts/a.md',
+        id: 'prompts/a.md',
         kwargs: { name: 'Ada' },
       });
     });
@@ -45,7 +45,7 @@ describe('RenderPreview', () => {
 
     await waitFor(() => {
       expect(renderTemplate).toHaveBeenCalledWith({
-        template_id: 'prompts/a.md',
+        id: 'prompts/a.md',
         kwargs: {},
       });
     });
@@ -101,7 +101,7 @@ describe('RenderPreview', () => {
     await waitFor(() => {
       expect(screen.queryByText(/Invalid JSON/)).not.toBeInTheDocument();
     });
-    expect(renderTemplate).toHaveBeenCalledWith({ template_id: 'prompts/a.md', kwargs: {} });
+    expect(renderTemplate).toHaveBeenCalledWith({ id: 'prompts/a.md', kwargs: {} });
   });
 
   it('surfaces a rejected render loudly', async () => {

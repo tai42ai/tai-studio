@@ -45,7 +45,7 @@ describe('InjectionList', () => {
     const user = userEvent.setup();
     render(<Harness inputJq={[]} />);
     await user.click(screen.getByRole('button', { name: 'Add input' }));
-    expect(screen.getByLabelText('Custom injection jq 1')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Custom injection jq 1' })).toBeInTheDocument();
   });
 
   it('switches a row to a custom jq and back to a template jq', async () => {
@@ -54,10 +54,12 @@ describe('InjectionList', () => {
     await user.click(screen.getByRole('button', { name: 'Add input' }));
     await user.click(screen.getByRole('combobox', { name: 'Injection source 1' }));
     await user.click(await screen.findByRole('option', { name: 'Custom jq' }));
-    expect(screen.getByLabelText('Custom injection jq 1')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Custom injection jq 1' })).toBeInTheDocument();
     await user.click(screen.getByRole('combobox', { name: 'Injection source 1' }));
     await user.click(await screen.findByRole('option', { name: 'current — the head' }));
-    expect(screen.queryByLabelText('Custom injection jq 1')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: 'Custom injection jq 1' }),
+    ).not.toBeInTheDocument();
   });
 
   it('edits the into field and removes the row', async () => {

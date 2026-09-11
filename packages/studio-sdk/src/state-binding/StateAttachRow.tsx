@@ -10,6 +10,7 @@ import { CodeBlock } from '../components/code-block';
 import { Checkbox } from '../components/checkbox';
 import { Field } from '../components/field';
 import { Select } from '../components/select';
+import { templatedTextSummary } from '../components/templated-text-field';
 import { AlertTriangleIcon, CloseIcon } from '../components/icons';
 import { InjectionList } from './InputInjectionRow';
 import { UpdateList } from './UpdateRow';
@@ -21,30 +22,31 @@ import type {
   BindingStateOption,
   BindingTemplateOption,
   StateAttach,
+  TemplatedText,
+  TemplatedTextCatalog,
 } from './types';
 
 const ATTACH_ON_USE_HINT = 'This template will be attached to the state when you save.';
 
 /** The subject/scope of the target's own (inherited) binding for a state this one also names. */
 export interface InheritedSubject {
-  readonly subject_expr: string;
-  readonly scope_expr: string | null;
+  readonly subject_expr: TemplatedText;
+  readonly scope_expr: TemplatedText | null;
 }
 
 /** The stored binding's raw jq, for the unresolved-catalog read-only fallback. */
 function rawBindingLines(attach: StateAttach): string {
-  const lines = [`subject: ${attach.subject_expr || '(unset)'}`];
-  if (attach.scope_expr !== null && attach.scope_expr !== '')
-    lines.push(`scope: ${attach.scope_expr}`);
+  const lines = [`subject: ${templatedTextSummary(attach.subject_expr)}`];
+  if (attach.scope_expr !== null) lines.push(`scope: ${templatedTextSummary(attach.scope_expr)}`);
   for (const injection of attach.input_injections) {
     lines.push(
-      `input ${injection.into || '(unset)'} <- ${injection.template_jq ?? injection.jq ?? ''}`,
+      `input ${injection.into || '(unset)'} <- ${injection.template_jq ?? templatedTextSummary(injection.jq)}`,
     );
   }
   for (const update of attach.updates) {
-    const ref = update.template_jq ?? update.jq ?? '';
+    const ref = update.template_jq ?? templatedTextSummary(update.jq);
     lines.push(
-      `update ${ref}${update.adapter !== null && update.adapter !== '' ? ` adapter ${update.adapter}` : ''}`,
+      `update ${ref}${update.adapter !== null ? ` adapter ${templatedTextSummary(update.adapter)}` : ''}`,
     );
   }
   return lines.join('\n');
@@ -60,6 +62,8 @@ export interface StateAttachRowProps {
   readonly subjectError?: string;
   /** The target's own binding subject for this state, when it also binds it (precedence). */
   readonly inherited?: InheritedSubject;
+  /** The stored templates a templated-text field's id picker offers. */
+  readonly templates?: TemplatedTextCatalog;
 }
 
 export function StateAttachRow({
@@ -71,6 +75,7 @@ export function StateAttachRow({
   sources,
   subjectError,
   inherited,
+  templates,
 }: StateAttachRowProps): ReactNode {
   const stateOption = statesCatalog.find((option) => option.name === attach.state);
   const attachedTemplates = stateOption?.attachedTemplates ?? [];
@@ -175,9 +180,9 @@ export function StateAttachRow({
                 Preset default:
               </span>
               <span style={{ fontFamily: 'var(--tai-font-mono)', fontSize: 'var(--tai-text-sm)' }}>
-                {`subject: ${inherited.subject_expr}`}
-                {inherited.scope_expr !== null && inherited.scope_expr !== ''
-                  ? `, scope: ${inherited.scope_expr}`
+                {`subject: ${templatedTextSummary(inherited.subject_expr)}`}
+                {inherited.scope_expr !== null
+                  ? `, scope: ${templatedTextSummary(inherited.scope_expr)}`
                   : ''}
               </span>
             </div>
@@ -244,6 +249,7 @@ export function StateAttachRow({
             scopeExpr={attach.scope_expr}
             subjectError={subjectError}
             suggestions={suggestions}
+            templates={templates}
             onSubjectChange={(next) => {
               onChange({ ...attach, subject_expr: next });
             }}
@@ -257,6 +263,7 @@ export function StateAttachRow({
               injections={attach.input_injections}
               inputJq={inputJq}
               suggestions={suggestions}
+              templates={templates}
               onChange={(next) => {
                 onChange({ ...attach, input_injections: [...next] });
               }}
@@ -269,6 +276,7 @@ export function StateAttachRow({
               updateJq={updateJq}
               sources={sources}
               suggestions={suggestions}
+              templates={templates}
               onChange={(next) => {
                 onChange({ ...attach, updates: [...next] });
               }}

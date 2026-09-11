@@ -18,6 +18,7 @@ import type {
   BindingTemplateOption,
   StateAttach,
   StateBinding,
+  TemplatedTextCatalog,
 } from './types';
 
 export interface StateBindingEditorProps {
@@ -40,13 +41,15 @@ export interface StateBindingEditorProps {
   readonly loading?: boolean;
   /** The catalog fetch failed. */
   readonly error?: string;
+  /** The stored templates a templated-text field's id picker offers, resolved by the door. */
+  readonly templatedTextTemplates?: TemplatedTextCatalog;
 }
 
 function blankAttach(): StateAttach {
   return {
     state: '',
     templates: [],
-    subject_expr: '',
+    subject_expr: { content: '' },
     scope_expr: null,
     input_injections: [],
     updates: [],
@@ -62,6 +65,7 @@ export function StateBindingEditor({
   inherited,
   loading = false,
   error,
+  templatedTextTemplates,
 }: StateBindingEditorProps): ReactNode {
   if (loading) {
     return (
@@ -106,12 +110,15 @@ export function StateBindingEditor({
               attach.state === ''
                 ? undefined
                 : inherited?.states.find((entry) => entry.state === attach.state);
-            // The subject is a required jq (contract: min_length=1); an empty one is
-            // caught inline once a state is chosen, never sent for the server to 422.
+            // The subject is a required authored value; an empty one (no stored id and
+            // no inline text) is caught inline once a state is chosen, never sent for
+            // the server to 422.
+            const subjectEmpty =
+              attach.subject_expr.id !== undefined
+                ? attach.subject_expr.id.trim() === ''
+                : (attach.subject_expr.content ?? '').trim() === '';
             const subjectError =
-              attach.state !== '' && attach.subject_expr.trim() === ''
-                ? 'Subject is required.'
-                : undefined;
+              attach.state !== '' && subjectEmpty ? 'Subject is required.' : undefined;
             return (
               <StateAttachRow
                 // Positional identity within a save; a state name may be blank while picking.
@@ -121,6 +128,7 @@ export function StateBindingEditor({
                 templatesCatalog={templatesCatalog}
                 sources={sources}
                 subjectError={subjectError}
+                templates={templatedTextTemplates}
                 inherited={
                   inheritedAttach === undefined
                     ? undefined

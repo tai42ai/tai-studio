@@ -128,6 +128,11 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
+  // The stored templates a binding's templated-text jq slots may reference by id.
+  const authoredTemplatesQuery = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+  });
   // The scheduled tool's schema feeds the binding editor's field pickers.
   const toolSchemaQuery = useQuery({
     queryKey: ['state-binding', 'tool-schema', tool],
@@ -408,6 +413,14 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           onChange={setStateBinding}
           statesCatalog={statesCatalogFromList(bindingStatesQuery.data ?? [])}
           templatesCatalog={templatesCatalogFromList(bindingTemplatesQuery.data ?? [])}
+          templatedTextTemplates={{
+            templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
+            loading: authoredTemplatesQuery.isPending,
+            error: authoredTemplatesQuery.isError
+              ? errorMessage(authoredTemplatesQuery.error)
+              : undefined,
+            onRetry: () => void authoredTemplatesQuery.refetch(),
+          }}
           inherited={inheritedBinding}
           sources={{
             input: fieldPathsFromSchema(toolSchemaQuery.data?.input),

@@ -20,6 +20,8 @@ export { SubjectScopeFields } from './SubjectScopeFields';
 export type { SubjectScopeFieldsProps } from './SubjectScopeFields';
 export { BindingJqField, appendTjq } from './BindingJqField';
 export type { BindingJqFieldProps, TemplateJqSuggestion } from './BindingJqField';
+export { BindingTemplatedJqField } from './BindingTemplatedJqField';
+export type { BindingTemplatedJqFieldProps } from './BindingTemplatedJqField';
 export { resolveTemplateJq, findByRef, resolveCallName } from './catalog';
 export type { ResolvedTemplateJq } from './catalog';
 export {
@@ -58,4 +60,6 @@ export type {
   StateAttach,
   StateInjection,
   StateUpdate,
+  TemplatedText,
+  TemplatedTextCatalog,
 } from './types';

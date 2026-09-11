@@ -45,11 +45,11 @@ function topicDoor(doors: HookList['trigger_auth'], topic: string): TriggerAuth 
 }
 
 function hasCondition(hook: HookParams): boolean {
-  return hook.condition !== null || hook.condition_id !== null;
+  return hook.condition !== null;
 }
 
 function hasExpr(hook: HookParams): boolean {
-  return hook.expr !== null || hook.expr_id !== null;
+  return hook.expr !== null;
 }
 
 /** A topic's bound verifier plus its config (a `secret_env` name, never a secret). */

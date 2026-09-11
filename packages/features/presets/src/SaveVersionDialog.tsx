@@ -101,6 +101,11 @@ export function SaveVersionDialog({
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
+  // The stored templates a binding's templated-text jq slots may reference by id.
+  const authoredTemplatesQuery = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+  });
   const baseSchemaQuery = useQuery({
     queryKey: ['state-binding', 'tool-schema', detail.base_tool],
     queryFn: ({ signal }) => api.getToolSchema(detail.base_tool, signal),
@@ -348,6 +353,14 @@ export function SaveVersionDialog({
             onChange={setStateBinding}
             statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
             templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
+            templatedTextTemplates={{
+              templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
+              loading: authoredTemplatesQuery.isPending,
+              error: authoredTemplatesQuery.isError
+                ? errorMessage(authoredTemplatesQuery.error)
+                : undefined,
+              onRetry: () => void authoredTemplatesQuery.refetch(),
+            }}
             sources={
               {
                 input: fieldPathsFromSchema(baseSchemaQuery.data?.input),

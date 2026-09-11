@@ -374,7 +374,7 @@ describe('RouteFormDialog — state binding', () => {
               {
                 state: 'counters',
                 templates: [],
-                subject_expr: '.k',
+                subject_expr: { content: '.k' },
                 scope_expr: null,
                 input_injections: [],
                 updates: [],
@@ -408,7 +408,7 @@ describe('RouteFormDialog — inherited advisory + binding serialization', () =>
           {
             state: 'counters',
             templates: [],
-            subject_expr: '.k',
+            subject_expr: { content: '.k' },
             scope_expr: null,
             input_injections: [],
             updates: [],
@@ -444,7 +444,7 @@ describe('RouteFormDialog — inherited advisory + binding serialization', () =>
               {
                 state: 'counters',
                 templates: [],
-                subject_expr: '.preset_key',
+                subject_expr: { content: '.preset_key' },
                 scope_expr: null,
                 input_injections: [],
                 updates: [],
@@ -486,7 +486,7 @@ describe('RouteFormDialog — inherited advisory + binding serialization', () =>
         {
           state: 'counters',
           templates: [],
-          subject_expr: '.k',
+          subject_expr: { content: '.k' },
           scope_expr: null,
           input_injections: [],
           updates: [],

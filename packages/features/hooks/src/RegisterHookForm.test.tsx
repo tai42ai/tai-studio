@@ -125,10 +125,9 @@ describe('RegisterHookForm — edit mode', () => {
       tool: 'slack.post_message',
       execution_key: 'svc-events',
       tool_kwargs: { channel: 'ops' },
-      // An id-based condition gate the form never renders a control for; it must
-      // survive an edit that only touches the inline fields.
-      condition_id: 'shape.big-event',
-      condition_kwargs: { threshold: 100 },
+      // A stored-template condition prefilled into the control; an edit that never
+      // touches it must save it back verbatim.
+      condition: { id: 'shape.big-event', kwargs: { threshold: 100 } },
     });
     renderWithProviders(<RegisterHookForm initial={initial} onClose={onClose} />, { client });
 
@@ -152,9 +151,7 @@ describe('RegisterHookForm — edit mode', () => {
         tool: 'slack.post_message',
         execution_key: 'svc-events',
         tool_kwargs: { channel: 'ops' },
-        condition: null,
-        condition_id: 'shape.big-event',
-        condition_kwargs: { threshold: 100 },
+        condition: { id: 'shape.big-event', kwargs: { threshold: 100 } },
       }),
     );
     await waitFor(() => {
@@ -222,15 +219,18 @@ describe('RegisterHookForm — jq condition/expr expression fields', () => {
     await user.type(screen.getByLabelText('Tool'), 'notify');
     await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
     await user.click(await screen.findByRole('option', { name: /svc-events/ }));
-    await user.type(screen.getByLabelText('Condition'), '.amount > 100');
-    await user.type(screen.getByLabelText('Expr'), '.message.text');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.amount > 100');
+    await user.type(screen.getByRole('textbox', { name: 'Expr' }), '.message.text');
     await user.click(screen.getByRole('button', { name: 'Register' }));
 
     await waitFor(() => {
       expect(registerHook).toHaveBeenCalledOnce();
     });
     expect(registerHook).toHaveBeenCalledWith(
-      expect.objectContaining({ condition: '.amount > 100', expr: '.message.text' }),
+      expect.objectContaining({
+        condition: { content: '.amount > 100' },
+        expr: { content: '.message.text' },
+      }),
     );
   });
 
@@ -317,7 +317,7 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
           {
             state: 'counters',
             templates: [],
-            subject_expr: '.k',
+            subject_expr: { content: '.k' },
             scope_expr: null,
             input_injections: [],
             updates: [],
@@ -352,7 +352,7 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
               {
                 state: 'counters',
                 templates: [],
-                subject_expr: '.preset_key',
+                subject_expr: { content: '.preset_key' },
                 scope_expr: null,
                 input_injections: [],
                 updates: [],
@@ -391,7 +391,7 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
         {
           state: 'counters',
           templates: [],
-          subject_expr: '.k',
+          subject_expr: { content: '.k' },
           scope_expr: null,
           input_injections: [],
           updates: [],

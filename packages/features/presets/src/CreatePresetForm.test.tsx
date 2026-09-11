@@ -644,7 +644,7 @@ describe('CreatePresetForm — binding serialization', () => {
         {
           state: 'counters',
           templates: [],
-          subject_expr: '',
+          subject_expr: { content: '' },
           scope_expr: null,
           input_injections: [],
           updates: [],
@@ -682,7 +682,7 @@ describe('CreatePresetForm — binding validation', () => {
         {
           state: 'counters',
           templates: [],
-          subject_expr: '',
+          subject_expr: { content: '' },
           scope_expr: null,
           input_injections: [],
           updates: [],

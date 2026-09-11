@@ -36,11 +36,11 @@ describe('PolicySection — jq condition field', () => {
       { client: stubClient({}) },
     );
 
-    await user.type(screen.getByLabelText('jq condition'), '.policy.limit > 0');
+    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.policy.limit > 0');
 
     await waitFor(() => {
       expect(onChange).toHaveBeenLastCalledWith(
-        expect.objectContaining({ condition: '.policy.limit > 0', condition_id: null }),
+        expect.objectContaining({ condition: { content: '.policy.limit > 0' } }),
       );
     });
   });
@@ -55,7 +55,7 @@ describe('PolicySection — jq condition field', () => {
       { client: stubClient({}) },
     );
     expect(
-      await screen.findByRole('button', { name: 'Open the visual editor for jq condition' }),
+      await screen.findByRole('button', { name: 'Open the visual editor for Condition' }),
     ).toBeInTheDocument();
   });
 

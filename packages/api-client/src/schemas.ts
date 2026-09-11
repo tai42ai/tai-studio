@@ -12,6 +12,35 @@ export const jsonValue: z.ZodType = z.unknown();
 /** A JSON Schema object (Pydantic-emitted). Permissive; parsed by the auto-form. */
 export const jsonSchema = z.record(z.string(), z.unknown());
 
+/**
+ * One authored-text value: either inline `content` (text written in place) or a
+ * stored template `id` (a template resource fetched and rendered), never both and
+ * never neither. `kwargs` are the render parameters and apply in BOTH cases — a
+ * prompt with placeholders needs its values whether it was typed inline or fetched.
+ * `.strict()` refuses any other key so a drifting field fails the parse loudly.
+ */
+export const templatedText = z
+  .object({
+    content: z.string().optional(),
+    id: z.string().optional(),
+    kwargs: z.record(z.string(), z.unknown()).optional(),
+  })
+  .strict()
+  .refine((value) => (value.content === undefined) !== (value.id === undefined), {
+    message: 'A templated-text value sets exactly one of `content` or `id`.',
+  });
+export type TemplatedText = z.infer<typeof templatedText>;
+
+/**
+ * A templated-text value that must carry a source: inline `content` is non-empty, or
+ * a stored template `id` is chosen. Used where the platform contract requires a
+ * value (e.g. a state binding's subject, an update's adapter when present).
+ */
+export const requiredTemplatedText = templatedText.refine(
+  (value) => (value.id !== undefined ? value.id.length > 0 : (value.content ?? '').length > 0),
+  { message: 'Provide inline text or choose a stored template.' },
+);
+
 // -- tools -------------------------------------------------------------------
 
 export const toolNames = z.array(z.string());
@@ -158,8 +187,10 @@ export type PresetDetail = z.infer<typeof presetDetail>;
  * carries the program; the other is `null`.
  */
 export const stateInjection = z.object({
+  // `template_jq` names a program the attached state template ships; it is resolved
+  // through compiled programs, never rendered as text, so it stays a plain string.
   template_jq: z.string().nullable().default(null),
-  jq: z.string().nullable().default(null),
+  jq: templatedText.nullable().default(null),
   into: z.string(),
 });
 export type StateInjection = z.infer<typeof stateInjection>;
@@ -174,13 +205,15 @@ export type StateInjection = z.infer<typeof stateInjection>;
  * `template_jq`/`jq` carries the program.
  */
 export const stateUpdate = z.object({
+  // `template_jq` names a program the attached state template ships; resolved through
+  // compiled programs, never rendered as text, so it stays a plain string.
   template_jq: z.string().nullable().default(null),
-  jq: z.string().nullable().default(null),
-  // A named update's adapter is either a non-empty jq or `null` (no adapter — the
-  // run input passes through). `min(1)` makes the empty string impossible to
-  // round-trip: the platform compile-checks any non-null adapter and refuses `''`.
-  adapter: z.string().min(1).nullable().default(null),
-  op_id: z.string().nullable().default(null),
+  jq: templatedText.nullable().default(null),
+  // A named update's adapter is either an authored value or `null` (no adapter — the
+  // run input passes through). When present it must carry a source (the platform
+  // compile-checks a non-null adapter and refuses an empty one).
+  adapter: requiredTemplatedText.nullable().default(null),
+  op_id: templatedText.nullable().default(null),
 });
 export type StateUpdate = z.infer<typeof stateUpdate>;
 
@@ -195,10 +228,10 @@ export type StateUpdate = z.infer<typeof stateUpdate>;
 export const stateAttach = z.object({
   state: z.string(),
   templates: z.array(z.string()).default([]),
-  // The platform contract enforces a non-empty subject (min_length=1); an empty
-  // expression is rejected here, never sent for the server to refuse.
-  subject_expr: z.string().min(1),
-  scope_expr: z.string().nullable().default(null),
+  // The platform contract enforces a subject that carries a source; an empty one is
+  // rejected here, never sent for the server to refuse.
+  subject_expr: requiredTemplatedText,
+  scope_expr: templatedText.nullable().default(null),
   input_injections: z.array(stateInjection).default([]),
   updates: z.array(stateUpdate).default([]),
 });
@@ -1576,8 +1609,8 @@ export type Notifications = z.infer<typeof notifications>;
 
 // -- hooks -------------------------------------------------------------------
 // Shapes match tai42_contract.hooks.HookParams: a hook fires a `tool` on a `topic`,
-// optionally gated by a `condition` and shaped by an `expr` (each either an inline
-// spec or a registered id, with its own kwargs).
+// optionally gated by a `condition` and shaped by an `expr` (each an authored
+// templated-text value: inline content or a stored template id, with render kwargs).
 
 /** A fire door — who may trigger a path, not what the fire may do. A string enum. */
 export const triggerAuth = z.enum([
@@ -1613,14 +1646,8 @@ export const hookParams = z.object({
   // The optional state subject the fire targets; `null` leaves it with no ambient
   // state context (a state tool it calls must then carry an explicit subject).
   subject: hookSubject.nullable().default(null),
-  condition: z.string().nullable().default(null),
-  condition_id: z.string().nullable().default(null),
-  // The `*_kwargs` pair is non-optional in the contract (defaults to {}, never
-  // null) — unlike the sibling condition/expr string fields, which are nullable.
-  condition_kwargs: z.record(z.string(), z.unknown()).default({}),
-  expr: z.string().nullable().default(null),
-  expr_id: z.string().nullable().default(null),
-  expr_kwargs: z.record(z.string(), z.unknown()).default({}),
+  condition: templatedText.nullable().default(null),
+  expr: templatedText.nullable().default(null),
   // The optional door-layer state binding this hook applies around its fire's tool
   // run (`null` when the hook touches no state).
   state_binding: stateBinding.nullable().default(null),
@@ -1802,16 +1829,14 @@ export type RoleGrants = z.infer<typeof roleGrants>;
  * read-only base-tier ceiling — the seeded jq `condition` plus `base_tier`
  * (`editor`/`viewer`, or `null` for the reserved `allow_all` admin). Layer 2 is the
  * editable per-tag `grants` map. `allow_all` (admin) carries an empty `grants` map
- * and reaches everything, un-lockable. `condition`/`condition_id`/`condition_kwargs`
- * are the base-tier jq — READ-ONLY here (no raw-jq authoring surface).
+ * and reaches everything, un-lockable. `condition` is the base-tier jq (an authored
+ * templated-text value) — READ-ONLY here (no raw-jq authoring surface).
  */
 export const roleBody = z.object({
   name: z.string(),
   description: z.string(),
   scopes: z.array(z.string()),
-  condition: z.string().nullable(),
-  condition_id: z.string().nullable(),
-  condition_kwargs: jsonValue.nullable(),
+  condition: templatedText.nullable(),
   base_tier: z.string().nullable(),
   allow_all: z.boolean(),
   grants: roleGrants,
@@ -1879,9 +1904,7 @@ export const tokensPayload = z.array(
     description: z.string(),
     scopes: z.array(z.string()),
     policy_data: jsonValue,
-    condition: z.string().nullable().optional(),
-    condition_id: z.string().nullable().optional(),
-    condition_kwargs: jsonValue.nullable().optional(),
+    condition: templatedText.nullable().optional(),
   }),
 );
 export type TokensPayload = z.infer<typeof tokensPayload>;
@@ -2061,15 +2084,13 @@ export type ValidateConditionResult = z.infer<typeof validateConditionResult>;
 /**
  * The enforced policy shape a version body carries. SECRET-ADJACENT — `condition`
  * can reveal auth logic, so its fixtures are hand-authored, never captured.
- * `condition`/`condition_id` are mutually exclusive at author time; both are
- * nullable here because whichever mode is unused is stored as `null`.
+ * `condition` is an authored templated-text value (inline content or a stored
+ * template id); `null` when the policy carries no condition.
  */
 export const policyBody = z.object({
   scopes: z.array(z.string()),
   policy_data: jsonValue,
-  condition: z.string().nullable(),
-  condition_id: z.string().nullable(),
-  condition_kwargs: jsonValue.nullable(),
+  condition: templatedText.nullable(),
 });
 export type PolicyBody = z.infer<typeof policyBody>;
 

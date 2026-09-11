@@ -31,7 +31,7 @@ describe('StateBindingSection', () => {
             {
               state: 'counters',
               templates: [],
-              subject_expr: '.id',
+              subject_expr: { content: '.id' },
               scope_expr: null,
               input_injections: [],
               updates: [],

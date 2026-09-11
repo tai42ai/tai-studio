@@ -47,8 +47,8 @@ describe('HooksPage — list', () => {
             name: 'notify-event',
             topic: 'events.created',
             tool: 'slack.post_message',
-            condition: 'amount > 100',
-            expr_id: 'shape.summary',
+            condition: { content: 'amount > 100' },
+            expr: { id: 'shape.summary' },
           }),
         ],
         total: 1,
@@ -207,11 +207,7 @@ describe('HooksPage — register', () => {
         tool_kwargs: { channel: 'ops' },
         subject: null,
         condition: null,
-        condition_id: null,
-        condition_kwargs: {},
         expr: null,
-        expr_id: null,
-        expr_kwargs: {},
         state_binding: null,
       });
     });

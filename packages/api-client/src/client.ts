@@ -65,9 +65,9 @@ export interface ApiKeyBody {
   // `null` is an explicit clear on edit (PATCH-style PUT): absent preserves the
   // stored policy data, `null` wipes it. Create never sends `null`.
   readonly policy_data?: Record<string, unknown> | null;
-  readonly condition?: string | null;
-  readonly condition_id?: string | null;
-  readonly condition_kwargs?: Record<string, unknown> | null;
+  // The access-control condition: an authored templated-text value (inline content
+  // or a stored template id), or `null` to explicitly clear it on edit.
+  readonly condition?: s.TemplatedText | null;
 }
 
 /**
@@ -82,16 +82,13 @@ export interface ClaimLinkBody {
 }
 
 /**
- * Body for the fail-closed jq guard (POST `/api/auth/validate-condition`).
- * `condition` (inline jq) and `condition_id` (named template) are mutually
- * exclusive — send exactly one. `sample_context` is a `JqAuthContext`-shaped
- * sample; when present the guard also evaluates the condition against it and
- * returns the boolean `result` (else `result` is `null`).
+ * Body for the fail-closed jq guard (POST `/api/auth/validate-condition`). The guard
+ * compile-checks the inline jq `condition` the author typed. `sample_context` is a
+ * `JqAuthContext`-shaped sample; when present the guard also evaluates the condition
+ * against it and returns the boolean `result` (else `result` is `null`).
  */
 export interface ValidateConditionBody {
   readonly condition?: string;
-  readonly condition_id?: string;
-  readonly condition_kwargs?: Record<string, unknown>;
   readonly sample_context?: Record<string, unknown>;
 }
 
@@ -966,11 +963,11 @@ export function createApiClient(config: ApiConfig) {
     // root; those surface as loud errors, never a faked success.
     deleteTemplateDir: (path: string) =>
       req('/api/delete-template-dir', s.templateDirDeleted, { method: 'POST', body: { path } }),
-    renderTemplate: (body: {
-      content?: string;
-      template_id?: string;
-      kwargs?: Record<string, unknown>;
-    }) => req('/api/render-template', s.templateRendered, { method: 'POST', body }),
+    // Render one authored text — inline `content` OR a stored template `id`, plus its
+    // render `kwargs` — and parse the rendered output. The value is the shared
+    // `TemplatedText` (exactly one source); the route wraps it under `text`.
+    renderTemplate: (text: s.TemplatedText) =>
+      req('/api/render-template', s.templateRendered, { method: 'POST', body: { text } }),
     clearTemplatesCache: () =>
       req('/api/clear-templates-cache', s.templateCacheCleared, { method: 'POST' }),
 

@@ -1,32 +1,28 @@
 /**
- * The "Policy" section appended to the API-keys create/edit dialog. It authors
- * the access-control policy fields that ride in the API-keys create/edit
- * request bodies — there is NO new key-CRUD route:
+ * The "Policy" section appended to the API-keys create/edit dialog. It authors the
+ * access-control policy fields that ride in the API-keys create/edit request bodies
+ * — there is NO new key-CRUD route:
  *
  *  - `policy_data` — a key/value editor whose rows round-trip into a JSON object
  *    surfaced under `.policy.*` in the jq context. A value that parses as JSON
  *    (number/bool/object) is stored as that value; otherwise it is a string.
- *  - `condition` — a mode toggle between two MUTUALLY-EXCLUSIVE authoring modes:
- *      * Inline jq — a `condition` textarea with the `JqAuthContext` field hints
- *        listed, a sample-context editor, and a Test-condition button hitting the
- *        fail-closed `POST /api/auth/validate-condition` guard. The guard is
- *        ADVISORY: a failed test (400) surfaces the verbatim guard message and
- *        raises a NON-BLOCKING "condition failed its last test" warning next to
- *        Save (via `onConditionTestFailedChange(true)`), but never blocks the save
- *        — the server re-validates at enforcement.
- *      * Named template — a `condition_id` selector fed by `GET /api/templates`
- *        plus a `condition_kwargs` key/value form.
- *    The unused side is always sent as `null`, so the server never sees both
- *    `condition` and `condition_id` set (which enforcement rejects) even when an
- *    edit switches modes.
+ *  - `condition` — an authored templated-text value edited through the shared
+ *    {@link TemplatedTextField}: inline jq content OR a stored template id, with
+ *    render kwargs, exactly one source. The INLINE editor carries the extra jq
+ *    chrome the policy condition needs: the `JqAuthContext` field hints, a
+ *    sample-context editor, and a Test-condition button hitting the fail-closed
+ *    `POST /api/auth/validate-condition` guard. The guard is ADVISORY: a failed
+ *    test (400) surfaces the verbatim guard message and raises a NON-BLOCKING
+ *    "condition failed its last test" warning next to Save (via
+ *    `onConditionTestFailedChange(true)`), but never blocks the save — the server
+ *    re-validates at enforcement.
  *
  * Emptying an input is NEVER a delete: the edit PUT is PATCH-style, so an absent
- * field preserves its stored value. To actually remove a previously-saved value,
- * the EDIT dialog surfaces two explicit affordances — each behind a small inline
- * confirm (removal loosens the key, so it is guarded):
- *  - "Remove condition" emits `condition: null`, `condition_id: null` AND
- *    `condition_kwargs: null` (the whole condition is removed as a unit — no
- *    orphaned kwargs, and no mode leaves a condition set).
+ * field preserves its stored value. An UNTOUCHED condition is OMITTED (so a save
+ * that never touched it cannot re-serialize a stored value into a phantom version);
+ * to actually remove a saved value, the EDIT dialog surfaces two explicit
+ * affordances — each behind a small inline confirm (removal loosens the key):
+ *  - "Remove condition" emits `condition: null` (the whole condition is removed).
  *  - "Clear policy data" emits `policy_data: null`.
  * Both appear ONLY when the seed carries a value to remove (never in CREATE mode).
  *
@@ -46,14 +42,14 @@ import {
   Badge,
   Button,
   ErrorState,
-  RadioGroup,
-  Select,
   Spinner,
+  TemplatedTextField,
   TextInput,
   Textarea,
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import type { TemplatedText } from '@tai42/api-client';
 import { JqField, type JqInputShapeDescriptor, type ServerValidateHook } from '@tai42/jq-studio';
 
 import { templateNamesKey } from './keys';
@@ -66,20 +62,14 @@ import { templateNamesKey } from './keys';
  */
 export interface PolicyFields {
   policy_data?: Record<string, unknown> | null;
-  condition?: string | null;
-  condition_id?: string | null;
-  condition_kwargs?: Record<string, unknown> | null;
+  condition?: TemplatedText | null;
 }
 
 /** Pre-fill for the edit dialog (from the key's `tokens-payload` record). */
 export interface PolicySeed {
   readonly policy_data?: unknown;
-  readonly condition?: string | null;
-  readonly condition_id?: string | null;
-  readonly condition_kwargs?: unknown;
+  readonly condition?: TemplatedText | null;
 }
-
-type ConditionMode = 'inline' | 'template';
 
 interface Row {
   readonly key: string;
@@ -191,7 +181,7 @@ const inlineConfirmStyle: CSSProperties = {
   marginTop: 'var(--tai-space-2)',
 };
 
-/** A non-null, non-array object — the shape a stored `policy_data`/`condition_kwargs` takes. */
+/** A non-null, non-array object — the shape a stored `policy_data` takes. */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -415,11 +405,6 @@ function InlineConfirm({
   );
 }
 
-/** Choose the initial mode: template when the seed carries a `condition_id`. */
-function initialMode(seed: PolicySeed | undefined): ConditionMode {
-  return seed?.condition_id != null && seed.condition_id.length > 0 ? 'template' : 'inline';
-}
-
 export function PolicySection({
   idPrefix,
   seed,
@@ -442,10 +427,7 @@ export function PolicySection({
   const api = useApi();
 
   const [policyRows, setPolicyRows] = useState<Row[]>(() => objectToRows(seed?.policy_data));
-  const [mode, setMode] = useState<ConditionMode>(() => initialMode(seed));
-  const [condition, setCondition] = useState(() => seed?.condition ?? '');
-  const [conditionId, setConditionId] = useState(() => seed?.condition_id ?? '');
-  const [kwargsRows, setKwargsRows] = useState<Row[]>(() => objectToRows(seed?.condition_kwargs));
+  const [condition, setCondition] = useState<TemplatedText | null>(() => seed?.condition ?? null);
   // The known-broken condition message from the last Test (a 400 the guard threw:
   // compile/render/eval failure or the empty-render lock-out); cleared on edit. It
   // is surfaced verbatim and raises a non-blocking warning next to Save; it never
@@ -453,8 +435,7 @@ export function PolicySection({
   const [conditionError, setConditionError] = useState<string | null>(null);
   // The last SUCCESSFUL Test outcome: the guard compiled the condition, and (with a
   // sample) evaluated it — `allows`/`denies` for a boolean result, `compiles` when no
-  // sample was evaluated. `null` before any successful Test. A denied sample is still
-  // a valid condition; the Test is advisory and never blocks save.
+  // sample was evaluated. `null` before any successful Test.
   const [validateOutcome, setValidateOutcome] = useState<'allows' | 'denies' | 'compiles' | null>(
     null,
   );
@@ -467,52 +448,45 @@ export function PolicySection({
   // fresh authoring of that side un-latches it so the new value is emitted instead.
   const [conditionCleared, setConditionCleared] = useState(false);
   const [policyDataCleared, setPolicyDataCleared] = useState(false);
-  // Whether the user has actually authored the key/value editors this session. An
-  // UNTOUCHED editor must re-emit the stored value BYTE-FOR-BYTE, not re-serialize
-  // its rows: the row form cannot distinguish a stored string `"7"`/`"true"` from
-  // the number `7`/boolean `true`, so re-serializing an untouched field would
-  // silently coerce a stored string to a different JSON type — changing the
-  // enforced `.policy.*` value and appending a phantom version. The captured seed
-  // values below are the verbatim originals, re-emitted while the editor is pristine.
+  // Bumped by "Remove condition" to remount the seeded-once control on a fresh value.
+  const [conditionResetToken, setConditionResetToken] = useState(0);
+  // Whether the user has actually authored these editors this session. An UNTOUCHED
+  // field re-emits the stored value BYTE-FOR-BYTE (via OMIT for the condition, and via
+  // the verbatim-seed branch for policy data): the row form cannot distinguish a
+  // stored string `"7"`/`"true"` from the number `7`/boolean `true`, so re-serializing
+  // an untouched field would silently coerce a stored value's JSON type — changing the
+  // enforced value and appending a phantom version.
   const [policyDataEdited, setPolicyDataEdited] = useState(false);
-  const [kwargsEdited, setKwargsEdited] = useState(false);
+  const [conditionEdited, setConditionEdited] = useState(false);
   const [seededPolicyDataValue] = useState<Record<string, unknown> | undefined>(() => {
     const value = seed?.policy_data;
     return isPlainObject(value) && Object.keys(value).length > 0 ? value : undefined;
   });
-  const [seededKwargsValue] = useState<Record<string, unknown> | undefined>(() => {
-    const value = seed?.condition_kwargs;
-    return isPlainObject(value) && Object.keys(value).length > 0 ? value : undefined;
-  });
-  // The verbatim stored inline condition, captured once. A pristine (unedited)
-  // condition re-emits this exact string rather than a trimmed copy, so a save that
-  // never touched the condition cannot normalize stored whitespace into a changed
-  // body and a phantom version. Only a non-blank stored condition is captured.
-  const [seededConditionValue] = useState<string | undefined>(() => {
-    const value = seed?.condition;
-    return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
-  });
 
   // The affordances only make sense when the seed carries something to remove — i.e.
   // EDIT mode with a saved value. In CREATE mode (no seed) there is nothing to clear.
-  const seededCondition =
-    (seed?.condition != null && seed.condition.length > 0) ||
-    (seed?.condition_id != null && seed.condition_id.length > 0);
+  const seededCondition = seed?.condition != null;
   const seededPolicyData = objectToRows(seed?.policy_data).length > 0;
 
   const templatesQuery = useQuery({
     queryKey: templateNamesKey,
     queryFn: ({ signal }) => api.listTemplates(signal),
-    enabled: mode === 'template',
   });
 
   const validate = useMutation({
-    // The guard evaluates the CURRENT inline condition against the parsed sample
-    // context (omitted when the sample editor is blank → compile-only). It never
-    // rides a `condition_id`, so the either/or is honored by construction.
-    mutationFn: (sample: Record<string, unknown> | undefined) =>
+    // The guard evaluates a given inline condition against the parsed sample context
+    // (omitted when the sample editor is blank → compile-only).
+    mutationFn: ({
+      content,
+      sample,
+    }: {
+      content: string;
+      sample: Record<string, unknown> | undefined;
+    }) =>
       api.validateCondition(
-        sample === undefined ? { condition } : { condition, sample_context: sample },
+        sample === undefined
+          ? { condition: content }
+          : { condition: content, sample_context: sample },
       ),
     onSuccess: (result) => {
       setConditionError(null);
@@ -522,15 +496,13 @@ export function PolicySection({
     },
     onError: (error) => {
       // A 400 is the guard's verbatim compile/render/eval message (including the
-      // empty-render lock-out) — surfaced exactly, never rephrased. It raises a
-      // non-blocking warning next to Save but never blocks the save; the server
-      // re-validates at enforcement.
+      // empty-render lock-out) — surfaced exactly, never rephrased.
       setValidateOutcome(null);
       setConditionError(errorMessage(error));
     },
   });
 
-  const runTest = (): void => {
+  const runTest = (content: string): void => {
     setSampleError(null);
     let sample: Record<string, unknown> | undefined;
     try {
@@ -541,24 +513,19 @@ export function PolicySection({
       setSampleError(errorMessage(error));
       return;
     }
-    validate.mutate(sample);
+    validate.mutate({ content, sample });
   };
 
   // The inline jq condition's server-validate hook, bound to the client (the shape
   // is the static {@link CONDITION_SHAPE}); the visual editor's Test panel seeds
-  // from the LIVE sample-context editor via {@link provideSampleInput}, so the
-  // editor validates against exactly what the section's own Test button below runs.
+  // from the LIVE sample-context editor via {@link provideSampleInput}.
   const conditionServerValidate = useMemo(() => makeConditionServerValidate(api), [api]);
-  // The live-sample provider for JqField's Test panel: the current sample-context
-  // editor content parsed to an object, or undefined (blank/malformed) so JqField
-  // falls back to the static CONDITION_SHAPE.sample skeleton (live → shape → blank).
   const provideSampleInput = useCallback(() => liveSampleInput(sampleContext), [sampleContext]);
 
   const fields = useMemo<PolicyFields>(() => {
     const out: PolicyFields = {};
 
     if (policyDataCleared) {
-      // Explicit clear (edit mode): wipe the stored policy data.
       out.policy_data = null;
     } else if (policyDataEdited) {
       const policyData = rowsToObject(policyRows);
@@ -570,54 +537,14 @@ export function PolicySection({
     }
 
     if (conditionCleared) {
-      // Explicit clear (edit mode): remove the condition as a UNIT — null every
-      // condition field so neither an inline nor a template condition survives, and
-      // no orphaned kwargs are left behind.
+      // Explicit clear (edit mode): remove the condition.
       out.condition = null;
-      out.condition_id = null;
-      out.condition_kwargs = null;
-    } else if (mode === 'inline') {
-      if (seededConditionValue !== undefined && condition === seededConditionValue) {
-        // Pristine seeded condition (unedited): re-emit VERBATIM so a save that never
-        // touched the condition can't trim stored whitespace into a changed body and
-        // a phantom version. A real edit (value differs) is trimmed/normalized below.
-        out.condition = seededConditionValue;
-        out.condition_id = null;
-        // condition_kwargs is OMITTED (never nulled): an inline condition can be
-        // Jinja-templated and legitimately carry kwargs, so a pristine (e.g.
-        // description-only) save must leave the stored kwargs untouched via PATCH —
-        // nulling them would wipe a valid inline condition's variables, alter the
-        // enforced body, and append a phantom version. Only a REAL template→inline
-        // switch (the else branch) clears orphaned kwargs.
-      } else {
-        const text = condition.trim();
-        if (text.length > 0) {
-          // The unused template side is nulled so the server never sees both set.
-          out.condition = text;
-          out.condition_id = null;
-          // Switching a SEEDED template condition to inline mode must not orphan the
-          // template's kwargs (inline mode has no kwargs editor): clear them so the
-          // stored/enforced body and its version can't keep a stale condition_kwargs.
-          if (seededKwargsValue !== undefined) out.condition_kwargs = null;
-        }
-      }
-    } else {
-      const id = conditionId.trim();
-      if (id.length > 0) {
-        out.condition_id = id;
-        out.condition = null;
-        if (kwargsEdited) {
-          out.condition_kwargs = rowsToObject(kwargsRows);
-        } else if (seededKwargsValue !== undefined) {
-          // Pristine kwargs editor re-emits the stored object VERBATIM (same JSON-type
-          // preservation as policy data above).
-          out.condition_kwargs = seededKwargsValue;
-        }
-        // A pristine kwargs editor with no meaningful stored kwargs omits the field
-        // entirely: the PATCH-style PUT then preserves the stored value rather than
-        // writing a phantom `{}` (which would coerce a stored null and pollute history).
-      }
+    } else if (conditionEdited) {
+      // The control keeps content XOR id and preserves untouched kwargs verbatim, so
+      // the emitted value is exactly what the author sees.
+      if (condition !== null) out.condition = condition;
     }
+    // Untouched: OMIT (the PATCH-style PUT preserves the stored condition byte-for-byte).
     return out;
   }, [
     policyDataCleared,
@@ -625,16 +552,11 @@ export function PolicySection({
     seededPolicyDataValue,
     policyRows,
     conditionCleared,
-    mode,
+    conditionEdited,
     condition,
-    seededConditionValue,
-    conditionId,
-    kwargsEdited,
-    seededKwargsValue,
-    kwargsRows,
   ]);
 
-  const conditionTestFailed = mode === 'inline' && conditionError !== null;
+  const conditionTestFailed = conditionError !== null;
 
   useEffect(() => {
     onChange(fields);
@@ -644,7 +566,7 @@ export function PolicySection({
     onConditionTestFailedChange(conditionTestFailed);
   }, [conditionTestFailed, onConditionTestFailedChange]);
 
-  const templateOptions = (templatesQuery.data ?? []).map((id) => ({ value: id, label: id }));
+  const templateOptions = (templatesQuery.data ?? []).map((id) => ({ id }));
 
   return (
     <div style={sectionStyle}>
@@ -658,7 +580,6 @@ export function PolicySection({
           onChange={(rows) => {
             setPolicyRows(rows);
             setPolicyDataEdited(true);
-            // Authoring rows again supersedes a pending explicit clear.
             setPolicyDataCleared(false);
           }}
         />
@@ -678,159 +599,119 @@ export function PolicySection({
       </div>
 
       <div>
-        {/* The group's name comes from `RadioGroup`'s own `label`, which renders the
-            heading AND wires `aria-labelledby`. A bare `<span>` beside it left the
-            `role="radiogroup"` with an empty accessible name. */}
-        <RadioGroup
+        <TemplatedTextField
+          key={`condition-${String(conditionResetToken)}`}
           label="Condition"
-          value={mode}
+          value={condition}
           disabled={disabled}
-          options={[
-            { value: 'inline', label: 'Inline jq expression' },
-            { value: 'template', label: 'Named template' },
-          ]}
-          onValueChange={(next) => {
-            setMode(next as ConditionMode);
-            // Switching modes re-engages authoring, superseding a pending clear.
+          templates={templateOptions}
+          templatesLoading={templatesQuery.isPending}
+          templatesError={templatesQuery.isError ? errorMessage(templatesQuery.error) : undefined}
+          onTemplatesRetry={() => void templatesQuery.refetch()}
+          onChange={(next) => {
+            setCondition(next);
+            setConditionEdited(true);
             setConditionCleared(false);
+            // Editing invalidates the last Test result, clearing the Save warning.
+            setConditionError(null);
+            setValidateOutcome(null);
           }}
+          renderInline={({ label, value, onChange: onInline, hideLabel }) => (
+            <div
+              className={hideLabel ? 'tai-templated-inline--grouped' : undefined}
+              style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}
+            >
+              <JqField
+                label={label}
+                shape={CONDITION_SHAPE}
+                sampleInput={provideSampleInput}
+                serverValidate={conditionServerValidate}
+                multiline
+                value={value}
+                readOnly={disabled}
+                onChange={onInline}
+              />
+              <div>
+                <span
+                  style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}
+                >
+                  Available context fields:
+                </span>
+                <div style={hintsStyle}>
+                  {JQ_CONTEXT_HINTS.map((hint) => (
+                    <Badge key={hint} variant="neutral">
+                      {hint}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={fieldLabelStyle} htmlFor={`${idPrefix}-sample-context`}>
+                  Sample context (JSON)
+                </label>
+                <Textarea
+                  id={`${idPrefix}-sample-context`}
+                  aria-label="Sample context (JSON)"
+                  value={sampleContext}
+                  rows={7}
+                  spellCheck={false}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    setSampleContext(event.target.value);
+                    setSampleError(null);
+                  }}
+                />
+                <p
+                  style={{
+                    margin: 'var(--tai-space-1) 0 0',
+                    fontSize: 'var(--tai-text-sm)',
+                    color: 'var(--tai-color-text-muted)',
+                  }}
+                >
+                  The JqAuthContext the condition is evaluated against. Blank tests compile-only (no
+                  allow/deny).
+                </p>
+                {sampleError !== null ? (
+                  <p
+                    role="alert"
+                    style={{
+                      margin: 'var(--tai-space-1) 0 0',
+                      fontSize: 'var(--tai-text-sm)',
+                      color: 'var(--tai-color-err-text)',
+                    }}
+                  >
+                    {sampleError}
+                  </p>
+                ) : null}
+              </div>
+              <div>
+                <Button
+                  type="button"
+                  disabled={disabled || value.trim().length === 0 || validate.isPending}
+                  onClick={() => {
+                    runTest(value);
+                  }}
+                >
+                  {validate.isPending ? <Spinner label="Testing" /> : null}
+                  Test condition
+                </Button>
+              </div>
+              {conditionError !== null ? <ErrorState message={conditionError} /> : null}
+              {validateOutcome !== null ? (
+                <div role="status">
+                  {validateOutcome === 'allows' ? (
+                    <Badge variant="success">allows sample</Badge>
+                  ) : validateOutcome === 'denies' ? (
+                    <Badge variant="warning">denies sample</Badge>
+                  ) : (
+                    <Badge variant="neutral">compiles (no sample evaluated)</Badge>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         />
       </div>
-
-      {mode === 'inline' ? (
-        <div>
-          <JqField
-            label="jq condition"
-            shape={CONDITION_SHAPE}
-            sampleInput={provideSampleInput}
-            serverValidate={conditionServerValidate}
-            multiline
-            value={condition}
-            readOnly={disabled}
-            onChange={(next) => {
-              setCondition(next);
-              // Editing invalidates the last Test result, clearing the non-blocking
-              // Save warning until the condition is re-tested.
-              setConditionError(null);
-              setValidateOutcome(null);
-              // Authoring a condition again supersedes a pending explicit clear.
-              setConditionCleared(false);
-            }}
-          />
-          <div style={{ marginTop: 'var(--tai-space-1)' }}>
-            <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-              Available context fields:
-            </span>
-            <div style={hintsStyle}>
-              {JQ_CONTEXT_HINTS.map((hint) => (
-                <Badge key={hint} variant="neutral">
-                  {hint}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <div style={{ marginTop: 'var(--tai-space-3)' }}>
-            <label style={fieldLabelStyle} htmlFor={`${idPrefix}-sample-context`}>
-              Sample context (JSON)
-            </label>
-            <Textarea
-              id={`${idPrefix}-sample-context`}
-              aria-label="Sample context (JSON)"
-              value={sampleContext}
-              rows={7}
-              spellCheck={false}
-              disabled={disabled}
-              onChange={(event) => {
-                setSampleContext(event.target.value);
-                setSampleError(null);
-              }}
-            />
-            <p
-              style={{
-                margin: 'var(--tai-space-1) 0 0',
-                fontSize: 'var(--tai-text-sm)',
-                color: 'var(--tai-color-text-muted)',
-              }}
-            >
-              The JqAuthContext the condition is evaluated against. Blank tests compile-only (no
-              allow/deny).
-            </p>
-            {sampleError !== null ? (
-              <p
-                role="alert"
-                style={{
-                  margin: 'var(--tai-space-1) 0 0',
-                  fontSize: 'var(--tai-text-sm)',
-                  color: 'var(--tai-color-err-text)',
-                }}
-              >
-                {sampleError}
-              </p>
-            ) : null}
-          </div>
-          <div style={{ marginTop: 'var(--tai-space-2)' }}>
-            <Button
-              type="button"
-              disabled={disabled || condition.trim().length === 0 || validate.isPending}
-              onClick={runTest}
-            >
-              {validate.isPending ? <Spinner label="Testing" /> : null}
-              Test condition
-            </Button>
-          </div>
-          {conditionError !== null ? (
-            <div style={{ marginTop: 'var(--tai-space-2)' }}>
-              <ErrorState message={conditionError} />
-            </div>
-          ) : null}
-          {validateOutcome !== null ? (
-            <div role="status" style={{ marginTop: 'var(--tai-space-2)' }}>
-              {validateOutcome === 'allows' ? (
-                <Badge variant="success">allows sample</Badge>
-              ) : validateOutcome === 'denies' ? (
-                <Badge variant="warning">denies sample</Badge>
-              ) : (
-                <Badge variant="neutral">compiles (no sample evaluated)</Badge>
-              )}
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
-          <div>
-            <span style={fieldLabelStyle}>Template</span>
-            {templatesQuery.isError ? (
-              <ErrorState
-                message={errorMessage(templatesQuery.error)}
-                onRetry={() => void templatesQuery.refetch()}
-              />
-            ) : (
-              <Select
-                aria-label="Condition template"
-                options={templateOptions}
-                value={conditionId}
-                placeholder={templatesQuery.isPending ? 'Loading templates…' : 'Select a template'}
-                disabled={disabled || templatesQuery.isPending}
-                onValueChange={(next) => {
-                  setConditionId(next);
-                  // Choosing a template again supersedes a pending explicit clear.
-                  setConditionCleared(false);
-                }}
-              />
-            )}
-          </div>
-          <KeyValueEditor
-            label="Condition kwargs"
-            rows={kwargsRows}
-            disabled={disabled}
-            onChange={(rows) => {
-              setKwargsRows(rows);
-              setKwargsEdited(true);
-              setConditionCleared(false);
-            }}
-          />
-        </div>
-      )}
 
       {seededCondition && !conditionCleared ? (
         <InlineConfirm
@@ -840,17 +721,13 @@ export function PolicySection({
           cancelLabel="Keep condition"
           disabled={disabled}
           onConfirm={() => {
-            // Remove the condition as a unit: latch the explicit clear and reset
-            // every condition input (mode back to inline) so the UI shows nothing
-            // configured and no stale Test state lingers.
             setConditionCleared(true);
-            setCondition('');
-            setConditionId('');
-            setKwargsRows([]);
-            setMode('inline');
+            setCondition(null);
+            setConditionEdited(false);
             setConditionError(null);
             setValidateOutcome(null);
             setSampleError(null);
+            setConditionResetToken((token) => token + 1);
           }}
         />
       ) : null}

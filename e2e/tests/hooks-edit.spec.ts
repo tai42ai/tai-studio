@@ -16,11 +16,7 @@ const HOOK = {
   execution_key: 'studio-e2e',
   tool_kwargs: {},
   condition: null,
-  condition_id: null,
-  condition_kwargs: {},
   expr: null,
-  expr_id: null,
-  expr_kwargs: {},
 };
 
 async function stubHooks(page: Page): Promise<void> {

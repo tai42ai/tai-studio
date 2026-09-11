@@ -7,9 +7,30 @@
  * the states it may bind, the templates each may attach, and — when a schema is
  * known — the fields a picker offers.
  */
-import type { StateBinding, StateAttach, StateInjection, StateUpdate } from '@tai42/api-client';
+import type {
+  StateBinding,
+  StateAttach,
+  StateInjection,
+  StateUpdate,
+  TemplatedText,
+} from '@tai42/api-client';
 
-export type { StateBinding, StateAttach, StateInjection, StateUpdate };
+import type { TemplatedTextTemplateOption } from '../components/templated-text-field';
+
+export type { StateBinding, StateAttach, StateInjection, StateUpdate, TemplatedText };
+
+/**
+ * The stored templates a {@link TemplatedText} field's id picker offers, with the
+ * fetch's loading/error state — resolved by the door screen and passed to the
+ * editor, which holds no data edge of its own. Absent leaves every templated-text
+ * field with the inline source only.
+ */
+export interface TemplatedTextCatalog {
+  readonly templates?: readonly TemplatedTextTemplateOption[];
+  readonly loading?: boolean;
+  readonly error?: string;
+  readonly onRetry?: () => void;
+}
 
 /** One selectable field of a schema: the record path + a human label. */
 export interface SchemaFieldPath {

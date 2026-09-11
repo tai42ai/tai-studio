@@ -182,7 +182,7 @@ describe('preset client transport', () => {
         {
           state: 'account',
           templates: [],
-          subject_expr: '.subject',
+          subject_expr: { content: '.subject' },
           scope_expr: null,
           input_injections: [],
           updates: [],
@@ -365,7 +365,7 @@ describe('preset client transport', () => {
         {
           state: 'account',
           templates: [],
-          subject_expr: '.subject',
+          subject_expr: { content: '.subject' },
           scope_expr: null,
           input_injections: [],
           updates: [],

@@ -47,8 +47,6 @@ export function EditKeyDialog({
   const seed: PolicySeed = {
     policy_data: payload.policy_data,
     condition: payload.condition ?? null,
-    condition_id: payload.condition_id ?? null,
-    condition_kwargs: payload.condition_kwargs,
   };
 
   const mutation = useMutation({

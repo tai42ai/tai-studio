@@ -86,6 +86,7 @@ export type {
 } from './fleet-report';
 export * as schemas from './schemas';
 export type {
+  TemplatedText,
   ToolSchema,
   ToolMediaResult,
   ToolTagEntry,

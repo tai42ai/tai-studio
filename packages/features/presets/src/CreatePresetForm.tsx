@@ -127,6 +127,11 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
+  // The stored templates a binding's templated-text jq slots may reference by id.
+  const authoredTemplatesQuery = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+  });
   // The base tool's declared input/output schema feeds the binding editor's field
   // pickers (the run output/input roots). The preset's own output_schema, when set,
   // narrows the output root.
@@ -513,6 +518,14 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           onChange={setStateBinding}
           statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
           templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
+          templatedTextTemplates={{
+            templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
+            loading: authoredTemplatesQuery.isPending,
+            error: authoredTemplatesQuery.isError
+              ? errorMessage(authoredTemplatesQuery.error)
+              : undefined,
+            onRetry: () => void authoredTemplatesQuery.refetch(),
+          }}
           sources={
             {
               input: fieldPathsFromSchema(baseSchemaQuery.data?.input),
