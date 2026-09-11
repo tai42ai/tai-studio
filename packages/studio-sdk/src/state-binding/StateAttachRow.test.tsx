@@ -66,17 +66,17 @@ describe('StateAttachRow', () => {
     expect(screen.getByRole('button', { name: 'Add update' })).toBeInTheDocument();
   });
 
-  it('shows the mount-on-use hint for an unmounted template pick', async () => {
+  it('shows the attach-on-use hint for a not-yet-attached template pick', async () => {
     const user = userEvent.setup();
     render(<Harness />);
     await user.click(screen.getByRole('combobox', { name: 'State' }));
     await user.click(await screen.findByRole('option', { name: 'counters' }));
-    // `tally` is already mounted → no hint; `audit` is not → hint on pick.
+    // `tally` is already attached → no hint; `audit` is not → hint on pick.
     await user.click(screen.getByRole('checkbox', { name: 'audit' }));
     expect(
       screen.getByText('This template will be attached to the state when you save.'),
     ).toBeInTheDocument();
-    // An already-mounted pick shows no hint.
+    // An already-attached pick shows no hint.
     await user.click(screen.getByRole('checkbox', { name: 'tally' }));
     const hints = screen.getAllByText('This template will be attached to the state when you save.');
     expect(hints).toHaveLength(1);
