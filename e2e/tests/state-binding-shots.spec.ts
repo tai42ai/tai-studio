@@ -85,7 +85,7 @@ async function seedBindingFixture(api: APIRequestContext): Promise<void> {
             description: 'The running total.',
             purpose: 'input',
             params: [],
-            jq: '.total',
+            jq: { content: '.total' },
           },
           bump: {
             description: 'Add to the total.',
@@ -93,7 +93,9 @@ async function seedBindingFixture(api: APIRequestContext): Promise<void> {
             params: ['total'],
             reads: [],
             writes: [['total']],
-            jq: '[{ op: "set", path: ["total"], value: (.record.total + .input.total) }]',
+            jq: {
+              content: '[{ op: "set", path: ["total"], value: (.record.total + .input.total) }]',
+            },
           },
         },
       },

@@ -33,6 +33,16 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
   const queryClient =
     providedQueryClient ?? new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
+  // Storage present by default (the warm-cache path the shell gives at runtime), so a
+  // field gating on the storage-presence signal — the templated-text condition control —
+  // renders its editor synchronously rather than the presence-loading placeholder. A
+  // test needing the absent path overrides `getStorageInfo` on its client.
+  queryClient.setQueryData(['storage', 'info'], {
+    present: true,
+    provider: 'test',
+    module: 'test',
+  });
+
   // A projection drives the capability context to `ready`: seed a session key so
   // `AuthProvider` is authenticated and `CapabilityProvider` fetches `getMe`. With
   // no projection the context stays `loading` and mint gating / plugin-tab gating

@@ -442,8 +442,11 @@ export {
   generateTemplateCall,
   parseTemplateCall,
   encodeTemplateSegment,
+  templatedTextCatalog,
 } from './state-binding';
 export type {
+  StoragePresenceQueryLike,
+  TemplateNamesQueryLike,
   StateBindingEditorProps,
   StateBindingSectionProps,
   StateAttachRowProps,

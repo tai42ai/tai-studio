@@ -115,6 +115,7 @@ export type {
   StateStats,
   TemplateJq,
   TemplateReconcile,
+  TemplateDeclarations,
   StateTemplateDocument,
   StateTemplateListItem,
   StateInjection,

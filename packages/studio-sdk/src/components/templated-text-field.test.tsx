@@ -112,3 +112,85 @@ describe('TemplatedTextField', () => {
     expect(templatedTextSummary({ id: 'tmpl_a' })).toBe('template: tmpl_a');
   });
 });
+
+describe('TemplatedTextField storage presence', () => {
+  it('offers no source toggle or picker when storage is absent and the value is inline', () => {
+    const onChange = vi.fn();
+    render(
+      <TemplatedTextField
+        label="Condition"
+        value={{ content: '.x' }}
+        storageAbsent
+        onChange={onChange}
+      />,
+    );
+    expect(screen.queryByRole('radio', { name: 'Inline text' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Stored template' })).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    // The inline editor stays; the value is untouched (no emit on mount).
+    expect(screen.getByRole('textbox', { name: 'Condition' })).toHaveValue('.x');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('offers no source toggle or picker when storage is absent and the value is empty', () => {
+    render(<TemplatedTextField label="Condition" value={null} storageAbsent onChange={vi.fn()} />);
+    expect(screen.queryByRole('radio', { name: 'Stored template' })).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Condition' })).toBeInTheDocument();
+  });
+
+  it('shows a stored id read-only with an unavailability note, keeping the value, when storage is absent', () => {
+    const onChange = vi.fn();
+    render(
+      <TemplatedTextField
+        label="Condition"
+        value={{ id: 'welcome', kwargs: { locale: 'en' } }}
+        storageAbsent
+        onChange={onChange}
+      />,
+    );
+    // No toggle, no picker, and no editable field: the id is a labeled read-only
+    // reference, so a reader cannot mistake it for the literal condition text.
+    expect(screen.queryByRole('radio', { name: 'Stored template' })).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByText('Stored template')).toBeInTheDocument();
+    expect(screen.getByText('welcome')).toBeInTheDocument();
+    // The stored render parameters are shown read-only as text (not muted disabled inputs
+    // that read as empty placeholders), so the WHOLE saved value stays legible.
+    expect(screen.getByText('Render parameters')).toBeInTheDocument();
+    expect(screen.getByText('locale')).toBeInTheDocument();
+    expect(screen.getByText('en')).toBeInTheDocument();
+    // The value is neither converted nor dropped (no emit on mount).
+    expect(screen.getByText(/no storage backend/i)).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('renders a placeholder and no source controls while storage presence is unknown', () => {
+    render(
+      <TemplatedTextField
+        label="Condition"
+        value={{ content: '.x' }}
+        storagePresenceLoading
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('radio', { name: 'Inline text' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: 'Stored template' })).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.queryByRole('combobox')).toBeNull();
+  });
+
+  it('keeps the source toggle when storage is present (unchanged behaviour)', () => {
+    render(
+      <TemplatedTextField
+        label="Condition"
+        value={{ content: '.x' }}
+        templates={[{ id: 'tmpl_a' }]}
+        onChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('radio', { name: 'Inline text' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Stored template' })).toBeInTheDocument();
+  });
+});

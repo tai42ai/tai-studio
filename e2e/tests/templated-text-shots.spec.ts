@@ -11,13 +11,21 @@
  *   - the hooks register form's Condition + Expr fields,
  *   - the API-keys policy section's Condition field on the create-key dialog.
  *
- * States per control: inline mode, stored mode with the template picker open, the
- * render-parameters editor expanded with a parameter, and the error state. The
- * template catalog is served by `/api/templates`; in the lean e2e boot storage is not
- * mounted, so that door genuinely 500s and the control's real stored-mode state IS the
- * load error (captured live on the binding + policy screens). Frames that need a
- * POPULATED catalog fulfil `/api/templates` through `page.route` with a real-shaped
- * list — the same idiom the templates + hooks-edit suites already use.
+ * The control gates its STORED source on the storage-presence signal (`GET /api/storage`):
+ * a stored template can be neither browsed nor resolved without a storage provider. The
+ * lean e2e boot does not mount the storage router at all, so every frame STUBS this signal
+ * (a real deployment serves it, reporting `present: false` when no provider is registered).
+ * Frames default to `present` — the normal case, where the full inline/stored toggle renders
+ * — and capture, on that path: inline mode, stored mode with the template picker open, the
+ * render-parameters editor expanded, and the catalog-load error (storage present but the
+ * `/api/templates` door still 500s on this boot). Frames needing a POPULATED picker fulfil
+ * `/api/templates` through `page.route`.
+ *
+ * The storage-ABSENT states stub `present: false`: the field offers the inline editor alone
+ * (`condition-absent-inline`), or — when the saved value already names a stored template —
+ * shows that id and its parameters READ-ONLY with a plain note (`condition-absent-stored`).
+ * `condition-loading` holds the presence response open so the placeholder that stands in for
+ * the toggle (never shown then removed) is captured.
  *
  * The PNGs land in `TEMPLATED_TEXT_SHOTS_DIR` (default: the gitignored
  * `test-results/`), so a reviewer can point it at any directory for out-of-tree
@@ -131,6 +139,56 @@ async function stubCatalog(page: Page, names: readonly string[]): Promise<void> 
   );
 }
 
+/**
+ * Fulfil `GET /api/storage` — the storage-presence signal the control gates its stored
+ * source on. The lean e2e boot does not mount the storage router at all, so the live door
+ * is unreachable and every frame stubs this to present the intended signal deterministically
+ * (matching a real deployment, where the door returns `present: false` when no provider is
+ * registered). `present` → a registered provider, so the full inline/stored toggle renders;
+ * `absent` → `present: false`, so the control offers the inline source alone / shows a saved
+ * stored id read-only; `loading` holds the response open through the capture window so the
+ * presence-unknown placeholder is the frame's subject, then resolves present.
+ *
+ * The skeleton wraps every response in a `{ data }` envelope, which the client unwraps
+ * before validating — so the stub must too, like `stubCatalog` above.
+ */
+async function stubStorage(page: Page, mode: 'present' | 'absent' | 'loading'): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/storage',
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      if (mode === 'loading') {
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+      }
+      const data =
+        mode === 'absent'
+          ? { present: false, provider: null, module: null }
+          : { present: true, provider: 'demo', module: 'demo' };
+      await route.fulfill({ json: { data } });
+    },
+  );
+}
+
+/** Fulfil `GET /api/hooks` with one existing hook, so its per-row Edit door opens the
+ * register form PREFILLED from that hook (the same idiom the hooks-edit suite uses). */
+async function stubHooksList(page: Page, items: readonly unknown[]): Promise<void> {
+  await page.route(
+    (url) => url.pathname === '/api/hooks',
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        json: { data: { items, total: items.length, topic_verifiers: {}, trigger_auth: {} } },
+      });
+    },
+  );
+}
+
 /** The root <div> of a TemplatedTextField: the parent of its mode radiogroup. */
 function control(page: Page, label: string): Locator {
   return page.getByRole('radiogroup', { name: `${label} source` }).locator('xpath=..');
@@ -179,6 +237,15 @@ async function attachStateBinding(page: Page): Promise<void> {
 interface Frame {
   readonly name: string;
   readonly path: string;
+  /**
+   * The storage-presence signal to serve. Default `present` (a registered provider, so
+   * the full inline/stored control renders — the normal case). `absent` stubs
+   * `present: false` (the inline-only / read-only-stored states). `loading` holds the
+   * presence response open so the placeholder is captured.
+   */
+  readonly storage?: 'present' | 'absent' | 'loading';
+  /** One existing hook to serve on `GET /api/hooks`, so its Edit door opens prefilled. */
+  readonly hooksList?: readonly unknown[];
   /** A real-shaped catalog to serve; omit to let the live (500-ing) door answer. */
   readonly catalog?: readonly string[];
   /** Drive the page into the state to capture. */
@@ -240,8 +307,9 @@ const FRAMES: readonly Frame[] = [
     clean: (page) => page.getByRole('dialog'),
   },
   {
-    // The genuine live state: storage is unmounted in this boot, so `/api/templates`
-    // 500s and the stored-mode picker IS the load error (with a Retry).
+    // Storage present but the catalog door fails: the lean boot serves no
+    // `/api/templates`, so switching to stored mode meets the load error (with a Retry)
+    // — the control's real catalog-failure state.
     name: 'binding-subject-picker-error',
     path: '/presets',
     action: async (page) => {
@@ -329,7 +397,8 @@ const FRAMES: readonly Frame[] = [
     clean: (page) => page.getByRole('dialog', { name: 'Create API key' }),
   },
   {
-    // The genuine live picker-load error, mirroring the binding one on this screen.
+    // Storage present, catalog door fails — the picker-load error, mirroring the
+    // binding one on this screen.
     name: 'policy-condition-picker-error',
     path: '/settings?tab=api-keys',
     action: async (page) => {
@@ -347,6 +416,72 @@ const FRAMES: readonly Frame[] = [
     ready: (page) => control(page, 'Condition').getByRole('button', { name: 'Retry' }),
     target: (page) => control(page, 'Condition'),
   },
+
+  // --- Storage absent (stubbed present: false) ------------------------------
+  {
+    // No storage backend: the condition field offers the inline editor alone — no source
+    // toggle, no catalog fetch, no error. That the shared error card is absent proves the
+    // field makes no catalog request when storage is absent.
+    name: 'condition-absent-inline',
+    path: '/hooks',
+    storage: 'absent',
+    action: async (page) => {
+      await page.getByRole('form', { name: 'Register hook' }).waitFor({ state: 'visible' });
+      // The stored source is not offered where it cannot work.
+      await expect(page.getByRole('radiogroup', { name: 'Condition source' })).toHaveCount(0);
+    },
+    ready: (page) =>
+      page.getByRole('form', { name: 'Register hook' }).getByRole('textbox', { name: 'Condition' }),
+    target: (page) => page.getByRole('form', { name: 'Register hook' }),
+    clean: (page) => page.getByRole('form', { name: 'Register hook' }),
+  },
+  {
+    // No storage backend, but the saved value already names a stored template: the id and
+    // its render parameters are shown READ-ONLY with a plain note, the value neither
+    // converted to inline nor dropped.
+    name: 'condition-absent-stored',
+    path: '/hooks',
+    storage: 'absent',
+    hooksList: [
+      {
+        name: 'notify-events',
+        topic: 'events',
+        tool: 'echo',
+        execution_key: 'studio-e2e',
+        tool_kwargs: {},
+        condition: { id: 'welcome', kwargs: { locale: 'en' } },
+        expr: null,
+      },
+    ],
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Edit hook notify-events' }).click();
+      await page.getByRole('dialog', { name: 'Edit hook' }).waitFor({ state: 'visible' });
+      // Bring the whole Condition field (id + note + render parameters) into view so the
+      // shot frames it completely rather than clipping its lower rows at the dialog edge.
+      await page.getByRole('group', { name: 'Condition', exact: true }).scrollIntoViewIfNeeded();
+    },
+    ready: (page) => page.getByText(/no storage backend/i),
+    // The control itself, so the id, its note and its parameters all sit inside the shot.
+    target: (page) => page.getByRole('group', { name: 'Condition', exact: true }),
+    clean: (page) => page.getByRole('dialog', { name: 'Edit hook' }),
+  },
+  {
+    // Presence unknown: a placeholder stands in, so the toggle is never shown and then
+    // removed. The presence response is held open through the capture window.
+    name: 'condition-loading',
+    path: '/hooks',
+    storage: 'loading',
+    action: async (page) => {
+      const form = page.getByRole('form', { name: 'Register hook' });
+      await form.waitFor({ state: 'visible' });
+      // While presence is unknown neither the toggle nor the inline editor is shown.
+      await expect(form.getByRole('radiogroup', { name: 'Condition source' })).toHaveCount(0);
+    },
+    ready: (page) =>
+      page.getByRole('form', { name: 'Register hook' }).locator('.tai-skeleton').first(),
+    target: (page) => page.getByRole('form', { name: 'Register hook' }),
+    clean: (page) => page.getByRole('form', { name: 'Register hook' }),
+  },
 ];
 
 /** Open the create-key dialog on the API-keys tab (the wildcard key is full-mint). */
@@ -363,6 +498,11 @@ for (const theme of ['light', 'dark'] as const) {
     for (const frame of FRAMES) {
       test(frame.name, async ({ page }) => {
         await seedCredential(page);
+        // Routes must be in place before the navigation whose mount fires the queries.
+        // The lean boot does not serve `/api/storage`, so every frame stubs the presence
+        // signal (present / absent / loading) rather than relying on a live default.
+        await stubStorage(page, frame.storage ?? 'present');
+        if (frame.hooksList !== undefined) await stubHooksList(page, frame.hooksList);
         if (frame.catalog !== undefined) await stubCatalog(page, frame.catalog);
         await page.goto(frame.path, { waitUntil: 'domcontentloaded' });
         await frame.action(page);

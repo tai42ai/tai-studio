@@ -37,6 +37,7 @@ import {
   statesListKey,
   stateTemplatesKey,
   toolBadgesByName,
+  templatedTextCatalog,
   useApi,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
@@ -128,10 +129,18 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
-  // The stored templates a binding's templated-text jq slots may reference by id.
+  // The stored templates a binding's templated-text jq slots may reference by id —
+  // gated on a storage backend being present (the list door 500s without one; a
+  // storage-free deployment is supported). Presence is the shared `['storage', 'info']`
+  // query the templates/storage screens read, so React Query serves it once.
+  const storageQuery = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
   const authoredTemplatesQuery = useQuery({
     queryKey: ['templates', 'names'],
     queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storageQuery.data?.present === true,
   });
   // The scheduled tool's schema feeds the binding editor's field pickers.
   const toolSchemaQuery = useQuery({
@@ -413,14 +422,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           onChange={setStateBinding}
           statesCatalog={statesCatalogFromList(bindingStatesQuery.data ?? [])}
           templatesCatalog={templatesCatalogFromList(bindingTemplatesQuery.data ?? [])}
-          templatedTextTemplates={{
-            templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
-            loading: authoredTemplatesQuery.isPending,
-            error: authoredTemplatesQuery.isError
-              ? errorMessage(authoredTemplatesQuery.error)
-              : undefined,
-            onRetry: () => void authoredTemplatesQuery.refetch(),
-          }}
+          templatedTextTemplates={templatedTextCatalog(storageQuery, authoredTemplatesQuery)}
           inherited={inheritedBinding}
           sources={{
             input: fieldPathsFromSchema(toolSchemaQuery.data?.input),

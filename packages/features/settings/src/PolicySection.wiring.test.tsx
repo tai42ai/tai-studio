@@ -54,6 +54,13 @@ function stubClient(methods: Partial<Record<keyof ApiClient, unknown>>): ApiClie
 
 function renderPolicySection(client: ApiClient): void {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // Storage present (the warm-cache path the shell gives at runtime), so the condition
+  // field renders its editor synchronously rather than the presence-loading placeholder.
+  queryClient.setQueryData(['storage', 'info'], {
+    present: true,
+    provider: 'test',
+    module: 'test',
+  });
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (
       <QueryClientProvider client={queryClient}>

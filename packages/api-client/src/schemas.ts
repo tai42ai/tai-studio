@@ -2798,11 +2798,12 @@ export const stateStats = z.object({
 export type StateStats = z.infer<typeof stateStats>;
 
 /**
- * One template jq: `jq` is a program over the subject's attached subtree, its `purpose`
- * either `input` (a read-only program feeding a tool argument) or `update` (a program
- * returning an op batch that mutates the record). `params` are its declared argument
- * names; `reads`/`writes` are the template-relative record paths an `update` declares,
- * each a list of key segments; `description` is the human label.
+ * One template jq: `jq` is a program over the subject's attached subtree, authored as a
+ * templated text (inline `content` or a stored template `id`); its `purpose` is either
+ * `input` (a read-only program feeding a tool argument) or `update` (a program returning
+ * an op batch that mutates the record). `params` are its declared argument names;
+ * `reads`/`writes` are the template-relative record paths an `update` declares, each a
+ * list of key segments; `description` is the human label.
  */
 export const templateJq = z.object({
   description: z.string().default(''),
@@ -2810,27 +2811,40 @@ export const templateJq = z.object({
   params: z.array(z.string()).default([]),
   reads: z.array(z.array(z.string())).default([]),
   writes: z.array(z.array(z.string())).default([]),
-  jq: z.string(),
+  jq: templatedText,
 });
 export type TemplateJq = z.infer<typeof templateJq>;
 
 /**
- * How a declarations edit settles open records: `view` reads the record, `close`
- * builds the op batch that settles it, `resolutions` names the resolutions a close
- * may name — each a jq program.
+ * How a declarations edit settles open records: `orphans` returns the items a record
+ * orphans against the new declarations, `close` builds the op batch that closes one
+ * orphan, `resolutions` names the resolutions a close may name — each a templated-text
+ * jq program (inline `content` or a stored template `id`).
  */
 export const templateReconcile = z.object({
-  view: z.string(),
-  close: z.string(),
-  resolutions: z.string(),
+  orphans: templatedText,
+  close: templatedText,
+  resolutions: templatedText,
 });
 export type TemplateReconcile = z.infer<typeof templateReconcile>;
 
 /**
+ * A template's declarations section: `schema` is the JSON schema of the static values an
+ * attachment stores, and `check` is an optional attach-time predicate authored as a
+ * templated text (inline `content` or a stored template `id`), `null` when the template
+ * declares none.
+ */
+export const templateDeclarations = z.object({
+  schema: jsonSchema,
+  check: templatedText.nullable().default(null),
+});
+export type TemplateDeclarations = z.infer<typeof templateDeclarations>;
+
+/**
  * The platform half of a state-template document (mirrors StateTemplateDocument).
  * `template_jq` maps a name to its definition (each carrying its `purpose`);
- * `reconcile` is the settle policy — both optional (`null` when the template declares
- * none).
+ * `reconcile` is the settle policy; `declarations` is the static-values section — all
+ * optional (`null` when the template declares none).
  */
 export const stateTemplateDocument = z.object({
   kind: z.literal('state-template').default('state-template'),
@@ -2839,7 +2853,7 @@ export const stateTemplateDocument = z.object({
   parameters: z.record(z.string(), z.unknown()).default({}),
   schema: jsonSchema,
   regimes: z.array(stateRegime).default([]),
-  declarations: z.record(z.string(), z.unknown()).nullable().default(null),
+  declarations: templateDeclarations.nullable().default(null),
   trace: z.record(z.string(), z.unknown()).default({}),
   template_jq: z.record(z.string(), templateJq).nullable().default(null),
   reconcile: templateReconcile.nullable().default(null),

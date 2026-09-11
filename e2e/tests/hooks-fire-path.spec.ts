@@ -91,7 +91,7 @@ test("a key the server refuses to bind surfaces the server's message VERBATIM", 
       user_id: conditionalKeyId,
       description: 'request-context-conditional key (e2e)',
       scopes: ['*'],
-      condition: '.identity.description == "on-call"',
+      condition: { content: '.identity.description == "on-call"' },
     },
   });
   expect(mint.status()).toBe(200);

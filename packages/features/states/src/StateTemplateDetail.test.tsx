@@ -14,7 +14,10 @@ function doc(overrides: Partial<StateTemplateDocument> = {}): StateTemplateDocum
     parameters: { ceiling: 100 },
     schema: { type: 'object', properties: { tally: { type: 'number' } } },
     regimes: [{ path: ['tally'], policy: 'single' }],
-    declarations: { check: '.tally >= 0' },
+    declarations: {
+      schema: { type: 'object', properties: { tally: { type: 'number' } } },
+      check: { content: '.tally >= 0' },
+    },
     trace: {},
     template_jq: {
       current: {
@@ -23,7 +26,7 @@ function doc(overrides: Partial<StateTemplateDocument> = {}): StateTemplateDocum
         params: ['as_of'],
         reads: [],
         writes: [],
-        jq: '.tally',
+        jq: { content: '.tally' },
       },
       bump: {
         description: 'add',
@@ -31,7 +34,7 @@ function doc(overrides: Partial<StateTemplateDocument> = {}): StateTemplateDocum
         params: ['amount'],
         reads: [],
         writes: [['tally']],
-        jq: '[{op:"inc"}]',
+        jq: { content: '[{op:"inc"}]' },
       },
     },
     reconcile: null,

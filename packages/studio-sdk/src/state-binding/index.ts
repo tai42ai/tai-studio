@@ -24,6 +24,8 @@ export { BindingTemplatedJqField } from './BindingTemplatedJqField';
 export type { BindingTemplatedJqFieldProps } from './BindingTemplatedJqField';
 export { resolveTemplateJq, findByRef, resolveCallName } from './catalog';
 export type { ResolvedTemplateJq } from './catalog';
+export { templatedTextCatalog } from './templated-text-catalog';
+export type { StoragePresenceQueryLike, TemplateNamesQueryLike } from './templated-text-catalog';
 export {
   templatesCatalogFromList,
   statesCatalogFromList,

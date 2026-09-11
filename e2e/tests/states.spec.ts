@@ -238,7 +238,7 @@ test.describe.serial('the platform state store, end to end', () => {
           target_kind: 'tool',
           target_name: 'studio_demo_echo',
           kind: 'thread',
-          key_expr: '.thread_id',
+          key_expr: { content: '.thread_id' },
         },
       },
     });

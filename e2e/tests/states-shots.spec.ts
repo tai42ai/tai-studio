@@ -165,7 +165,7 @@ async function seedStateStore(api: APIRequestContext): Promise<void> {
           target_kind: TARGET_KIND,
           target_name: TARGET_NAME,
           kind: 'thread',
-          key_expr: '.thread_id',
+          key_expr: { content: '.thread_id' },
         },
       },
     }),

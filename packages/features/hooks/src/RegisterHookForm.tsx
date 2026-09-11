@@ -39,8 +39,8 @@ import {
   templatesCatalogFromList,
   statesListKey,
   stateTemplatesKey,
+  templatedTextCatalog,
   useApi,
-  type TemplatedTextCatalog,
 } from '@tai42/studio-sdk';
 import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
 import type { HookParams, HookSubject, StateBinding, TemplatedText } from '@tai42/api-client';
@@ -168,17 +168,20 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   );
   // Bumped on a successful create so the seeded-once condition/expr controls remount blank.
   const [formResetToken, setFormResetToken] = useState(0);
-  // The stored templates the condition/expr id pickers (and the binding's jq slots) offer.
+  // The stored templates the condition/expr id pickers (and the binding's jq slots)
+  // offer — gated on a storage backend being present (the list door 500s without one;
+  // a storage-free deployment is supported). Presence is the shared `['storage', 'info']`
+  // query the templates/storage screens read, so React Query serves it once.
+  const storageQuery = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
   const templatesQuery = useQuery({
     queryKey: ['templates', 'names'],
     queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storageQuery.data?.present === true,
   });
-  const templatedTextTemplates: TemplatedTextCatalog = {
-    templates: (templatesQuery.data ?? []).map((id) => ({ id })),
-    loading: templatesQuery.isPending,
-    error: templatesQuery.isError ? errorMessage(templatesQuery.error) : undefined,
-    onRetry: () => void templatesQuery.refetch(),
-  };
+  const templatedTextTemplates = templatedTextCatalog(storageQuery, templatesQuery);
   const bindingStatesQuery = useQuery({
     queryKey: statesListKey,
     queryFn: ({ signal }) => api.listStates(signal),
@@ -455,6 +458,8 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         templatesLoading={templatedTextTemplates.loading}
         templatesError={templatedTextTemplates.error}
         onTemplatesRetry={templatedTextTemplates.onRetry}
+        storageAbsent={templatedTextTemplates.storageAbsent}
+        storagePresenceLoading={templatedTextTemplates.storagePresenceLoading}
         onChange={setCondition}
         renderInline={({ label, value, onChange, hideLabel }) => (
           <div className={hideLabel ? 'tai-templated-inline--grouped' : undefined}>
@@ -477,6 +482,8 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         templatesLoading={templatedTextTemplates.loading}
         templatesError={templatedTextTemplates.error}
         onTemplatesRetry={templatedTextTemplates.onRetry}
+        storageAbsent={templatedTextTemplates.storageAbsent}
+        storagePresenceLoading={templatedTextTemplates.storagePresenceLoading}
         onChange={setExpr}
         renderInline={({ label, value, onChange, hideLabel }) => (
           <div className={hideLabel ? 'tai-templated-inline--grouped' : undefined}>

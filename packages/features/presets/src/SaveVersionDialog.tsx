@@ -54,6 +54,7 @@ import {
   statesListKey,
   stateTemplatesKey,
   toolsListKey,
+  templatedTextCatalog,
   useApi,
   type BindingSourceSchemas,
   type SchemaEditorChange,
@@ -101,10 +102,18 @@ export function SaveVersionDialog({
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
-  // The stored templates a binding's templated-text jq slots may reference by id.
+  // The stored templates a binding's templated-text jq slots may reference by id —
+  // gated on a storage backend being present (the list door 500s without one; a
+  // storage-free deployment is supported). Presence is the shared `['storage', 'info']`
+  // query the templates/storage screens read, so React Query serves it once.
+  const storageQuery = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
   const authoredTemplatesQuery = useQuery({
     queryKey: ['templates', 'names'],
     queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storageQuery.data?.present === true,
   });
   const baseSchemaQuery = useQuery({
     queryKey: ['state-binding', 'tool-schema', detail.base_tool],
@@ -353,14 +362,7 @@ export function SaveVersionDialog({
             onChange={setStateBinding}
             statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
             templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
-            templatedTextTemplates={{
-              templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
-              loading: authoredTemplatesQuery.isPending,
-              error: authoredTemplatesQuery.isError
-                ? errorMessage(authoredTemplatesQuery.error)
-                : undefined,
-              onRetry: () => void authoredTemplatesQuery.refetch(),
-            }}
+            templatedTextTemplates={templatedTextCatalog(storageQuery, authoredTemplatesQuery)}
             sources={
               {
                 input: fieldPathsFromSchema(baseSchemaQuery.data?.input),

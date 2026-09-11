@@ -47,6 +47,7 @@ import {
   TextInput,
   Textarea,
   errorMessage,
+  templatedTextCatalog,
   useApi,
 } from '@tai42/studio-sdk';
 import type { TemplatedText } from '@tai42/api-client';
@@ -468,9 +469,18 @@ export function PolicySection({
   const seededCondition = seed?.condition != null;
   const seededPolicyData = objectToRows(seed?.policy_data).length > 0;
 
+  // The stored templates the id picker offers — gated on a storage backend being
+  // present (the list door 500s without one; a storage-free deployment is supported).
+  // Presence is the shared `['storage', 'info']` query the templates/storage screens
+  // read, so React Query serves it once.
+  const storageQuery = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
   const templatesQuery = useQuery({
     queryKey: templateNamesKey,
     queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storageQuery.data?.present === true,
   });
 
   const validate = useMutation({
@@ -566,7 +576,7 @@ export function PolicySection({
     onConditionTestFailedChange(conditionTestFailed);
   }, [conditionTestFailed, onConditionTestFailedChange]);
 
-  const templateOptions = (templatesQuery.data ?? []).map((id) => ({ id }));
+  const templatedTextTemplates = templatedTextCatalog(storageQuery, templatesQuery);
 
   return (
     <div style={sectionStyle}>
@@ -604,10 +614,12 @@ export function PolicySection({
           label="Condition"
           value={condition}
           disabled={disabled}
-          templates={templateOptions}
-          templatesLoading={templatesQuery.isPending}
-          templatesError={templatesQuery.isError ? errorMessage(templatesQuery.error) : undefined}
-          onTemplatesRetry={() => void templatesQuery.refetch()}
+          templates={templatedTextTemplates.templates}
+          templatesLoading={templatedTextTemplates.loading}
+          templatesError={templatedTextTemplates.error}
+          onTemplatesRetry={templatedTextTemplates.onRetry}
+          storageAbsent={templatedTextTemplates.storageAbsent}
+          storagePresenceLoading={templatedTextTemplates.storagePresenceLoading}
           onChange={(next) => {
             setCondition(next);
             setConditionEdited(true);

@@ -464,11 +464,15 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
       {
         client: client({
           patchStateAttachment,
-          listStateTemplates: vi
-            .fn()
-            .mockResolvedValue([
-              templateDoc({ reconcile: { view: '.', close: '[]', resolutions: '.' } }),
-            ]),
+          listStateTemplates: vi.fn().mockResolvedValue([
+            templateDoc({
+              reconcile: {
+                orphans: { content: '.' },
+                close: { content: '[]' },
+                resolutions: { content: '.' },
+              },
+            }),
+          ]),
         }),
       },
     );

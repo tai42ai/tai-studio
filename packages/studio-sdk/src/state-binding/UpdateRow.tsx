@@ -138,6 +138,8 @@ function UpdateRowEditor({
           templatesLoading={templates?.loading}
           templatesError={templates?.error}
           onTemplatesRetry={templates?.onRetry}
+          storageAbsent={templates?.storageAbsent}
+          storagePresenceLoading={templates?.storagePresenceLoading}
           onChange={(next) => {
             onChange({ ...update, adapter: next });
           }}

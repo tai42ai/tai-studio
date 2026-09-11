@@ -20,7 +20,7 @@ describe('templatesCatalogFromList', () => {
             params: ['as_of'],
             reads: [],
             writes: [],
-            jq: '.b',
+            jq: { content: '.b' },
           },
           bump: {
             purpose: 'update',
@@ -28,7 +28,7 @@ describe('templatesCatalogFromList', () => {
             params: ['total'],
             reads: [],
             writes: [['tally']],
-            jq: '[]',
+            jq: { content: '[]' },
           },
         },
       },

@@ -49,6 +49,8 @@ export function BindingTemplatedJqField({
       templatesLoading={templates?.loading}
       templatesError={templates?.error}
       onTemplatesRetry={templates?.onRetry}
+      storageAbsent={templates?.storageAbsent}
+      storagePresenceLoading={templates?.storagePresenceLoading}
       renderInline={({
         label: inlineLabel,
         value: inlineValue,

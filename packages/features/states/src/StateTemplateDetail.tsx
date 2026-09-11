@@ -35,16 +35,18 @@ import {
   FeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
-import { ApiError, type StateTemplateDocument, type TemplateJq } from '@tai42/api-client';
+import {
+  ApiError,
+  type StateTemplateDocument,
+  type TemplateJq,
+  type TemplatedText,
+} from '@tai42/api-client';
 
 import { stateTemplateDetailKey } from './keys';
 
-/** The check jq a template declares, read from `declarations.check`; `null` when absent. */
-function checkJq(document: StateTemplateDocument): string | null {
-  const declarations = document.declarations;
-  if (declarations === null) return null;
-  const check = (declarations as { check?: unknown }).check;
-  return typeof check === 'string' && check !== '' ? check : null;
+/** The check a template declares, read from `declarations.check`; `null` when absent. */
+function checkBody(document: StateTemplateDocument): TemplatedText | null {
+  return document.declarations?.check ?? null;
 }
 
 /** A regime row's Path and Policy, read defensively from the free-form regime entry. */
@@ -66,14 +68,25 @@ function regimeCells(
   return { path, policy };
 }
 
-/** A keyboard-native "Show jq" disclosure over one jq program. */
-function ShowJq({ label, jq }: { readonly label: string; readonly jq: string }): ReactNode {
+/**
+ * A read-only view of one templated-text jq program: an inline body opens in a
+ * keyboard-native "Show jq" disclosure; a stored body names the template id it renders
+ * from (there is no inline text to reveal).
+ */
+function ShowJq({ label, jq }: { readonly label: string; readonly jq: TemplatedText }): ReactNode {
+  if (jq.id !== undefined) {
+    return (
+      <p style={{ margin: 0 }}>
+        Stored template: <code style={{ fontFamily: 'var(--tai-font-mono)' }}>{jq.id}</code>
+      </p>
+    );
+  }
   return (
     <details>
       <summary aria-label={label} style={{ cursor: 'pointer' }}>
         Show jq
       </summary>
-      <CodeBlock code={jq} language="jq" />
+      <CodeBlock code={jq.content ?? ''} language="jq" />
     </details>
   );
 }
@@ -95,7 +108,7 @@ function TemplateTab({ document }: { readonly document: StateTemplateDocument })
   const schema = document.schema;
   const regimes = document.regimes;
   const parameters = document.parameters;
-  const check = checkJq(document);
+  const check = checkBody(document);
   const hasSchema = Object.keys(schema).length > 0;
   const parameterEntries = Object.entries(parameters);
 

@@ -36,6 +36,7 @@ import {
   templatesCatalogFromList,
   statesListKey,
   stateTemplatesKey,
+  templatedTextCatalog,
   useApi,
   validateAgainstSchema,
   type SchemaFormErrors,
@@ -85,10 +86,18 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
     queryKey: stateTemplatesKey,
     queryFn: ({ signal }) => api.listStateTemplates(signal),
   });
-  // The stored templates a binding's templated-text jq slots may reference by id.
+  // The stored templates a binding's templated-text jq slots may reference by id —
+  // gated on a storage backend being present (the list door 500s without one; a
+  // storage-free deployment is supported). Presence is the shared `['storage', 'info']`
+  // query the templates/storage screens read, so React Query serves it once.
+  const storageQuery = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
   const authoredTemplatesQuery = useQuery({
     queryKey: ['templates', 'names'],
     queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storageQuery.data?.present === true,
   });
   // The route's target tool schema (a preset is served as a tool) feeds the field pickers.
   const targetName = value.target?.target_name ?? '';
@@ -189,14 +198,7 @@ export function RouteFormDialog({ initial, onClose }: RouteFormDialogProps): Rea
             onChange={setStateBinding}
             statesCatalog={statesCatalogFromList(statesQuery.data ?? [])}
             templatesCatalog={templatesCatalogFromList(templatesQuery.data ?? [])}
-            templatedTextTemplates={{
-              templates: (authoredTemplatesQuery.data ?? []).map((id) => ({ id })),
-              loading: authoredTemplatesQuery.isPending,
-              error: authoredTemplatesQuery.isError
-                ? errorMessage(authoredTemplatesQuery.error)
-                : undefined,
-              onRetry: () => void authoredTemplatesQuery.refetch(),
-            }}
+            templatedTextTemplates={templatedTextCatalog(storageQuery, authoredTemplatesQuery)}
             inherited={inheritedBinding}
             sources={{
               input: fieldPathsFromSchema(toolSchemaQuery.data?.input),

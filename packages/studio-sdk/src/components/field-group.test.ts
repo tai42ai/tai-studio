@@ -300,6 +300,8 @@ const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
     'RadioGroup at or below RADIO_MAX_OPTIONS, Select above — group is branch-conditional.',
   'packages/studio-sdk/src/components/reveal-input.tsx':
     'Both branches are the SDK TextInput, which claims the control id — no marker needed.',
+  'packages/studio-sdk/src/components/templated-text-field.tsx':
+    'The RadioGroup source toggle then a mode branch (Skeleton, ErrorState, or a hideLabel Field around Select) plus the KwargsEditor — the outer Field is marked group, so it claims no control id and each inner control names or drops its own.',
   'packages/studio-sdk/src/components/tool-picker.tsx':
     'Both branches are a Select, which claims the control id — no marker needed.',
   'packages/studio-sdk/src/schema-form/string-field.tsx':

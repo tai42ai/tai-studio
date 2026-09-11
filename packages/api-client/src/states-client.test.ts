@@ -475,27 +475,40 @@ describe('states client transport', () => {
 });
 
 describe('state-template document + record-result schemas', () => {
-  it('parses a document carrying template_jq/reconcile', () => {
+  it('parses a served document whose reconcile keys orphans and whose bodies are templated text', () => {
     const doc = schemas.stateTemplateDocument.parse({
+      kind: 'state-template',
       name: 'notes',
       schema: { type: 'object' },
+      declarations: { schema: { type: 'object' }, check: { content: '.ok' } },
       template_jq: {
-        active: { description: 'open items', purpose: 'input', params: ['since'], jq: '.items' },
+        active: {
+          description: 'open items',
+          purpose: 'input',
+          params: ['since'],
+          jq: { content: '.items' },
+        },
         append: {
           description: 'add one',
           purpose: 'update',
           reads: [['items']],
           writes: [['items']],
-          jq: '[{op:"set"}]',
+          jq: { content: '[{op:"set"}]', kwargs: {} },
         },
       },
-      reconcile: { view: '.open', close: '[]', resolutions: '.names' },
+      reconcile: {
+        orphans: { content: '[ .data.items[] ]' },
+        close: { content: '[]' },
+        resolutions: { content: '.names' },
+      },
     });
-    expect(doc.template_jq?.active?.jq).toBe('.items');
+    expect(doc.template_jq?.active?.jq).toEqual({ content: '.items' });
     expect(doc.template_jq?.active?.purpose).toBe('input');
     expect(doc.template_jq?.active?.params).toEqual(['since']);
     expect(doc.template_jq?.append?.writes).toEqual([['items']]);
-    expect(doc.reconcile?.resolutions).toBe('.names');
+    expect(doc.reconcile?.orphans).toEqual({ content: '[ .data.items[] ]' });
+    expect(doc.reconcile?.resolutions).toEqual({ content: '.names' });
+    expect(doc.declarations?.check).toEqual({ content: '.ok' });
   });
 
   it('defaults template_jq/reconcile to null when the document omits them', () => {
@@ -505,17 +518,17 @@ describe('state-template document + record-result schemas', () => {
   });
 
   it('fills the optional fields of a template jq with their defaults', () => {
-    const read = schemas.templateJq.parse({ purpose: 'input', jq: '.x' });
+    const read = schemas.templateJq.parse({ purpose: 'input', jq: { content: '.x' } });
     expect(read.description).toBe('');
     expect(read.params).toEqual([]);
-    const update = schemas.templateJq.parse({ purpose: 'update', jq: '.x' });
+    const update = schemas.templateJq.parse({ purpose: 'update', jq: { content: '.x' } });
     expect(update.description).toBe('');
     expect(update.reads).toEqual([]);
     expect(update.writes).toEqual([]);
   });
 
   it('throws on a template jq missing its purpose (never a silent coerce)', () => {
-    expect(() => schemas.templateJq.parse({ jq: '.x' })).toThrow();
+    expect(() => schemas.templateJq.parse({ jq: { content: '.x' } })).toThrow();
   });
 
   it('parses an eval result and an apply result', () => {
@@ -537,7 +550,9 @@ describe('state-template document + record-result schemas', () => {
   });
 
   it('throws on a reconcile missing a required jq program (never a silent coerce)', () => {
-    expect(() => schemas.templateReconcile.parse({ view: '.open', close: '[]' })).toThrow();
+    expect(() =>
+      schemas.templateReconcile.parse({ orphans: { content: '.open' }, close: { content: '[]' } }),
+    ).toThrow();
   });
 });
 

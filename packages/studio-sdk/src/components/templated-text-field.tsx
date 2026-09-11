@@ -14,9 +14,15 @@
  * emitting a normalized value on every change (a caller resets it by remounting
  * under a fresh `key`). The inline editor is a plain multiline textarea by default;
  * a caller authoring jq or another rich field passes `renderInline` to supply its
- * own editor. The stored-template list, its loading/error state, and the verbatim
- * server message for an id that no longer resolves are passed in by the caller —
- * this control holds no data edge of its own.
+ * own editor. The stored-template list, its loading/error state, the verbatim
+ * server message for an id that no longer resolves, and whether storage is present
+ * are passed in by the caller — this control holds no data edge of its own.
+ *
+ * When storage is absent (a supported configuration in which stored templates
+ * cannot be fetched or resolved) the stored source is not offered: an inline or
+ * empty value edits inline; a value already carrying an `id` is shown read-only with
+ * its kwargs, never converted or dropped. See `storageAbsent` /
+ * `storagePresenceLoading`.
  */
 import { useState, type ReactNode } from 'react';
 
@@ -76,6 +82,21 @@ export interface TemplatedTextFieldProps {
   readonly onTemplatesRetry?: () => void;
   /** The verbatim server message when the stored `id` no longer resolves. */
   readonly resolveError?: string;
+  /**
+   * Storage is registered ABSENT (`GET /api/storage` → `present: false`) — a fully
+   * supported configuration in which stored templates can be neither browsed nor
+   * resolved. The stored source is therefore not offered: an inline or empty value
+   * shows the inline editor alone (no toggle, no catalog); a value that already
+   * carries an `id` is shown READ-ONLY with its kwargs and a note that stored
+   * templates are unavailable here — the authored value is never converted to inline,
+   * dropped, or blanked.
+   */
+  readonly storageAbsent?: boolean;
+  /**
+   * Storage presence is not yet known. A placeholder stands in for the source region
+   * so the toggle is not shown and then removed once presence resolves.
+   */
+  readonly storagePresenceLoading?: boolean;
   /** Supply a custom inline-content editor (jq, rich text); defaults to a textarea. */
   readonly renderInline?: (props: TemplatedTextInlineProps) => ReactNode;
   readonly disabled?: boolean;
@@ -266,6 +287,8 @@ export function TemplatedTextField({
   templatesError,
   onTemplatesRetry,
   resolveError,
+  storageAbsent = false,
+  storagePresenceLoading = false,
   renderInline,
   disabled = false,
   placeholder,
@@ -334,76 +357,152 @@ export function TemplatedTextField({
       ? storedDraft.trim()
       : undefined;
 
-  // ONE coherent group per field: the label + description form the group header,
-  // and the source toggle, the active editor, and the render-parameters disclosure
-  // sit under it — so the toggle unambiguously belongs to THIS field, and the field
-  // reads label → description → toggle → editor → parameters like every sibling
-  // field in the form. The header names the `role="group"` container; the toggle
-  // names itself `"<label> source"`; the active editor is named by the field's own
-  // name through its visually-hidden `<label for>` (see `hideLabel`). The group
-  // container and that editor therefore both answer to the field's own name — the
-  // container-name redundancy `Field` accepts by design (a redundant container is
-  // audible, an unnamed group is silent).
-  return (
-    <Field label={label} description={description} group>
-      <RadioGroup
-        aria-label={`${label} source`}
-        variant="segmented"
-        value={mode}
-        disabled={disabled}
-        options={[
-          { value: 'inline', label: 'Inline text' },
-          { value: 'stored', label: 'Stored template' },
-        ]}
-        onValueChange={(next) => {
-          changeMode(next as Mode);
-        }}
-      />
+  // The inline editor, shared by the present-storage inline mode and the
+  // absent-storage inline-only rendering: the caller's rich editor when supplied,
+  // else a plain textarea.
+  const inlineEditor =
+    renderInline !== undefined ? (
+      renderInline({ label, value: inlineDraft, onChange: changeInline, error, hideLabel: true })
+    ) : (
+      <Field label={label} hideLabel error={error}>
+        <Textarea
+          value={inlineDraft}
+          placeholder={placeholder}
+          disabled={disabled}
+          onChange={(event) => {
+            changeInline(event.target.value);
+          }}
+        />
+      </Field>
+    );
 
-      {mode === 'inline' ? (
-        renderInline !== undefined ? (
-          renderInline({
-            label,
-            value: inlineDraft,
-            onChange: changeInline,
-            error,
-            hideLabel: true,
-          })
+  // A stored `id` already authored on the value: with storage absent it is shown
+  // read-only rather than resolved, browsed, converted, or dropped.
+  const authoredStoredId = value?.id;
+  const showsReadOnlyStored = storageAbsent && authoredStoredId !== undefined;
+
+  // The source region. While presence is unknown a placeholder stands in, so the
+  // toggle is never shown and then removed. With storage absent the stored source
+  // cannot work and is not offered: an inline or empty value edits inline; a value
+  // carrying an `id` is shown read-only with an unavailability note. With storage
+  // present the full inline/stored toggle and picker render.
+  let source: ReactNode;
+  if (storagePresenceLoading) {
+    source = <Skeleton height={36} />;
+  } else if (storageAbsent) {
+    source = showsReadOnlyStored ? (
+      <>
+        {/* A labeled read-only reference, NOT an editable field: no input box, a
+            "Stored template" caption, and the id in monospace — so it reads as a stored
+            reference the way the state-template screen shows one, never as literal text a
+            reader could mistake for the condition itself. A long id wraps rather than
+            overflowing its row. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
+          <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
+            Stored template
+          </span>
+          <code style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}>
+            {authoredStoredId}
+          </code>
+        </div>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 'var(--tai-text-sm)',
+            color: 'var(--tai-color-text-muted)',
+          }}
+        >
+          Stored templates are unavailable — this deployment has no storage backend.
+        </p>
+      </>
+    ) : (
+      inlineEditor
+    );
+  } else {
+    source = (
+      <>
+        <RadioGroup
+          aria-label={`${label} source`}
+          variant="segmented"
+          value={mode}
+          disabled={disabled}
+          options={[
+            { value: 'inline', label: 'Inline text' },
+            { value: 'stored', label: 'Stored template' },
+          ]}
+          onValueChange={(next) => {
+            changeMode(next as Mode);
+          }}
+        />
+
+        {mode === 'inline' ? (
+          inlineEditor
+        ) : templatesError !== undefined ? (
+          <ErrorState message={templatesError} onRetry={onTemplatesRetry} />
+        ) : templatesLoading ? (
+          <Skeleton height={36} />
         ) : (
           <Field label={label} hideLabel error={error}>
-            <Textarea
-              value={inlineDraft}
-              placeholder={placeholder}
-              disabled={disabled}
-              onChange={(event) => {
-                changeInline(event.target.value);
-              }}
+            <Select
+              placeholder={templates.length === 0 ? 'No templates available' : 'Select a template'}
+              value={storedDraft}
+              disabled={disabled || templates.length === 0}
+              options={templateOptions}
+              onValueChange={changeStored}
             />
           </Field>
-        )
-      ) : templatesError !== undefined ? (
-        <ErrorState message={templatesError} onRetry={onTemplatesRetry} />
-      ) : templatesLoading ? (
-        <Skeleton height={36} />
+        )}
+
+        {unresolvedId !== undefined ? (
+          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
+            {resolveError ?? `The stored template "${unresolvedId}" is not available.`}
+          </p>
+        ) : null}
+      </>
+    );
+  }
+
+  // ONE coherent group per field: the label + description form the group header, and
+  // the source region and the render-parameters disclosure sit under it — so the
+  // controls unambiguously belong to THIS field, read label → description → source →
+  // parameters like every sibling field. The header names the `role="group"`
+  // container; the active editor is named by the field's own name through its
+  // visually-hidden `<label for>` (see `hideLabel`). The container-name redundancy
+  // `Field` accepts by design (a redundant container is audible, an unnamed group is
+  // silent).
+  //
+  // A read-only stored value shows its render parameters as read-only text — the values
+  // in normal weight, NOT the muted disabled inputs a reader could mistake for empty
+  // placeholders — matching the read-only treatment of the id above; every editable
+  // rendering keeps the full add/remove editor.
+  return (
+    <Field label={label} description={description} group>
+      {source}
+      {showsReadOnlyStored ? (
+        kwargsRows.length > 0 ? (
+          <div
+            role="group"
+            aria-label={`${label} render parameters`}
+            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}
+          >
+            <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
+              Render parameters
+            </span>
+            {kwargsRows.map((row) => (
+              <div
+                key={row.key}
+                style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}
+              >
+                <code>{row.key}</code>
+                <span style={{ color: 'var(--tai-color-text-muted)' }}>: </span>
+                <code>{row.value}</code>
+              </div>
+            ))}
+          </div>
+        ) : null
       ) : (
-        <Field label={label} hideLabel error={error}>
-          <Select
-            placeholder={templates.length === 0 ? 'No templates available' : 'Select a template'}
-            value={storedDraft}
-            disabled={disabled || templates.length === 0}
-            options={templateOptions}
-            onValueChange={changeStored}
-          />
-        </Field>
+        <KwargsEditor label={label} rows={kwargsRows} disabled={disabled} onChange={changeKwargs} />
       )}
-
-      {unresolvedId !== undefined ? (
-        <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-          {resolveError ?? `The stored template "${unresolvedId}" is not available.`}
-        </p>
-      ) : null}
-
-      <KwargsEditor label={label} rows={kwargsRows} disabled={disabled} onChange={changeKwargs} />
     </Field>
   );
 }

@@ -30,6 +30,14 @@ export interface TemplatedTextCatalog {
   readonly loading?: boolean;
   readonly error?: string;
   readonly onRetry?: () => void;
+  /**
+   * Storage is registered absent (`GET /api/storage` → `present: false`), so the
+   * catalog was not fetched and the stored source is not offered on the fields this
+   * catalog feeds; an already-stored id is shown read-only.
+   */
+  readonly storageAbsent?: boolean;
+  /** Storage presence is not yet known — the fields render a placeholder, not a toggle. */
+  readonly storagePresenceLoading?: boolean;
 }
 
 /** One selectable field of a schema: the record path + a human label. */

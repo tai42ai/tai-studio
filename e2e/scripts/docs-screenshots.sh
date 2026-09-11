@@ -354,7 +354,7 @@ print(json.dumps({
     "description": "Demo owned service key",
     "scopes": ["studio"],
     "owner_user_id": os.environ["OWNER_USER_ID"],
-    "condition": os.environ["OWNED_CONDITION"],
+    "condition": {"content": os.environ["OWNED_CONDITION"]},
 }))')"
 mint_resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/auth/api-keys" -d "${mint_body}")"
 # The mint reply is `{"data": {"api_key": "sk-…", "key_fingerprint": "…"}}` — the raw
@@ -530,8 +530,8 @@ print(json.dumps({
     "door": "api",
     "target_kind": "tool",
     "target_name": "studio_demo_echo",
-    "payload_expr": "{message: .message}",
-    "reply_expr": os.environ["REPLY_EXPR"],
+    "payload_expr": {"content": "{message: .message}"},
+    "reply_expr": {"content": os.environ["REPLY_EXPR"]},
     "execution_key": os.environ["EXECUTION_KEY"],
     "callback_url": "https://docs-demo.invalid/conversations/answers",
 }))')"
@@ -698,7 +698,7 @@ print(json.dumps({
         "target_kind": os.environ["TARGET_KIND"],
         "target_name": os.environ["TARGET_NAME"],
         "kind": "thread",
-        "key_expr": ".thread_id",
+        "key_expr": {"content": ".thread_id"},
     },
 }))')")"
 case "${hook_resp}" in
