@@ -109,6 +109,10 @@ export interface ConfigFormValue {
   target_name?: string;
   multichannel?: boolean;
   greeting_template?: string;
+  // The tool-target state binding the platform keys on this config. The form does
+  // not author it yet, but carries it through an edit so an upsert never drops a
+  // binding set elsewhere. Typed as the wire field so the read value round-trips.
+  state_binding?: TargetConversationConfig['state_binding'];
 }
 
 /**
@@ -126,6 +130,7 @@ export function configToFormValue(config: TargetConversationConfig): ConfigFormV
     target_kind: config.target_kind,
     target_name: config.target_name,
     multichannel: config.multichannel,
+    state_binding: config.state_binding,
     ...(config.greeting_template !== null ? { greeting_template: config.greeting_template } : {}),
   };
 }
@@ -174,5 +179,8 @@ export function formValueToBody(value: ConfigFormValue): TargetConversationConfi
     target_name: value.target_name ?? '',
     multichannel: value.multichannel ?? false,
     greeting_template: greeting === '' ? null : greeting,
+    // Carried through unchanged — the form does not author the binding, and the
+    // upsert replaces the whole row, so echoing it back keeps an existing one.
+    state_binding: value.state_binding ?? null,
   };
 }

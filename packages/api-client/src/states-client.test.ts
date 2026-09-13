@@ -625,12 +625,13 @@ describe('state-binding schema', () => {
     expect(() => schemas.stateAttach.parse({ state: 'notes' })).toThrow();
   });
 
-  it('throws on an EMPTY subject expression — parity with the contract min_length=1', () => {
-    expect(() =>
-      schemas.stateAttach.parse({ state: 'notes', subject_expr: { content: '' } }),
-    ).toThrow();
-    // A required templated-text with a chosen-but-empty stored id is empty too.
-    expect(() => schemas.stateAttach.parse({ state: 'notes', subject_expr: { id: '' } })).toThrow();
+  it('leaves subject-expression non-emptiness to the server (the published schema does not constrain it)', () => {
+    // The published contract schema types subject_expr as a plain templated text with
+    // no min-length, so the generated schema parses one the server would later refuse;
+    // non-emptiness is the server's authority, not a client-side refinement.
+    expect(
+      schemas.stateAttach.parse({ state: 'notes', subject_expr: { content: '' } }).subject_expr,
+    ).toEqual({ content: '' });
   });
 
   it('carries the binding onto the door bodies (preset, route, hook)', () => {

@@ -513,24 +513,30 @@ export interface SetMcpSecretEnvBody {
 /**
  * The client-facing write body for a state declaration (`PUT /api/states/{name}`), the
  * wire shape of `tai42_contract.states.StateDeclaration` minus the platform-computed
- * `effective_schema`/`regimes` (those are read-only, refused on a write). `retention_days`
- * is `null` to keep records forever.
+ * `effective_schema`/`regimes` (those are read-only, refused on a write). `schema` is the
+ * `TemplatedText | dict` union: an inline JSON-schema object, or a stored template reference
+ * (`id` + render `kwargs`) the platform renders to the schema. `retention_days` is `null` to
+ * keep records forever.
  */
 export interface StateDeclarationBody {
   readonly name: string;
   readonly description?: string;
-  readonly schema: Record<string, unknown>;
+  readonly schema: s.TemplatedText | Record<string, unknown>;
   readonly subject_kinds: readonly string[];
   readonly default_subject_kind: string;
   readonly retention_days?: number | null;
 }
 
-/** A state-template document write body (`PUT /api/state-templates/{name}`, the platform half). */
+/**
+ * A state-template document write body (`PUT /api/state-templates/{name}`, the platform half).
+ * `schema` is the `TemplatedText | dict` union — an inline fragment schema, or a stored
+ * template reference the platform renders to the fragment.
+ */
 export interface StateTemplateBody {
   readonly name: string;
   readonly description?: string;
   readonly parameters?: Record<string, unknown>;
-  readonly schema: Record<string, unknown>;
+  readonly schema: s.TemplatedText | Record<string, unknown>;
   readonly regimes?: Record<string, unknown>[];
   readonly declarations?: Record<string, unknown> | null;
   readonly trace?: Record<string, unknown>;
@@ -1386,7 +1392,7 @@ export function createApiClient(config: ApiConfig) {
     // -- hooks --------------------------------------------------------
     listHooks: (topic?: string, signal?: AbortSignal) =>
       req('/api/hooks', s.hookList, { signal, query: topic === undefined ? undefined : { topic } }),
-    registerHook: (params: s.HookParams) =>
+    registerHook: (params: s.HookRegister) =>
       req('/api/hooks', s.hookRegistered, { method: 'POST', body: params }),
     unregisterHook: (name: string) =>
       req(`/api/hooks/${encodeSegment(name)}`, s.hookRemoved, { method: 'DELETE' }),

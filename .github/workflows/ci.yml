@@ -133,6 +133,14 @@ jobs:
       # api:update` so the review sees the surface change.
       - name: API report
         run: pnpm --filter @tai42/studio-sdk --filter @tai42/api-client run api:check
+      # The served-document schemas are generated from the vendored platform contract
+      # JSON-schema bundle. Regenerate in memory and fail if the committed
+      # src/generated/served-schemas.ts differs, so a stale generated file (a bundle
+      # re-vendor without a regenerate, or a hand edit) reds the build. The comparison
+      # is on the generated source, which drops descriptions and reads the bundle
+      # parsed, so a bundle whitespace/escaping difference never trips it.
+      - name: Schema freshness
+        run: pnpm --filter @tai42/api-client run schema:check
       - name: Typecheck
         run: pnpm -r typecheck
       - name: Lint
@@ -242,6 +250,56 @@ jobs:
               )
               sys.exit(1)
           print(f"OK: latest tai42-contract {latest} satisfies the fixture pin '{pin}'.")
+          PY
+
+  # Freshness gate for the vendored contract-schema bundle's pinned major. The
+  # api-client generates its served-document schemas from
+  # packages/api-client/contract-schema/contract-schema.json, whose `contract_version`
+  # is the single source of the pinned major. This job asks PyPI for the latest
+  # published tai42-contract and fails the moment its major leaves the vendored
+  # major, so a contract major bump forces a deliberate re-vendor
+  # (`pnpm --filter @tai42/api-client run schema:refresh`) + regenerate rather than a
+  # silent stale pin. Self-contained (no siblings).
+  api-client-contract-pin:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.11.26'
+      - name: Check vendored contract major against latest tai42-contract
+        run: |
+          uv run --with packaging python - <<'PY'
+          import json
+          import sys
+          import urllib.request
+          from pathlib import Path
+
+          from packaging.specifiers import SpecifierSet
+          from packaging.version import Version
+
+          bundle = Path("packages/api-client/contract-schema/contract-schema.json")
+          pinned = Version(json.loads(bundle.read_text())["contract_version"])
+          major = pinned.major
+          specifier = SpecifierSet(f">={major},<{major + 1}")
+
+          url = "https://pypi.org/pypi/tai42-contract/json"
+          with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310 (fixed https URL)
+              data = json.load(response)
+          latest = data["info"]["version"]
+
+          if Version(latest) not in specifier:
+              print(
+                  f"::error file={bundle}::The vendored contract bundle is cut from "
+                  f"tai42-contract {pinned} (major {major}), but the latest published "
+                  f"release is {latest}, outside '>={major},<{major + 1}'. Re-vendor the "
+                  f"bundle from the new major and regenerate: "
+                  f"`pnpm --filter @tai42/api-client run schema:refresh`."
+              )
+              sys.exit(1)
+          print(f"OK: latest tai42-contract {latest} is within the vendored major {major}.")
           PY
 
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.

@@ -1,7 +1,9 @@
 /**
  * The Declaration tab and the Declare-state create dialog. Both author a state's base
- * JSON schema (through `SchemaEditor`), the subject kinds it serves (`TagsInput`) with a
- * default kind (`Select`), and an optional retention window. The attached subtrees a
+ * schema (the `TemplatedText | dict` union, through `SchemaField`), the subject kinds it
+ * serves (`TagsInput`) with a default kind (`Select`), and an optional retention window.
+ * When the base schema is a stored template reference, the tab also shows the
+ * platform-resolved effective schema read-only beneath the field. The attached subtrees a
  * template contributes are shown read-only with a `template` badge — they are edited on
  * the Templates tab, never here (an attachment composes into the effective schema, so
  * editing the base never rewrites a template's fragment).
@@ -18,9 +20,9 @@ import {
   ErrorState,
   Field,
   FormDialog,
+  JsonTree,
   NumberInput,
   Select,
-  SchemaEditor,
   Skeleton,
   Spinner,
   TagsInput,
@@ -28,20 +30,30 @@ import {
   errorMessage,
   isFeatureDisabled,
   featureDisabledMessage,
+  templatedTextCatalog,
   FeatureDisabled,
   useApi,
-  type SchemaEditorChange,
 } from '@tai42/studio-sdk';
 import { type StateDeclarationBody, type StateDetail } from '@tai42/api-client';
 
+import {
+  SchemaField,
+  storedSchemaRef,
+  type SchemaFieldChange,
+  type SchemaUnion,
+} from './SchemaField';
 import { stateDetailKey, stateStatsKey, statesListKey } from './keys';
 
 const PERSON_KIND = 'person';
 
 /** The mutable declaration fields the editor authors, shared by create and edit. */
 interface DeclarationDraft {
+  /**
+   * The base schema as the served `TemplatedText | dict` union: an inline schema dict, or a
+   * stored template reference the platform renders to the schema; `null` when unset.
+   */
+  readonly schema: SchemaUnion | null;
   readonly description: string;
-  readonly schema: Record<string, unknown> | null;
   readonly schemaValid: boolean;
   readonly subjectKinds: string[];
   readonly defaultKind: string;
@@ -59,6 +71,16 @@ function toBody(name: string, draft: DeclarationDraft): StateDeclarationBody {
     default_subject_kind: draft.defaultKind,
     retention_days: retention === '' ? null : Number(retention),
   };
+}
+
+/**
+ * The draft's initial base schema from a served declaration: a stored template reference as
+ * is, a non-empty inline dict as is, an empty or absent schema as the unset `null`.
+ */
+function initialSchema(served: StateDetail['schema']): SchemaUnion | null {
+  if (served === undefined) return null;
+  if (storedSchemaRef(served) !== null) return served;
+  return Object.keys(served).length > 0 ? served : null;
 }
 
 /** Whether a draft is complete enough to submit (schema valid, ≥1 kind, default in kinds). */
@@ -201,23 +223,52 @@ function DeclarationEditorBody({
   draft,
   onDraft,
   attachments,
+  resolvedSchema,
 }: {
   readonly draft: DeclarationDraft;
   readonly onDraft: (updater: (d: DeclarationDraft) => DeclarationDraft) => void;
   readonly attachments?: readonly { template: string; path: string[] }[];
+  /**
+   * The platform-resolved `effective_schema` of the SAVED declaration, shown read-only when
+   * its base schema is a stored template reference (an `id` alone does not reveal the shape).
+   * Absent on a create, where nothing is resolved yet.
+   */
+  readonly resolvedSchema?: Record<string, unknown> | null;
 }): ReactNode {
-  const onSchema = (change: SchemaEditorChange): void => {
+  const api = useApi();
+  // The stored templates the schema field's picker offers, gated on a storage backend being
+  // present (the list door 500s without one; a storage-free deployment is supported). Presence
+  // is the shared `['storage', 'info']` query the templates/storage screens read, so React
+  // Query serves it once.
+  const storageQuery = useQuery({
+    queryKey: ['storage', 'info'],
+    queryFn: ({ signal }) => api.getStorageInfo(signal),
+  });
+  const templatesQuery = useQuery({
+    queryKey: ['templates', 'names'],
+    queryFn: ({ signal }) => api.listTemplates(signal),
+    enabled: storageQuery.data?.present === true,
+  });
+  const catalog = templatedTextCatalog(storageQuery, templatesQuery);
+
+  const onSchema = (change: SchemaFieldChange): void => {
     onDraft((d) => ({ ...d, schema: change.schema, schemaValid: change.valid }));
   };
+  const storedBase = storedSchemaRef(draft.schema);
   return (
     <>
-      <SchemaEditor
-        value={draft.schema}
-        onChange={onSchema}
-        requireTitle={false}
+      <SchemaField
         label="Base schema"
         description="The document shape for a subject before any template is attached."
+        value={draft.schema}
+        onChange={onSchema}
+        catalog={catalog}
       />
+      {storedBase !== null && resolvedSchema !== undefined && resolvedSchema !== null ? (
+        <Field label="Resolved schema" description="Resolved from the stored template." group>
+          <JsonTree data={resolvedSchema} label="Resolved schema" />
+        </Field>
+      ) : null}
       {attachments !== undefined && attachments.length > 0 ? (
         <Field
           label="Attached subtrees"
@@ -279,7 +330,7 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
   const initial = useMemo<DeclarationDraft>(
     () => ({
       description: state.description,
-      schema: Object.keys(state.schema).length > 0 ? state.schema : null,
+      schema: initialSchema(state.schema),
       schemaValid: true,
       subjectKinds: [...state.subject_kinds],
       defaultKind: state.default_subject_kind,
@@ -289,7 +340,7 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
   );
   const [draft, setDraft] = useState<DeclarationDraft>(initial);
 
-  const schemaChanged = JSON.stringify(draft.schema ?? {}) !== JSON.stringify(state.schema);
+  const schemaChanged = JSON.stringify(draft.schema ?? {}) !== JSON.stringify(state.schema ?? {});
   const subjectsChanged =
     JSON.stringify(draft.subjectKinds) !== JSON.stringify(state.subject_kinds) ||
     draft.defaultKind !== state.default_subject_kind;
@@ -318,6 +369,7 @@ export function DeclarationTab({ state }: { readonly state: StateDetail }): Reac
         draft={draft}
         onDraft={setDraft}
         attachments={state.attachments.map((a) => ({ template: a.template, path: a.path }))}
+        resolvedSchema={state.effective_schema}
       />
       {saveMutation.isError ? <ErrorState message={errorMessage(saveMutation.error)} /> : null}
       <div>

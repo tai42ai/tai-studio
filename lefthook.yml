@@ -16,3 +16,10 @@ pre-commit:
       # keeps the check from hitting the network.
       glob: '{package.json,pnpm-lock.yaml,pnpm-workspace.yaml}'
       run: pnpm install --frozen-lockfile --offline
+    schemas:
+      # The api-client's served-document schemas are generated from the vendored
+      # contract bundle. When either the bundle or the generated file is staged,
+      # regenerate in memory and fail if the committed generated file is stale, so a
+      # re-vendor or hand edit is caught before the commit lands, not in CI.
+      glob: 'packages/api-client/{contract-schema/contract-schema.json,src/generated/served-schemas.ts}'
+      run: pnpm --filter @tai42/api-client run schema:check

@@ -105,8 +105,9 @@ function reconcileOrphans(error: unknown): OrphanRecord[] | null {
 
 /**
  * The object-level paths an attachment may land on — the document root (`[]`) plus every
- * nested object property, walked from the state's base schema. A template's fragment
- * composes onto an object, so only object levels are offered.
+ * nested object property, walked from the state's resolved `effective_schema` (a base schema
+ * authored as a stored template reference is not readable client-side; the resolved schema
+ * always is). A template's fragment composes onto an object, so only object levels are offered.
  */
 function objectLevelPaths(schema: JsonSchema | undefined): string[][] {
   const paths: string[][] = [[]];
@@ -278,7 +279,7 @@ export function TemplatesTab({ state }: { readonly state: StateDetail }): ReactN
       {attachOpen ? (
         <AttachTemplateDialog
           stateName={state.name}
-          schema={state.schema}
+          schema={state.effective_schema ?? {}}
           attachedTemplates={state.attachments.map((a) => a.template)}
           templates={templates}
           onClose={() => {

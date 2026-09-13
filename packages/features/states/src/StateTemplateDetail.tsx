@@ -2,7 +2,8 @@
  * The state-template screen — a READ-ONLY view of one uploaded state-template
  * document (`GET /api/state-templates/{name}`), over two tabs:
  *
- *  - Template: the fields (`schema`) as a read-only tree, the write policies
+ *  - Template: the fields (`schema`) as a read-only tree — or, when the fragment schema is
+ *    a stored template reference, that reference read-only — the write policies
  *    (`regimes`) as a table, the check jq behind a disclosure, and the parameters
  *    as a table.
  *  - Jq: every template jq by name, purpose, description, and its declared
@@ -37,11 +38,13 @@ import {
 } from '@tai42/studio-sdk';
 import {
   ApiError,
+  schemas,
   type StateTemplateDocument,
   type TemplateJq,
   type TemplatedText,
 } from '@tai42/api-client';
 
+import { storedSchemaRef } from './SchemaField';
 import { stateTemplateDetailKey } from './keys';
 
 /** The check a template declares, read from `declarations.check`; `null` when absent. */
@@ -104,22 +107,81 @@ function Chips({ items }: { readonly items: readonly string[] }): ReactNode {
   );
 }
 
+/**
+ * The template's fragment schema, served as the `TemplatedText | dict` union: a stored
+ * template reference (`id` + kwargs) resolved to the fragment at platform time, or an inline
+ * fragment dict. A stored reference shows its id and render parameters read-only with a note
+ * that the schema is rendered from that stored template (a template serves no resolved
+ * schema); an inline dict shows its fields.
+ */
+function SchemaSection({
+  schema,
+}: {
+  readonly schema: StateTemplateDocument['schema'];
+}): ReactNode {
+  const reference = storedSchemaRef(schema);
+  const templated = schema !== undefined && schemas.templatedText.safeParse(schema).success;
+  const inline = !templated && schema !== undefined ? schema : {};
+  const hasInline = Object.keys(inline).length > 0;
+
+  if (reference !== null) {
+    const kwargs = reference.kwargs ?? {};
+    const kwargEntries = Object.entries(kwargs);
+    return (
+      <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+        <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Fields</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
+          <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
+            Stored template
+          </span>
+          <code style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}>
+            {reference.id}
+          </code>
+        </div>
+        {kwargEntries.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
+            <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
+              Render parameters
+            </span>
+            {kwargEntries.map(([key, raw]) => (
+              <div key={key} style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}>
+                <code>{key}</code>
+                <span style={{ color: 'var(--tai-color-text-muted)' }}>: </span>
+                <code>{typeof raw === 'string' ? raw : JSON.stringify(raw)}</code>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <p
+          style={{
+            margin: 0,
+            fontSize: 'var(--tai-text-sm)',
+            color: 'var(--tai-color-text-muted)',
+          }}
+        >
+          The schema is rendered from this stored template.
+        </p>
+      </section>
+    );
+  }
+  if (!hasInline) return null;
+  return (
+    <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Fields</h3>
+      <JsonTree data={inline} label="Fields" />
+    </section>
+  );
+}
+
 function TemplateTab({ document }: { readonly document: StateTemplateDocument }): ReactNode {
-  const schema = document.schema;
   const regimes = document.regimes;
   const parameters = document.parameters;
   const check = checkBody(document);
-  const hasSchema = Object.keys(schema).length > 0;
   const parameterEntries = Object.entries(parameters);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-5)' }}>
-      {hasSchema ? (
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-          <h3 style={{ margin: 0, fontSize: 'var(--tai-text-md)' }}>Fields</h3>
-          <JsonTree data={schema} label="Fields" />
-        </section>
-      ) : null}
+      <SchemaSection schema={document.schema} />
 
       {regimes.length > 0 ? (
         <section style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>

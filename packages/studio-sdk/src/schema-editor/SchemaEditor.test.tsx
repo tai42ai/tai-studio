@@ -214,6 +214,27 @@ describe('SchemaEditor', () => {
     expect(screen.getByText('What the tool returns.')).toBeInTheDocument();
   });
 
+  it('hides the label visually while keeping it the textarea name and its `for` association', () => {
+    render(
+      <SchemaEditor
+        value={null}
+        onChange={vi.fn()}
+        requireTitle={false}
+        label="Base schema"
+        hideLabel
+      />,
+    );
+    // The textarea keeps its accessible name (visually hiding drops paint, not the name).
+    const textarea = screen.getByLabelText('Base schema JSON');
+    // The label stays in the DOM behind `tai-visually-hidden`, still a real `<label for>`
+    // pointing at the control — not removed from the accessibility tree.
+    const labelEl = screen.getByText('Base schema');
+    expect(labelEl.tagName).toBe('LABEL');
+    expect(labelEl).toHaveClass('tai-field-label', 'tai-visually-hidden');
+    expect(labelEl.getAttribute('for')).toBe(textarea.id);
+    expect(textarea.id).not.toBe('');
+  });
+
   it('renders the mono textarea and previews the schema fields', () => {
     render(
       <SchemaEditor

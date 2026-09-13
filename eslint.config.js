@@ -200,6 +200,10 @@ export default tseslint.config(
       // The reference plugin's COMPILED bundle (a build artifact shipped inside
       // the Python package, emitted by build:reference-plugin) — never linted.
       'e2e/reference-plugin/src/reference_plugin/studio/**',
+      // The served-document schemas GENERATED from the platform contract bundle
+      // (emitted by the api-client's schema:generate) — the freshness gate is their
+      // tie, so they are never hand-linted.
+      'packages/api-client/src/generated/**',
     ],
   },
   js.configs.recommended,

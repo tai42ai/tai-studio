@@ -228,6 +228,7 @@ describe('createApiClient', () => {
               topic: 't',
               tool: 'notify',
               execution_key: 'svc-notify',
+              execution_key_fingerprint: 'fp-notify',
             },
           ],
           total: 1,

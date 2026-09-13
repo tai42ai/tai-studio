@@ -10,6 +10,13 @@ pnpm-lock.yaml
 packages/studio-sdk/etc/
 packages/api-client/etc/
 
+# The vendored platform contract bundle is a byte-for-byte copy of the published
+# artifact (api-client schema:refresh copies it), and the served-document schemas are
+# generated from it (schema:generate output; "Do not edit"). The freshness gate is
+# their tie; neither is hand-formatted.
+packages/api-client/contract-schema/
+packages/api-client/src/generated/
+
 # The reference plugin's COMPILED bundle + generated manifest (emitted by
 # build:reference-plugin, shipped inside the Python package).
 e2e/reference-plugin/src/reference_plugin/studio/

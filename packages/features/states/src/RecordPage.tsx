@@ -164,7 +164,9 @@ function RecordPageBody({
   const [editor, setEditor] = useState<EditorState>({ mode: 'closed' });
   const [eraseOpen, setEraseOpen] = useState(false);
 
-  const effectiveSchema = detailQuery.data?.effective_schema ?? detailQuery.data?.schema ?? null;
+  // The record form validates and seeds against the platform-resolved `effective_schema` (the
+  // base schema — which may be a stored template reference — composed with every attachment).
+  const effectiveSchema = detailQuery.data?.effective_schema ?? null;
 
   const saveMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.putStateRecord(stateName, subject, data),

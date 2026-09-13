@@ -69,8 +69,8 @@ describe('routeToFormValue', () => {
         callback_url: 'https://x/y',
         target_kind: 'tool',
         target_name: 'lookup',
-        payload_expr: '.message',
-        reply_expr: '.result',
+        payload_expr: { content: '.message' },
+        reply_expr: { content: '.result' },
         initial_mode: 'manual',
         turns_per_hour_override: 30,
         error_reply_text: 'sorry',
@@ -136,8 +136,8 @@ describe('formValueToBody', () => {
       door: 'channel',
       target_kind: 'tool',
       target_name: 'lookup',
-      payload_expr: '.a',
-      reply_expr: '.b',
+      payload_expr: { content: '.a' },
+      reply_expr: { content: '.b' },
       initial_mode: 'agent',
       execution_key: 'svc',
       channel: 'whatsapp',
@@ -145,7 +145,7 @@ describe('formValueToBody', () => {
       callback_url: null,
       turns_per_hour_override: 12,
       error_reply_text: 'oops',
-      state_binding: null,
+      locale: null,
     });
   });
 
@@ -186,7 +186,7 @@ describe('formValueToBody', () => {
       callback_url: null,
       turns_per_hour_override: null,
       error_reply_text: null,
-      state_binding: null,
+      locale: null,
     });
   });
 });

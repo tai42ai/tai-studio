@@ -103,7 +103,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
         target_kind: 'agent',
         target_name: 'assistant',
         kind: 'person',
-        key_expr: '.actor.id',
+        key_expr: { content: '.actor.id' },
       },
     });
   });

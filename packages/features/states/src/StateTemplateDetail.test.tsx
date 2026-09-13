@@ -55,6 +55,24 @@ describe('StateTemplateDetail', () => {
     expect(screen.getByText('ceiling')).toBeInTheDocument();
   });
 
+  it('renders a stored-reference fragment schema as a read-only reference', async () => {
+    const client: StubApiClient = {
+      getStateTemplate: vi
+        .fn()
+        .mockResolvedValue(doc({ schema: { id: 'prefs-schema', kwargs: { locale: 'en' } } })),
+    };
+    renderWithProviders(<StateTemplateDetail name="tally" />, { client });
+    await screen.findByTestId('state-template-detail');
+    expect(screen.getByText('Stored template')).toBeInTheDocument();
+    expect(screen.getByText('prefs-schema')).toBeInTheDocument();
+    // The render parameters are shown, and the source is named (a template serves no resolved
+    // schema, so the note states the schema is rendered from the stored template).
+    expect(screen.getByText('locale')).toBeInTheDocument();
+    expect(
+      screen.getByText('The schema is rendered from this stored template.'),
+    ).toBeInTheDocument();
+  });
+
   it('lists template jq by name, purpose, description and params/writes on the Jq tab', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = { getStateTemplate: vi.fn().mockResolvedValue(doc()) };

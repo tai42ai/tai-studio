@@ -226,6 +226,9 @@ export interface RouteFormValue {
   initial_mode?: ConversationMode;
   turns_per_hour_override?: number;
   error_reply_text?: string;
+  // The route locale the platform keys, not authored by this form; carried through an
+  // edit so an upsert never drops one set elsewhere.
+  locale?: string | null;
   target?: {
     target_kind?: 'agent' | 'tool';
     target_name?: string;
@@ -252,6 +255,7 @@ export function routeToFormValue(route: ConversationRoute): RouteFormValue {
     route_name: route.route_name,
     execution_key: route.execution_key,
     initial_mode: route.initial_mode,
+    ...(route.locale !== null ? { locale: route.locale } : {}),
     ...(route.turns_per_hour_override !== null
       ? { turns_per_hour_override: route.turns_per_hour_override }
       : {}),
@@ -261,8 +265,10 @@ export function routeToFormValue(route: ConversationRoute): RouteFormValue {
         ? {
             target_kind: 'tool',
             target_name: route.target_name,
-            ...(route.payload_expr !== null ? { payload_expr: route.payload_expr } : {}),
-            ...(route.reply_expr !== null ? { reply_expr: route.reply_expr } : {}),
+            // The jq fields are templated text on the wire; the form authors their
+            // inline `content`, so prefill from it (a stored-id expr has none).
+            ...(route.payload_expr?.content ? { payload_expr: route.payload_expr.content } : {}),
+            ...(route.reply_expr?.content ? { reply_expr: route.reply_expr.content } : {}),
           }
         : { target_kind: 'agent', target_name: route.target_name },
     delivery:
@@ -338,8 +344,10 @@ export function formValueToBody(value: RouteFormValue): ConversationRouteCreate 
     door: delivery.door ?? 'api',
     target_kind: target.target_kind ?? 'agent',
     target_name: target.target_name ?? '',
-    payload_expr: isTool ? (target.payload_expr ?? null) : null,
-    reply_expr: isTool ? (target.reply_expr ?? null) : null,
+    // A tool's jq is authored as inline text and rides the wire as a templated text
+    // (inline `content`); a blank or agent-target field is `null`.
+    payload_expr: isTool && target.payload_expr ? { content: target.payload_expr } : null,
+    reply_expr: isTool && target.reply_expr ? { content: target.reply_expr } : null,
     initial_mode: value.initial_mode ?? 'agent',
     execution_key: value.execution_key ?? '',
     channel: isApi ? null : (delivery.channel ?? null),
@@ -347,7 +355,8 @@ export function formValueToBody(value: RouteFormValue): ConversationRouteCreate 
     callback_url: isApi ? (delivery.callback_url ?? null) : null,
     turns_per_hour_override: value.turns_per_hour_override ?? null,
     error_reply_text: value.error_reply_text ?? null,
-    // The door screen supplies the state binding; the schema-driven body carries none.
-    state_binding: null,
+    // Carried through unchanged — the form does not author the locale, and the upsert
+    // replaces the whole row, so echoing it back keeps one set elsewhere.
+    locale: value.locale ?? null,
   };
 }

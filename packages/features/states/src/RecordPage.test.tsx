@@ -27,6 +27,7 @@ function detail(): StateDetail {
     effective_schema: {},
     regimes: [],
     attachments: [],
+    updated_at: null,
   };
 }
 

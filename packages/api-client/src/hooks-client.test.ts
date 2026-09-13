@@ -138,6 +138,7 @@ function hookRecord(overrides: Record<string, unknown> = {}): Record<string, unk
     topic: 'events.created',
     tool: 'slack.post_message',
     execution_key: 'svc-events',
+    execution_key_fingerprint: 'fp-events',
     ...overrides,
   };
 }

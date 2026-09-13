@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { ApiError, type StateDetail } from '@tai42/api-client';
 
 import { DeclarationTab, DeclareStateDialog } from './DeclarationTab';
-import { renderWithProviders } from './test-utils';
+import { renderWithProviders, type StubApiClient } from './test-utils';
 
 function detail(over: Record<string, unknown> = {}): StateDetail {
   return {
@@ -22,7 +22,22 @@ function detail(over: Record<string, unknown> = {}): StateDetail {
     effective_schema: { type: 'object' },
     regimes: [],
     attachments: [],
+    updated_at: null,
     ...over,
+  };
+}
+
+/** Storage-presence + template-list stubs the schema field's picker reads. Absent by default
+ * (the schema field then edits its inline JSON body alone). */
+function withStorage(
+  client: StubApiClient,
+  present = false,
+  templates: string[] = [],
+): StubApiClient {
+  return {
+    getStorageInfo: vi.fn().mockResolvedValue({ present, provider: null, module: null }),
+    listTemplates: vi.fn().mockResolvedValue(templates),
+    ...client,
   };
 }
 
@@ -32,7 +47,7 @@ describe('DeclareStateDialog', () => {
     const putState = vi.fn().mockResolvedValue(detail());
     const onCreated = vi.fn();
     renderWithProviders(<DeclareStateDialog onClose={vi.fn()} onCreated={onCreated} />, {
-      client: { putState },
+      client: withStorage({ putState }),
     });
 
     await user.type(screen.getByLabelText('Name'), 'profile');
@@ -56,7 +71,7 @@ describe('DeclarationTab', () => {
     const user = userEvent.setup();
     const putState = vi.fn().mockResolvedValue(detail());
     renderWithProviders(<DeclarationTab state={detail()} />, {
-      client: { getStateStats: vi.fn().mockResolvedValue({ records: 0 }), putState },
+      client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 0 }), putState }),
     });
     await user.type(await screen.findByLabelText('Retention (days)'), '30');
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -73,7 +88,7 @@ describe('DeclarationTab', () => {
         new ApiError('state "profile" has records; cannot remove or change a declared field', 409),
       );
     renderWithProviders(<DeclarationTab state={detail()} />, {
-      client: { getStateStats: vi.fn().mockResolvedValue({ records: 3 }), putState },
+      client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 3 }), putState }),
     });
 
     fireEvent.change(await screen.findByLabelText('Base schema JSON'), {
@@ -96,7 +111,7 @@ describe('DeclarationTab', () => {
     const user = userEvent.setup();
     const putState = vi.fn().mockResolvedValue(detail());
     renderWithProviders(<DeclarationTab state={detail()} />, {
-      client: { getStateStats: vi.fn().mockResolvedValue({ records: 3 }), putState },
+      client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 3 }), putState }),
     });
     await user.type(await screen.findByLabelText('Subject kinds'), 'thread{Enter}');
     await user.click(screen.getByRole('button', { name: 'Save' }));
@@ -110,7 +125,7 @@ describe('DeclarationTab', () => {
       attachments: [{ template: 'notes', path: ['notes'], parameters: {}, declarations: {} }],
     });
     renderWithProviders(<DeclarationTab state={withAttachment} />, {
-      client: { getStateStats: vi.fn().mockResolvedValue({ records: 0 }) },
+      client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 0 }) }),
     });
     expect(await screen.findByText('Attached subtrees')).toBeInTheDocument();
     expect(screen.getAllByText('notes').length).toBeGreaterThan(0);
@@ -121,5 +136,42 @@ describe('DeclarationTab', () => {
       client: { getStateStats: vi.fn().mockRejectedValue(new ApiError('no store', 501)) },
     });
     expect(await screen.findByTestId('feature-disabled')).toBeInTheDocument();
+  });
+
+  it('round-trips a stored-reference base schema through the declaration PUT', async () => {
+    const user = userEvent.setup();
+    const putState = vi.fn().mockResolvedValue(detail());
+    const state = detail({
+      schema: { id: 'profile-schema' },
+      effective_schema: { type: 'object', properties: { nickname: { type: 'string' } } },
+    });
+    renderWithProviders(<DeclarationTab state={state} />, {
+      client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 0 }), putState }),
+    });
+    // A dirty change elsewhere enables Save; the untouched stored-reference schema is written
+    // back to the wire body verbatim (the union arm, not a resolved dict).
+    await user.type(await screen.findByLabelText('Retention (days)'), '30');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(putState).toHaveBeenCalled();
+    });
+    expect((putState.mock.calls[0]?.[1] as { schema: unknown }).schema).toEqual({
+      id: 'profile-schema',
+    });
+  });
+
+  it('renders a stored-reference base schema with its resolved effective schema', async () => {
+    const state = detail({
+      schema: { id: 'profile-schema' },
+      effective_schema: { type: 'object', properties: { nickname: { type: 'string' } } },
+    });
+    renderWithProviders(<DeclarationTab state={state} />, {
+      client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 0 }) }),
+    });
+    // The stored reference is shown (once storage presence resolves), and the platform-resolved
+    // effective schema is rendered read-only beneath it under the resolution caption.
+    expect(await screen.findByText('profile-schema')).toBeInTheDocument();
+    expect(screen.getByText('Resolved from the stored template.')).toBeInTheDocument();
+    expect(screen.getByText('Resolved schema')).toBeInTheDocument();
   });
 });

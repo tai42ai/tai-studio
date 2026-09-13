@@ -329,7 +329,7 @@ describe('NotificationsPage', () => {
           {
             ...record,
             id: 't',
-            template: { name: 'order_update', language: 'en', parameters: ['#123', 'shipped'] },
+            template: { name: 'status_update', language: 'en', body_parameters: ['A-42', 'sent'] },
           },
         ],
       }),
@@ -337,16 +337,20 @@ describe('NotificationsPage', () => {
     renderWithProviders(<NotificationsPage search={{}} />, { client });
 
     const template = await screen.findByTestId('notification-template');
-    expect(within(template).getByText('order_update')).toBeInTheDocument();
+    expect(within(template).getByText('status_update')).toBeInTheDocument();
     expect(within(template).getByText('en')).toBeInTheDocument();
-    expect(within(template).getByText('Parameters: #123, shipped')).toBeInTheDocument();
+    expect(within(template).getByText('Parameters: A-42, sent')).toBeInTheDocument();
   });
 
   it('renders a parameter-less template without a Parameters line', async () => {
     const client = stubClient(
       vi.fn().mockResolvedValue({
         notifications: [
-          { ...record, id: 'tp', template: { name: 'welcome', language: 'he', parameters: [] } },
+          {
+            ...record,
+            id: 'tp',
+            template: { name: 'welcome', language: 'he', body_parameters: [] },
+          },
         ],
       }),
     );

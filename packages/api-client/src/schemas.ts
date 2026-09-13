@@ -6,40 +6,60 @@
  */
 import { z } from 'zod';
 
+import { templatedText } from './templated-text';
+import * as generated from './generated/served-schemas';
+
+export { templatedText, requiredTemplatedText } from './templated-text';
+export type { TemplatedText } from './templated-text';
+
+// Served-document schemas are GENERATED from the platform contract JSON-schema
+// bundle (src/generated/served-schemas.ts) and re-exported here under the names the
+// rest of the client uses. The generator maps every `x-tai42-templated-text` field
+// to the shared `templatedText` zod, so a served body can never be a bare string.
+// The plain response DTOs below (list wrappers, acks, version rows) stay hand-written.
+export const stateInjection = generated.stateInjection;
+export type StateInjection = z.infer<typeof stateInjection>;
+export const stateUpdate = generated.stateUpdate;
+export type StateUpdate = z.infer<typeof stateUpdate>;
+export const stateAttach = generated.stateAttach;
+export type StateAttach = z.infer<typeof stateAttach>;
+export const stateBinding = generated.stateBinding;
+export type StateBinding = z.infer<typeof stateBinding>;
+export const presetBody = generated.presetBody;
+export type PresetBody = z.input<typeof presetBody>;
+export const conversationRoute = generated.conversationRoute;
+export type ConversationRoute = z.infer<typeof conversationRoute>;
+export const conversationRouteCreate = generated.conversationRouteCreate;
+export type ConversationRouteCreate = z.input<typeof conversationRouteCreate>;
+export const targetConversationConfig = generated.targetConversationConfig;
+export type TargetConversationConfig = z.input<typeof targetConversationConfig>;
+export const channelTemplate = generated.channelTemplate;
+export type ChannelTemplate = z.infer<typeof channelTemplate>;
+export const hookSubject = generated.hookSubject;
+export type HookSubject = z.infer<typeof hookSubject>;
+export const hookParams = generated.hookParams;
+export type HookParams = z.infer<typeof hookParams>;
+export const hookRegister = generated.hookRegister;
+export type HookRegister = z.input<typeof hookRegister>;
+export const stateDeclaration = generated.stateDeclaration;
+export type StateDeclaration = z.infer<typeof stateDeclaration>;
+export const stateTemplateDocument = generated.stateTemplateDocument;
+export type StateTemplateDocument = z.infer<typeof stateTemplateDocument>;
+export const templateJq = generated.stateTemplateJq;
+export type TemplateJq = z.infer<typeof templateJq>;
+export const templateReconcile = generated.stateTemplateReconcile;
+export type TemplateReconcile = z.infer<typeof templateReconcile>;
+export const templateDeclarations = generated.stateTemplateDeclarations;
+export type TemplateDeclarations = z.infer<typeof templateDeclarations>;
+export const policyBody = generated.accessPolicy;
+export type PolicyBody = z.infer<typeof policyBody>;
+export const roleBody = generated.roleDefinition;
+export type RoleBody = z.infer<typeof roleBody>;
 /** An arbitrary JSON value (tool results, rendered payloads). */
 export const jsonValue: z.ZodType = z.unknown();
 
 /** A JSON Schema object (Pydantic-emitted). Permissive; parsed by the auto-form. */
 export const jsonSchema = z.record(z.string(), z.unknown());
-
-/**
- * One authored-text value: either inline `content` (text written in place) or a
- * stored template `id` (a template resource fetched and rendered), never both and
- * never neither. `kwargs` are the render parameters and apply in BOTH cases — a
- * prompt with placeholders needs its values whether it was typed inline or fetched.
- * `.strict()` refuses any other key so a drifting field fails the parse loudly.
- */
-export const templatedText = z
-  .object({
-    content: z.string().optional(),
-    id: z.string().optional(),
-    kwargs: z.record(z.string(), z.unknown()).optional(),
-  })
-  .strict()
-  .refine((value) => (value.content === undefined) !== (value.id === undefined), {
-    message: 'A templated-text value sets exactly one of `content` or `id`.',
-  });
-export type TemplatedText = z.infer<typeof templatedText>;
-
-/**
- * A templated-text value that must carry a source: inline `content` is non-empty, or
- * a stored template `id` is chosen. Used where the platform contract requires a
- * value (e.g. a state binding's subject, an update's adapter when present).
- */
-export const requiredTemplatedText = templatedText.refine(
-  (value) => (value.id !== undefined ? value.id.length > 0 : (value.content ?? '').length > 0),
-  { message: 'Provide inline text or choose a stored template.' },
-);
 
 // -- tools -------------------------------------------------------------------
 
@@ -177,93 +197,6 @@ export const presetDetail = presetRecord.extend({
   fixed_kwargs: z.record(z.string(), z.unknown()),
 });
 export type PresetDetail = z.infer<typeof presetDetail>;
-
-/**
- * One input injection of a state binding: BEFORE the run, a value is produced and
- * placed into the run input under `into` (the run-input field name). A template
- * `input` jq (`template_jq`, named `name` or attachment-qualified `template.name`) reads the
- * record — its input is the record (`.`), with declared params bound as `$params`; a
- * custom `jq` reads `{record, input}` → the value. Exactly one of `template_jq`/`jq`
- * carries the program; the other is `null`.
- */
-export const stateInjection = z.object({
-  // `template_jq` names a program the attached state template ships; it is resolved
-  // through compiled programs, never rendered as text, so it stays a plain string.
-  template_jq: z.string().nullable().default(null),
-  jq: templatedText.nullable().default(null),
-  into: z.string(),
-});
-export type StateInjection = z.infer<typeof stateInjection>;
-
-/**
- * One update of a state binding: AFTER the run, a template-relative op batch is
- * applied through the store. A NAMED update (`template_jq`) runs the template `update`
- * jq over `{record, input}` where `input` is built by `adapter` — a jq over
- * `{output, input}` that constructs the update jq's declared input object. A custom
- * `jq` runs over `{record, output, input}` → `[{op, path, value}]` and carries no
- * adapter. `op_id` is an optional idempotency-key expression. Exactly one of
- * `template_jq`/`jq` carries the program.
- */
-export const stateUpdate = z.object({
-  // `template_jq` names a program the attached state template ships; resolved through
-  // compiled programs, never rendered as text, so it stays a plain string.
-  template_jq: z.string().nullable().default(null),
-  jq: templatedText.nullable().default(null),
-  // A named update's adapter is either an authored value or `null` (no adapter — the
-  // run input passes through). When present it must carry a source (the platform
-  // compile-checks a non-null adapter and refuses an empty one).
-  adapter: requiredTemplatedText.nullable().default(null),
-  op_id: templatedText.nullable().default(null),
-});
-export type StateUpdate = z.infer<typeof stateUpdate>;
-
-/**
- * One attached state of a binding: the `state`, one or more `templates`
- * (attach-on-use — attached to the state on the binding's save), the `subject_expr`
- * (a jq yielding the record KEY — a bare key string OR a full subject object — that
- * this binding reads and updates), an optional `scope_expr` (a boolean jq predicate;
- * when it is false this state is skipped for the run), and the ordered
- * `input_injections` (before the run) and `updates` (after it).
- */
-export const stateAttach = z.object({
-  state: z.string(),
-  templates: z.array(z.string()).default([]),
-  // The platform contract enforces a subject that carries a source; an empty one is
-  // rejected here, never sent for the server to refuse.
-  subject_expr: requiredTemplatedText,
-  scope_expr: templatedText.nullable().default(null),
-  input_injections: z.array(stateInjection).default([]),
-  updates: z.array(stateUpdate).default([]),
-});
-export type StateAttach = z.infer<typeof stateAttach>;
-
-/**
- * The one generic binding shape carried, optionally, on every runnable definition
- * (a preset, a channel route, a schedule, a hook) and repeated per node by the
- * flow engine. It attaches one or more states, each with its templates, subject,
- * injections and updates. `null` on a definition means no binding. Mirrors the
- * platform `StateBinding` document.
- */
-export const stateBinding = z.object({
-  // At least one attached state: the platform contract refuses a zero-state binding, so
-  // "no binding" is spelled `null` on the definition, never `{ states: [] }`.
-  states: z.array(stateAttach).min(1),
-});
-export type StateBinding = z.infer<typeof stateBinding>;
-
-/** The full version body a preset stores under `kind="preset"`. */
-export const presetBody = z.object({
-  base_tool: z.string(),
-  description: z.string(),
-  fixed_kwargs: z.record(z.string(), z.unknown()),
-  extensions: presetExtensions,
-  output_schema: z.record(z.string(), z.unknown()).nullable(),
-  input_schema: z.record(z.string(), z.unknown()).nullable(),
-  // The optional door-layer state binding this preset applies around every run
-  // (`null` when the preset touches no state).
-  state_binding: stateBinding.nullable().default(null),
-});
-export type PresetBody = z.infer<typeof presetBody>;
 
 /**
  * One immutable version row (`GET /api/presets/{name}/versions[/{version}]`).
@@ -1225,73 +1158,11 @@ export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 export const conversationRecordOrigin = z.enum(['client', 'operator']);
 export type ConversationRecordOrigin = z.infer<typeof conversationRecordOrigin>;
 
-/**
- * A stored routing row as a read door returns it, its `callback_secret` withheld.
- *
- * `initial_mode`, `turns_per_hour_override`, and `error_reply_text` carry defaults
- * because a stored row always returns them, while a hand-built stub/fixture may
- * omit them — the default keeps such a payload valid without inventing a field the
- * server never sends.
- */
-export const conversationRoute = z.object({
-  route_name: z.string(),
-  door: conversationDoor,
-  target_kind: conversationTargetKind,
-  target_name: z.string(),
-  payload_expr: z.string().nullable(),
-  reply_expr: z.string().nullable(),
-  initial_mode: conversationMode.default('agent'),
-  execution_key: z.string(),
-  channel: z.string().nullable(),
-  our_identity: z.string().nullable(),
-  callback_url: z.string().nullable(),
-  turns_per_hour_override: z.number().int().nullable().default(null),
-  error_reply_text: z.string().nullable().default(null),
-  execution_key_fingerprint: z.string(),
-  // The door-layer state binding the backend stores on the route's target config and
-  // returns on read (`null` when the route touches no state) — the edit form prefills it.
-  state_binding: stateBinding.nullable().default(null),
-});
-export type ConversationRoute = z.infer<typeof conversationRoute>;
-
 export const conversationRoutes = z.object({
   items: z.array(conversationRoute),
   total: z.number(),
 });
 export type ConversationRoutes = z.infer<typeof conversationRoutes>;
-
-/**
- * The client-facing create/edit body for a conversation route — the wire model of
- * `tai42_contract.conversations.ConversationRouteCreate`. `POST
- * /api/conversations/{route_name}` is an UPSERT, so this one shape is both the
- * create AND the edit body. `route_name` rides the URL path; it is carried here too
- * (the door rejects a body whose `route_name` disagrees with the path).
- *
- * The contract's cross-field validators are mirrored where the form authors this
- * body: `payload_expr`/`reply_expr` are tool-only; an `api` door carries a
- * `callback_url` (and no channel identity); a `channel` door carries `channel` +
- * `our_identity` (and no callback). Sent explicitly (including `null`) so an edit
- * clears a field the operator emptied rather than leaving the stored value.
- */
-export const conversationRouteCreate = z.object({
-  route_name: z.string(),
-  door: conversationDoor,
-  target_kind: conversationTargetKind,
-  target_name: z.string().min(1),
-  payload_expr: z.string().nullable().default(null),
-  reply_expr: z.string().nullable().default(null),
-  initial_mode: conversationMode.default('agent'),
-  execution_key: z.string().min(1),
-  channel: z.string().nullable().default(null),
-  our_identity: z.string().nullable().default(null),
-  callback_url: z.string().nullable().default(null),
-  turns_per_hour_override: z.number().int().positive().nullable().default(null),
-  error_reply_text: z.string().min(1).max(2000).nullable().default(null),
-  // The optional door-layer state binding this route applies around every turn's
-  // tool run (`null` when the route touches no state).
-  state_binding: stateBinding.nullable().default(null),
-});
-export type ConversationRouteCreate = z.infer<typeof conversationRouteCreate>;
 
 /**
  * The create/replace reply: whether THIS call created the row (vs. replaced an
@@ -1421,28 +1292,6 @@ export const conversationThreadMessageSent = z.object({
 });
 export type ConversationThreadMessageSent = z.infer<typeof conversationThreadMessageSent>;
 
-/**
- * Per-target presentation config for the conversation bridge, keyed by
- * `(target_kind, target_name)` — the wire model of
- * `tai42_contract.conversations.TargetConversationConfig`. The row carries no
- * server-derived fields, so this ONE shape is the stored row AND the upsert body
- * (`PUT /api/conversation-configs/{target_kind}/{target_name}` is the create AND
- * the edit path).
- *
- * `multichannel` opts the target into person linking; `greeting_template` is the
- * first-contact greeting. `greeting_template` is a `str.format` template (NOT a jq
- * expression) that may reference at most the `{pairing_code}` placeholder — it
- * carries no `x-tai42-expression`. `null` is the explicit spelling for "no
- * greeting"; a blank string is refused server-side.
- */
-export const targetConversationConfig = z.object({
-  target_kind: conversationTargetKind,
-  target_name: z.string().min(1),
-  multichannel: z.boolean().default(false),
-  greeting_template: z.string().nullable().default(null),
-});
-export type TargetConversationConfig = z.infer<typeof targetConversationConfig>;
-
 /** Every stored per-target config (`GET /api/conversation-configs`). */
 export const conversationConfigs = z.object({
   items: z.array(targetConversationConfig),
@@ -1563,19 +1412,6 @@ export type WebEntryCodeRevoked = z.infer<typeof webEntryCodeRevoked>;
 // send), `options` (tappable option labels) — plus the `audience` identity the
 // record is addressed to; the inbox renders them.
 
-/**
- * A pre-approved channel template a notification carried, stored raw on the sink
- * record when the notify supplied one (server-side it is mutually exclusive with
- * `media`/`options`). `parameters` is the POSITIONAL list of body-text values
- * substituted into the template's placeholders in order; empty when it has none.
- */
-export const channelTemplate = z.object({
-  name: z.string(),
-  language: z.string(),
-  parameters: z.array(z.string()).default([]),
-});
-export type ChannelTemplate = z.infer<typeof channelTemplate>;
-
 export const notification = z.object({
   id: z.string(),
   message: z.string(),
@@ -1608,9 +1444,10 @@ export const notifications = z.object({
 export type Notifications = z.infer<typeof notifications>;
 
 // -- hooks -------------------------------------------------------------------
-// Shapes match tai42_contract.hooks.HookParams: a hook fires a `tool` on a `topic`,
-// optionally gated by a `condition` and shaped by an `expr` (each an authored
-// templated-text value: inline content or a stored template id, with render kwargs).
+// The hand-written hook response DTOs: the fire-door authority enum, the list rows and
+// their wrapper, and the per-topic verifier/trigger metadata. The served hook DOCUMENT
+// schemas (`hookSubject`/`hookParams`/`hookRegister`) are generated from the contract
+// bundle and re-exported at the top of this file, not defined here.
 
 /** A fire door — who may trigger a path, not what the fire may do. A string enum. */
 export const triggerAuth = z.enum([
@@ -1621,38 +1458,6 @@ export const triggerAuth = z.enum([
   'out-of-service',
 ]);
 export type TriggerAuth = z.infer<typeof triggerAuth>;
-
-/**
- * The optional state subject a hook fire targets (mirrors
- * `tai42_contract.hooks.HookSubject`): the conversation-target scope plus the subject
- * `kind` and a `key_expr` jq evaluated over the event payload at fire. `null` leaves the
- * fire with no ambient state context.
- */
-export const hookSubject = z.object({
-  target_kind: conversationTargetKind,
-  target_name: z.string(),
-  kind: z.string(),
-  key_expr: z.string(),
-});
-export type HookSubject = z.infer<typeof hookSubject>;
-
-export const hookParams = z.object({
-  name: z.string(),
-  topic: z.string(),
-  tool: z.string(),
-  // The api-key `user_id` the fire runs AS.
-  execution_key: z.string().min(1),
-  tool_kwargs: z.record(z.string(), z.unknown()).default({}),
-  // The optional state subject the fire targets; `null` leaves it with no ambient
-  // state context (a state tool it calls must then carry an explicit subject).
-  subject: hookSubject.nullable().default(null),
-  condition: templatedText.nullable().default(null),
-  expr: templatedText.nullable().default(null),
-  // The optional door-layer state binding this hook applies around its fire's tool
-  // run (`null` when the hook touches no state).
-  state_binding: stateBinding.nullable().default(null),
-});
-export type HookParams = z.infer<typeof hookParams>;
 
 export const hookList = z.object({
   items: z.array(hookParams),
@@ -1824,24 +1629,6 @@ export type GrantLevel = z.infer<typeof grantLevel>;
 export const roleGrants = z.record(z.string(), grantLevel);
 export type RoleGrants = z.infer<typeof roleGrants>;
 
-/**
- * A role body (`GET /api/auth/roles`, and the write routes' echo). Layer 1 is the
- * read-only base-tier ceiling — the seeded jq `condition` plus `base_tier`
- * (`editor`/`viewer`, or `null` for the reserved `allow_all` admin). Layer 2 is the
- * editable per-tag `grants` map. `allow_all` (admin) carries an empty `grants` map
- * and reaches everything, un-lockable. `condition` is the base-tier jq (an authored
- * templated-text value) — READ-ONLY here (no raw-jq authoring surface).
- */
-export const roleBody = z.object({
-  name: z.string(),
-  description: z.string(),
-  scopes: z.array(z.string()),
-  condition: templatedText.nullable(),
-  base_tier: z.string().nullable(),
-  allow_all: z.boolean(),
-  grants: roleGrants,
-});
-export type RoleBody = z.infer<typeof roleBody>;
 export const roleList = z.array(roleBody);
 
 /** `DELETE /api/auth/roles/{name}` — the deleted role's name. */
@@ -2080,19 +1867,6 @@ export const validateConditionResult = z.object({
   result: z.boolean().nullable(),
 });
 export type ValidateConditionResult = z.infer<typeof validateConditionResult>;
-
-/**
- * The enforced policy shape a version body carries. SECRET-ADJACENT — `condition`
- * can reveal auth logic, so its fixtures are hand-authored, never captured.
- * `condition` is an authored templated-text value (inline content or a stored
- * template id); `null` when the policy carries no condition.
- */
-export const policyBody = z.object({
-  scopes: z.array(z.string()),
-  policy_data: jsonValue,
-  condition: templatedText.nullable(),
-});
-export type PolicyBody = z.infer<typeof policyBody>;
 
 /**
  * One immutable policy version row
@@ -2717,12 +2491,13 @@ export type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResu
 export { toolRunSubmitResult, toolRunRecord, toolRunList } from './tool-runs';
 
 // -- states ------------------------------------------------------------------
-// Shapes mirror tai42_contract.states.models: a declared JSON document, one per
-// subject. The base document, template fragments, write regimes and effective schema
-// are permissive JSON records — the auto-form and JsonTree interpret them at runtime;
-// a drift throws ApiSchemaError. Server-composed fields (`effective_schema`, `regimes`,
-// list/stats derived columns) are modelled optional so a response that omits them still
-// parses.
+// The hand-written state response DTOs — list rows and detail (built on the generated
+// `stateDeclaration`), attachments, per-subject records and subjects, stats and consumers.
+// The served DOCUMENT schemas (`stateDeclaration`/`stateTemplateDocument` and the template
+// sub-shapes) are generated from the contract bundle and re-exported at the top of this
+// file. The composed `effective_schema` and write `regimes` stay permissive JSON records
+// (the auto-form and JsonTree interpret them at runtime) and are server-computed, so they
+// are modelled optional and a response that omits them still parses.
 
 /** One addressed subject: the conversation-target scope plus the (kind, key) within it. */
 export const stateSubject = z.object({
@@ -2735,25 +2510,6 @@ export type StateSubject = z.infer<typeof stateSubject>;
 
 /** One absolute write-regime rule composed over the attachments: `{path, regime}`, permissive. */
 export const stateRegime = z.record(z.string(), z.unknown());
-
-/**
- * A declared state served on every read. `schema` is the base JSON Schema;
- * `effective_schema` (the base composed with every attached template's fragment) and
- * `regimes` (the absolute write-regime rules) are platform-COMPUTED and served on every
- * read — modelled optional so a write body that omits them, or a server yet to compose
- * them, still parses. A drift throws ApiSchemaError.
- */
-export const stateDeclaration = z.object({
-  name: z.string(),
-  description: z.string().default(''),
-  schema: jsonSchema,
-  subject_kinds: z.array(z.string()),
-  default_subject_kind: z.string(),
-  retention_days: z.number().nullable().default(null),
-  effective_schema: jsonSchema.nullable().optional(),
-  regimes: z.array(stateRegime).nullable().optional(),
-});
-export type StateDeclaration = z.infer<typeof stateDeclaration>;
 
 /**
  * One row of `GET /api/states` — a served declaration (`list_states` dumps every
@@ -2796,69 +2552,6 @@ export const stateStats = z.object({
   consumers: z.number().default(0),
 });
 export type StateStats = z.infer<typeof stateStats>;
-
-/**
- * One template jq: `jq` is a program over the subject's attached subtree, authored as a
- * templated text (inline `content` or a stored template `id`); its `purpose` is either
- * `input` (a read-only program feeding a tool argument) or `update` (a program returning
- * an op batch that mutates the record). `params` are its declared argument names;
- * `reads`/`writes` are the template-relative record paths an `update` declares, each a
- * list of key segments; `description` is the human label.
- */
-export const templateJq = z.object({
-  description: z.string().default(''),
-  purpose: z.enum(['input', 'update']),
-  params: z.array(z.string()).default([]),
-  reads: z.array(z.array(z.string())).default([]),
-  writes: z.array(z.array(z.string())).default([]),
-  jq: templatedText,
-});
-export type TemplateJq = z.infer<typeof templateJq>;
-
-/**
- * How a declarations edit settles open records: `orphans` returns the items a record
- * orphans against the new declarations, `close` builds the op batch that closes one
- * orphan, `resolutions` names the resolutions a close may name — each a templated-text
- * jq program (inline `content` or a stored template `id`).
- */
-export const templateReconcile = z.object({
-  orphans: templatedText,
-  close: templatedText,
-  resolutions: templatedText,
-});
-export type TemplateReconcile = z.infer<typeof templateReconcile>;
-
-/**
- * A template's declarations section: `schema` is the JSON schema of the static values an
- * attachment stores, and `check` is an optional attach-time predicate authored as a
- * templated text (inline `content` or a stored template `id`), `null` when the template
- * declares none.
- */
-export const templateDeclarations = z.object({
-  schema: jsonSchema,
-  check: templatedText.nullable().default(null),
-});
-export type TemplateDeclarations = z.infer<typeof templateDeclarations>;
-
-/**
- * The platform half of a state-template document (mirrors StateTemplateDocument).
- * `template_jq` maps a name to its definition (each carrying its `purpose`);
- * `reconcile` is the settle policy; `declarations` is the static-values section — all
- * optional (`null` when the template declares none).
- */
-export const stateTemplateDocument = z.object({
-  kind: z.literal('state-template').default('state-template'),
-  name: z.string(),
-  description: z.string().default(''),
-  parameters: z.record(z.string(), z.unknown()).default({}),
-  schema: jsonSchema,
-  regimes: z.array(stateRegime).default([]),
-  declarations: templateDeclarations.nullable().default(null),
-  trace: z.record(z.string(), z.unknown()).default({}),
-  template_jq: z.record(z.string(), templateJq).nullable().default(null),
-  reconcile: templateReconcile.nullable().default(null),
-});
-export type StateTemplateDocument = z.infer<typeof stateTemplateDocument>;
 
 /**
  * One row of `GET /api/state-templates`. The template document plus the two derived columns

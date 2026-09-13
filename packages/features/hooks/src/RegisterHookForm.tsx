@@ -43,7 +43,13 @@ import {
   useApi,
 } from '@tai42/studio-sdk';
 import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
-import type { HookParams, HookSubject, StateBinding, TemplatedText } from '@tai42/api-client';
+import type {
+  HookParams,
+  HookRegister,
+  HookSubject,
+  StateBinding,
+  TemplatedText,
+} from '@tai42/api-client';
 
 import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
 import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
@@ -154,7 +160,9 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
     initial?.subject != null ? `${initial.subject.target_kind}:${initial.subject.target_name}` : '',
   );
   const [subjectKind, setSubjectKind] = useState(initial?.subject?.kind ?? '');
-  const [subjectKeyExpr, setSubjectKeyExpr] = useState(initial?.subject?.key_expr ?? '');
+  // The subject key is a templated text on the wire; the JqField authors its inline
+  // jq, so the form holds the `content` string and wraps it back on submit.
+  const [subjectKeyExpr, setSubjectKeyExpr] = useState(initial?.subject?.key_expr.content ?? '');
 
   const [submitted, setSubmitted] = useState(false);
   const [kwargsError, setKwargsError] = useState<string | null>(null);
@@ -232,7 +240,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
   });
 
   const mutation = useMutation({
-    mutationFn: (params: HookParams) => api.registerHook(params),
+    mutationFn: (params: HookRegister) => api.registerHook(params),
     onSuccess: () => {
       void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === HOOKS_KEY_ROOT });
       if (onClose !== undefined) {
@@ -306,11 +314,11 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         target_kind: subjectTarget.slice(0, separator) as HookSubject['target_kind'],
         target_name: subjectTarget.slice(separator + 1),
         kind: subjectKind.trim(),
-        key_expr: subjectKeyExpr.trim(),
+        key_expr: { content: subjectKeyExpr.trim() },
       };
     }
 
-    const params: HookParams = {
+    const params: HookRegister = {
       name: trimmedName,
       topic: topic.trim(),
       tool: tool.trim(),

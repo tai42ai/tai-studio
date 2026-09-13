@@ -17,13 +17,14 @@ function detail(attachments: unknown[] = []): StateDetail {
   return {
     name: 'profile',
     description: '',
-    // A nested object property so the attachment path picker offers a non-root level.
     schema: { type: 'object', properties: { notes: { type: 'object' } } },
     subject_kinds: ['person'],
     default_subject_kind: 'person',
     retention_days: null,
     attachments,
-    effective_schema: { type: 'object' },
+    // The resolved schema the attachment-path picker walks: a nested object property so it
+    // offers a non-root level.
+    effective_schema: { type: 'object', properties: { notes: { type: 'object' } } },
     regimes: [],
   } as unknown as StateDetail;
 }

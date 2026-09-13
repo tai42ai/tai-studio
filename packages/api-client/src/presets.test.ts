@@ -160,9 +160,9 @@ describe('presetVersion — immutable version row', () => {
     expect(() => schemas.presetVersion.parse({ ...version, body: brokenBody })).toThrow();
   });
 
-  it('throws loudly when the body drops input_schema (the backend always emits it)', () => {
-    const { input_schema: _dropped, ...brokenBody } = version.body;
-    expect(() => schemas.presetVersion.parse({ ...version, body: brokenBody })).toThrow();
+  it('defaults input_schema to null when the body omits it (the contract field carries a default)', () => {
+    const { input_schema: _dropped, ...body } = version.body;
+    expect(schemas.presetVersion.parse({ ...version, body }).body.input_schema).toBeNull();
   });
 });
 

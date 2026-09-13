@@ -207,6 +207,7 @@ export type {
   Notifications,
   ChannelTemplate,
   HookParams,
+  HookRegister,
   HookSubject,
   HookList,
   TriggerAuth,

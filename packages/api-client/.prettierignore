@@ -1,0 +1,7 @@
+# The vendored platform contract bundle is a byte-for-byte copy of the published
+# artifact (schema:refresh copies it), and the served-document schemas are generated
+# from it (schema:generate output; "Do not edit"). The freshness gate is their tie, so
+# neither is hand-formatted. The per-package format:check runs prettier from this
+# directory, so the ignore is repeated here alongside the repo-root .prettierignore.
+contract-schema/
+src/generated/

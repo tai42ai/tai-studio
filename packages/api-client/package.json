@@ -25,6 +25,7 @@
     "@microsoft/api-extractor": "7.58.12",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "json-schema-to-zod": "2.8.1",
     "vitest": "catalog:"
   },
   "main": "./dist/index.js",
@@ -56,6 +57,9 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
     "api:check": "api-extractor run --config config/api-extractor.json",
-    "api:update": "api-extractor run --local --config config/api-extractor.json"
+    "api:update": "api-extractor run --local --config config/api-extractor.json",
+    "schema:generate": "node scripts/gen-schemas.mjs",
+    "schema:check": "node scripts/gen-schemas.mjs --check",
+    "schema:refresh": "node scripts/schema-refresh.mjs"
   }
 }

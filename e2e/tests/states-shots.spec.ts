@@ -201,6 +201,26 @@ test.beforeAll(async () => {
   }
 });
 
+/**
+ * Fulfil a `GET` on `pathname` with the skeleton's `{ data }` envelope, so a frame can drive
+ * a screen the lean boot cannot seed. The stored-reference schema states below need a storage
+ * backend — which the lean e2e boot has none of — so their state / template reads and the
+ * storage-presence + template-catalog signals are served here rather than seeded through the
+ * API. Non-GET and every other route fall through to the live skeleton.
+ */
+async function stubGet(page: Page, pathname: string, data: unknown): Promise<void> {
+  await page.route(
+    (url) => url.pathname === pathname,
+    async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({ json: { data } });
+    },
+  );
+}
+
 /** The six frames the docs "## States" section shows, each with a POPULATED-content
  * signal (never a bare timeout) and, where the frame drives the page into a state, the
  * action that gets it there. */
@@ -209,7 +229,32 @@ interface Frame {
   readonly path: string;
   readonly ready: (page: Page) => Locator;
   readonly action?: (page: Page) => Promise<void>;
+  /** Route stubs to install before navigation (a frame the lean boot cannot seed). */
+  readonly setup?: (page: Page) => Promise<void>;
 }
+
+/** A state declared with a stored-reference base schema, plus the platform-resolved
+ * `effective_schema` the read shows beneath the reference. */
+const STORED_STATE = 'notes-ref';
+const STORED_SCHEMA_TEMPLATE = 'notes-schema';
+const RESOLVED_SCHEMA = {
+  type: 'object',
+  properties: {
+    items: {
+      type: 'array',
+      title: 'Items',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', title: 'Id' },
+          text: { type: 'string', title: 'Text' },
+        },
+      },
+    },
+  },
+};
+/** A state-template whose fragment schema is a stored reference. */
+const STORED_TEMPLATE = 'prefs-ref';
 
 const FRAMES: readonly Frame[] = [
   {
@@ -256,6 +301,59 @@ const FRAMES: readonly Frame[] = [
       await page.getByText('api', { exact: true }).first().waitFor({ state: 'visible' });
     },
   },
+  {
+    // The Declaration tab of a state whose BASE schema is a stored template reference: the
+    // schema field's stored-template picker names the reference, and the platform-resolved
+    // effective schema is shown read-only beneath it. Storage-backed, so the reads are stubbed
+    // (the lean boot has no storage backend to seed a resolvable reference against).
+    name: 'states-declaration-stored-schema',
+    path: `/states?state=${STORED_STATE}`,
+    setup: async (page) => {
+      await stubGet(page, '/api/storage', { present: true, provider: 'demo', module: 'demo' });
+      await stubGet(page, '/api/templates', [STORED_SCHEMA_TEMPLATE]);
+      await stubGet(page, `/api/states/${STORED_STATE}`, {
+        name: STORED_STATE,
+        description: 'Per-subject notes, schema authored as a stored template.',
+        schema: { id: STORED_SCHEMA_TEMPLATE },
+        effective_schema: RESOLVED_SCHEMA,
+        subject_kinds: ['thread'],
+        default_subject_kind: 'thread',
+        retention_days: null,
+        regimes: [],
+        attachments: [],
+        updated_at: null,
+      });
+      await stubGet(page, `/api/states/${STORED_STATE}/stats`, {
+        records: 0,
+        per_field: {},
+        per_kind: {},
+        consumers: 0,
+      });
+    },
+    ready: (page) => page.getByText('Resolved from the stored template.'),
+  },
+  {
+    // The state-template detail whose fragment schema is a stored template reference: the
+    // Template tab shows the reference and its render parameters read-only with the same
+    // resolution note. Stubbed for the same reason.
+    name: 'states-template-stored-schema',
+    path: `/states?template=${STORED_TEMPLATE}`,
+    setup: async (page) => {
+      await stubGet(page, `/api/state-templates/${STORED_TEMPLATE}`, {
+        kind: 'state-template',
+        name: STORED_TEMPLATE,
+        description: 'Per-subject display preferences, schema authored as a stored template.',
+        parameters: {},
+        schema: { id: 'prefs-schema', kwargs: { locale: 'en' } },
+        regimes: [],
+        declarations: null,
+        trace: {},
+        template_jq: null,
+        reconcile: null,
+      });
+    },
+    ready: (page) => page.getByText('The schema is rendered from this stored template.'),
+  },
 ];
 
 for (const theme of ['light', 'dark'] as const) {
@@ -265,6 +363,7 @@ for (const theme of ['light', 'dark'] as const) {
     for (const frame of FRAMES) {
       test(frame.name, async ({ page }) => {
         await seedCredential(page);
+        if (frame.setup) await frame.setup(page);
         await page.goto(frame.path, { waitUntil: 'domcontentloaded' });
         await frame.ready(page).waitFor({ state: 'visible' });
         if (frame.action) await frame.action(page);

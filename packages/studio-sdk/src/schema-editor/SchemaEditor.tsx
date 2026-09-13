@@ -50,6 +50,13 @@ export interface SchemaEditorProps {
   readonly description?: string;
   readonly disabled?: boolean;
   readonly idPrefix?: string;
+  /**
+   * Render the field label for ASSISTIVE TECH ONLY — visually hidden but still the editor's
+   * accessible name. Used when a host control already draws the visible label above this
+   * editor (e.g. an authored-body control whose inline editor this is), so the heading is not
+   * drawn twice. Forwarded to the underlying {@link Field}.
+   */
+  readonly hideLabel?: boolean;
 }
 
 function seedText(value: Record<string, unknown> | null): string {
@@ -144,6 +151,7 @@ export function SchemaEditor({
   description,
   disabled,
   idPrefix = 'schema-editor',
+  hideLabel = false,
 }: SchemaEditorProps): ReactNode {
   const [text, setText] = useState<string>(() => seedText(value));
 
@@ -159,7 +167,7 @@ export function SchemaEditor({
 
   return (
     <div data-testid={idPrefix} className="tai-stack tai-stack-3">
-      <Field label={label} description={description} error={result.error}>
+      <Field label={label} description={description} hideLabel={hideLabel} error={result.error}>
         <Textarea
           value={text}
           disabled={disabled}

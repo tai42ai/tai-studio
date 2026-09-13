@@ -128,8 +128,8 @@ function TemplateBlock({ template }: { readonly template: ChannelTemplate }): Re
         <Badge variant="neutral">{template.name}</Badge>
         <Badge variant="neutral">{template.language}</Badge>
       </div>
-      {template.parameters.length > 0 ? (
-        <span style={labelStyle}>Parameters: {template.parameters.join(', ')}</span>
+      {template.body_parameters.length > 0 ? (
+        <span style={labelStyle}>Parameters: {template.body_parameters.join(', ')}</span>
       ) : null}
     </div>
   );
