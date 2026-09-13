@@ -13,8 +13,9 @@
  *
  * The control gates its STORED source on the storage-presence signal (`GET /api/storage`):
  * a stored template can be neither browsed nor resolved without a storage provider. The
- * lean e2e boot does not mount the storage router at all, so every frame STUBS this signal
- * (a real deployment serves it, reporting `present: false` when no provider is registered).
+ * lean e2e boot mounts no storage MANAGEMENT router, so it answers this always-mounted
+ * presence read `present: false`; every frame STUBS the signal to drive its intended state
+ * (present / absent / loading) deterministically rather than depend on that live default.
  * Frames default to `present` — the normal case, where the full inline/stored toggle renders
  * — and capture, on that path: inline mode, stored mode with the template picker open, the
  * render-parameters editor expanded, and the catalog-load error (storage present but the
@@ -141,10 +142,10 @@ async function stubCatalog(page: Page, names: readonly string[]): Promise<void> 
 
 /**
  * Fulfil `GET /api/storage` — the storage-presence signal the control gates its stored
- * source on. The lean e2e boot does not mount the storage router at all, so the live door
- * is unreachable and every frame stubs this to present the intended signal deterministically
- * (matching a real deployment, where the door returns `present: false` when no provider is
- * registered). `present` → a registered provider, so the full inline/stored toggle renders;
+ * source on. The lean e2e boot mounts no storage MANAGEMENT router, so the always-mounted
+ * live door answers `present: false`; every frame stubs it to present the intended signal
+ * deterministically instead. `present` → a registered provider, so the full inline/stored
+ * toggle renders;
  * `absent` → `present: false`, so the control offers the inline source alone / shows a saved
  * stored id read-only; `loading` holds the response open through the capture window so the
  * presence-unknown placeholder is the frame's subject, then resolves present.
@@ -499,8 +500,9 @@ for (const theme of ['light', 'dark'] as const) {
       test(frame.name, async ({ page }) => {
         await seedCredential(page);
         // Routes must be in place before the navigation whose mount fires the queries.
-        // The lean boot does not serve `/api/storage`, so every frame stubs the presence
-        // signal (present / absent / loading) rather than relying on a live default.
+        // The lean boot answers `/api/storage` `present: false` (the core presence read),
+        // so every frame stubs the signal (present / absent / loading) to drive its state
+        // deterministically rather than relying on that live default.
         await stubStorage(page, frame.storage ?? 'present');
         if (frame.hooksList !== undefined) await stubHooksList(page, frame.hooksList);
         if (frame.catalog !== undefined) await stubCatalog(page, frame.catalog);

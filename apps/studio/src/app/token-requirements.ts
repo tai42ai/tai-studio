@@ -40,7 +40,10 @@ export const TOKEN_REQUIREMENTS = {
   servedEndpoints: { anyOf: ['/api/sub-mcp'] },
   hooks: { anyOf: ['/api/hooks'] },
   templates: { anyOf: ['/api/templates'] },
-  storage: { anyOf: ['/api/storage'] },
+  // The storage nav opens the management page, so it keys off the management
+  // surface — NOT the presence read `/api/storage`, which is mounted in every
+  // deployment (a presence-only deploy has no management page to show).
+  storage: { anyOf: ['/api/storage/resources'] },
   manifest: { anyOf: ['/api/manifest'] },
   settings: 'always',
   system: { anyOf: ['/api/system'] },

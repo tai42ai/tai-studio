@@ -88,6 +88,15 @@ describe('TOKEN_REQUIREMENTS map', () => {
     expect(tokenCovered(scoped(['/api/tools']), 'connectors')).toBe(false);
   });
 
+  it('tokenCovered: storage keys off the MANAGEMENT surface, not the always-mounted presence read', () => {
+    // `/api/storage` (presence) is mounted in every deployment, so a projection that
+    // reaches only it must NOT show the storage nav — the management page it opens
+    // would error where no management surface is mounted. The token keys off the
+    // management route `/api/storage/resources` instead.
+    expect(tokenCovered(scoped(['/api/storage/resources']), 'storage')).toBe(true);
+    expect(tokenCovered(scoped(['/api/storage']), 'storage')).toBe(false);
+  });
+
   it('contributionCovered: full shows all; absent ⇒ full-only; declared ⇒ any-of', () => {
     expect(contributionCovered(FULL_PROJECTION, undefined)).toBe(true);
     expect(contributionCovered(FULL_PROJECTION, { routes: ['/api/x'] })).toBe(true);
