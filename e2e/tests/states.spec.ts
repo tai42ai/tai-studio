@@ -77,15 +77,17 @@ function templateFile(doc: Record<string, unknown> = TEMPLATE_DOC) {
 
 test.describe.serial('the platform state store, end to end', () => {
   test.beforeAll(async () => {
-    // Clear a prior run so a re-run against a persisted backend starts clean: the hook
-    // must go before the state (a bound consumer refuses the declaration delete), and the
-    // template after the state (an attached template refuses its delete).
+    // Clear a prior run so a re-run against a persisted backend starts clean. Referential
+    // integrity forces the order: unbind the consumer hook first (a bound consumer refuses
+    // the state's declaration delete), detach the template (an attached template refuses
+    // its own delete), then delete the state and the template.
     const api = await apiRequest.newContext({
       baseURL: BASE_URL,
       extraHTTPHeaders: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
     });
     try {
       await api.delete(`/api/hooks/${CONSUMER_HOOK}`).catch(() => undefined);
+      await api.delete(`/api/states/${STATE}/attachments/${TEMPLATE}`).catch(() => undefined);
       await api.delete(`/api/states/${STATE}`).catch(() => undefined);
       await api.delete(`/api/state-templates/${TEMPLATE}`).catch(() => undefined);
     } finally {
