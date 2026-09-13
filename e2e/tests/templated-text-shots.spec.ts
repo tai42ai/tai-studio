@@ -449,6 +449,7 @@ const FRAMES: readonly Frame[] = [
         topic: 'events',
         tool: 'echo',
         execution_key: 'studio-e2e',
+        execution_key_fingerprint: 'e2e00000000000000000000000000000',
         tool_kwargs: {},
         condition: { id: 'welcome', kwargs: { locale: 'en' } },
         expr: null,

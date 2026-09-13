@@ -14,6 +14,7 @@ const HOOK = {
   topic: 'events.created',
   tool: 'slack.post',
   execution_key: 'studio-e2e',
+  execution_key_fingerprint: 'e2e00000000000000000000000000000',
   tool_kwargs: {},
   condition: null,
   expr: null,
