@@ -273,7 +273,7 @@ export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => v
             <Textarea
               value={toolKwargs}
               rows={4}
-              placeholder='{ "flow_graph_kwargs": { "priority": "high" } }'
+              placeholder='{ "options": { "priority": "high" } }'
               onChange={(event) => {
                 setToolKwargs(event.target.value);
               }}

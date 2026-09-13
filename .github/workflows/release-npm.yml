@@ -112,23 +112,28 @@ jobs:
               "tag": "${{ github.ref_name }}"
             }
 
-  # Plugin rebuild hook: a published Studio release pokes babelfish, whose
-  # sdk-update lane repins packages/flows to this version and rebuilds the studio
-  # plugin bundle. Fork runs carry no token and skip.
-  notify-babelfish:
+  # SDK rebuild hook: a published Studio release notifies the repository
+  # configured to rebuild against a new SDK release, whose pipeline repins to
+  # this version and rebuilds its plugin bundle. The target repo is a setting
+  # (vars.SDK_UPDATE_REPOSITORY, owner/repo); with the setting or the dispatch
+  # token absent — as on a fork — the step skips.
+  notify-sdk-consumer:
     needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
     env:
-      BABELFISH_DISPATCH_TOKEN: ${{ secrets.TAI_BABELFISH_DISPATCH_TOKEN }}
+      # Holds the dispatch token for the repository configured to rebuild
+      # against a new SDK release.
+      SDK_DISPATCH_TOKEN: ${{ secrets.TAI_BABELFISH_DISPATCH_TOKEN }}
+      SDK_UPDATE_REPOSITORY: ${{ vars.SDK_UPDATE_REPOSITORY }}
     steps:
-      - name: Trigger the babelfish sdk-update rebuild
-        if: env.BABELFISH_DISPATCH_TOKEN != ''
+      - name: Notify the repository configured to rebuild against a new SDK release
+        if: env.SDK_DISPATCH_TOKEN != '' && env.SDK_UPDATE_REPOSITORY != ''
         uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
         with:
-          token: ${{ env.BABELFISH_DISPATCH_TOKEN }}
-          repository: ${{ github.repository_owner }}/babelfish
+          token: ${{ env.SDK_DISPATCH_TOKEN }}
+          repository: ${{ env.SDK_UPDATE_REPOSITORY }}
           event-type: sdk-release
           client-payload: |
             {
