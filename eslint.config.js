@@ -109,6 +109,12 @@ const API_CLIENT_TEST_EXTERNAL = ['vitest'];
 /** Test and test-support source files (e.g. `test-setup.ts`, `test-utils.tsx`). */
 export const TEST_GLOBS = ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}', '**/test-*.{ts,tsx}'];
 
+// Size and complexity limits apply to PRODUCT SOURCE only. Test, spec and story
+// files, and the whole e2e harness package, carry no size or complexity cap:
+// their length and branching model scenarios, not shipped behaviour. These globs
+// are excluded from the size/complexity block below.
+export const SIZE_COMPLEXITY_IGNORES = [...TEST_GLOBS, '**/*.stories.{ts,tsx}', 'e2e/**'];
+
 /**
  * Builds the `boundaries/dependencies` allowlist. When `includeTestExternals` is
  * true the test-only packages AND Node core are added; it is enabled for
@@ -238,6 +244,34 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+    },
+  },
+  // Size and complexity floor for product source (SOURCE-ONLY — see
+  // SIZE_COMPLEXITY_IGNORES). A function/module/branch depth past these limits is
+  // refactored into one-concern units, never silenced. `.tsx` gets a higher
+  // per-function cap than `.ts` because a component's JSX return is a single
+  // function whose length is layout, not logic.
+  {
+    files: ['**/*.{ts,tsx}'],
+    ignores: SIZE_COMPLEXITY_IGNORES,
+    rules: {
+      complexity: ['error', 15],
+      'max-depth': ['error', 4],
+      'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    files: ['**/*.ts'],
+    ignores: SIZE_COMPLEXITY_IGNORES,
+    rules: {
+      'max-lines-per-function': ['error', { max: 80, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    files: ['**/*.tsx'],
+    ignores: SIZE_COMPLEXITY_IGNORES,
+    rules: {
+      'max-lines-per-function': ['error', { max: 150, skipBlankLines: true, skipComments: true }],
     },
   },
   // Architectural import boundaries (allowlist). The elements/settings apply to
