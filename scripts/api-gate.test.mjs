@@ -601,6 +601,119 @@ test('an added trailing REST param stays breaking (member and function)', () => 
   );
 });
 
+// ------------------------------------- order-only report reshape (emission form)
+// An internal refactor can change how api-extractor EMITS an inferred object type
+// without changing the contract: it reorders the object's members, reorders the
+// alternatives of a union type, or renders a type reference bare (`Foo`) instead of
+// through the namespace-import alias of its source module (`s.Foo`). The set of
+// members and the identity of every type are unchanged, so a pure reshape is a
+// non-breaking patch; a real added/removed/changed member or type still classifies
+// as before. `passesPatch` proves both halves at once — the classification AND the
+// gate's decision on a >=1.0 patch bump, the exact release shape of the incident.
+
+const passesPatch = (oldBody, newBody) => {
+  const found = findings(oldBody, newBody);
+  return {
+    found,
+    passes: gatePasses('label-honesty', '16.0.0', '16.0.1', found.length > 0).passes,
+  };
+};
+
+test('reordering a union type inside a variable object passes on a patch bump', () => {
+  // The ApiProvider case: a `status` union's alternatives are emitted in a new order.
+  const r = passesPatch(
+    'export const p: {\n  readonly status: "running" | "succeeded" | "failed" | "lost";\n};',
+    'export const p: {\n  readonly status: "failed" | "running" | "succeeded" | "lost";\n};',
+  );
+  assert.deepEqual(r.found, []);
+  assert.equal(r.passes, true);
+});
+
+test('reordering members and requalifying type refs in a function return passes on a patch bump', () => {
+  // The createApiClient case: the inferred return object's members are reordered AND
+  // their parameter types requalified from `s.X` to bare `X` (same declared types).
+  const r = passesPatch(
+    'export function createApiClient(): {\n' +
+      '  readonly registerHook: (params: s.HookRegister) => void;\n' +
+      '  readonly renderTemplate: (text: s.TemplatedText) => void;\n};',
+    'export function createApiClient(): {\n' +
+      '  readonly renderTemplate: (text: TemplatedText) => void;\n' +
+      '  readonly registerHook: (params: HookRegister) => void;\n};',
+  );
+  assert.deepEqual(r.found, []);
+  assert.equal(r.passes, true);
+});
+
+test('dropping a namespace-alias qualifier alone is non-breaking (same declared type)', () => {
+  assert.deepEqual(
+    findings(
+      'export const c: {\n  readonly a: s.Foo;\n};',
+      'export const c: {\n  readonly a: Foo;\n};',
+    ),
+    [],
+  );
+});
+
+test('a non-literal union alias reordering its members is non-breaking', () => {
+  assert.deepEqual(
+    findings(
+      'export type T = {\n  status: "a" | "b" | "c";\n};',
+      'export type T = {\n  status: "c" | "b" | "a";\n};',
+    ),
+    [],
+  );
+});
+
+test('reordering members while ADDING one is non-breaking (reshape + additive)', () => {
+  assert.deepEqual(
+    findings(
+      'export const c: {\n  readonly a: number;\n  readonly b: string;\n};',
+      'export const c: {\n  readonly b: string;\n  readonly a: number;\n  readonly d: boolean;\n};',
+    ),
+    [],
+  );
+});
+
+// INVERSE — a reshape must never mask a real change; each stays breaking and FAILS
+// the >=1.0 patch bump.
+
+test('removing a member from a reshaped variable object stays breaking and fails a patch bump', () => {
+  const r = passesPatch(
+    'export const c: {\n  readonly a: number;\n  readonly b: string;\n};',
+    'export const c: {\n  readonly b: string;\n};',
+  );
+  assert.ok(r.found.some((f) => f.includes('c') && f.includes('declaration text changed')));
+  assert.equal(r.passes, false);
+});
+
+test('removing a member from a reshaped function return stays breaking', () => {
+  const found = findings(
+    'export function f(): {\n  readonly a: number;\n  readonly b: string;\n};',
+    'export function f(): {\n  readonly b: string;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('f') && f.includes('overload')));
+});
+
+test('changing a leaf type name stays breaking even when the qualifier form matches', () => {
+  // `s.Foo -> s.Bar`: the alias `s` is unchanged, only the leaf differs — a real type
+  // change, still breaking. Qualifier folding keeps the leaf as the discriminator.
+  assert.ok(
+    findings(
+      'export const c: {\n  readonly a: s.Foo;\n};',
+      'export const c: {\n  readonly a: s.Bar;\n};',
+    ).some((f) => f.includes('c')),
+  );
+});
+
+test('changing a union member (not reordering it) stays breaking', () => {
+  assert.ok(
+    findings(
+      'export const p: {\n  readonly status: "running" | "succeeded";\n};',
+      'export const p: {\n  readonly status: "running" | "cancelled";\n};',
+    ).some((f) => f.includes('p')),
+  );
+});
+
 // --------------------------------------------------- real committed reports E2E
 // The gate parses the actual api-extractor reports it ships to gate. This loads
 // each real etc/*.api.md from disk, parses it with the production parseReport, and
