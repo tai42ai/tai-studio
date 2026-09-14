@@ -1,3 +1,10 @@
+// Each secret op mounts the full MCP config editor — a schema-driven form that
+// re-renders on every keystroke, plus the async paste → confirm-re-read → save/sweep
+// chain — so these flows are a heavy render chain that runs slowly under coverage
+// instrumentation on a loaded runner. The file gets explicit testTimeout headroom and
+// userEvent runs without its inter-key delay, so a loaded runner cannot push a keystroke
+// chain past the timeout; correctness stays gated by the real assertions and awaited
+// signals below.
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
@@ -15,9 +22,11 @@ import {
 } from './test-utils-mcp-servers';
 import { McpServersSection } from './mcp-servers';
 
+vi.setConfig({ testTimeout: 15_000 });
+
 describe('McpServersSection — secret op lifecycle + blocking', () => {
   it('shuts the Save door while a paste op is in flight, then sweeps the key it generated', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     // The combined op is held open, so the whole in-flight window is observable: the draft
@@ -82,10 +91,14 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith({ SECRET_1: '' });
     });
+    // Wait out the save's success state, which lands only once its reload broadcast and the
+    // post-save re-reads have settled, so no in-flight cache write is still draining when the
+    // test ends.
+    await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
   });
 
   it('raises when the paste cannot be confirmed, keeping the Save and paste doors shut', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
     const setMcpConfig = vi.fn().mockResolvedValue(reload(0));
     const setEnvConfig = vi.fn().mockResolvedValue(reload(0));
@@ -124,7 +137,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('confirms the paste past a retriable refusal of the re-read', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
     const setMcpConfig = vi.fn().mockResolvedValue(reload(0));
     const setEnvConfig = vi.fn().mockResolvedValue(reload(0));
@@ -166,7 +179,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('refuses a second paste while the first is still storing', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     let commitPaste = (): void => undefined;
     const setMcpSecretEnv = vi.fn().mockImplementation(
       () =>
@@ -209,7 +222,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('keeps the editor (and its paste provenance) alive when a manifest refetch fails', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
     const setMcpConfig = vi.fn().mockResolvedValue(reload(0));
@@ -258,7 +271,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('surfaces a server refusal of the combined op loudly (dangling-!ENV / X-band validator)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setMcpSecretEnv = vi
       .fn()
       .mockRejectedValue(new ApiError('refused: dangling !ENV reference', 400));
@@ -280,7 +293,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('surfaces a server dangling-!ENV refusal of the manifest save loudly', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setMcpConfig = vi
       .fn()
       .mockRejectedValue(new ApiError('manifest invalid: dangling !ENV reference to MISSING', 400));
@@ -303,7 +316,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('blocks pasting a new secret while the editor has unsaved edits', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
     const client = {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
@@ -329,7 +342,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
   });
 
   it('blocks the paste Use-secret action until the env entry has a key', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
     const client = {
       getMcpStatus: vi.fn().mockResolvedValue(status()),
