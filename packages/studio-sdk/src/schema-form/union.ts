@@ -6,7 +6,7 @@
  * active (an unset/`null` value, or nothing matches).
  */
 import { resolveRef } from './resolve';
-import type { UnionVariant } from './classify';
+import type { UnionVariant } from './field-model';
 import type { JsonSchema } from './types';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

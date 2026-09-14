@@ -926,6 +926,51 @@ describe('HooksPage — unbind topic verifier', () => {
 
     expect(await screen.findByText('no verifier bound to topic')).toBeInTheDocument();
   });
+
+  it("resets the mutation on open, so one topic's failed unbind does not leak its error into the next topic's dialog", async () => {
+    const user = userEvent.setup();
+    // The unbind fails for the first topic; the second topic's dialog never submits.
+    const deleteTopicVerifier = vi
+      .fn()
+      .mockRejectedValue(new ApiError('unbind of events.created is forbidden', 403));
+    const client: StubApiClient = {
+      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+      listHooks: vi.fn().mockResolvedValue({
+        items: [],
+        total: 0,
+        topic_verifiers: {
+          'events.created': { verifier: 'shared_secret', config: {} },
+          'alerts.raised': { verifier: 'shared_secret', config: {} },
+        },
+      }),
+      listHookVerifiers: vi.fn().mockResolvedValue(['shared_secret']),
+      deleteTopicVerifier,
+    };
+    renderWithProviders(<HooksPage search={{}} />, { client });
+
+    // Topic A: open the confirm, unbind, and it fails loudly.
+    await user.click(
+      await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
+    );
+    const dialogA = await screen.findByRole('dialog');
+    await user.click(within(dialogA).getByRole('button', { name: 'Unbind verifier' }));
+    expect(await screen.findByText('unbind of events.created is forbidden')).toBeInTheDocument();
+
+    // Cancel A's dialog.
+    await user.click(within(dialogA).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+
+    // Topic B: opening the confirm must reset the mutation — A's stale error must NOT
+    // leak into the freshly-opened dialog before any action is taken.
+    await user.click(screen.getByRole('button', { name: 'Unbind verifier from alerts.raised' }));
+    const dialogB = await screen.findByRole('dialog');
+    expect(
+      within(dialogB).queryByText('unbind of events.created is forbidden'),
+    ).not.toBeInTheDocument();
+    expect(within(dialogB).queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
 
 describe('HooksPage — delete', () => {

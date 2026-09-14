@@ -64,70 +64,80 @@ function DetailSection({
   );
 }
 
-export function SpanDetail({ span }: { readonly span: RunSpan | null }): ReactNode {
-  if (span === null) {
-    return (
-      <div style={emptyStyle} data-testid="span-detail-empty">
-        <p style={{ margin: 0 }}>Select a span to see its detail.</p>
-      </div>
-    );
-  }
-
-  const spanName = span.name ?? '(unnamed span)';
+/** The detail header: name, type/error badges, the duration/model/token meta row, and
+ * the error message when the span failed. */
+function SpanHeader({
+  span,
+  spanName,
+}: {
+  readonly span: RunSpan;
+  readonly spanName: string;
+}): ReactNode {
   const duration = spanDurationMs(span);
   const tokens = spanTokens(span.usage);
   const error = isErrorSpan(span);
+  return (
+    <div className="tai-stack tai-stack-2">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--tai-space-2)',
+          flexWrap: 'wrap',
+        }}
+      >
+        <h3
+          style={{ margin: 0, fontSize: 'var(--tai-text-md)', color: 'var(--tai-color-heading)' }}
+        >
+          {spanName}
+        </h3>
+        {span.type !== null ? <Badge>{span.type}</Badge> : null}
+        {error ? <Badge variant="danger">error</Badge> : null}
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 'var(--tai-space-1) var(--tai-space-4)',
+          fontSize: 'var(--tai-text-sm)',
+          color: 'var(--tai-color-text-muted)',
+        }}
+      >
+        {duration !== null ? <span>{formatLatencyMs(duration)}</span> : null}
+        {span.model !== null ? <span className="tai-mono">{span.model}</span> : null}
+        {tokens > 0 ? <span>{formatTokenCount(tokens)} tokens</span> : null}
+      </div>
+      {error && span.statusMessage !== null ? (
+        <p
+          style={{
+            margin: 0,
+            fontSize: 'var(--tai-text-sm)',
+            color: 'var(--tai-color-err-text)',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {span.statusMessage}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** The adaptive payload body: chat bubbles for a message-shaped generation, Arguments/
+ * Result for a tool, else guarded JSON — plus the usage and metadata trees. */
+function SpanBody({
+  span,
+  spanName,
+}: {
+  readonly span: RunSpan;
+  readonly spanName: string;
+}): ReactNode {
   const type = (span.type ?? '').toUpperCase();
   const inputMessages = type === 'GENERATION' || type === 'LLM' ? asMessages(span.input) : null;
   const outputMessages = inputMessages !== null ? asMessages(span.output) : null;
   const isTool = type === 'TOOL';
-
   return (
-    <div style={panelStyle} data-testid="span-detail">
-      <div className="tai-stack tai-stack-2">
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--tai-space-2)',
-            flexWrap: 'wrap',
-          }}
-        >
-          <h3
-            style={{ margin: 0, fontSize: 'var(--tai-text-md)', color: 'var(--tai-color-heading)' }}
-          >
-            {spanName}
-          </h3>
-          {span.type !== null ? <Badge>{span.type}</Badge> : null}
-          {error ? <Badge variant="danger">error</Badge> : null}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 'var(--tai-space-1) var(--tai-space-4)',
-            fontSize: 'var(--tai-text-sm)',
-            color: 'var(--tai-color-text-muted)',
-          }}
-        >
-          {duration !== null ? <span>{formatLatencyMs(duration)}</span> : null}
-          {span.model !== null ? <span className="tai-mono">{span.model}</span> : null}
-          {tokens > 0 ? <span>{formatTokenCount(tokens)} tokens</span> : null}
-        </div>
-        {error && span.statusMessage !== null ? (
-          <p
-            style={{
-              margin: 0,
-              fontSize: 'var(--tai-text-sm)',
-              color: 'var(--tai-color-err-text)',
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            {span.statusMessage}
-          </p>
-        ) : null}
-      </div>
-
+    <>
       {inputMessages !== null ? (
         <SpanMessages messages={inputMessages} label="Messages" />
       ) : hasContent(span.input) ? (
@@ -155,6 +165,25 @@ export function SpanDetail({ span }: { readonly span: RunSpan | null }): ReactNo
       {usageIsMeaningful(span.metadata) ? (
         <DetailSection label="Metadata" data={span.metadata} spanName={spanName} />
       ) : null}
+    </>
+  );
+}
+
+export function SpanDetail({ span }: { readonly span: RunSpan | null }): ReactNode {
+  if (span === null) {
+    return (
+      <div style={emptyStyle} data-testid="span-detail-empty">
+        <p style={{ margin: 0 }}>Select a span to see its detail.</p>
+      </div>
+    );
+  }
+
+  const spanName = span.name ?? '(unnamed span)';
+
+  return (
+    <div style={panelStyle} data-testid="span-detail">
+      <SpanHeader span={span} spanName={spanName} />
+      <SpanBody span={span} spanName={spanName} />
     </div>
   );
 }

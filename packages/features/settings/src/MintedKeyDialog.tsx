@@ -24,7 +24,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { ClaimLinkCreated } from '@tai42/api-client';
 
-import { dialogActionsStyle } from './api-keys-common';
+import { dialogActionsStyle } from './api-keys-styles';
 
 const claimSectionStyle: CSSProperties = {
   display: 'flex',

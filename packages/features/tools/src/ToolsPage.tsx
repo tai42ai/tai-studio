@@ -29,20 +29,17 @@
  * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
  * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  AppLink,
   ArrowLeftIcon,
   Button,
   Card,
   EmptyState,
   ErrorState,
-  ExplorerView,
   PageHeader,
   Skeleton,
   Stack,
-  TD,
   errorMessage,
   isFeatureDisabled,
   isFullProjection,
@@ -53,116 +50,24 @@ import {
   useCapabilities,
   useReloadToolDisplayNames,
   useSearchCommit,
-  type CapabilityState,
-  type ExplorerColumn,
-  type ExplorerEmptyStates,
   type Folder,
   type PageProps,
   type RouteSearch,
 } from '@tai42/studio-sdk';
 import type { ToolMetaPatch } from '@tai42/api-client';
 
-import { ToolBadges } from './badges';
+import { toolMetaKey } from './keys';
 import { FolderActionsMenu } from './FolderActions';
 import { RunPanel } from './RunPanel';
 import { ToolAdminCard } from './ToolAdminCard';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 import { ToolMetaEditDialog } from './ToolMetaEditDialog';
-import { buildToolViews, toFolders, type ToolView } from './toolView';
-import { toolMetaKey, toolTagsKey, toolsListKey } from './keys';
-
-/** The untagged pseudo-tag's chip label. */
-const UNTAGGED_LABEL = 'Untagged';
-
-/** How many tag chips the filter row shows before collapsing the rest into "+N more". */
-const MAX_VISIBLE_TAG_CHIPS = 8;
-
-/** The explorer's list/card view-mode persistence key. */
-const TOOLS_VIEW_SURFACE = 'tools';
-
-/** The search box's accessible name; the commit listener keys the search input on it. */
-const SEARCH_LABEL = 'Filter tools';
-
-/** Case-insensitive substring over a tool's real name and display label. */
-function toolMatches(view: ToolView, query: string): boolean {
-  const needle = query.toLowerCase();
-  return (
-    view.name.toLowerCase().includes(needle) || view.displayName.toLowerCase().includes(needle)
-  );
-}
-
-/** The tools table's single column; folder rows span it. */
-const COLUMNS: ExplorerColumn[] = [{ key: 'name', header: 'Name' }];
+import type { ToolView } from './toolView';
+import { useToolCatalog } from './useToolCatalog';
+import { ToolExplorer, SEARCH_LABEL } from './ToolExplorer';
 
 /** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
 const TOOL_META_WRITE_ROUTE = '/api/tool-meta/tools';
-
-/** Push a following flex item to the far edge of its `.tai-row`. */
-const spacerStyle = { marginLeft: 'auto' };
-
-/** One tool row: its display label as an `AppLink` setting `?tool=` (preserving the
- * active `?tags=` and `?q=`), the real name shown secondary+mono when a display name
- * overrides it, and — for writers — an edit affordance opening the overlay dialog. */
-function ToolItem({
-  view,
-  selected,
-  preserveTags,
-  preserveQuery,
-  canWrite,
-  onEdit,
-}: {
-  readonly view: ToolView;
-  readonly selected: boolean;
-  readonly preserveTags: readonly string[];
-  readonly preserveQuery: string | undefined;
-  readonly canWrite: boolean;
-  readonly onEdit: (view: ToolView) => void;
-}): ReactNode {
-  return (
-    <div className="tai-row">
-      <AppLink
-        to="tools"
-        search={{
-          tool: view.name,
-          tags: preserveTags.length > 0 ? [...preserveTags] : undefined,
-          q: preserveQuery,
-        }}
-        aria-label={`Open tool ${view.name}`}
-        aria-current={selected ? 'page' : undefined}
-        className="tai-nav-item"
-      >
-        <span className={view.hasCustomName ? undefined : 'tai-mono'}>{view.displayName}</span>
-        {view.hasCustomName ? <span className="tai-muted tai-mono">{view.name}</span> : null}
-      </AppLink>
-      <ToolBadges badges={view.badges} />
-      {canWrite ? (
-        <>
-          <div style={spacerStyle} />
-          <Button
-            variant="ghost"
-            aria-label={`Edit tool ${view.name}`}
-            onClick={() => {
-              onEdit(view);
-            }}
-          >
-            Edit
-          </Button>
-        </>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * The tools visible to the caller. A scoped session sees only the tools its
- * projection lists; a full session — and any not-yet-ready projection — sees the
- * whole catalog, with the server the final authority on every run.
- */
-function projectedTools(views: readonly ToolView[], state: CapabilityState): ToolView[] {
-  if (state.status !== 'ready' || isFullProjection(state.projection)) return [...views];
-  const allowed = new Set(state.projection.tools);
-  return views.filter((view) => allowed.has(view.name));
-}
 
 function ToolList({
   selected,
@@ -178,8 +83,6 @@ function ToolList({
   readonly metaWriteDisabled: boolean;
   readonly onEdit: (view: ToolView, folders: readonly Folder[]) => void;
 }): ReactNode {
-  const api = useApi();
-  const navigate = useAppNavigate();
   // The projection door AND the store must both be live: an unconfigured tool_meta
   // store answers the overlay write with a 501 `tool-meta-not-configured`, so once a
   // write has revealed the store off, the per-row edit affordance is withdrawn — a
@@ -187,6 +90,7 @@ function ToolList({
   const canWrite = useCanWrite(TOOL_META_WRITE_ROUTE, 'PATCH') && !metaWriteDisabled;
   const { state } = useCapabilities();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const catalog = useToolCatalog(state);
 
   // The live search box holds a local draft; the committed `?q=` is written only on an
   // explicit commit (Enter / an edited blur), never per keystroke. Re-seed the draft
@@ -199,12 +103,6 @@ function ToolList({
     setQuery(committedQuery);
   }
 
-  const toolsQuery = useQuery({ queryKey: toolsListKey, queryFn: () => api.listTools() });
-  const tagsQuery = useQuery({ queryKey: toolTagsKey, queryFn: () => api.listToolTags() });
-  const metaQuery = useQuery({ queryKey: toolMetaKey, queryFn: () => api.listToolMeta() });
-
-  // Compose the full `tools` search from the next query, preserving the active tool +
-  // tags.
   const containerRef = useRef<HTMLDivElement>(null);
   const buildSearch = useCallback(
     (q: string | undefined): RouteSearch<'tools'> => ({
@@ -230,7 +128,7 @@ function ToolList({
   const preserveQuery = query.trim() === '' ? undefined : query.trim();
 
   let body: ReactNode;
-  if (toolsQuery.isPending) {
+  if (catalog.toolsPending) {
     body = (
       <div className="tai-stack tai-stack-2">
         <Skeleton height={32} />
@@ -238,159 +136,98 @@ function ToolList({
         <Skeleton height={32} />
       </div>
     );
-  } else if (toolsQuery.isError) {
+  } else if (catalog.toolsError !== null) {
+    body = <ErrorState message={errorMessage(catalog.toolsError)} onRetry={catalog.onRetryTools} />;
+  } else {
     body = (
-      <ErrorState
-        message={errorMessage(toolsQuery.error)}
-        onRetry={() => void toolsQuery.refetch()}
+      <ToolExplorer
+        allViews={catalog.allViews}
+        folders={catalog.folders}
+        sideReadError={catalog.sideReadError}
+        onRetrySideRead={catalog.onRetrySideRead}
+        selected={selected}
+        selectedTags={selectedTags}
+        preserveQuery={preserveQuery}
+        canWrite={canWrite}
+        currentFolderId={currentFolderId}
+        onNavigateFolder={setCurrentFolderId}
+        query={query}
+        onQueryChange={setQuery}
+        onEdit={onEdit}
+        // Writers get per-folder Rename + Move (the overlay folder doors); a reader
+        // session never sees an action it can only be refused.
+        renderFolderActions={
+          canWrite
+            ? (folder) => <FolderActionsMenu folder={folder} folders={catalog.folders} />
+            : undefined
+        }
       />
     );
-  } else {
-    const overlayRows = metaQuery.data?.meta ?? [];
-    const folders: Folder[] = toFolders(metaQuery.data?.folders ?? []);
-    const allViews = projectedTools(
-      buildToolViews(toolsQuery.data, tagsQuery.data ?? [], overlayRows),
-      state,
-    );
-    if (allViews.length === 0) {
-      body = (
-        <EmptyState
-          title="No tools available"
-          description="Tools arrive as marketplace plugins — install one to run it here."
-          action={
-            <AppLink
-              to="marketplace"
-              search={{ kind: 'tool' }}
-              className="tai-btn tai-btn-secondary"
-            >
-              Browse marketplace
-            </AppLink>
-          }
-        />
-      );
-    } else {
-      // A tags OR overlay read failure must not take down browsing: the merged view still
-      // renders (from whatever loaded), under a loud notice, with the tag chips suppressed
-      // — no filter built from partial data.
-      const sideReadError = tagsQuery.isError
-        ? tagsQuery.error
-        : metaQuery.isError
-          ? metaQuery.error
-          : null;
-
-      // A tool whose effective visibility is hidden is excluded outright — unhiding is a
-      // CLI/API operation (`tai tool-meta … --visibility shown`), never a screen affordance.
-      const visibleViews = allViews.filter((view) => !view.hidden);
-
-      // `empty` fires only when nothing is filed AND no folder exists — here, with a
-      // non-empty catalog (the truly-empty catalog is handled above), that means every
-      // installed tool is hidden, so the copy names that rather than the install prompt.
-      const emptyStates: ExplorerEmptyStates = {
-        empty: {
-          title: 'No visible tools',
-          description: 'Every installed tool is hidden. Unhide one with the tai tool-meta command.',
-        },
-        emptyFolder: {
-          title: 'This folder is empty',
-          description: 'No tools or subfolders are filed here.',
-        },
-        noMatch: {
-          title: 'No tools match',
-          description: 'No tool matches the search or the selected tags.',
-        },
-      };
-
-      const renderTool = (view: ToolView): ReactNode => (
-        <ToolItem
-          view={view}
-          selected={view.name === selected}
-          preserveTags={selectedTags}
-          preserveQuery={preserveQuery}
-          canWrite={canWrite}
-          onEdit={(edited) => {
-            onEdit(edited, folders);
-          }}
-        />
-      );
-
-      body = (
-        <>
-          {sideReadError !== null ? (
-            <ErrorState
-              message={errorMessage(sideReadError)}
-              onRetry={() => {
-                if (tagsQuery.isError) void tagsQuery.refetch();
-                if (metaQuery.isError) void metaQuery.refetch();
-              }}
-            />
-          ) : null}
-
-          <ExplorerView<ToolView>
-            items={visibleViews}
-            getItemKey={(view) => view.name}
-            getFolderId={(view) => view.folderId}
-            folders={folders}
-            currentFolderId={currentFolderId}
-            onNavigate={setCurrentFolderId}
-            rootLabel="All tools"
-            viewSurface={TOOLS_VIEW_SURFACE}
-            label="Tools"
-            columns={COLUMNS}
-            renderRow={(view) => <TD>{renderTool(view)}</TD>}
-            renderCard={(view) => <Card interactive>{renderTool(view)}</Card>}
-            // Open == select in this master/detail; a click anywhere on the row/card
-            // selects the tool, mirroring the row's name-link navigation exactly (the SDK
-            // yields to that link and the Edit button, so neither double-fires).
-            onOpenItem={(view) => {
-              navigate('tools', {
-                tool: view.name,
-                tags: selectedTags.length > 0 ? [...selectedTags] : undefined,
-                q: preserveQuery,
-              });
-            }}
-            // Writers get per-folder Rename + Move (the overlay folder doors); a
-            // reader session never sees an action it can only be refused.
-            renderFolderActions={
-              canWrite
-                ? (folder) => <FolderActionsMenu folder={folder} folders={folders} />
-                : undefined
-            }
-            search={{
-              value: query,
-              onChange: setQuery,
-              matches: toolMatches,
-              label: SEARCH_LABEL,
-              placeholder: 'Filter by name',
-            }}
-            tags={
-              sideReadError !== null
-                ? undefined
-                : {
-                    getTags: (view) => view.tags,
-                    selected: selectedTags,
-                    onChange: (next) => {
-                      navigate('tools', {
-                        tool: selected,
-                        tags: next.length > 0 ? [...next] : undefined,
-                        q: preserveQuery,
-                      });
-                    },
-                    untaggedLabel: UNTAGGED_LABEL,
-                    filterLabel: 'Filter tools by tag',
-                    maxVisibleTags: MAX_VISIBLE_TAG_CHIPS,
-                  }
-            }
-            emptyStates={emptyStates}
-          />
-        </>
-      );
-    }
   }
 
   return (
     <div className="tai-stack" ref={containerRef}>
       {body}
     </div>
+  );
+}
+
+/** The detail pane: a Back control on a single pane, then the run panel + extensions
+ * card for the selected tool, or the "no tool" / "not available" empty states. */
+function ToolDetailPane({
+  selected,
+  selectionAvailable,
+  showBack,
+  onBack,
+  detailHeadingRef,
+}: {
+  readonly selected: string | undefined;
+  readonly selectionAvailable: boolean;
+  readonly showBack: boolean;
+  readonly onBack: () => void;
+  readonly detailHeadingRef: RefObject<HTMLHeadingElement | null>;
+}): ReactNode {
+  return (
+    <Stack gap={6} className="tai-split-detail">
+      {showBack ? (
+        <div>
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeftIcon />
+            Back
+          </Button>
+        </div>
+      ) : null}
+
+      {selected === undefined ? (
+        <Card>
+          <EmptyState
+            title="No tool selected"
+            description="Choose a tool from the list to configure and run it."
+          />
+        </Card>
+      ) : !selectionAvailable ? (
+        <Card>
+          <EmptyState
+            title="Tool not available"
+            description="This tool is outside your access. Choose a tool from the list to configure and run it."
+          />
+        </Card>
+      ) : (
+        <>
+          <Card>
+            <Stack>
+              <h2 className="tai-section-title tai-mono" tabIndex={-1} ref={detailHeadingRef}>
+                {selected}
+              </h2>
+              <RunPanel key={selected} toolName={selected} />
+            </Stack>
+          </Card>
+          <Card>
+            <ToolExtensionsCard key={selected} tool={selected} />
+          </Card>
+        </>
+      )}
+    </Stack>
   );
 }
 
@@ -483,46 +320,13 @@ export function ToolsPage({ search }: PageProps<'tools'>): ReactNode {
           </Stack>
         </Card>
 
-        <Stack gap={6} className="tai-split-detail">
-          {showBack ? (
-            <div>
-              <Button variant="ghost" onClick={clearSelection}>
-                <ArrowLeftIcon />
-                Back
-              </Button>
-            </div>
-          ) : null}
-
-          {selected === undefined ? (
-            <Card>
-              <EmptyState
-                title="No tool selected"
-                description="Choose a tool from the list to configure and run it."
-              />
-            </Card>
-          ) : !selectionAvailable ? (
-            <Card>
-              <EmptyState
-                title="Tool not available"
-                description="This tool is outside your access. Choose a tool from the list to configure and run it."
-              />
-            </Card>
-          ) : (
-            <>
-              <Card>
-                <Stack>
-                  <h2 className="tai-section-title tai-mono" tabIndex={-1} ref={detailHeadingRef}>
-                    {selected}
-                  </h2>
-                  <RunPanel key={selected} toolName={selected} />
-                </Stack>
-              </Card>
-              <Card>
-                <ToolExtensionsCard key={selected} tool={selected} />
-              </Card>
-            </>
-          )}
-        </Stack>
+        <ToolDetailPane
+          selected={selected}
+          selectionAvailable={selectionAvailable}
+          showBack={showBack}
+          onBack={clearSelection}
+          detailHeadingRef={detailHeadingRef}
+        />
       </div>
 
       <ToolAdminCard />

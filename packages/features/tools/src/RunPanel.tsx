@@ -1,27 +1,19 @@
 /**
  * The RUN PANEL for a selected tool.
  *
- * PANEL-VS-AUTOFORM: a plugin may contribute a rich run panel for a specific
- * tool via `context.registerToolPanel`. `RunPanel` fetches the tool's params schema, then
- * consults the live plugin registry (`getContributions`): if a panel targets this
- * tool it is rendered with `ToolPanelProps`; OTHERWISE — the common case — the
- * schema-driven AUTO-FORM path runs.
+ * PANEL-VS-AUTOFORM: a plugin may contribute a rich run panel for a specific tool via
+ * `context.registerToolPanel`. `RunPanel` fetches the tool's params schema, then
+ * consults the live plugin registry: if a panel targets this tool it is rendered with
+ * `ToolPanelProps`; OTHERWISE — the common case — the schema-driven AUTO-FORM path runs.
  *
- * The auto-form seeds its value from `defaultValueForSchema`, renders the
- * `SchemaForm`, and on Run validates with `validateAgainstSchema` BEFORE calling
- * `runTool`. The run is a synchronous POST under a client timeout (see `run.ts`):
- * pending → a loud running state; success → the typed `ResultViewer`; a timeout →
- * a DISTINCT "still executing server-side" notice; any other failure → the
- * generic loud `ErrorState`.
- *
- * The detail order is description → form → actions → result: the auto-form leads
- * with the schema's description, then the `SchemaForm` (SDK form chrome —
- * `Field`/`TextInput`/`Textarea`/`Select`/`Button`), then the run doors, then the
- * typed result. Layout spacing between elements comes from the SDK stack/row
- * classes; per-element margin/whitespace resets remain inline.
+ * The auto-form seeds its value from the schema, renders the `SchemaForm`, and on Run
+ * validates BEFORE calling `runTool`. The run is a synchronous POST under a client
+ * timeout (see {@link useAutoFormRun}): pending → a loud running state; success → the
+ * typed `ResultViewer`; a timeout → a DISTINCT "still executing server-side" notice;
+ * any other failure → the generic loud `ErrorState`.
  */
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Button,
   ErrorState,
@@ -29,45 +21,25 @@ import {
   SchemaForm,
   Skeleton,
   Spinner,
-  defaultValueForSchema,
   errorMessage,
   featureDisabledMessage,
-  isFeatureDisabled,
   useApi,
-  useCanWrite,
-  useCapabilities,
-  validateAgainstSchema,
   type JsonSchema,
-  type SchemaFormErrors,
   type ToolPanelProps,
 } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
 
 import { toolSchemaKey } from './keys';
-import { toolRunsListKey } from './backgroundRunsCommon';
 import { ResultViewer } from './ResultViewer';
-import { RunTimeoutError, runToolWithTimeout } from './run';
+import { runToolWithTimeout } from './run';
 import { BackgroundRuns } from './BackgroundRuns';
-
-/**
- * The two run doors, each a CONCRETE route so the projection can method-gate it. The
- * synchronous Run POSTs the admin-only `/api/run-tool`; Run in background POSTs
- * `/api/tool-runs`. The tool-selection gate (`projection.tools`) fills the whole registry
- * the moment EITHER door is projected, so it cannot tell the two apart — a scoped editor
- * reaches the panel via the background door yet the sync door 403s. Each button therefore
- * gates on its OWN door (projection ⊆ gate), independent of tool visibility.
- */
-const RUN_TOOL_ROUTE = '/api/run-tool';
-const TOOL_RUNS_ROUTE = '/api/tool-runs';
+import { useAutoFormRun, type AutoFormRun } from './useAutoFormRun';
 
 /** The distinct, loud "run still executing server-side" state (honest limit).
  * Deliberately NOT the generic `ErrorState`: a different heading, colour, and a
  * `do-not-retry` warning so the operator can tell a live run from a safe retry. */
 function TimeoutNotice(): ReactNode {
   return (
-    // `.tai-warn-state` is the design system's published warn surface: the state
-    // degraded rather than failed, so it takes that panel rather than a formula of
-    // its own.
     <div role="alert" data-testid="tool-run-timeout" className="tai-warn-state">
       <strong className="tai-status-warn">Run still executing server-side</strong>
       <p style={{ margin: 'var(--tai-space-2) 0 0', whiteSpace: 'pre-wrap' }}>
@@ -83,6 +55,78 @@ function TimeoutNotice(): ReactNode {
   );
 }
 
+/** The run doors: the read-only note when no door is reachable, else the Run / Run in
+ * background buttons (each gated on its own door). */
+function RunActions({ run }: { readonly run: AutoFormRun }): ReactNode {
+  if (run.noRunDoor) {
+    return (
+      <p role="note" data-testid="run-read-only-note" className="tai-muted" style={{ margin: 0 }}>
+        Running this tool is outside your access — it is shown read-only.
+      </p>
+    );
+  }
+  return (
+    <div className="tai-row">
+      {run.showSyncButton ? (
+        <Button type="submit" variant="primary" disabled={!run.canRunSync || run.run.isPending}>
+          {run.run.isPending ? <Spinner label="Running" /> : null}
+          Run
+        </Button>
+      ) : null}
+      {run.showBackgroundButton ? (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={run.onRunInBackground}
+          disabled={!run.canRunBackground || run.background.isPending}
+        >
+          {run.background.isPending ? <Spinner label="Submitting" /> : null}
+          Run in background
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** The run outcome: a background-submit failure, the synchronous running state, a
+ * timeout or generic error, and the typed result. */
+function RunOutcome({ run }: { readonly run: AutoFormRun }): ReactNode {
+  return (
+    <>
+      {run.background.isError ? (
+        run.backgroundDisabled ? (
+          <FeatureDisabled
+            feature="Background runs"
+            message={featureDisabledMessage(run.background.error)}
+          />
+        ) : (
+          <ErrorState message={errorMessage(run.background.error)} />
+        )
+      ) : null}
+
+      {run.run.isPending ? (
+        <div role="status" className="tai-row">
+          <Spinner label="Running" />
+          <span>Running — the tool is executing on the server.</span>
+        </div>
+      ) : null}
+
+      {run.timedOut ? (
+        <TimeoutNotice />
+      ) : run.run.isError ? (
+        <ErrorState message={errorMessage(run.run.error)} />
+      ) : null}
+
+      {run.run.isSuccess ? (
+        <section className="tai-stack">
+          <h3 className="tai-card-title">Result</h3>
+          <ResultViewer result={run.run.data} />
+        </section>
+      ) : null}
+    </>
+  );
+}
+
 /** The schema-driven auto-form run path. Exported for direct unit testing. */
 export function AutoFormRunPanel({
   toolName,
@@ -93,78 +137,7 @@ export function AutoFormRunPanel({
   readonly schema: JsonSchema;
   readonly description?: string | null;
 }): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const { state } = useCapabilities();
-  const [value, setValue] = useState<unknown>(() => defaultValueForSchema(schema));
-  const [errors, setErrors] = useState<SchemaFormErrors | undefined>(undefined);
-  const [activeRunId, setActiveRunId] = useState<string | undefined>(undefined);
-
-  // Projection ⊆ gate, per run door: the sync Run 403s unless the projection reaches
-  // `POST /api/run-tool` (admin-only), the background Run unless it reaches
-  // `POST /api/tool-runs`. Both fail closed while the projection is not ready.
-  const canRunSync = useCanWrite(RUN_TOOL_ROUTE, 'POST');
-  const canRunBackground = useCanWrite(TOOL_RUNS_ROUTE, 'POST');
-  // Once ready, a caller reaching NEITHER door would 403 on every run: show a read-only
-  // note instead of dead buttons. Before ready, both buttons render disabled (fail-safe).
-  const ready = state.status === 'ready';
-  const noRunDoor = ready && !canRunSync && !canRunBackground;
-
-  const run = useMutation({
-    mutationFn: (kwargs: Record<string, unknown>) => runToolWithTimeout(api, toolName, kwargs),
-  });
-
-  const background = useMutation({
-    mutationFn: (kwargs: Record<string, unknown>) =>
-      api.submitToolRun({ tool_name: toolName, arguments: kwargs }),
-    onSuccess: (result) => {
-      setActiveRunId(result.run_id);
-      // Refetch the recent-runs list so the just-submitted run appears at once.
-      // The list stops polling once every listed run is terminal, so a run
-      // submitted into an empty or all-terminal list would otherwise never show
-      // until the next manual refetch; invalidating restarts the poll now that a
-      // running run is present.
-      void queryClient.invalidateQueries({ queryKey: toolRunsListKey(toolName) });
-    },
-  });
-
-  /** Validate the form and return the run-tool kwargs, or `null` when invalid.
-   * run-tool kwargs must be an object; a non-object form root (scalar/array,
-   * which SchemaForm supports) is never a valid kwargs map, so guard rather than
-   * blindly cast. */
-  const validatedKwargs = (): Record<string, unknown> | null => {
-    const validation = validateAgainstSchema(schema, value);
-    if (Object.keys(validation).length > 0) {
-      setErrors(validation);
-      return null;
-    }
-    setErrors(undefined);
-    return value !== null && typeof value === 'object' && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
-  };
-
-  const onSubmit = (event: SyntheticEvent): void => {
-    event.preventDefault();
-    // Guard the door too, not only the button: a form submit (Enter) must not fire a run
-    // the gate denies.
-    if (!canRunSync) return;
-    const kwargs = validatedKwargs();
-    if (kwargs !== null) run.mutate(kwargs);
-  };
-
-  const onRunInBackground = (): void => {
-    if (!canRunBackground) return;
-    const kwargs = validatedKwargs();
-    if (kwargs !== null) background.mutate(kwargs);
-  };
-
-  // The tool-run store is unconfigured: a background submit answered with a 501
-  // `tool-runs-not-configured`. Hide the background door and show the muted OFF
-  // note rather than a red error — the feature is off, not broken.
-  const backgroundDisabled = isFeatureDisabled(background.error);
-
-  const timedOut = run.isError && run.error instanceof RunTimeoutError;
+  const run = useAutoFormRun({ toolName, schema });
 
   return (
     <div className="tai-stack">
@@ -174,72 +147,14 @@ export function AutoFormRunPanel({
         </p>
       ) : null}
 
-      <form onSubmit={onSubmit} className="tai-stack">
-        <SchemaForm schema={schema} value={value} onChange={setValue} errors={errors} />
-        {noRunDoor ? (
-          <p
-            role="note"
-            data-testid="run-read-only-note"
-            className="tai-muted"
-            style={{ margin: 0 }}
-          >
-            Running this tool is outside your access — it is shown read-only.
-          </p>
-        ) : (
-          <div className="tai-row">
-            {ready && !canRunSync ? null : (
-              <Button type="submit" variant="primary" disabled={!canRunSync || run.isPending}>
-                {run.isPending ? <Spinner label="Running" /> : null}
-                Run
-              </Button>
-            )}
-            {(ready && !canRunBackground) || backgroundDisabled ? null : (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={onRunInBackground}
-                disabled={!canRunBackground || background.isPending}
-              >
-                {background.isPending ? <Spinner label="Submitting" /> : null}
-                Run in background
-              </Button>
-            )}
-          </div>
-        )}
+      <form onSubmit={run.onSubmit} className="tai-stack">
+        <SchemaForm schema={schema} value={run.value} onChange={run.setValue} errors={run.errors} />
+        <RunActions run={run} />
       </form>
 
-      {background.isError ? (
-        backgroundDisabled ? (
-          <FeatureDisabled
-            feature="Background runs"
-            message={featureDisabledMessage(background.error)}
-          />
-        ) : (
-          <ErrorState message={errorMessage(background.error)} />
-        )
-      ) : null}
+      <RunOutcome run={run} />
 
-      {run.isPending ? (
-        <div role="status" className="tai-row">
-          <Spinner label="Running" />
-          <span>Running — the tool is executing on the server.</span>
-        </div>
-      ) : null}
-
-      {timedOut ? (
-        <TimeoutNotice />
-      ) : run.isError ? (
-        <ErrorState message={errorMessage(run.error)} />
-      ) : null}
-
-      {run.isSuccess ? (
-        <section className="tai-stack">
-          <h3 className="tai-card-title">Result</h3>
-          <ResultViewer result={run.data} />
-        </section>
-      ) : null}
-
-      <BackgroundRuns toolName={toolName} activeRunId={activeRunId} />
+      <BackgroundRuns toolName={toolName} activeRunId={run.activeRunId} />
     </div>
   );
 }

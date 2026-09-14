@@ -7,7 +7,7 @@
  * server state flows through TanStack Query:
  * loading → `Skeleton`, empty → `EmptyState`, error → a loud `ErrorState`.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
@@ -38,6 +38,7 @@ import { TemplateDetail } from './TemplateDetail';
 import { UploadTemplateForm } from './UploadTemplateForm';
 import { deriveTemplateFolders, templateFolderId, templateLabel } from './folders';
 import { storageInfoKey, templatesListKey } from './keys';
+import { useTemplateDetailFocus } from './use-template-detail-focus';
 
 /** The explorer's list/card view-mode persistence key. */
 const TEMPLATES_VIEW_SURFACE = 'templates';
@@ -311,48 +312,7 @@ export function TemplatesPage({ search }: PageProps<'templates'>): ReactNode {
   // collapses to the one pane the selection names.
   const pane = selected !== undefined ? 'detail' : 'list';
 
-  // FOCUS MANAGEMENT (WCAG 2.4.3). Single-pane, selecting a row hides the list pane
-  // that held the just-activated link, so focus must be moved deliberately or it drops
-  // to <body>. Mirrors ToolsPage: seed the previous selection on MOUNT so an initial
-  // `?template=` deep-link never steals focus (focus follows a client-side change only).
-  const listRef = useRef<HTMLDivElement>(null);
-  const prevSelected = useRef<string | undefined>(selected);
-  const headingNode = useRef<HTMLHeadingElement | null>(null);
-  // True while a client-side selection waits for its detail heading to mount.
-  const pendingFocus = useRef(false);
-
-  // Callback ref threaded onto the detail's <h2>. When the heading mounts after a
-  // client-side selection it pulls focus; on a deep-link mount `pendingFocus` is false,
-  // so focus is never stolen. Cleared to null on unmount (Back), so it never goes stale.
-  const setDetailHeading = useCallback((node: HTMLHeadingElement | null) => {
-    headingNode.current = node;
-    if (node !== null && pendingFocus.current) {
-      pendingFocus.current = false;
-      node.focus();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selected === prevSelected.current) return;
-    const previous = prevSelected.current;
-    prevSelected.current = selected;
-    if (selected !== undefined) {
-      // Moved INTO a selection → focus the detail heading. It is either already mounted
-      // (focus it now) or still loading (focus it when its callback ref fires).
-      if (headingNode.current !== null) {
-        headingNode.current.focus();
-      } else {
-        pendingFocus.current = true;
-      }
-    } else if (previous !== undefined) {
-      // Cleared (Back) → return focus to the list row it came from, matched inside the
-      // list pane by the link's own accessible name.
-      pendingFocus.current = false;
-      listRef.current
-        ?.querySelector<HTMLElement>(`[aria-label="Open template ${previous}"]`)
-        ?.focus();
-    }
-  }, [selected]);
+  const { listRef, setDetailHeading } = useTemplateDetailFocus(selected);
 
   const clearCache = useMutation({
     mutationFn: () => api.clearTemplatesCache(),

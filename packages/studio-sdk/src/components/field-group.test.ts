@@ -290,20 +290,20 @@ function fieldOpens(source: string): FieldOpen[] {
  * such sites in the repo. A new one reddens until someone reads it.
  */
 const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
-  'packages/features/agents/src/ComposeAgentDialog.tsx':
+  'packages/features/agents/src/ComposeSpecFields.tsx':
     'ErrorState on a failed read, MultiToolPicker / PresetSpecEditor / SubAgentComposer otherwise — all three are marked group, so neither branch claims the control id.',
   'packages/features/hooks/src/ExecutionKeyPicker.tsx':
     'Select on the ready branch, ErrorState / <p role="status"> otherwise — group is branch-conditional.',
-  'packages/features/hooks/src/TopicVerifierForm.tsx':
+  'packages/features/hooks/src/VerifierSelectField.tsx':
     'Select on the ready branch, ErrorState / <p role="status"> otherwise — group is branch-conditional.',
-  'packages/features/interactions/src/renderers.tsx':
+  'packages/features/interactions/src/renderers/select-answer.tsx':
     'RadioGroup at or below RADIO_MAX_OPTIONS, Select above — group is branch-conditional.',
   'packages/studio-sdk/src/components/reveal-input.tsx':
     'Both branches are the SDK TextInput, which claims the control id — no marker needed.',
   'packages/studio-sdk/src/components/templated-text-field.tsx':
     'The RadioGroup source toggle then a mode branch (Skeleton, ErrorState, or a hideLabel Field around Select) plus the KwargsEditor — the outer Field is marked group, so it claims no control id and each inner control names or drops its own.',
   'packages/studio-sdk/src/components/tool-picker.tsx':
-    'Both branches are a Select, which claims the control id — no marker needed.',
+    'The Field wraps the tool ToolSelect (a grouped or flat Select) only when the caller passes a visible label; that inner Select claims the control id, so no marker is needed.',
   'packages/studio-sdk/src/schema-form/string-field.tsx':
     'CompletionInput or TextInput, both of which claim the control id — no marker needed.',
 };

@@ -28,12 +28,16 @@ import { useState, type ReactNode } from 'react';
 
 import type { TemplatedText } from '@tai42/api-client';
 
-import { Button, ErrorState, Skeleton } from './primitives';
 import { Field } from './field';
-import { RadioGroup } from './radio-group';
-import { Select } from './select';
-import { Textarea, TextInput } from './inputs';
-import { CloseIcon } from './icons';
+import {
+  initialMode,
+  objectToRows,
+  templatedValueFrom,
+  type KwargRow,
+  type Mode,
+} from './templated-text-kwargs';
+import { KwargsEditor, ReadOnlyKwargs } from './templated-text-kwargs-editor';
+import { TemplatedTextSource } from './templated-text-source';
 
 /** One stored template the id picker offers. */
 export interface TemplatedTextTemplateOption {
@@ -111,170 +115,6 @@ export function templatedTextSummary(value: TemplatedText | null): string {
   return value.content ?? '';
 }
 
-type Mode = 'inline' | 'stored';
-
-interface KwargRow {
-  readonly key: string;
-  readonly value: string;
-  /**
-   * The stored value this row was seeded from, kept so an UNTOUCHED row re-emits it
-   * BYTE-FOR-BYTE: the row form cannot tell a stored string `"7"` from the number `7`,
-   * so re-parsing an untouched row would silently coerce the stored type. `undefined`
-   * for a row the author added.
-   */
-  readonly original?: unknown;
-}
-
-/** The row's canonical string form, matched against `value` to detect an untouched row. */
-function stringifyRowValue(raw: unknown): string {
-  return typeof raw === 'string' ? raw : JSON.stringify(raw);
-}
-
-/** Parse a cell as JSON when it can be (numbers/bools/objects), else keep the string. */
-function parseCellValue(raw: string): unknown {
-  const trimmed = raw.trim();
-  if (trimmed.length === 0) return '';
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    return raw;
-  }
-}
-
-/** Collapse the kwargs rows into an object, dropping rows with a blank key. */
-function rowsToObject(rows: readonly KwargRow[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const row of rows) {
-    const key = row.key.trim();
-    if (key.length === 0) continue;
-    // An untouched seeded row re-emits its stored value verbatim (no JSON-type coerce);
-    // an edited or added row is parsed from the cell text.
-    out[key] =
-      row.original !== undefined && stringifyRowValue(row.original) === row.value
-        ? row.original
-        : parseCellValue(row.value);
-  }
-  return out;
-}
-
-/** Seed rows from a stored kwargs object (stringifying non-string values). */
-function objectToRows(kwargs: Record<string, unknown> | undefined): KwargRow[] {
-  if (kwargs === undefined) return [];
-  return Object.entries(kwargs).map(([key, raw]) => ({
-    key,
-    value: stringifyRowValue(raw),
-    original: raw,
-  }));
-}
-
-/** The add/remove kwargs editor, revealed on demand and open when kwargs already exist. */
-function KwargsEditor({
-  label,
-  rows,
-  disabled,
-  onChange,
-}: {
-  readonly label: string;
-  readonly rows: readonly KwargRow[];
-  readonly disabled: boolean;
-  readonly onChange: (rows: KwargRow[]) => void;
-}): ReactNode {
-  const [open, setOpen] = useState(rows.length > 0);
-  const groupLabel = `${label} render parameters`;
-
-  if (!open) {
-    // Wrapped so the ghost button keeps its content width and stays left-aligned
-    // in the field's column, marking it as this field's own disclosure rather than
-    // a full-width control floating between two fields.
-    return (
-      <div>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={disabled}
-          onClick={() => {
-            setOpen(true);
-            onChange([...rows, { key: '', value: '' }]);
-          }}
-        >
-          Add render parameters
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      role="group"
-      aria-label={groupLabel}
-      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}
-    >
-      <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-        Render parameters
-      </span>
-      {rows.map((row, index) => (
-        <div
-          key={index}
-          style={{ display: 'flex', gap: 'var(--tai-space-2)', alignItems: 'center' }}
-        >
-          <TextInput
-            aria-label={`${groupLabel} key ${String(index + 1)}`}
-            placeholder="name"
-            value={row.key}
-            autoComplete="off"
-            disabled={disabled}
-            onChange={(event) => {
-              const next = [...rows];
-              next[index] = { ...row, key: event.target.value };
-              onChange(next);
-            }}
-          />
-          <TextInput
-            aria-label={`${groupLabel} value ${String(index + 1)}`}
-            placeholder="value"
-            value={row.value}
-            autoComplete="off"
-            disabled={disabled}
-            onChange={(event) => {
-              const next = [...rows];
-              next[index] = { ...row, value: event.target.value };
-              onChange(next);
-            }}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={`Remove ${groupLabel} ${String(index + 1)}`}
-            disabled={disabled}
-            onClick={() => {
-              onChange(rows.filter((_, position) => position !== index));
-            }}
-          >
-            <CloseIcon aria-hidden="true" />
-          </Button>
-        </div>
-      ))}
-      <div>
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={disabled}
-          onClick={() => {
-            onChange([...rows, { key: '', value: '' }]);
-          }}
-        >
-          Add parameter
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/** The initial mode: stored when the seed carries an `id`, inline otherwise. */
-function initialMode(value: TemplatedText | null): Mode {
-  return value?.id !== undefined ? 'stored' : 'inline';
-}
-
 export function TemplatedTextField({
   label,
   value,
@@ -304,22 +144,7 @@ export function TemplatedTextField({
     nextStored: string,
     nextKwargs: readonly KwargRow[],
   ): void => {
-    const kwargs = rowsToObject(nextKwargs);
-    const kw = Object.keys(kwargs).length > 0 ? { kwargs } : {};
-    if (nextMode === 'stored') {
-      const id = nextStored.trim();
-      if (id === '') {
-        onChange(required ? { id: '', ...kw } : null);
-        return;
-      }
-      onChange({ id, ...kw });
-      return;
-    }
-    if (nextInline.trim() === '') {
-      onChange(required ? { content: '', ...kw } : null);
-      return;
-    }
-    onChange({ content: nextInline, ...kw });
+    onChange(templatedValueFrom(nextMode, nextInline, nextStored, nextKwargs, required));
   };
 
   const changeMode = (next: Mode): void => {
@@ -342,125 +167,33 @@ export function TemplatedTextField({
     emit(mode, inlineDraft, storedDraft, next);
   };
 
-  const templateOptions = templates.map((template) => ({
-    value: template.id,
-    label: template.label ?? template.id,
-  }));
-  // A stored id the catalog does not offer cannot be picked from the list; it is
-  // shown as an unresolved note rather than silently blanked.
-  const unresolvedId =
-    mode === 'stored' &&
-    storedDraft.trim() !== '' &&
-    !templatesLoading &&
-    templatesError === undefined &&
-    !templates.some((template) => template.id === storedDraft.trim())
-      ? storedDraft.trim()
-      : undefined;
+  // A stored `id` already authored on the value is shown read-only when storage is
+  // absent — never resolved, browsed, converted, or dropped.
+  const showsReadOnlyStored = storageAbsent && value?.id !== undefined;
 
-  // The inline editor, shared by the present-storage inline mode and the
-  // absent-storage inline-only rendering: the caller's rich editor when supplied,
-  // else a plain textarea.
-  const inlineEditor =
-    renderInline !== undefined ? (
-      renderInline({ label, value: inlineDraft, onChange: changeInline, error, hideLabel: true })
-    ) : (
-      <Field label={label} hideLabel error={error}>
-        <Textarea
-          value={inlineDraft}
-          placeholder={placeholder}
-          disabled={disabled}
-          onChange={(event) => {
-            changeInline(event.target.value);
-          }}
-        />
-      </Field>
-    );
-
-  // A stored `id` already authored on the value: with storage absent it is shown
-  // read-only rather than resolved, browsed, converted, or dropped.
-  const authoredStoredId = value?.id;
-  const showsReadOnlyStored = storageAbsent && authoredStoredId !== undefined;
-
-  // The source region. While presence is unknown a placeholder stands in, so the
-  // toggle is never shown and then removed. With storage absent the stored source
-  // cannot work and is not offered: an inline or empty value edits inline; a value
-  // carrying an `id` is shown read-only with an unavailability note. With storage
-  // present the full inline/stored toggle and picker render.
-  let source: ReactNode;
-  if (storagePresenceLoading) {
-    source = <Skeleton height={36} />;
-  } else if (storageAbsent) {
-    source = showsReadOnlyStored ? (
-      <>
-        {/* A labeled read-only reference, NOT an editable field: no input box, a
-            "Stored template" caption, and the id in monospace — so it reads as a stored
-            reference the way the state-template screen shows one, never as literal text a
-            reader could mistake for the condition itself. A long id wraps rather than
-            overflowing its row. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
-          <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-            Stored template
-          </span>
-          <code style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}>
-            {authoredStoredId}
-          </code>
-        </div>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 'var(--tai-text-sm)',
-            color: 'var(--tai-color-text-muted)',
-          }}
-        >
-          Stored templates are unavailable — this deployment has no storage backend.
-        </p>
-      </>
-    ) : (
-      inlineEditor
-    );
-  } else {
-    source = (
-      <>
-        <RadioGroup
-          aria-label={`${label} source`}
-          variant="segmented"
-          value={mode}
-          disabled={disabled}
-          options={[
-            { value: 'inline', label: 'Inline text' },
-            { value: 'stored', label: 'Stored template' },
-          ]}
-          onValueChange={(next) => {
-            changeMode(next as Mode);
-          }}
-        />
-
-        {mode === 'inline' ? (
-          inlineEditor
-        ) : templatesError !== undefined ? (
-          <ErrorState message={templatesError} onRetry={onTemplatesRetry} />
-        ) : templatesLoading ? (
-          <Skeleton height={36} />
-        ) : (
-          <Field label={label} hideLabel error={error}>
-            <Select
-              placeholder={templates.length === 0 ? 'No templates available' : 'Select a template'}
-              value={storedDraft}
-              disabled={disabled || templates.length === 0}
-              options={templateOptions}
-              onValueChange={changeStored}
-            />
-          </Field>
-        )}
-
-        {unresolvedId !== undefined ? (
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-            {resolveError ?? `The stored template "${unresolvedId}" is not available.`}
-          </p>
-        ) : null}
-      </>
-    );
-  }
+  const source = (
+    <TemplatedTextSource
+      label={label}
+      mode={mode}
+      inlineDraft={inlineDraft}
+      storedDraft={storedDraft}
+      error={error}
+      disabled={disabled}
+      placeholder={placeholder}
+      renderInline={renderInline}
+      templates={templates}
+      templatesLoading={templatesLoading}
+      templatesError={templatesError}
+      onTemplatesRetry={onTemplatesRetry}
+      resolveError={resolveError}
+      storageAbsent={storageAbsent}
+      storagePresenceLoading={storagePresenceLoading}
+      authoredStoredId={value?.id}
+      onModeChange={changeMode}
+      onInlineChange={changeInline}
+      onStoredChange={changeStored}
+    />
+  );
 
   // ONE coherent group per field: the label + description form the group header, and
   // the source region and the render-parameters disclosure sit under it — so the
@@ -470,36 +203,11 @@ export function TemplatedTextField({
   // visually-hidden `<label for>` (see `hideLabel`). The container-name redundancy
   // `Field` accepts by design (a redundant container is audible, an unnamed group is
   // silent).
-  //
-  // A read-only stored value shows its render parameters as read-only text — the values
-  // in normal weight, NOT the muted disabled inputs a reader could mistake for empty
-  // placeholders — matching the read-only treatment of the id above; every editable
-  // rendering keeps the full add/remove editor.
   return (
     <Field label={label} description={description} group>
       {source}
       {showsReadOnlyStored ? (
-        kwargsRows.length > 0 ? (
-          <div
-            role="group"
-            aria-label={`${label} render parameters`}
-            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}
-          >
-            <span style={{ fontSize: 'var(--tai-text-sm)', color: 'var(--tai-color-text-muted)' }}>
-              Render parameters
-            </span>
-            {kwargsRows.map((row) => (
-              <div
-                key={row.key}
-                style={{ fontFamily: 'var(--tai-font-mono)', wordBreak: 'break-all' }}
-              >
-                <code>{row.key}</code>
-                <span style={{ color: 'var(--tai-color-text-muted)' }}>: </span>
-                <code>{row.value}</code>
-              </div>
-            ))}
-          </div>
-        ) : null
+        <ReadOnlyKwargs label={label} rows={kwargsRows} />
       ) : (
         <KwargsEditor label={label} rows={kwargsRows} disabled={disabled} onChange={changeKwargs} />
       )}

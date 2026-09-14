@@ -4,6 +4,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { JsonTree } from './json-tree';
 
+/**
+ * The expand-all budget guards drive `userEvent` over payloads of hundreds to
+ * thousands of nodes; under v8 coverage in the full parallel suite that render
+ * runs well past the 5s default, so those tests are given room.
+ */
+const HEAVY_EXPAND_TIMEOUT_MS = 20_000;
+
 function firstOf<T extends Element>(nodes: NodeListOf<T>): T {
   const [node] = nodes;
   if (node === undefined) throw new Error('expected a matching element');
@@ -164,80 +171,96 @@ describe('JsonTree', () => {
       expect(screen.getByText('k6:')).toBeInTheDocument();
     });
 
-    it('bounds expand-all by a total node budget on a wide-and-deep payload', async () => {
-      const user = userEvent.setup();
-      // Full expansion (every container through the depth cap) would render 7**4
-      // leaves; the node budget must open only a bounded subset of that product.
-      const fullLeaves = 7 ** 4;
-      const { container } = render(<JsonTree data={makeWide(4, 7)} label="Body" />);
+    it(
+      'bounds expand-all by a total node budget on a wide-and-deep payload',
+      async () => {
+        const user = userEvent.setup();
+        // Full expansion (every container through the depth cap) would render 7**4
+        // leaves; the node budget must open only a bounded subset of that product.
+        const fullLeaves = 7 ** 4;
+        const { container } = render(<JsonTree data={makeWide(4, 7)} label="Body" />);
 
-      await user.click(screen.getByRole('button', { name: 'Expand all' }));
+        await user.click(screen.getByRole('button', { name: 'Expand all' }));
 
-      const leaves = container.querySelectorAll('.tai-syntax-number').length;
-      // Far fewer than a full expansion would lay out — the budget stopped it short.
-      expect(leaves).toBeLessThan(fullLeaves);
-      // ...yet a usable subset did open.
-      expect(leaves).toBeGreaterThan(0);
-      // A container the budget left collapsed keeps its click-to-expand affordance.
-      const closed = Array.from(container.querySelectorAll('details')).filter((d) => !d.open);
-      expect(closed.length).toBeGreaterThan(0);
-    });
+        const leaves = container.querySelectorAll('.tai-syntax-number').length;
+        // Far fewer than a full expansion would lay out — the budget stopped it short.
+        expect(leaves).toBeLessThan(fullLeaves);
+        // ...yet a usable subset did open.
+        expect(leaves).toBeGreaterThan(0);
+        // A container the budget left collapsed keeps its click-to-expand affordance.
+        const closed = Array.from(container.querySelectorAll('details')).filter((d) => !d.open);
+        expect(closed.length).toBeGreaterThan(0);
+      },
+      HEAVY_EXPAND_TIMEOUT_MS,
+    );
 
-    it('skips an over-budget node yet still opens a smaller sibling within the budget', async () => {
-      const user = userEvent.setup();
-      // Fourteen sibling arrays of one page each drain the budget down to 84 before
-      // `big` is reached; `big`'s own page (100) no longer fits, so it is skipped —
-      // and a later one-key `small` still opens on the 84 that remain. Abandoning the
-      // whole queue when `big` overspends would deny `small` an open it clearly fits.
-      const filler = (): unknown => Array.from({ length: 100 }, (_, index) => index);
-      const data: Record<string, unknown> = {};
-      for (let i = 0; i < 14; i += 1) data[`f${String(i)}`] = filler();
-      data.big = Array.from({ length: 100 }, (_, index) => `big-${String(index)}`);
-      data.small = { small_marker: 'small-here' };
-      render(<JsonTree data={data} label="Body" />);
+    it(
+      'skips an over-budget node yet still opens a smaller sibling within the budget',
+      async () => {
+        const user = userEvent.setup();
+        // Fourteen sibling arrays of one page each drain the budget down to 84 before
+        // `big` is reached; `big`'s own page (100) no longer fits, so it is skipped —
+        // and a later one-key `small` still opens on the 84 that remain. Abandoning the
+        // whole queue when `big` overspends would deny `small` an open it clearly fits.
+        const filler = (): unknown => Array.from({ length: 100 }, (_, index) => index);
+        const data: Record<string, unknown> = {};
+        for (let i = 0; i < 14; i += 1) data[`f${String(i)}`] = filler();
+        data.big = Array.from({ length: 100 }, (_, index) => `big-${String(index)}`);
+        data.small = { small_marker: 'small-here' };
+        render(<JsonTree data={data} label="Body" />);
 
-      await user.click(screen.getByRole('button', { name: 'Expand all' }));
+        await user.click(screen.getByRole('button', { name: 'Expand all' }));
 
-      // `big` is skipped: its distinctive elements never render.
-      expect(screen.queryByText('"big-0"')).not.toBeInTheDocument();
-      // ...but the smaller sibling opened, so its leaf is in the DOM.
-      expect(screen.getByText('small_marker:')).toBeInTheDocument();
-      expect(screen.getByText('"small-here"')).toBeInTheDocument();
-    });
+        // `big` is skipped: its distinctive elements never render.
+        expect(screen.queryByText('"big-0"')).not.toBeInTheDocument();
+        // ...but the smaller sibling opened, so its leaf is in the DOM.
+        expect(screen.getByText('small_marker:')).toBeInTheDocument();
+        expect(screen.getByText('"small-here"')).toBeInTheDocument();
+      },
+      HEAVY_EXPAND_TIMEOUT_MS,
+    );
 
-    it('keeps expand-all within the total node budget even when it skips past nodes', async () => {
-      const user = userEvent.setup();
-      // Forty full-page arrays: opening them all would lay out 4000 leaves. The sweep
-      // opens as many as fit and skips the rest, so the total rendered leaf count
-      // stays at or below the page-bounded budget.
-      const rows: Record<string, unknown> = {};
-      for (let i = 0; i < 40; i += 1)
-        rows[`row${String(i)}`] = Array.from({ length: 100 }, (_, index) => index);
-      const { container } = render(<JsonTree data={rows} label="Body" />);
+    it(
+      'keeps expand-all within the total node budget even when it skips past nodes',
+      async () => {
+        const user = userEvent.setup();
+        // Forty full-page arrays: opening them all would lay out 4000 leaves. The sweep
+        // opens as many as fit and skips the rest, so the total rendered leaf count
+        // stays at or below the page-bounded budget.
+        const rows: Record<string, unknown> = {};
+        for (let i = 0; i < 40; i += 1)
+          rows[`row${String(i)}`] = Array.from({ length: 100 }, (_, index) => index);
+        const { container } = render(<JsonTree data={rows} label="Body" />);
 
-      await user.click(screen.getByRole('button', { name: 'Expand all' }));
+        await user.click(screen.getByRole('button', { name: 'Expand all' }));
 
-      const leaves = container.querySelectorAll('.tai-syntax-number').length;
-      expect(leaves).toBeGreaterThan(0);
-      expect(leaves).toBeLessThanOrEqual(1500);
-    });
+        const leaves = container.querySelectorAll('.tai-syntax-number').length;
+        expect(leaves).toBeGreaterThan(0);
+        expect(leaves).toBeLessThanOrEqual(1500);
+      },
+      HEAVY_EXPAND_TIMEOUT_MS,
+    );
 
-    it('opens a budget-collapsed node on an explicit click', async () => {
-      const user = userEvent.setup();
-      const { container } = render(<JsonTree data={makeWide(4, 7)} label="Body" />);
-      await user.click(screen.getByRole('button', { name: 'Expand all' }));
+    it(
+      'opens a budget-collapsed node on an explicit click',
+      async () => {
+        const user = userEvent.setup();
+        const { container } = render(<JsonTree data={makeWide(4, 7)} label="Body" />);
+        await user.click(screen.getByRole('button', { name: 'Expand all' }));
 
-      const before = container.querySelectorAll('.tai-syntax-number').length;
-      const closed = Array.from(container.querySelectorAll('details')).find((d) => !d.open);
-      if (closed === undefined) throw new Error('expected a collapsed container');
-      const summary = closed.querySelector('summary');
-      if (summary === null) throw new Error('expected a summary to click');
+        const before = container.querySelectorAll('.tai-syntax-number').length;
+        const closed = Array.from(container.querySelectorAll('details')).find((d) => !d.open);
+        if (closed === undefined) throw new Error('expected a collapsed container');
+        const summary = closed.querySelector('summary');
+        if (summary === null) throw new Error('expected a summary to click');
 
-      await user.click(summary);
+        await user.click(summary);
 
-      // Clicking a collapsed container reveals more of the tree than the budget did.
-      expect(container.querySelectorAll('.tai-syntax-number').length).toBeGreaterThan(before);
-    });
+        // Clicking a collapsed container reveals more of the tree than the budget did.
+        expect(container.querySelectorAll('.tai-syntax-number').length).toBeGreaterThan(before);
+      },
+      HEAVY_EXPAND_TIMEOUT_MS,
+    );
 
     it('materializes only the visible window of a large object, never every value', () => {
       const width = 150;

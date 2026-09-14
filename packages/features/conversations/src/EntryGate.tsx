@@ -13,31 +13,23 @@
  * each surface their failures LOUDLY here.
  */
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Button,
   Card,
   Checkbox,
   ConfirmDialog,
-  Dialog,
-  EmptyState,
   ErrorState,
-  ScrollRegion,
   Skeleton,
-  Spinner,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-  Table,
   errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
 
-import { EMPTY_PLACEHOLDER, formatInstant } from './format';
-import { conversationRoutesKey, webEntryGateKey } from './keys';
+import { conversationRoutesKey } from './keys';
 import { MintEntryCodeDialog } from './MintEntryCodeDialog';
+import { useEntryGate } from './useEntryGate';
+import { EntryCodesTable } from './EntryCodesTable';
+import { RevokeCodeDialog } from './RevokeCodeDialog';
 
 const headerStyle: CSSProperties = {
   display: 'flex',
@@ -52,11 +44,6 @@ const bodyStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 'var(--tai-space-4)',
 };
-
-/** The expiry cell: "Never" for a null expiry, else the locale-formatted instant. */
-function formatExpiry(value: string | null): string {
-  return value === null ? 'Never' : formatInstant(value);
-}
 
 export function EntryGate({ route }: { readonly route: string }): ReactNode {
   const api = useApi();
@@ -85,48 +72,17 @@ export function EntryGate({ route }: { readonly route: string }): ReactNode {
 }
 
 function EntryGatePanel({ identity }: { readonly identity: string }): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-
   const [minting, setMinting] = useState(false);
-  const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
-  const [confirmEnable, setConfirmEnable] = useState(false);
-
-  const gate = useQuery({
-    queryKey: webEntryGateKey(identity),
-    queryFn: ({ signal }) => api.getWebEntryGate(identity, signal),
-  });
-
-  const invalidateGate = (): void => {
-    void queryClient.invalidateQueries({ queryKey: webEntryGateKey(identity) });
-  };
-
-  const toggleMutation = useMutation({
-    mutationFn: (enabled: boolean) => api.setWebEntryGate(identity, enabled),
-    onSuccess: () => {
-      setConfirmEnable(false);
-      invalidateGate();
-    },
-  });
-
-  const revokeMutation = useMutation({
-    mutationFn: (codeId: string) => api.revokeWebEntryCode(identity, codeId),
-    onSuccess: () => {
-      setPendingRevoke(null);
-      invalidateGate();
-    },
-  });
-
-  // Turning the gate ON while no live code exists locks the route to everyone, so
-  // it is confirmed first (allowed, just warned); every other flip is immediate.
-  const onToggle = (next: boolean): void => {
-    toggleMutation.reset();
-    if (next && gate.data?.codes.length === 0) {
-      setConfirmEnable(true);
-      return;
-    }
-    toggleMutation.mutate(next);
-  };
+  const {
+    gate,
+    toggleMutation,
+    revokeMutation,
+    onToggle,
+    confirmEnable,
+    setConfirmEnable,
+    pendingRevoke,
+    setPendingRevoke,
+  } = useEntryGate(identity);
 
   let body: ReactNode;
   if (gate.isPending) {
@@ -134,58 +90,24 @@ function EntryGatePanel({ identity }: { readonly identity: string }): ReactNode 
   } else if (gate.isError) {
     body = <ErrorState message={errorMessage(gate.error)} onRetry={() => void gate.refetch()} />;
   } else {
-    const { enabled, codes } = gate.data;
     body = (
       <div style={bodyStyle}>
         <Checkbox
           label="Require an entry code"
-          checked={enabled}
+          checked={gate.data.enabled}
           disabled={toggleMutation.isPending}
           onCheckedChange={onToggle}
         />
         {toggleMutation.isError && !confirmEnable ? (
           <ErrorState message={errorMessage(toggleMutation.error)} />
         ) : null}
-        {codes.length === 0 ? (
-          <EmptyState
-            title="No entry codes"
-            description="Mint a code to hand out — anyone who opens its chat link enters the gated route."
-          />
-        ) : (
-          <ScrollRegion label="Entry codes">
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Label</TH>
-                  <TH>Created</TH>
-                  <TH>Expires</TH>
-                  <TH aria-label="Actions" />
-                </TR>
-              </THead>
-              <TBody>
-                {codes.map((code) => (
-                  <TR key={code.code_id}>
-                    <TD>{code.label ?? EMPTY_PLACEHOLDER}</TD>
-                    <TD>{formatInstant(code.created_at)}</TD>
-                    <TD>{formatExpiry(code.expires_at)}</TD>
-                    <TD style={{ textAlign: 'right' }}>
-                      <Button
-                        variant="ghost"
-                        aria-label={`Revoke entry code ${code.label ?? code.code_id}`}
-                        onClick={() => {
-                          revokeMutation.reset();
-                          setPendingRevoke(code.code_id);
-                        }}
-                      >
-                        Revoke
-                      </Button>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          </ScrollRegion>
-        )}
+        <EntryCodesTable
+          codes={gate.data.codes}
+          onRevoke={(codeId) => {
+            revokeMutation.reset();
+            setPendingRevoke(codeId);
+          }}
+        />
       </div>
     );
   }
@@ -235,40 +157,17 @@ function EntryGatePanel({ identity }: { readonly identity: string }): ReactNode 
         </ConfirmDialog>
       ) : null}
       {pendingRevoke !== null ? (
-        <Dialog
-          open
-          title="Revoke entry code"
-          description="Revoke this code? Its chat link stops working immediately and cannot be restored — a new code means revoke and mint."
-          onOpenChange={(next) => {
-            if (!next) setPendingRevoke(null);
+        <RevokeCodeDialog
+          isError={revokeMutation.isError}
+          error={revokeMutation.error}
+          isPending={revokeMutation.isPending}
+          onCancel={() => {
+            setPendingRevoke(null);
           }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-            {revokeMutation.isError ? (
-              <ErrorState message={errorMessage(revokeMutation.error)} />
-            ) : null}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-3)' }}>
-              <Button
-                onClick={() => {
-                  setPendingRevoke(null);
-                }}
-                disabled={revokeMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  revokeMutation.mutate(pendingRevoke);
-                }}
-                disabled={revokeMutation.isPending}
-              >
-                {revokeMutation.isPending ? <Spinner label="Revoking" /> : null}
-                Revoke code
-              </Button>
-            </div>
-          </div>
-        </Dialog>
+          onConfirm={() => {
+            revokeMutation.mutate(pendingRevoke);
+          }}
+        />
       ) : null}
     </Card>
   );

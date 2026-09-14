@@ -5,7 +5,7 @@
 import type { ReactNode } from 'react';
 import { Checkbox } from '@tai42/studio-sdk';
 
-import { badgeRowStyle } from './api-keys-common';
+import { badgeRowStyle } from './api-keys-styles';
 
 export function ScopePicker({
   scopeIds,

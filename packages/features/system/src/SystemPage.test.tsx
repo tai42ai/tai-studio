@@ -50,9 +50,7 @@ function renderWithProviders(
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
   const apiClient =
-    projection !== null
-      ? ({ ...client, getMe: () => Promise.resolve(projection) } as ApiClient)
-      : client;
+    projection !== null ? { ...client, getMe: () => Promise.resolve(projection) } : client;
   const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

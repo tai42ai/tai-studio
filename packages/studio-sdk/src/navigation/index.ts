@@ -1,6 +1,5 @@
 export {
   NavigationProvider,
-  AppLink,
   useAppNavigate,
   useResolvePath,
   usePluginNavigation,
@@ -8,7 +7,8 @@ export {
   useNavigationGuard,
   useNavigationGate,
 } from './context';
-export type { AppLinkProps } from './context';
+export { AppLink } from './app-link';
+export type { AppLinkProps } from './app-link';
 export { useSearchCommit } from './use-search-commit';
 export type { SearchCommitParams } from './use-search-commit';
 export type {

@@ -126,3 +126,88 @@ const baseProjection: MeProjection = {
   agents: [],
   mintable: false,
 };
+
+/** The dirty-guard discard prompt (the shared ConfirmDialog's body copy). */
+export const DISCARD_PROMPT = 'This editor has unsaved changes. Leaving now discards them.';
+
+/** The MCP-ENTRY schema (`TaiMCPConfig`) as the schema route emits it: an object
+ *  with a required `title` string and a required nested `config` object. */
+export const MCP_SCHEMA = {
+  $defs: {
+    MCPConfig: {
+      type: 'object',
+      title: 'MCPConfig',
+      properties: {
+        command: { type: 'string', title: 'Command' },
+      },
+      required: ['command'],
+    },
+  },
+  type: 'object',
+  title: 'TaiMCPConfig',
+  required: ['title', 'config'],
+  properties: {
+    title: { type: 'string', title: 'Title' },
+    config: { $ref: '#/$defs/MCPConfig' },
+  },
+} as const;
+
+export const MANIFEST = { mcp: [{ title: 'srv' }], user_tools: ['echo'] };
+export const MANIFEST_CONFIGURED = {
+  mcp: [{ title: 'srv', config: { command: 'run' } }],
+  user_tools: ['echo'],
+};
+
+/** An MCP-entry schema carrying a secret-bearing `env` map (a string→string record)
+ *  alongside the transport `title`. */
+export const SECRET_SCHEMA = {
+  type: 'object',
+  title: 'TaiMCPConfig',
+  required: ['title'],
+  properties: {
+    title: { type: 'string', title: 'Title' },
+    env: { type: 'object', title: 'Env', additionalProperties: { type: 'string' } },
+  },
+} as const;
+
+export const withEnvBlank = {
+  mcp: [{ title: 'srv', env: { API_KEY: '' } }],
+  user_tools: ['echo'],
+};
+export const withEnvMarker = {
+  mcp: [{ title: 'srv', env: { API_KEY: '!ENV ${SECRET_1}' } }],
+  user_tools: ['echo'],
+};
+
+export function status() {
+  return { bound: { srv: ['a', 'b'] }, failed: [{ title: 'bad', status: 'timeout' }] };
+}
+
+/** A `list_failed_mcps` fleet report whose sole worker carries `entries` as its
+ *  failed-server payload — the shape the dedicated `/api/mcp-status/failed` door
+ *  returns and `failedMcpsFromReport` unwinds. */
+export function failedReport(entries: { title: string; status: string }[]) {
+  return {
+    op: 'list_failed_mcps',
+    reachable: true,
+    local_only: true,
+    results: [{ name: 'serve-a', outcome: 'applied', payload: entries, error: null, detail: null }],
+    error: null,
+  };
+}
+
+/** A converged (lone-worker) fleet report for op `op`. */
+export function fleetOk(op: string) {
+  return {
+    op,
+    reachable: true,
+    local_only: true,
+    results: [{ name: 'serve-a', outcome: 'applied', payload: null, error: null, detail: null }],
+    error: null,
+  };
+}
+
+/** A converged config-save result carrying `env_keys`. */
+export function reload(env_keys: number) {
+  return { status: 'ok', env_keys, fanout: { mode: 'local-only', note: 'lone worker' } };
+}

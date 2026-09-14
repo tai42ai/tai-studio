@@ -13,10 +13,9 @@
  * Every server-supplied value renders as escaped React text; no config field is ever
  * interpreted as markup.
  */
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -24,7 +23,6 @@ import {
   ScrollRegion,
   Skeleton,
   TBody,
-  TD,
   TH,
   THead,
   TR,
@@ -35,15 +33,18 @@ import {
 } from '@tai42/studio-sdk';
 import type { TargetConversationConfig } from '@tai42/api-client';
 
-import { EMPTY_PLACEHOLDER } from './format';
 import { conversationConfigsKey } from './keys';
 import { ConfigFormDialog } from './ConfigFormDialog';
 import { ReadFailure } from './read-states';
+import { ConfigRow, configRowKey } from './ConfigRow';
 
-/** The stable identity of a config row — its `(target_kind, target_name)` key. */
-function configRowKey(config: TargetConversationConfig): string {
-  return `${config.target_kind}:${config.target_name}`;
-}
+const headerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 'var(--tai-space-3)',
+  marginBottom: 'var(--tai-space-4)',
+};
 
 export function ConfigsTable(): ReactNode {
   const api = useApi();
@@ -111,57 +112,21 @@ export function ConfigsTable(): ReactNode {
           </THead>
           <TBody>
             {configs.data.items.map((config) => (
-              <TR key={configRowKey(config)}>
-                <TD>
-                  <span className="tai-mono">{`${config.target_kind}: ${config.target_name}`}</span>
-                </TD>
-                <TD>
-                  <Badge variant={config.multichannel ? 'success' : 'neutral'}>
-                    {config.multichannel ? 'On' : 'Off'}
-                  </Badge>
-                </TD>
-                <TD>
-                  {config.greeting_template !== null ? (
-                    <span className="tai-mono">{config.greeting_template}</span>
-                  ) : (
-                    <span className="tai-muted">{EMPTY_PLACEHOLDER}</span>
-                  )}
-                </TD>
-                <TD style={{ textAlign: 'right' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      gap: 'var(--tai-space-2)',
-                      justifyContent: 'flex-end',
-                    }}
-                  >
-                    {canWrite ? (
-                      <Button
-                        aria-label={`Edit config ${configRowKey(config)}`}
-                        onClick={() => {
-                          setEditing(config);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    ) : null}
-                    {canDelete ? (
-                      <Button
-                        variant="ghost"
-                        aria-label={`Delete config ${configRowKey(config)}`}
-                        onClick={() => {
-                          // Clear any prior delete failure so this confirm opens clean,
-                          // never carrying a stale error from a different config's attempt.
-                          deleteMutation.reset();
-                          setPendingDelete(config);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                  </div>
-                </TD>
-              </TR>
+              <ConfigRow
+                key={configRowKey(config)}
+                config={config}
+                canWrite={canWrite}
+                canDelete={canDelete}
+                onEdit={() => {
+                  setEditing(config);
+                }}
+                onDelete={() => {
+                  // Clear any prior delete failure so this confirm opens clean, never
+                  // carrying a stale error from a different config's attempt.
+                  deleteMutation.reset();
+                  setPendingDelete(config);
+                }}
+              />
             ))}
           </TBody>
         </Table>
@@ -172,15 +137,7 @@ export function ConfigsTable(): ReactNode {
   return (
     <div data-testid="conversation-configs">
       <Card>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--tai-space-3)',
-            marginBottom: 'var(--tai-space-4)',
-          }}
-        >
+        <div style={headerStyle}>
           <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>Per-target configs</h2>
           {canWrite ? (
             <Button

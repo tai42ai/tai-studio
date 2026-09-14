@@ -19,18 +19,20 @@
  * Polling stops while the tab is in the background (TanStack's default), so a
  * parked Studio tab never holds the reader open.
  */
-import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useRef, type ReactNode, type RefObject } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, EmptyState, Skeleton, errorMessage, useApi } from '@tai42/studio-sdk';
+import { Card, useApi } from '@tai42/studio-sdk';
 
 import { useNow, RELATIVE_TICK_MS } from './clock';
 import { countOf } from './format';
-import { Exchange } from './Exchange';
 import { useFocusHandoff } from './focus';
 import { conversationTranscriptKey } from './keys';
-import { useLiveRegion, useStandingNotice } from './live-region';
-import { boundedRefresh, dedupeBy, trimToNewestPage, withinRefreshWindow } from './paging';
-import { ReadFailure, StaleRead, staleReadMessage, TruncatedNotice } from './read-states';
+import { useLiveRegion } from './live-region';
+import { boundedRefresh, trimToNewestPage } from './paging';
+import { TruncatedNotice } from './read-states';
+import { useTailingPager } from './useTailingPager';
+import { TranscriptBody } from './TranscriptBody';
+import { TranscriptTailStatus } from './TranscriptTailStatus';
 
 /**
  * Exchanges per request. Large on purpose: an ordinary thread arrives in one page,
@@ -83,23 +85,6 @@ export function Transcript({
     ...boundedRefresh(TRANSCRIPT_MAX_PAGES, TAIL_INTERVAL_MS),
   });
 
-  // Every page is newest-first and each further page is older than the last, so
-  // the accumulated pages are one strictly descending run: reversing it yields
-  // the reading order, newest at the foot. One exchange can be on two retained
-  // pages at once — a tick re-reads them one after another, and an exchange
-  // landing between two of those reads shifts the page boundary under them — so
-  // the run is de-duplicated first, keeping the newest page's copy.
-  const items = dedupeBy(
-    query.data?.pages.flatMap((page) => page.items) ?? [],
-    (record) => record.message_id,
-  ).reverse();
-  const paused = !withinRefreshWindow(query.data?.pages.length, TRANSCRIPT_MAX_PAGES);
-  // Any capped page means the filtered read is partial — surfaced, never a silent cut.
-  const truncated = query.data?.pages.some((page) => page.truncated) ?? false;
-  // The thread id is the addressable identity; the address it belongs to is the
-  // friendlier name, and every record in a thread carries the same one.
-  const heading = items[0]?.client_address ?? threadId;
-
   // The two controls that do not survive being used, and where focus goes when
   // each of them is gone: the thread heading, this pane's own top.
   const loadOlderRef = useRef<HTMLButtonElement>(null);
@@ -107,152 +92,30 @@ export function Transcript({
   const loadOlder = useFocusHandoff(loadOlderRef, headingRef);
   const jump = useFocusHandoff(jumpRef, headingRef);
   const live = useLiveRegion('conversation-transcript-announcer');
-  const { announce, region } = live;
 
-  const count = items.length;
-  const hasOlder = query.hasNextPage;
-  const pageFailed = query.isFetchNextPageError;
-  const loadingOlder = query.isFetchingNextPage;
-  /** Set by the paging click, cleared once that page's outcome is on screen. */
-  const pendingPage = useRef(false);
-
-  // Deliberately UNKEYED: a page already in the cache settles without the pane
-  // ever rendering an in-flight state, so there is no value whose change can be
-  // depended on to mark the outcome. The flag the click set is what makes this act.
-  useEffect(() => {
-    if (!pendingPage.current || loadingOlder) return;
-    pendingPage.current = false;
-    // A failed page already speaks for itself in its own alert; a second account
-    // of the same event beside it is one too many.
-    if (!pageFailed) {
-      const onScreen = `${countOf(count, 'exchange', 'exchanges')} on screen.`;
-      announce(
-        hasOlder
-          ? `Older messages loaded above. ${onScreen}`
-          : `The whole thread is loaded. ${onScreen}`,
-      );
-    }
-    loadOlder.settle();
+  // Every page is newest-first and each further page is older than the last, so the
+  // accumulated pages are one strictly descending run: reversing it yields reading
+  // order, newest at the foot.
+  const pager = useTailingPager({
+    query,
+    maxPages: TRANSCRIPT_MAX_PAGES,
+    idOf: (record) => record.message_id,
+    reverse: true,
+    live,
+    loadFocus: loadOlder,
+    resumeFocus: jump,
+    messages: {
+      loaded: (hasOlder, count) =>
+        `${hasOlder ? 'Older messages loaded above.' : 'The whole thread is loaded.'} ${countOf(count, 'exchange', 'exchanges')} on screen.`,
+      paused: PAUSED_NOTICE,
+      resumed: (count) =>
+        `Back at the newest page. ${countOf(count, 'exchange', 'exchanges')} on screen, and new messages arrive again.`,
+    },
   });
-
-  const wasPaused = useRef(paused);
-  useEffect(() => {
-    if (paused === wasPaused.current) return;
-    wasPaused.current = paused;
-    if (paused) {
-      announce(PAUSED_NOTICE);
-      return;
-    }
-    announce(
-      `Back at the newest page. ${countOf(count, 'exchange', 'exchanges')} on screen, and new messages arrive again.`,
-    );
-    jump.settle();
-  }, [paused, count, announce, jump]);
-
-  // Said only in the state the pane actually shows it in: paused wins over stale.
-  const staleMessage = !paused && query.isRefetchError ? staleReadMessage(query.error) : undefined;
-  useStandingNotice(live, staleMessage);
-
-  let body: ReactNode;
-  if (query.isPending) {
-    body = <Skeleton height={240} />;
-  } else if (query.isLoadingError) {
-    // Only the INITIAL-load failure blanks the transcript; query-core flags
-    // `status: 'error'` on any fetch error even with pages retained.
-    body = (
-      <ReadFailure
-        error={query.error}
-        onRetry={() => void query.refetch()}
-        forbiddenDescription="Reading conversation transcripts needs authority over this deployment's conversations."
-        notFoundDescription="This thread is not available to you, or is no longer in the route's index — retention may have expired it."
-      />
-    );
-  } else if (items.length === 0) {
-    body =
-      q !== undefined ? (
-        <EmptyState
-          title="No matching messages"
-          description="No exchange in this thread matches the current text filter."
-        />
-      ) : (
-        <EmptyState
-          title="Nothing in this thread"
-          description="The thread is indexed but holds no readable exchange."
-        />
-      );
-  } else {
-    body = (
-      <div className="tai-stack tai-stack-3">
-        {hasOlder ? (
-          <Button
-            ref={loadOlderRef}
-            onClick={() => {
-              pendingPage.current = true;
-              loadOlder.hold();
-              void query.fetchNextPage();
-            }}
-            disabled={loadingOlder}
-          >
-            {loadingOlder ? 'Loading…' : 'Load older messages'}
-          </Button>
-        ) : null}
-        {query.isFetchNextPageError ? (
-          <div role="alert" className="tai-row">
-            <span style={{ color: 'var(--tai-color-err-text)' }}>
-              Could not load older messages: {errorMessage(query.error)}
-            </span>
-            <Button onClick={() => void query.fetchNextPage()}>Retry</Button>
-          </div>
-        ) : null}
-        <ol
-          className="tai-stack tai-stack-3"
-          data-testid="conversation-transcript"
-          style={{ listStyle: 'none', margin: 0, padding: 0 }}
-        >
-          {items.map((record) => (
-            <Exchange key={record.message_id} record={record} now={now} />
-          ))}
-        </ol>
-      </div>
-    );
-  }
-
-  // The foot of a pane that holds a transcript says what its tail is doing, and
-  // never claims more than the pane can keep: live, paused this far back (with
-  // the move that resumes it), or stopped because the read itself is failing.
-  // Paused wins over stopped — nothing is being read at all in that state, and
-  // the one control clears both. Neither notice is a live region of its own; both
-  // are spoken by the standing one.
-  let tailStatus: ReactNode = null;
-  if (query.data !== undefined) {
-    if (paused) {
-      tailStatus = (
-        <div className="tai-row" data-testid="conversation-transcript-paused">
-          <span className="tai-muted" style={{ fontSize: 'var(--tai-text-xs)' }}>
-            {PAUSED_NOTICE}
-          </span>
-          <Button
-            ref={jumpRef}
-            onClick={() => {
-              jump.hold();
-              trimToNewestPage(queryClient, queryKey);
-              void query.refetch();
-            }}
-          >
-            Jump to latest
-          </Button>
-        </div>
-      );
-    } else if (query.isRefetchError) {
-      tailStatus = <StaleRead error={query.error} onRetry={() => void query.refetch()} />;
-    } else {
-      tailStatus = (
-        <p className="tai-muted" style={{ margin: 0, fontSize: 'var(--tai-text-xs)' }}>
-          New messages appear here on their own.
-        </p>
-      );
-    }
-  }
+  const { items } = pager;
+  // The thread id is the addressable identity; the address it belongs to is the
+  // friendlier name, and every record in a thread carries the same one.
+  const heading = items[0]?.client_address ?? threadId;
 
   return (
     <Card>
@@ -260,10 +123,37 @@ export function Transcript({
         <h2 className="tai-card-title" tabIndex={-1} ref={headingRef}>
           {heading}
         </h2>
-        {truncated ? <TruncatedNotice noun="messages" /> : null}
-        {body}
-        {tailStatus}
-        {region}
+        {pager.truncated ? <TruncatedNotice noun="messages" /> : null}
+        <TranscriptBody
+          isPending={query.isPending}
+          isLoadingError={query.isLoadingError}
+          error={query.error}
+          onRetry={() => void query.refetch()}
+          items={items}
+          q={q}
+          now={now}
+          hasOlder={pager.hasMore}
+          loadingOlder={pager.loadingMore}
+          pageFailed={pager.pageFailed}
+          loadOlderRef={loadOlderRef}
+          onLoadOlder={pager.onLoadMore}
+          onRetryOlder={() => void query.fetchNextPage()}
+        />
+        <TranscriptTailStatus
+          hasData={query.data !== undefined}
+          paused={pager.paused}
+          pausedNotice={PAUSED_NOTICE}
+          isRefetchError={query.isRefetchError}
+          error={query.error}
+          onRetry={() => void query.refetch()}
+          jumpRef={jumpRef}
+          onJump={() => {
+            jump.hold();
+            trimToNewestPage(queryClient, queryKey);
+            void query.refetch();
+          }}
+        />
+        {live.region}
       </div>
     </Card>
   );

@@ -11,7 +11,8 @@ import type { ReactNode } from 'react';
 
 import { Field } from '../components/field';
 import { Select } from '../components/select';
-import { classifySchema, type FieldModel, type UnionVariant } from './classify';
+import { classifySchema } from './classify';
+import type { FieldModel, UnionVariant } from './field-model';
 import { skeletonValueForSchema } from './default-value';
 import { FieldGroup } from './field-group';
 import { FieldNode } from './field-node';

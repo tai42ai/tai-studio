@@ -4,8 +4,7 @@
  * and explicit acceptance of the routes served without authentication — composed
  * with the preview's missing-env collection into one install dialog.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import {
   Badge,
   Checkbox,
@@ -15,28 +14,21 @@ import {
   Skeleton,
   TextInput,
   XCircleIcon,
-  useApi,
 } from '@tai42/studio-sdk';
 import type { MarketplaceInstallPreview, MarketplaceRoutesDecl } from '@tai42/api-client';
 
-import { marketplacePreviewKey } from './keys';
+import { useMountInstall } from './use-mount-install';
+import type { InstallExtras } from './install-mount';
 
-/** How long after the last base keystroke the preview refetches. */
-const PREVIEW_DEBOUNCE_MS = 250;
+export { collectEnv } from './install-mount';
+export type { InstallExtras } from './install-mount';
+export { useDebouncedValue } from './use-mount-install';
 
 /** A route-carrying item as the dialog drives it: its name, kind, and declaration. */
 export interface RouteItem {
   readonly name: string;
   readonly kind: string;
   readonly routes: MarketplaceRoutesDecl;
-}
-
-/** The install/update body fields this dialog contributes. */
-export interface InstallExtras {
-  route_mounts: Record<string, string>;
-  accept_public_routes: boolean;
-  env?: Record<string, string>;
-  secret_keys?: string[];
 }
 
 /** The route-carrying items of a published version, in declaration order. */
@@ -49,50 +41,6 @@ export function routeItemsOf(
     out.push({ name: item.name, kind: item.kind, routes: item.routes });
   }
   return out;
-}
-
-/**
- * Track a value that only settles `delayMs` after it last changed. The first
- * value settles immediately, so a preview fires on open before any edit.
- */
-export function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSettled(value);
-    }, delayMs);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delayMs]);
-  return settled;
-}
-
-/**
- * The env value + secret-key split from the collected inputs: a blank field is
- * omitted (the deployment may already provide it); a filled field is marked secret
- * only when its toggle is ON.
- *
- * The toggle state is SEEDED from the server's per-var `required_env[].secret`, so
- * secret-ness comes from that authority, not a blanket default: a `secret: true`
- * var (an OAuth client secret) is masked, a `secret: false` var (a client id) is
- * not unless the operator turns it on. Keying off `=== true` honors an off toggle
- * and never force-masks — an un-seeded var stays out of the secret band.
- */
-export function collectEnv(
-  requiredVars: readonly string[],
-  values: Record<string, string>,
-  secret: Record<string, boolean>,
-): { env: Record<string, string>; secretKeys: string[] } {
-  const env: Record<string, string> = {};
-  const secretKeys: string[] = [];
-  for (const name of requiredVars) {
-    const value = values[name] ?? '';
-    if (value === '') continue;
-    env[name] = value;
-    if (secret[name] === true) secretKeys.push(name);
-  }
-  return { env, secretKeys };
 }
 
 /**
@@ -278,98 +226,32 @@ export function MountInstallDialog({
   readonly onSubmit: (extras: InstallExtras) => Promise<void>;
   readonly onClose: () => void;
 }): ReactNode {
-  const api = useApi();
-  // The base each item is CURRENTLY mounted at: the stored mount on update, the
-  // declared default on install (or for an item the install added). This seeds the
-  // inputs and, on update, is the baseline the submit diffs against so an untouched
-  // base is OMITTED and the server preserves it.
-  const seededBases = useMemo(
-    () =>
-      Object.fromEntries(
-        routeItems.map((item) => [item.name, storedMounts?.[item.name] ?? item.routes.base]),
-      ),
-    [routeItems, storedMounts],
-  );
-  const [bases, setBases] = useState<Record<string, string>>(seededBases);
-  const [accepted, setAccepted] = useState(false);
-  const [envValues, setEnvValues] = useState<Record<string, string>>({});
-  // Only OPERATOR overrides live in state; each toggle's baseline is the derived
-  // `requiredEnvSecret`, so a var starts secret iff the server marks it so — no
-  // async seed to miss when the preview lands.
-  const [envSecretOverride, setEnvSecretOverride] = useState<Record<string, boolean>>({});
-
-  // The serialized map is the debounce + cache key: a stable string that only
-  // changes when a base actually changes, so identity churn never refetches.
-  const basesKey = JSON.stringify(bases);
-  const debouncedKey = useDebouncedValue(basesKey, PREVIEW_DEBOUNCE_MS);
-  const debouncedBases = useMemo(
-    () => JSON.parse(debouncedKey) as Record<string, string>,
-    [debouncedKey],
-  );
-
-  const previewQuery = useQuery({
-    queryKey: marketplacePreviewKey(refValue, version, debouncedKey),
-    queryFn: ({ signal }) =>
-      api.previewMarketplaceInstall(
-        { ref: refValue, version: version ?? undefined, route_mounts: debouncedBases },
-        signal,
-      ),
-    // Keep the last resolved paths on screen while a remap re-previews, so the
-    // list does not blank on every keystroke.
-    placeholderData: (prev) => prev,
+  const {
+    bases,
+    setBases,
+    accepted,
+    setAccepted,
+    envValues,
+    setEnvValues,
+    setEnvSecretOverride,
+    preview,
+    previewIsError,
+    collisions,
+    publicRows,
+    requiresAccept,
+    envToCollect,
+    envSecretMap,
+    blocked,
+    submit,
+  } = useMountInstall({
+    refValue,
+    version,
+    verb,
+    routeItems,
+    storedMounts,
+    requiredEnvSecret,
+    onSubmit,
   });
-
-  const preview = previewQuery.data;
-  const collisions = preview?.collisions ?? [];
-  const publicRows = preview?.new_public_routes ?? [];
-  const requiresAccept = preview?.requires_public_acceptance ?? false;
-  // The env to collect is the preview's server-computed missing set — only on
-  // INSTALL: an update that would add a required var is refused server-side, so the
-  // update flow never collects env. Each var's effective secret band is the SERVER's
-  // per-var `required_env[].secret` from this same preview (the authority; the
-  // registry's plugin-detail body carries no per-item required-env), OR the
-  // `requiredEnvSecret` prop, OR an operator override.
-  const envToCollect = verb === 'Install' ? (preview?.missing_env ?? []) : [];
-  const previewEnvSecret: Record<string, boolean> = {};
-  for (const req of preview?.required_env ?? []) previewEnvSecret[req.name] = req.secret;
-  const envSecretMap = Object.fromEntries(
-    envToCollect.map((name) => [
-      name,
-      previewEnvSecret[name] === true ||
-        requiredEnvSecret?.[name] === true ||
-        envSecretOverride[name] === true,
-    ]),
-  );
-  // Submit is blocked until a clean preview exists with no collision and any
-  // required public acceptance given. A preview error blocks too — an unverified
-  // mount must never be committed.
-  const blocked =
-    previewQuery.isError ||
-    preview === undefined ||
-    collisions.length > 0 ||
-    (requiresAccept && !accepted);
-
-  const submit = (): Promise<void> => {
-    // INSTALL sends every base (declared default is correct). UPDATE sends ONLY the
-    // items whose base the operator changed from its current stored base — omitted
-    // items are preserved by the server's stored-mount precedence, so a plugin
-    // installed at a non-default base is never reset to default on an edit-free update.
-    const route_mounts =
-      verb === 'Update'
-        ? Object.fromEntries(
-            Object.entries(bases).filter(([name, base]) => base !== seededBases[name]),
-          )
-        : bases;
-    const extras: InstallExtras = { route_mounts, accept_public_routes: accepted };
-    if (envToCollect.length > 0) {
-      const { env, secretKeys } = collectEnv(envToCollect, envValues, envSecretMap);
-      if (Object.keys(env).length > 0) {
-        extras.env = env;
-        extras.secret_keys = secretKeys;
-      }
-    }
-    return onSubmit(extras);
-  };
 
   return (
     <FormDialog
@@ -400,7 +282,7 @@ export function MountInstallDialog({
             <ItemRoutes item={item} preview={preview} />
           </div>
         ))}
-        {previewQuery.isError ? (
+        {previewIsError ? (
           <ErrorState message="The install preview failed. Fix the error and edit a base to retry." />
         ) : null}
         {collisions.length > 0 ? <CollisionBlock collisions={collisions} /> : null}

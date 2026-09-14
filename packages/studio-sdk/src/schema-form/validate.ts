@@ -6,6 +6,8 @@
  * malformed value — a malformed value IS the error it reports.
  */
 import { classifySchema } from './classify';
+import type { FieldModel } from './field-model';
+import { isRecord } from '../guards';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
 import { scalarLabel } from './resolve';
 import { activeVariantIndex } from './union';
@@ -21,13 +23,19 @@ export interface ValidateOptions {
   readonly maxUploadBytes?: number;
 }
 
+/** The invariants every per-node validator shares while walking one value tree. */
+interface ValidateCtx {
+  /** The document root, for `$ref` resolution during re-classification. */
+  readonly root: JsonSchema;
+  /** The path-keyed error bag every validator writes into. */
+  readonly errors: Record<string, string>;
+  /** The host's default media byte cap (a field's own cap still overrides it). */
+  readonly maxUploadBytes: number | undefined;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function joinPath(path: string, key: string): string {
   return path === '' ? key : `${path}.${key}`;
@@ -58,127 +66,200 @@ function formatError(format: string, value: string): string | undefined {
   }
 }
 
-function walk(
-  schema: JsonSchema,
+type ModelOf<K extends FieldModel['kind']> = Extract<FieldModel, { kind: K }>;
+
+// A free-form JSON field: any JSON is accepted, subject only to the container the
+// schema commits to (mirrors the renderer's inline check).
+function validateJson(
+  model: ModelOf<'json'>,
   value: unknown,
   path: string,
-  root: JsonSchema,
-  errors: Record<string, string>,
-  maxUploadBytes: number | undefined,
+  ctx: ValidateCtx,
 ): void {
-  const classified = classifySchema(schema, root);
+  if (model.jsonType === 'object' && !isRecord(value)) {
+    ctx.errors[path] = 'must be a JSON object';
+  } else if (model.jsonType === 'array' && !Array.isArray(value)) {
+    ctx.errors[path] = 'must be a JSON array';
+  }
+}
+
+function validateConst(
+  model: ModelOf<'const'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (value !== model.value) ctx.errors[path] = `must equal ${scalarLabel(model.value)}`;
+}
+
+function validateEnum(
+  model: ModelOf<'enum'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  const allowed = model.options.some((option) => option.value === value);
+  if (!allowed) ctx.errors[path] = 'must be one of the allowed values';
+}
+
+function validateString(
+  model: ModelOf<'string'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (typeof value !== 'string') {
+    ctx.errors[path] = 'must be a string';
+    return;
+  }
+  // A media-annotated string carries a byte cap; enforce it on the value's
+  // DECODED size so a value that arrived by any route is caught here too. The
+  // precedence matches the renderer: field `contentMaxBytes` → host cap →
+  // shared default.
+  if (model.media !== undefined) {
+    const cap = effectiveMaxBytes(model.media.maxBytes, ctx.maxUploadBytes);
+    const size = decodedByteSize(value);
+    if (size > cap) {
+      ctx.errors[path] = overCapMessage('The value', size, cap);
+      return;
+    }
+  }
+  if (value.length > 0 && model.format !== undefined) {
+    const message = formatError(model.format, value);
+    if (message !== undefined) ctx.errors[path] = message;
+  }
+}
+
+function validateNumber(
+  model: ModelOf<'number'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    ctx.errors[path] = model.integer ? 'must be an integer' : 'must be a number';
+    return;
+  }
+  if (model.integer && !Number.isInteger(value)) ctx.errors[path] = 'must be an integer';
+}
+
+function validateBoolean(value: unknown, path: string, ctx: ValidateCtx): void {
+  if (typeof value !== 'boolean') ctx.errors[path] = 'must be true or false';
+}
+
+function validateArray(
+  model: ModelOf<'array'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (!Array.isArray(value)) {
+    ctx.errors[path] = 'must be an array';
+    return;
+  }
+  value.forEach((item, index) => {
+    walk(model.items, item, `${path}[${String(index)}]`, ctx);
+  });
+}
+
+function validateObject(
+  model: ModelOf<'object'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (!isRecord(value)) {
+    ctx.errors[path] = 'must be an object';
+    return;
+  }
+  const propMap = new Map(model.properties);
+  for (const [name, propSchema] of model.properties) {
+    const childPath = joinPath(path, name);
+    const childValue = value[name];
+    if (childValue === undefined) {
+      if (model.required.has(name)) ctx.errors[childPath] = `"${name}" is required`;
+      continue;
+    }
+    walk(propSchema, childValue, childPath, ctx);
+  }
+  // Required keys naming a property that somehow isn't declared still count.
+  for (const name of model.required) {
+    if (!propMap.has(name) && value[name] === undefined) {
+      ctx.errors[joinPath(path, name)] = `"${name}" is required`;
+    }
+  }
+}
+
+function validateRecord(
+  model: ModelOf<'record'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (!isRecord(value)) {
+    ctx.errors[path] = 'must be an object';
+    return;
+  }
+  for (const [key, entryValue] of Object.entries(value)) {
+    walk(model.values, entryValue, joinPath(path, key), ctx);
+  }
+}
+
+function validateUnion(
+  model: ModelOf<'union'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  const index = activeVariantIndex(value, model.variants, model.discriminator, ctx.root);
+  const variant = index === -1 ? undefined : model.variants[index];
+  if (variant === undefined) {
+    ctx.errors[path] = 'does not match any allowed variant';
+    return;
+  }
+  walk(variant.schema, value, path, ctx);
+}
+
+function walk(schema: JsonSchema, value: unknown, path: string, ctx: ValidateCtx): void {
+  const classified = classifySchema(schema, ctx.root);
 
   if (value === null) {
-    if (!classified.nullable) errors[path] = 'must not be null';
+    if (!classified.nullable) ctx.errors[path] = 'must not be null';
     return;
   }
 
   const { model } = classified;
   switch (model.kind) {
     case 'json':
-      // A free-form JSON field: any JSON is accepted, subject only to the
-      // container the schema commits to (mirrors the renderer's inline check).
-      if (model.jsonType === 'object' && !isPlainObject(value)) {
-        errors[path] = 'must be a JSON object';
-      } else if (model.jsonType === 'array' && !Array.isArray(value)) {
-        errors[path] = 'must be a JSON array';
-      }
+      validateJson(model, value, path, ctx);
       return;
     case 'const':
-      if (value !== model.value) errors[path] = `must equal ${scalarLabel(model.value)}`;
+      validateConst(model, value, path, ctx);
       return;
-    case 'enum': {
-      const allowed = model.options.some((option) => option.value === value);
-      if (!allowed) errors[path] = 'must be one of the allowed values';
+    case 'enum':
+      validateEnum(model, value, path, ctx);
       return;
-    }
-    case 'string': {
-      if (typeof value !== 'string') {
-        errors[path] = 'must be a string';
-        return;
-      }
-      // A media-annotated string carries a byte cap; enforce it on the value's
-      // DECODED size so a value that arrived by any route is caught here too. The
-      // precedence matches the renderer: field `contentMaxBytes` → host cap →
-      // shared default.
-      if (model.media !== undefined) {
-        const cap = effectiveMaxBytes(model.media.maxBytes, maxUploadBytes);
-        const size = decodedByteSize(value);
-        if (size > cap) {
-          errors[path] = overCapMessage('The value', size, cap);
-          return;
-        }
-      }
-      if (value.length > 0 && model.format !== undefined) {
-        const message = formatError(model.format, value);
-        if (message !== undefined) errors[path] = message;
-      }
+    case 'string':
+      validateString(model, value, path, ctx);
       return;
-    }
-    case 'number': {
-      if (typeof value !== 'number' || Number.isNaN(value)) {
-        errors[path] = model.integer ? 'must be an integer' : 'must be a number';
-        return;
-      }
-      if (model.integer && !Number.isInteger(value)) errors[path] = 'must be an integer';
+    case 'number':
+      validateNumber(model, value, path, ctx);
       return;
-    }
     case 'boolean':
-      if (typeof value !== 'boolean') errors[path] = 'must be true or false';
+      validateBoolean(value, path, ctx);
       return;
-    case 'array': {
-      if (!Array.isArray(value)) {
-        errors[path] = 'must be an array';
-        return;
-      }
-      value.forEach((item, index) => {
-        walk(model.items, item, `${path}[${String(index)}]`, root, errors, maxUploadBytes);
-      });
+    case 'array':
+      validateArray(model, value, path, ctx);
       return;
-    }
-    case 'object': {
-      if (!isPlainObject(value)) {
-        errors[path] = 'must be an object';
-        return;
-      }
-      const propMap = new Map(model.properties);
-      for (const [name, propSchema] of model.properties) {
-        const childPath = joinPath(path, name);
-        const childValue = value[name];
-        if (childValue === undefined) {
-          if (model.required.has(name)) errors[childPath] = `"${name}" is required`;
-          continue;
-        }
-        walk(propSchema, childValue, childPath, root, errors, maxUploadBytes);
-      }
-      // Required keys naming a property that somehow isn't declared still count.
-      for (const name of model.required) {
-        if (!propMap.has(name) && value[name] === undefined) {
-          errors[joinPath(path, name)] = `"${name}" is required`;
-        }
-      }
+    case 'object':
+      validateObject(model, value, path, ctx);
       return;
-    }
-    case 'record': {
-      if (!isPlainObject(value)) {
-        errors[path] = 'must be an object';
-        return;
-      }
-      for (const [key, entryValue] of Object.entries(value)) {
-        walk(model.values, entryValue, joinPath(path, key), root, errors, maxUploadBytes);
-      }
+    case 'record':
+      validateRecord(model, value, path, ctx);
       return;
-    }
-    case 'union': {
-      const index = activeVariantIndex(value, model.variants, model.discriminator, root);
-      const variant = index === -1 ? undefined : model.variants[index];
-      if (variant === undefined) {
-        errors[path] = 'does not match any allowed variant';
-        return;
-      }
-      walk(variant.schema, value, path, root, errors, maxUploadBytes);
+    case 'union':
+      validateUnion(model, value, path, ctx);
       return;
-    }
   }
 }
 
@@ -194,6 +275,6 @@ export function validateAgainstSchema(
   options?: ValidateOptions,
 ): SchemaFormErrors {
   const errors: Record<string, string> = {};
-  walk(schema, value, '', schema, errors, options?.maxUploadBytes);
+  walk(schema, value, '', { root: schema, errors, maxUploadBytes: options?.maxUploadBytes });
   return errors;
 }

@@ -48,8 +48,7 @@ function renderWithProviders(
   }
   const resolveMe =
     getMe ?? (projection !== undefined ? () => Promise.resolve(projection) : undefined);
-  const apiClient =
-    resolveMe !== undefined ? ({ ...client, getMe: resolveMe } as ApiClient) : client;
+  const apiClient = resolveMe !== undefined ? { ...client, getMe: resolveMe } : client;
   const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

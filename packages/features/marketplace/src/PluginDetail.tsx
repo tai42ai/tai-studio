@@ -6,379 +6,24 @@
  * installed and advisory queries never blank it — their failures surface as loud
  * inline strips in their own sections.
  */
-import { useMemo, useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+
+import { Card, CopyField, ErrorState, Skeleton, Stack, errorMessage } from '@tai42/studio-sdk';
+
+import { AdvisoriesStrip } from './advisories';
+import { routeItemsOf } from './install-dialog';
 import {
-  AppLink,
-  ArrowLeftIcon,
-  Badge,
-  Button,
-  Card,
-  CheckCircleIcon,
-  ConfirmDialog,
-  CopyField,
-  EmptyState,
-  ErrorState,
-  ExternalLinkButton,
-  FeatureDisabled,
-  ScrollRegion,
-  Skeleton,
-  Stack,
-  TBody,
-  TD,
-  TH,
-  THead,
-  TR,
-  Table,
-  TagChips,
-  errorMessage,
-  featureDisabledMessage,
-  isFeatureDisabled,
-  useApi,
-  useProseScrollRegions,
-} from '@tai42/studio-sdk';
-import type {
-  MarketplaceDelivery,
-  MarketplaceInstallBody,
-  MarketplaceInstallResult,
-  MarketplaceInstalled,
-  MarketplacePluginDetail,
-  MarketplaceVersion,
-} from '@tai42/api-client';
-
-import { advisoriesForListing, severityVariant, WarningBlock } from './advisories';
-import { ListingIcon, listingTitle } from './display';
-import {
-  MountInstallDialog,
-  collectEnv,
-  EnvVarFields,
-  routeItemsOf,
-  type RouteItem,
-} from './install-dialog';
-import {
-  marketplaceAdvisoriesKey,
-  marketplaceInstalledKey,
-  marketplacePluginKey,
-  marketplacePreviewKey,
-} from './keys';
-
-/**
- * The env picture a listing's items declare, folded across the detail: each
- * required var's derived `secret`-ness (an OAuth client secret is; a client id or a
- * plain marker var is not) and the item(s) that need it. The install dialog seeds
- * its toggles from `secret` and shows the hint; the vars to COLLECT come from the
- * install preview's server-computed `missing_env`, never re-derived here.
- */
-interface RequiredEnvEntry {
-  readonly secret: boolean;
-  readonly items: string[];
-}
-
-function requiredEnvIndex(detail: MarketplacePluginDetail): Map<string, RequiredEnvEntry> {
-  const index = new Map<string, RequiredEnvEntry>();
-  for (const item of detail.latest?.items ?? []) {
-    // The registry omits per-item required_env (undefined); only a fixture/preview
-    // that declares it drives these pre-dialog hints.
-    for (const req of item.required_env ?? []) {
-      const entry = index.get(req.name);
-      if (entry === undefined) {
-        index.set(req.name, { secret: req.secret, items: [item.name] });
-      } else {
-        index.set(req.name, {
-          secret: entry.secret || req.secret,
-          items: [...entry.items, item.name],
-        });
-      }
-    }
-  }
-  return index;
-}
-
-/**
- * How the listing's latest version is delivered, derived exactly the way the server
- * derives it — from whether the spec names a package. The registry's plugin-detail
- * body carries no `delivery` field (that is server-computed and rides the installed
- * rows and the install preview), so the detail surface reads it off the listing's
- * `package`: `null` (a descriptor listing that names none) ⇒ `descriptor`, else
- * `package`.
- */
-function deliveryOf(detail: MarketplacePluginDetail): MarketplaceDelivery {
-  return detail.package === null ? 'descriptor' : 'package';
-}
-
-/** Which mutation dialog is open (each is mounted only while active). */
-type ActiveAction = 'install' | 'update' | 'uninstall';
-
-/** The last completed action's receipt, rendered as an inline success line. */
-interface ActionResult {
-  readonly verb: string;
-  readonly ref: string;
-  readonly version: string | null;
-  readonly notes: readonly string[];
-  readonly advisories: MarketplaceInstallResult['advisories'];
-  // The routes the install/update mounted — what was opened where. Empty for an
-  // uninstall and for a plugin that registers none.
-  readonly routes: MarketplaceInstallResult['routes'];
-}
-
-/**
- * Map a version's lifecycle status to a badge tier: published is a success,
- * scan_failed / killed are terminal failures (danger), and pending / validating
- * are in-progress states (warning, not a failure). Any unknown status falls back
- * to neutral.
- */
-function versionStatusVariant(status: string): string {
-  switch (status) {
-    case 'published':
-      return 'success';
-    case 'scan_failed':
-    case 'killed':
-      return 'danger';
-    case 'pending':
-    case 'validating':
-      return 'warning';
-    default:
-      return 'neutral';
-  }
-}
-
-function VersionStatusBadge({ status }: { readonly status: string }): ReactNode {
-  return <Badge variant={versionStatusVariant(status)}>{status}</Badge>;
-}
-
-/** The listing header + readme + metadata. */
-function InfoCard({ detail }: { readonly detail: MarketplacePluginDetail }): ReactNode {
-  const title = listingTitle(detail.display_name, detail.name);
-  // A rendered README carries the two surfaces that outrun their column — wide
-  // tables and code blocks — and React never rendered them, so they cannot be
-  // wrapped in a `ScrollRegion`. This instruments them in place instead, so each
-  // one that actually scrolls becomes a named keyboard target. The labels name
-  // the document these surfaces come from: an unheaded table on this page lands
-  // in the landmark list beside the listing's other regions, and "Table" alone
-  // would not say which of them a reader had arrived in.
-  const readmeRef = useProseScrollRegions({
-    table: 'README table',
-    pre: 'README code block',
-  });
-  // The prop object, not its string, is what React compares: a fresh literal
-  // makes every re-render of this card re-write the README's `innerHTML`,
-  // destroying the instrumented regions and dropping a reader standing in one
-  // onto the document body. Held by identity, the write happens only when the
-  // README itself changes.
-  const readme = useMemo(
-    () => (detail.readme_md === null ? null : { __html: detail.readme_md }),
-    [detail.readme_md],
-  );
-  return (
-    <Card>
-      <div style={{ display: 'flex', gap: 'var(--tai-space-4)', alignItems: 'flex-start' }}>
-        <ListingIcon iconUrl={detail.icon_url} title={title} size={56} />
-        <div className="tai-stack tai-stack-2" style={{ minWidth: 0 }}>
-          <h2 className="tai-card-title" style={{ wordBreak: 'break-word' }}>
-            {title}
-          </h2>
-          {/* A descriptor listing names no package; show an em dash in its place. */}
-          <code className="tai-mono tai-muted">{detail.package ?? '—'}</code>
-          <p style={{ margin: 0 }}>{detail.description}</p>
-          <div className="tai-row">
-            <Badge>{detail.trust_tier}</Badge>
-            <Badge>{detail.pricing}</Badge>
-            {/* How the plugin is delivered: a pip-installed `package` or a
-                declarative `descriptor` (nothing installed but the manifest entry),
-                derived from the listing's package the way the server derives it. */}
-            {detail.latest !== null ? <Badge>{deliveryOf(detail)}</Badge> : null}
-            {/* A display-only premium mark — a badge, never a payment surface. */}
-            {detail.premium === true ? <Badge variant="primary">Premium</Badge> : null}
-            <span className="tai-muted">{detail.downloads} downloads</span>
-            {detail.license !== null ? (
-              <span className="tai-muted">License: {detail.license}</span>
-            ) : null}
-          </div>
-          <TagChips tags={[...detail.categories, ...detail.tags]} />
-          {detail.homepage_url !== null ||
-          detail.repository_url !== null ||
-          (detail.docs_url !== null && detail.docs_url !== undefined) ? (
-            <div className="tai-row">
-              {detail.homepage_url !== null ? (
-                <ExternalLinkButton url={detail.homepage_url}>Homepage</ExternalLinkButton>
-              ) : null}
-              {detail.repository_url !== null ? (
-                <ExternalLinkButton url={detail.repository_url}>Repository</ExternalLinkButton>
-              ) : null}
-              {/* The marketplace-stored docs-site link, null-guarded like the
-                  other two. */}
-              {detail.docs_url !== null && detail.docs_url !== undefined ? (
-                <ExternalLinkButton url={detail.docs_url}>Docs</ExternalLinkButton>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      </div>
-      {readme === null ? null : (
-        // readme_md is server-sanitized trusted HTML (sanitized at ingest); the
-        // client is not the sanitization boundary and renders it as-is.
-        <div
-          ref={readmeRef}
-          className="tai-prose"
-          style={{ marginTop: 'var(--tai-space-4)' }}
-          dangerouslySetInnerHTML={readme}
-        />
-      )}
-    </Card>
-  );
-}
-
-/** The items contained by the latest published version. */
-function ItemsCard({ detail }: { readonly detail: MarketplacePluginDetail }): ReactNode {
-  const items = detail.latest?.items ?? [];
-  return (
-    <Card>
-      <h2 className="tai-card-title" style={{ marginBottom: 'var(--tai-space-3)' }}>
-        Contained items
-      </h2>
-      {items.length === 0 ? (
-        <EmptyState title="No items" description="This plugin has no published items yet." />
-      ) : (
-        <ScrollRegion label="Contained items">
-          <Table>
-            <THead>
-              <TR>
-                <TH>Kind</TH>
-                <TH>Group</TH>
-                <TH>Name</TH>
-                <TH>Description</TH>
-                <TH>Tags</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {items.map((item) => (
-                <TR key={`${item.kind}/${item.name}`}>
-                  <TD>
-                    <Badge>{item.kind}</Badge>
-                  </TD>
-                  {/* The item's logical group, or an em dash when it is ungrouped. */}
-                  <TD>{item.group ?? '—'}</TD>
-                  <TD>{item.name}</TD>
-                  <TD>{item.description}</TD>
-                  <TD>
-                    <TagChips tags={item.tags} />
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </ScrollRegion>
-      )}
-    </Card>
-  );
-}
-
-/**
- * The routes the plugin's route-carrying items declare, at their DEFAULT bases:
- * the absolute path each route mounts at (`/api/<base><path>`), its methods, and
- * whether it is served public. An operator sees where the plugin would open its
- * surface before opening the install dialog to remap it. Renders nothing when the
- * plugin declares no routes.
- */
-function RoutesCard({
-  routeItems,
-  mounts,
-}: {
-  readonly routeItems: readonly RouteItem[];
-  // The installed row's `{item_name: base}` mounts, so an INSTALLED plugin renders
-  // at its ACTUAL mounted base; absent (not installed / query not ready) each item
-  // falls back to its declared default.
-  readonly mounts?: Record<string, string>;
-}): ReactNode {
-  if (routeItems.length === 0) return null;
-  return (
-    <Card>
-      <h2 className="tai-card-title" style={{ marginBottom: 'var(--tai-space-3)' }}>
-        Routes
-      </h2>
-      <div className="tai-stack">
-        {routeItems.map((item) => {
-          const base = mounts?.[item.name] ?? item.routes.base;
-          return (
-            <div key={item.name} className="tai-stack tai-stack-2">
-              <div className="tai-row">
-                <Badge>{item.kind}</Badge>
-                <strong>{item.name}</strong>
-                <code className="tai-mono tai-muted">/api/{base}</code>
-              </div>
-              <ScrollRegion label={`${item.name} routes`}>
-                <Table>
-                  <THead>
-                    <TR>
-                      <TH>Path</TH>
-                      <TH>Methods</TH>
-                      <TH>Public</TH>
-                    </TR>
-                  </THead>
-                  <TBody>
-                    {item.routes.paths.map((route) => (
-                      <TR key={`${route.path}/${route.methods.join(',')}`}>
-                        <TD>
-                          <code className="tai-mono">
-                            /api/{base}
-                            {route.path}
-                          </code>
-                        </TD>
-                        <TD>{route.methods.join(', ')}</TD>
-                        <TD>{route.public ? <Badge variant="warning">public</Badge> : '—'}</TD>
-                      </TR>
-                    ))}
-                  </TBody>
-                </Table>
-              </ScrollRegion>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
-/** The version history, latest first as the wire orders it. */
-function VersionsCard({
-  versions,
-}: {
-  readonly versions: readonly MarketplaceVersion[];
-}): ReactNode {
-  return (
-    <Card>
-      <h2 className="tai-card-title" style={{ marginBottom: 'var(--tai-space-3)' }}>
-        Versions
-      </h2>
-      {versions.length === 0 ? (
-        <EmptyState title="No versions" description="This plugin has no versions yet." />
-      ) : (
-        <ScrollRegion label="Versions">
-          <Table>
-            <THead>
-              <TR>
-                <TH>Version</TH>
-                <TH>Status</TH>
-                <TH>Published</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {versions.map((version) => (
-                <TR key={version.version}>
-                  <TD>{version.version}</TD>
-                  <TD>
-                    <VersionStatusBadge status={version.status} />
-                  </TD>
-                  <TD>{version.published_at ?? '—'}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </ScrollRegion>
-      )}
-    </Card>
-  );
-}
+  ActionResultCard,
+  BackButton,
+  InfoCard,
+  ItemsCard,
+  RoutesCard,
+  VersionsCard,
+} from './plugin-detail-cards';
+import { ActionsCard } from './plugin-detail-actions';
+import { requiredEnvFromDetail } from './plugin-detail-data';
+import { PluginDetailDialogs } from './plugin-detail-dialogs';
+import { usePluginDetail } from './use-plugin-detail';
 
 export function PluginDetail({
   refValue,
@@ -387,81 +32,10 @@ export function PluginDetail({
   readonly refValue: string;
   readonly onBack: () => void;
 }): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const [activeAction, setActiveAction] = useState<ActiveAction | null>(null);
-  const [result, setResult] = useState<ActionResult | null>(null);
+  const detail = usePluginDetail(refValue);
+  const { detailQuery, installedQuery, advisoriesQuery } = detail;
 
-  const slash = refValue.indexOf('/');
-  const namespace = slash >= 0 ? refValue.slice(0, slash) : '';
-  const name = slash >= 0 ? refValue.slice(slash + 1) : '';
-
-  const detailQuery = useQuery({
-    queryKey: marketplacePluginKey(refValue),
-    queryFn: ({ signal }) => api.getMarketplacePlugin(namespace, name, signal),
-    enabled: slash >= 0,
-  });
-  const installedQuery = useQuery({
-    queryKey: marketplaceInstalledKey,
-    queryFn: ({ signal }) => api.listInstalledMarketplacePlugins(signal),
-    enabled: slash >= 0,
-  });
-  const advisoriesQuery = useQuery({
-    queryKey: marketplaceAdvisoriesKey,
-    queryFn: ({ signal }) => api.getMarketplaceAdvisories(signal),
-    enabled: slash >= 0,
-  });
-  const onInstallSuccess = (receipt: MarketplaceInstallResult, verb: string): void => {
-    setActiveAction(null);
-    setResult({
-      verb,
-      ref: receipt.ref,
-      version: receipt.version,
-      notes: receipt.notes,
-      advisories: receipt.advisories,
-      routes: receipt.routes,
-    });
-    // The app pip-installed/uninstalled a plugin and reloaded: tools, agents,
-    // extensions, channels, the manifest — ANY server-derived cache — may now be
-    // stale. Invalidate the whole cache rather than a hand-picked subset.
-    void queryClient.invalidateQueries();
-  };
-
-  // The install/update body minus the ref the mutation supplies: the env dialog
-  // adds the preview's missing_env values + their secret marks (seeded from the
-  // detail's required_env), the mount dialog adds the chosen route bases +
-  // public-route consent; a plain install/update sends none.
-  const installMutation = useMutation({
-    mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
-      api.installMarketplacePlugin({ ref: refValue, ...body }),
-    onSuccess: (receipt) => {
-      onInstallSuccess(receipt, 'Installed');
-    },
-  });
-  const updateMutation = useMutation({
-    mutationFn: (body: Omit<MarketplaceInstallBody, 'ref'>) =>
-      api.updateMarketplacePlugin({ ref: refValue, ...body }),
-    onSuccess: (receipt) => {
-      onInstallSuccess(receipt, 'Updated');
-    },
-  });
-  const uninstallMutation = useMutation({
-    mutationFn: () => api.uninstallMarketplacePlugin({ ref: refValue }),
-    onSuccess: (receipt) => {
-      setActiveAction(null);
-      setResult({
-        verb: 'Uninstalled',
-        ref: receipt.ref,
-        version: null,
-        notes: receipt.notes,
-        advisories: [],
-        routes: [],
-      });
-      void queryClient.invalidateQueries();
-    },
-  });
-
-  if (slash < 0) {
+  if (detail.slash < 0) {
     return (
       <Stack>
         <BackButton onBack={onBack} />
@@ -471,7 +45,6 @@ export function PluginDetail({
       </Stack>
     );
   }
-
   if (detailQuery.isPending) {
     return (
       <Stack>
@@ -494,52 +67,18 @@ export function PluginDetail({
     );
   }
 
-  // The marketplace install store is unconfigured: an install/update/uninstall
-  // answered with a 501 `marketplace-not-configured`. Disable the write buttons and
-  // show the muted OFF note. Browse/detail reads never need the store, so they stay
-  // untouched. Uninstall is folded in for symmetry even though its button unmounts
-  // when the store is off (an unconfigured store carries no installed rows to remove).
-  const storeRefusal = [installMutation.error, updateMutation.error, uninstallMutation.error].find(
-    isFeatureDisabled,
-  );
-  const storeRefusalMessage =
-    storeRefusal !== undefined ? featureDisabledMessage(storeRefusal) : null;
-
-  const detail = detailQuery.data;
-  // The env picture the detail's items declare: per-var secret-ness + the item that
-  // needs each. This is a SUPPLEMENTARY fallback only — the registry's plugin-detail
-  // body carries no per-item required_env, so in production this index is empty. What
-  // actually routes the install to the env dialog, and the vars to collect, and their
-  // secret band, all come from the install PREVIEW (the server authority), not here.
-  const envIndex = requiredEnvIndex(detail);
-  const requiredEnvSecret: Record<string, boolean> = {};
-  const requiredEnvHints: Record<string, string> = {};
-  for (const [envName, entry] of envIndex) {
-    requiredEnvSecret[envName] = entry.secret;
-    requiredEnvHints[envName] = entry.items.join(', ');
-  }
+  const plugin = detailQuery.data;
+  const { requiredEnvSecret, requiredEnvHints } = requiredEnvFromDetail(plugin);
   // The route-carrying items of the latest version — a channel or router that
-  // declares HTTP routes. When present, install/update runs through the mount
-  // dialog so the operator sees, remaps, and accepts the resulting paths.
-  const routeItems = routeItemsOf(detail.latest?.items ?? []);
-  const version = detail.latest?.version ?? null;
-  // The stored `{item_name: base}` mounts of this plugin's installed row (absent
-  // until the installed query lands, or when not installed). Threaded into the
-  // routes card (render at the ACTUAL base) and the update dialog (seed the base
-  // inputs from the CURRENT mount, not the declared default).
+  // declares HTTP routes. When present, install/update runs through the mount dialog.
+  const routeItems = routeItemsOf(plugin.latest?.items ?? []);
+  const version = plugin.latest?.version ?? null;
+  // The stored `{item_name: base}` mounts of this plugin's installed row (absent until
+  // the installed query lands, or when not installed): the routes card renders at the
+  // ACTUAL base and the update dialog seeds from the CURRENT mount.
   const installedMounts = installedQuery.data?.installed.find(
     (row) => row.ref === refValue,
   )?.route_mounts;
-  const matching =
-    advisoriesQuery.data !== undefined
-      ? advisoriesForListing(advisoriesQuery.data.advisories, refValue)
-      : [];
-  const closeAction = (): void => {
-    if (activeAction === 'install') installMutation.reset();
-    if (activeAction === 'update') updateMutation.reset();
-    if (activeAction === 'uninstall') uninstallMutation.reset();
-    setActiveAction(null);
-  };
 
   return (
     <Stack>
@@ -550,529 +89,50 @@ export function PluginDetail({
         </h1>
       </div>
 
-      <InfoCard detail={detail} />
+      <InfoCard detail={plugin} />
 
       <ActionsCard
-        detail={detail}
+        detail={plugin}
         installedQuery={installedQuery}
-        storeRefusalMessage={storeRefusalMessage}
-        onOpen={(action) => {
-          setActiveAction(action);
-        }}
+        storeRefusalMessage={detail.storeRefusalMessage}
+        onOpen={detail.openAction}
       />
 
       {/* A descriptor listing names no package, so there is nothing to copy. */}
-      {detail.package !== null ? (
+      {plugin.package !== null ? (
         <Card>
-          <CopyField label="Package" value={detail.package} idPrefix="install-package" />
+          <CopyField label="Package" value={plugin.package} idPrefix="install-package" />
         </Card>
       ) : null}
 
-      {result !== null ? (
-        <Card>
-          <div role="status" className="tai-stack tai-stack-2">
-            <span className="tai-status tai-status-ok">
-              <CheckCircleIcon />
-              <strong>
-                {result.verb} {result.ref}
-                {result.version !== null ? ` ${result.version}` : ''}
-              </strong>
-            </span>
-            {result.notes.length > 0 ? (
-              <ul style={{ margin: 0, paddingLeft: 'var(--tai-space-4)' }}>
-                {result.notes.map((note, index) => (
-                  <li key={index}>{note}</li>
-                ))}
-              </ul>
-            ) : null}
-            {result.advisories.length > 0 ? (
-              <div className="tai-stack tai-stack-2">
-                {result.advisories.map((advisory) => (
-                  <div key={advisory.id} className="tai-row">
-                    <Badge variant={severityVariant(advisory.severity)}>{advisory.severity}</Badge>
-                    <span>{advisory.summary}</span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {result.routes.length > 0 ? (
-              <div className="tai-stack tai-stack-2">
-                <span className="tai-muted">Mounted routes</span>
-                <ul style={{ margin: 0, paddingLeft: 'var(--tai-space-4)' }}>
-                  {result.routes.map((route) => (
-                    <li key={`${route.item}/${route.full_path}/${route.methods.join(',')}`}>
-                      <code className="tai-mono">{route.full_path}</code>{' '}
-                      <span className="tai-muted">{route.methods.join(', ')}</span>{' '}
-                      {route.public ? <Badge variant="warning">public</Badge> : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-        </Card>
-      ) : null}
+      {detail.result !== null ? <ActionResultCard result={detail.result} /> : null}
 
-      {advisoriesQuery.isError ? (
-        <ErrorState
-          message={errorMessage(advisoriesQuery.error)}
-          onRetry={() => void advisoriesQuery.refetch()}
-        />
-      ) : matching.length > 0 ? (
-        <WarningBlock>
-          <strong className="tai-status-warn">Security advisories</strong>
-          {matching.map((advisory) => (
-            <div key={advisory.id} className="tai-row">
-              <Badge variant={severityVariant(advisory.severity)}>{advisory.severity}</Badge>
-              <span>{advisory.summary}</span>
-              <span className="tai-muted">Affects {advisory.affected_versions}</span>
-            </div>
-          ))}
-        </WarningBlock>
-      ) : null}
-
-      <ItemsCard detail={detail} />
-      <RoutesCard routeItems={routeItems} mounts={installedMounts} />
-      <VersionsCard versions={detail.versions} />
-
-      {activeAction === 'install' ? (
-        routeItems.length > 0 ? (
-          // Route-carrying plugins mount through the preview dialog, which also
-          // collects the preview's missing env in the same flow.
-          <MountInstallDialog
-            refValue={refValue}
-            version={version}
-            verb="Install"
-            routeItems={routeItems}
-            requiredEnvSecret={requiredEnvSecret}
-            envHints={requiredEnvHints}
-            onSubmit={(extras) => installMutation.mutateAsync(extras).then(() => undefined)}
-            onClose={closeAction}
-          />
-        ) : (
-          // A non-route plugin: whether it needs install-time env is the install
-          // PREVIEW's call, not the detail's (the registry omits per-item
-          // required_env). This previews with no env and routes on the result — the
-          // env dialog when it reports required/missing env, the plain confirm when
-          // clean.
-          <NonRouteInstallDialog
-            refValue={refValue}
-            version={version}
-            detail={detail}
-            requiredEnvSecret={requiredEnvSecret}
-            envHints={requiredEnvHints}
-            isPending={installMutation.isPending}
-            error={installMutation.error}
-            onInstall={(body) => {
-              installMutation.mutate(body);
-            }}
-            onClose={closeAction}
-          />
-        )
-      ) : null}
-      {activeAction === 'update' && routeItems.length > 0 ? (
-        // Route-carrying plugins update through the same mount dialog: the
-        // preview surfaces any new collision or newly-public route to accept.
-        <MountInstallDialog
-          refValue={refValue}
-          version={version}
-          verb="Update"
-          routeItems={routeItems}
-          storedMounts={installedMounts}
-          onSubmit={(extras) => updateMutation.mutateAsync(extras).then(() => undefined)}
-          onClose={closeAction}
-        />
-      ) : null}
-      {activeAction === 'update' && routeItems.length === 0 ? (
-        <ConfirmDialog
-          title="Update plugin"
-          confirmLabel="Update"
-          pendingLabel="Updating"
-          confirmVariant="primary"
-          isPending={updateMutation.isPending}
-          error={isFeatureDisabled(updateMutation.error) ? null : updateMutation.error}
-          disabledNote={
-            isFeatureDisabled(updateMutation.error) ? (
-              <FeatureDisabled
-                feature="Marketplace installs"
-                message={featureDisabledMessage(updateMutation.error)}
-              />
-            ) : undefined
-          }
-          onConfirm={() => {
-            updateMutation.mutate({});
-          }}
-          onClose={closeAction}
-        >
-          <p style={{ margin: 0 }}>
-            Update {refValue} to the latest version?{' '}
-            {/* A descriptor plugin installs nothing but its manifest entry; a
-                packaged plugin is pip-installed. */}
-            {deliveryOf(detail) === 'descriptor'
-              ? 'The app will re-fetch the descriptor and reload.'
-              : 'The app will pip-install the package and reload.'}
-          </p>
-          {/* An upgrade that adds a required variable is loudly refused by the server
-              (no env dialog on update); name the recourse. */}
-          <p className="tai-muted" style={{ margin: 0 }}>
-            If the update needs a new required variable, set it in the{' '}
-            <AppLink to="settings">environment editor</AppLink>, then retry.
-          </p>
-        </ConfirmDialog>
-      ) : null}
-      {activeAction === 'uninstall' ? (
-        <ConfirmDialog
-          title="Uninstall plugin"
-          confirmLabel="Uninstall"
-          pendingLabel="Uninstalling"
-          isPending={uninstallMutation.isPending}
-          error={uninstallMutation.error}
-          onConfirm={() => {
-            uninstallMutation.mutate();
-          }}
-          onClose={closeAction}
-        >
-          <p style={{ margin: 0 }}>
-            Uninstall {refValue}? The app will remove the package and reload.
-          </p>
-        </ConfirmDialog>
-      ) : null}
-    </Stack>
-  );
-}
-
-function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
-  return (
-    <div>
-      <Button variant="ghost" onClick={onBack}>
-        <ArrowLeftIcon />
-        Back to marketplace
-      </Button>
-    </div>
-  );
-}
-
-/**
- * The install dialog for a NON-route plugin. Whether the plugin needs install-time
- * env is the install PREVIEW's call — the server authority — because the registry's
- * plugin-detail body carries no per-item required_env, so a detail-derived index is
- * always empty in production. This previews with no env and routes on the result:
- *
- *  - a preview that names required or missing env opens the env-collecting dialog;
- *  - a clean no-env preview (and the brief pending window before it lands) shows the
- *    plain one-click confirm — the path a route-less, env-less plugin must take;
- *  - a preview that FAILS opens the env dialog too, where its own (cache-shared)
- *    preview surfaces the failure (the muted OFF note, or a loud block) rather than
- *    letting an unverified install commit with an empty body.
- */
-function NonRouteInstallDialog({
-  refValue,
-  version,
-  detail,
-  requiredEnvSecret,
-  envHints,
-  isPending,
-  error,
-  onInstall,
-  onClose,
-}: {
-  readonly refValue: string;
-  readonly version: string | null;
-  readonly detail: MarketplacePluginDetail;
-  readonly requiredEnvSecret: Record<string, boolean>;
-  readonly envHints: Record<string, string>;
-  readonly isPending: boolean;
-  readonly error: Error | null;
-  readonly onInstall: (body: Omit<MarketplaceInstallBody, 'ref'>) => void;
-  readonly onClose: () => void;
-}): ReactNode {
-  const api = useApi();
-  // The env-less install preview: `required_env` (every var the spec needs) and
-  // `missing_env` (those the deployment does not already provide). No mounts — env is
-  // mount-independent — so this shares its cache key with the env dialog's own preview.
-  const previewQuery = useQuery({
-    queryKey: marketplacePreviewKey(refValue, version, ''),
-    queryFn: ({ signal }) =>
-      api.previewMarketplaceInstall({ ref: refValue, version: version ?? undefined }, signal),
-  });
-  const preview = previewQuery.data;
-  // Env is needed only when the SERVER's dry-run says so. A resolved preview that
-  // names required or missing env routes to the env-collecting dialog; everything
-  // else — the pending window, a clean no-env preview, and a FAILED dry-run — stays
-  // on the plain confirm (a failed dry-run blocks it there, rather than switching
-  // dialog types on a transient error and churning the modal).
-  const needsEnv =
-    preview !== undefined && (preview.required_env.length > 0 || preview.missing_env.length > 0);
-
-  if (needsEnv) {
-    return (
-      <InstallEnvDialog
+      <AdvisoriesStrip
+        isError={advisoriesQuery.isError}
+        error={advisoriesQuery.error}
+        onRetry={() => void advisoriesQuery.refetch()}
+        advisories={advisoriesQuery.data?.advisories}
         refValue={refValue}
+      />
+
+      <ItemsCard detail={plugin} />
+      <RoutesCard routeItems={routeItems} mounts={installedMounts} />
+      <VersionsCard versions={plugin.versions} />
+
+      <PluginDetailDialogs
+        activeAction={detail.activeAction}
+        refValue={refValue}
+        detail={plugin}
+        routeItems={routeItems}
         version={version}
         requiredEnvSecret={requiredEnvSecret}
-        envHints={envHints}
-        isPending={isPending}
-        error={error}
-        onSubmit={(env, secretKeys) => {
-          // Every var pre-satisfied → a plain install body; otherwise carry the
-          // collected values and their secret marks.
-          onInstall(Object.keys(env).length > 0 ? { env, secret_keys: secretKeys } : {});
-        }}
-        onClose={onClose}
+        requiredEnvHints={requiredEnvHints}
+        installedMounts={installedMounts}
+        installMutation={detail.installMutation}
+        updateMutation={detail.updateMutation}
+        uninstallMutation={detail.uninstallMutation}
+        onClose={detail.closeAction}
       />
-    );
-  }
-
-  // The env picture is unverified until the dry-run resolves, so the plain confirm
-  // never commits an empty body prematurely: an OFF 501 on the preview or the install
-  // shows the muted note (a state, not an error); a non-OFF preview failure blocks
-  // loudly; and the PENDING window blocks too (a skeleton in the confirm's disabled
-  // slot, which disables the button), so an env-requiring plugin cannot be installed
-  // with `{}` in the beat before its preview lands.
-  const offError = [previewQuery.error, error].find(isFeatureDisabled) ?? null;
-  const previewLoud = isFeatureDisabled(previewQuery.error) ? null : previewQuery.error;
-  const disabledNote =
-    offError !== null ? (
-      <FeatureDisabled feature="Marketplace installs" message={featureDisabledMessage(offError)} />
-    ) : previewLoud !== null ? (
-      <ErrorState message={errorMessage(previewLoud)} />
-    ) : previewQuery.isPending ? (
-      <Skeleton height={48} />
-    ) : undefined;
-
-  return (
-    <ConfirmDialog
-      title="Install plugin"
-      confirmLabel="Install"
-      pendingLabel="Installing"
-      confirmVariant="primary"
-      isPending={isPending}
-      error={disabledNote !== undefined || isFeatureDisabled(error) ? null : error}
-      disabledNote={disabledNote}
-      onConfirm={() => {
-        onInstall({});
-      }}
-      onClose={onClose}
-    >
-      <p style={{ margin: 0 }}>
-        Install {refValue}
-        {detail.latest !== null ? ` v${detail.latest.version}` : ''}?{' '}
-        {/* A descriptor plugin installs nothing but its manifest entry; a
-            packaged plugin is pip-installed. */}
-        {deliveryOf(detail) === 'descriptor'
-          ? 'The app will register this plugin and reload.'
-          : 'The app will pip-install the package and reload.'}
-      </p>
-    </ConfirmDialog>
-  );
-}
-
-/**
- * The install confirm for a plugin whose items declare install-time env: it
- * previews to learn the server-computed `missing_env` — the vars the deployment
- * does not already provide — and collects one value per missing var. Each toggle is
- * SEEDED from `requiredEnvSecret`: a `true` var (an OAuth client secret) is locked
- * on (the server masks it regardless, so an off toggle would lie), a `false` var (a
- * client id / plain marker) starts off and stays free. A blank field is omitted
- * (the deployment may still provide it); the server's install-time env refusal is
- * the real enforcement, surfaced loudly here. When `missing_env` is empty (every
- * var pre-satisfied) the dialog is a plain one-click confirm.
- */
-function InstallEnvDialog({
-  refValue,
-  version,
-  requiredEnvSecret,
-  envHints,
-  isPending,
-  error,
-  onSubmit,
-  onClose,
-}: {
-  readonly refValue: string;
-  readonly version: string | null;
-  readonly requiredEnvSecret: Record<string, boolean>;
-  readonly envHints: Record<string, string>;
-  readonly isPending: boolean;
-  readonly error: Error | null;
-  readonly onSubmit: (env: Record<string, string>, secretKeys: string[]) => void;
-  readonly onClose: () => void;
-}): ReactNode {
-  const api = useApi();
-  // The install preview names `missing_env` server-side (required − env store −
-  // process env). No mounts: env is mount-independent, so this shares nothing with
-  // the route dialog's per-mount preview.
-  const previewQuery = useQuery({
-    queryKey: marketplacePreviewKey(refValue, version, ''),
-    queryFn: ({ signal }) =>
-      api.previewMarketplaceInstall({ ref: refValue, version: version ?? undefined }, signal),
-  });
-  const missingVars = previewQuery.data?.missing_env ?? [];
-  // The server's per-var secret-ness from THIS preview — the authority. The
-  // registry's plugin-detail body carries no per-item required-env, so a non-route
-  // env plugin's secret band comes from here, not the detail-derived
-  // `requiredEnvSecret` prop (a supplementary fallback), or an operator override.
-  const previewEnvSecret: Record<string, boolean> = {};
-  for (const req of previewQuery.data?.required_env ?? []) previewEnvSecret[req.name] = req.secret;
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [secretOverride, setSecretOverride] = useState<Record<string, boolean>>({});
-  const secretMap = Object.fromEntries(
-    missingVars.map((name) => [
-      name,
-      previewEnvSecret[name] === true ||
-        requiredEnvSecret[name] === true ||
-        secretOverride[name] === true,
-    ]),
-  );
-  // A var the server marks secret is LOCKED on (the server masks it regardless), so
-  // the lock merges the preview's authority with the detail-derived prop.
-  const lockedSecret = Object.fromEntries(
-    missingVars.map((name) => [
-      name,
-      previewEnvSecret[name] === true || requiredEnvSecret[name] === true,
-    ]),
-  );
-
-  // An OFF 501 `marketplace-not-configured` on either the preview or the install is
-  // a state, not an error: the muted note replaces a loud alert and blocks the
-  // confirm. A non-OFF preview failure blocks too — the missing set is unknown.
-  const offError = [previewQuery.error, error].find(isFeatureDisabled) ?? null;
-  const previewBlocked = previewQuery.isPending || previewQuery.isError;
-  const loudError = offError !== null ? null : (error ?? previewQuery.error);
-
-  const submit = (): void => {
-    const { env, secretKeys } = collectEnv(missingVars, values, secretMap);
-    onSubmit(env, secretKeys);
-  };
-  return (
-    <ConfirmDialog
-      title="Install plugin"
-      confirmLabel="Install"
-      pendingLabel="Installing"
-      confirmVariant="primary"
-      isPending={isPending || previewQuery.isPending}
-      error={loudError}
-      disabledNote={
-        offError !== null ? (
-          <FeatureDisabled
-            feature="Marketplace installs"
-            message={featureDisabledMessage(offError)}
-          />
-        ) : previewBlocked ? (
-          <Skeleton height={48} />
-        ) : undefined
-      }
-      onConfirm={submit}
-      onClose={onClose}
-    >
-      <div className="tai-stack tai-stack-3">
-        <p style={{ margin: 0 }}>
-          Install {refValue}
-          {version !== null ? ` v${version}` : ''}?
-          {missingVars.length > 0
-            ? ' This plugin needs these values to install. Leave a field blank if the deployment already provides it.'
-            : ''}
-        </p>
-        {missingVars.length > 0 ? (
-          <EnvVarFields
-            requiredVars={missingVars}
-            values={values}
-            secret={secretMap}
-            requiredSecret={lockedSecret}
-            hints={envHints}
-            onChangeValue={(name, value) => {
-              setValues((prev) => ({ ...prev, [name]: value }));
-            }}
-            onToggleSecret={(name, checked) => {
-              setSecretOverride((prev) => ({ ...prev, [name]: checked }));
-            }}
-          />
-        ) : null}
-      </div>
-    </ConfirmDialog>
-  );
-}
-
-/** The install-state badges + action buttons, from the installed query. */
-function ActionsCard({
-  detail,
-  installedQuery,
-  storeRefusalMessage,
-  onOpen,
-}: {
-  readonly detail: MarketplacePluginDetail;
-  readonly installedQuery: ReturnType<typeof useQuery<MarketplaceInstalled, Error>>;
-  readonly storeRefusalMessage: string | null;
-  readonly onOpen: (action: ActiveAction) => void;
-}): ReactNode {
-  const storeDisabled = storeRefusalMessage !== null;
-  const ref = `${detail.namespace}/${detail.name}`;
-
-  if (installedQuery.isPending) {
-    return (
-      <Card>
-        <Skeleton height={32} />
-      </Card>
-    );
-  }
-  if (installedQuery.isError) {
-    return (
-      <Card>
-        <ErrorState
-          message={errorMessage(installedQuery.error)}
-          onRetry={() => void installedQuery.refetch()}
-        />
-      </Card>
-    );
-  }
-
-  const installed = installedQuery.data.installed.find((row) => row.ref === ref);
-
-  return (
-    <Card>
-      <div className="tai-row">
-        {installed === undefined ? (
-          <Button
-            variant="primary"
-            disabled={storeDisabled}
-            onClick={() => {
-              onOpen('install');
-            }}
-          >
-            Install
-          </Button>
-        ) : (
-          <>
-            <Badge variant="success">Installed v{installed.version}</Badge>
-            {installed.missing_upstream ? (
-              <Badge>Not in the registry</Badge>
-            ) : installed.update_available && installed.latest !== null ? (
-              <>
-                <Badge variant="warning">Update available: v{installed.latest}</Badge>
-                <Button
-                  variant="primary"
-                  disabled={storeDisabled}
-                  onClick={() => {
-                    onOpen('update');
-                  }}
-                >
-                  Update
-                </Button>
-              </>
-            ) : null}
-            <Button
-              variant="danger"
-              onClick={() => {
-                onOpen('uninstall');
-              }}
-            >
-              Uninstall
-            </Button>
-          </>
-        )}
-      </div>
-      {storeRefusalMessage !== null ? (
-        <FeatureDisabled feature="Marketplace installs" message={storeRefusalMessage} />
-      ) : null}
-    </Card>
+    </Stack>
   );
 }

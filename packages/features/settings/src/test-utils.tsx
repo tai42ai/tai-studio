@@ -54,9 +54,7 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
     globalThis.sessionStorage.removeItem(SESSION_KEY);
   }
   const apiClient =
-    projection !== undefined
-      ? ({ ...client, getMe: () => Promise.resolve(projection) } as ApiClient)
-      : client;
+    projection !== undefined ? { ...client, getMe: () => Promise.resolve(projection) } : client;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (

@@ -14,6 +14,7 @@ import type { ReactNode } from 'react';
 import { JsonTree } from '../components/json-tree';
 import { resolveRef } from '../schema-form/resolve';
 import type { JsonSchema } from '../schema-form/types';
+import { isRecord } from '../guards';
 
 export interface StructuredOutputProps {
   /** The tool's declared MCP output schema, if any. */
@@ -24,10 +25,6 @@ export interface StructuredOutputProps {
 
 /** The pane's name when the payload has no schema to name it by. */
 const RAW_OUTPUT_LABEL = 'Structured output';
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isObjectSchema(
   schema: JsonSchema | undefined,

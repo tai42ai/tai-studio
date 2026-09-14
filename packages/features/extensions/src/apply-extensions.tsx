@@ -22,8 +22,8 @@
  * is surfaced LOUDLY as ESCAPED text, never swallowed. Every server-supplied string
  * renders as text through the DS components (React escapes it) — no HTML sink.
  */
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { Extension, PresetExtensionElement, PresetRecord } from '@tai42/api-client';
 
 import {
@@ -44,7 +44,6 @@ import {
   extensionElementName,
   hiddenToolNames,
   toolBadgesByName,
-  toolsListKey,
   useApi,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
@@ -54,10 +53,9 @@ import {
   applyToolMetaKey,
   applyToolTagsKey,
   applyToolsKey,
-  comboLoadKey,
-  extensionsQueryKey,
   type ToolExtensionsOrigin,
 } from './keys';
+import { useToolExtensionsEditor } from './use-tool-extensions-editor';
 
 const panelStyle: CSSProperties = {
   display: 'flex',
@@ -201,59 +199,17 @@ function ToolExtensionsEditor({
   readonly tool: string;
   readonly origin: ToolExtensionsOrigin;
 }): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-
-  const catalogQuery = useQuery({
-    queryKey: extensionsQueryKey,
-    queryFn: ({ signal }) => api.listExtensions(signal),
-  });
-
-  const combosQuery = useQuery<PresetExtensionElement[][]>({
-    queryKey: comboLoadKey(origin, tool),
-    queryFn:
-      origin === 'manifest'
-        ? async ({ signal }) => (await api.getToolExtensions(tool, signal)).combos
-        : // A preset combo element is a bare name or a `{name, config}` mapping; the
-          // FULL elements are kept so a combo's author `config` can be rehydrated on
-          // save (the name-only editor below shows only names).
-          async ({ signal }) => (await api.getPreset(tool, signal)).extensions,
-  });
-
-  // The local, editable working copy — a deep clone seeded from the loaded combos
-  // so edits never mutate the query cache. `null` until the load lands. Seeded ONCE
-  // per mount: this editor is remounted per (origin, tool) by its `key`, so a fresh
-  // tool re-seeds, while a background refetch (window focus/reconnect) must never
-  // overwrite in-progress edits with the server copy and silently discard them.
-  const [combos, setCombos] = useState<PresetExtensionElement[][] | null>(null);
-  useEffect(() => {
-    if (combos === null && combosQuery.data !== undefined) {
-      setCombos(combosQuery.data.map((combo) => [...combo]));
-    }
-  }, [combos, combosQuery.data]);
-
-  const save = useMutation({
-    mutationFn: async (next: PresetExtensionElement[][]): Promise<void> => {
-      // The combos are config-bearing end to end (a surviving element keeps its author
-      // `config` through an edit), so the edited value is written back as-is.
-      if (origin === 'manifest') {
-        await api.setToolExtensions(tool, next);
-      } else {
-        await api.savePresetVersion(tool, { extensions: next });
-      }
-    },
-    onSuccess: () => {
-      // A combo save rebinds/tears the per-combo BRANCH tools, so several views shift at
-      // once: this panel's combo load + tool picker, the extension-catalog families on
-      // this same page, and the registered-tool master list. Invalidate all of them so
-      // every dependent view refetches — the same catalog + tool-list refresh the
-      // tools-page extensions card performs.
-      void queryClient.invalidateQueries({ queryKey: comboLoadKey(origin, tool) });
-      void queryClient.invalidateQueries({ queryKey: applyToolsKey });
-      void queryClient.invalidateQueries({ queryKey: extensionsQueryKey });
-      void queryClient.invalidateQueries({ queryKey: toolsListKey });
-    },
-  });
+  const {
+    catalogQuery,
+    combosQuery,
+    combos,
+    save,
+    changeCombo,
+    dropCombo,
+    shiftComboUp,
+    shiftComboDown,
+    addCombo,
+  } = useToolExtensionsEditor(tool, origin);
 
   // Error states first — a rejected load (or a zod mismatch) must surface LOUDLY
   // and never be masked by the `combos === null` (not-yet-seeded) loading guard.
@@ -286,9 +242,6 @@ function ToolExtensionsEditor({
   }
 
   const available = catalogQuery.data;
-  const update = (next: PresetExtensionElement[][]): void => {
-    setCombos(next);
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
@@ -311,28 +264,16 @@ function ToolExtensionsEditor({
               available={available}
               disabled={save.isPending}
               onChange={(next) => {
-                update(combos.map((existing, i) => (i === index ? next : existing)));
+                changeCombo(index, next);
               }}
               onRemove={() => {
-                update(combos.filter((_, i) => i !== index));
+                dropCombo(index);
               }}
               onMoveUp={() => {
-                if (index === 0) return;
-                const next = [...combos];
-                [next[index - 1], next[index]] = [next[index], next[index - 1]] as [
-                  PresetExtensionElement[],
-                  PresetExtensionElement[],
-                ];
-                update(next);
+                shiftComboUp(index);
               }}
               onMoveDown={() => {
-                if (index === combos.length - 1) return;
-                const next = [...combos];
-                [next[index], next[index + 1]] = [next[index + 1], next[index]] as [
-                  PresetExtensionElement[],
-                  PresetExtensionElement[],
-                ];
-                update(next);
+                shiftComboDown(index);
               }}
             />
           ))}
@@ -342,12 +283,7 @@ function ToolExtensionsEditor({
       {save.isError ? <ErrorState message={errorMessage(save.error)} /> : null}
 
       <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
-        <Button
-          disabled={save.isPending}
-          onClick={() => {
-            update([...combos, []]);
-          }}
-        >
+        <Button disabled={save.isPending} onClick={addCombo}>
           Add extension set
         </Button>
         <Button

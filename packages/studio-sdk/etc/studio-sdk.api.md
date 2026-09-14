@@ -172,20 +172,1689 @@ interface ApiKeyBody {
 
 // @public (undocumented)
 export const ApiProvider: Provider<    {
-readonly baseUrl: string;
-readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
-readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
-input: Record<string, unknown>;
-output: Record<string, unknown> | null;
-description: string | null;
+readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
+readonly getHealth: (signal?: AbortSignal) => Promise<string>;
+readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
+kind: string;
+state: "default" | "active" | "off";
+plugin: string | null;
+detail: string;
+}[]>;
+readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
+listings: {
+ref: string;
+namespace: string;
+name: string;
+display_name: string | null;
+icon_url: string | null;
+package: string | null;
+description: string;
+categories: string[];
+tags: string[];
+trust_tier: string;
+pricing: string;
+latest_version: string | null;
+downloads: number;
+updated_at: string;
+kinds: {
+kind: string;
+count: number;
+names: string[];
+}[];
+groups: {
+name: string;
+count: number;
+}[];
+premium?: boolean | null | undefined;
+}[];
+total: number;
+page: number;
+page_size: number;
 }>;
-readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
-input: Record<string, unknown>;
-output: Record<string, unknown> | null;
+readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
+namespace: string;
+name: string;
+display_name: string | null;
+icon_url: string | null;
+package: string | null;
+description: string;
+readme_md: string | null;
+license: string | null;
+homepage_url: string | null;
+repository_url: string | null;
+categories: string[];
+tags: string[];
+trust_tier: string;
+pricing: string;
+downloads: number;
+latest: {
+version: string;
+contract_range: string | null;
+status: string;
+published_at: string | null;
+items: {
+kind: string;
+name: string;
+description: string;
+tags: string[];
+group: string | null;
+routes?: {
+base: string;
+paths: {
+path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+public: boolean;
+}[];
+} | null | undefined;
+required_env?: {
+name: string;
+secret: boolean;
+}[] | undefined;
+}[];
+} | null;
+versions: {
+version: string;
+contract_range: string | null;
+status: string;
+published_at: string | null;
+}[];
+source?: "pypi" | "github" | "spec" | null | undefined;
+docs_url?: string | null | undefined;
+premium?: boolean | null | undefined;
+}>;
+readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
+readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
+readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
+installed: {
+ref: string;
+version: string;
+source: string;
+delivery: "package" | "descriptor";
+installed_at: string;
+latest: string | null;
+update_available: boolean;
+incompatible_newer: string | null;
+missing_upstream: boolean;
+compat: {
+status: "unknown" | "compatible" | "incompatible";
+reason: string | null;
+};
+items: {
+name: string;
+kind: string;
+}[];
+route_mounts: Record<string, string>;
+}[];
+quarantined: {
+name: string;
+reason: string;
+}[];
+}>;
+readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
+ref: string;
+version: string;
+items: {
+item: string;
+kind: string;
+base: string;
+default_base: string;
+routes: {
+path: string;
+full_path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+public: boolean;
+}[];
+}[];
+collisions: {
+item: string;
+full_path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+conflict_owner: string;
+conflict_path: string;
+}[];
+public_routes: {
+item: string;
+full_path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+}[];
+new_public_routes: {
+item: string;
+full_path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+}[];
+requires_public_acceptance: boolean;
+required_env: {
+name: string;
+secret: boolean;
+}[];
+missing_env: string[];
+delivery: "package" | "descriptor";
+}>;
+readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
+ref: string;
+version: string;
+notes: string[];
+advisories: {
+id: number;
+listing: string;
+affected_versions: string;
+severity: string;
+summary: string;
+created_at: string;
+withdrawn_at: string | null;
+}[];
+routes: {
+item: string;
+full_path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+public: boolean;
+}[];
+}>;
+readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
+ref: string;
+uninstalled: true;
+notes: string[];
+}>;
+readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
+ref: string;
+version: string;
+notes: string[];
+advisories: {
+id: number;
+listing: string;
+affected_versions: string;
+severity: string;
+summary: string;
+created_at: string;
+withdrawn_at: string | null;
+}[];
+routes: {
+item: string;
+full_path: string;
+methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+public: boolean;
+}[];
+}>;
+readonly upgradeAllMarketplacePlugins: () => Promise<{
+results: {
+ref: string;
+outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
+detail: string;
+}[];
+}>;
+readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
+advisories: {
+id: number;
+listing: string;
+affected_versions: string;
+severity: string;
+summary: string;
+created_at: string;
+withdrawn_at: string | null;
+}[];
+fetched_at: string;
+}>;
+readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
+summary: {
+totalRuns: number;
+totalCost: number;
+totalTokens: number;
+averageLatencyMs: number;
+avgCostPerRun: number;
+avgTokensPerRun: number;
+timeToFirstTokenMs: number | null;
+};
+timeSeries: {
+bucket: string | null;
+runs: number;
+cost: number;
+avgLatencyMs: number;
+totalTokens: number;
+}[];
+byModel: {
+model: string;
+calls: number;
+cost: number;
+totalTokens: number;
+avgLatencyMs: number;
+}[];
+granularity: "hour" | "day" | "week";
+}>;
+readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
+items: {
+id: string;
+traceId: string;
+createdAt: string | null;
+tags: string[];
+status: "error" | "success";
+cost: number | null;
+latencyMs: number | null;
+totalTokens: number | null;
+inputPreview: unknown;
+outputPreview: unknown;
+}[];
+page: number;
+nextPage: number | null;
+}>;
+readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
+traceId: string;
+timestamp: string | null;
+tags: string[];
+totalCost: number | null;
+input: unknown;
+output: unknown;
+metadata: unknown;
+spans: {
+id: string;
+parentId: string | null;
+traceId: string | null;
+name: string | null;
+type: string | null;
+level: string | null;
+statusMessage: string | null;
+start: string | null;
+end: string | null;
+model: string | null;
+usage: unknown;
+metadata: unknown;
+input: unknown;
+output: unknown;
+nodeId: string | null;
+}[];
+}>;
+readonly exportTrace: (traceId: string, signal?: AbortSignal) => Promise<Blob>;
+readonly exportRuns: (params: RunsQuery & {
+format: "csv" | "json";
+}, signal?: AbortSignal) => Promise<Blob>;
+readonly listSchedules: (signal?: AbortSignal) => Promise<{
+[x: string]: unknown;
+name: string;
+enabled?: boolean | undefined;
+schedule?: unknown;
+target?: unknown;
+args?: unknown[] | undefined;
+kwargs?: Record<string, unknown> | undefined;
+}[]>;
+readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
+[x: string]: unknown;
+utc: unknown;
+local?: unknown;
+system?: unknown;
+}>;
+readonly addSchedule: (body: {
+tool_name: string;
+tool_kwargs: Record<string, unknown>;
+schedule_kwargs: Record<string, unknown>;
+state_binding?: StateBinding | null;
+}) => Promise<unknown>;
+readonly deleteSchedule: (name: string) => Promise<unknown>;
+readonly listBackupSections: (signal?: AbortSignal) => Promise<{
+name: string;
+secret: boolean;
+}[]>;
+readonly exportBackup: (sections: string[], signal?: AbortSignal) => Promise<Blob>;
+readonly importBackup: (body: {
+document: unknown;
+sections: string[];
+}) => Promise<{
+ok: boolean;
+sections: Record<string, {
+created: number;
+updated: number;
+skipped: number;
+errors: string[];
+new_api_keys?: {
+user_id: string;
+description: string;
+api_key: string;
+}[] | undefined;
+fanout?: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+} | undefined;
+}>;
+}>;
+readonly validateCondition: (body: ValidateConditionBody) => Promise<{
+ok: boolean;
+result: boolean | null;
+}>;
+readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
+version: number;
+body: {
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+policy_data: Record<string, unknown>;
+scopes: string[];
+};
+tags: string[];
+created_at: string;
+is_current: boolean;
+}[]>;
+readonly rollbackPolicy: (userId: string, version: number) => Promise<{
+user_id: string;
+active_version: number;
+}>;
+readonly logout: () => Promise<{
+revoked: boolean;
+}>;
+readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
+mintable: boolean;
+providers: {
+name: string;
+mintable: boolean;
+}[];
+}>;
+readonly getLoginMethods: (options?: {
+signal?: AbortSignal;
+}) => Promise<{
+methods: ({
+shape: "form";
+id: string;
+title: string;
+purpose: "login" | "bootstrap" | "invite";
+fields: {
+name: string;
+label: string;
+secret: boolean;
+autocomplete?: string | undefined;
+}[];
+submit_path: string;
+} | {
+shape: "button";
+id: string;
+label: string;
+href: string;
+icon?: string | undefined;
+})[];
+bootstrap: boolean;
+}>;
+readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
+token: string;
+user_id: string;
+}>;
+readonly exchangeSsoCode: (code: string) => Promise<{
+token: string;
+user_id: string;
+}>;
+readonly claimLogin: (body: {
+token: string;
+}) => Promise<{
+token: string;
+user_id: string;
+}>;
+readonly getMe: (signal?: AbortSignal) => Promise<{
+user_id: string;
+owner_user_id: string | null;
+admin: boolean;
+scopes: string[];
+routes: {
+path: string;
+methods: string[];
+}[];
+route_patterns: {
+pattern: string;
+scope_id: string;
+}[];
+sub_mcp: {
+tools: string[];
+transport: string;
+slug: string;
+}[];
+tools: string[];
+agents: string[];
+mintable: boolean;
+}>;
+readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
+readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
+scope_id: string;
+url: string;
+}>;
+readonly removeUrlFromScope: (body: {
+url: string;
+}) => Promise<{
+url: string;
+}>;
+readonly removeScope: (scopeId: string) => Promise<{
+scope_id: string;
+deleted_keys: number;
+}>;
+readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
+path: string;
+methods: string[];
+mapped: string | null;
+tags: string[];
+summary: string;
+action: "read" | "write" | "secret" | "fenced" | null;
+}[]>;
+readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
+readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
+url: string;
+}>;
+readonly unpinPublicRoute: (url: string) => Promise<{
+url: string;
+}>;
+readonly listRoles: (signal?: AbortSignal) => Promise<{
+allow_all: boolean;
+base_tier: string | null;
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+description: string;
+grants: Record<string, "none" | "read" | "write">;
+name: string;
+scopes: string[];
+}[]>;
+readonly createRole: (body: RoleCreateBody) => Promise<{
+allow_all: boolean;
+base_tier: string | null;
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+description: string;
+grants: Record<string, "none" | "read" | "write">;
+name: string;
+scopes: string[];
+}>;
+readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
+allow_all: boolean;
+base_tier: string | null;
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+description: string;
+grants: Record<string, "none" | "read" | "write">;
+name: string;
+scopes: string[];
+}>;
+readonly deleteRole: (name: string) => Promise<{
+name: string;
+deleted: boolean;
+}>;
+readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
+versions: {
+version: number;
+body: {
+allow_all: boolean;
+base_tier: string | null;
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+description: string;
+grants: Record<string, "none" | "read" | "write">;
+name: string;
+scopes: string[];
+};
+tags: string[];
+created_at: string;
+is_current: boolean;
+}[];
+audit: {
+version: number;
+body: {
+action: string;
+actor: string | null;
+before: unknown;
+after: unknown;
+};
+tags: string[];
+created_at: string;
+is_current: boolean;
+}[];
+}>;
+readonly rollbackRole: (name: string, version: number) => Promise<{
+allow_all: boolean;
+base_tier: string | null;
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+description: string;
+grants: Record<string, "none" | "read" | "write">;
+name: string;
+scopes: string[];
+}>;
+readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
+user_id: string;
+description: string;
+scopes: string[];
+policy_data: unknown;
+condition?: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null | undefined;
+}[]>;
+readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
+readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
+user_id: string;
+updated: boolean;
+}>;
+readonly revokeApiKey: (userId: string) => Promise<{
+user_id: string;
+revoked: boolean;
+}>;
+readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
+claim_path: string;
+token: string;
+expires_at: string;
+}>;
+readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
+groups: {
+name: string;
+module: string;
+qualname: string;
+fields: {
+name: string;
+env_var: string;
+type: string;
+default: unknown;
+required: boolean;
+secret: boolean;
 description: string | null;
+nested_group: string | null;
+default_namespace_var: string | null;
+value: unknown;
+}[];
+}[];
+}>;
+readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
+readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
+name: string;
+trigger_path: string;
+token: string;
+topic: string;
+expires_at: string | null;
+}>;
+readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
+items: {
+name: string;
+topic: string;
+execution_key: string;
+trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
+tool_kwargs: Record<string, unknown> | null;
+created_by: string | null;
+created_at: string;
+expires_at: string | null;
+token_hash_prefix: string;
+}[];
+total: number;
+}>;
+readonly deleteTriggerLink: (name: string) => Promise<{
+removed: boolean;
+name: string;
+}>;
+readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
+items: {
+condition: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+execution_key: string;
+execution_key_fingerprint: string;
+expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+name: string;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+templates: string[];
+updates: {
+adapter: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
+subject: {
+key_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+kind: string;
+target_kind: "tool" | "agent";
+target_name: string;
+} | null;
+tool: string;
+tool_kwargs: Record<string, unknown>;
+topic: string;
+}[];
+total: number;
+topic_verifiers: Record<string, {
+verifier: string;
+config: Record<string, unknown>;
+}>;
+trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
+}>;
+readonly registerHook: (params: HookRegister) => Promise<{
+registered: boolean;
+name: string;
+}>;
+readonly unregisterHook: (name: string) => Promise<{
+removed: boolean;
+name: string;
+}>;
+readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
+readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
+topic: string;
+verifier: string;
+}>;
+readonly deleteTopicVerifier: (topic: string) => Promise<{
+removed: boolean;
+topic: string;
+}>;
+readonly listAgents: (signal?: AbortSignal) => Promise<{
+items: {
+name: string;
+description: string;
+tool_name: string;
+input_schema: Record<string, unknown>;
+spec_runnable: boolean;
+}[];
+total: number;
+}>;
+readonly listSpecRunnableAgents: (signal?: AbortSignal) => Promise<{
+items: {
+name: string;
+description: string;
+tool_name: string;
+input_schema: Record<string, unknown>;
+spec_runnable: boolean;
+}[];
+total: number;
+}>;
+readonly streamAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
+readonly streamAuthoredAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
+readonly listNotifications: (signal?: AbortSignal) => Promise<{
+notifications: {
+id: string;
+message: string;
+recipient: string | null;
+created_at: string;
+audience?: string | null | undefined;
+media?: unknown[] | null | undefined;
+template?: {
+body_parameters: string[];
+buttons: unknown[];
+header_media: {
+caption: string | null;
+filename: string | null;
+kind: "image" | "link" | "document" | "video" | "audio";
+url: string;
+} | null;
+language: string;
+name: string;
+} | null | undefined;
+options?: string[] | null | undefined;
+}[];
+}>;
+readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
+enabled: boolean;
+codes: {
+code_id: string;
+label: string | null;
+created_at: string;
+expires_at: string | null;
+}[];
+}>;
+readonly setWebEntryGate: (identity: string, enabled: boolean) => Promise<{
+enabled: boolean;
+}>;
+readonly mintWebEntryCode: (identity: string, body: WebEntryCodeMintBody) => Promise<{
+code: string;
+code_id: string;
+expires_at: string | null;
+}>;
+readonly revokeWebEntryCode: (identity: string, codeId: string) => Promise<{
+status: "revoked";
+}>;
+readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
+items: {
+callback_secret: string | null;
+callback_url: string | null;
+channel: string | null;
+door: "channel" | "api";
+error_reply_text: string | null;
+execution_key: string;
+execution_key_fingerprint: string;
+initial_mode: "agent" | "manual";
+locale: string | null;
+our_identity: string | null;
+payload_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+reply_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+route_name: string;
+target_kind: "tool" | "agent";
+target_name: string;
+turns_per_hour_override: number | null;
+}[];
+total: number;
+}>;
+readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
+created: boolean;
+route_name: string;
+route: {
+callback_secret: string | null;
+callback_url: string | null;
+channel: string | null;
+door: "channel" | "api";
+error_reply_text: string | null;
+execution_key: string;
+execution_key_fingerprint: string;
+initial_mode: "agent" | "manual";
+locale: string | null;
+our_identity: string | null;
+payload_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+reply_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+route_name: string;
+target_kind: "tool" | "agent";
+target_name: string;
+turns_per_hour_override: number | null;
+};
+callback_secret: string | null;
+}>;
+readonly deleteConversationRoute: (routeName: string) => Promise<{
+removed: boolean;
+route_name: string;
+}>;
+readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
+total: number;
+page: number;
+page_size: number;
+next_page: number | null;
+truncated: boolean;
+items: {
+thread_id: string;
+client_address: string;
+last_activity_at: number;
+message_count: number;
+last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+}[];
+}>;
+readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
+order: "asc" | "desc";
+total: number;
+page: number;
+page_size: number;
+next_page: number | null;
+truncated: boolean;
+items: {
+message_id: string;
+route_name: string;
+door: "channel" | "api";
+thread_id: string;
+client_address: string;
+caller_principal: string | null;
+inbound_text: string;
+answer_status: "error" | "silent" | "answered" | null;
+answer: string | null;
+origin: "client" | "operator";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+created_at: number;
+updated_at: number;
+channel?: string | null | undefined;
+our_identity?: string | null | undefined;
+provider_message_id?: string | null | undefined;
+callback_url?: string | null | undefined;
+error?: string | null | undefined;
+outbound_message_ids?: string[] | undefined;
+attempts?: number | undefined;
+}[];
+}>;
+readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
+total: number;
+page: number;
+page_size: number;
+next_page: number | null;
+truncated: boolean;
+items: {
+message_id: string;
+route_name: string;
+door: "channel" | "api";
+thread_id: string;
+client_address: string;
+caller_principal: string | null;
+inbound_text: string;
+answer_status: "error" | "silent" | "answered" | null;
+answer: string | null;
+origin: "client" | "operator";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+created_at: number;
+updated_at: number;
+channel?: string | null | undefined;
+our_identity?: string | null | undefined;
+provider_message_id?: string | null | undefined;
+callback_url?: string | null | undefined;
+error?: string | null | undefined;
+outbound_message_ids?: string[] | undefined;
+attempts?: number | undefined;
+}[];
+}>;
+readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
+message_id: string;
+thread_id: string;
+}>;
+readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
+mode: "agent" | "manual";
+source: "route" | "thread";
+}>;
+readonly setConversationThreadMode: (routeName: string, threadId: string, mode: ConversationThreadMode) => Promise<{
+mode: "agent" | "manual";
+source: "route" | "thread";
+}>;
+readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
+items: {
+greeting_template: string | null;
+multichannel: boolean;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+templates: string[];
+updates: {
+adapter: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
+target_kind: "tool" | "agent";
+target_name: string;
+}[];
+total: number;
+}>;
+readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
+greeting_template: string | null;
+multichannel: boolean;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+templates: string[];
+updates: {
+adapter: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
+target_kind: "tool" | "agent";
+target_name: string;
+}>;
+readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
+created: boolean;
+target_kind: "tool" | "agent";
+target_name: string;
+config: {
+greeting_template: string | null;
+multichannel: boolean;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+templates: string[];
+updates: {
+adapter: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
+target_kind: "tool" | "agent";
+target_name: string;
+};
+}>;
+readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
+removed: boolean;
+target_kind: "tool" | "agent";
+target_name: string;
+}>;
+readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
+items: {
+message_id: string;
+route_name: string;
+door: "channel" | "api";
+thread_id: string;
+client_address: string;
+caller_principal: string | null;
+inbound_text: string;
+answer_status: "error" | "silent" | "answered" | null;
+answer: string | null;
+origin: "client" | "operator";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+created_at: number;
+updated_at: number;
+channel?: string | null | undefined;
+our_identity?: string | null | undefined;
+provider_message_id?: string | null | undefined;
+callback_url?: string | null | undefined;
+error?: string | null | undefined;
+outbound_message_ids?: string[] | undefined;
+attempts?: number | undefined;
+}[];
+total: number;
+}>;
+readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
+removed: number;
+route_name: string;
+thread_id: string;
+}>;
+readonly deleteConversationPerson: (personId: string) => Promise<{
+person_id: string;
+removed: number;
+erased: boolean;
+}>;
+readonly listChannels: (signal?: AbortSignal) => Promise<{
+channels: string[];
+}>;
+readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
+total: number;
+page: number;
+page_size: number;
+next_page: number | null;
+truncated: boolean;
+items: {
+interaction_id: string;
+group_id: string;
+question: string;
+answer_format: "text" | "external" | "confirm" | "select" | "form";
+format_payload: Record<string, unknown>;
+created_at: string;
+timeout_at: string;
+sensitive: boolean;
+server_verified?: boolean | undefined;
+channel?: string | undefined;
+recipient?: string | undefined;
+origin?: string | undefined;
+audience?: string | undefined;
+media?: unknown[] | undefined;
+}[];
+}>;
+readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
+interaction_id: string;
+status: string;
+}>;
+readonly cancelInteraction: (interactionId: string) => Promise<{
+interaction_id: string;
+status: string;
+}>;
+readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
+name: string;
+version: string;
+api_version: number;
+entry: string;
+integrity: Record<string, string>;
+contributions: {
+tool_panels: Record<string, string>;
+pages: string[];
+settings_tabs: string[];
+nav_entries: string[];
+};
+}[]>;
+readonly listProviders: (signal?: AbortSignal) => Promise<{
+providers: {
+id: string;
+display_name: string;
+description: string;
+icon_url: string;
+kind: "none" | "oauth";
+origin: "system" | "community";
+category: string;
+sub_services: {
+id: string;
+display_name: string;
+description: string;
+scopes: string[];
+}[];
+config_fields: {
+key: string;
+label: string;
+target: "env" | "header";
+required: boolean;
+secret: boolean;
+}[];
+}[];
+categories: {
+id: string;
+display_name: string;
+sort_order: number;
+}[];
+}>;
+readonly listConnections: (signal?: AbortSignal) => Promise<{
+items: {
+connection_id: string;
+provider_id: string;
+alias: string;
+kind: "none" | "oauth";
+account_identity: string | null;
+enabled_sub_services: string[];
+granted_scopes: string[];
+unreachable_sub_services: string[];
+auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+created_at: string;
+}[];
+total: number;
+unhealthy?: number | undefined;
+}>;
+readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
+connection_id: string;
+provider_id: string;
+alias: string;
+kind: "none" | "oauth";
+account_identity: string | null;
+enabled_sub_services: string[];
+granted_scopes: string[];
+unreachable_sub_services: string[];
+auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+created_at: string;
+}>;
+readonly startConnect: (args: StartConnectArgs) => Promise<{
+flow_id: string;
+authorize_url: string;
+} | {
+connection_id: string;
+added_manifest_entries: string[];
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+} | null;
+}>;
+readonly disconnect: (id: string) => Promise<{
+connection_id: string;
+upstream_revoke_outcome: "success" | "failed" | "skipped";
+upstream_revoke_status: number | null;
+removed_manifest_entries: string[];
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+} | null;
+}>;
+readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
+flow_id: string;
+authorize_url: string;
+}>;
+readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
+connection_id: string;
+enabled_sub_services: string[];
+consent_required: boolean;
+flow_id: string | null;
+authorize_url: string | null;
+added_manifest_entries: string[];
+removed_manifest_entries: string[];
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+} | null;
+}>;
+readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+kind: "success";
+connection_id: string;
+return_url: string;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+} | null;
+} | {
+kind: "failed";
+reason: string;
+} | {
+kind: "cancelled";
+message: string;
+}>;
+readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
+mcp: {
+[x: string]: unknown;
+managed?: {
+connection_id: string;
+provider_id: string;
+sub_service: string;
+} | null | undefined;
+}[];
+user_tools: string[];
+}>;
+readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
+var: string;
+pointer: string;
+has_default: boolean;
+set: boolean;
+}[]>;
+readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
+name: string;
+description: string;
+}[]>;
+readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
+description: string;
+env: Record<string, string>;
+secret_keys: string[];
+}>;
+readonly putSettingsProfile: (name: string, body: SettingsProfileBody) => Promise<{
+ok: true;
+version?: number | undefined;
+}>;
+readonly deleteSettingsProfile: (name: string) => Promise<{
+ok: true;
+}>;
+readonly diffSettingsProfile: (name: string) => Promise<{
+added: string[];
+removed: string[];
+changed: {
+key: string;
+old: string;
+new: string;
+}[];
+recycle_keys: string[];
+refused_keys: string[];
+}>;
+readonly applySettingsProfile: (name: string) => Promise<{
+hot: string[];
+recycle: {
+name: string;
+kind: string;
+status: string;
+generation_before: number;
+}[];
+fresh: {
+name: string;
+kind: string;
+generation: number;
+}[];
+refused: {
+key: string;
+reason: string;
+}[];
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
+version: number;
+tags: string[];
+created_at: string;
+is_current: boolean;
+}[]>;
+readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
+version: number;
+tags: string[];
+created_at: string;
+is_current: boolean;
+body: {
+description: string;
+env: Record<string, string>;
+secret_keys: string[];
+};
+}>;
+readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
+ok: true;
+version: number;
+}>;
+readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
+env: Record<string, string>;
+secret_keys: string[];
+}>;
+readonly setEnvConfig: (env: Record<string, string>) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly getConfigMode: (signal?: AbortSignal) => Promise<{
+config_mode: string;
+read_only: boolean;
+}>;
+readonly reloadConfig: (targets?: string[] | null) => Promise<{
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+}>;
+readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
+tools: string[];
+transport: string;
 }>>;
-readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
-readonly reloadTool: (args: ToolAdminArgs) => Promise<{
+readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
+slug: string;
+tools: string[];
+transport: string;
+}>;
+readonly deleteSubMcp: (slug: string) => Promise<{
+slug: string;
+removed: true;
+}>;
+readonly getManifest: (signal?: AbortSignal) => Promise<{
+mcp: {
+[x: string]: unknown;
+managed?: {
+connection_id: string;
+provider_id: string;
+sub_service: string;
+} | null | undefined;
+}[];
+user_tools: string[];
+}>;
+readonly setMcpConfig: (mcp: unknown[]) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
+bound: Record<string, string[]>;
+failed: {
+title: string;
+status: string;
+}[];
+}>;
+readonly reloadMcp: (title: string) => Promise<{
 op: string;
 reachable: boolean;
 local_only: boolean;
@@ -198,7 +1867,177 @@ detail: string | null;
 }[];
 error: string | null;
 }>;
-readonly removeTool: (args: ToolAdminArgs) => Promise<{
+readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly removeToolsEntry: (title: string) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly removeAgentsEntry: (title: string) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
 op: string;
 reachable: boolean;
 local_only: boolean;
@@ -211,300 +2050,208 @@ detail: string | null;
 }[];
 error: string | null;
 }>;
-readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
-run_id: string;
+readonly reloadFailedMcps: () => Promise<{
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
 }>;
-readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
-run_id: string;
-tool_name: string;
-status: "running" | "succeeded" | "failed" | "lost";
-started_at: string;
-finished_at?: string | undefined;
-result?: unknown;
-error?: string | undefined;
+readonly deregisterMcp: (title: string) => Promise<{
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
 }>;
-readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
-run_id: string;
-tool_name: string;
-status: "running" | "succeeded" | "failed" | "lost";
-started_at: string;
-finished_at?: string | undefined;
-}[]>;
-readonly listToolTags: (signal?: AbortSignal) => Promise<{
-name: string;
-tags: string[];
-badges: string[];
-hidden: boolean;
-}[]>;
-readonly listPresets: (signal?: AbortSignal) => Promise<{
-name: string;
-base_tool: string;
-description: string;
-active_version: number;
-extensions: (string | {
-name: string;
-config: Record<string, unknown>;
-})[][];
-output_schema: Record<string, unknown> | null;
-input_schema: Record<string, unknown> | null;
-conflicted: boolean;
-conflicted_reason: string | null;
-uses: string[];
-used_by: string[];
-}[]>;
-readonly createPreset: (body: CreatePresetBody) => Promise<{
-name: string;
-base_tool: string;
-description: string;
-active_version: number;
-extensions: (string | {
-name: string;
-config: Record<string, unknown>;
-})[][];
-output_schema: Record<string, unknown> | null;
-input_schema: Record<string, unknown> | null;
-conflicted: boolean;
-conflicted_reason: string | null;
-uses: string[];
-used_by: string[];
+readonly listTemplates: (signal?: AbortSignal) => Promise<string[]>;
+readonly getTemplate: (templateId: string) => Promise<{
+template: string;
+schema: Record<string, unknown>;
 }>;
-readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
-name: string;
-base_tool: string;
-description: string;
-active_version: number;
-extensions: (string | {
-name: string;
-config: Record<string, unknown>;
-})[][];
-output_schema: Record<string, unknown> | null;
-input_schema: Record<string, unknown> | null;
-conflicted: boolean;
-conflicted_reason: string | null;
-uses: string[];
-used_by: string[];
-fixed_kwargs: Record<string, unknown>;
+readonly uploadTemplate: (path: string, content: string) => Promise<{
+path: string;
+uploaded: true;
 }>;
-readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
-version: number;
-body: {
-base_tool: string;
-description: string;
-extensions: (string | Record<string, unknown>)[][];
-fixed_kwargs: Record<string, unknown>;
-input_schema: Record<string, unknown> | {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-output_schema: Record<string, unknown> | {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-};
-tags: string[];
-created_at: string;
-is_current: boolean;
-}[]>;
-readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-version: number;
-body: {
-base_tool: string;
-description: string;
-extensions: (string | Record<string, unknown>)[][];
-fixed_kwargs: Record<string, unknown>;
-input_schema: Record<string, unknown> | {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-output_schema: Record<string, unknown> | {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-};
-tags: string[];
-created_at: string;
-is_current: boolean;
-}>;
-readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
-version: number;
-body: {
-base_tool: string;
-description: string;
-extensions: (string | Record<string, unknown>)[][];
-fixed_kwargs: Record<string, unknown>;
-input_schema: Record<string, unknown> | {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-output_schema: Record<string, unknown> | {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-};
-tags: string[];
-created_at: string;
-is_current: boolean;
-}>;
-readonly rollbackPreset: (name: string, version: number) => Promise<{
-name: string;
-active_version: number;
-}>;
-readonly deletePreset: (name: string) => Promise<{
-name: string;
+readonly deleteTemplate: (path: string) => Promise<{
+path: string;
 deleted: true;
 }>;
-readonly renamePreset: (name: string, newName: string) => Promise<{
-name: string;
-renamed_from: string;
-active_version: number;
+readonly deleteTemplateDir: (path: string) => Promise<{
+path: string;
+deleted: true;
 }>;
-readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
-name: string;
-referees: string[];
+readonly renderTemplate: (text: TemplatedText) => Promise<{
+rendered: string;
 }>;
-readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-valid: boolean;
+readonly clearTemplatesCache: () => Promise<{
+cleared: true;
+}>;
+readonly listExtensions: (signal?: AbortSignal) => Promise<{
+name: string;
+kind: string;
+}[]>;
+readonly getToolExtensions: (name: string, signal?: AbortSignal) => Promise<{
+combos: (string | {
+name: string;
+config: Record<string, unknown>;
+})[][];
+available: {
+name: string;
+kind: string;
+}[];
+}>;
+readonly setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) => Promise<{
+status: string;
+env_keys: number;
+fanout: {
+mode: "local-only";
+note: string;
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "fleet";
+} | {
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
+error: string | null;
+mode: "unreachable";
+};
+}>;
+readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
+present: boolean;
+backend: string | null;
+module: string | null;
+}>;
+readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
+workers: {
+name: string;
+kind: "backend" | "serve";
+pid: number;
+generation: number;
+joined_at: string;
+beat_at: string;
+state: "ready" | "resyncing" | "recycling";
+stale: boolean;
+last_op: {
+op: string;
+outcome: string;
+at: string;
+} | null;
+}[];
+}>;
+readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
+op: string;
+reachable: boolean;
+local_only: boolean;
+results: {
+name: string;
+outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+payload: unknown;
+error: string | null;
+detail: string | null;
+}[];
 error: string | null;
 }>;
-readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
+readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
+present: boolean;
+provider: string | null;
+module: string | null;
+}>;
+readonly listStorageResources: (signal?: AbortSignal) => Promise<{
+resources: string[];
+}>;
+readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
+id: string;
+content_type: string | null;
+}>;
+readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
+readonly uploadStorageResource: (body: StorageUploadBody) => Promise<{
+id: string;
+stored: true;
+}>;
+readonly deleteStorageResource: (id: string) => Promise<{
+id: string;
+deleted: true;
+}>;
+readonly deleteStorageDir: (path: string) => Promise<{
+dir: string;
+deleted: true;
+}>;
+readonly listToolMeta: (signal?: AbortSignal) => Promise<{
+folders: {
+id: string;
 name: string;
-version: number;
+parent_id: string | null;
+}[];
+meta: {
+tool_name: string;
+display_name: string | null;
+folder_id: string | null;
 tags: string[];
+badges: string[];
+hidden: boolean | null;
+}[];
+}>;
+readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
+tool_name: string;
+display_name: string | null;
+folder_id: string | null;
+tags: string[];
+badges: string[];
+hidden: boolean | null;
+}>;
+readonly deleteToolMeta: (toolName: string) => Promise<{
+tool_name: string;
+deleted: true;
+}>;
+readonly createFolder: (name: string, parentId?: string | null) => Promise<{
+id: string;
+name: string;
+parent_id: string | null;
+}>;
+readonly renameFolder: (folderId: string, name: string) => Promise<{
+id: string;
+name: string;
+parent_id: string | null;
+}>;
+readonly moveFolder: (folderId: string, parentId: string | null) => Promise<{
+id: string;
+name: string;
+parent_id: string | null;
+}>;
+readonly deleteFolder: (folderId: string) => Promise<{
+folder_id: string;
+deleted: true;
 }>;
 readonly listStates: (signal?: AbortSignal) => Promise<{
 default_subject_kind: string;
@@ -922,1743 +2669,289 @@ deleted: true;
 readonly pruneStateRetention: () => Promise<{
 pruned: Record<string, number>;
 }>;
-readonly listToolMeta: (signal?: AbortSignal) => Promise<{
-folders: {
-id: string;
+readonly listPresets: (signal?: AbortSignal) => Promise<{
 name: string;
-parent_id: string | null;
-}[];
-meta: {
-tool_name: string;
-display_name: string | null;
-folder_id: string | null;
-tags: string[];
-badges: string[];
-hidden: boolean | null;
-}[];
-}>;
-readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
-tool_name: string;
-display_name: string | null;
-folder_id: string | null;
-tags: string[];
-badges: string[];
-hidden: boolean | null;
-}>;
-readonly deleteToolMeta: (toolName: string) => Promise<{
-tool_name: string;
-deleted: true;
-}>;
-readonly createFolder: (name: string, parentId?: string | null) => Promise<{
-id: string;
-name: string;
-parent_id: string | null;
-}>;
-readonly renameFolder: (folderId: string, name: string) => Promise<{
-id: string;
-name: string;
-parent_id: string | null;
-}>;
-readonly moveFolder: (folderId: string, parentId: string | null) => Promise<{
-id: string;
-name: string;
-parent_id: string | null;
-}>;
-readonly deleteFolder: (folderId: string) => Promise<{
-folder_id: string;
-deleted: true;
-}>;
-readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
-present: boolean;
-provider: string | null;
-module: string | null;
-}>;
-readonly listStorageResources: (signal?: AbortSignal) => Promise<{
-resources: string[];
-}>;
-readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
-id: string;
-content_type: string | null;
-}>;
-readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
-readonly uploadStorageResource: (body: StorageUploadBody) => Promise<{
-id: string;
-stored: true;
-}>;
-readonly deleteStorageResource: (id: string) => Promise<{
-id: string;
-deleted: true;
-}>;
-readonly deleteStorageDir: (path: string) => Promise<{
-dir: string;
-deleted: true;
-}>;
-readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
-present: boolean;
-backend: string | null;
-module: string | null;
-}>;
-readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
-workers: {
-name: string;
-kind: "backend" | "serve";
-pid: number;
-generation: number;
-joined_at: string;
-beat_at: string;
-state: "ready" | "resyncing" | "recycling";
-stale: boolean;
-last_op: {
-op: string;
-outcome: string;
-at: string;
-} | null;
-}[];
-}>;
-readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-}>;
-readonly listExtensions: (signal?: AbortSignal) => Promise<{
-name: string;
-kind: string;
-}[]>;
-readonly getToolExtensions: (name: string, signal?: AbortSignal) => Promise<{
-combos: (string | {
+base_tool: string;
+description: string;
+active_version: number;
+extensions: (string | {
 name: string;
 config: Record<string, unknown>;
 })[][];
-available: {
-name: string;
-kind: string;
-}[];
-}>;
-readonly setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly listTemplates: (signal?: AbortSignal) => Promise<string[]>;
-readonly getTemplate: (templateId: string) => Promise<{
-template: string;
-schema: Record<string, unknown>;
-}>;
-readonly uploadTemplate: (path: string, content: string) => Promise<{
-path: string;
-uploaded: true;
-}>;
-readonly deleteTemplate: (path: string) => Promise<{
-path: string;
-deleted: true;
-}>;
-readonly deleteTemplateDir: (path: string) => Promise<{
-path: string;
-deleted: true;
-}>;
-readonly renderTemplate: (text: TemplatedText) => Promise<{
-rendered: string;
-}>;
-readonly clearTemplatesCache: () => Promise<{
-cleared: true;
-}>;
-readonly getManifest: (signal?: AbortSignal) => Promise<{
-mcp: {
-[x: string]: unknown;
-managed?: {
-connection_id: string;
-provider_id: string;
-sub_service: string;
-} | null | undefined;
-}[];
-user_tools: string[];
-}>;
-readonly setMcpConfig: (mcp: unknown[]) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
-bound: Record<string, string[]>;
-failed: {
-title: string;
-status: string;
-}[];
-}>;
-readonly reloadMcp: (title: string) => Promise<{
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-}>;
-readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly removeToolsEntry: (title: string) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly removeAgentsEntry: (title: string) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-}>;
-readonly reloadFailedMcps: () => Promise<{
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-}>;
-readonly deregisterMcp: (title: string) => Promise<{
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-}>;
-readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
-tools: string[];
-transport: string;
-}>>;
-readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
-slug: string;
-tools: string[];
-transport: string;
-}>;
-readonly deleteSubMcp: (slug: string) => Promise<{
-slug: string;
-removed: true;
-}>;
-readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
-env: Record<string, string>;
-secret_keys: string[];
-}>;
-readonly setEnvConfig: (env: Record<string, string>) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly getConfigMode: (signal?: AbortSignal) => Promise<{
-config_mode: string;
-read_only: boolean;
-}>;
-readonly reloadConfig: (targets?: string[] | null) => Promise<{
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-}>;
-readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
-name: string;
-description: string;
+output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
+conflicted: boolean;
+conflicted_reason: string | null;
+uses: string[];
+used_by: string[];
 }[]>;
-readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
+readonly createPreset: (body: CreatePresetBody) => Promise<{
+name: string;
+base_tool: string;
 description: string;
-env: Record<string, string>;
-secret_keys: string[];
-}>;
-readonly putSettingsProfile: (name: string, body: SettingsProfileBody) => Promise<{
-ok: true;
-version?: number | undefined;
-}>;
-readonly deleteSettingsProfile: (name: string) => Promise<{
-ok: true;
-}>;
-readonly diffSettingsProfile: (name: string) => Promise<{
-added: string[];
-removed: string[];
-changed: {
-key: string;
-old: string;
-new: string;
-}[];
-recycle_keys: string[];
-refused_keys: string[];
-}>;
-readonly applySettingsProfile: (name: string) => Promise<{
-hot: string[];
-recycle: {
+active_version: number;
+extensions: (string | {
 name: string;
-kind: string;
-status: string;
-generation_before: number;
-}[];
-fresh: {
-name: string;
-kind: string;
-generation: number;
-}[];
-refused: {
-key: string;
-reason: string;
-}[];
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
-version: number;
-tags: string[];
-created_at: string;
-is_current: boolean;
-}[]>;
-readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-version: number;
-tags: string[];
-created_at: string;
-is_current: boolean;
-body: {
-description: string;
-env: Record<string, string>;
-secret_keys: string[];
-};
-}>;
-readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
-ok: true;
-version: number;
-}>;
-readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
-status: string;
-env_keys: number;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-};
-}>;
-readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
-mcp: {
-[x: string]: unknown;
-managed?: {
-connection_id: string;
-provider_id: string;
-sub_service: string;
-} | null | undefined;
-}[];
-user_tools: string[];
-}>;
-readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
-var: string;
-pointer: string;
-has_default: boolean;
-set: boolean;
-}[]>;
-readonly listProviders: (signal?: AbortSignal) => Promise<{
-providers: {
-id: string;
-display_name: string;
-description: string;
-icon_url: string;
-kind: "none" | "oauth";
-origin: "system" | "community";
-category: string;
-sub_services: {
-id: string;
-display_name: string;
-description: string;
-scopes: string[];
-}[];
-config_fields: {
-key: string;
-label: string;
-target: "env" | "header";
-required: boolean;
-secret: boolean;
-}[];
-}[];
-categories: {
-id: string;
-display_name: string;
-sort_order: number;
-}[];
-}>;
-readonly listConnections: (signal?: AbortSignal) => Promise<{
-items: {
-connection_id: string;
-provider_id: string;
-alias: string;
-kind: "none" | "oauth";
-account_identity: string | null;
-enabled_sub_services: string[];
-granted_scopes: string[];
-unreachable_sub_services: string[];
-auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-created_at: string;
-}[];
-total: number;
-unhealthy?: number | undefined;
-}>;
-readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
-connection_id: string;
-provider_id: string;
-alias: string;
-kind: "none" | "oauth";
-account_identity: string | null;
-enabled_sub_services: string[];
-granted_scopes: string[];
-unreachable_sub_services: string[];
-auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-created_at: string;
-}>;
-readonly startConnect: (args: StartConnectArgs) => Promise<{
-flow_id: string;
-authorize_url: string;
-} | {
-connection_id: string;
-added_manifest_entries: string[];
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-}>;
-readonly disconnect: (id: string) => Promise<{
-connection_id: string;
-upstream_revoke_outcome: "success" | "failed" | "skipped";
-upstream_revoke_status: number | null;
-removed_manifest_entries: string[];
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-}>;
-readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-flow_id: string;
-authorize_url: string;
-}>;
-readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-connection_id: string;
-enabled_sub_services: string[];
-consent_required: boolean;
-flow_id: string | null;
-authorize_url: string | null;
-added_manifest_entries: string[];
-removed_manifest_entries: string[];
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-}>;
-readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
-kind: "success";
-connection_id: string;
-return_url: string;
-fanout: {
-mode: "local-only";
-note: string;
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "fleet";
-} | {
-op: string;
-reachable: boolean;
-local_only: boolean;
-results: {
-name: string;
-outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-payload: unknown;
-error: string | null;
-detail: string | null;
-}[];
-error: string | null;
-mode: "unreachable";
-} | null;
-} | {
-kind: "failed";
-reason: string;
-} | {
-kind: "cancelled";
-message: string;
-}>;
-readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
-name: string;
-version: string;
-api_version: number;
-entry: string;
-integrity: Record<string, string>;
-contributions: {
-tool_panels: Record<string, string>;
-pages: string[];
-settings_tabs: string[];
-nav_entries: string[];
-};
-}[]>;
-readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
-total: number;
-page: number;
-page_size: number;
-next_page: number | null;
-truncated: boolean;
-items: {
-interaction_id: string;
-group_id: string;
-question: string;
-answer_format: "text" | "external" | "confirm" | "select" | "form";
-format_payload: Record<string, unknown>;
-created_at: string;
-timeout_at: string;
-sensitive: boolean;
-server_verified?: boolean | undefined;
-channel?: string | undefined;
-recipient?: string | undefined;
-origin?: string | undefined;
-audience?: string | undefined;
-media?: unknown[] | undefined;
-}[];
-}>;
-readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
-interaction_id: string;
-status: string;
-}>;
-readonly cancelInteraction: (interactionId: string) => Promise<{
-interaction_id: string;
-status: string;
-}>;
-readonly listChannels: (signal?: AbortSignal) => Promise<{
-channels: string[];
-}>;
-readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
-items: {
-callback_secret: string | null;
-callback_url: string | null;
-channel: string | null;
-door: "channel" | "api";
-error_reply_text: string | null;
-execution_key: string;
-execution_key_fingerprint: string;
-initial_mode: "agent" | "manual";
-locale: string | null;
-our_identity: string | null;
-payload_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-reply_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-route_name: string;
-target_kind: "tool" | "agent";
-target_name: string;
-turns_per_hour_override: number | null;
-}[];
-total: number;
-}>;
-readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
-created: boolean;
-route_name: string;
-route: {
-callback_secret: string | null;
-callback_url: string | null;
-channel: string | null;
-door: "channel" | "api";
-error_reply_text: string | null;
-execution_key: string;
-execution_key_fingerprint: string;
-initial_mode: "agent" | "manual";
-locale: string | null;
-our_identity: string | null;
-payload_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-reply_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-route_name: string;
-target_kind: "tool" | "agent";
-target_name: string;
-turns_per_hour_override: number | null;
-};
-callback_secret: string | null;
-}>;
-readonly deleteConversationRoute: (routeName: string) => Promise<{
-removed: boolean;
-route_name: string;
-}>;
-readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
-total: number;
-page: number;
-page_size: number;
-next_page: number | null;
-truncated: boolean;
-items: {
-thread_id: string;
-client_address: string;
-last_activity_at: number;
-message_count: number;
-last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-}[];
-}>;
-readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
-order: "asc" | "desc";
-total: number;
-page: number;
-page_size: number;
-next_page: number | null;
-truncated: boolean;
-items: {
-message_id: string;
-route_name: string;
-door: "channel" | "api";
-thread_id: string;
-client_address: string;
-caller_principal: string | null;
-inbound_text: string;
-answer_status: "error" | "silent" | "answered" | null;
-answer: string | null;
-origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-created_at: number;
-updated_at: number;
-channel?: string | null | undefined;
-our_identity?: string | null | undefined;
-provider_message_id?: string | null | undefined;
-callback_url?: string | null | undefined;
-error?: string | null | undefined;
-outbound_message_ids?: string[] | undefined;
-attempts?: number | undefined;
-}[];
-}>;
-readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
-total: number;
-page: number;
-page_size: number;
-next_page: number | null;
-truncated: boolean;
-items: {
-message_id: string;
-route_name: string;
-door: "channel" | "api";
-thread_id: string;
-client_address: string;
-caller_principal: string | null;
-inbound_text: string;
-answer_status: "error" | "silent" | "answered" | null;
-answer: string | null;
-origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-created_at: number;
-updated_at: number;
-channel?: string | null | undefined;
-our_identity?: string | null | undefined;
-provider_message_id?: string | null | undefined;
-callback_url?: string | null | undefined;
-error?: string | null | undefined;
-outbound_message_ids?: string[] | undefined;
-attempts?: number | undefined;
-}[];
-}>;
-readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
-message_id: string;
-thread_id: string;
-}>;
-readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
-mode: "agent" | "manual";
-source: "route" | "thread";
-}>;
-readonly setConversationThreadMode: (routeName: string, threadId: string, mode: ConversationThreadMode) => Promise<{
-mode: "agent" | "manual";
-source: "route" | "thread";
-}>;
-readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
-items: {
-greeting_template: string | null;
-multichannel: boolean;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-target_kind: "tool" | "agent";
-target_name: string;
-}[];
-total: number;
-}>;
-readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
-greeting_template: string | null;
-multichannel: boolean;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-target_kind: "tool" | "agent";
-target_name: string;
-}>;
-readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
-created: boolean;
-target_kind: "tool" | "agent";
-target_name: string;
-config: {
-greeting_template: string | null;
-multichannel: boolean;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-target_kind: "tool" | "agent";
-target_name: string;
-};
-}>;
-readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
-removed: boolean;
-target_kind: "tool" | "agent";
-target_name: string;
-}>;
-readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
-items: {
-message_id: string;
-route_name: string;
-door: "channel" | "api";
-thread_id: string;
-client_address: string;
-caller_principal: string | null;
-inbound_text: string;
-answer_status: "error" | "silent" | "answered" | null;
-answer: string | null;
-origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-created_at: number;
-updated_at: number;
-channel?: string | null | undefined;
-our_identity?: string | null | undefined;
-provider_message_id?: string | null | undefined;
-callback_url?: string | null | undefined;
-error?: string | null | undefined;
-outbound_message_ids?: string[] | undefined;
-attempts?: number | undefined;
-}[];
-total: number;
-}>;
-readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
-removed: number;
-route_name: string;
-thread_id: string;
-}>;
-readonly deleteConversationPerson: (personId: string) => Promise<{
-person_id: string;
-removed: number;
-erased: boolean;
-}>;
-readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
-enabled: boolean;
-codes: {
-code_id: string;
-label: string | null;
-created_at: string;
-expires_at: string | null;
-}[];
-}>;
-readonly setWebEntryGate: (identity: string, enabled: boolean) => Promise<{
-enabled: boolean;
-}>;
-readonly mintWebEntryCode: (identity: string, body: WebEntryCodeMintBody) => Promise<{
-code: string;
-code_id: string;
-expires_at: string | null;
-}>;
-readonly revokeWebEntryCode: (identity: string, codeId: string) => Promise<{
-status: "revoked";
-}>;
-readonly listNotifications: (signal?: AbortSignal) => Promise<{
-notifications: {
-id: string;
-message: string;
-recipient: string | null;
-created_at: string;
-audience?: string | null | undefined;
-media?: unknown[] | null | undefined;
-template?: {
-body_parameters: string[];
-buttons: unknown[];
-header_media: {
-caption: string | null;
-filename: string | null;
-kind: "image" | "link" | "document" | "video" | "audio";
-url: string;
-} | null;
-language: string;
-name: string;
-} | null | undefined;
-options?: string[] | null | undefined;
-}[];
-}>;
-readonly listAgents: (signal?: AbortSignal) => Promise<{
-items: {
-name: string;
-description: string;
-tool_name: string;
-input_schema: Record<string, unknown>;
-spec_runnable: boolean;
-}[];
-total: number;
-}>;
-readonly listSpecRunnableAgents: (signal?: AbortSignal) => Promise<{
-items: {
-name: string;
-description: string;
-tool_name: string;
-input_schema: Record<string, unknown>;
-spec_runnable: boolean;
-}[];
-total: number;
-}>;
-readonly streamAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
-readonly streamAuthoredAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
-readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
-items: {
-condition: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-execution_key: string;
-execution_key_fingerprint: string;
-expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-name: string;
-state_binding: {
-states: {
-input_injections: {
-into: string;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-scope_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-state: string;
-subject_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-templates: string[];
-updates: {
-adapter: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-jq: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-op_id: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-template_jq: string | null;
-}[];
-}[];
-} | null;
-subject: {
-key_expr: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-};
-kind: string;
-target_kind: "tool" | "agent";
-target_name: string;
-} | null;
-tool: string;
-tool_kwargs: Record<string, unknown>;
-topic: string;
-}[];
-total: number;
-topic_verifiers: Record<string, {
-verifier: string;
 config: Record<string, unknown>;
+})[][];
+output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
+conflicted: boolean;
+conflicted_reason: string | null;
+uses: string[];
+used_by: string[];
 }>;
-trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
-}>;
-readonly registerHook: (params: HookRegister) => Promise<{
-registered: boolean;
+readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
 name: string;
-}>;
-readonly unregisterHook: (name: string) => Promise<{
-removed: boolean;
-name: string;
-}>;
-readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
-readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
-topic: string;
-verifier: string;
-}>;
-readonly deleteTopicVerifier: (topic: string) => Promise<{
-removed: boolean;
-topic: string;
-}>;
-readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
-name: string;
-trigger_path: string;
-token: string;
-topic: string;
-expires_at: string | null;
-}>;
-readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
-items: {
-name: string;
-topic: string;
-execution_key: string;
-trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-tool_kwargs: Record<string, unknown> | null;
-created_by: string | null;
-created_at: string;
-expires_at: string | null;
-token_hash_prefix: string;
-}[];
-total: number;
-}>;
-readonly deleteTriggerLink: (name: string) => Promise<{
-removed: boolean;
-name: string;
-}>;
-readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
-readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
-groups: {
-name: string;
-module: string;
-qualname: string;
-fields: {
-name: string;
-env_var: string;
-type: string;
-default: unknown;
-required: boolean;
-secret: boolean;
-description: string | null;
-nested_group: string | null;
-default_namespace_var: string | null;
-value: unknown;
-}[];
-}[];
-}>;
-readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
-readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
-scope_id: string;
-url: string;
-}>;
-readonly removeUrlFromScope: (body: {
-url: string;
-}) => Promise<{
-url: string;
-}>;
-readonly removeScope: (scopeId: string) => Promise<{
-scope_id: string;
-deleted_keys: number;
-}>;
-readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
-path: string;
-methods: string[];
-mapped: string | null;
-tags: string[];
-summary: string;
-action: "read" | "write" | "secret" | "fenced" | null;
-}[]>;
-readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
-readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
-url: string;
-}>;
-readonly unpinPublicRoute: (url: string) => Promise<{
-url: string;
-}>;
-readonly listRoles: (signal?: AbortSignal) => Promise<{
-allow_all: boolean;
-base_tier: string | null;
-condition: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
+base_tool: string;
 description: string;
-grants: Record<string, "none" | "read" | "write">;
+active_version: number;
+extensions: (string | {
 name: string;
-scopes: string[];
-}[]>;
-readonly createRole: (body: RoleCreateBody) => Promise<{
-allow_all: boolean;
-base_tier: string | null;
-condition: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-description: string;
-grants: Record<string, "none" | "read" | "write">;
-name: string;
-scopes: string[];
+config: Record<string, unknown>;
+})[][];
+output_schema: Record<string, unknown> | null;
+input_schema: Record<string, unknown> | null;
+conflicted: boolean;
+conflicted_reason: string | null;
+uses: string[];
+used_by: string[];
+fixed_kwargs: Record<string, unknown>;
 }>;
-readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
-allow_all: boolean;
-base_tier: string | null;
-condition: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null;
-description: string;
-grants: Record<string, "none" | "read" | "write">;
-name: string;
-scopes: string[];
-}>;
-readonly deleteRole: (name: string) => Promise<{
-name: string;
-deleted: boolean;
-}>;
-readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
-versions: {
+readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
 version: number;
 body: {
-allow_all: boolean;
-base_tier: string | null;
-condition: {
+base_tool: string;
+description: string;
+extensions: (string | Record<string, unknown>)[][];
+fixed_kwargs: Record<string, unknown>;
+input_schema: Record<string, unknown> | {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-description: string;
-grants: Record<string, "none" | "read" | "write">;
-name: string;
-scopes: string[];
+output_schema: Record<string, unknown> | {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
 };
-tags: string[];
-created_at: string;
-is_current: boolean;
-}[];
-audit: {
-version: number;
-body: {
-action: string;
-actor: string | null;
-before: unknown;
-after: unknown;
-};
-tags: string[];
-created_at: string;
-is_current: boolean;
-}[];
-}>;
-readonly rollbackRole: (name: string, version: number) => Promise<{
-allow_all: boolean;
-base_tier: string | null;
-condition: {
+templates: string[];
+updates: {
+adapter: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-description: string;
-grants: Record<string, "none" | "read" | "write">;
-name: string;
-scopes: string[];
-}>;
-readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
-user_id: string;
-description: string;
-scopes: string[];
-policy_data: unknown;
-condition?: {
-content?: string | undefined;
-id?: string | undefined;
-kwargs?: Record<string, unknown> | undefined;
-} | null | undefined;
-}[]>;
-readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
-readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
-user_id: string;
-updated: boolean;
-}>;
-readonly revokeApiKey: (userId: string) => Promise<{
-user_id: string;
-revoked: boolean;
-}>;
-readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
-claim_path: string;
-token: string;
-expires_at: string;
-}>;
-readonly getMe: (signal?: AbortSignal) => Promise<{
-user_id: string;
-owner_user_id: string | null;
-admin: boolean;
-scopes: string[];
-routes: {
-path: string;
-methods: string[];
-}[];
-route_patterns: {
-pattern: string;
-scope_id: string;
-}[];
-sub_mcp: {
-tools: string[];
-transport: string;
-slug: string;
-}[];
-tools: string[];
-agents: string[];
-mintable: boolean;
-}>;
-readonly getLoginMethods: (options?: {
-signal?: AbortSignal;
-}) => Promise<{
-methods: ({
-shape: "form";
-id: string;
-title: string;
-purpose: "login" | "bootstrap" | "invite";
-fields: {
-name: string;
-label: string;
-secret: boolean;
-autocomplete?: string | undefined;
-}[];
-submit_path: string;
-} | {
-shape: "button";
-id: string;
-label: string;
-href: string;
-icon?: string | undefined;
-})[];
-bootstrap: boolean;
-}>;
-readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
-token: string;
-user_id: string;
-}>;
-readonly exchangeSsoCode: (code: string) => Promise<{
-token: string;
-user_id: string;
-}>;
-readonly claimLogin: (body: {
-token: string;
-}) => Promise<{
-token: string;
-user_id: string;
-}>;
-readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
-mintable: boolean;
-providers: {
-name: string;
-mintable: boolean;
-}[];
-}>;
-readonly logout: () => Promise<{
-revoked: boolean;
-}>;
-readonly validateCondition: (body: ValidateConditionBody) => Promise<{
-ok: boolean;
-result: boolean | null;
-}>;
-readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
-version: number;
-body: {
-condition: {
+jq: {
 content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-policy_data: Record<string, unknown>;
-scopes: string[];
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
 };
 tags: string[];
 created_at: string;
 is_current: boolean;
 }[]>;
-readonly rollbackPolicy: (userId: string, version: number) => Promise<{
-user_id: string;
+readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
+version: number;
+body: {
+base_tool: string;
+description: string;
+extensions: (string | Record<string, unknown>)[][];
+fixed_kwargs: Record<string, unknown>;
+input_schema: Record<string, unknown> | {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+output_schema: Record<string, unknown> | {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+templates: string[];
+updates: {
+adapter: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
+};
+tags: string[];
+created_at: string;
+is_current: boolean;
+}>;
+readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
+version: number;
+body: {
+base_tool: string;
+description: string;
+extensions: (string | Record<string, unknown>)[][];
+fixed_kwargs: Record<string, unknown>;
+input_schema: Record<string, unknown> | {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+output_schema: Record<string, unknown> | {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state_binding: {
+states: {
+input_injections: {
+into: string;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+scope_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+state: string;
+subject_expr: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+};
+templates: string[];
+updates: {
+adapter: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+jq: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+op_id: {
+content?: string | undefined;
+id?: string | undefined;
+kwargs?: Record<string, unknown> | undefined;
+} | null;
+template_jq: string | null;
+}[];
+}[];
+} | null;
+};
+tags: string[];
+created_at: string;
+is_current: boolean;
+}>;
+readonly rollbackPreset: (name: string, version: number) => Promise<{
+name: string;
 active_version: number;
 }>;
-readonly listBackupSections: (signal?: AbortSignal) => Promise<{
+readonly deletePreset: (name: string) => Promise<{
 name: string;
-secret: boolean;
-}[]>;
-readonly exportBackup: (sections: string[], signal?: AbortSignal) => Promise<Blob>;
-readonly importBackup: (body: {
-document: unknown;
-sections: string[];
-}) => Promise<{
-ok: boolean;
-sections: Record<string, {
-created: number;
-updated: number;
-skipped: number;
-errors: string[];
-new_api_keys?: {
-user_id: string;
-description: string;
-api_key: string;
-}[] | undefined;
-fanout?: {
-mode: "local-only";
-note: string;
-} | {
+deleted: true;
+}>;
+readonly renamePreset: (name: string, newName: string) => Promise<{
+name: string;
+renamed_from: string;
+active_version: number;
+}>;
+readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
+name: string;
+referees: string[];
+}>;
+readonly validatePreset: (body: ValidatePresetBody) => Promise<{
+valid: boolean;
+error: string | null;
+}>;
+readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
+name: string;
+version: number;
+tags: string[];
+}>;
+readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
+readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
+input: Record<string, unknown>;
+output: Record<string, unknown> | null;
+description: string | null;
+}>;
+readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
+input: Record<string, unknown>;
+output: Record<string, unknown> | null;
+description: string | null;
+}>>;
+readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
+readonly reloadTool: (args: ToolAdminArgs) => Promise<{
 op: string;
 reachable: boolean;
 local_only: boolean;
@@ -2670,8 +2963,8 @@ error: string | null;
 detail: string | null;
 }[];
 error: string | null;
-mode: "fleet";
-} | {
+}>;
+readonly removeTool: (args: ToolAdminArgs) => Promise<{
 op: string;
 reachable: boolean;
 local_only: boolean;
@@ -2683,326 +2976,33 @@ error: string | null;
 detail: string | null;
 }[];
 error: string | null;
-mode: "unreachable";
-} | undefined;
 }>;
+readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
+run_id: string;
 }>;
-readonly listSchedules: (signal?: AbortSignal) => Promise<{
-[x: string]: unknown;
-name: string;
-enabled?: boolean | undefined;
-schedule?: unknown;
-target?: unknown;
-args?: unknown[] | undefined;
-kwargs?: Record<string, unknown> | undefined;
-}[]>;
-readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
-[x: string]: unknown;
-utc: unknown;
-local?: unknown;
-system?: unknown;
-}>;
-readonly addSchedule: (body: {
+readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
+run_id: string;
 tool_name: string;
-tool_kwargs: Record<string, unknown>;
-schedule_kwargs: Record<string, unknown>;
-state_binding?: StateBinding | null;
-}) => Promise<unknown>;
-readonly deleteSchedule: (name: string) => Promise<unknown>;
-readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
-summary: {
-totalRuns: number;
-totalCost: number;
-totalTokens: number;
-averageLatencyMs: number;
-avgCostPerRun: number;
-avgTokensPerRun: number;
-timeToFirstTokenMs: number | null;
-};
-timeSeries: {
-bucket: string | null;
-runs: number;
-cost: number;
-avgLatencyMs: number;
-totalTokens: number;
-}[];
-byModel: {
-model: string;
-calls: number;
-cost: number;
-totalTokens: number;
-avgLatencyMs: number;
-}[];
-granularity: "hour" | "day" | "week";
+status: "failed" | "running" | "succeeded" | "lost";
+started_at: string;
+finished_at?: string | undefined;
+result?: unknown;
+error?: string | undefined;
 }>;
-readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
-items: {
-id: string;
-traceId: string;
-createdAt: string | null;
-tags: string[];
-status: "error" | "success";
-cost: number | null;
-latencyMs: number | null;
-totalTokens: number | null;
-inputPreview: unknown;
-outputPreview: unknown;
-}[];
-page: number;
-nextPage: number | null;
-}>;
-readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
-traceId: string;
-timestamp: string | null;
-tags: string[];
-totalCost: number | null;
-input: unknown;
-output: unknown;
-metadata: unknown;
-spans: {
-id: string;
-parentId: string | null;
-traceId: string | null;
-name: string | null;
-type: string | null;
-level: string | null;
-statusMessage: string | null;
-start: string | null;
-end: string | null;
-model: string | null;
-usage: unknown;
-metadata: unknown;
-input: unknown;
-output: unknown;
-nodeId: string | null;
-}[];
-}>;
-readonly exportTrace: (traceId: string, signal?: AbortSignal) => Promise<Blob>;
-readonly exportRuns: (params: RunsQuery & {
-format: "csv" | "json";
-}, signal?: AbortSignal) => Promise<Blob>;
-readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
-listings: {
-ref: string;
-namespace: string;
-name: string;
-display_name: string | null;
-icon_url: string | null;
-package: string | null;
-description: string;
-categories: string[];
-tags: string[];
-trust_tier: string;
-pricing: string;
-latest_version: string | null;
-downloads: number;
-updated_at: string;
-kinds: {
-kind: string;
-count: number;
-names: string[];
-}[];
-groups: {
-name: string;
-count: number;
-}[];
-premium?: boolean | null | undefined;
-}[];
-total: number;
-page: number;
-page_size: number;
-}>;
-readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
-namespace: string;
-name: string;
-display_name: string | null;
-icon_url: string | null;
-package: string | null;
-description: string;
-readme_md: string | null;
-license: string | null;
-homepage_url: string | null;
-repository_url: string | null;
-categories: string[];
-tags: string[];
-trust_tier: string;
-pricing: string;
-downloads: number;
-latest: {
-version: string;
-contract_range: string | null;
-status: string;
-published_at: string | null;
-items: {
-kind: string;
-name: string;
-description: string;
-tags: string[];
-group: string | null;
-routes?: {
-base: string;
-paths: {
-path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-public: boolean;
-}[];
-} | null | undefined;
-required_env?: {
-name: string;
-secret: boolean;
-}[] | undefined;
-}[];
-} | null;
-versions: {
-version: string;
-contract_range: string | null;
-status: string;
-published_at: string | null;
-}[];
-source?: "pypi" | "github" | "spec" | null | undefined;
-docs_url?: string | null | undefined;
-premium?: boolean | null | undefined;
-}>;
-readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
-readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
-readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
-installed: {
-ref: string;
-version: string;
-source: string;
-delivery: "package" | "descriptor";
-installed_at: string;
-latest: string | null;
-update_available: boolean;
-incompatible_newer: string | null;
-missing_upstream: boolean;
-compat: {
-status: "unknown" | "compatible" | "incompatible";
-reason: string | null;
-};
-items: {
-name: string;
-kind: string;
-}[];
-route_mounts: Record<string, string>;
-}[];
-quarantined: {
-name: string;
-reason: string;
-}[];
-}>;
-readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
-ref: string;
-version: string;
-items: {
-item: string;
-kind: string;
-base: string;
-default_base: string;
-routes: {
-path: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-public: boolean;
-}[];
-}[];
-collisions: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-conflict_owner: string;
-conflict_path: string;
-}[];
-public_routes: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-}[];
-new_public_routes: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-}[];
-requires_public_acceptance: boolean;
-required_env: {
-name: string;
-secret: boolean;
-}[];
-missing_env: string[];
-delivery: "package" | "descriptor";
-}>;
-readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-ref: string;
-version: string;
-notes: string[];
-advisories: {
-id: number;
-listing: string;
-affected_versions: string;
-severity: string;
-summary: string;
-created_at: string;
-withdrawn_at: string | null;
-}[];
-routes: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-public: boolean;
-}[];
-}>;
-readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
-ref: string;
-uninstalled: true;
-notes: string[];
-}>;
-readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-ref: string;
-version: string;
-notes: string[];
-advisories: {
-id: number;
-listing: string;
-affected_versions: string;
-severity: string;
-summary: string;
-created_at: string;
-withdrawn_at: string | null;
-}[];
-routes: {
-item: string;
-full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-public: boolean;
-}[];
-}>;
-readonly upgradeAllMarketplacePlugins: () => Promise<{
-results: {
-ref: string;
-outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-detail: string;
-}[];
-}>;
-readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
-advisories: {
-id: number;
-listing: string;
-affected_versions: string;
-severity: string;
-summary: string;
-created_at: string;
-withdrawn_at: string | null;
-}[];
-fetched_at: string;
-}>;
-readonly getHealth: (signal?: AbortSignal) => Promise<string>;
-readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
-kind: string;
-state: "default" | "active" | "off";
-plugin: string | null;
-detail: string;
+readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
+run_id: string;
+tool_name: string;
+status: "failed" | "running" | "succeeded" | "lost";
+started_at: string;
+finished_at?: string | undefined;
 }[]>;
-readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
+readonly listToolTags: (signal?: AbortSignal) => Promise<{
+name: string;
+tags: string[];
+badges: string[];
+hidden: boolean;
+}[]>;
+readonly baseUrl: string;
 } | null>;
 
 // @public
@@ -4432,20 +4432,1689 @@ export function coversWrite(state: CapabilityState, path: string, method: string
 
 // @public (undocumented)
 function createApiClient(config: ApiConfig): {
-    readonly baseUrl: string;
-    readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
-    readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
-        input: Record<string, unknown>;
-        output: Record<string, unknown> | null;
-        description: string | null;
+    readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
+    readonly getHealth: (signal?: AbortSignal) => Promise<string>;
+    readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
+        kind: string;
+        state: "default" | "active" | "off";
+        plugin: string | null;
+        detail: string;
+    }[]>;
+    readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
+        listings: {
+            ref: string;
+            namespace: string;
+            name: string;
+            display_name: string | null;
+            icon_url: string | null;
+            package: string | null;
+            description: string;
+            categories: string[];
+            tags: string[];
+            trust_tier: string;
+            pricing: string;
+            latest_version: string | null;
+            downloads: number;
+            updated_at: string;
+            kinds: {
+                kind: string;
+                count: number;
+                names: string[];
+            }[];
+            groups: {
+                name: string;
+                count: number;
+            }[];
+            premium?: boolean | null | undefined;
+        }[];
+        total: number;
+        page: number;
+        page_size: number;
     }>;
-    readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
-        input: Record<string, unknown>;
-        output: Record<string, unknown> | null;
-        description: string | null;
+    readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
+        namespace: string;
+        name: string;
+        display_name: string | null;
+        icon_url: string | null;
+        package: string | null;
+        description: string;
+        readme_md: string | null;
+        license: string | null;
+        homepage_url: string | null;
+        repository_url: string | null;
+        categories: string[];
+        tags: string[];
+        trust_tier: string;
+        pricing: string;
+        downloads: number;
+        latest: {
+            version: string;
+            contract_range: string | null;
+            status: string;
+            published_at: string | null;
+            items: {
+                kind: string;
+                name: string;
+                description: string;
+                tags: string[];
+                group: string | null;
+                routes?: {
+                    base: string;
+                    paths: {
+                        path: string;
+                        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                        public: boolean;
+                    }[];
+                } | null | undefined;
+                required_env?: {
+                    name: string;
+                    secret: boolean;
+                }[] | undefined;
+            }[];
+        } | null;
+        versions: {
+            version: string;
+            contract_range: string | null;
+            status: string;
+            published_at: string | null;
+        }[];
+        source?: "pypi" | "github" | "spec" | null | undefined;
+        docs_url?: string | null | undefined;
+        premium?: boolean | null | undefined;
+    }>;
+    readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
+    readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
+    readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
+        installed: {
+            ref: string;
+            version: string;
+            source: string;
+            delivery: "package" | "descriptor";
+            installed_at: string;
+            latest: string | null;
+            update_available: boolean;
+            incompatible_newer: string | null;
+            missing_upstream: boolean;
+            compat: {
+                status: "unknown" | "compatible" | "incompatible";
+                reason: string | null;
+            };
+            items: {
+                name: string;
+                kind: string;
+            }[];
+            route_mounts: Record<string, string>;
+        }[];
+        quarantined: {
+            name: string;
+            reason: string;
+        }[];
+    }>;
+    readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
+        ref: string;
+        version: string;
+        items: {
+            item: string;
+            kind: string;
+            base: string;
+            default_base: string;
+            routes: {
+                path: string;
+                full_path: string;
+                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                public: boolean;
+            }[];
+        }[];
+        collisions: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            conflict_owner: string;
+            conflict_path: string;
+        }[];
+        public_routes: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+        }[];
+        new_public_routes: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+        }[];
+        requires_public_acceptance: boolean;
+        required_env: {
+            name: string;
+            secret: boolean;
+        }[];
+        missing_env: string[];
+        delivery: "package" | "descriptor";
+    }>;
+    readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
+        ref: string;
+        version: string;
+        notes: string[];
+        advisories: {
+            id: number;
+            listing: string;
+            affected_versions: string;
+            severity: string;
+            summary: string;
+            created_at: string;
+            withdrawn_at: string | null;
+        }[];
+        routes: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            public: boolean;
+        }[];
+    }>;
+    readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
+        ref: string;
+        uninstalled: true;
+        notes: string[];
+    }>;
+    readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
+        ref: string;
+        version: string;
+        notes: string[];
+        advisories: {
+            id: number;
+            listing: string;
+            affected_versions: string;
+            severity: string;
+            summary: string;
+            created_at: string;
+            withdrawn_at: string | null;
+        }[];
+        routes: {
+            item: string;
+            full_path: string;
+            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            public: boolean;
+        }[];
+    }>;
+    readonly upgradeAllMarketplacePlugins: () => Promise<{
+        results: {
+            ref: string;
+            outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
+            detail: string;
+        }[];
+    }>;
+    readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
+        advisories: {
+            id: number;
+            listing: string;
+            affected_versions: string;
+            severity: string;
+            summary: string;
+            created_at: string;
+            withdrawn_at: string | null;
+        }[];
+        fetched_at: string;
+    }>;
+    readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
+        summary: {
+            totalRuns: number;
+            totalCost: number;
+            totalTokens: number;
+            averageLatencyMs: number;
+            avgCostPerRun: number;
+            avgTokensPerRun: number;
+            timeToFirstTokenMs: number | null;
+        };
+        timeSeries: {
+            bucket: string | null;
+            runs: number;
+            cost: number;
+            avgLatencyMs: number;
+            totalTokens: number;
+        }[];
+        byModel: {
+            model: string;
+            calls: number;
+            cost: number;
+            totalTokens: number;
+            avgLatencyMs: number;
+        }[];
+        granularity: "hour" | "day" | "week";
+    }>;
+    readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
+        items: {
+            id: string;
+            traceId: string;
+            createdAt: string | null;
+            tags: string[];
+            status: "error" | "success";
+            cost: number | null;
+            latencyMs: number | null;
+            totalTokens: number | null;
+            inputPreview: unknown;
+            outputPreview: unknown;
+        }[];
+        page: number;
+        nextPage: number | null;
+    }>;
+    readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
+        traceId: string;
+        timestamp: string | null;
+        tags: string[];
+        totalCost: number | null;
+        input: unknown;
+        output: unknown;
+        metadata: unknown;
+        spans: {
+            id: string;
+            parentId: string | null;
+            traceId: string | null;
+            name: string | null;
+            type: string | null;
+            level: string | null;
+            statusMessage: string | null;
+            start: string | null;
+            end: string | null;
+            model: string | null;
+            usage: unknown;
+            metadata: unknown;
+            input: unknown;
+            output: unknown;
+            nodeId: string | null;
+        }[];
+    }>;
+    readonly exportTrace: (traceId: string, signal?: AbortSignal) => Promise<Blob>;
+    readonly exportRuns: (params: RunsQuery & {
+        format: "csv" | "json";
+    }, signal?: AbortSignal) => Promise<Blob>;
+    readonly listSchedules: (signal?: AbortSignal) => Promise<{
+        [x: string]: unknown;
+        name: string;
+        enabled?: boolean | undefined;
+        schedule?: unknown;
+        target?: unknown;
+        args?: unknown[] | undefined;
+        kwargs?: Record<string, unknown> | undefined;
+    }[]>;
+    readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
+        [x: string]: unknown;
+        utc: unknown;
+        local?: unknown;
+        system?: unknown;
+    }>;
+    readonly addSchedule: (body: {
+        tool_name: string;
+        tool_kwargs: Record<string, unknown>;
+        schedule_kwargs: Record<string, unknown>;
+        state_binding?: StateBinding | null;
+    }) => Promise<unknown>;
+    readonly deleteSchedule: (name: string) => Promise<unknown>;
+    readonly listBackupSections: (signal?: AbortSignal) => Promise<{
+        name: string;
+        secret: boolean;
+    }[]>;
+    readonly exportBackup: (sections: string[], signal?: AbortSignal) => Promise<Blob>;
+    readonly importBackup: (body: {
+        document: unknown;
+        sections: string[];
+    }) => Promise<{
+        ok: boolean;
+        sections: Record<string, {
+            created: number;
+            updated: number;
+            skipped: number;
+            errors: string[];
+            new_api_keys?: {
+                user_id: string;
+                description: string;
+                api_key: string;
+            }[] | undefined;
+            fanout?: {
+                mode: "local-only";
+                note: string;
+            } | {
+                op: string;
+                reachable: boolean;
+                local_only: boolean;
+                results: {
+                    name: string;
+                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                    payload: unknown;
+                    error: string | null;
+                    detail: string | null;
+                }[];
+                error: string | null;
+                mode: "fleet";
+            } | {
+                op: string;
+                reachable: boolean;
+                local_only: boolean;
+                results: {
+                    name: string;
+                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                    payload: unknown;
+                    error: string | null;
+                    detail: string | null;
+                }[];
+                error: string | null;
+                mode: "unreachable";
+            } | undefined;
+        }>;
+    }>;
+    readonly validateCondition: (body: ValidateConditionBody) => Promise<{
+        ok: boolean;
+        result: boolean | null;
+    }>;
+    readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
+        version: number;
+        body: {
+            condition: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            policy_data: Record<string, unknown>;
+            scopes: string[];
+        };
+        tags: string[];
+        created_at: string;
+        is_current: boolean;
+    }[]>;
+    readonly rollbackPolicy: (userId: string, version: number) => Promise<{
+        user_id: string;
+        active_version: number;
+    }>;
+    readonly logout: () => Promise<{
+        revoked: boolean;
+    }>;
+    readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
+        mintable: boolean;
+        providers: {
+            name: string;
+            mintable: boolean;
+        }[];
+    }>;
+    readonly getLoginMethods: (options?: {
+        signal?: AbortSignal;
+    }) => Promise<{
+        methods: ({
+            shape: "form";
+            id: string;
+            title: string;
+            purpose: "login" | "bootstrap" | "invite";
+            fields: {
+                name: string;
+                label: string;
+                secret: boolean;
+                autocomplete?: string | undefined;
+            }[];
+            submit_path: string;
+        } | {
+            shape: "button";
+            id: string;
+            label: string;
+            href: string;
+            icon?: string | undefined;
+        })[];
+        bootstrap: boolean;
+    }>;
+    readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
+        token: string;
+        user_id: string;
+    }>;
+    readonly exchangeSsoCode: (code: string) => Promise<{
+        token: string;
+        user_id: string;
+    }>;
+    readonly claimLogin: (body: {
+        token: string;
+    }) => Promise<{
+        token: string;
+        user_id: string;
+    }>;
+    readonly getMe: (signal?: AbortSignal) => Promise<{
+        user_id: string;
+        owner_user_id: string | null;
+        admin: boolean;
+        scopes: string[];
+        routes: {
+            path: string;
+            methods: string[];
+        }[];
+        route_patterns: {
+            pattern: string;
+            scope_id: string;
+        }[];
+        sub_mcp: {
+            tools: string[];
+            transport: string;
+            slug: string;
+        }[];
+        tools: string[];
+        agents: string[];
+        mintable: boolean;
+    }>;
+    readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
+    readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
+        scope_id: string;
+        url: string;
+    }>;
+    readonly removeUrlFromScope: (body: {
+        url: string;
+    }) => Promise<{
+        url: string;
+    }>;
+    readonly removeScope: (scopeId: string) => Promise<{
+        scope_id: string;
+        deleted_keys: number;
+    }>;
+    readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
+        path: string;
+        methods: string[];
+        mapped: string | null;
+        tags: string[];
+        summary: string;
+        action: "read" | "write" | "secret" | "fenced" | null;
+    }[]>;
+    readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
+    readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
+        url: string;
+    }>;
+    readonly unpinPublicRoute: (url: string) => Promise<{
+        url: string;
+    }>;
+    readonly listRoles: (signal?: AbortSignal) => Promise<{
+        allow_all: boolean;
+        base_tier: string | null;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
+        description: string;
+        grants: Record<string, "none" | "read" | "write">;
+        name: string;
+        scopes: string[];
+    }[]>;
+    readonly createRole: (body: RoleCreateBody) => Promise<{
+        allow_all: boolean;
+        base_tier: string | null;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
+        description: string;
+        grants: Record<string, "none" | "read" | "write">;
+        name: string;
+        scopes: string[];
+    }>;
+    readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
+        allow_all: boolean;
+        base_tier: string | null;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
+        description: string;
+        grants: Record<string, "none" | "read" | "write">;
+        name: string;
+        scopes: string[];
+    }>;
+    readonly deleteRole: (name: string) => Promise<{
+        name: string;
+        deleted: boolean;
+    }>;
+    readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
+        versions: {
+            version: number;
+            body: {
+                allow_all: boolean;
+                base_tier: string | null;
+                condition: {
+                    content?: string | undefined;
+                    id?: string | undefined;
+                    kwargs?: Record<string, unknown> | undefined;
+                } | null;
+                description: string;
+                grants: Record<string, "none" | "read" | "write">;
+                name: string;
+                scopes: string[];
+            };
+            tags: string[];
+            created_at: string;
+            is_current: boolean;
+        }[];
+        audit: {
+            version: number;
+            body: {
+                action: string;
+                actor: string | null;
+                before: unknown;
+                after: unknown;
+            };
+            tags: string[];
+            created_at: string;
+            is_current: boolean;
+        }[];
+    }>;
+    readonly rollbackRole: (name: string, version: number) => Promise<{
+        allow_all: boolean;
+        base_tier: string | null;
+        condition: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null;
+        description: string;
+        grants: Record<string, "none" | "read" | "write">;
+        name: string;
+        scopes: string[];
+    }>;
+    readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
+        user_id: string;
+        description: string;
+        scopes: string[];
+        policy_data: unknown;
+        condition?: {
+            content?: string | undefined;
+            id?: string | undefined;
+            kwargs?: Record<string, unknown> | undefined;
+        } | null | undefined;
+    }[]>;
+    readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
+    readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
+        user_id: string;
+        updated: boolean;
+    }>;
+    readonly revokeApiKey: (userId: string) => Promise<{
+        user_id: string;
+        revoked: boolean;
+    }>;
+    readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
+        claim_path: string;
+        token: string;
+        expires_at: string;
+    }>;
+    readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
+        groups: {
+            name: string;
+            module: string;
+            qualname: string;
+            fields: {
+                name: string;
+                env_var: string;
+                type: string;
+                default: unknown;
+                required: boolean;
+                secret: boolean;
+                description: string | null;
+                nested_group: string | null;
+                default_namespace_var: string | null;
+                value: unknown;
+            }[];
+        }[];
+    }>;
+    readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
+    readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
+        name: string;
+        trigger_path: string;
+        token: string;
+        topic: string;
+        expires_at: string | null;
+    }>;
+    readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
+        items: {
+            name: string;
+            topic: string;
+            execution_key: string;
+            trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
+            tool_kwargs: Record<string, unknown> | null;
+            created_by: string | null;
+            created_at: string;
+            expires_at: string | null;
+            token_hash_prefix: string;
+        }[];
+        total: number;
+    }>;
+    readonly deleteTriggerLink: (name: string) => Promise<{
+        removed: boolean;
+        name: string;
+    }>;
+    readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
+        items: {
+            condition: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            execution_key: string;
+            execution_key_fingerprint: string;
+            expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            name: string;
+            state_binding: {
+                states: {
+                    input_injections: {
+                        into: string;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    state: string;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    templates: string[];
+                    updates: {
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                }[];
+            } | null;
+            subject: {
+                key_expr: {
+                    content?: string | undefined;
+                    id?: string | undefined;
+                    kwargs?: Record<string, unknown> | undefined;
+                };
+                kind: string;
+                target_kind: "tool" | "agent";
+                target_name: string;
+            } | null;
+            tool: string;
+            tool_kwargs: Record<string, unknown>;
+            topic: string;
+        }[];
+        total: number;
+        topic_verifiers: Record<string, {
+            verifier: string;
+            config: Record<string, unknown>;
+        }>;
+        trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
+    }>;
+    readonly registerHook: (params: HookRegister) => Promise<{
+        registered: boolean;
+        name: string;
+    }>;
+    readonly unregisterHook: (name: string) => Promise<{
+        removed: boolean;
+        name: string;
+    }>;
+    readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
+    readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
+        topic: string;
+        verifier: string;
+    }>;
+    readonly deleteTopicVerifier: (topic: string) => Promise<{
+        removed: boolean;
+        topic: string;
+    }>;
+    readonly listAgents: (signal?: AbortSignal) => Promise<{
+        items: {
+            name: string;
+            description: string;
+            tool_name: string;
+            input_schema: Record<string, unknown>;
+            spec_runnable: boolean;
+        }[];
+        total: number;
+    }>;
+    readonly listSpecRunnableAgents: (signal?: AbortSignal) => Promise<{
+        items: {
+            name: string;
+            description: string;
+            tool_name: string;
+            input_schema: Record<string, unknown>;
+            spec_runnable: boolean;
+        }[];
+        total: number;
+    }>;
+    readonly streamAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
+    readonly streamAuthoredAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
+    readonly listNotifications: (signal?: AbortSignal) => Promise<{
+        notifications: {
+            id: string;
+            message: string;
+            recipient: string | null;
+            created_at: string;
+            audience?: string | null | undefined;
+            media?: unknown[] | null | undefined;
+            template?: {
+                body_parameters: string[];
+                buttons: unknown[];
+                header_media: {
+                    caption: string | null;
+                    filename: string | null;
+                    kind: "image" | "link" | "document" | "video" | "audio";
+                    url: string;
+                } | null;
+                language: string;
+                name: string;
+            } | null | undefined;
+            options?: string[] | null | undefined;
+        }[];
+    }>;
+    readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
+        enabled: boolean;
+        codes: {
+            code_id: string;
+            label: string | null;
+            created_at: string;
+            expires_at: string | null;
+        }[];
+    }>;
+    readonly setWebEntryGate: (identity: string, enabled: boolean) => Promise<{
+        enabled: boolean;
+    }>;
+    readonly mintWebEntryCode: (identity: string, body: WebEntryCodeMintBody) => Promise<{
+        code: string;
+        code_id: string;
+        expires_at: string | null;
+    }>;
+    readonly revokeWebEntryCode: (identity: string, codeId: string) => Promise<{
+        status: "revoked";
+    }>;
+    readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
+        items: {
+            callback_secret: string | null;
+            callback_url: string | null;
+            channel: string | null;
+            door: "channel" | "api";
+            error_reply_text: string | null;
+            execution_key: string;
+            execution_key_fingerprint: string;
+            initial_mode: "agent" | "manual";
+            locale: string | null;
+            our_identity: string | null;
+            payload_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            reply_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            route_name: string;
+            target_kind: "tool" | "agent";
+            target_name: string;
+            turns_per_hour_override: number | null;
+        }[];
+        total: number;
+    }>;
+    readonly createOrReplaceConversationRoute: (route: ConversationRouteCreate) => Promise<{
+        created: boolean;
+        route_name: string;
+        route: {
+            callback_secret: string | null;
+            callback_url: string | null;
+            channel: string | null;
+            door: "channel" | "api";
+            error_reply_text: string | null;
+            execution_key: string;
+            execution_key_fingerprint: string;
+            initial_mode: "agent" | "manual";
+            locale: string | null;
+            our_identity: string | null;
+            payload_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            reply_expr: {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            route_name: string;
+            target_kind: "tool" | "agent";
+            target_name: string;
+            turns_per_hour_override: number | null;
+        };
+        callback_secret: string | null;
+    }>;
+    readonly deleteConversationRoute: (routeName: string) => Promise<{
+        removed: boolean;
+        route_name: string;
+    }>;
+    readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
+        items: {
+            thread_id: string;
+            client_address: string;
+            last_activity_at: number;
+            message_count: number;
+            last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+        }[];
+    }>;
+    readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
+        order: "asc" | "desc";
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
+    }>;
+    readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
+    }>;
+    readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
+        message_id: string;
+        thread_id: string;
+    }>;
+    readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
+        mode: "agent" | "manual";
+        source: "route" | "thread";
+    }>;
+    readonly setConversationThreadMode: (routeName: string, threadId: string, mode: ConversationThreadMode) => Promise<{
+        mode: "agent" | "manual";
+        source: "route" | "thread";
+    }>;
+    readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
+        items: {
+            greeting_template: string | null;
+            multichannel: boolean;
+            state_binding: {
+                states: {
+                    input_injections: {
+                        into: string;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    state: string;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    templates: string[];
+                    updates: {
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                }[];
+            } | null;
+            target_kind: "tool" | "agent";
+            target_name: string;
+        }[];
+        total: number;
+    }>;
+    readonly getConversationConfig: (targetKind: ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
+        greeting_template: string | null;
+        multichannel: boolean;
+        state_binding: {
+            states: {
+                input_injections: {
+                    into: string;
+                    jq: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    template_jq: string | null;
+                }[];
+                scope_expr: {
+                    content?: string | undefined;
+                    id?: string | undefined;
+                    kwargs?: Record<string, unknown> | undefined;
+                } | null;
+                state: string;
+                subject_expr: {
+                    content?: string | undefined;
+                    id?: string | undefined;
+                    kwargs?: Record<string, unknown> | undefined;
+                };
+                templates: string[];
+                updates: {
+                    adapter: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    jq: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    op_id: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    template_jq: string | null;
+                }[];
+            }[];
+        } | null;
+        target_kind: "tool" | "agent";
+        target_name: string;
+    }>;
+    readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
+        created: boolean;
+        target_kind: "tool" | "agent";
+        target_name: string;
+        config: {
+            greeting_template: string | null;
+            multichannel: boolean;
+            state_binding: {
+                states: {
+                    input_injections: {
+                        into: string;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    state: string;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    templates: string[];
+                    updates: {
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                }[];
+            } | null;
+            target_kind: "tool" | "agent";
+            target_name: string;
+        };
+    }>;
+    readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
+        removed: boolean;
+        target_kind: "tool" | "agent";
+        target_name: string;
+    }>;
+    readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
+        items: {
+            message_id: string;
+            route_name: string;
+            door: "channel" | "api";
+            thread_id: string;
+            client_address: string;
+            caller_principal: string | null;
+            inbound_text: string;
+            answer_status: "error" | "silent" | "answered" | null;
+            answer: string | null;
+            origin: "client" | "operator";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            created_at: number;
+            updated_at: number;
+            channel?: string | null | undefined;
+            our_identity?: string | null | undefined;
+            provider_message_id?: string | null | undefined;
+            callback_url?: string | null | undefined;
+            error?: string | null | undefined;
+            outbound_message_ids?: string[] | undefined;
+            attempts?: number | undefined;
+        }[];
+        total: number;
+    }>;
+    readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
+        removed: number;
+        route_name: string;
+        thread_id: string;
+    }>;
+    readonly deleteConversationPerson: (personId: string) => Promise<{
+        person_id: string;
+        removed: number;
+        erased: boolean;
+    }>;
+    readonly listChannels: (signal?: AbortSignal) => Promise<{
+        channels: string[];
+    }>;
+    readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
+        total: number;
+        page: number;
+        page_size: number;
+        next_page: number | null;
+        truncated: boolean;
+        items: {
+            interaction_id: string;
+            group_id: string;
+            question: string;
+            answer_format: "text" | "external" | "confirm" | "select" | "form";
+            format_payload: Record<string, unknown>;
+            created_at: string;
+            timeout_at: string;
+            sensitive: boolean;
+            server_verified?: boolean | undefined;
+            channel?: string | undefined;
+            recipient?: string | undefined;
+            origin?: string | undefined;
+            audience?: string | undefined;
+            media?: unknown[] | undefined;
+        }[];
+    }>;
+    readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
+        interaction_id: string;
+        status: string;
+    }>;
+    readonly cancelInteraction: (interactionId: string) => Promise<{
+        interaction_id: string;
+        status: string;
+    }>;
+    readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
+        name: string;
+        version: string;
+        api_version: number;
+        entry: string;
+        integrity: Record<string, string>;
+        contributions: {
+            tool_panels: Record<string, string>;
+            pages: string[];
+            settings_tabs: string[];
+            nav_entries: string[];
+        };
+    }[]>;
+    readonly listProviders: (signal?: AbortSignal) => Promise<{
+        providers: {
+            id: string;
+            display_name: string;
+            description: string;
+            icon_url: string;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            category: string;
+            sub_services: {
+                id: string;
+                display_name: string;
+                description: string;
+                scopes: string[];
+            }[];
+            config_fields: {
+                key: string;
+                label: string;
+                target: "env" | "header";
+                required: boolean;
+                secret: boolean;
+            }[];
+        }[];
+        categories: {
+            id: string;
+            display_name: string;
+            sort_order: number;
+        }[];
+    }>;
+    readonly listConnections: (signal?: AbortSignal) => Promise<{
+        items: {
+            connection_id: string;
+            provider_id: string;
+            alias: string;
+            kind: "none" | "oauth";
+            account_identity: string | null;
+            enabled_sub_services: string[];
+            granted_scopes: string[];
+            unreachable_sub_services: string[];
+            auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+            created_at: string;
+        }[];
+        total: number;
+        unhealthy?: number | undefined;
+    }>;
+    readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
+        connection_id: string;
+        provider_id: string;
+        alias: string;
+        kind: "none" | "oauth";
+        account_identity: string | null;
+        enabled_sub_services: string[];
+        granted_scopes: string[];
+        unreachable_sub_services: string[];
+        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
+        created_at: string;
+    }>;
+    readonly startConnect: (args: StartConnectArgs) => Promise<{
+        flow_id: string;
+        authorize_url: string;
+    } | {
+        connection_id: string;
+        added_manifest_entries: string[];
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly disconnect: (id: string) => Promise<{
+        connection_id: string;
+        upstream_revoke_outcome: "success" | "failed" | "skipped";
+        upstream_revoke_status: number | null;
+        removed_manifest_entries: string[];
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
+        flow_id: string;
+        authorize_url: string;
+    }>;
+    readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
+        connection_id: string;
+        enabled_sub_services: string[];
+        consent_required: boolean;
+        flow_id: string | null;
+        authorize_url: string | null;
+        added_manifest_entries: string[];
+        removed_manifest_entries: string[];
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+        kind: "success";
+        connection_id: string;
+        return_url: string;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        } | null;
+    } | {
+        kind: "failed";
+        reason: string;
+    } | {
+        kind: "cancelled";
+        message: string;
+    }>;
+    readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
+        mcp: {
+            [x: string]: unknown;
+            managed?: {
+                connection_id: string;
+                provider_id: string;
+                sub_service: string;
+            } | null | undefined;
+        }[];
+        user_tools: string[];
+    }>;
+    readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
+        var: string;
+        pointer: string;
+        has_default: boolean;
+        set: boolean;
+    }[]>;
+    readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
+        name: string;
+        description: string;
+    }[]>;
+    readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
+        description: string;
+        env: Record<string, string>;
+        secret_keys: string[];
+    }>;
+    readonly putSettingsProfile: (name: string, body: SettingsProfileBody) => Promise<{
+        ok: true;
+        version?: number | undefined;
+    }>;
+    readonly deleteSettingsProfile: (name: string) => Promise<{
+        ok: true;
+    }>;
+    readonly diffSettingsProfile: (name: string) => Promise<{
+        added: string[];
+        removed: string[];
+        changed: {
+            key: string;
+            old: string;
+            new: string;
+        }[];
+        recycle_keys: string[];
+        refused_keys: string[];
+    }>;
+    readonly applySettingsProfile: (name: string) => Promise<{
+        hot: string[];
+        recycle: {
+            name: string;
+            kind: string;
+            status: string;
+            generation_before: number;
+        }[];
+        fresh: {
+            name: string;
+            kind: string;
+            generation: number;
+        }[];
+        refused: {
+            key: string;
+            reason: string;
+        }[];
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
+        version: number;
+        tags: string[];
+        created_at: string;
+        is_current: boolean;
+    }[]>;
+    readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
+        version: number;
+        tags: string[];
+        created_at: string;
+        is_current: boolean;
+        body: {
+            description: string;
+            env: Record<string, string>;
+            secret_keys: string[];
+        };
+    }>;
+    readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
+        ok: true;
+        version: number;
+    }>;
+    readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
+        env: Record<string, string>;
+        secret_keys: string[];
+    }>;
+    readonly setEnvConfig: (env: Record<string, string>) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly getConfigMode: (signal?: AbortSignal) => Promise<{
+        config_mode: string;
+        read_only: boolean;
+    }>;
+    readonly reloadConfig: (targets?: string[] | null) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
+    readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
+        tools: string[];
+        transport: string;
     }>>;
-    readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
-    readonly reloadTool: (args: ToolAdminArgs) => Promise<{
+    readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
+        slug: string;
+        tools: string[];
+        transport: string;
+    }>;
+    readonly deleteSubMcp: (slug: string) => Promise<{
+        slug: string;
+        removed: true;
+    }>;
+    readonly getManifest: (signal?: AbortSignal) => Promise<{
+        mcp: {
+            [x: string]: unknown;
+            managed?: {
+                connection_id: string;
+                provider_id: string;
+                sub_service: string;
+            } | null | undefined;
+        }[];
+        user_tools: string[];
+    }>;
+    readonly setMcpConfig: (mcp: unknown[]) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
+        bound: Record<string, string[]>;
+        failed: {
+            title: string;
+            status: string;
+        }[];
+    }>;
+    readonly reloadMcp: (title: string) => Promise<{
         op: string;
         reachable: boolean;
         local_only: boolean;
@@ -4458,7 +6127,177 @@ function createApiClient(config: ApiConfig): {
         }[];
         error: string | null;
     }>;
-    readonly removeTool: (args: ToolAdminArgs) => Promise<{
+    readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly removeToolsEntry: (title: string) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly removeAgentsEntry: (title: string) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
         op: string;
         reachable: boolean;
         local_only: boolean;
@@ -4471,300 +6310,208 @@ function createApiClient(config: ApiConfig): {
         }[];
         error: string | null;
     }>;
-    readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
-        run_id: string;
-    }>;
-    readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
-        run_id: string;
-        tool_name: string;
-        status: "running" | "succeeded" | "failed" | "lost";
-        started_at: string;
-        finished_at?: string | undefined;
-        result?: unknown;
-        error?: string | undefined;
-    }>;
-    readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
-        run_id: string;
-        tool_name: string;
-        status: "running" | "succeeded" | "failed" | "lost";
-        started_at: string;
-        finished_at?: string | undefined;
-    }[]>;
-    readonly listToolTags: (signal?: AbortSignal) => Promise<{
-        name: string;
-        tags: string[];
-        badges: string[];
-        hidden: boolean;
-    }[]>;
-    readonly listPresets: (signal?: AbortSignal) => Promise<{
-        name: string;
-        base_tool: string;
-        description: string;
-        active_version: number;
-        extensions: (string | {
+    readonly reloadFailedMcps: () => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
             name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        input_schema: Record<string, unknown> | null;
-        conflicted: boolean;
-        conflicted_reason: string | null;
-        uses: string[];
-        used_by: string[];
-    }[]>;
-    readonly createPreset: (body: CreatePresetBody) => Promise<{
-        name: string;
-        base_tool: string;
-        description: string;
-        active_version: number;
-        extensions: (string | {
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
+    }>;
+    readonly deregisterMcp: (title: string) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
             name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        input_schema: Record<string, unknown> | null;
-        conflicted: boolean;
-        conflicted_reason: string | null;
-        uses: string[];
-        used_by: string[];
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
+        error: string | null;
     }>;
-    readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
-        name: string;
-        base_tool: string;
-        description: string;
-        active_version: number;
-        extensions: (string | {
-            name: string;
-            config: Record<string, unknown>;
-        })[][];
-        output_schema: Record<string, unknown> | null;
-        input_schema: Record<string, unknown> | null;
-        conflicted: boolean;
-        conflicted_reason: string | null;
-        uses: string[];
-        used_by: string[];
-        fixed_kwargs: Record<string, unknown>;
+    readonly listTemplates: (signal?: AbortSignal) => Promise<string[]>;
+    readonly getTemplate: (templateId: string) => Promise<{
+        template: string;
+        schema: Record<string, unknown>;
     }>;
-    readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
-        version: number;
-        body: {
-            base_tool: string;
-            description: string;
-            extensions: (string | Record<string, unknown>)[][];
-            fixed_kwargs: Record<string, unknown>;
-            input_schema: Record<string, unknown> | {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            output_schema: Record<string, unknown> | {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            state_binding: {
-                states: {
-                    input_injections: {
-                        into: string;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                    scope_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    state: string;
-                    subject_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    };
-                    templates: string[];
-                    updates: {
-                        adapter: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        op_id: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                }[];
-            } | null;
-        };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
-    }[]>;
-    readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-        version: number;
-        body: {
-            base_tool: string;
-            description: string;
-            extensions: (string | Record<string, unknown>)[][];
-            fixed_kwargs: Record<string, unknown>;
-            input_schema: Record<string, unknown> | {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            output_schema: Record<string, unknown> | {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            state_binding: {
-                states: {
-                    input_injections: {
-                        into: string;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                    scope_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    state: string;
-                    subject_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    };
-                    templates: string[];
-                    updates: {
-                        adapter: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        op_id: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                }[];
-            } | null;
-        };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
+    readonly uploadTemplate: (path: string, content: string) => Promise<{
+        path: string;
+        uploaded: true;
     }>;
-    readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
-        version: number;
-        body: {
-            base_tool: string;
-            description: string;
-            extensions: (string | Record<string, unknown>)[][];
-            fixed_kwargs: Record<string, unknown>;
-            input_schema: Record<string, unknown> | {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            output_schema: Record<string, unknown> | {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            state_binding: {
-                states: {
-                    input_injections: {
-                        into: string;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                    scope_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    state: string;
-                    subject_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    };
-                    templates: string[];
-                    updates: {
-                        adapter: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        op_id: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                }[];
-            } | null;
-        };
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
-    }>;
-    readonly rollbackPreset: (name: string, version: number) => Promise<{
-        name: string;
-        active_version: number;
-    }>;
-    readonly deletePreset: (name: string) => Promise<{
-        name: string;
+    readonly deleteTemplate: (path: string) => Promise<{
+        path: string;
         deleted: true;
     }>;
-    readonly renamePreset: (name: string, newName: string) => Promise<{
-        name: string;
-        renamed_from: string;
-        active_version: number;
+    readonly deleteTemplateDir: (path: string) => Promise<{
+        path: string;
+        deleted: true;
     }>;
-    readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
-        name: string;
-        referees: string[];
+    readonly renderTemplate: (text: TemplatedText) => Promise<{
+        rendered: string;
     }>;
-    readonly validatePreset: (body: ValidatePresetBody) => Promise<{
-        valid: boolean;
+    readonly clearTemplatesCache: () => Promise<{
+        cleared: true;
+    }>;
+    readonly listExtensions: (signal?: AbortSignal) => Promise<{
+        name: string;
+        kind: string;
+    }[]>;
+    readonly getToolExtensions: (name: string, signal?: AbortSignal) => Promise<{
+        combos: (string | {
+            name: string;
+            config: Record<string, unknown>;
+        })[][];
+        available: {
+            name: string;
+            kind: string;
+        }[];
+    }>;
+    readonly setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) => Promise<{
+        status: string;
+        env_keys: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "fleet";
+        } | {
+            op: string;
+            reachable: boolean;
+            local_only: boolean;
+            results: {
+                name: string;
+                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+                payload: unknown;
+                error: string | null;
+                detail: string | null;
+            }[];
+            error: string | null;
+            mode: "unreachable";
+        };
+    }>;
+    readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
+        present: boolean;
+        backend: string | null;
+        module: string | null;
+    }>;
+    readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
+        workers: {
+            name: string;
+            kind: "backend" | "serve";
+            pid: number;
+            generation: number;
+            joined_at: string;
+            beat_at: string;
+            state: "ready" | "resyncing" | "recycling";
+            stale: boolean;
+            last_op: {
+                op: string;
+                outcome: string;
+                at: string;
+            } | null;
+        }[];
+    }>;
+    readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
+        }[];
         error: string | null;
     }>;
-    readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
-        name: string;
-        version: number;
+    readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
+        present: boolean;
+        provider: string | null;
+        module: string | null;
+    }>;
+    readonly listStorageResources: (signal?: AbortSignal) => Promise<{
+        resources: string[];
+    }>;
+    readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
+        id: string;
+        content_type: string | null;
+    }>;
+    readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
+    readonly uploadStorageResource: (body: StorageUploadBody) => Promise<{
+        id: string;
+        stored: true;
+    }>;
+    readonly deleteStorageResource: (id: string) => Promise<{
+        id: string;
+        deleted: true;
+    }>;
+    readonly deleteStorageDir: (path: string) => Promise<{
+        dir: string;
+        deleted: true;
+    }>;
+    readonly listToolMeta: (signal?: AbortSignal) => Promise<{
+        folders: {
+            id: string;
+            name: string;
+            parent_id: string | null;
+        }[];
+        meta: {
+            tool_name: string;
+            display_name: string | null;
+            folder_id: string | null;
+            tags: string[];
+            badges: string[];
+            hidden: boolean | null;
+        }[];
+    }>;
+    readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
+        tool_name: string;
+        display_name: string | null;
+        folder_id: string | null;
         tags: string[];
+        badges: string[];
+        hidden: boolean | null;
+    }>;
+    readonly deleteToolMeta: (toolName: string) => Promise<{
+        tool_name: string;
+        deleted: true;
+    }>;
+    readonly createFolder: (name: string, parentId?: string | null) => Promise<{
+        id: string;
+        name: string;
+        parent_id: string | null;
+    }>;
+    readonly renameFolder: (folderId: string, name: string) => Promise<{
+        id: string;
+        name: string;
+        parent_id: string | null;
+    }>;
+    readonly moveFolder: (folderId: string, parentId: string | null) => Promise<{
+        id: string;
+        name: string;
+        parent_id: string | null;
+    }>;
+    readonly deleteFolder: (folderId: string) => Promise<{
+        folder_id: string;
+        deleted: true;
     }>;
     readonly listStates: (signal?: AbortSignal) => Promise<{
         default_subject_kind: string;
@@ -5182,2087 +6929,340 @@ function createApiClient(config: ApiConfig): {
     readonly pruneStateRetention: () => Promise<{
         pruned: Record<string, number>;
     }>;
-    readonly listToolMeta: (signal?: AbortSignal) => Promise<{
-        folders: {
-            id: string;
-            name: string;
-            parent_id: string | null;
-        }[];
-        meta: {
-            tool_name: string;
-            display_name: string | null;
-            folder_id: string | null;
-            tags: string[];
-            badges: string[];
-            hidden: boolean | null;
-        }[];
-    }>;
-    readonly upsertToolMeta: (toolName: string, patch: ToolMetaPatch) => Promise<{
-        tool_name: string;
-        display_name: string | null;
-        folder_id: string | null;
-        tags: string[];
-        badges: string[];
-        hidden: boolean | null;
-    }>;
-    readonly deleteToolMeta: (toolName: string) => Promise<{
-        tool_name: string;
-        deleted: true;
-    }>;
-    readonly createFolder: (name: string, parentId?: string | null) => Promise<{
-        id: string;
+    readonly listPresets: (signal?: AbortSignal) => Promise<{
         name: string;
-        parent_id: string | null;
-    }>;
-    readonly renameFolder: (folderId: string, name: string) => Promise<{
-        id: string;
-        name: string;
-        parent_id: string | null;
-    }>;
-    readonly moveFolder: (folderId: string, parentId: string | null) => Promise<{
-        id: string;
-        name: string;
-        parent_id: string | null;
-    }>;
-    readonly deleteFolder: (folderId: string) => Promise<{
-        folder_id: string;
-        deleted: true;
-    }>;
-    readonly getStorageInfo: (signal?: AbortSignal) => Promise<{
-        present: boolean;
-        provider: string | null;
-        module: string | null;
-    }>;
-    readonly listStorageResources: (signal?: AbortSignal) => Promise<{
-        resources: string[];
-    }>;
-    readonly statStorageResource: (id: string, signal?: AbortSignal) => Promise<{
-        id: string;
-        content_type: string | null;
-    }>;
-    readonly downloadStorageResource: (id: string, signal?: AbortSignal) => Promise<Blob>;
-    readonly uploadStorageResource: (body: StorageUploadBody) => Promise<{
-        id: string;
-        stored: true;
-    }>;
-    readonly deleteStorageResource: (id: string) => Promise<{
-        id: string;
-        deleted: true;
-    }>;
-    readonly deleteStorageDir: (path: string) => Promise<{
-        dir: string;
-        deleted: true;
-    }>;
-    readonly getBackendInfo: (signal?: AbortSignal) => Promise<{
-        present: boolean;
-        backend: string | null;
-        module: string | null;
-    }>;
-    readonly listFleetWorkers: (signal?: AbortSignal) => Promise<{
-        workers: {
-            name: string;
-            kind: "backend" | "serve";
-            pid: number;
-            generation: number;
-            joined_at: string;
-            beat_at: string;
-            state: "ready" | "resyncing" | "recycling";
-            stale: boolean;
-            last_op: {
-                op: string;
-                outcome: string;
-                at: string;
-            } | null;
-        }[];
-    }>;
-    readonly reloadFleetConfig: (targets: string[] | null) => Promise<{
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
-            detail: string | null;
-        }[];
-        error: string | null;
-    }>;
-    readonly listExtensions: (signal?: AbortSignal) => Promise<{
-        name: string;
-        kind: string;
-    }[]>;
-    readonly getToolExtensions: (name: string, signal?: AbortSignal) => Promise<{
-        combos: (string | {
+        base_tool: string;
+        description: string;
+        active_version: number;
+        extensions: (string | {
             name: string;
             config: Record<string, unknown>;
         })[][];
-        available: {
-            name: string;
-            kind: string;
-        }[];
-    }>;
-    readonly setToolExtensions: (name: string, combos: readonly s.PresetExtensionElement[][]) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly listTemplates: (signal?: AbortSignal) => Promise<string[]>;
-    readonly getTemplate: (templateId: string) => Promise<{
-        template: string;
-        schema: Record<string, unknown>;
-    }>;
-    readonly uploadTemplate: (path: string, content: string) => Promise<{
-        path: string;
-        uploaded: true;
-    }>;
-    readonly deleteTemplate: (path: string) => Promise<{
-        path: string;
-        deleted: true;
-    }>;
-    readonly deleteTemplateDir: (path: string) => Promise<{
-        path: string;
-        deleted: true;
-    }>;
-    readonly renderTemplate: (text: s.TemplatedText) => Promise<{
-        rendered: string;
-    }>;
-    readonly clearTemplatesCache: () => Promise<{
-        cleared: true;
-    }>;
-    readonly getManifest: (signal?: AbortSignal) => Promise<{
-        mcp: {
-            [x: string]: unknown;
-            managed?: {
-                connection_id: string;
-                provider_id: string;
-                sub_service: string;
-            } | null | undefined;
-        }[];
-        user_tools: string[];
-    }>;
-    readonly setMcpConfig: (mcp: unknown[]) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly getMcpStatus: (signal?: AbortSignal) => Promise<{
-        bound: Record<string, string[]>;
-        failed: {
-            title: string;
-            status: string;
-        }[];
-    }>;
-    readonly reloadMcp: (title: string) => Promise<{
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
-            detail: string | null;
-        }[];
-        error: string | null;
-    }>;
-    readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly removeToolsEntry: (title: string) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly removeAgentsEntry: (title: string) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly listFailedMcps: (signal?: AbortSignal) => Promise<{
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
-            detail: string | null;
-        }[];
-        error: string | null;
-    }>;
-    readonly reloadFailedMcps: () => Promise<{
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
-            detail: string | null;
-        }[];
-        error: string | null;
-    }>;
-    readonly deregisterMcp: (title: string) => Promise<{
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
-            detail: string | null;
-        }[];
-        error: string | null;
-    }>;
-    readonly listSubMcp: (signal?: AbortSignal) => Promise<Record<string, {
-        tools: string[];
-        transport: string;
-    }>>;
-    readonly createSubMcp: (slug: string, tools: string[], transport?: string) => Promise<{
-        slug: string;
-        tools: string[];
-        transport: string;
-    }>;
-    readonly deleteSubMcp: (slug: string) => Promise<{
-        slug: string;
-        removed: true;
-    }>;
-    readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
-        env: Record<string, string>;
-        secret_keys: string[];
-    }>;
-    readonly setEnvConfig: (env: Record<string, string>) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly getConfigMode: (signal?: AbortSignal) => Promise<{
-        config_mode: string;
-        read_only: boolean;
-    }>;
-    readonly reloadConfig: (targets?: string[] | null) => Promise<{
-        op: string;
-        reachable: boolean;
-        local_only: boolean;
-        results: {
-            name: string;
-            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-            payload: unknown;
-            error: string | null;
-            detail: string | null;
-        }[];
-        error: string | null;
-    }>;
-    readonly listSettingsProfiles: (signal?: AbortSignal) => Promise<{
+        output_schema: Record<string, unknown> | null;
+        input_schema: Record<string, unknown> | null;
+        conflicted: boolean;
+        conflicted_reason: string | null;
+        uses: string[];
+        used_by: string[];
+    }[]>;
+    readonly createPreset: (body: CreatePresetBody) => Promise<{
         name: string;
+        base_tool: string;
         description: string;
-    }[]>;
-    readonly getSettingsProfile: (name: string, signal?: AbortSignal) => Promise<{
-        description: string;
-        env: Record<string, string>;
-        secret_keys: string[];
-    }>;
-    readonly putSettingsProfile: (name: string, body: s.SettingsProfileBody) => Promise<{
-        ok: true;
-        version?: number | undefined;
-    }>;
-    readonly deleteSettingsProfile: (name: string) => Promise<{
-        ok: true;
-    }>;
-    readonly diffSettingsProfile: (name: string) => Promise<{
-        added: string[];
-        removed: string[];
-        changed: {
-            key: string;
-            old: string;
-            new: string;
-        }[];
-        recycle_keys: string[];
-        refused_keys: string[];
-    }>;
-    readonly applySettingsProfile: (name: string) => Promise<{
-        hot: string[];
-        recycle: {
+        active_version: number;
+        extensions: (string | {
             name: string;
-            kind: string;
-            status: string;
-            generation_before: number;
-        }[];
-        fresh: {
-            name: string;
-            kind: string;
-            generation: number;
-        }[];
-        refused: {
-            key: string;
-            reason: string;
-        }[];
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly listSettingsProfileVersions: (name: string, signal?: AbortSignal) => Promise<{
-        version: number;
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
-    }[]>;
-    readonly getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
-        version: number;
-        tags: string[];
-        created_at: string;
-        is_current: boolean;
-        body: {
-            description: string;
-            env: Record<string, string>;
-            secret_keys: string[];
-        };
-    }>;
-    readonly rollbackSettingsProfile: (name: string, version: number) => Promise<{
-        ok: true;
-        version: number;
-    }>;
-    readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
-        status: string;
-        env_keys: number;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        };
-    }>;
-    readonly getManifestPreserved: (signal?: AbortSignal) => Promise<{
-        mcp: {
-            [x: string]: unknown;
-            managed?: {
-                connection_id: string;
-                provider_id: string;
-                sub_service: string;
-            } | null | undefined;
-        }[];
-        user_tools: string[];
-    }>;
-    readonly getMcpEnvRefs: (signal?: AbortSignal) => Promise<{
-        var: string;
-        pointer: string;
-        has_default: boolean;
-        set: boolean;
-    }[]>;
-    readonly listProviders: (signal?: AbortSignal) => Promise<{
-        providers: {
-            id: string;
-            display_name: string;
-            description: string;
-            icon_url: string;
-            kind: "none" | "oauth";
-            origin: "system" | "community";
-            category: string;
-            sub_services: {
-                id: string;
-                display_name: string;
-                description: string;
-                scopes: string[];
-            }[];
-            config_fields: {
-                key: string;
-                label: string;
-                target: "env" | "header";
-                required: boolean;
-                secret: boolean;
-            }[];
-        }[];
-        categories: {
-            id: string;
-            display_name: string;
-            sort_order: number;
-        }[];
-    }>;
-    readonly listConnections: (signal?: AbortSignal) => Promise<{
-        items: {
-            connection_id: string;
-            provider_id: string;
-            alias: string;
-            kind: "none" | "oauth";
-            account_identity: string | null;
-            enabled_sub_services: string[];
-            granted_scopes: string[];
-            unreachable_sub_services: string[];
-            auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-            created_at: string;
-        }[];
-        total: number;
-        unhealthy?: number | undefined;
-    }>;
-    readonly getConnection: (id: string, signal?: AbortSignal) => Promise<{
-        connection_id: string;
-        provider_id: string;
-        alias: string;
-        kind: "none" | "oauth";
-        account_identity: string | null;
-        enabled_sub_services: string[];
-        granted_scopes: string[];
-        unreachable_sub_services: string[];
-        auth_health_state: "healthy" | "reconnect_required" | "refresh_failing";
-        created_at: string;
-    }>;
-    readonly startConnect: (args: StartConnectArgs) => Promise<{
-        flow_id: string;
-        authorize_url: string;
-    } | {
-        connection_id: string;
-        added_manifest_entries: string[];
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly disconnect: (id: string) => Promise<{
-        connection_id: string;
-        upstream_revoke_outcome: "success" | "failed" | "skipped";
-        upstream_revoke_status: number | null;
-        removed_manifest_entries: string[];
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly reconnect: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-        flow_id: string;
-        authorize_url: string;
-    }>;
-    readonly patchSubServices: (id: string, enabled_sub_services: string[], return_url?: string) => Promise<{
-        connection_id: string;
-        enabled_sub_services: string[];
-        consent_required: boolean;
-        flow_id: string | null;
-        authorize_url: string | null;
-        added_manifest_entries: string[];
-        removed_manifest_entries: string[];
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
-    }>;
-    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
-        kind: "success";
-        connection_id: string;
-        return_url: string;
-        fanout: {
-            mode: "local-only";
-            note: string;
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "fleet";
-        } | {
-            op: string;
-            reachable: boolean;
-            local_only: boolean;
-            results: {
-                name: string;
-                outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                payload: unknown;
-                error: string | null;
-                detail: string | null;
-            }[];
-            error: string | null;
-            mode: "unreachable";
-        } | null;
-    } | {
-        kind: "failed";
-        reason: string;
-    } | {
-        kind: "cancelled";
-        message: string;
-    }>;
-    readonly listStudioPlugins: (signal?: AbortSignal) => Promise<{
-        name: string;
-        version: string;
-        api_version: number;
-        entry: string;
-        integrity: Record<string, string>;
-        contributions: {
-            tool_panels: Record<string, string>;
-            pages: string[];
-            settings_tabs: string[];
-            nav_entries: string[];
-        };
-    }[]>;
-    readonly listInteractions: (page: number, pageSize: number, signal?: AbortSignal) => Promise<{
-        total: number;
-        page: number;
-        page_size: number;
-        next_page: number | null;
-        truncated: boolean;
-        items: {
-            interaction_id: string;
-            group_id: string;
-            question: string;
-            answer_format: "text" | "external" | "confirm" | "select" | "form";
-            format_payload: Record<string, unknown>;
-            created_at: string;
-            timeout_at: string;
-            sensitive: boolean;
-            server_verified?: boolean | undefined;
-            channel?: string | undefined;
-            recipient?: string | undefined;
-            origin?: string | undefined;
-            audience?: string | undefined;
-            media?: unknown[] | undefined;
-        }[];
-    }>;
-    readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<{
-        interaction_id: string;
-        status: string;
-    }>;
-    readonly cancelInteraction: (interactionId: string) => Promise<{
-        interaction_id: string;
-        status: string;
-    }>;
-    readonly listChannels: (signal?: AbortSignal) => Promise<{
-        channels: string[];
-    }>;
-    readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
-        items: {
-            callback_secret: string | null;
-            callback_url: string | null;
-            channel: string | null;
-            door: "channel" | "api";
-            error_reply_text: string | null;
-            execution_key: string;
-            execution_key_fingerprint: string;
-            initial_mode: "agent" | "manual";
-            locale: string | null;
-            our_identity: string | null;
-            payload_expr: {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            reply_expr: {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            route_name: string;
-            target_kind: "tool" | "agent";
-            target_name: string;
-            turns_per_hour_override: number | null;
-        }[];
-        total: number;
-    }>;
-    readonly createOrReplaceConversationRoute: (route: s.ConversationRouteCreate) => Promise<{
-        created: boolean;
-        route_name: string;
-        route: {
-            callback_secret: string | null;
-            callback_url: string | null;
-            channel: string | null;
-            door: "channel" | "api";
-            error_reply_text: string | null;
-            execution_key: string;
-            execution_key_fingerprint: string;
-            initial_mode: "agent" | "manual";
-            locale: string | null;
-            our_identity: string | null;
-            payload_expr: {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            reply_expr: {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            route_name: string;
-            target_kind: "tool" | "agent";
-            target_name: string;
-            turns_per_hour_override: number | null;
-        };
-        callback_secret: string | null;
-    }>;
-    readonly deleteConversationRoute: (routeName: string) => Promise<{
-        removed: boolean;
-        route_name: string;
-    }>;
-    readonly listConversationThreads: (routeName: string, page: number, pageSize: number, filters?: ConversationThreadFilters, signal?: AbortSignal) => Promise<{
-        total: number;
-        page: number;
-        page_size: number;
-        next_page: number | null;
-        truncated: boolean;
-        items: {
-            thread_id: string;
-            client_address: string;
-            last_activity_at: number;
-            message_count: number;
-            last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-        }[];
-    }>;
-    readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
-        order: "asc" | "desc";
-        total: number;
-        page: number;
-        page_size: number;
-        next_page: number | null;
-        truncated: boolean;
-        items: {
-            message_id: string;
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
-            answer: string | null;
-            origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-            created_at: number;
-            updated_at: number;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            error?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
-    }>;
-    readonly searchConversationMessages: (query: ConversationMessageSearchQuery, signal?: AbortSignal) => Promise<{
-        total: number;
-        page: number;
-        page_size: number;
-        next_page: number | null;
-        truncated: boolean;
-        items: {
-            message_id: string;
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
-            answer: string | null;
-            origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-            created_at: number;
-            updated_at: number;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            error?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
-    }>;
-    readonly sendConversationThreadMessage: (routeName: string, body: ConversationThreadMessageBody) => Promise<{
-        message_id: string;
-        thread_id: string;
-    }>;
-    readonly getConversationThreadMode: (routeName: string, threadId: string, signal?: AbortSignal) => Promise<{
-        mode: "agent" | "manual";
-        source: "route" | "thread";
-    }>;
-    readonly setConversationThreadMode: (routeName: string, threadId: string, mode: s.ConversationThreadMode) => Promise<{
-        mode: "agent" | "manual";
-        source: "route" | "thread";
-    }>;
-    readonly listConversationConfigs: (signal?: AbortSignal) => Promise<{
-        items: {
-            greeting_template: string | null;
-            multichannel: boolean;
-            state_binding: {
-                states: {
-                    input_injections: {
-                        into: string;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                    scope_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    state: string;
-                    subject_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    };
-                    templates: string[];
-                    updates: {
-                        adapter: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        op_id: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                }[];
-            } | null;
-            target_kind: "tool" | "agent";
-            target_name: string;
-        }[];
-        total: number;
-    }>;
-    readonly getConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string, signal?: AbortSignal) => Promise<{
-        greeting_template: string | null;
-        multichannel: boolean;
-        state_binding: {
-            states: {
-                input_injections: {
-                    into: string;
-                    jq: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    template_jq: string | null;
-                }[];
-                scope_expr: {
-                    content?: string | undefined;
-                    id?: string | undefined;
-                    kwargs?: Record<string, unknown> | undefined;
-                } | null;
-                state: string;
-                subject_expr: {
-                    content?: string | undefined;
-                    id?: string | undefined;
-                    kwargs?: Record<string, unknown> | undefined;
-                };
-                templates: string[];
-                updates: {
-                    adapter: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    jq: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    op_id: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    template_jq: string | null;
-                }[];
-            }[];
-        } | null;
-        target_kind: "tool" | "agent";
-        target_name: string;
-    }>;
-    readonly setConversationConfig: (config: s.TargetConversationConfig) => Promise<{
-        created: boolean;
-        target_kind: "tool" | "agent";
-        target_name: string;
-        config: {
-            greeting_template: string | null;
-            multichannel: boolean;
-            state_binding: {
-                states: {
-                    input_injections: {
-                        into: string;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                    scope_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    state: string;
-                    subject_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    };
-                    templates: string[];
-                    updates: {
-                        adapter: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        op_id: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                }[];
-            } | null;
-            target_kind: "tool" | "agent";
-            target_name: string;
-        };
-    }>;
-    readonly deleteConversationConfig: (targetKind: s.ConversationTargetKind, targetName: string) => Promise<{
-        removed: boolean;
-        target_kind: "tool" | "agent";
-        target_name: string;
-    }>;
-    readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
-        items: {
-            message_id: string;
-            route_name: string;
-            door: "channel" | "api";
-            thread_id: string;
-            client_address: string;
-            caller_principal: string | null;
-            inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
-            answer: string | null;
-            origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
-            created_at: number;
-            updated_at: number;
-            channel?: string | null | undefined;
-            our_identity?: string | null | undefined;
-            provider_message_id?: string | null | undefined;
-            callback_url?: string | null | undefined;
-            error?: string | null | undefined;
-            outbound_message_ids?: string[] | undefined;
-            attempts?: number | undefined;
-        }[];
-        total: number;
-    }>;
-    readonly deleteConversationThread: (routeName: string, threadId: string) => Promise<{
-        removed: number;
-        route_name: string;
-        thread_id: string;
-    }>;
-    readonly deleteConversationPerson: (personId: string) => Promise<{
-        person_id: string;
-        removed: number;
-        erased: boolean;
-    }>;
-    readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
-        enabled: boolean;
-        codes: {
-            code_id: string;
-            label: string | null;
-            created_at: string;
-            expires_at: string | null;
-        }[];
-    }>;
-    readonly setWebEntryGate: (identity: string, enabled: boolean) => Promise<{
-        enabled: boolean;
-    }>;
-    readonly mintWebEntryCode: (identity: string, body: WebEntryCodeMintBody) => Promise<{
-        code: string;
-        code_id: string;
-        expires_at: string | null;
-    }>;
-    readonly revokeWebEntryCode: (identity: string, codeId: string) => Promise<{
-        status: "revoked";
-    }>;
-    readonly listNotifications: (signal?: AbortSignal) => Promise<{
-        notifications: {
-            id: string;
-            message: string;
-            recipient: string | null;
-            created_at: string;
-            audience?: string | null | undefined;
-            media?: unknown[] | null | undefined;
-            template?: {
-                body_parameters: string[];
-                buttons: unknown[];
-                header_media: {
-                    caption: string | null;
-                    filename: string | null;
-                    kind: "image" | "link" | "document" | "video" | "audio";
-                    url: string;
-                } | null;
-                language: string;
-                name: string;
-            } | null | undefined;
-            options?: string[] | null | undefined;
-        }[];
-    }>;
-    readonly listAgents: (signal?: AbortSignal) => Promise<{
-        items: {
-            name: string;
-            description: string;
-            tool_name: string;
-            input_schema: Record<string, unknown>;
-            spec_runnable: boolean;
-        }[];
-        total: number;
-    }>;
-    readonly listSpecRunnableAgents: (signal?: AbortSignal) => Promise<{
-        items: {
-            name: string;
-            description: string;
-            tool_name: string;
-            input_schema: Record<string, unknown>;
-            spec_runnable: boolean;
-        }[];
-        total: number;
-    }>;
-    readonly streamAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
-    readonly streamAuthoredAgentRun: (name: string, input: unknown, signal?: AbortSignal) => Promise<AsyncGenerator<ParsedAgentEvent, any, any>>;
-    readonly listHooks: (topic?: string, signal?: AbortSignal) => Promise<{
-        items: {
-            condition: {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            execution_key: string;
-            execution_key_fingerprint: string;
-            expr: {
-                content?: string | undefined;
-                id?: string | undefined;
-                kwargs?: Record<string, unknown> | undefined;
-            } | null;
-            name: string;
-            state_binding: {
-                states: {
-                    input_injections: {
-                        into: string;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                    scope_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    } | null;
-                    state: string;
-                    subject_expr: {
-                        content?: string | undefined;
-                        id?: string | undefined;
-                        kwargs?: Record<string, unknown> | undefined;
-                    };
-                    templates: string[];
-                    updates: {
-                        adapter: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        jq: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        op_id: {
-                            content?: string | undefined;
-                            id?: string | undefined;
-                            kwargs?: Record<string, unknown> | undefined;
-                        } | null;
-                        template_jq: string | null;
-                    }[];
-                }[];
-            } | null;
-            subject: {
-                key_expr: {
-                    content?: string | undefined;
-                    id?: string | undefined;
-                    kwargs?: Record<string, unknown> | undefined;
-                };
-                kind: string;
-                target_kind: "tool" | "agent";
-                target_name: string;
-            } | null;
-            tool: string;
-            tool_kwargs: Record<string, unknown>;
-            topic: string;
-        }[];
-        total: number;
-        topic_verifiers: Record<string, {
-            verifier: string;
             config: Record<string, unknown>;
-        }>;
-        trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
+        })[][];
+        output_schema: Record<string, unknown> | null;
+        input_schema: Record<string, unknown> | null;
+        conflicted: boolean;
+        conflicted_reason: string | null;
+        uses: string[];
+        used_by: string[];
     }>;
-    readonly registerHook: (params: s.HookRegister) => Promise<{
-        registered: boolean;
+    readonly getPreset: (name: string, signal?: AbortSignal) => Promise<{
         name: string;
-    }>;
-    readonly unregisterHook: (name: string) => Promise<{
-        removed: boolean;
-        name: string;
-    }>;
-    readonly listHookVerifiers: (signal?: AbortSignal) => Promise<string[]>;
-    readonly setTopicVerifier: (topic: string, body: TopicVerifierBody) => Promise<{
-        topic: string;
-        verifier: string;
-    }>;
-    readonly deleteTopicVerifier: (topic: string) => Promise<{
-        removed: boolean;
-        topic: string;
-    }>;
-    readonly createTriggerLink: (body: TriggerLinkCreateBody) => Promise<{
-        name: string;
-        trigger_path: string;
-        token: string;
-        topic: string;
-        expires_at: string | null;
-    }>;
-    readonly listTriggerLinks: (signal?: AbortSignal) => Promise<{
-        items: {
+        base_tool: string;
+        description: string;
+        active_version: number;
+        extensions: (string | {
             name: string;
-            topic: string;
-            execution_key: string;
-            trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
-            tool_kwargs: Record<string, unknown> | null;
-            created_by: string | null;
-            created_at: string;
-            expires_at: string | null;
-            token_hash_prefix: string;
-        }[];
-        total: number;
+            config: Record<string, unknown>;
+        })[][];
+        output_schema: Record<string, unknown> | null;
+        input_schema: Record<string, unknown> | null;
+        conflicted: boolean;
+        conflicted_reason: string | null;
+        uses: string[];
+        used_by: string[];
+        fixed_kwargs: Record<string, unknown>;
     }>;
-    readonly deleteTriggerLink: (name: string) => Promise<{
-        removed: boolean;
-        name: string;
-    }>;
-    readonly getMcpConfigSchema: (signal?: AbortSignal) => Promise<Record<string, unknown>>;
-    readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
-        groups: {
-            name: string;
-            module: string;
-            qualname: string;
-            fields: {
-                name: string;
-                env_var: string;
-                type: string;
-                default: unknown;
-                required: boolean;
-                secret: boolean;
-                description: string | null;
-                nested_group: string | null;
-                default_namespace_var: string | null;
-                value: unknown;
-            }[];
-        }[];
-    }>;
-    readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
-    readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
-        scope_id: string;
-        url: string;
-    }>;
-    readonly removeUrlFromScope: (body: {
-        url: string;
-    }) => Promise<{
-        url: string;
-    }>;
-    readonly removeScope: (scopeId: string) => Promise<{
-        scope_id: string;
-        deleted_keys: number;
-    }>;
-    readonly listAuthRoutes: (signal?: AbortSignal) => Promise<{
-        path: string;
-        methods: string[];
-        mapped: string | null;
-        tags: string[];
-        summary: string;
-        action: "read" | "write" | "secret" | "fenced" | null;
-    }[]>;
-    readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
-    readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
-        url: string;
-    }>;
-    readonly unpinPublicRoute: (url: string) => Promise<{
-        url: string;
-    }>;
-    readonly listRoles: (signal?: AbortSignal) => Promise<{
-        allow_all: boolean;
-        base_tier: string | null;
-        condition: {
-            content?: string | undefined;
-            id?: string | undefined;
-            kwargs?: Record<string, unknown> | undefined;
-        } | null;
-        description: string;
-        grants: Record<string, "none" | "read" | "write">;
-        name: string;
-        scopes: string[];
-    }[]>;
-    readonly createRole: (body: RoleCreateBody) => Promise<{
-        allow_all: boolean;
-        base_tier: string | null;
-        condition: {
-            content?: string | undefined;
-            id?: string | undefined;
-            kwargs?: Record<string, unknown> | undefined;
-        } | null;
-        description: string;
-        grants: Record<string, "none" | "read" | "write">;
-        name: string;
-        scopes: string[];
-    }>;
-    readonly updateRole: (name: string, body: RoleUpdateBody) => Promise<{
-        allow_all: boolean;
-        base_tier: string | null;
-        condition: {
-            content?: string | undefined;
-            id?: string | undefined;
-            kwargs?: Record<string, unknown> | undefined;
-        } | null;
-        description: string;
-        grants: Record<string, "none" | "read" | "write">;
-        name: string;
-        scopes: string[];
-    }>;
-    readonly deleteRole: (name: string) => Promise<{
-        name: string;
-        deleted: boolean;
-    }>;
-    readonly listRoleVersions: (name: string, signal?: AbortSignal) => Promise<{
-        versions: {
-            version: number;
-            body: {
-                allow_all: boolean;
-                base_tier: string | null;
-                condition: {
-                    content?: string | undefined;
-                    id?: string | undefined;
-                    kwargs?: Record<string, unknown> | undefined;
-                } | null;
-                description: string;
-                grants: Record<string, "none" | "read" | "write">;
-                name: string;
-                scopes: string[];
-            };
-            tags: string[];
-            created_at: string;
-            is_current: boolean;
-        }[];
-        audit: {
-            version: number;
-            body: {
-                action: string;
-                actor: string | null;
-                before: unknown;
-                after: unknown;
-            };
-            tags: string[];
-            created_at: string;
-            is_current: boolean;
-        }[];
-    }>;
-    readonly rollbackRole: (name: string, version: number) => Promise<{
-        allow_all: boolean;
-        base_tier: string | null;
-        condition: {
-            content?: string | undefined;
-            id?: string | undefined;
-            kwargs?: Record<string, unknown> | undefined;
-        } | null;
-        description: string;
-        grants: Record<string, "none" | "read" | "write">;
-        name: string;
-        scopes: string[];
-    }>;
-    readonly listTokensPayload: (signal?: AbortSignal) => Promise<{
-        user_id: string;
-        description: string;
-        scopes: string[];
-        policy_data: unknown;
-        condition?: {
-            content?: string | undefined;
-            id?: string | undefined;
-            kwargs?: Record<string, unknown> | undefined;
-        } | null | undefined;
-    }[]>;
-    readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
-    readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
-        user_id: string;
-        updated: boolean;
-    }>;
-    readonly revokeApiKey: (userId: string) => Promise<{
-        user_id: string;
-        revoked: boolean;
-    }>;
-    readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
-        claim_path: string;
-        token: string;
-        expires_at: string;
-    }>;
-    readonly getMe: (signal?: AbortSignal) => Promise<{
-        user_id: string;
-        owner_user_id: string | null;
-        admin: boolean;
-        scopes: string[];
-        routes: {
-            path: string;
-            methods: string[];
-        }[];
-        route_patterns: {
-            pattern: string;
-            scope_id: string;
-        }[];
-        sub_mcp: {
-            tools: string[];
-            transport: string;
-            slug: string;
-        }[];
-        tools: string[];
-        agents: string[];
-        mintable: boolean;
-    }>;
-    readonly getLoginMethods: (options?: {
-        signal?: AbortSignal;
-    }) => Promise<{
-        methods: ({
-            shape: "form";
-            id: string;
-            title: string;
-            purpose: "login" | "bootstrap" | "invite";
-            fields: {
-                name: string;
-                label: string;
-                secret: boolean;
-                autocomplete?: string | undefined;
-            }[];
-            submit_path: string;
-        } | {
-            shape: "button";
-            id: string;
-            label: string;
-            href: string;
-            icon?: string | undefined;
-        })[];
-        bootstrap: boolean;
-    }>;
-    readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
-        token: string;
-        user_id: string;
-    }>;
-    readonly exchangeSsoCode: (code: string) => Promise<{
-        token: string;
-        user_id: string;
-    }>;
-    readonly claimLogin: (body: {
-        token: string;
-    }) => Promise<{
-        token: string;
-        user_id: string;
-    }>;
-    readonly getAuthCapabilities: (signal?: AbortSignal) => Promise<{
-        mintable: boolean;
-        providers: {
-            name: string;
-            mintable: boolean;
-        }[];
-    }>;
-    readonly logout: () => Promise<{
-        revoked: boolean;
-    }>;
-    readonly validateCondition: (body: ValidateConditionBody) => Promise<{
-        ok: boolean;
-        result: boolean | null;
-    }>;
-    readonly listPolicyVersions: (userId: string, signal?: AbortSignal) => Promise<{
+    readonly listPresetVersions: (name: string, signal?: AbortSignal) => Promise<{
         version: number;
         body: {
-            condition: {
+            base_tool: string;
+            description: string;
+            extensions: (string | Record<string, unknown>)[][];
+            fixed_kwargs: Record<string, unknown>;
+            input_schema: Record<string, unknown> | {
                 content?: string | undefined;
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
             } | null;
-            policy_data: Record<string, unknown>;
-            scopes: string[];
+            output_schema: Record<string, unknown> | {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            state_binding: {
+                states: {
+                    input_injections: {
+                        into: string;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    state: string;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    templates: string[];
+                    updates: {
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                }[];
+            } | null;
         };
         tags: string[];
         created_at: string;
         is_current: boolean;
     }[]>;
-    readonly rollbackPolicy: (userId: string, version: number) => Promise<{
-        user_id: string;
+    readonly getPresetVersion: (name: string, version: number, signal?: AbortSignal) => Promise<{
+        version: number;
+        body: {
+            base_tool: string;
+            description: string;
+            extensions: (string | Record<string, unknown>)[][];
+            fixed_kwargs: Record<string, unknown>;
+            input_schema: Record<string, unknown> | {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            output_schema: Record<string, unknown> | {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            state_binding: {
+                states: {
+                    input_injections: {
+                        into: string;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    state: string;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    templates: string[];
+                    updates: {
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                }[];
+            } | null;
+        };
+        tags: string[];
+        created_at: string;
+        is_current: boolean;
+    }>;
+    readonly savePresetVersion: (name: string, body: SavePresetVersionBody) => Promise<{
+        version: number;
+        body: {
+            base_tool: string;
+            description: string;
+            extensions: (string | Record<string, unknown>)[][];
+            fixed_kwargs: Record<string, unknown>;
+            input_schema: Record<string, unknown> | {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            output_schema: Record<string, unknown> | {
+                content?: string | undefined;
+                id?: string | undefined;
+                kwargs?: Record<string, unknown> | undefined;
+            } | null;
+            state_binding: {
+                states: {
+                    input_injections: {
+                        into: string;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                    scope_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    } | null;
+                    state: string;
+                    subject_expr: {
+                        content?: string | undefined;
+                        id?: string | undefined;
+                        kwargs?: Record<string, unknown> | undefined;
+                    };
+                    templates: string[];
+                    updates: {
+                        adapter: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        jq: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        op_id: {
+                            content?: string | undefined;
+                            id?: string | undefined;
+                            kwargs?: Record<string, unknown> | undefined;
+                        } | null;
+                        template_jq: string | null;
+                    }[];
+                }[];
+            } | null;
+        };
+        tags: string[];
+        created_at: string;
+        is_current: boolean;
+    }>;
+    readonly rollbackPreset: (name: string, version: number) => Promise<{
+        name: string;
         active_version: number;
     }>;
-    readonly listBackupSections: (signal?: AbortSignal) => Promise<{
+    readonly deletePreset: (name: string) => Promise<{
         name: string;
-        secret: boolean;
-    }[]>;
-    readonly exportBackup: (sections: string[], signal?: AbortSignal) => Promise<Blob>;
-    readonly importBackup: (body: {
-        document: unknown;
-        sections: string[];
-    }) => Promise<{
-        ok: boolean;
-        sections: Record<string, {
-            created: number;
-            updated: number;
-            skipped: number;
-            errors: string[];
-            new_api_keys?: {
-                user_id: string;
-                description: string;
-                api_key: string;
-            }[] | undefined;
-            fanout?: {
-                mode: "local-only";
-                note: string;
-            } | {
-                op: string;
-                reachable: boolean;
-                local_only: boolean;
-                results: {
-                    name: string;
-                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                    payload: unknown;
-                    error: string | null;
-                    detail: string | null;
-                }[];
-                error: string | null;
-                mode: "fleet";
-            } | {
-                op: string;
-                reachable: boolean;
-                local_only: boolean;
-                results: {
-                    name: string;
-                    outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
-                    payload: unknown;
-                    error: string | null;
-                    detail: string | null;
-                }[];
-                error: string | null;
-                mode: "unreachable";
-            } | undefined;
-        }>;
+        deleted: true;
     }>;
-    readonly listSchedules: (signal?: AbortSignal) => Promise<{
-        [x: string]: unknown;
+    readonly renamePreset: (name: string, newName: string) => Promise<{
         name: string;
-        enabled?: boolean | undefined;
-        schedule?: unknown;
-        target?: unknown;
-        args?: unknown[] | undefined;
-        kwargs?: Record<string, unknown> | undefined;
-    }[]>;
-    readonly getServerDateTime: (signal?: AbortSignal) => Promise<{
-        [x: string]: unknown;
-        utc: unknown;
-        local?: unknown;
-        system?: unknown;
+        renamed_from: string;
+        active_version: number;
     }>;
-    readonly addSchedule: (body: {
-        tool_name: string;
-        tool_kwargs: Record<string, unknown>;
-        schedule_kwargs: Record<string, unknown>;
-        state_binding?: s.StateBinding | null;
-    }) => Promise<unknown>;
-    readonly deleteSchedule: (name: string) => Promise<unknown>;
-    readonly getObservabilityMetrics: (params?: MetricsQuery, signal?: AbortSignal) => Promise<{
-        summary: {
-            totalRuns: number;
-            totalCost: number;
-            totalTokens: number;
-            averageLatencyMs: number;
-            avgCostPerRun: number;
-            avgTokensPerRun: number;
-            timeToFirstTokenMs: number | null;
-        };
-        timeSeries: {
-            bucket: string | null;
-            runs: number;
-            cost: number;
-            avgLatencyMs: number;
-            totalTokens: number;
-        }[];
-        byModel: {
-            model: string;
-            calls: number;
-            cost: number;
-            totalTokens: number;
-            avgLatencyMs: number;
-        }[];
-        granularity: "hour" | "day" | "week";
+    readonly getPresetReferees: (name: string, signal?: AbortSignal) => Promise<{
+        name: string;
+        referees: string[];
     }>;
-    readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
-        items: {
-            id: string;
-            traceId: string;
-            createdAt: string | null;
-            tags: string[];
-            status: "error" | "success";
-            cost: number | null;
-            latencyMs: number | null;
-            totalTokens: number | null;
-            inputPreview: unknown;
-            outputPreview: unknown;
-        }[];
-        page: number;
-        nextPage: number | null;
+    readonly validatePreset: (body: ValidatePresetBody) => Promise<{
+        valid: boolean;
+        error: string | null;
     }>;
-    readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
-        traceId: string;
-        timestamp: string | null;
+    readonly setPresetVersionTags: (name: string, version: number, tags: readonly string[]) => Promise<{
+        name: string;
+        version: number;
         tags: string[];
-        totalCost: number | null;
-        input: unknown;
-        output: unknown;
-        metadata: unknown;
-        spans: {
-            id: string;
-            parentId: string | null;
-            traceId: string | null;
-            name: string | null;
-            type: string | null;
-            level: string | null;
-            statusMessage: string | null;
-            start: string | null;
-            end: string | null;
-            model: string | null;
-            usage: unknown;
-            metadata: unknown;
-            input: unknown;
-            output: unknown;
-            nodeId: string | null;
-        }[];
     }>;
-    readonly exportTrace: (traceId: string, signal?: AbortSignal) => Promise<Blob>;
-    readonly exportRuns: (params: RunsQuery & {
-        format: "csv" | "json";
-    }, signal?: AbortSignal) => Promise<Blob>;
-    readonly searchMarketplace: (query?: MarketplaceSearchQuery, signal?: AbortSignal) => Promise<{
-        listings: {
-            ref: string;
-            namespace: string;
-            name: string;
-            display_name: string | null;
-            icon_url: string | null;
-            package: string | null;
-            description: string;
-            categories: string[];
-            tags: string[];
-            trust_tier: string;
-            pricing: string;
-            latest_version: string | null;
-            downloads: number;
-            updated_at: string;
-            kinds: {
-                kind: string;
-                count: number;
-                names: string[];
-            }[];
-            groups: {
-                name: string;
-                count: number;
-            }[];
-            premium?: boolean | null | undefined;
-        }[];
-        total: number;
-        page: number;
-        page_size: number;
+    readonly listTools: (signal?: AbortSignal) => Promise<string[]>;
+    readonly getToolSchema: (name: string, signal?: AbortSignal) => Promise<{
+        input: Record<string, unknown>;
+        output: Record<string, unknown> | null;
+        description: string | null;
     }>;
-    readonly getMarketplacePlugin: (namespace: string, name: string, signal?: AbortSignal) => Promise<{
-        namespace: string;
-        name: string;
-        display_name: string | null;
-        icon_url: string | null;
-        package: string | null;
-        description: string;
-        readme_md: string | null;
-        license: string | null;
-        homepage_url: string | null;
-        repository_url: string | null;
-        categories: string[];
-        tags: string[];
-        trust_tier: string;
-        pricing: string;
-        downloads: number;
-        latest: {
-            version: string;
-            contract_range: string | null;
-            status: string;
-            published_at: string | null;
-            items: {
-                kind: string;
-                name: string;
-                description: string;
-                tags: string[];
-                group: string | null;
-                routes?: {
-                    base: string;
-                    paths: {
-                        path: string;
-                        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                        public: boolean;
-                    }[];
-                } | null | undefined;
-                required_env?: {
-                    name: string;
-                    secret: boolean;
-                }[] | undefined;
-            }[];
-        } | null;
-        versions: {
-            version: string;
-            contract_range: string | null;
-            status: string;
-            published_at: string | null;
-        }[];
-        source?: "pypi" | "github" | "spec" | null | undefined;
-        docs_url?: string | null | undefined;
-        premium?: boolean | null | undefined;
-    }>;
-    readonly listMarketplaceCategories: (signal?: AbortSignal) => Promise<string[]>;
-    readonly listMarketplaceKinds: (signal?: AbortSignal) => Promise<string[]>;
-    readonly listInstalledMarketplacePlugins: (signal?: AbortSignal) => Promise<{
-        installed: {
-            ref: string;
-            version: string;
-            source: string;
-            delivery: "package" | "descriptor";
-            installed_at: string;
-            latest: string | null;
-            update_available: boolean;
-            incompatible_newer: string | null;
-            missing_upstream: boolean;
-            compat: {
-                status: "unknown" | "compatible" | "incompatible";
-                reason: string | null;
-            };
-            items: {
-                name: string;
-                kind: string;
-            }[];
-            route_mounts: Record<string, string>;
-        }[];
-        quarantined: {
-            name: string;
-            reason: string;
-        }[];
-    }>;
-    readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
-        ref: string;
-        version: string;
-        items: {
-            item: string;
-            kind: string;
-            base: string;
-            default_base: string;
-            routes: {
-                path: string;
-                full_path: string;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-                public: boolean;
-            }[];
-        }[];
-        collisions: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            conflict_owner: string;
-            conflict_path: string;
-        }[];
-        public_routes: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-        new_public_routes: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-        }[];
-        requires_public_acceptance: boolean;
-        required_env: {
-            name: string;
-            secret: boolean;
-        }[];
-        missing_env: string[];
-        delivery: "package" | "descriptor";
-    }>;
-    readonly installMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-        ref: string;
-        version: string;
-        notes: string[];
-        advisories: {
-            id: number;
-            listing: string;
-            affected_versions: string;
-            severity: string;
-            summary: string;
-            created_at: string;
-            withdrawn_at: string | null;
-        }[];
-        routes: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            public: boolean;
-        }[];
-    }>;
-    readonly uninstallMarketplacePlugin: (body: MarketplaceUninstallBody) => Promise<{
-        ref: string;
-        uninstalled: true;
-        notes: string[];
-    }>;
-    readonly updateMarketplacePlugin: (body: MarketplaceInstallBody) => Promise<{
-        ref: string;
-        version: string;
-        notes: string[];
-        advisories: {
-            id: number;
-            listing: string;
-            affected_versions: string;
-            severity: string;
-            summary: string;
-            created_at: string;
-            withdrawn_at: string | null;
-        }[];
-        routes: {
-            item: string;
-            full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
-            public: boolean;
-        }[];
-    }>;
-    readonly upgradeAllMarketplacePlugins: () => Promise<{
+    readonly getAllToolSchemas: (signal?: AbortSignal) => Promise<Record<string, {
+        input: Record<string, unknown>;
+        output: Record<string, unknown> | null;
+        description: string | null;
+    }>>;
+    readonly runTool: (args: RunToolArgs, signal?: AbortSignal) => Promise<unknown>;
+    readonly reloadTool: (args: ToolAdminArgs) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
         results: {
-            ref: string;
-            outcome: "failed" | "upgraded" | "up-to-date" | "no-compatible-version";
-            detail: string;
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
         }[];
+        error: string | null;
     }>;
-    readonly getMarketplaceAdvisories: (signal?: AbortSignal) => Promise<{
-        advisories: {
-            id: number;
-            listing: string;
-            affected_versions: string;
-            severity: string;
-            summary: string;
-            created_at: string;
-            withdrawn_at: string | null;
+    readonly removeTool: (args: ToolAdminArgs) => Promise<{
+        op: string;
+        reachable: boolean;
+        local_only: boolean;
+        results: {
+            name: string;
+            outcome: "failed" | "resyncing" | "recycling" | "stale" | "applied" | "missing" | "departed" | "timed_out";
+            payload: unknown;
+            error: string | null;
+            detail: string | null;
         }[];
-        fetched_at: string;
+        error: string | null;
     }>;
-    readonly getHealth: (signal?: AbortSignal) => Promise<string>;
-    readonly getSystemKinds: (signal?: AbortSignal) => Promise<{
-        kind: string;
-        state: "default" | "active" | "off";
-        plugin: string | null;
-        detail: string;
+    readonly submitToolRun: (args: SubmitToolRunArgs, signal?: AbortSignal) => Promise<{
+        run_id: string;
+    }>;
+    readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
+        run_id: string;
+        tool_name: string;
+        status: "failed" | "running" | "succeeded" | "lost";
+        started_at: string;
+        finished_at?: string | undefined;
+        result?: unknown;
+        error?: string | undefined;
+    }>;
+    readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
+        run_id: string;
+        tool_name: string;
+        status: "failed" | "running" | "succeeded" | "lost";
+        started_at: string;
+        finished_at?: string | undefined;
     }[]>;
-    readonly streamInteractions: (signal?: AbortSignal, lastEventId?: string) => Promise<AsyncGenerator<SseFrame, any, any>>;
+    readonly listToolTags: (signal?: AbortSignal) => Promise<{
+        name: string;
+        tags: string[];
+        badges: string[];
+        hidden: boolean;
+    }[]>;
+    readonly baseUrl: string;
 };
 
 // @public
@@ -11572,6 +11572,11 @@ const runTrace: z.ZodObject<{
 
 declare namespace s {
     export {
+        jsonSchema,
+        jsonValue,
+        toolRunSubmitResult,
+        toolRunRecord,
+        toolRunList,
         templatedText,
         requiredTemplatedText,
         TemplatedText,
@@ -11613,8 +11618,6 @@ declare namespace s {
         PolicyBody,
         roleBody,
         RoleBody,
-        jsonValue,
-        jsonSchema,
         toolNames,
         toolSchema,
         ToolSchema,
@@ -11875,6 +11878,9 @@ declare namespace s {
         authRoute,
         AuthRoute,
         authRoutes,
+        publicRoutes,
+        pinPublicResult,
+        unpinPublicResult,
         grantLevel,
         GrantLevel,
         roleGrants,
@@ -11887,9 +11893,6 @@ declare namespace s {
         RoleAuditEvent,
         roleVersions,
         RoleVersions,
-        publicRoutes,
-        pinPublicResult,
-        unpinPublicResult,
         tokensPayload,
         TokensPayload,
         createdApiKey,
@@ -12002,9 +12005,6 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
-        toolRunSubmitResult,
-        toolRunRecord,
-        toolRunList,
         stateSubject,
         StateSubject,
         stateRegime,
@@ -14192,9 +14192,9 @@ const toolRunList: z.ZodArray<z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
     status: z.ZodEnum<{
+        failed: "failed";
         running: "running";
         succeeded: "succeeded";
-        failed: "failed";
         lost: "lost";
     }>;
     started_at: z.ZodString;
@@ -14206,9 +14206,9 @@ const toolRunRecord: z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
     status: z.ZodEnum<{
+        failed: "failed";
         running: "running";
         succeeded: "succeeded";
-        failed: "failed";
         lost: "lost";
     }>;
     started_at: z.ZodString;

@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { Field } from '../components/field';
 import { RadioGroup } from '../components/radio-group';
 import { Select } from '../components/select';
-import type { FieldModel } from './classify';
+import type { FieldModel } from './field-model';
 
 const RADIO_MAX_OPTIONS = 3;
 

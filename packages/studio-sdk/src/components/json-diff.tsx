@@ -24,6 +24,7 @@ import { type ReactNode } from 'react';
 import { Badge } from './badge';
 import { JsonTree } from './json-tree';
 import { Table, TBody, TD, TH, THead, TR } from './table';
+import { isRecord } from '../guards';
 
 /** One leaf difference between the two JSON values. */
 export interface JsonDiffRow {
@@ -34,10 +35,6 @@ export interface JsonDiffRow {
   readonly before?: unknown;
   /** The value on the RIGHT side — set for `added` and `changed` rows. */
   readonly after?: unknown;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Structural deep-equality over JSON values (arrays compared position-wise). */

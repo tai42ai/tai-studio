@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { resolveTtlSeconds } from './expiry';
+import { formatExpiry, resolveTtlSeconds } from './expiry';
 
 describe('resolveTtlSeconds — presets', () => {
   it('maps Permanent to an explicit null (not 0)', () => {
@@ -42,5 +42,20 @@ describe('resolveTtlSeconds — custom', () => {
 
   it('throws loudly on a fractional value (the decimal edge)', () => {
     expect(() => resolveTtlSeconds('custom', '3600.5')).toThrow(/positive whole number/);
+  });
+});
+
+describe('formatExpiry', () => {
+  it('renders a null expiry as the given nullLabel', () => {
+    expect(formatExpiry(null, { nullLabel: 'Permanent' })).toBe('Permanent');
+  });
+
+  it('shows an unparseable value verbatim', () => {
+    expect(formatExpiry('not-a-date')).toBe('not-a-date');
+  });
+
+  it('formats a valid instant for the locale', () => {
+    const value = '2026-07-22T10:00:00Z';
+    expect(formatExpiry(value)).toBe(new Date(value).toLocaleString());
   });
 });

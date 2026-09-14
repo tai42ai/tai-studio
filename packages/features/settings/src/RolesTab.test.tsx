@@ -11,13 +11,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { ApiClient, AuthRoute, RoleBody, RoleGrants } from '@tai42/api-client';
 
+import { RolesTab } from './RolesTab';
 import {
-  RolesTab,
   baseTierLabel,
   effectiveLevelsOf,
   featureGroupsOf,
   isGrantableAction,
-} from './RolesTab';
+} from './role-grants';
 import { decorBorderedControls, renderWithProviders } from './test-utils';
 
 // -- fixtures ----------------------------------------------------------------

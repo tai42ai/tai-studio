@@ -7,7 +7,8 @@
  * be exercised.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult } from '@testing-library/react';
+import { render, screen, type RenderResult } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
 import { vi, type Mock } from 'vitest';
 
@@ -17,6 +18,7 @@ import type {
   KindStatus,
   MeProjection,
   ParsedAgentEvent,
+  PresetDetail,
   PresetRecord,
   ToolTagEntry,
 } from '@tai42/api-client';
@@ -62,7 +64,7 @@ export function renderWithProviders(
     ...client,
     getMe: () => Promise.resolve(projection ?? fullProjection()),
     getSystemKinds: () => Promise.resolve<KindStatus[]>(systemKinds ? [...systemKinds] : []),
-  } as ApiClient;
+  };
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (
@@ -265,3 +267,45 @@ export function hangingStream(
     );
   };
 }
+
+/** A stub client wired for the compose dialog: the tool/tag/preset reads plus create. */
+export function composeClient(over = {}): ApiClient {
+  return stubClient({
+    listTools: () => Promise.resolve(['echo', 'weather']),
+    listToolTags: () => Promise.resolve([]),
+    listPresets: () => Promise.resolve([]),
+    createPreset: vi.fn(() => Promise.resolve(presetRecord())),
+    ...over,
+  });
+}
+
+/** Open the base-agent picker and choose the default authorable agent. */
+export async function pickBaseAgent(): Promise<void> {
+  await userEvent.click(await screen.findByRole('combobox', { name: 'Base agent' }));
+  // The option label is `name — description`, so match by the name fragment.
+  await userEvent.click(await screen.findByRole('option', { name: /authorable_agent/ }));
+}
+
+// Name + description — both REQUIRED, both gate submit. Used by every test that drives
+// a successful create (an empty description would block it like a missing name).
+export async function fillNameAndDescription(name: string): Promise<void> {
+  await userEvent.type(screen.getByLabelText('Name'), name);
+  await userEvent.type(screen.getByLabelText('Description'), 'An assistant agent');
+}
+
+/** A stored preset's full detail record, for the expand-into-inline-spec paths. */
+export const presetDetail = (over: Partial<PresetDetail> = {}): PresetDetail => ({
+  name: 'echo_pinned',
+  base_tool: 'echo',
+  description: 'Pinned echo',
+  active_version: 1,
+  extensions: [],
+  output_schema: null,
+  input_schema: null,
+  conflicted: false,
+  conflicted_reason: null,
+  uses: [],
+  used_by: [],
+  fixed_kwargs: {},
+  ...over,
+});

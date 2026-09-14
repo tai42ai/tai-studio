@@ -92,6 +92,58 @@ function retryAfterSeconds(header: string | null): number | undefined {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }
 
+/**
+ * Read the JSON body of a request response, applying the transport's error
+ * policy: a non-2xx status throws (a 409 as `ApiConflictError` carrying the
+ * parsed body, every other as `ApiError` with the server message/code and the
+ * named `Retry-After` delay), and a body that is not JSON throws `ApiSchemaError`
+ * on a 2xx or `ApiError` otherwise. Returns the parsed payload only for a 2xx.
+ */
+async function readJsonPayload(
+  response: Response,
+  path: string,
+  retryAfter: number | undefined,
+): Promise<unknown> {
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    if (response.ok) throw new ApiSchemaError(path, 'response was not valid JSON');
+    throw new ApiError(
+      response.statusText || 'request failed',
+      response.status,
+      undefined,
+      retryAfter,
+    );
+  }
+
+  if (!response.ok) {
+    const { message, code } = extractError(payload);
+    const text = message ?? (response.statusText || 'request failed');
+    // The parsed body rides the error so a caller can key a follow-up on its structured
+    // fields (e.g. a reconcile refusal's `orphans`), never on the message prose.
+    if (response.status === 409) throw new ApiConflictError(text, payload);
+    throw new ApiError(text, response.status, code, retryAfter, payload);
+  }
+
+  return payload;
+}
+
+/** Unwrap the `{ data }` envelope and validate it against `schema`; a missing
+ *  envelope or a validation failure throws `ApiSchemaError`. */
+function validateEnvelope<S extends z.ZodType>(
+  schema: S,
+  path: string,
+  payload: unknown,
+): z.infer<S> {
+  if (!isDataEnvelope(payload)) {
+    throw new ApiSchemaError(path, 'response was not a { data } envelope');
+  }
+  const parsed = schema.safeParse(payload.data);
+  if (!parsed.success) throw new ApiSchemaError(path, parsed.error.issues);
+  return parsed.data;
+}
+
 export async function apiRequest<S extends z.ZodType>(
   config: ApiConfig,
   path: string,
@@ -115,36 +167,8 @@ export async function apiRequest<S extends z.ZodType>(
   // `Retry-After` rides on the error so a retrying caller waits the delay the server
   // named (the gated routes' reloading 503 carries one) instead of guessing.
   const retryAfter = retryAfterSeconds(response.headers.get('Retry-After'));
-
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    if (response.ok) throw new ApiSchemaError(path, 'response was not valid JSON');
-    throw new ApiError(
-      response.statusText || 'request failed',
-      response.status,
-      undefined,
-      retryAfter,
-    );
-  }
-
-  if (!response.ok) {
-    const { message, code } = extractError(payload);
-    const text = message ?? (response.statusText || 'request failed');
-    // The parsed body rides the error so a caller can key a follow-up on its structured
-    // fields (e.g. a reconcile refusal's `orphans`), never on the message prose.
-    if (response.status === 409) throw new ApiConflictError(text, payload);
-    throw new ApiError(text, response.status, code, retryAfter, payload);
-  }
-
-  if (!isDataEnvelope(payload)) {
-    throw new ApiSchemaError(path, 'response was not a { data } envelope');
-  }
-
-  const parsed = schema.safeParse(payload.data);
-  if (!parsed.success) throw new ApiSchemaError(path, parsed.error.issues);
-  return parsed.data;
+  const payload = await readJsonPayload(response, path, retryAfter);
+  return validateEnvelope(schema, path, payload);
 }
 
 /**

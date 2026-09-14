@@ -10,7 +10,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiError, type StateDetail } from '@tai42/api-client';
 
-import { RecordPage, parseSubjectRef, formatSubjectParam } from './RecordPage';
+import { RecordPage } from './RecordPage';
+import { parseSubjectRef, formatSubjectParam } from './record-subject';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 const subject = { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'p-1' };

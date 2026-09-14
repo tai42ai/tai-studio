@@ -16,7 +16,10 @@
  * empty value so the committed seed validates against its own schema.
  */
 import { classifySchema } from './classify';
+import type { FieldModel } from './field-model';
 import type { JsonSchema } from './types';
+
+type ModelOf<K extends FieldModel['kind']> = Extract<FieldModel, { kind: K }>;
 
 /** The explicit `default` (wrapper takes precedence over the resolved node), if any. */
 function explicitDefault(
@@ -53,6 +56,48 @@ export function skeletonValueForSchema(schema: JsonSchema, root: JsonSchema = sc
 }
 
 /**
+ * Seed an object's required nested structure and any optional property that
+ * carries an explicit default. A required property recurses; an optional one is
+ * materialized only when it declares a `default`, so its own required children
+ * never raise errors on a field the user did not opt into.
+ */
+function seedObject(
+  model: ModelOf<'object'>,
+  root: JsonSchema,
+  mintScalars: boolean,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [name, propSchema] of model.properties) {
+    if (model.required.has(name)) {
+      const seeded = seedValue(propSchema, root, mintScalars);
+      if (seeded !== undefined) result[name] = seeded;
+      continue;
+    }
+    const propClassified = classifySchema(propSchema, root);
+    const propDefault = explicitDefault(propSchema, propClassified.schema);
+    if (propDefault.present) result[name] = propDefault.value;
+  }
+  return result;
+}
+
+/**
+ * The empty value a required scalar mints in a committed skeleton: strings `''`,
+ * numbers `0`, booleans `false`. Absent (left value-less) on the default path,
+ * where a fresh form should flag the missing required scalar instead.
+ */
+function seedScalar(kind: 'string' | 'number' | 'boolean', mintScalars: boolean): unknown {
+  if (!mintScalars) return undefined;
+  switch (kind) {
+    case 'string':
+      return '';
+    case 'number':
+      return 0;
+    case 'boolean':
+      return false;
+  }
+}
+
+/**
  * The shared seeding walk. `mintScalars` distinguishes the two entry points
  * above: `false` leaves value-less required scalars absent; `true` mints their
  * type's empty value.
@@ -66,30 +111,16 @@ function seedValue(schema: JsonSchema, root: JsonSchema, mintScalars: boolean): 
   switch (model.kind) {
     case 'const':
       return model.value;
-    case 'object': {
-      const result: Record<string, unknown> = {};
-      for (const [name, propSchema] of model.properties) {
-        if (model.required.has(name)) {
-          const seeded = seedValue(propSchema, root, mintScalars);
-          if (seeded !== undefined) result[name] = seeded;
-          continue;
-        }
-        const propClassified = classifySchema(propSchema, root);
-        const propDefault = explicitDefault(propSchema, propClassified.schema);
-        if (propDefault.present) result[name] = propDefault.value;
-      }
-      return result;
-    }
+    case 'object':
+      return seedObject(model, root, mintScalars);
     case 'array':
       return [];
     case 'record':
       return {};
     case 'string':
-      return mintScalars ? '' : undefined;
     case 'number':
-      return mintScalars ? 0 : undefined;
     case 'boolean':
-      return mintScalars ? false : undefined;
+      return seedScalar(model.kind, mintScalars);
     case 'enum':
     case 'union':
     case 'json':

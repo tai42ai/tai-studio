@@ -17,223 +17,15 @@ import {
   variantTag,
   type EnumOption,
 } from './resolve';
+import type { ClassifiedField, UnionVariant } from './field-model';
+import { expressionAnnotation, mediaUpload } from './string-annotations';
 import type { JsonSchema } from './types';
-
-/**
- * How a string field accepts binary content as a JSON-serializable string.
- * Derived from a field's JSON-Schema media annotations (see the `SchemaForm` module).
- */
-export interface MediaUpload {
-  /**
-   * `base64` — the emitted value is the raw base64 body (no `data:` prefix),
-   * matching `contentEncoding: "base64"`. `data-url` — the emitted value is a
-   * full `data:<mime>;base64,<body>` URL, matching `format: "data-url"`.
-   */
-  readonly encoding: 'base64' | 'data-url';
-  /**
-   * The `contentMediaType` constraint (e.g. `image/*`, `application/pdf`), used
-   * for MIME validation and the file picker's `accept`. `undefined` for a bare
-   * `format: "data-url"` field with no declared type.
-   */
-  readonly mediaType: string | undefined;
-  /** A per-field byte cap from `contentMaxBytes`, if the schema pins one. */
-  readonly maxBytes: number | undefined;
-}
-
-/** One top-level key of the expression's input document, with a one-line gloss. */
-export interface ExpressionAnnotationKey {
-  readonly name: string;
-  readonly gloss: string;
-}
-
-/**
- * The `x-tai42-expression` annotation on a string schema: the server declares
- * that the field's value is authored in a pipeline expression language (only jq
- * today) and optionally describes what `.` is for that expression. The renderer
- * uses it to open the visual-editor door instead of a plain text box. The shape
- * mirrors jq-studio's input-shape descriptor WITHOUT importing it — classification
- * stays a pure schema concern; the renderer maps this onto a jq field declaration.
- */
-export interface ExpressionAnnotation {
-  /** The declared language. An unknown language never reaches here — it classifies
-   *  as a plain string, so an older client renders a newer server's field as the
-   *  ordinary text input it always was. */
-  readonly language: 'jq';
-  /** Short chip label for what `.` is (e.g. "node envelope"). */
-  readonly label: string | undefined;
-  /** One sentence describing what `.` is in this field. */
-  readonly blurb: string | undefined;
-  /** The top-level keys of `.`, each with a one-liner. */
-  readonly keys: readonly ExpressionAnnotationKey[] | undefined;
-  /** What the expression must return (e.g. "true or false"). */
-  readonly returns: string | undefined;
-  /** Per-field caveats. */
-  readonly caveats: readonly string[] | undefined;
-  /** True when the annotation carries a `sample` — tracked separately because a
-   *  legitimate sample may be JSON `null`. */
-  readonly hasSample: boolean;
-  /** A static skeleton of `.` for the Test panel. Meaningful only when
-   *  {@link hasSample} is true. */
-  readonly sample: unknown;
-}
-
-/** One selectable variant of a union field. */
-export interface UnionVariant {
-  readonly label: string;
-  /** The discriminator tag value, or `undefined` for a non-discriminated union. */
-  readonly tag: unknown;
-  /** The variant schema as written (unresolved — the renderer resolves it). */
-  readonly schema: JsonSchema;
-}
-
-/** The renderer-facing classification of a schema node. */
-export type FieldModel =
-  | { readonly kind: 'const'; readonly value: unknown }
-  | { readonly kind: 'enum'; readonly options: readonly EnumOption[] }
-  | {
-      readonly kind: 'string';
-      readonly format: string | undefined;
-      /** Present when media annotations opt the field into the upload control. */
-      readonly media: MediaUpload | undefined;
-      /** Present when a well-formed `x-tai42-expression` annotation opts the
-       *  field into the jq expression editor (see {@link ExpressionAnnotation}). */
-      readonly expression: ExpressionAnnotation | undefined;
-    }
-  | { readonly kind: 'number'; readonly integer: boolean }
-  | { readonly kind: 'boolean' }
-  | { readonly kind: 'array'; readonly items: JsonSchema }
-  | {
-      readonly kind: 'object';
-      readonly properties: readonly (readonly [string, JsonSchema])[];
-      readonly required: ReadonlySet<string>;
-    }
-  | {
-      // A string-keyed map typed by `additionalProperties` (no fixed
-      // `properties`), edited as key/value rows. `values` is the entry value
-      // schema AS WRITTEN — the entry editor resolves any `$ref` itself, exactly
-      // as `array.items` is.
-      readonly kind: 'record';
-      readonly values: JsonSchema;
-    }
-  | {
-      readonly kind: 'union';
-      readonly variants: readonly UnionVariant[];
-      readonly discriminator: string | undefined;
-    }
-  | {
-      // A shape with no structured editor to build — a property-less object, a
-      // bare `additionalProperties`-open object, an items-less array, an empty/
-      // multi-type/`allOf` schema. It is NOT undroppable: every one of these still
-      // describes JSON, so the renderer edits it as free-form JSON in a mono
-      // textarea rather than dead-ending on a badge. `jsonType` is the container
-      // the schema commits to, so a valid buffer must parse to it (`'any'` = no
-      // constraint beyond "is JSON"); `reason` records which shape fell through.
-      readonly kind: 'json';
-      readonly jsonType: 'object' | 'array' | 'any';
-      readonly reason: string;
-    };
-
-/** A fully classified field: its model plus resolved metadata. */
-export interface ClassifiedField {
-  readonly model: FieldModel;
-  /** True when JSON `null` is an accepted value (a null-union member). */
-  readonly nullable: boolean;
-  /** The effective (ref-resolved) schema this classification describes. */
-  readonly schema: JsonSchema;
-  readonly title: string | undefined;
-  readonly description: string | undefined;
-}
 
 function firstString(...values: readonly unknown[]): string | undefined {
   for (const value of values) {
     if (typeof value === 'string' && value.length > 0) return value;
   }
   return undefined;
-}
-
-/**
- * Detect the media-upload annotations on a (ref-resolved) string schema. A field
- * opts into the upload control when it carries `contentEncoding: "base64"` plus a
- * `contentMediaType`, OR `format: "data-url"`. Anything else is a plain string.
- */
-function mediaUpload(schema: JsonSchema): MediaUpload | undefined {
-  const mediaType =
-    typeof schema.contentMediaType === 'string' ? schema.contentMediaType : undefined;
-  const maxBytes =
-    typeof schema.contentMaxBytes === 'number' && schema.contentMaxBytes > 0
-      ? schema.contentMaxBytes
-      : undefined;
-  if (schema.format === 'data-url') {
-    return { encoding: 'data-url', mediaType, maxBytes };
-  }
-  if (schema.contentEncoding === 'base64' && mediaType !== undefined) {
-    return { encoding: 'base64', mediaType, maxBytes };
-  }
-  return undefined;
-}
-
-const EXPRESSION_KEYWORD = 'x-tai42-expression';
-
-/** A parsed-JSON plain object (arrays and `null` are `typeof 'object'` too). */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-/**
- * Detect the `x-tai42-expression` annotation on a (ref-resolved) string schema,
- * mirroring {@link mediaUpload}: a well-formed annotation opts the field into the
- * jq expression editor; anything else — absent, non-object, unknown language, or
- * any wrongly-typed member — yields `undefined`, so the field renders EXACTLY as
- * the plain string input it is today. Malformed payloads NEVER throw: a bad
- * annotation is a server-side authoring bug, and degrading to the ordinary text
- * box keeps the form usable while staying byte-identical to the unannotated
- * rendering.
- */
-function expressionAnnotation(schema: JsonSchema): ExpressionAnnotation | undefined {
-  const raw: unknown = schema[EXPRESSION_KEYWORD];
-  if (!isRecord(raw)) return undefined;
-  // The language gate doubles as the forward-compatibility valve: a future
-  // language this client does not understand degrades to a plain string field.
-  if (raw.language !== 'jq') return undefined;
-
-  const { label, blurb, returns } = raw;
-  if (label !== undefined && typeof label !== 'string') return undefined;
-  if (blurb !== undefined && typeof blurb !== 'string') return undefined;
-  if (returns !== undefined && typeof returns !== 'string') return undefined;
-
-  let keys: ExpressionAnnotationKey[] | undefined;
-  if (raw.keys !== undefined) {
-    if (!Array.isArray(raw.keys)) return undefined;
-    keys = [];
-    for (const entry of raw.keys as readonly unknown[]) {
-      if (!isRecord(entry) || typeof entry.name !== 'string' || typeof entry.gloss !== 'string') {
-        return undefined;
-      }
-      keys.push({ name: entry.name, gloss: entry.gloss });
-    }
-  }
-
-  let caveats: string[] | undefined;
-  if (raw.caveats !== undefined) {
-    if (!Array.isArray(raw.caveats)) return undefined;
-    caveats = [];
-    for (const entry of raw.caveats as readonly unknown[]) {
-      if (typeof entry !== 'string') return undefined;
-      caveats.push(entry);
-    }
-  }
-
-  // `sample` is any JSON — including `null` — so presence is tracked, not typed.
-  return {
-    language: 'jq',
-    label,
-    blurb,
-    keys,
-    returns,
-    caveats,
-    hasSample: 'sample' in raw,
-    sample: raw.sample,
-  };
 }
 
 /**
@@ -254,132 +46,250 @@ function jsonFallback(
   return { model: { kind: 'json', jsonType, reason }, nullable, schema, title, description };
 }
 
-/**
- * Classify a schema node (resolving `$ref` first). `wrapper` metadata (a
- * ref-site title/description) is threaded down so a `{ $ref, title }` or a
- * null-union wrapper keeps its property-level label.
- */
-export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedField {
-  const resolved = resolveRef(raw, root);
-  const title = firstString(raw.title, resolved.title);
-  const description = firstString(raw.description, resolved.description);
+// const pins a single value. Null-acceptance is fully decidable here: the one
+// permitted value either IS null or it is not. Without this, a `const: null`
+// field would seed to null and then fail the validator's upstream "must not be
+// null" gate before the equality check ever ran — permanently invalid.
+function classifyConst(
+  resolved: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+): ClassifiedField {
+  return {
+    model: { kind: 'const', value: resolved.const },
+    nullable: resolved.const === null,
+    schema: resolved,
+    title,
+    description,
+  };
+}
 
-  // const pins a single value. Null-acceptance is fully decidable here: the one
-  // permitted value either IS null or it is not. Without this, a `const: null`
-  // field would seed to null and then fail the validator's upstream "must not be
-  // null" gate before the equality check ever ran — permanently invalid.
-  if ('const' in resolved) {
-    return {
-      model: { kind: 'const', value: resolved.const },
-      nullable: resolved.const === null,
-      schema: resolved,
-      title,
-      description,
-    };
-  }
+// enum → a fixed choice list.
+function classifyEnum(
+  resolved: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+): ClassifiedField {
+  const enumValues = resolved.enum ?? [];
+  const options: EnumOption[] = enumValues.map((value) => ({ value, label: scalarLabel(value) }));
+  const nullable = enumValues.some((value) => value === null);
+  return { model: { kind: 'enum', options }, nullable, schema: resolved, title, description };
+}
 
-  // enum → a fixed choice list.
-  if (resolved.enum !== undefined) {
-    const options: EnumOption[] = resolved.enum.map((value) => ({
-      value,
-      label: scalarLabel(value),
-    }));
-    const nullable = resolved.enum.some((value) => value === null);
-    return { model: { kind: 'enum', options }, nullable, schema: resolved, title, description };
-  }
-
-  // anyOf/oneOf union normalization.
-  const members = unionMembers(resolved);
-  if (members !== undefined) {
-    const nonNull = members.filter((member) => !isNullSchema(resolveRef(member, root)));
-    const nullable = nonNull.length !== members.length;
-    const soleNonNull = nonNull[0];
-    if (soleNonNull === undefined) {
-      // Every member is `null` — degenerate, but `null` is still valid, so edit
-      // it as JSON (nullable) rather than dead-ending on a badge.
-      return jsonFallback(
-        resolved,
-        'any',
-        'union with no non-null members',
-        title,
-        description,
-        true,
-      );
-    }
-    if (nonNull.length === 1) {
-      const inner = classifySchema(soleNonNull, root);
-      // Media annotations (`contentEncoding`/`contentMediaType`/`format: data-url`)
-      // that land on the OUTER null-union wrapper of an OPTIONAL field would
-      // otherwise be lost when delegating to the inner string member, silently
-      // degrading an optional upload field to a plain text box. Re-detect them on
-      // the wrapper and attach to the inner string model. The expression
-      // annotation gets the same treatment for the same reason: an optional
-      // annotated field must keep its editor door.
-      const model =
-        inner.model.kind === 'string'
-          ? {
-              ...inner.model,
-              media: inner.model.media ?? mediaUpload(resolved),
-              expression: inner.model.expression ?? expressionAnnotation(resolved),
-            }
-          : inner.model;
-      return {
-        model,
-        nullable: nullable || inner.nullable,
-        schema: inner.schema,
-        title: title ?? inner.title,
-        description: description ?? inner.description,
-      };
-    }
-    const discriminator = resolved.discriminator?.propertyName;
-    const variants: UnionVariant[] = nonNull.map((member, index) => {
-      const tag = discriminator === undefined ? undefined : variantTag(member, discriminator, root);
-      return { label: variantLabel(member, index, tag, root), tag, schema: member };
-    });
-    return {
-      model: { kind: 'union', variants, discriminator },
-      nullable,
-      schema: resolved,
-      title,
-      description,
-    };
-  }
-
-  // allOf: Pydantic wraps a single $ref this way; a multi-member intersection is
-  // not a form-renderable construct.
-  if (resolved.allOf !== undefined) {
-    const soleAllOf = resolved.allOf[0];
-    if (resolved.allOf.length === 1 && soleAllOf !== undefined) {
-      const inner = classifySchema(soleAllOf, root);
-      return {
-        model: inner.model,
-        nullable: inner.nullable,
-        schema: inner.schema,
-        title: title ?? inner.title,
-        description: description ?? inner.description,
-      };
-    }
-    // Whether the intersection accepts `null` is not statically decidable here
-    // (it does iff EVERY member does), and the json escape hatch only enforces
-    // what it KNOWS — so stay permissive like `jsonType: 'any'` itself and let
-    // the server-side contract be the authority, rather than rejecting a null
-    // the schema may well permit (e.g. an intersection of open schemas).
+// anyOf/oneOf union normalization.
+function classifyUnion(
+  resolved: JsonSchema,
+  members: readonly JsonSchema[],
+  root: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+): ClassifiedField {
+  const nonNull = members.filter((member) => !isNullSchema(resolveRef(member, root)));
+  const nullable = nonNull.length !== members.length;
+  const soleNonNull = nonNull[0];
+  if (soleNonNull === undefined) {
+    // Every member is `null` — degenerate, but `null` is still valid, so edit
+    // it as JSON (nullable) rather than dead-ending on a badge.
     return jsonFallback(
       resolved,
       'any',
-      'allOf intersection of multiple schemas',
+      'union with no non-null members',
       title,
       description,
       true,
     );
   }
+  if (nonNull.length === 1) {
+    return classifySoleUnionMember(soleNonNull, resolved, root, nullable, title, description);
+  }
+  const discriminator = resolved.discriminator?.propertyName;
+  const variants: UnionVariant[] = nonNull.map((member, index) => {
+    const tag = discriminator === undefined ? undefined : variantTag(member, discriminator, root);
+    return { label: variantLabel(member, index, tag, root), tag, schema: member };
+  });
+  return {
+    model: { kind: 'union', variants, discriminator },
+    nullable,
+    schema: resolved,
+    title,
+    description,
+  };
+}
 
-  // Type-driven classification.
+// A null-union of exactly one non-null member: delegate to that member.
+function classifySoleUnionMember(
+  soleNonNull: JsonSchema,
+  resolved: JsonSchema,
+  root: JsonSchema,
+  nullable: boolean,
+  title: string | undefined,
+  description: string | undefined,
+): ClassifiedField {
+  const inner = classifySchema(soleNonNull, root);
+  // Media annotations (`contentEncoding`/`contentMediaType`/`format: data-url`)
+  // that land on the OUTER null-union wrapper of an OPTIONAL field would
+  // otherwise be lost when delegating to the inner string member, silently
+  // degrading an optional upload field to a plain text box. Re-detect them on
+  // the wrapper and attach to the inner string model. The expression
+  // annotation gets the same treatment for the same reason: an optional
+  // annotated field must keep its editor door.
+  const model =
+    inner.model.kind === 'string'
+      ? {
+          ...inner.model,
+          media: inner.model.media ?? mediaUpload(resolved),
+          expression: inner.model.expression ?? expressionAnnotation(resolved),
+        }
+      : inner.model;
+  return {
+    model,
+    nullable: nullable || inner.nullable,
+    schema: inner.schema,
+    title: title ?? inner.title,
+    description: description ?? inner.description,
+  };
+}
+
+// allOf: Pydantic wraps a single $ref this way; a multi-member intersection is
+// not a form-renderable construct.
+function classifyAllOf(
+  resolved: JsonSchema,
+  root: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+): ClassifiedField {
+  const allOf = resolved.allOf ?? [];
+  const soleAllOf = allOf[0];
+  if (allOf.length === 1 && soleAllOf !== undefined) {
+    const inner = classifySchema(soleAllOf, root);
+    return {
+      model: inner.model,
+      nullable: inner.nullable,
+      schema: inner.schema,
+      title: title ?? inner.title,
+      description: description ?? inner.description,
+    };
+  }
+  // Whether the intersection accepts `null` is not statically decidable here
+  // (it does iff EVERY member does), and the json escape hatch only enforces
+  // what it KNOWS — so stay permissive like `jsonType: 'any'` itself and let
+  // the server-side contract be the authority, rather than rejecting a null
+  // the schema may well permit (e.g. an intersection of open schemas).
+  return jsonFallback(
+    resolved,
+    'any',
+    'allOf intersection of multiple schemas',
+    title,
+    description,
+    true,
+  );
+}
+
+function classifyString(
+  resolved: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+  nullable: boolean,
+): ClassifiedField {
+  return {
+    model: {
+      kind: 'string',
+      format: resolved.format,
+      media: mediaUpload(resolved),
+      expression: expressionAnnotation(resolved),
+    },
+    nullable,
+    schema: resolved,
+    title,
+    description,
+  };
+}
+
+function classifyArray(
+  resolved: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+  nullable: boolean,
+): ClassifiedField {
+  if (resolved.items === undefined) {
+    // A bare array with no item schema: no per-item editor to build, but the
+    // value is still a JSON array — edit it whole as free-form JSON.
+    return jsonFallback(
+      resolved,
+      'array',
+      'array without an items schema',
+      title,
+      description,
+      nullable,
+    );
+  }
+  return {
+    model: { kind: 'array', items: resolved.items },
+    nullable,
+    schema: resolved,
+    title,
+    description,
+  };
+}
+
+function classifyObject(
+  resolved: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+  nullable: boolean,
+): ClassifiedField {
+  if (resolved.properties === undefined) {
+    // A free-form object typed by a VALUE SCHEMA (`additionalProperties` is a
+    // schema, not `false`/`true`/absent) is a string→X map — renderable as
+    // key/value rows. A boolean/absent `additionalProperties` carries no value
+    // type to build an entry editor from, so it falls through to the free-form
+    // JSON editor (constrained to a JSON object).
+    // Read as `unknown`: the value is parsed JSON, where `additionalProperties:
+    // null` is possible and `typeof null === 'object'` would otherwise classify
+    // it as a record with a `null` value schema.
+    const additional: unknown = resolved.additionalProperties;
+    if (typeof additional === 'object' && additional !== null) {
+      return {
+        model: { kind: 'record', values: additional as JsonSchema },
+        nullable,
+        schema: resolved,
+        title,
+        description,
+      };
+    }
+    return jsonFallback(
+      resolved,
+      'object',
+      'free-form object with no property schema',
+      title,
+      description,
+      nullable,
+    );
+  }
+  const properties: (readonly [string, JsonSchema])[] = Object.entries(resolved.properties);
+  const required = new Set(resolved.required ?? []);
+  return {
+    model: { kind: 'object', properties, required },
+    nullable,
+    schema: resolved,
+    title,
+    description,
+  };
+}
+
+// Type-driven classification: a single non-null JSON type maps to its structured
+// editor; no type, several types, or an unrecognized one lands on the JSON fallback.
+function classifyByType(
+  resolved: JsonSchema,
+  title: string | undefined,
+  description: string | undefined,
+): ClassifiedField {
   const types = typeList(resolved);
   const nonNullTypes = types.filter((type) => type !== 'null');
   const nullableByType = nonNullTypes.length !== types.length;
 
-  if (nonNullTypes.length === 0) {
+  const type = nonNullTypes[0];
+  if (nonNullTypes.length === 0 || type === undefined) {
     // No `type` at all (an open `{}` schema, or `type: "null"` alone) accepts any
     // JSON — the classic "any" field. Edit it as free-form JSON. Nullable is
     // always true here: `type: "null"` declares it, and an open schema with no
@@ -404,32 +314,9 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
       nullableByType,
     );
   }
-
-  const type = nonNullTypes[0];
-  if (type === undefined) {
-    return jsonFallback(
-      resolved,
-      'any',
-      'schema declares no renderable type',
-      title,
-      description,
-      nullableByType,
-    );
-  }
   switch (type) {
     case 'string':
-      return {
-        model: {
-          kind: 'string',
-          format: resolved.format,
-          media: mediaUpload(resolved),
-          expression: expressionAnnotation(resolved),
-        },
-        nullable: nullableByType,
-        schema: resolved,
-        title,
-        description,
-      };
+      return classifyString(resolved, title, description, nullableByType);
     case 'number':
       return {
         model: { kind: 'number', integer: false },
@@ -454,66 +341,10 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
         title,
         description,
       };
-    case 'array': {
-      if (resolved.items === undefined) {
-        // A bare array with no item schema: no per-item editor to build, but the
-        // value is still a JSON array — edit it whole as free-form JSON.
-        return jsonFallback(
-          resolved,
-          'array',
-          'array without an items schema',
-          title,
-          description,
-          nullableByType,
-        );
-      }
-      return {
-        model: { kind: 'array', items: resolved.items },
-        nullable: nullableByType,
-        schema: resolved,
-        title,
-        description,
-      };
-    }
-    case 'object': {
-      if (resolved.properties === undefined) {
-        // A free-form object typed by a VALUE SCHEMA (`additionalProperties` is a
-        // schema, not `false`/`true`/absent) is a string→X map — renderable as
-        // key/value rows. A boolean/absent `additionalProperties` carries no value
-        // type to build an entry editor from, so it falls through to the free-form
-        // JSON editor (constrained to a JSON object).
-        // Read as `unknown`: the value is parsed JSON, where `additionalProperties:
-        // null` is possible and `typeof null === 'object'` would otherwise classify
-        // it as a record with a `null` value schema.
-        const additional: unknown = resolved.additionalProperties;
-        if (typeof additional === 'object' && additional !== null) {
-          return {
-            model: { kind: 'record', values: additional as JsonSchema },
-            nullable: nullableByType,
-            schema: resolved,
-            title,
-            description,
-          };
-        }
-        return jsonFallback(
-          resolved,
-          'object',
-          'free-form object with no property schema',
-          title,
-          description,
-          nullableByType,
-        );
-      }
-      const properties: (readonly [string, JsonSchema])[] = Object.entries(resolved.properties);
-      const required = new Set(resolved.required ?? []);
-      return {
-        model: { kind: 'object', properties, required },
-        nullable: nullableByType,
-        schema: resolved,
-        title,
-        description,
-      };
-    }
+    case 'array':
+      return classifyArray(resolved, title, description, nullableByType);
+    case 'object':
+      return classifyObject(resolved, title, description, nullableByType);
     default:
       return jsonFallback(
         resolved,
@@ -524,4 +355,22 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
         nullableByType,
       );
   }
+}
+
+/**
+ * Classify a schema node (resolving `$ref` first). `wrapper` metadata (a
+ * ref-site title/description) is threaded down so a `{ $ref, title }` or a
+ * null-union wrapper keeps its property-level label.
+ */
+export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedField {
+  const resolved = resolveRef(raw, root);
+  const title = firstString(raw.title, resolved.title);
+  const description = firstString(raw.description, resolved.description);
+
+  if ('const' in resolved) return classifyConst(resolved, title, description);
+  if (resolved.enum !== undefined) return classifyEnum(resolved, title, description);
+  const members = unionMembers(resolved);
+  if (members !== undefined) return classifyUnion(resolved, members, root, title, description);
+  if (resolved.allOf !== undefined) return classifyAllOf(resolved, root, title, description);
+  return classifyByType(resolved, title, description);
 }

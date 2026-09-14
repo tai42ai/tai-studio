@@ -28,7 +28,8 @@ import { ApiProvider } from '@tai42/studio-sdk';
 // Only `JqField` is stubbed (below); the props type comes from the real module.
 import type { JqFieldProps } from '@tai42/jq-studio';
 
-import { CONDITION_SHAPE, PolicySection } from './PolicySection';
+import { CONDITION_SHAPE } from './policy-condition';
+import { PolicySection } from './PolicySection';
 
 // A mutable holder for the latest props the stubbed JqField was rendered with.
 // Created via vi.hoisted so the hoisted vi.mock factory below can close over it.

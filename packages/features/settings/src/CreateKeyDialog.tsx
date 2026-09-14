@@ -5,26 +5,14 @@
  */
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Button,
-  Dialog,
-  ErrorState,
-  Spinner,
-  TextInput,
-  errorMessage,
-  useApi,
-} from '@tai42/studio-sdk';
+import { Button, Dialog, ErrorState, Spinner, errorMessage, useApi } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
 
 import { tokensPayloadKey } from './keys';
-import { PolicySection, type PolicyFields } from './PolicySection';
-import { ScopePicker } from './ScopePicker';
-import {
-  conditionWarningStyle,
-  dialogActionsStyle,
-  fieldLabelStyle,
-  formStyle,
-} from './api-keys-common';
+import { PolicySection } from './PolicySection';
+import type { PolicyFields } from './policy-data';
+import { KeyFormFields } from './KeyFormFields';
+import { conditionWarningStyle, dialogActionsStyle, formStyle } from './api-keys-styles';
 
 export function CreateKeyDialog({
   open,
@@ -102,50 +90,16 @@ export function CreateKeyDialog({
       }}
     >
       <div style={formStyle}>
-        <div>
-          <label style={fieldLabelStyle} htmlFor="create-key-user">
-            User ID
-          </label>
-          <TextInput
-            id="create-key-user"
-            aria-label="User ID"
-            value={userId}
-            autoComplete="off"
-            onChange={(event) => {
-              setUserId(event.target.value);
-            }}
-          />
-        </div>
-        <div>
-          <label style={fieldLabelStyle} htmlFor="create-key-desc">
-            Description
-          </label>
-          <TextInput
-            id="create-key-desc"
-            aria-label="Description"
-            value={description}
-            autoComplete="off"
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
-          />
-        </div>
-        <div>
-          <span style={fieldLabelStyle}>Scopes</span>
-          <ScopePicker
-            scopeIds={scopeIds}
-            selected={selected}
-            disabled={false}
-            onToggle={(scopeId, next) => {
-              setSelected((current) => {
-                const updated = new Set(current);
-                if (next) updated.add(scopeId);
-                else updated.delete(scopeId);
-                return updated;
-              });
-            }}
-          />
-        </div>
+        <KeyFormFields
+          idPrefix="create-key"
+          userId={userId}
+          onUserIdChange={setUserId}
+          description={description}
+          onDescriptionChange={setDescription}
+          scopeIds={scopeIds}
+          selected={selected}
+          onSelectedChange={setSelected}
+        />
         <PolicySection
           key={policyNonce}
           idPrefix="create-key"

@@ -16,7 +16,8 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import type { ApiClient, KindStatus } from '@tai42/api-client';
-import { render, type RenderResult } from '@testing-library/react';
+import { render, screen, type RenderResult } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi, type Mock } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
@@ -86,3 +87,91 @@ export function renderWithProviders(
 
   return { ...result, navigate, queryClient };
 }
+
+/** A sample preset record for the create-form suites. */
+export const record = {
+  name: 'paris_weather',
+  base_tool: 'weather',
+  description: 'Paris weather',
+  active_version: 1,
+  extensions: [],
+  output_schema: null,
+  conflicted: false,
+  conflicted_reason: null,
+  uses: [],
+  used_by: [],
+};
+
+/** A stub client defaulting every read the create form touches. */
+export function baseClient(overrides: StubApiClient = {}): StubApiClient {
+  return {
+    listTools: vi.fn().mockResolvedValue(['weather']),
+    listPresets: vi.fn().mockResolvedValue([]),
+    listToolTags: vi.fn().mockResolvedValue([]),
+    listToolMeta: vi.fn().mockResolvedValue({ folders: [], meta: [] }),
+    upsertToolMeta: vi.fn().mockResolvedValue({
+      tool_name: 'paris_weather',
+      display_name: null,
+      folder_id: null,
+      tags: ['geo'],
+      hidden: null,
+    }),
+    listExtensions: vi.fn().mockResolvedValue([]),
+    listAgents: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    getToolSchema: vi.fn().mockResolvedValue({
+      input: { type: 'object', properties: {}, required: [] },
+      output: null,
+      description: null,
+    }),
+    ...overrides,
+  };
+}
+
+/** Name + base only — used by the validate tests (an empty description is valid to validate). */
+export async function fillNameAndBase(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.type(screen.getByPlaceholderText('paris_weather'), 'paris_weather');
+  await user.click(await screen.findByRole('combobox'));
+  await user.click(await screen.findByRole('option', { name: 'weather' }));
+}
+
+/** Name + base + description — the full gate a create must clear before submit. */
+export async function fillCreatable(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await fillNameAndBase(user);
+  await user.type(screen.getByPlaceholderText('Paris weather'), 'Paris weather');
+}
+
+/** A preset detail record for the detail-panel suites. */
+export const detail = {
+  name: 'paris_weather',
+  base_tool: 'weather',
+  description: 'Paris weather',
+  active_version: 7,
+  extensions: [],
+  output_schema: null,
+  conflicted: false,
+  conflicted_reason: null,
+  uses: [],
+  used_by: [],
+  fixed_kwargs: { city: 'Paris' },
+};
+
+/** An empty overlay map — the default for tests that don't exercise overlay details. */
+export const emptyMeta = { folders: [], meta: [] };
+
+/** The current-version list a detail panel reads to seed the save-version binding. */
+export const versions = [
+  {
+    version: 2,
+    body: {
+      base_tool: 'weather',
+      description: 'Paris weather',
+      fixed_kwargs: { city: 'Paris' },
+      extensions: [],
+      tags: ['geo'],
+      output_schema: null,
+    },
+    tags: [],
+    created_at: 'now',
+    is_current: true,
+  },
+];

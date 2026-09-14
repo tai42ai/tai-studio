@@ -42,6 +42,11 @@ function isAbsoluteHttpsUrl(candidate: string): boolean {
   }
 }
 
+/** Whether a required string field is unset or whitespace-only. */
+function blank(candidate: string | undefined): boolean {
+  return (candidate ?? '').trim() === '';
+}
+
 /**
  * What `.` is for `payload_expr`: the inbound conversation turn. The program maps
  * it to the JSON object of keyword arguments the tool is dispatched with.
@@ -88,6 +93,158 @@ function routeNameProperty(fixed: string | undefined): JsonSchema {
   };
 }
 
+/** The `agent`-kind branch of the discriminated `target` union. */
+function targetAgentVariant(): JsonSchema {
+  return {
+    title: 'Agent',
+    type: 'object',
+    required: ['target_kind', 'target_name'],
+    properties: {
+      target_kind: { const: 'agent', title: 'Target kind' },
+      target_name: {
+        type: 'string',
+        title: 'Agent name',
+        description: 'A registered agent the turn runs as a threaded conversation.',
+      },
+    },
+  };
+}
+
+/** The `tool`-kind branch of the discriminated `target` union (the only branch with jq). */
+function targetToolVariant(): JsonSchema {
+  return {
+    title: 'Tool',
+    type: 'object',
+    required: ['target_kind', 'target_name'],
+    properties: {
+      target_kind: { const: 'tool', title: 'Target kind' },
+      target_name: {
+        type: 'string',
+        title: 'Tool name',
+        description: 'A registered tool dispatched statelessly per message.',
+      },
+      payload_expr: {
+        type: 'string',
+        title: 'Payload expression',
+        description:
+          "Optional jq mapping the inbound turn to the tool's keyword arguments; blank uses { message, sender }.",
+        'x-tai42-expression': PAYLOAD_EXPR_ANNOTATION,
+      },
+      reply_expr: {
+        type: 'string',
+        title: 'Reply expression',
+        description:
+          'Optional jq mapping the tool result to the reply; blank passes a null / string / parts result straight through.',
+        'x-tai42-expression': REPLY_EXPR_ANNOTATION,
+      },
+    },
+  };
+}
+
+/** The `target` field: a union discriminated on `target_kind` (agent vs tool). */
+function targetSchema(): JsonSchema {
+  return {
+    title: 'Target',
+    description: 'What an inbound turn on this route runs.',
+    discriminator: { propertyName: 'target_kind' },
+    oneOf: [targetAgentVariant(), targetToolVariant()],
+  };
+}
+
+/** The `api`-door branch of the discriminated `delivery` union. */
+function deliveryApiVariant(): JsonSchema {
+  return {
+    title: 'API',
+    type: 'object',
+    required: ['door', 'callback_url'],
+    properties: {
+      door: { const: 'api', title: 'Door' },
+      callback_url: {
+        type: 'string',
+        format: 'uri',
+        title: 'Callback URL',
+        description: 'The absolute https URL the signed answer callback is delivered to.',
+      },
+    },
+  };
+}
+
+/** The `channel`-door branch of the discriminated `delivery` union. */
+function deliveryChannelVariant(): JsonSchema {
+  return {
+    title: 'Channel',
+    type: 'object',
+    required: ['door', 'channel', 'our_identity'],
+    properties: {
+      door: { const: 'channel', title: 'Door' },
+      channel: {
+        type: 'string',
+        title: 'Channel',
+        description: 'The registry channel name (":"-free) the medium adapter delivers through.',
+      },
+      our_identity: {
+        type: 'string',
+        title: 'Our identity',
+        description: 'The medium address this route is texted at.',
+      },
+    },
+  };
+}
+
+/** The `delivery` field: a union discriminated on `door` (api vs channel). */
+function deliverySchema(): JsonSchema {
+  return {
+    title: 'Door',
+    description: "How a turn's answer is delivered back.",
+    discriminator: { propertyName: 'door' },
+    oneOf: [deliveryApiVariant(), deliveryChannelVariant()],
+  };
+}
+
+/** The `execution_key` property — the api-key user_id a turn runs as. */
+function executionKeyProperty(): JsonSchema {
+  return {
+    type: 'string',
+    title: 'Execution key',
+    description:
+      'The api-key user_id the turn runs AS; its live grants authorize the run and every tool call it makes.',
+  };
+}
+
+/** The `initial_mode` property — the thread control mode when none is overridden. */
+function initialModeProperty(): JsonSchema {
+  return {
+    type: 'string',
+    enum: ['agent', 'manual'],
+    default: 'agent',
+    title: 'Initial mode',
+    description:
+      'The thread control mode when none is overridden: agent runs the turn, manual suppresses it for an operator to answer.',
+  };
+}
+
+/** The `turns_per_hour_override` property — an optional per-route turn rate. */
+function turnsPerHourProperty(): JsonSchema {
+  return {
+    type: ['integer', 'null'],
+    minimum: 1,
+    title: 'Turns-per-hour override',
+    description:
+      "A positive per-hour turn rate for this route's per-address buckets, or blank for the global rate.",
+  };
+}
+
+/** The `error_reply_text` property — the participant-facing reply on a failed turn. */
+function errorReplyTextProperty(): JsonSchema {
+  return {
+    type: ['string', 'null'],
+    maxLength: 2000,
+    title: 'Error reply text',
+    description:
+      'The participant-facing reply sent when a turn fails; blank uses the built-in default.',
+  };
+}
+
 /**
  * The route form's schema. `fixedRouteName` pins `route_name` to a read-only value
  * for the edit path (the name IS the route's identity and its URL key, so a rename
@@ -100,121 +257,12 @@ export function routeFormSchema(fixedRouteName?: string): JsonSchema {
     required: ['route_name', 'target', 'delivery', 'execution_key'],
     properties: {
       route_name: routeNameProperty(fixedRouteName),
-      target: {
-        title: 'Target',
-        description: 'What an inbound turn on this route runs.',
-        discriminator: { propertyName: 'target_kind' },
-        oneOf: [
-          {
-            title: 'Agent',
-            type: 'object',
-            required: ['target_kind', 'target_name'],
-            properties: {
-              target_kind: { const: 'agent', title: 'Target kind' },
-              target_name: {
-                type: 'string',
-                title: 'Agent name',
-                description: 'A registered agent the turn runs as a threaded conversation.',
-              },
-            },
-          },
-          {
-            title: 'Tool',
-            type: 'object',
-            required: ['target_kind', 'target_name'],
-            properties: {
-              target_kind: { const: 'tool', title: 'Target kind' },
-              target_name: {
-                type: 'string',
-                title: 'Tool name',
-                description: 'A registered tool dispatched statelessly per message.',
-              },
-              payload_expr: {
-                type: 'string',
-                title: 'Payload expression',
-                description:
-                  "Optional jq mapping the inbound turn to the tool's keyword arguments; blank uses { message, sender }.",
-                'x-tai42-expression': PAYLOAD_EXPR_ANNOTATION,
-              },
-              reply_expr: {
-                type: 'string',
-                title: 'Reply expression',
-                description:
-                  'Optional jq mapping the tool result to the reply; blank passes a null / string / parts result straight through.',
-                'x-tai42-expression': REPLY_EXPR_ANNOTATION,
-              },
-            },
-          },
-        ],
-      },
-      delivery: {
-        title: 'Door',
-        description: "How a turn's answer is delivered back.",
-        discriminator: { propertyName: 'door' },
-        oneOf: [
-          {
-            title: 'API',
-            type: 'object',
-            required: ['door', 'callback_url'],
-            properties: {
-              door: { const: 'api', title: 'Door' },
-              callback_url: {
-                type: 'string',
-                format: 'uri',
-                title: 'Callback URL',
-                description: 'The absolute https URL the signed answer callback is delivered to.',
-              },
-            },
-          },
-          {
-            title: 'Channel',
-            type: 'object',
-            required: ['door', 'channel', 'our_identity'],
-            properties: {
-              door: { const: 'channel', title: 'Door' },
-              channel: {
-                type: 'string',
-                title: 'Channel',
-                description:
-                  'The registry channel name (":"-free) the medium adapter delivers through.',
-              },
-              our_identity: {
-                type: 'string',
-                title: 'Our identity',
-                description: 'The medium address this route is texted at.',
-              },
-            },
-          },
-        ],
-      },
-      execution_key: {
-        type: 'string',
-        title: 'Execution key',
-        description:
-          'The api-key user_id the turn runs AS; its live grants authorize the run and every tool call it makes.',
-      },
-      initial_mode: {
-        type: 'string',
-        enum: ['agent', 'manual'],
-        default: 'agent',
-        title: 'Initial mode',
-        description:
-          'The thread control mode when none is overridden: agent runs the turn, manual suppresses it for an operator to answer.',
-      },
-      turns_per_hour_override: {
-        type: ['integer', 'null'],
-        minimum: 1,
-        title: 'Turns-per-hour override',
-        description:
-          "A positive per-hour turn rate for this route's per-address buckets, or blank for the global rate.",
-      },
-      error_reply_text: {
-        type: ['string', 'null'],
-        maxLength: 2000,
-        title: 'Error reply text',
-        description:
-          'The participant-facing reply sent when a turn fails; blank uses the built-in default.',
-      },
+      target: targetSchema(),
+      delivery: deliverySchema(),
+      execution_key: executionKeyProperty(),
+      initial_mode: initialModeProperty(),
+      turns_per_hour_override: turnsPerHourProperty(),
+      error_reply_text: errorReplyTextProperty(),
     },
   };
 }
@@ -290,41 +338,69 @@ export function routeToFormValue(route: ConversationRoute): RouteFormValue {
  * active variant (an unselected variant is the schema's own required-union error,
  * not a field error here).
  */
-export function requiredFieldErrors(value: RouteFormValue, editing: boolean): SchemaFormErrors {
+/** The create-only route-name required + slug check (edit pins it read-only). */
+function routeNameError(value: RouteFormValue, editing: boolean): Record<string, string> {
+  if (editing) return {};
+  const name = (value.route_name ?? '').trim();
+  if (name === '') return { route_name: 'A route name is required.' };
+  if (!ROUTE_NAME_RE.test(name)) {
+    return { route_name: 'Use a ":"-free slug: lowercase letters, digits, and hyphens only.' };
+  }
+  return {};
+}
+
+/** The target-name blank check, scoped to the selected target variant. */
+function targetNameError(target: NonNullable<RouteFormValue['target']>): Record<string, string> {
+  if (target.target_kind === undefined || !blank(target.target_name)) return {};
+  return {
+    'target.target_name':
+      target.target_kind === 'tool' ? 'A tool name is required.' : 'An agent name is required.',
+  };
+}
+
+/** The execution-key blank check. */
+function executionKeyError(value: RouteFormValue): Record<string, string> {
+  return blank(value.execution_key) ? { execution_key: 'An execution key is required.' } : {};
+}
+
+/** The api-door callback-URL required + absolute-https checks. */
+function apiDeliveryErrors(
+  delivery: NonNullable<RouteFormValue['delivery']>,
+): Record<string, string> {
+  const callbackUrl = (delivery.callback_url ?? '').trim();
+  if (callbackUrl === '') return { 'delivery.callback_url': 'A callback URL is required.' };
+  if (!isAbsoluteHttpsUrl(callbackUrl)) {
+    return { 'delivery.callback_url': 'Must be an absolute https URL.' };
+  }
+  return {};
+}
+
+/** The channel-door required + colon-free channel and identity checks. */
+function channelDeliveryErrors(
+  delivery: NonNullable<RouteFormValue['delivery']>,
+): Record<string, string> {
   const errors: Record<string, string> = {};
-  const blank = (candidate: string | undefined): boolean => (candidate ?? '').trim() === '';
-
-  // `route_name` is editable only on create; on edit it is a read-only const.
-  if (!editing) {
-    const name = (value.route_name ?? '').trim();
-    if (name === '') errors.route_name = 'A route name is required.';
-    else if (!ROUTE_NAME_RE.test(name))
-      errors.route_name = 'Use a ":"-free slug: lowercase letters, digits, and hyphens only.';
-  }
-
-  const target = value.target ?? {};
-  if (target.target_kind !== undefined && blank(target.target_name)) {
-    errors['target.target_name'] =
-      target.target_kind === 'tool' ? 'A tool name is required.' : 'An agent name is required.';
-  }
-
-  if (blank(value.execution_key)) errors.execution_key = 'An execution key is required.';
-
-  const delivery = value.delivery ?? {};
-  if (delivery.door === 'api') {
-    const callbackUrl = (delivery.callback_url ?? '').trim();
-    if (callbackUrl === '') errors['delivery.callback_url'] = 'A callback URL is required.';
-    else if (!isAbsoluteHttpsUrl(callbackUrl))
-      errors['delivery.callback_url'] = 'Must be an absolute https URL.';
-  }
-  if (delivery.door === 'channel') {
-    const channel = delivery.channel ?? '';
-    if (channel.trim() === '') errors['delivery.channel'] = 'A channel is required.';
-    else if (channel.includes(':')) errors['delivery.channel'] = 'Use a ":"-free channel name.';
-    if (blank(delivery.our_identity)) errors['delivery.our_identity'] = 'An identity is required.';
-  }
-
+  const channel = delivery.channel ?? '';
+  if (channel.trim() === '') errors['delivery.channel'] = 'A channel is required.';
+  else if (channel.includes(':')) errors['delivery.channel'] = 'Use a ":"-free channel name.';
+  if (blank(delivery.our_identity)) errors['delivery.our_identity'] = 'An identity is required.';
   return errors;
+}
+
+/** The delivery-field checks, dispatched on the selected door variant. */
+function deliveryErrors(delivery: NonNullable<RouteFormValue['delivery']>): Record<string, string> {
+  if (delivery.door === 'api') return apiDeliveryErrors(delivery);
+  if (delivery.door === 'channel') return channelDeliveryErrors(delivery);
+  return {};
+}
+
+export function requiredFieldErrors(value: RouteFormValue, editing: boolean): SchemaFormErrors {
+  return {
+    ...routeNameError(value, editing),
+    ...targetNameError(value.target ?? {}),
+    ...executionKeyError(value),
+    ...deliveryErrors(value.delivery ?? {}),
+  };
 }
 
 /**
@@ -334,29 +410,66 @@ export function requiredFieldErrors(value: RouteFormValue, editing: boolean): Sc
  * belongs to the other variant is sent as `null` (never a stale value), mirroring
  * the contract's per-door / per-target-kind exclusivity.
  */
-export function formValueToBody(value: RouteFormValue): ConversationRouteCreate {
-  const target = value.target ?? {};
-  const delivery = value.delivery ?? {};
-  const isTool = target.target_kind === 'tool';
-  const isApi = delivery.door === 'api';
+/** The target-kind/name fields plus the tool-only inline jq expressions. */
+function targetBodyFields(
+  target: NonNullable<RouteFormValue['target']>,
+  isTool: boolean,
+): Pick<ConversationRouteCreate, 'target_kind' | 'target_name' | 'payload_expr' | 'reply_expr'> {
   return {
-    route_name: value.route_name ?? '',
-    door: delivery.door ?? 'api',
     target_kind: target.target_kind ?? 'agent',
     target_name: target.target_name ?? '',
     // A tool's jq is authored as inline text and rides the wire as a templated text
     // (inline `content`); a blank or agent-target field is `null`.
     payload_expr: isTool && target.payload_expr ? { content: target.payload_expr } : null,
     reply_expr: isTool && target.reply_expr ? { content: target.reply_expr } : null,
-    initial_mode: value.initial_mode ?? 'agent',
-    execution_key: value.execution_key ?? '',
+  };
+}
+
+/** The door field plus the per-door exclusive delivery fields (the other variant's are `null`). */
+function deliveryBodyFields(
+  delivery: NonNullable<RouteFormValue['delivery']>,
+  isApi: boolean,
+): Pick<ConversationRouteCreate, 'door' | 'channel' | 'our_identity' | 'callback_url'> {
+  return {
+    door: delivery.door ?? 'api',
     channel: isApi ? null : (delivery.channel ?? null),
     our_identity: isApi ? null : (delivery.our_identity ?? null),
     callback_url: isApi ? (delivery.callback_url ?? null) : null,
+  };
+}
+
+/** The flat scalar tail — the route-level fields with no target/delivery variant fork. */
+function scalarBodyFields(
+  value: RouteFormValue,
+): Pick<
+  ConversationRouteCreate,
+  | 'route_name'
+  | 'initial_mode'
+  | 'execution_key'
+  | 'turns_per_hour_override'
+  | 'error_reply_text'
+  | 'locale'
+> {
+  return {
+    route_name: value.route_name ?? '',
+    initial_mode: value.initial_mode ?? 'agent',
+    execution_key: value.execution_key ?? '',
     turns_per_hour_override: value.turns_per_hour_override ?? null,
     error_reply_text: value.error_reply_text ?? null,
     // Carried through unchanged — the form does not author the locale, and the upsert
     // replaces the whole row, so echoing it back keeps one set elsewhere.
     locale: value.locale ?? null,
+  };
+}
+
+export function formValueToBody(value: RouteFormValue): ConversationRouteCreate {
+  const target = value.target ?? {};
+  const delivery = value.delivery ?? {};
+  const isTool = target.target_kind === 'tool';
+  const isApi = delivery.door === 'api';
+  return {
+    ...scalarBodyFields(value),
+    ...targetBodyFields(target, isTool),
+    ...deliveryBodyFields(delivery, isApi),
   };
 }

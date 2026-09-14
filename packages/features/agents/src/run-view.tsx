@@ -28,7 +28,7 @@ import {
 } from '@tai42/studio-sdk';
 import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 
-import { Timeline } from './timeline';
+import { Timeline } from './Timeline';
 
 // -- streaming run hook ------------------------------------------------------
 

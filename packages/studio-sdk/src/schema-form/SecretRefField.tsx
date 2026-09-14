@@ -1,11 +1,8 @@
 /**
  * `SecretRefField` — a data-agnostic masked editor for ONE secret value that is
  * EITHER a reference to an existing env key OR a freshly pasted secret. It knows
- * nothing about the `!ENV ${KEY}` marker syntax or any wire format: it emits a
- * discriminated {@link SecretRef} and the host maps that to whatever it stores
- * (the consumer that mounts this — the connectors page's McpServersSection —
- * writes an `!ENV ${KEY}` marker for a `key` ref and runs the combined
- * store-then-mark op for a `paste`).
+ * nothing about any wire format: it emits a discriminated {@link SecretRef} and
+ * the host maps that to whatever it stores.
  *
  * WRITE-ONLY for a pasted secret: the plaintext lives only in local editor state
  * until the user commits it, at which point it leaves the DOM entirely (held only
@@ -29,10 +26,9 @@ import { Select } from '../components/select';
 /**
  * The value {@link SecretRefField} emits and reads back. The `source` discriminant
  * is what the host branches on:
- *  - `key`   — reference an existing env key; the host writes `!ENV ${key}`.
+ *  - `key`   — reference an existing env key; the host resolves the reference.
  *  - `paste` — a new plaintext secret; the host stores it under a generated key
- *              (combined op) and writes the resulting marker. `secret` is
- *              write-only and is never rendered.
+ *              and records the reference. `secret` is write-only and never rendered.
  */
 export type SecretRef =
   | { readonly source: 'key'; readonly key: string }
@@ -141,71 +137,125 @@ export function SecretRefField({
   return (
     <div data-testid={idPrefix}>
       {canPick ? (
-        <div className="tai-row" role="group" aria-label={`${label} source`}>
-          <Button
-            type="button"
-            variant={effectiveMode === 'key' ? 'primary' : 'secondary'}
-            aria-pressed={effectiveMode === 'key'}
-            onClick={() => {
-              setMode('key');
-            }}
-          >
-            Reference existing key
-          </Button>
-          <Button
-            type="button"
-            variant={effectiveMode === 'paste' ? 'primary' : 'secondary'}
-            aria-pressed={effectiveMode === 'paste'}
-            onClick={() => {
-              setMode('paste');
-            }}
-          >
-            Paste new secret
-          </Button>
-        </div>
+        <SecretSourceToggle label={label} effectiveMode={effectiveMode} onMode={setMode} />
       ) : null}
+      <SecretEditorBody
+        label={label}
+        effectiveMode={effectiveMode}
+        availableKeys={availableKeys}
+        pickedKey={pickedKey}
+        onPickKey={commitKey}
+        draftSecret={draftSecret}
+        onDraftChange={setDraftSecret}
+        onCommitPaste={commitPaste}
+        pasteDisabledReason={pasteDisabledReason}
+        pasteBlocked={pasteBlocked}
+      />
+    </div>
+  );
+}
 
-      {effectiveMode === 'key' ? (
-        availableKeys.length === 0 ? (
-          <span className="tai-field-hint">No keys available</span>
-        ) : (
-          <Field label={label}>
-            <Select
-              value={pickedKey === '' ? undefined : pickedKey}
-              onValueChange={commitKey}
-              placeholder="Select a key"
-              options={availableKeys.map((key) => ({ value: key, label: key }))}
-            />
-          </Field>
-        )
-      ) : (
-        <div className="tai-row">
-          <div style={{ flex: 1 }}>
-            <Field label={label} error={pasteDisabledReason}>
-              {/* type=password: the plaintext is masked and offers no reveal —
-                  it is write-only. */}
-              <TextInput
-                type="password"
-                value={draftSecret}
-                onChange={(event) => {
-                  setDraftSecret(event.target.value);
-                }}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="Paste a secret value"
-              />
-            </Field>
-          </div>
-          <Button
-            type="button"
-            variant="primary"
-            disabled={draftSecret === '' || pasteBlocked}
-            onClick={commitPaste}
-          >
-            Use secret
-          </Button>
-        </div>
-      )}
+/** The key/paste source switch, shown only when key picking is available. */
+function SecretSourceToggle({
+  label,
+  effectiveMode,
+  onMode,
+}: {
+  label: string;
+  effectiveMode: 'key' | 'paste';
+  onMode: (mode: 'key' | 'paste') => void;
+}): ReactNode {
+  return (
+    <div className="tai-row" role="group" aria-label={`${label} source`}>
+      <Button
+        type="button"
+        variant={effectiveMode === 'key' ? 'primary' : 'secondary'}
+        aria-pressed={effectiveMode === 'key'}
+        onClick={() => {
+          onMode('key');
+        }}
+      >
+        Reference existing key
+      </Button>
+      <Button
+        type="button"
+        variant={effectiveMode === 'paste' ? 'primary' : 'secondary'}
+        aria-pressed={effectiveMode === 'paste'}
+        onClick={() => {
+          onMode('paste');
+        }}
+      >
+        Paste new secret
+      </Button>
+    </div>
+  );
+}
+
+/** The active editor: a key Select (or an empty-keys hint) or the write-only paste input. */
+function SecretEditorBody({
+  label,
+  effectiveMode,
+  availableKeys,
+  pickedKey,
+  onPickKey,
+  draftSecret,
+  onDraftChange,
+  onCommitPaste,
+  pasteDisabledReason,
+  pasteBlocked,
+}: {
+  label: string;
+  effectiveMode: 'key' | 'paste';
+  availableKeys: readonly string[];
+  pickedKey: string;
+  onPickKey: (key: string) => void;
+  draftSecret: string;
+  onDraftChange: (secret: string) => void;
+  onCommitPaste: () => void;
+  pasteDisabledReason: string | undefined;
+  pasteBlocked: boolean;
+}): ReactNode {
+  if (effectiveMode === 'key') {
+    if (availableKeys.length === 0) {
+      return <span className="tai-field-hint">No keys available</span>;
+    }
+    return (
+      <Field label={label}>
+        <Select
+          value={pickedKey === '' ? undefined : pickedKey}
+          onValueChange={onPickKey}
+          placeholder="Select a key"
+          options={availableKeys.map((key) => ({ value: key, label: key }))}
+        />
+      </Field>
+    );
+  }
+  return (
+    <div className="tai-row">
+      <div style={{ flex: 1 }}>
+        <Field label={label} error={pasteDisabledReason}>
+          {/* type=password: the plaintext is masked and offers no reveal —
+              it is write-only. */}
+          <TextInput
+            type="password"
+            value={draftSecret}
+            onChange={(event) => {
+              onDraftChange(event.target.value);
+            }}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Paste a secret value"
+          />
+        </Field>
+      </div>
+      <Button
+        type="button"
+        variant="primary"
+        disabled={draftSecret === '' || pasteBlocked}
+        onClick={onCommitPaste}
+      >
+        Use secret
+      </Button>
     </div>
   );
 }

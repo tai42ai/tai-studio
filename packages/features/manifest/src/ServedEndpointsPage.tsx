@@ -20,7 +20,6 @@ import {
   Badge,
   Button,
   Card,
-  Checkbox,
   ConfirmDialog,
   CopyField,
   Dialog,
@@ -45,9 +44,11 @@ import {
 } from '@tai42/studio-sdk';
 import type { PageProps, RadioOption } from '@tai42/studio-sdk';
 import { useState } from 'react';
-import type { ReactNode, SyntheticEvent } from 'react';
+import type { ReactNode } from 'react';
 
-import { subMcpAvailableToolsKey, subMcpKey } from './keys';
+import { subMcpKey } from './keys';
+import { useCreateSubMcp } from './use-create-sub-mcp';
+import { SubMcpToolsField } from './SubMcpToolsField';
 
 /** The transports the sub-MCP build path supports end to end (`http` default). */
 const TRANSPORT_OPTIONS: readonly RadioOption[] = [
@@ -165,66 +166,24 @@ function SubMcpList({
 }
 
 function CreateSubMcpForm(): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const toolsQuery = useQuery({
-    queryKey: subMcpAvailableToolsKey,
-    queryFn: ({ signal }) => api.listTools(signal),
-  });
-  // The already-registered slugs, read from the shared list cache, drive the
-  // slug-swap pre-check (register is a silent-swap upsert server-side).
-  const listQuery = useQuery({
-    queryKey: subMcpKey,
-    queryFn: ({ signal }) => api.listSubMcp(signal),
-  });
-  const existingSlugs = new Set(Object.keys(listQuery.data ?? {}));
-
-  const [slug, setSlug] = useState('');
-  const [selected, setSelected] = useState<readonly string[]>([]);
-  const [transport, setTransport] = useState('http');
-  const [slugError, setSlugError] = useState<string | undefined>(undefined);
-  const [toolsError, setToolsError] = useState<string | undefined>(undefined);
-  const [confirmSwap, setConfirmSwap] = useState(false);
-
-  const create = useMutation({
-    mutationFn: (input: { slug: string; tools: string[]; transport: string }) =>
-      api.createSubMcp(input.slug, input.tools, input.transport),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: subMcpKey });
-      setSlug('');
-      setSelected([]);
-      setTransport('http');
-    },
-  });
-
-  const toggleTool = (tool: string, checked: boolean): void => {
-    setSelected((prev) =>
-      checked ? [...prev, tool] : prev.filter((existing) => existing !== tool),
-    );
-  };
-
-  const trimmedSlug = slug.trim();
-  const wouldSwap = trimmedSlug !== '' && existingSlugs.has(trimmedSlug);
-
-  const runCreate = (): void => {
-    create.mutate({ slug: trimmedSlug, tools: [...selected], transport });
-  };
-
-  const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    const nextSlugError = trimmedSlug === '' ? 'A slug is required.' : undefined;
-    const nextToolsError =
-      selected.length === 0 ? 'Select at least one tool for the sub-MCP.' : undefined;
-    setSlugError(nextSlugError);
-    setToolsError(nextToolsError);
-    if (nextSlugError !== undefined || nextToolsError !== undefined) return;
-    // A matching slug is a REPLACE, not an add — confirm before the swap.
-    if (wouldSwap) {
-      setConfirmSwap(true);
-      return;
-    }
-    runCreate();
-  };
+  const {
+    toolsQuery,
+    slug,
+    setSlug,
+    selected,
+    transport,
+    setTransport,
+    slugError,
+    toolsError,
+    confirmSwap,
+    setConfirmSwap,
+    toggleTool,
+    trimmedSlug,
+    wouldSwap,
+    runCreate,
+    onSubmit,
+    create,
+  } = useCreateSubMcp();
 
   return (
     <form
@@ -268,78 +227,12 @@ function CreateSubMcpForm(): ReactNode {
         variant="segmented"
       />
 
-      {/* A multi-select group. Not a single-control `Field`: several checkboxes
-          cannot share one injected control id, so the label/description/error are
-          rendered directly on the enclosing fieldset. */}
-      <fieldset
-        style={{
-          border: 'none',
-          margin: 0,
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--tai-space-2)',
-        }}
-      >
-        <legend style={{ padding: 0, fontSize: 'var(--tai-text-sm)', fontWeight: 600 }}>
-          Tools
-        </legend>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 'var(--tai-text-sm)',
-            color: 'var(--tai-color-text-muted)',
-          }}
-        >
-          Choose the tools this sub-MCP exposes.
-        </p>
-        {toolsQuery.isPending ? (
-          <Skeleton height={80} />
-        ) : toolsQuery.isError ? (
-          <ErrorState
-            message={errorMessage(toolsQuery.error)}
-            onRetry={() => void toolsQuery.refetch()}
-          />
-        ) : toolsQuery.data.length === 0 ? (
-          <EmptyState title="No tools available" description="There are no tools to expose yet." />
-        ) : (
-          <div
-            style={{
-              border: '1px solid var(--tai-color-border)',
-              borderRadius: 'var(--tai-radius-md)',
-              padding: 'var(--tai-space-3)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--tai-space-2)',
-              maxHeight: '16rem',
-              overflowY: 'auto',
-            }}
-          >
-            {toolsQuery.data.map((tool) => (
-              <Checkbox
-                key={tool}
-                label={tool}
-                checked={selected.includes(tool)}
-                onCheckedChange={(checked) => {
-                  toggleTool(tool, checked);
-                }}
-              />
-            ))}
-          </div>
-        )}
-        {toolsError !== undefined ? (
-          <p
-            role="alert"
-            style={{
-              margin: 0,
-              fontSize: 'var(--tai-text-sm)',
-              color: 'var(--tai-color-err-text)',
-            }}
-          >
-            {toolsError}
-          </p>
-        ) : null}
-      </fieldset>
+      <SubMcpToolsField
+        toolsQuery={toolsQuery}
+        selected={selected}
+        toolsError={toolsError}
+        onToggle={toggleTool}
+      />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
         <Button type="submit" variant="primary" disabled={create.isPending}>

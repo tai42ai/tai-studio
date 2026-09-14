@@ -63,7 +63,10 @@ function entryStateBag(state: unknown): Record<string, unknown> {
   return {};
 }
 
-export function createNavigation(router: AppRouter): NavigationContextValue {
+/** The token twins: `navigate`/`resolvePath` resolve an opaque route TOKEN through {@link PATH}. */
+function createTokenNavigation(
+  router: AppRouter,
+): Pick<NavigationContextValue, 'navigate' | 'resolvePath'> {
   return {
     navigate: <T extends RouteToken>(
       token: T,
@@ -82,6 +85,17 @@ export function createNavigation(router: AppRouter): NavigationContextValue {
     resolvePath: <T extends RouteToken>(token: T, search?: RouteSearch<T>): string => {
       return router.buildLocation({ to: PATH[token], search: search ?? {} } as BuildArg).href;
     },
+  };
+}
+
+/** The plugin twins: navigate/resolve a RUNTIME plugin path and drive the per-entry state channel. */
+function createPluginNavigation(
+  router: AppRouter,
+): Pick<
+  NavigationContextValue,
+  'navigatePlugin' | 'resolvePluginPath' | 'navigatePluginWithOptions' | 'updatePluginEntryState'
+> {
+  return {
     navigatePlugin: (
       pluginId: string,
       pagePath: string,
@@ -146,4 +160,8 @@ export function createNavigation(router: AppRouter): NavigationContextValue {
       } as unknown as NavigateArg);
     },
   };
+}
+
+export function createNavigation(router: AppRouter): NavigationContextValue {
+  return { ...createTokenNavigation(router), ...createPluginNavigation(router) };
 }

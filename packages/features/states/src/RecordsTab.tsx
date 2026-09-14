@@ -33,7 +33,7 @@ import {
 import type { StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
 
 import { conversationTargetsKey, stateSearchKey, stateSubjectsKey } from './keys';
-import { formatSubjectParam, formatTargetParam } from './RecordPage';
+import { formatSubjectParam, formatTargetParam } from './record-subject';
 
 const PERSON_KIND = 'person';
 

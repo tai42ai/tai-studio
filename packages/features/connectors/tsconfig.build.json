@@ -16,8 +16,8 @@
     "**/*.spec.ts",
     "**/*.spec.tsx",
     "src/test-setup.ts",
-    "**/test-utils.ts",
-    "**/test-utils.tsx"
+    "**/test-utils*.ts",
+    "**/test-utils*.tsx"
   ],
   "references": [
     { "path": "../../studio-sdk/tsconfig.build.json" },

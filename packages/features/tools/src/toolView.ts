@@ -39,6 +39,65 @@ export interface ToolView {
   readonly overlayHidden: boolean | null;
 }
 
+/** Native ∪ overlay tags, deduped and locale-sorted. */
+function mergeTags(nativeTags: readonly string[], overlayTags: readonly string[]): string[] {
+  return [...new Set([...nativeTags, ...overlayTags])].sort((a, b) => a.localeCompare(b));
+}
+
+/** Native ∪ overlay badges, deduped and sorted (the SDK's merge). */
+function mergeBadgesFor(
+  nativeBadges: readonly string[],
+  overlayBadges: readonly string[],
+): readonly string[] {
+  return mergeToolBadges(nativeBadges, overlayBadges);
+}
+
+/** The display label parts: `display_name ?? name`, the raw override, and whether one is set. */
+function nameParts(
+  name: string,
+  overlay: ToolMetaRecord | undefined,
+): { displayName: string; overlayDisplayName: string | null; hasCustomName: boolean } {
+  const overlayDisplayName = overlay?.display_name ?? null;
+  return {
+    displayName: overlayDisplayName ?? name,
+    overlayDisplayName,
+    hasCustomName: overlayDisplayName !== null,
+  };
+}
+
+/** The effective visibility after the overlay's tri-state override, plus the raw tri-state. */
+function visibility(
+  native: ToolTagEntry | undefined,
+  overlay: ToolMetaRecord | undefined,
+): { hidden: boolean; overlayHidden: boolean | null } {
+  const overlayHidden = overlay?.hidden ?? null;
+  return { hidden: effectiveHidden(overlayHidden, native?.hidden ?? false), overlayHidden };
+}
+
+/** The merged view model for one tool from its native tag entry and overlay row. */
+function toolViewFor(
+  name: string,
+  native: ToolTagEntry | undefined,
+  overlay: ToolMetaRecord | undefined,
+): ToolView {
+  const nativeTags = native?.tags ?? [];
+  const overlayTags = overlay?.tags ?? [];
+  const nativeBadges = native?.badges ?? [];
+  const overlayBadges = overlay?.badges ?? [];
+  return {
+    name,
+    ...nameParts(name, overlay),
+    nativeTags,
+    overlayTags,
+    tags: mergeTags(nativeTags, overlayTags),
+    nativeBadges,
+    overlayBadges,
+    badges: mergeBadgesFor(nativeBadges, overlayBadges),
+    folderId: overlay?.folder_id ?? null,
+    ...visibility(native, overlay),
+  };
+}
+
 export function buildToolViews(
   names: readonly string[],
   tagEntries: readonly ToolTagEntry[],
@@ -46,39 +105,15 @@ export function buildToolViews(
 ): ToolView[] {
   const nativeByName = new Map(tagEntries.map((entry) => [entry.name, entry]));
   const overlayByName = new Map(overlayRows.map((row) => [row.tool_name, row]));
+  return names.map((name) => toolViewFor(name, nativeByName.get(name), overlayByName.get(name)));
+}
 
-  return names.map((name) => {
-    const native = nativeByName.get(name);
-    const overlay = overlayByName.get(name);
-
-    const nativeTags = native?.tags ?? [];
-    const overlayTags = overlay?.tags ?? [];
-    const tags = [...new Set([...nativeTags, ...overlayTags])].sort((a, b) => a.localeCompare(b));
-
-    const nativeBadges = native?.badges ?? [];
-    const overlayBadges = overlay?.badges ?? [];
-    const badges = mergeToolBadges(nativeBadges, overlayBadges);
-
-    const overlayDisplayName = overlay?.display_name ?? null;
-    const declaredHidden = native?.hidden ?? false;
-    const overlayHidden = overlay?.hidden ?? null;
-
-    return {
-      name,
-      displayName: overlayDisplayName ?? name,
-      overlayDisplayName,
-      hasCustomName: overlayDisplayName !== null,
-      nativeTags,
-      overlayTags,
-      tags,
-      nativeBadges,
-      overlayBadges,
-      badges,
-      folderId: overlay?.folder_id ?? null,
-      hidden: effectiveHidden(overlayHidden, declaredHidden),
-      overlayHidden,
-    };
-  });
+/** Case-insensitive substring over a tool's real name and display label. */
+export function toolMatches(view: ToolView, query: string): boolean {
+  const needle = query.toLowerCase();
+  return (
+    view.name.toLowerCase().includes(needle) || view.displayName.toLowerCase().includes(needle)
+  );
 }
 
 /** Map the overlay's folder records into the SDK's camelCase folder shape. */

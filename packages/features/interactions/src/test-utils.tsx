@@ -26,6 +26,10 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 
+// Aliased so the `InteractionsPage` response TYPE (above) is not shadowed by the page
+// component the inbox render helper mounts.
+import { InteractionsPage as InteractionsPageComponent } from './interactions';
+
 // -- provider stack ----------------------------------------------------------
 
 export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
@@ -58,8 +62,7 @@ export function renderWithProviders(ui: ReactNode, options: ProviderOptions): Re
   }
   const resolveMe =
     getMe ?? (projection !== undefined ? () => Promise.resolve(projection) : undefined);
-  const apiClient =
-    resolveMe !== undefined ? ({ ...client, getMe: resolveMe } as ApiClient) : client;
+  const apiClient = resolveMe !== undefined ? { ...client, getMe: resolveMe } : client;
 
   function Wrapper({ children }: { children: ReactNode }): ReactNode {
     return (
@@ -244,3 +247,105 @@ export async function emitFrame(
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
+
+// -- inbox fixtures ----------------------------------------------------------
+
+/**
+ * Build the JSON `data` of an `interaction.add` SSE frame. Inputs use the concise
+ * test aliases `format`/`prompt`; the emitted payload uses the real wire fields
+ * the skeleton sends — `answer_format`/`question` plus the id/timestamp fields.
+ */
+export function interactionJson(fields: {
+  interaction_id: string;
+  format: string;
+  prompt?: string;
+  format_payload?: Record<string, unknown>;
+}): string {
+  return encodeInteraction({
+    interaction_id: fields.interaction_id,
+    group_id: `g-${fields.interaction_id}`,
+    answer_format: fields.format,
+    question: fields.prompt ?? '',
+    format_payload: fields.format_payload ?? {},
+    created_at: '2026-07-04T00:00:00Z',
+    timeout_at: '2026-07-04T00:05:00Z',
+  });
+}
+
+/**
+ * The `data` of an `interaction.answered` / `interaction.removed` frame — the
+ * skeleton sends only ids on those events, never the question fields.
+ */
+export function idJson(interactionId: string): string {
+  return encodeInteraction({ interaction_id: interactionId, group_id: `g-${interactionId}` });
+}
+
+/** A pending record shaped like the paged base door serves (the query seed). */
+export function pendingItem(id: string, extra: Partial<Interaction> = {}): Interaction {
+  return {
+    interaction_id: id,
+    group_id: `g-${id}`,
+    answer_format: 'text',
+    question: '',
+    format_payload: {},
+    created_at: '2026-07-04T00:00:00Z',
+    timeout_at: '2026-07-04T00:05:00Z',
+    sensitive: false,
+    ...extra,
+  };
+}
+
+/** A hand-resolved projection promise, so a test can drive `getMe` past a barrier. */
+export function deferredProjection(): {
+  promise: Promise<MeProjection>;
+  resolve: (projection: MeProjection) => void;
+} {
+  let resolve!: (projection: MeProjection) => void;
+  const promise = new Promise<MeProjection>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+/** Let mount-time async effects (stream connect) settle inside `act`. */
+export async function settle(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+/**
+ * Render the inbox page wired to a fresh scripted stream. Defaults to a full
+ * (admin) projection so the answer control is gated ON — the submission and
+ * lifecycle tests exercise a real control; the gating tests pass their own
+ * scoped/absent projection.
+ */
+export function renderInbox(
+  answerInteraction?: ApiClient['answerInteraction'],
+  projection: MeProjection = fullProjection(),
+  baseUrl = '',
+): {
+  channel: StreamChannel;
+  answer: ApiClient['answerInteraction'];
+  container: HTMLElement;
+} {
+  const channel = makeChannel();
+  const answer = answerInteraction ?? vi.fn().mockResolvedValue(undefined);
+  // A populated channel catalog so the delivery-channels chrome renders badges, not
+  // its empty-state marketplace anchor — these tests scan the page for the interaction
+  // card's own anchor (the empty-state link is covered in ChannelsCard.test.tsx).
+  const client = stubClient({
+    channel,
+    answerInteraction: answer,
+    listChannels: vi.fn().mockResolvedValue({ channels: ['telegram'] }),
+    baseUrl,
+  });
+  const { container } = renderWithProviders(<InteractionsPageComponent search={{}} />, {
+    client,
+    projection,
+  });
+  return { channel, answer, container };
+}
+
+/** An inert markup payload the XSS pins assert is never mounted as a live sink. */
+export const XSS = "<script>window.__xss='pwned'</script>";

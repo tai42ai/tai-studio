@@ -5,8 +5,8 @@
  * request, since the door overwrites silently on a colliding path. FILES resets only
  * when every file succeeded, leaving failures listed to retry.
  */
-import { useRef, useState, type ChangeEvent, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, type ReactNode, type SyntheticEvent } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
   Button,
@@ -22,26 +22,9 @@ import {
 } from '@tai42/studio-sdk';
 
 import { templateDetailKey, templatesListKey } from './keys';
+import { useFilesUpload, type FileEntry } from './use-files-upload';
 
 type UploadMode = 'text' | 'files';
-
-/** Read a picked file's text; a read failure rejects loudly (never a silent blank). */
-function readFileText(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => {
-      reject(new Error(`Could not read ${file.name}`));
-    };
-    reader.onload = () => {
-      if (typeof reader.result !== 'string') {
-        reject(new Error(`Could not read ${file.name}`));
-        return;
-      }
-      resolve(reader.result);
-    };
-    reader.readAsText(file);
-  });
-}
 
 /** The single-template authoring form (a path + its content). */
 function TextUploadForm(): ReactNode {
@@ -105,14 +88,6 @@ function TextUploadForm(): ReactNode {
   );
 }
 
-/** One picked file, its derived template path, and its per-file upload outcome. */
-interface FileEntry {
-  readonly path: string;
-  readonly file: File;
-  readonly status: 'pending' | 'uploading' | 'done' | 'error';
-  readonly error: string | null;
-}
-
 const STATUS_BADGE: Record<FileEntry['status'], { label: string; variant: string }> = {
   pending: { label: 'Ready', variant: 'neutral' },
   uploading: { label: 'Uploading…', variant: 'primary' },
@@ -122,78 +97,17 @@ const STATUS_BADGE: Record<FileEntry['status'], { label: string; variant: string
 
 /** The multi-file batch form: pick many, loop the single-item door, report each. */
 function FilesUploadForm(): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [entries, setEntries] = useState<FileEntry[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  // The existing keys, read from the shared list cache, are the conflict oracle.
-  const listQuery = useQuery({ queryKey: templatesListKey, queryFn: () => api.listTemplates() });
-  const existing = new Set(listQuery.data ?? []);
-
-  // The entries awaiting upload (a `done` entry is settled and excluded).
-  const outstanding = entries.filter((entry) => entry.status !== 'done');
-
-  // CONFLICT CHECK — computed on every render, BEFORE any request. A path already on
-  // the server, or a name picked twice in this batch, blocks the whole batch: the
-  // single-item door overwrites, so an accidental collision would clobber silently.
-  const seen = new Map<string, number>();
-  for (const entry of outstanding) seen.set(entry.path, (seen.get(entry.path) ?? 0) + 1);
-  const conflicts = outstanding
-    .filter((entry) => existing.has(entry.path) || (seen.get(entry.path) ?? 0) > 1)
-    .map((entry) => entry.path);
-  const conflictSet = new Set(conflicts);
-
-  const onFilesChange = (event: ChangeEvent<HTMLInputElement>): void => {
-    const files = Array.from(event.target.files ?? []);
-    setEntries(files.map((file) => ({ path: file.name, file, status: 'pending', error: null })));
-  };
-
-  const reset = (): void => {
-    setEntries([]);
-    if (inputRef.current !== null) inputRef.current.value = '';
-  };
-
-  const patch = (path: string, next: Partial<FileEntry>): void => {
-    setEntries((prev) =>
-      prev.map((entry) => (entry.path === path ? { ...entry, ...next } : entry)),
-    );
-  };
-
-  // A conflict check needs the existing names; when the list query ERRORED they are
-  // unknown, so the guard cannot run and the batch must not proceed as if conflict-free.
-  const canSubmit =
-    outstanding.length > 0 &&
-    conflicts.length === 0 &&
-    !submitting &&
-    !listQuery.isPending &&
-    !listQuery.isError;
-
-  const onSubmit = async (): Promise<void> => {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    let anySuccess = false;
-    let anyFailure = false;
-    for (const entry of outstanding) {
-      patch(entry.path, { status: 'uploading', error: null });
-      try {
-        const content = await readFileText(entry.file);
-        await api.uploadTemplate(entry.path, content);
-        patch(entry.path, { status: 'done', error: null });
-        void queryClient.invalidateQueries({ queryKey: templateDetailKey(entry.path) });
-        anySuccess = true;
-      } catch (err) {
-        patch(entry.path, { status: 'error', error: errorMessage(err) });
-        anyFailure = true;
-      }
-    }
-    setSubmitting(false);
-    // Reflect every uploaded template even on a partial batch; reset ONLY when the
-    // whole batch succeeded (close-on-success-only) so failures stay listed to retry.
-    if (anySuccess) void queryClient.invalidateQueries({ queryKey: templatesListKey });
-    if (!anyFailure) reset();
-  };
+  const {
+    inputRef,
+    entries,
+    conflicts,
+    conflictSet,
+    listQuery,
+    canSubmit,
+    submitting,
+    onFilesChange,
+    onSubmit,
+  } = useFilesUpload();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>

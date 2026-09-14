@@ -30,9 +30,10 @@
  *    pass having completed via {@link PluginLoader.ensureLoaded}.
  */
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import { ApiError, ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
-import { checkPluginApiVersion, errorMessage, type PluginEntry } from '@tai42/studio-sdk';
-import { loadPlugin, setPluginHostState, type PluginLoaderState } from '@tai42/studio-sdk/host';
+import { type ApiClient, type ApiUnauthorizedError } from '@tai42/api-client';
+import { setPluginHostState, type PluginLoaderState } from '@tai42/studio-sdk/host';
+
+import { classifyRegistryError, loadOnePlugin } from './plugin-load';
 
 export type { PluginLoaderState };
 
@@ -74,12 +75,6 @@ const INITIAL: PluginLoaderState = {
   registryError: null,
 };
 
-/** `/api/plugins/{name}/studio/{entry}` — the server-injected import map resolves
- * and integrity-checks this URL; the bundle needs no auth header (public asset). */
-function bundleUrl(name: string, entry: string): string {
-  return `/api/plugins/${name}/studio/${entry}`;
-}
-
 export function createPluginLoader(deps: PluginLoaderDeps): PluginLoader {
   const store = createStore<PluginLoaderState>(() => INITIAL);
   let inFlight: Promise<void> | null = null;
@@ -99,30 +94,19 @@ export function createPluginLoader(deps: PluginLoaderDeps): PluginLoader {
     try {
       manifests = await deps.api.listStudioPlugins();
     } catch (error) {
-      if (error instanceof ApiUnauthorizedError) {
+      const disposition = classifyRegistryError(error);
+      if (disposition.kind === 'unauthorized') {
         // A 401 is a login redirect, NOT a plugin error. Reset so the next
         // authenticated pass re-fetches the registry.
         inFlight = null;
         store.setState(INITIAL);
-        deps.onUnauthorized(error);
+        deps.onUnauthorized(disposition.error);
         return;
       }
-      if (error instanceof ApiError && error.status === 403) {
-        // A 403 means the registry route (`/api/plugins`) is outside this
-        // session's capabilities — treat it as ABSENCE, not a loud failure. The
-        // pass completes with no plugins and no registryError, so a deep-linked
-        // plugin page falls through to its neutral not-available EmptyState rather
-        // than a red error card (the server stays the authority for the route).
-        store.setState({ ...INITIAL, status: 'ready' });
-        return;
-      }
-      // Any other registry failure is loud and visible — the pass is "done" but
-      // carries the error so `/plugins/*` renders it instead of a blank gate.
-      store.setState({
-        ...INITIAL,
-        status: 'ready',
-        registryError: errorMessage(error),
-      });
+      // A 403 (absence) completes the pass empty; any other failure completes it
+      // "done" but carries the error so `/plugins/*` renders it, not a blank gate.
+      const registryError = disposition.kind === 'error' ? disposition.message : null;
+      store.setState({ ...INITIAL, status: 'ready', registryError });
       return;
     }
 
@@ -130,48 +114,14 @@ export function createPluginLoader(deps: PluginLoaderDeps): PluginLoader {
     const plugins: { name: string; version: string }[] = [];
     const errors: Record<string, string> = {};
     for (const manifest of manifests) {
-      const gate = checkPluginApiVersion(manifest.api_version);
-      if (!gate.ok) {
-        errors[manifest.name] = gate.reason ?? 'incompatible Studio-plugin API version';
-        continue;
-      }
-      // Stylesheets injected for THIS plugin, so any failure past this point can
-      // remove exactly them and nothing else — a failed plugin leaves no styles.
-      const removeStylesheets: (() => void)[] = [];
-      try {
-        // Inject the plugin's `.css` assets BEFORE importing its JS. The manifest
-        // integrity map is the single source of truth for served assets; the css
-        // entries are sorted lexicographically for a deterministic cascade order.
-        const cssAssets = Object.entries(manifest.integrity)
-          .filter(([file]) => file.endsWith('.css'))
-          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-        for (const [cssFile, integrity] of cssAssets) {
-          const remove = await deps.loadStylesheet(bundleUrl(manifest.name, cssFile), integrity);
-          removeStylesheets.push(remove);
-        }
-
-        const mod = await deps.importModule(bundleUrl(manifest.name, manifest.entry));
-        const register = (mod as { register?: unknown }).register;
-        if (typeof register !== 'function') {
-          // A bundle with no `register` entry cannot contribute — surface it
-          // loudly rather than skip it silently.
-          throw new Error('plugin bundle does not export a register(context) function');
-        }
-        // `loadPlugin` awaits `register` (sync or async), stages its contributions,
-        // and commits them only if it resolves — a throw or rejection is caught
-        // below as the loud error card and commits nothing, so a failed plugin
-        // never leaves a partial registration.
-        await loadPlugin(manifest.name, register as PluginEntry);
+      const result = await loadOnePlugin(manifest, deps.importModule, deps.loadStylesheet);
+      if (result.ok) {
         loaded.push(manifest.name);
         // Record identity (name + version) so host chrome can attribute a
-        // contribution to its plugin (the nav provenance badge). Only a plugin that
-        // fully loaded is listed — a failed one falls to the errors map below.
-        plugins.push({ name: manifest.name, version: manifest.version });
-      } catch (error) {
-        // A failed plugin leaves nothing behind — detach any stylesheets already
-        // injected for it before recording the loud error card.
-        for (const remove of removeStylesheets) remove();
-        errors[manifest.name] = errorMessage(error);
+        // contribution to its plugin (the nav provenance badge).
+        plugins.push({ name: manifest.name, version: result.version });
+      } else {
+        errors[manifest.name] = result.message;
       }
     }
 

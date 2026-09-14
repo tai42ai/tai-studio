@@ -13,5 +13,6 @@ export { useAgentRun, useAuthoredAgentRun, useStreamRun, StreamRunView } from '.
 export type { AgentRun, StreamOpener } from './run-view';
 export { AuthoringSection, ComposeAgentDialog, AuthoredRunView } from './authoring';
 export type { AuthoredRunTarget, InlinePresetSpec, InlineSubAgentSpec } from './authoring';
-export { Timeline, buildTimeline } from './timeline';
-export type { TimelineItem, TimelineFold } from './timeline';
+export { Timeline } from './Timeline';
+export { buildTimeline } from './build-timeline';
+export type { TimelineItem, TimelineFold } from './timeline-model';

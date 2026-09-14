@@ -46,3 +46,14 @@ export function resolveTtlSeconds(choice: ExpiryChoice, customSeconds: string): 
   }
   return Number(trimmed);
 }
+
+/**
+ * Render an ISO-8601 expiry instant for humans. A `null` value (a permanent link)
+ * yields `nullLabel`; an unparseable string shows verbatim.
+ */
+export function formatExpiry(value: string | null, options: { nullLabel?: string } = {}): string {
+  if (value === null) return options.nullLabel ?? '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+}

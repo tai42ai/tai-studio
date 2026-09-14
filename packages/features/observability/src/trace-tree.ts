@@ -111,6 +111,101 @@ function createsCycle(id: string, parentId: string, byId: ReadonlyMap<string, Sp
 }
 
 /**
+ * Nest each node under its parent, or attach it to root when the parent is absent, is
+ * itself, or linking it would close a cycle — so every span attaches exactly once and
+ * the forest stays acyclic. Returns the roots.
+ */
+function linkForest(byId: ReadonlyMap<string, SpanNode>): SpanNode[] {
+  const roots: SpanNode[] = [];
+  for (const node of byId.values()) {
+    const pid = node.span.parentId;
+    const parent =
+      pid !== null &&
+      pid !== node.span.id &&
+      byId.has(pid) &&
+      !createsCycle(node.span.id, pid, byId)
+        ? byId.get(pid)
+        : undefined;
+    if (parent !== undefined) parent.children.push(node);
+    else roots.push(node);
+  }
+  return roots;
+}
+
+/** The waterfall time axis: the earliest start and latest end (ms). `t1` is always > t0. */
+function timeAxis(visible: readonly RunSpan[]): { t0: number; t1: number } {
+  let t0 = Infinity;
+  let t1 = -Infinity;
+  for (const span of visible) {
+    if (span.start !== null) {
+      const start = new Date(span.start).getTime();
+      if (!Number.isNaN(start)) t0 = Math.min(t0, start);
+    }
+    if (span.end !== null) {
+      const end = new Date(span.end).getTime();
+      if (!Number.isNaN(end)) t1 = Math.max(t1, end);
+    }
+  }
+  if (!Number.isFinite(t0)) t0 = 0;
+  if (!Number.isFinite(t1) || t1 <= t0) t1 = t0 + 1;
+  return { t0, t1 };
+}
+
+/** The slowest NON-root span (the real bottleneck; a root usually wraps the whole run). */
+function pickSlowest(
+  visible: readonly RunSpan[],
+  byId: ReadonlyMap<string, SpanNode>,
+): string | null {
+  let slowestId: string | null = null;
+  let slowest = -1;
+  for (const span of visible) {
+    const duration = spanDurationMs(span);
+    const pid = span.parentId;
+    const hasParent = pid !== null && pid !== span.id && byId.has(pid);
+    if (duration !== null && hasParent && duration > slowest) {
+      slowest = duration;
+      slowestId = span.id;
+    }
+  }
+  return slowestId;
+}
+
+/** The earliest-starting ERROR span, or null. */
+function pickFirstError(visible: readonly RunSpan[]): string | null {
+  let firstErrorId: string | null = null;
+  let firstErrorStart = Infinity;
+  for (const span of visible) {
+    if (isErrorSpan(span)) {
+      const start = startMs(span, 0);
+      if (start < firstErrorStart) {
+        firstErrorStart = start;
+        firstErrorId = span.id;
+      }
+    }
+  }
+  return firstErrorId;
+}
+
+/** The axis extents plus the two navigation jumps. */
+function measureExtents(
+  visible: readonly RunSpan[],
+  byId: ReadonlyMap<string, SpanNode>,
+): { t0: number; t1: number; slowestId: string | null; firstErrorId: string | null } {
+  return {
+    ...timeAxis(visible),
+    slowestId: pickSlowest(visible, byId),
+    firstErrorId: pickFirstError(visible),
+  };
+}
+
+/** Sort every sibling list by start, in place, depth-first. */
+function sortForest(roots: SpanNode[]): void {
+  const byStart = (a: SpanNode, b: SpanNode): number => startMs(a.span, 0) - startMs(b.span, 0);
+  roots.sort(byStart);
+  for (const node of roots) sortForest(node.children);
+}
+
+/**
  * Rebuild the span forest, nesting by `parentId` and sorting each sibling list by
  * start. A span attaches to root — never dropped — when its parent is absent, is
  * itself, or linking it would close a cycle, so every span attaches exactly once
@@ -125,65 +220,9 @@ export function buildTree(spans: readonly RunSpan[], options: BuildTreeOptions =
     byId.set(span.id, { span, children: [], durationMs: spanDurationMs(span) });
   }
 
-  const roots: SpanNode[] = [];
-  for (const node of byId.values()) {
-    const pid = node.span.parentId;
-    const parent =
-      pid !== null &&
-      pid !== node.span.id &&
-      byId.has(pid) &&
-      !createsCycle(node.span.id, pid, byId)
-        ? byId.get(pid)
-        : undefined;
-    if (parent !== undefined) parent.children.push(node);
-    else roots.push(node);
-  }
-
-  let t0 = Infinity;
-  let t1 = -Infinity;
-  let slowestId: string | null = null;
-  let slowest = -1;
-  let firstErrorId: string | null = null;
-  let firstErrorStart = Infinity;
-
-  for (const span of visible) {
-    if (span.start !== null) {
-      const start = new Date(span.start).getTime();
-      if (!Number.isNaN(start)) t0 = Math.min(t0, start);
-    }
-    if (span.end !== null) {
-      const end = new Date(span.end).getTime();
-      if (!Number.isNaN(end)) t1 = Math.max(t1, end);
-    }
-    const duration = spanDurationMs(span);
-    // "Slowest" points at the real bottleneck — a non-root span — since a root
-    // span usually wraps the whole run and is uninformative.
-    const parentId = span.parentId;
-    const hasParent = parentId !== null && parentId !== span.id && byId.has(parentId);
-    if (duration !== null && hasParent && duration > slowest) {
-      slowest = duration;
-      slowestId = span.id;
-    }
-    if (isErrorSpan(span)) {
-      const start = startMs(span, 0);
-      if (start < firstErrorStart) {
-        firstErrorStart = start;
-        firstErrorId = span.id;
-      }
-    }
-  }
-
-  const byStart = (a: SpanNode, b: SpanNode): number => startMs(a.span, 0) - startMs(b.span, 0);
-  const sortRecursively = (list: SpanNode[]): void => {
-    list.sort(byStart);
-    for (const node of list) sortRecursively(node.children);
-  };
-  sortRecursively(roots);
-
-  if (!Number.isFinite(t0)) t0 = 0;
-  if (!Number.isFinite(t1) || t1 <= t0) t1 = t0 + 1;
-
-  return { roots, byId, t0, t1, slowestId, firstErrorId };
+  const roots = linkForest(byId);
+  sortForest(roots);
+  return { roots, byId, ...measureExtents(visible, byId) };
 }
 
 /** The span selected by default when a trace opens: the first error, else the first root. */

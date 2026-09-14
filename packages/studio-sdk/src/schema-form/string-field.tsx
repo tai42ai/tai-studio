@@ -26,7 +26,7 @@ import { Field } from '../components/field';
 import { AlertTriangleIcon } from '../components/icons';
 import { TextInput, Textarea } from '../components/inputs';
 import { errorMessage } from '../errors';
-import type { ExpressionAnnotation, MediaUpload } from './classify';
+import type { ExpressionAnnotation, MediaUpload } from './field-model';
 import type { ExpressionFieldComponent, ExpressionInputShape } from './context';
 import { CompletionProviderContext, ExpressionFieldContext } from './context';
 import { MediaField } from './media-field';

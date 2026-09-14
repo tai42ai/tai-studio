@@ -1,129 +1,38 @@
 /**
  * Register / edit form: builds a {@link HookParams} and posts it to
  * `api.registerHook` (the documented upsert edit path). `name`, `topic`, `tool`
- * and the execution key are required. The fire door is topic-level (server-derived,
- * shown in the list), not a register input. Optional `condition`/`expr` text fields
- * default to `null` when left blank. The `tool_kwargs` textarea is parsed with
- * `JSON.parse` — a parse failure (or a non-object result) is a LOUD inline field
- * error that blocks submit, so no API call fires on bad input.
+ * and the execution key are required; optional `condition`/`expr`/subject default
+ * to unset. The `tool_kwargs` textarea is parsed with `JSON.parse` — a parse
+ * failure (or a non-object result) is a LOUD inline field error that blocks submit,
+ * so no API call fires on bad input.
  *
  * Two modes on one form. With no `initial` it is the blank create form. With an
- * `initial` hook (the per-row Edit door) it starts prefilled from that hook and
- * saves back over it. `condition` and `expr` are authored templated-text values
- * (inline jq or a stored template id, with render kwargs). In edit mode the form is
- * chrome-free (its host `Dialog` supplies the surface and title) and closes via
- * `onClose` on success.
- *
- * A register POST is an upsert: an existing name silently replaces that hook. The
- * form watches the full hooks list and shows an inline replace notice the moment
- * the typed name hits another hook (never the one being edited). A failed request —
- * including the backend's name/topic charset 400, whose message names the offending
- * field — surfaces loudly and inline in an `ErrorState`.
+ * `initial` hook (the per-row Edit door) it starts prefilled and saves back over it;
+ * in edit mode it is chrome-free (its host `Dialog` supplies the surface) and closes
+ * via `onClose` on success. A register POST is an upsert: the form watches the full
+ * hooks list and shows an inline replace notice the moment the typed name hits
+ * another hook (never the one being edited). A failed request surfaces loudly and
+ * inline in an `ErrorState`.
  */
-import { useMemo, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type SyntheticEvent } from 'react';
 import {
   Button,
   Card,
   ErrorState,
-  Field,
-  Select,
   Spinner,
   StateBindingSection,
-  TemplatedTextField,
-  Textarea,
-  TextInput,
   errorMessage,
-  fieldPathsFromSchema,
-  statesCatalogFromList,
-  templatesCatalogFromList,
-  statesListKey,
-  stateTemplatesKey,
-  templatedTextCatalog,
-  useApi,
 } from '@tai42/studio-sdk';
-import { JqField, type JqFieldDeclaration } from '@tai42/jq-studio';
-import type {
-  HookParams,
-  HookRegister,
-  HookSubject,
-  StateBinding,
-  TemplatedText,
-} from '@tai42/api-client';
+import type { HookParams } from '@tai42/api-client';
 
-import { HOOKS_KEY_ROOT, hooksListKey } from './keys';
-import { ExecutionKeyPicker, useExecutionKeys } from './ExecutionKeyPicker';
 import { fireGateUnsatisfiable } from './fire-path-gate';
-
-/**
- * The `condition` and `expr` inline specs are jq (the same jq gate/shape family the
- * access-control policy authors): `condition` gates whether the hook fires, `expr`
- * shapes the event before the tool runs. Both evaluate against the event that fired
- * the hook, whose shape is defined by the topic — so the declaration carries an
- * OPEN document descriptor (no fixed keys) rather than inventing an envelope the
- * server does not promise. There is no author-time validate endpoint for a hook
- * spec (unlike the policy condition's `validate-condition` guard), so neither
- * declaration wires `serverValidate`. Each field is a `JqField`: a resting input
- * with an always-present visual-editor door, both painted in the SDK design system
- * the host injects into jq-studio once at the root.
- */
-const HOOK_CONDITION_DECLARATION: JqFieldDeclaration = {
-  language: 'jq',
-  shape: {
-    id: 'tai42.hooks.condition',
-    label: 'event',
-    blurb:
-      'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
-    keys: [],
-    returns: 'true or false — the hook fires only when the condition returns true',
-  },
-};
-
-const HOOK_EXPR_DECLARATION: JqFieldDeclaration = {
-  language: 'jq',
-  shape: {
-    id: 'tai42.hooks.expr',
-    label: 'event',
-    blurb:
-      'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
-    keys: [],
-    returns: 'the value the hook shapes from the event before the tool runs',
-  },
-};
-
-/** The `key_expr` field's jq shape: it is evaluated over the fire payload to a string key. */
-const HOOK_SUBJECT_KEY_DECLARATION: JqFieldDeclaration = {
-  language: 'jq',
-  shape: {
-    id: 'tai42.hooks.subject_key',
-    label: 'event',
-    blurb:
-      'The event that fired the hook. Its shape is defined by the topic, so treat it as an open document.',
-    keys: [],
-    returns: 'a non-empty string — the subject key the fire keys its state writes to',
-  },
-};
-
-/** Parse the `tool_kwargs` textarea; blank means `{}`. Throws a loud message on bad input. */
-function parseToolKwargs(raw: string): Record<string, unknown> {
-  const trimmed = raw.trim();
-  if (trimmed === '') return {};
-  let value: unknown;
-  try {
-    value = JSON.parse(trimmed);
-  } catch (error) {
-    throw new Error(`Invalid JSON: ${errorMessage(error)}`);
-  }
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new Error('Invalid JSON: tool_kwargs must be a JSON object.');
-  }
-  return value as Record<string, unknown>;
-}
-
-/** Serialize a hook's `tool_kwargs` back into the textarea; an empty map prefills blank. */
-function serializeToolKwargs(kwargs: Record<string, unknown>): string {
-  return Object.keys(kwargs).length === 0 ? '' : JSON.stringify(kwargs, null, 2);
-}
+import { useHookFormFields } from './useHookFormFields';
+import { useHookFormData } from './useHookFormData';
+import { useRegisterHook } from './useRegisterHook';
+import { buildHookParams } from './buildHookParams';
+import { HookIdentityFields } from './HookIdentityFields';
+import { HookSubjectSection } from './HookSubjectSection';
+import { HookConditionExprFields } from './HookConditionExprFields';
 
 export interface RegisterHookFormProps {
   /**
@@ -139,197 +48,51 @@ export interface RegisterHookFormProps {
 }
 
 export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {}): ReactNode {
-  const api = useApi();
-  const queryClient = useQueryClient();
-
   const editing = initial !== undefined;
+  const fields = useHookFormFields(initial);
+  const data = useHookFormData({ tool: fields.tool, subjectOpen: fields.subjectOpen });
+  const mutation = useRegisterHook({ onClose, onReset: fields.reset });
 
-  const [name, setName] = useState(initial?.name ?? '');
-  const [topic, setTopic] = useState(initial?.topic ?? '');
-  const [tool, setTool] = useState(initial?.tool ?? '');
-  const [toolKwargs, setToolKwargs] = useState(() =>
-    initial === undefined ? '' : serializeToolKwargs(initial.tool_kwargs),
-  );
-  const [condition, setCondition] = useState<TemplatedText | null>(initial?.condition ?? null);
-  const [expr, setExpr] = useState<TemplatedText | null>(initial?.expr ?? null);
-  const [executionKey, setExecutionKey] = useState(initial?.execution_key ?? '');
-
-  // The optional state subject the fire targets. Prefilled from an edited hook's stored
-  // subject; a `<target_kind>:<target_name>` string picks the conversation target.
-  const [subjectTarget, setSubjectTarget] = useState(
-    initial?.subject != null ? `${initial.subject.target_kind}:${initial.subject.target_name}` : '',
-  );
-  const [subjectKind, setSubjectKind] = useState(initial?.subject?.kind ?? '');
-  // The subject key is a templated text on the wire; the JqField authors its inline
-  // jq, so the form holds the `content` string and wraps it back on submit.
-  const [subjectKeyExpr, setSubjectKeyExpr] = useState(initial?.subject?.key_expr.content ?? '');
-
-  const [submitted, setSubmitted] = useState(false);
-  const [kwargsError, setKwargsError] = useState<string | null>(null);
-  const [subjectError, setSubjectError] = useState<string | null>(null);
-  // The Subject group is collapsed by default; its fields (and the targets read) mount
-  // only when expanded, or when an edited hook already carries a subject.
-  const [subjectOpen, setSubjectOpen] = useState(initial?.subject != null);
-  // The optional door-layer state binding applied around this hook's fire.
-  const [stateBinding, setStateBinding] = useState<StateBinding | null>(
-    initial?.state_binding ?? null,
-  );
-  // Bumped on a successful create so the seeded-once condition/expr controls remount blank.
-  const [formResetToken, setFormResetToken] = useState(0);
-  // The stored templates the condition/expr id pickers (and the binding's jq slots)
-  // offer — gated on a storage backend being present (the list door 500s without one;
-  // a storage-free deployment is supported). Presence is the shared `['storage', 'info']`
-  // query the templates/storage screens read, so React Query serves it once.
-  const storageQuery = useQuery({
-    queryKey: ['storage', 'info'],
-    queryFn: ({ signal }) => api.getStorageInfo(signal),
-  });
-  const templatesQuery = useQuery({
-    queryKey: ['templates', 'names'],
-    queryFn: ({ signal }) => api.listTemplates(signal),
-    enabled: storageQuery.data?.present === true,
-  });
-  const templatedTextTemplates = templatedTextCatalog(storageQuery, templatesQuery);
-  const bindingStatesQuery = useQuery({
-    queryKey: statesListKey,
-    queryFn: ({ signal }) => api.listStates(signal),
-  });
-  const bindingTemplatesQuery = useQuery({
-    queryKey: stateTemplatesKey,
-    queryFn: ({ signal }) => api.listStateTemplates(signal),
-  });
-  // The hook's tool schema feeds the binding editor's field pickers.
-  const toolSchemaQuery = useQuery({
-    queryKey: ['state-binding', 'tool-schema', tool],
-    queryFn: ({ signal }) => api.getToolSchema(tool.trim(), signal),
-    enabled: tool.trim() !== '',
-  });
-  // When the hook tool is a preset, its own binding is inherited (this door's binding
-  // overrides it per state).
-  const bindingPresetsQuery = useQuery({
-    queryKey: ['state-binding', 'presets'],
-    queryFn: ({ signal }) => api.listPresets(signal),
-  });
-  const toolIsPreset = bindingPresetsQuery.data?.some((p) => p.name === tool.trim()) ?? false;
-  const toolVersionsQuery = useQuery({
-    queryKey: ['state-binding', 'preset-versions', tool.trim()],
-    queryFn: ({ signal }) => api.listPresetVersions(tool.trim(), signal),
-    enabled: toolIsPreset && tool.trim() !== '',
-  });
-  const inheritedBinding =
-    toolVersionsQuery.data?.find((v) => v.is_current)?.body.state_binding ?? null;
-
-  const targetsQuery = useQuery({
-    queryKey: ['hooks', 'conversation-targets'],
-    queryFn: ({ signal }) => api.listConversationRoutes(signal),
-    enabled: subjectOpen,
-  });
-  const targetOptions = (targetsQuery.data?.items ?? []).map((route) => ({
-    value: `${route.target_kind}:${route.target_name}`,
-    label: `${route.target_kind} · ${route.target_name}`,
-  }));
-
-  const keysQuery = useExecutionKeys();
-
-  // The full (unfiltered) hooks list, feeding overwrite detection. Shares the list
-  // root so a register's invalidation refetches it; a filtered list elsewhere on
-  // the page keeps its own key, so the notice sees EVERY existing name.
-  const hooksQuery = useQuery({
-    queryKey: hooksListKey(''),
-    queryFn: ({ signal }) => api.listHooks(undefined, signal),
-  });
-
-  const mutation = useMutation({
-    mutationFn: (params: HookRegister) => api.registerHook(params),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === HOOKS_KEY_ROOT });
-      if (onClose !== undefined) {
-        onClose();
-        return;
-      }
-      setName('');
-      setTopic('');
-      setTool('');
-      setToolKwargs('');
-      setCondition(null);
-      setExpr(null);
-      setExecutionKey('');
-      setSubjectTarget('');
-      setSubjectKind('');
-      setSubjectKeyExpr('');
-      setSubmitted(false);
-      setKwargsError(null);
-      setSubjectError(null);
-      setFormResetToken((token) => token + 1);
-    },
-  });
-
-  const trimmedName = name.trim();
-  const nameMissing = trimmedName === '';
-  const topicMissing = topic.trim() === '';
-  const toolMissing = tool.trim() === '';
-  const executionKeyMissing = executionKey === '';
-  const unsatisfiable = fireGateUnsatisfiable(keysQuery);
-
-  const existingNames = useMemo(
-    () => new Set((hooksQuery.data?.items ?? []).map((h) => h.name)),
-    [hooksQuery.data],
-  );
-  // A register POST is an upsert: an existing name silently replaces that hook.
-  // Warn when the typed name hits another hook — never the one being edited, whose
-  // own name saving back over is the whole point of the edit.
+  const trimmedName = fields.name.trim();
+  const missing = {
+    name: trimmedName === '',
+    topic: fields.topic.trim() === '',
+    tool: fields.tool.trim() === '',
+    executionKey: fields.executionKey === '',
+  };
+  const unsatisfiable = fireGateUnsatisfiable(data.keysQuery);
+  // A register POST is an upsert: warn when the typed name hits ANOTHER hook — never
+  // the one being edited, whose own name saving back over is the point of the edit.
   const replacesExisting =
-    trimmedName !== '' && trimmedName !== initial?.name && existingNames.has(trimmedName);
-
-  // The optional subject: either fully specified (target + kind + key expression) or
-  // omitted entirely. A partially-filled subject is refused loudly rather than sent.
-  const subjectTouched =
-    subjectTarget !== '' || subjectKind.trim() !== '' || subjectKeyExpr.trim() !== '';
+    trimmedName !== '' && trimmedName !== initial?.name && data.existingNames.has(trimmedName);
 
   const onSubmit = (event: SyntheticEvent): void => {
     event.preventDefault();
-    setSubmitted(true);
-    setKwargsError(null);
-    setSubjectError(null);
-    if (nameMissing || topicMissing || toolMissing || executionKeyMissing || unsatisfiable) {
+    fields.setSubmitted(true);
+    fields.setKwargsError(null);
+    fields.setSubjectError(null);
+    if (missing.name || missing.topic || missing.tool || missing.executionKey || unsatisfiable) {
       return;
     }
-
-    let toolKwargsValue: Record<string, unknown>;
-    try {
-      toolKwargsValue = parseToolKwargs(toolKwargs);
-    } catch (error) {
-      setKwargsError(errorMessage(error));
+    const result = buildHookParams({
+      name: fields.name,
+      topic: fields.topic,
+      tool: fields.tool,
+      executionKey: fields.executionKey,
+      toolKwargs: fields.toolKwargs,
+      subjectTarget: fields.subjectTarget,
+      subjectKind: fields.subjectKind,
+      subjectKeyExpr: fields.subjectKeyExpr,
+      condition: fields.condition,
+      expr: fields.expr,
+      stateBinding: fields.stateBinding,
+    });
+    if (!result.ok) {
+      if (result.field === 'kwargs') fields.setKwargsError(result.message);
+      else fields.setSubjectError(result.message);
       return;
     }
-
-    let subject: HookSubject | null = null;
-    if (subjectTouched) {
-      const separator = subjectTarget.indexOf(':');
-      if (separator < 0 || subjectKind.trim() === '' || subjectKeyExpr.trim() === '') {
-        setSubjectError('A subject needs a target, a kind, and a key expression.');
-        return;
-      }
-      subject = {
-        target_kind: subjectTarget.slice(0, separator) as HookSubject['target_kind'],
-        target_name: subjectTarget.slice(separator + 1),
-        kind: subjectKind.trim(),
-        key_expr: { content: subjectKeyExpr.trim() },
-      };
-    }
-
-    const params: HookRegister = {
-      name: trimmedName,
-      topic: topic.trim(),
-      tool: tool.trim(),
-      execution_key: executionKey,
-      tool_kwargs: toolKwargsValue,
-      subject,
-      condition,
-      expr,
-      state_binding: stateBinding,
-    };
-    mutation.mutate(params);
+    mutation.mutate(result.params);
   };
 
   const form = (
@@ -338,192 +101,27 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       onSubmit={onSubmit}
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
     >
-      {hooksQuery.isError ? (
+      {data.hooksQuery.isError ? (
         <p role="alert" style={{ margin: 0, color: 'var(--tai-color-warning)' }}>
-          Could not load existing hooks: {errorMessage(hooksQuery.error)}. Overwrite detection is
-          unavailable; a register still replaces any existing hook with the same name.
+          Could not load existing hooks: {errorMessage(data.hooksQuery.error)}. Overwrite detection
+          is unavailable; a register still replaces any existing hook with the same name.
         </p>
       ) : null}
-      <Field label="Name" error={submitted && nameMissing ? 'A name is required.' : undefined}>
-        <TextInput
-          value={name}
-          placeholder="e.g. notify-on-event"
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-        />
-      </Field>
-      {replacesExisting ? (
-        <p role="status" style={{ margin: 0, color: 'var(--tai-color-warning)' }}>
-          Replaces the existing hook <strong>{trimmedName}</strong> — its current registration is
-          overwritten.
-        </p>
-      ) : null}
-      <Field label="Topic" error={submitted && topicMissing ? 'A topic is required.' : undefined}>
-        <TextInput
-          value={topic}
-          placeholder="e.g. events.created"
-          onChange={(event) => {
-            setTopic(event.target.value);
-          }}
-        />
-      </Field>
-      <Field label="Tool" error={submitted && toolMissing ? 'A tool is required.' : undefined}>
-        <TextInput
-          value={tool}
-          placeholder="e.g. slack.post_message"
-          onChange={(event) => {
-            setTool(event.target.value);
-          }}
-        />
-      </Field>
-      <ExecutionKeyPicker
-        value={executionKey}
-        onValueChange={setExecutionKey}
-        error={submitted && executionKeyMissing ? 'An execution key is required.' : undefined}
+      <HookIdentityFields
+        fields={fields}
+        missing={missing}
+        replacesExisting={replacesExisting}
+        trimmedName={trimmedName}
       />
-      <Field
-        label="Tool kwargs (JSON)"
-        description="A JSON object of keyword arguments passed to the tool. Blank means none."
-        error={kwargsError ?? undefined}
-      >
-        <Textarea
-          value={toolKwargs}
-          rows={4}
-          placeholder='{ "channel": "ops" }'
-          onChange={(event) => {
-            setToolKwargs(event.target.value);
-          }}
-        />
-      </Field>
-      <div className="tai-stack tai-stack-3">
-        <button
-          type="button"
-          className="tai-btn tai-btn-ghost"
-          aria-expanded={subjectOpen}
-          onClick={() => {
-            setSubjectOpen((open) => !open);
-          }}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          Subject (optional)
-        </button>
-        {subjectOpen ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--tai-space-3)',
-              marginTop: 'var(--tai-space-3)',
-            }}
-          >
-            <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-              Key this fire&rsquo;s state writes to a subject; leave blank for none.
-            </p>
-            <Field label="Target">
-              <Select
-                value={subjectTarget}
-                onValueChange={setSubjectTarget}
-                aria-label="Subject target"
-                placeholder="Choose a conversation target"
-                options={targetOptions}
-              />
-            </Field>
-            <Field
-              label="Subject kind"
-              description="The subject family the state declares (e.g. person)."
-            >
-              <TextInput
-                value={subjectKind}
-                placeholder="e.g. person"
-                onChange={(event) => {
-                  setSubjectKind(event.target.value);
-                }}
-              />
-            </Field>
-            <JqField
-              label="Key expression"
-              description="A jq over the event payload; it must yield a non-empty string key."
-              shape={HOOK_SUBJECT_KEY_DECLARATION.shape}
-              multiline={false}
-              value={subjectKeyExpr}
-              onChange={setSubjectKeyExpr}
-            />
-            {subjectError !== null ? (
-              <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-                {subjectError}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-      <TemplatedTextField
-        key={`condition-${String(formResetToken)}`}
-        label="Condition"
-        description="Optional. Gates whether the hook fires; blank leaves it unset."
-        value={condition}
-        templates={templatedTextTemplates.templates}
-        templatesLoading={templatedTextTemplates.loading}
-        templatesError={templatedTextTemplates.error}
-        onTemplatesRetry={templatedTextTemplates.onRetry}
-        storageAbsent={templatedTextTemplates.storageAbsent}
-        storagePresenceLoading={templatedTextTemplates.storagePresenceLoading}
-        onChange={setCondition}
-        renderInline={({ label, value, onChange, hideLabel }) => (
-          <div className={hideLabel ? 'tai-templated-inline--grouped' : undefined}>
-            <JqField
-              label={label}
-              shape={HOOK_CONDITION_DECLARATION.shape}
-              multiline={false}
-              value={value}
-              onChange={onChange}
-            />
-          </div>
-        )}
-      />
-      <TemplatedTextField
-        key={`expr-${String(formResetToken)}`}
-        label="Expr"
-        description="Optional. Shapes the event before the tool runs; blank leaves it unset."
-        value={expr}
-        templates={templatedTextTemplates.templates}
-        templatesLoading={templatedTextTemplates.loading}
-        templatesError={templatedTextTemplates.error}
-        onTemplatesRetry={templatedTextTemplates.onRetry}
-        storageAbsent={templatedTextTemplates.storageAbsent}
-        storagePresenceLoading={templatedTextTemplates.storagePresenceLoading}
-        onChange={setExpr}
-        renderInline={({ label, value, onChange, hideLabel }) => (
-          <div className={hideLabel ? 'tai-templated-inline--grouped' : undefined}>
-            <JqField
-              label={label}
-              shape={HOOK_EXPR_DECLARATION.shape}
-              multiline={false}
-              value={value}
-              onChange={onChange}
-            />
-          </div>
-        )}
+      <HookSubjectSection fields={fields} targetOptions={data.targetOptions} />
+      <HookConditionExprFields
+        fields={fields}
+        templatedTextTemplates={data.templatedTextTemplates}
       />
       <StateBindingSection
-        value={stateBinding}
-        onChange={setStateBinding}
-        statesCatalog={statesCatalogFromList(bindingStatesQuery.data ?? [])}
-        templatesCatalog={templatesCatalogFromList(bindingTemplatesQuery.data ?? [])}
-        templatedTextTemplates={templatedTextTemplates}
-        inherited={inheritedBinding}
-        sources={{
-          input: fieldPathsFromSchema(toolSchemaQuery.data?.input),
-          output: fieldPathsFromSchema(toolSchemaQuery.data?.output),
-          loading: tool.trim() !== '' && toolSchemaQuery.isPending,
-          error: toolSchemaQuery.isError ? "Couldn't load the tool's fields." : undefined,
-        }}
-        loading={bindingStatesQuery.isPending || bindingTemplatesQuery.isPending}
-        error={
-          bindingStatesQuery.isError || bindingTemplatesQuery.isError
-            ? errorMessage(bindingStatesQuery.error ?? bindingTemplatesQuery.error)
-            : undefined
-        }
+        value={fields.stateBinding}
+        onChange={fields.setStateBinding}
+        {...data.stateBinding}
       />
       {mutation.isError ? <ErrorState message={errorMessage(mutation.error)} /> : null}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>

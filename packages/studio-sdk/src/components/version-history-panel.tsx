@@ -30,13 +30,16 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { errorMessage } from '../errors';
 import { Dialog } from './dialog';
 import { Field } from './field';
-import { CheckCircleIcon, PendingIcon } from './icons';
-import { JsonDiff } from './json-diff';
-import { JsonTree } from './json-tree';
 import { Button, Card, ErrorState, Spinner } from './primitives';
 import { ScrollRegion } from './scroll-region';
-import { Table, TBody, TD, TH, THead, TR } from './table';
-import { TagChips, TagsInput } from './tags';
+import { Table, TBody, TH, THead, TR } from './table';
+import { TagsInput } from './tags';
+import {
+  CompareDialog,
+  RollbackConfirmDialog,
+  SelectedVersionBody,
+  VersionRow,
+} from './version-history-rows';
 
 /** One version row — the kind-agnostic shape every consumer projects into. */
 export interface VersionHistoryEntry {
@@ -235,85 +238,19 @@ export function VersionHistoryPanel({
             </THead>
             <TBody>
               {versions.map((entry) => (
-                <TR key={entry.version} data-testid={`version-row-${String(entry.version)}`}>
-                  <TD className="tai-table-id" numeric>
-                    {entry.version}
-                  </TD>
-                  <TD className="tai-mono">{entry.created_at}</TD>
-                  <TD>
-                    {entry.is_current ? (
-                      <span className="tai-status tai-status-ok">
-                        <CheckCircleIcon />
-                        Current
-                      </span>
-                    ) : (
-                      <span className="tai-status tai-status-pending">
-                        <PendingIcon />
-                        Historical
-                      </span>
-                    )}
-                  </TD>
-                  {showTags ? (
-                    <TD>
-                      {(entry.tags ?? []).length > 0 ? (
-                        <TagChips tags={entry.tags ?? []} />
-                      ) : (
-                        <span className="tai-muted">—</span>
-                      )}
-                    </TD>
-                  ) : null}
-                  <TD>
-                    <div className="tai-row">
-                      <Button
-                        aria-label={`View version ${String(entry.version)}`}
-                        onClick={() => {
-                          view(entry.version);
-                        }}
-                      >
-                        View
-                      </Button>
-                      {canCompare ? (
-                        <Button
-                          // The name starts with the word the button is SHOWING,
-                          // which is what WCAG 2.5.3 (Label in Name) asks: a constant
-                          // "Compare …" would leave a button reading "Comparing…"
-                          // named "Compare", and a voice-control user naming a control
-                          // they cannot see. The button stays ENABLED while armed —
-                          // unlike an Edit action, a second click on the armed row is
-                          // the disarm, so there is nothing to take away.
-                          aria-label={`${compareFrom === entry.version ? 'Comparing' : 'Compare'} version ${String(entry.version)}`}
-                          onClick={() => {
-                            compare(entry.version);
-                          }}
-                        >
-                          {compareFrom === entry.version ? 'Comparing…' : 'Compare'}
-                        </Button>
-                      ) : null}
-                      {onEditTags !== undefined && !readOnly ? (
-                        <Button
-                          aria-label={`Edit tags for version ${String(entry.version)}`}
-                          onClick={() => {
-                            setEditingTags(entry.version);
-                          }}
-                        >
-                          Edit tags
-                        </Button>
-                      ) : null}
-                      {readOnly ? null : (
-                        <Button
-                          variant="secondary"
-                          aria-label={`Roll back to version ${String(entry.version)}`}
-                          disabled={entry.is_current}
-                          onClick={() => {
-                            setConfirming(entry.version);
-                          }}
-                        >
-                          Roll back
-                        </Button>
-                      )}
-                    </div>
-                  </TD>
-                </TR>
+                <VersionRow
+                  key={entry.version}
+                  entry={entry}
+                  showTags={showTags}
+                  canCompare={canCompare}
+                  compareArmed={compareFrom === entry.version}
+                  readOnly={readOnly}
+                  canEditTags={onEditTags !== undefined}
+                  onView={view}
+                  onCompare={compare}
+                  onEditTags={setEditingTags}
+                  onRollback={setConfirming}
+                />
               ))}
             </TBody>
           </Table>
@@ -326,35 +263,16 @@ export function VersionHistoryPanel({
         </p>
       ) : null}
 
-      {selectedEntry !== undefined ? (
-        <section className="tai-stack tai-stack-2">
-          <h3 className="tai-section-title">Version {selectedEntry.version} body</h3>
-          <Card>
-            <JsonTree
-              data={selectedEntry.body}
-              label={`Version ${String(selectedEntry.version)} body`}
-            />
-          </Card>
-        </section>
-      ) : null}
+      {selectedEntry !== undefined ? <SelectedVersionBody entry={selectedEntry} /> : null}
 
       {comparePair !== null ? (
-        <Dialog
-          title={`v${String(comparePair.from)} compared with v${String(comparePair.to)}`}
-          description="A structural diff of the two version bodies. Arrays compare whole."
-          open
-          onOpenChange={(next) => {
-            if (!next) closeCompare();
-          }}
-        >
-          {/* A deep diff row can run wider than the dialog; it scrolls in place. */}
-          <ScrollRegion label="Version diff">
-            <JsonDiff before={fromBody} after={toBody} />
-          </ScrollRegion>
-          <div className="tai-dialog-actions">
-            <Button onClick={closeCompare}>Close</Button>
-          </div>
-        </Dialog>
+        <CompareDialog
+          from={comparePair.from}
+          to={comparePair.to}
+          fromBody={fromBody}
+          toBody={toBody}
+          onClose={closeCompare}
+        />
       ) : null}
 
       {editingEntry !== undefined && onEditTags !== undefined ? (
@@ -369,38 +287,16 @@ export function VersionHistoryPanel({
       ) : null}
 
       {confirming !== null ? (
-        <Dialog
-          title="Roll back version"
-          description={
-            `Make version ${String(confirming)} the active version? The version history is preserved.` +
-            (rollbackConfirmDescription !== undefined ? ` ${rollbackConfirmDescription}` : '')
-          }
-          open
-          onOpenChange={(next) => {
-            if (!next) setConfirming(null);
+        <RollbackConfirmDialog
+          version={confirming}
+          rollbackPending={rollbackPending}
+          rollbackError={rollbackError}
+          extraDescription={rollbackConfirmDescription}
+          onCancel={() => {
+            setConfirming(null);
           }}
-        >
-          {rollbackError !== undefined ? <ErrorState message={rollbackError} /> : null}
-          <div className="tai-dialog-actions">
-            <Button
-              onClick={() => {
-                setConfirming(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              disabled={rollbackPending}
-              onClick={() => {
-                onRollback(confirming);
-              }}
-            >
-              {rollbackPending ? <Spinner label="Rolling back" /> : null}
-              Roll back
-            </Button>
-          </div>
-        </Dialog>
+          onConfirm={onRollback}
+        />
       ) : null}
     </div>
   );

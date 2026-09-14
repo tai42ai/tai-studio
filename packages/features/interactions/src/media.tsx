@@ -24,7 +24,7 @@ import { schemas } from '@tai42/api-client';
 import type { InteractionMediaItem } from '@tai42/api-client';
 import { Badge, ExternalLinkButton, isSafeHttpUrl, useApi } from '@tai42/studio-sdk';
 
-import { MalformedPayload } from './renderers';
+import { MalformedPayload } from './renderers/malformed-payload';
 
 /**
  * The served-media route: media is stored by reference and served from the API

@@ -6,86 +6,16 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
-  type AriaAttributes,
-  type CSSProperties,
-  type MouseEvent,
   type ReactNode,
 } from 'react';
 
-import type {
-  NavigationContextValue,
-  NavigationGuardHandler,
-  RouteSearch,
-  RouteToken,
-} from './types';
+import { NavigationGuardRegistry, type GuardEntry } from './guard-registry';
+import { buildGuardedNavigation, type CommittedEntry } from './guarded-navigation';
+import { useBackForwardGuard } from './use-back-forward-guard';
+import type { NavigationContextValue, NavigationGuardHandler } from './types';
 
 /** Shell-provided navigation; no default, so use outside {@link NavigationProvider} throws. */
 const NavigationContext = createContext<NavigationContextValue | null>(null);
-
-/**
- * One armed navigation guard. The registry holds this exact object (not a
- * snapshot), so flipping `when` or swapping `handler` on re-render takes effect
- * without re-registering.
- */
-interface GuardEntry {
-  when: boolean;
-  handler: NavigationGuardHandler;
-}
-
-/**
- * The guards active under one {@link NavigationProvider} — the single registry
- * every SDK-controlled navigation consults, so feature and plugin-page guards
- * compose against the same set. `run` stops at the first veto (at most one confirm
- * dialog); `subscribe` re-evaluates browser-level listeners when the armed set changes.
- */
-class NavigationGuardRegistry {
-  private readonly guards = new Set<GuardEntry>();
-  private readonly listeners = new Set<() => void>();
-
-  /** Register a guard; returns the unregister function. */
-  add(entry: GuardEntry): () => void {
-    this.guards.add(entry);
-    this.emit();
-    return () => {
-      this.guards.delete(entry);
-      this.emit();
-    };
-  }
-
-  /** Notify subscribers that a guard's `when` may have changed. */
-  touch(): void {
-    this.emit();
-  }
-
-  subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  }
-
-  hasArmedGuards(): boolean {
-    for (const entry of this.guards) {
-      if (entry.when) return true;
-    }
-    return false;
-  }
-
-  /** Resolve `true` only if every armed guard allows the navigation. */
-  async run(): Promise<boolean> {
-    for (const entry of this.guards) {
-      if (!entry.when) continue;
-      const allowed = await entry.handler();
-      if (!allowed) return false;
-    }
-    return true;
-  }
-
-  private emit(): void {
-    for (const listener of this.listeners) listener();
-  }
-}
 
 /**
  * Carries the provider's guard registry to {@link useNavigationGuard}. Separate from
@@ -108,42 +38,6 @@ function useGuardRegistry(): NavigationGuardRegistry {
   return registry;
 }
 
-/**
- * The `history.state` namespace under which the host stores per-history-entry plugin
- * state, keyed by pluginId. Shared, by literal contract, with the shell's
- * `createNavigation` (which WRITES the slot) and the plugin catch-all page (which
- * READS it) — this SDK layer only reconstructs it for the committed-entry mirror.
- */
-const ENTRY_STATE_KEY = 'studioPluginEntryState';
-
-/**
- * Reconstruct the `history.state` bag a guard-approved plugin navigation LANDS on, so
- * a subsequently vetoed Back restores the entry with the state it just wrote intact
- * rather than clobbering it with null. Mirrors the host's
- * `{ studioPluginEntryState: { [pluginId]: state } }` namespace. TanStack's own
- * `key`/`__TSR_*` keys are unobservable at this layer, so this is a best-effort bag —
- * no worse than the `null` it replaces for those keys, and correct for the plugin slot.
- */
-function reconstructEntryState(pluginId: string, state: unknown): unknown {
-  return { [ENTRY_STATE_KEY]: { [pluginId]: state } };
-}
-
-/**
- * Merge one plugin's state slot into a prior `history.state` bag, preserving BOTH the
- * router's own keys and every other plugin's slot. Used to refresh the committed entry
- * after {@link NavigationContextValue.updatePluginEntryState}, so a later vetoed Back
- * restores the UPDATED slot instead of the pre-update one.
- */
-function mergeEntryState(prev: unknown, pluginId: string, state: unknown): unknown {
-  const base = prev !== null && typeof prev === 'object' ? (prev as Record<string, unknown>) : {};
-  const priorSlot = base[ENTRY_STATE_KEY];
-  const priorBag =
-    priorSlot !== null && typeof priorSlot === 'object'
-      ? (priorSlot as Record<string, unknown>)
-      : {};
-  return { ...base, [ENTRY_STATE_KEY]: { ...priorBag, [pluginId]: state } };
-}
-
 export function NavigationProvider({
   value,
   children,
@@ -158,174 +52,16 @@ export function NavigationProvider({
   // The last committed history entry the SDK observed (URL + `history.state`): what a
   // canceled back/forward restores to. URL changes made outside the SDK's navigate
   // entry points are unobservable by design at this layer.
-  const committedRef = useRef<{ href: string; state: unknown } | null>(null);
+  const committedRef = useRef<CommittedEntry | null>(null);
 
-  // Mirror the registry's armed state into React so the browser listeners attach only
-  // while at least one guard is armed.
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    setArmed(registry.hasArmedGuards());
-    return registry.subscribe(() => {
-      setArmed(registry.hasArmedGuards());
-    });
-  }, [registry]);
-
-  useEffect(() => {
-    if (!armed) return;
-
-    // The protected entry (URL + state); a back/forward landing elsewhere is first
-    // canceled back to here while the guard is consulted.
-    committedRef.current = { href: window.location.href, state: window.history.state };
-    // Set while replaying a guard-approved back/forward, so its `popstate` passes
-    // through instead of being re-intercepted.
-    let bypass = false;
-    // Latched while a decision is pending, so a second Back mid-decision keeps canceling
-    // without starting a concurrent `registry.run()` — one gesture, one dialog.
-    let pending = false;
-    // Restore pushes stacked for the pending decision, so an approved replay unwinds
-    // exactly that far in one `go(-depth)`. Reset per decision.
-    let restores = 0;
-
-    const onPopState = () => {
-      if (bypass) {
-        bypass = false;
-        committedRef.current = { href: window.location.href, state: window.history.state };
-        return;
-      }
-      if (!registry.hasArmedGuards()) {
-        committedRef.current = { href: window.location.href, state: window.history.state };
-        return;
-      }
-      const committed = committedRef.current;
-      if (committed === null) return;
-      // Cancel the browser's move by pushing the committed entry on top of wherever it
-      // landed. popstate exposes no direction/distance and the router owns
-      // `history.state`, so restore can only push, not delete. A vetoed forward thus
-      // strands a stub entry — an accepted limit the next pushState truncates.
-      window.history.pushState(committed.state, '', committed.href);
-      restores += 1;
-      if (pending) return;
-      pending = true;
-      void registry.run().then((allowed) => {
-        pending = false;
-        const depth = restores;
-        restores = 0;
-        if (!allowed) return;
-        bypass = true;
-        window.history.go(-depth);
-      });
-    };
-
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      // Browsers below the floor (Chrome 108) gate the prompt on a set `returnValue`,
-      // not `preventDefault` alone; the string is ignored. Typed deprecated, still required.
-      // eslint-disable-next-line @typescript-eslint/no-deprecated -- required beforeunload trigger for the supported browser range.
-      event.returnValue = '';
-    };
-
-    window.addEventListener('popstate', onPopState);
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => {
-      committedRef.current = null;
-      window.removeEventListener('popstate', onPopState);
-      window.removeEventListener('beforeunload', onBeforeUnload);
-    };
-  }, [armed, registry]);
+  useBackForwardGuard(registry, committedRef);
 
   // Wrap the shell's transitions so an armed guard is consulted before they commit.
   // With no guard armed the call stays synchronous — identical to the raw shell value.
-  const guarded = useMemo<NavigationContextValue>(() => {
-    // Forwarded as a REST tuple, so the shell's `navigate` is called with exactly
-    // the arguments the caller passed — a caller that wants the default history
-    // behaviour never turns into one that passed an explicit `undefined` for it.
-    const navigate: NavigationContextValue['navigate'] = (...args) => {
-      const [token, search] = args;
-      if (!registry.hasArmedGuards()) {
-        value.navigate(...args);
-        return;
-      }
-      void registry.run().then((allowed) => {
-        if (!allowed) return;
-        value.navigate(...args);
-        // Advance the committed entry to the resolved destination (the router may commit
-        // async, so `window.location` would be stale). Its router state is unobservable
-        // here, hence `state: null`.
-        if (committedRef.current !== null) {
-          committedRef.current = { href: value.resolvePath(token, search), state: null };
-        }
-      });
-    };
-    const navigatePlugin: NavigationContextValue['navigatePlugin'] = (
-      pluginId,
-      pagePath,
-      params,
-      search,
-    ) => {
-      if (!registry.hasArmedGuards()) {
-        value.navigatePlugin(pluginId, pagePath, params, search);
-        return;
-      }
-      void registry.run().then((allowed) => {
-        if (!allowed) return;
-        value.navigatePlugin(pluginId, pagePath, params, search);
-        if (committedRef.current !== null) {
-          committedRef.current = {
-            href: value.resolvePluginPath(pluginId, pagePath, params, search),
-            state: null,
-          };
-        }
-      });
-    };
-    const result: NavigationContextValue = { ...value, navigate, navigatePlugin };
-
-    // navigatePluginWithOptions: guard-gated exactly like navigatePlugin (a veto never
-    // reaches the host member — no entry, no state). On approval, refresh the committed
-    // entry with the reconstructed state bag so a subsequent vetoed Back restores the
-    // slot this navigation just wrote, not null. Only wrapped when the host provides it;
-    // an older host leaves it undefined and the plugin-facing hook throws loudly.
-    const hostNavigateWithOptions = value.navigatePluginWithOptions;
-    if (hostNavigateWithOptions !== undefined) {
-      result.navigatePluginWithOptions = (pluginId, pagePath, params, search, options) => {
-        if (!registry.hasArmedGuards()) {
-          hostNavigateWithOptions(pluginId, pagePath, params, search, options);
-          return;
-        }
-        void registry.run().then((allowed) => {
-          if (!allowed) return;
-          hostNavigateWithOptions(pluginId, pagePath, params, search, options);
-          if (committedRef.current !== null) {
-            committedRef.current = {
-              href: value.resolvePluginPath(pluginId, pagePath, params, search),
-              state:
-                options?.state !== undefined
-                  ? reconstructEntryState(pluginId, options.state)
-                  : null,
-            };
-          }
-        });
-      };
-    }
-
-    // updatePluginEntryState: guard-FREE — rewriting the current entry's state is not a
-    // navigation away, so no guard is consulted. But the SDK MUST wrap it to refresh the
-    // committed entry with the merged slot, so a later vetoed Back restores the UPDATED
-    // state rather than the pre-update one. URL is unchanged, so href is preserved.
-    const hostUpdateEntryState = value.updatePluginEntryState;
-    if (hostUpdateEntryState !== undefined) {
-      result.updatePluginEntryState = (pluginId, state) => {
-        hostUpdateEntryState(pluginId, state);
-        if (committedRef.current !== null) {
-          committedRef.current = {
-            href: committedRef.current.href,
-            state: mergeEntryState(committedRef.current.state, pluginId, state),
-          };
-        }
-      };
-    }
-
-    return result;
-  }, [value, registry]);
+  const guarded = useMemo<NavigationContextValue>(
+    () => buildGuardedNavigation(value, registry, committedRef),
+    [value, registry],
+  );
 
   const commitHref = useCallback((href: string) => {
     if (committedRef.current !== null) committedRef.current = { href, state: null };
@@ -342,7 +78,7 @@ export function NavigationProvider({
   );
 }
 
-function useNavigation(): NavigationContextValue {
+export function useNavigation(): NavigationContextValue {
   const ctx = useContext(NavigationContext);
   if (ctx === null) {
     throw new Error(
@@ -445,59 +181,4 @@ export function usePluginEntryNavigation(): {
     );
   }
   return { navigatePluginWithOptions, updatePluginEntryState };
-}
-
-export interface AppLinkProps<T extends RouteToken> {
-  to: T;
-  search?: RouteSearch<T>;
-  children: ReactNode;
-  className?: string;
-  'aria-label'?: string;
-  'aria-current'?: AriaAttributes['aria-current'];
-  /** Native tooltip text (also a sensible non-AT hover hint). */
-  title?: string;
-  /** Inline styles for the anchor. */
-  style?: CSSProperties;
-}
-
-/**
- * A real anchor (so middle-click / open-in-new-tab keep working) that drives a
- * client-side transition on plain left-click. Modified clicks (new tab/window,
- * download) fall through to the browser's default handling.
- */
-export function AppLink<T extends RouteToken>({
-  to,
-  search,
-  children,
-  className,
-  'aria-label': ariaLabel,
-  'aria-current': ariaCurrent,
-  title,
-  style,
-}: AppLinkProps<T>): ReactNode {
-  const { navigate, resolvePath } = useNavigation();
-  const href = resolvePath(to, search);
-  const onClick = useCallback(
-    (event: MouseEvent<HTMLAnchorElement>) => {
-      if (event.defaultPrevented) return;
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
-        return;
-      event.preventDefault();
-      navigate(to, search);
-    },
-    [navigate, to, search],
-  );
-  return createElement(
-    'a',
-    {
-      href,
-      className,
-      'aria-label': ariaLabel,
-      'aria-current': ariaCurrent,
-      title,
-      style,
-      onClick,
-    },
-    children,
-  );
 }

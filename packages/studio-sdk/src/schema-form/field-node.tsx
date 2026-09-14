@@ -47,24 +47,12 @@ function labelText(explicit: string | undefined, label: string | undefined): str
 
 /** A single schema node, dispatched on its classified model kind. */
 export function FieldNode(props: FieldNodeProps): ReactNode {
-  const {
-    schema,
-    root,
-    value,
-    onChange,
-    path,
-    label,
-    required,
-    markRequired = false,
-    errors,
-    idPrefix,
-  } = props;
-  const classified = classifySchema(schema, root);
-  const base = labelText(classified.title, label);
-  const heading = markRequired && required ? `${base} *` : base;
-  const description = classified.description;
+  const { root, value, onChange, path, required, idPrefix, errors } = props;
+  const classified = classifySchema(props.schema, root);
+  const base = labelText(classified.title, props.label);
+  const heading = props.markRequired === true && required ? `${base} *` : base;
+  const { model, description } = classified;
   const error = errors?.[path];
-  const model = classified.model;
 
   switch (model.kind) {
     case 'json':
@@ -81,9 +69,12 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
       );
     case 'const':
       return (
-        <Field label={heading} description={description} error={error}>
-          <TextInput value={scalarLabel(model.value)} readOnly disabled />
-        </Field>
+        <ConstField
+          heading={heading}
+          description={description}
+          error={error}
+          constValue={model.value}
+        />
       );
     case 'enum':
       return (
@@ -113,27 +104,24 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
       );
     case 'number':
       return (
-        <Field label={heading} description={description} error={error}>
-          <NumberInput
-            step={model.integer ? '1' : 'any'}
-            value={typeof value === 'number' ? value : ''}
-            onChange={(event) => {
-              const raw = event.target.value;
-              onChange(raw === '' ? undefined : Number(raw));
-            }}
-          />
-        </Field>
+        <NumberField
+          heading={heading}
+          description={description}
+          error={error}
+          integer={model.integer}
+          value={value}
+          onChange={onChange}
+        />
       );
     case 'boolean':
       return (
-        <Field label={heading} description={description} error={error}>
-          <Checkbox
-            checked={value === true}
-            onCheckedChange={(checked) => {
-              onChange(checked);
-            }}
-          />
-        </Field>
+        <BooleanField
+          heading={heading}
+          description={description}
+          error={error}
+          value={value}
+          onChange={onChange}
+        />
       );
     case 'array':
       return (
@@ -197,4 +185,72 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
         />
       );
   }
+}
+
+/** The label/description/error chrome every scalar leaf field shares. */
+interface ScalarFieldChrome {
+  readonly heading: string;
+  readonly description: string | undefined;
+  readonly error: string | undefined;
+}
+
+/** A `const`-pinned value: shown read-only, never editable. */
+function ConstField({
+  heading,
+  description,
+  error,
+  constValue,
+}: ScalarFieldChrome & { constValue: unknown }): ReactNode {
+  return (
+    <Field label={heading} description={description} error={error}>
+      <TextInput value={scalarLabel(constValue)} readOnly disabled />
+    </Field>
+  );
+}
+
+/** A number/integer field; an empty input clears the value to `undefined`. */
+function NumberField({
+  heading,
+  description,
+  error,
+  integer,
+  value,
+  onChange,
+}: ScalarFieldChrome & {
+  integer: boolean;
+  value: unknown;
+  onChange: (value: unknown) => void;
+}): ReactNode {
+  return (
+    <Field label={heading} description={description} error={error}>
+      <NumberInput
+        step={integer ? '1' : 'any'}
+        value={typeof value === 'number' ? value : ''}
+        onChange={(event) => {
+          const raw = event.target.value;
+          onChange(raw === '' ? undefined : Number(raw));
+        }}
+      />
+    </Field>
+  );
+}
+
+/** A boolean field rendered as a checkbox. */
+function BooleanField({
+  heading,
+  description,
+  error,
+  value,
+  onChange,
+}: ScalarFieldChrome & { value: unknown; onChange: (value: unknown) => void }): ReactNode {
+  return (
+    <Field label={heading} description={description} error={error}>
+      <Checkbox
+        checked={value === true}
+        onCheckedChange={(checked) => {
+          onChange(checked);
+        }}
+      />
+    </Field>
+  );
 }

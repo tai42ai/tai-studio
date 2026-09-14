@@ -13,7 +13,7 @@ import { XCircleIcon } from '../components/icons';
 import { Button } from '../components/primitives';
 import { Field, useFieldControl, type FieldControlProps } from '../components/field';
 import { TextInput } from '../components/inputs';
-import type { MediaUpload } from './classify';
+import type { MediaUpload } from './field-model';
 import { MaxUploadBytesContext } from './context';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
 
@@ -114,9 +114,7 @@ export function MediaField({
   const defaultMax = useContext(MaxUploadBytesContext);
   const maxBytes = effectiveMaxBytes(media.maxBytes, defaultMax);
   const [uploadError, setUploadError] = useState<string | undefined>(undefined);
-  const [attached, setAttached] = useState<
-    { name: string; previewUrl: string; value: string } | undefined
-  >(undefined);
+  const [attached, setAttached] = useState<AttachedMedia | undefined>(undefined);
 
   const accept = (file: File | undefined): void => {
     if (file === undefined) return;
@@ -139,19 +137,7 @@ export function MediaField({
     onChange('');
   };
 
-  // The just-picked file's chip/preview applies ONLY while it still matches the
-  // current field value; if the value is reset or replaced externally (an edit
-  // loads a different record, or the form resets after submit), fall back to a
-  // value-derived display so a stale filename/thumbnail can never linger.
-  const activeAttached = attached?.value === value ? attached : undefined;
-  // Prefer the just-read preview; on an edit with a pre-existing data-url value,
-  // reconstruct the preview from the value itself.
-  const previewUrl =
-    activeAttached?.previewUrl ??
-    (media.encoding === 'data-url' && value.startsWith('data:') ? value : undefined);
-  const isImage =
-    media.mediaType?.startsWith('image/') === true || previewUrl?.startsWith('data:image') === true;
-  const fileName = activeAttached?.name ?? (value !== '' ? 'Attached file' : undefined);
+  const { previewUrl, isImage, fileName } = mediaPreview(attached, value, media);
 
   return (
     <Field label={heading} description={description} error={error}>
@@ -161,29 +147,12 @@ export function MediaField({
         onFile={accept}
       />
 
-      {fileName !== undefined ? (
-        <div className="tai-row">
-          {isImage && previewUrl !== undefined ? (
-            <img
-              src={previewUrl}
-              alt={fileName}
-              // A thumbnail is per-instance geometry: it is capped to a fixed
-              // height and can never exceed the width it is given.
-              style={{
-                maxWidth: '100%',
-                maxHeight: '6rem',
-                borderRadius: 'var(--tai-radius-md)',
-                border: '1px solid var(--tai-color-control-border)',
-              }}
-            />
-          ) : (
-            <Badge>{fileName}</Badge>
-          )}
-          <Button type="button" variant="secondary" onClick={clear}>
-            Remove
-          </Button>
-        </div>
-      ) : null}
+      <AttachedPreview
+        fileName={fileName}
+        isImage={isImage}
+        previewUrl={previewUrl}
+        onClear={clear}
+      />
 
       {uploadError !== undefined ? (
         <span id={uploadErrorId} role="alert" className="tai-field-error">
@@ -192,33 +161,133 @@ export function MediaField({
         </span>
       ) : null}
 
-      <label htmlFor={pasteId} className="tai-field">
-        <span className="tai-field-hint">Or paste a value</span>
-        <TextInput
-          id={pasteId}
-          type="text"
-          // Only the upload error's id: `TextInput` joins it with the enclosing
-          // Field's own description and error IDREFs rather than replacing them.
-          aria-describedby={uploadError === undefined ? undefined : uploadErrorId}
-          aria-invalid={uploadError === undefined ? undefined : true}
-          value={value}
-          onChange={(event) => {
-            const next = event.target.value;
-            // The same effective cap the picker enforces, measured on the pasted
-            // string's DECODED byte size. Reject over-cap LOUDLY; never accept or
-            // truncate — the field keeps its prior value.
-            const size = decodedByteSize(next);
-            if (size > maxBytes) {
-              setUploadError(overCapMessage('The pasted value', size, maxBytes));
-              return;
-            }
-            setUploadError(undefined);
-            setAttached(undefined);
-            onChange(next);
+      <MediaPasteInput
+        pasteId={pasteId}
+        value={value}
+        maxBytes={maxBytes}
+        uploadErrorId={uploadError === undefined ? undefined : uploadErrorId}
+        onReject={setUploadError}
+        onAccept={(next) => {
+          setUploadError(undefined);
+          setAttached(undefined);
+          onChange(next);
+        }}
+      />
+    </Field>
+  );
+}
+
+/** The just-picked file, retained only while it still matches the current field value. */
+interface AttachedMedia {
+  name: string;
+  previewUrl: string;
+  value: string;
+}
+
+/**
+ * The display derived from the attached file and the current value: the chip/preview
+ * applies ONLY while the attachment still matches the value (an external reset or a
+ * different record loading falls back to a value-derived display so a stale
+ * filename/thumbnail can never linger); an existing data-url value reconstructs its
+ * own preview.
+ */
+function mediaPreview(
+  attached: AttachedMedia | undefined,
+  value: string,
+  media: MediaUpload,
+): { previewUrl: string | undefined; isImage: boolean; fileName: string | undefined } {
+  const activeAttached = attached?.value === value ? attached : undefined;
+  const previewUrl =
+    activeAttached?.previewUrl ??
+    (media.encoding === 'data-url' && value.startsWith('data:') ? value : undefined);
+  const isImage =
+    media.mediaType?.startsWith('image/') === true || previewUrl?.startsWith('data:image') === true;
+  const fileName = activeAttached?.name ?? (value !== '' ? 'Attached file' : undefined);
+  return { previewUrl, isImage, fileName };
+}
+
+/** The attached-file chip: an image thumbnail when previewable, else a filename badge, plus Remove. */
+function AttachedPreview({
+  fileName,
+  isImage,
+  previewUrl,
+  onClear,
+}: {
+  fileName: string | undefined;
+  isImage: boolean;
+  previewUrl: string | undefined;
+  onClear: () => void;
+}): ReactNode {
+  if (fileName === undefined) return null;
+  return (
+    <div className="tai-row">
+      {isImage && previewUrl !== undefined ? (
+        <img
+          src={previewUrl}
+          alt={fileName}
+          // A thumbnail is per-instance geometry: it is capped to a fixed height and
+          // can never exceed the width it is given.
+          style={{
+            maxWidth: '100%',
+            maxHeight: '6rem',
+            borderRadius: 'var(--tai-radius-md)',
+            border: '1px solid var(--tai-color-control-border)',
           }}
         />
-      </label>
-    </Field>
+      ) : (
+        <Badge>{fileName}</Badge>
+      )}
+      <Button type="button" variant="secondary" onClick={onClear}>
+        Remove
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * The paste fallback: a text input that enforces the SAME effective byte cap the
+ * picker does, measured on the pasted string's DECODED size. An over-cap paste is
+ * rejected LOUDLY (`onReject`) and the field keeps its prior value; an accepted paste
+ * clears any attachment and emits the new value (`onAccept`).
+ */
+function MediaPasteInput({
+  pasteId,
+  value,
+  maxBytes,
+  uploadErrorId,
+  onReject,
+  onAccept,
+}: {
+  pasteId: string;
+  value: string;
+  maxBytes: number;
+  /** Set while an upload error stands, so the input points at it and reads invalid. */
+  uploadErrorId: string | undefined;
+  onReject: (message: string) => void;
+  onAccept: (value: string) => void;
+}): ReactNode {
+  return (
+    <label htmlFor={pasteId} className="tai-field">
+      <span className="tai-field-hint">Or paste a value</span>
+      <TextInput
+        id={pasteId}
+        type="text"
+        // Only the upload error's id: `TextInput` joins it with the enclosing Field's
+        // own description and error IDREFs rather than replacing them.
+        aria-describedby={uploadErrorId}
+        aria-invalid={uploadErrorId === undefined ? undefined : true}
+        value={value}
+        onChange={(event) => {
+          const next = event.target.value;
+          const size = decodedByteSize(next);
+          if (size > maxBytes) {
+            onReject(overCapMessage('The pasted value', size, maxBytes));
+            return;
+          }
+          onAccept(next);
+        }}
+      />
+    </label>
   );
 }
 

@@ -1,8 +1,8 @@
 /**
- * Detail-pane tests: the active baked kwargs render through `JsonTree`; a normal
- * record exposes New version + version history + the soft-delete copy; a conflicted
- * record is delete-only with the quarantine copy; a successful delete clears the
- * `?preset=` selection.
+ * The preset detail panel — the record view and overlay details: fixed_kwargs +
+ * active version, the overlay display name / tags edit (two-field merge-patch, SDK
+ * reload, tool_meta-off note), the New version / output-schema / conflicted-record
+ * surfaces, and the basic rename affordance + a successful rename.
  */
 import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -13,48 +13,8 @@ import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { ApiError } from '@tai42/api-client';
 
 import { PresetDetail } from './PresetDetail';
-import {
-  presetDetailKey,
-  presetRefereesKey,
-  presetToolMetaKey,
-  presetVersionsKey,
-  presetsListKey,
-} from './keys';
-import { renderWithProviders, type StubApiClient } from './test-utils';
-
-const detail = {
-  name: 'paris_weather',
-  base_tool: 'weather',
-  description: 'Paris weather',
-  active_version: 7,
-  extensions: [],
-  output_schema: null,
-  conflicted: false,
-  conflicted_reason: null,
-  uses: [],
-  used_by: [],
-  fixed_kwargs: { city: 'Paris' },
-};
-
-/** An empty overlay map — the default for tests that don't exercise overlay details. */
-const emptyMeta = { folders: [], meta: [] };
-
-const versions = [
-  {
-    version: 2,
-    body: {
-      base_tool: 'weather',
-      description: 'Paris weather',
-      fixed_kwargs: { city: 'Paris' },
-      extensions: [],
-      tags: ['geo'],
-      output_schema: null,
-    },
-    tags: [],
-    created_at: 'now',
-    is_current: true,
-  },
-];
+import { presetDetailKey, presetToolMetaKey, presetVersionsKey, presetsListKey } from './keys';
+import { detail, emptyMeta, renderWithProviders, versions, type StubApiClient } from './test-utils';
 
 describe('PresetDetail', () => {
   it('renders the active fixed_kwargs via JsonTree and the active version', async () => {
@@ -374,152 +334,6 @@ describe('PresetDetail', () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: toolsListKey });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetVersionsKey('london_weather') });
     // …and the OLD name's (credential-bearing) caches are dropped.
-    expect(remove).toHaveBeenCalledWith({ queryKey: presetDetailKey('paris_weather') });
-    expect(remove).toHaveBeenCalledWith({ queryKey: presetVersionsKey('paris_weather') });
-  });
-
-  it('renders a rejected rename’s server message verbatim, including the referee list', async () => {
-    const user = userEvent.setup();
-    const serverMessage =
-      "preset 'paris_weather' cannot be renamed: it is referenced by preset(s) ['a_ref', 'z_ref']; update those presets first";
-    const client: StubApiClient = {
-      getPreset: vi.fn().mockResolvedValue(detail),
-      listPresetVersions: vi.fn().mockResolvedValue(versions),
-      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
-      renamePreset: vi.fn().mockRejectedValue(new Error(serverMessage)),
-    };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
-
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
-    await user.type(screen.getByRole('textbox'), 'london_weather');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
-
-    // The server message — referee list and all — renders verbatim, no truncation.
-    expect(await screen.findByText(serverMessage)).toBeInTheDocument();
-  });
-
-  it('shows the server conflicted_reason verbatim on a conflicted record', async () => {
-    const client: StubApiClient = {
-      getPreset: vi.fn().mockResolvedValue({
-        ...detail,
-        conflicted: true,
-        conflicted_reason: 'name shadowed by manifest tool weather at boot',
-      }),
-      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
-    };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
-
-    expect(
-      await screen.findByText('name shadowed by manifest tool weather at boot'),
-    ).toBeInTheDocument();
-  });
-
-  it('preflight: a non-empty referee list blocks the rename with a danger callout', async () => {
-    const user = userEvent.setup();
-    const renamePreset = vi.fn();
-    const client: StubApiClient = {
-      getPreset: vi.fn().mockResolvedValue(detail),
-      listPresetVersions: vi.fn().mockResolvedValue(versions),
-      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
-      getPresetReferees: vi
-        .fn()
-        .mockResolvedValue({ name: 'paris_weather', referees: ['a_ref', 'z_ref'] }),
-      renamePreset,
-    };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
-
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
-    // The referees callout lists the blockers and the submit is disabled.
-    expect(
-      await screen.findByText('Referenced by: a_ref, z_ref — update those presets first.'),
-    ).toBeInTheDocument();
-    const rename = screen.getByRole('button', { name: 'Rename' });
-    expect(rename).toBeDisabled();
-
-    await user.type(screen.getByRole('textbox'), 'london_weather');
-    expect(screen.getByRole('button', { name: 'Rename' })).toBeDisabled();
-    expect(renamePreset).not.toHaveBeenCalled();
-  });
-
-  it('preflight: an empty referee list allows the rename', async () => {
-    const user = userEvent.setup();
-    const renamePreset = vi.fn().mockResolvedValue({
-      name: 'london_weather',
-      renamed_from: 'paris_weather',
-      active_version: 7,
-    });
-    const getPresetReferees = vi.fn().mockResolvedValue({ name: 'paris_weather', referees: [] });
-    const client: StubApiClient = {
-      getPreset: vi.fn().mockResolvedValue(detail),
-      listPresetVersions: vi.fn().mockResolvedValue(versions),
-      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
-      getPresetReferees,
-      renamePreset,
-    };
-    const { queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, { client });
-    const remove = vi.spyOn(queryClient, 'removeQueries');
-
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
-    await user.type(screen.getByRole('textbox'), 'london_weather');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
-
-    expect(renamePreset).toHaveBeenCalledWith('paris_weather', 'london_weather');
-    // The old name's referees cache is dropped alongside its other caches.
-    expect(remove).toHaveBeenCalledWith({ queryKey: presetRefereesKey('paris_weather') });
-  });
-
-  it('preflight: a referees fetch error degrades to advisory (submit stays enabled)', async () => {
-    const user = userEvent.setup();
-    const renamePreset = vi.fn().mockResolvedValue({
-      name: 'london_weather',
-      renamed_from: 'paris_weather',
-      active_version: 7,
-    });
-    const client: StubApiClient = {
-      getPreset: vi.fn().mockResolvedValue(detail),
-      listPresetVersions: vi.fn().mockResolvedValue(versions),
-      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
-      getPresetReferees: vi.fn().mockRejectedValue(new Error('referees door 503')),
-      renamePreset,
-    };
-    renderWithProviders(<PresetDetail name="paris_weather" />, { client });
-
-    await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
-    // The advisory error shows small, but a legal rename is NOT blocked.
-    expect(
-      await screen.findByText(/Could not check referees: referees door 503/),
-    ).toBeInTheDocument();
-    await user.type(screen.getByRole('textbox'), 'london_weather');
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
-
-    expect(renamePreset).toHaveBeenCalledWith('paris_weather', 'london_weather');
-  });
-
-  it('clears the ?preset= selection after a successful delete', async () => {
-    const user = userEvent.setup();
-    const deletePreset = vi.fn().mockResolvedValue({ name: 'paris_weather', deleted: true });
-    const client: StubApiClient = {
-      getPreset: vi.fn().mockResolvedValue(detail),
-      listPresetVersions: vi.fn().mockResolvedValue(versions),
-      listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
-      deletePreset,
-    };
-    const { navigate, queryClient } = renderWithProviders(<PresetDetail name="paris_weather" />, {
-      client,
-    });
-    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
-    const remove = vi.spyOn(queryClient, 'removeQueries');
-
-    await user.click(await screen.findByRole('button', { name: 'Delete preset paris_weather' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
-
-    expect(deletePreset).toHaveBeenCalledWith('paris_weather');
-    expect(navigate).toHaveBeenCalledWith('presets', {});
-    // The list + tools master list are invalidated…
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: presetsListKey });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: toolsListKey });
-    // …and the deleted preset's own (credential-bearing) caches are dropped so a
-    // same-name recreate cannot flash the removed record.
     expect(remove).toHaveBeenCalledWith({ queryKey: presetDetailKey('paris_weather') });
     expect(remove).toHaveBeenCalledWith({ queryKey: presetVersionsKey('paris_weather') });
   });

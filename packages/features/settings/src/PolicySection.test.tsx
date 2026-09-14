@@ -15,12 +15,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiError, type ApiClient } from '@tai42/api-client';
 
-import {
-  CONDITION_SHAPE,
-  liveSampleInput,
-  makeConditionServerValidate,
-  PolicySection,
-} from './PolicySection';
+import { CONDITION_SHAPE, liveSampleInput, makeConditionServerValidate } from './policy-condition';
+import { PolicySection } from './PolicySection';
 import { renderWithProviders } from './test-utils';
 
 function stubClient(methods: Partial<Record<keyof ApiClient, unknown>>): ApiClient {

@@ -4,27 +4,15 @@
  */
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Button,
-  Dialog,
-  ErrorState,
-  Spinner,
-  TextInput,
-  errorMessage,
-  useApi,
-} from '@tai42/studio-sdk';
+import { Button, Dialog, ErrorState, Spinner, errorMessage, useApi } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
 
 import { tokensPayloadKey } from './keys';
-import { PolicySection, type PolicyFields, type PolicySeed } from './PolicySection';
-import { ScopePicker } from './ScopePicker';
-import {
-  conditionWarningStyle,
-  dialogActionsStyle,
-  fieldLabelStyle,
-  formStyle,
-  type KeyPayload,
-} from './api-keys-common';
+import { PolicySection } from './PolicySection';
+import type { PolicyFields, PolicySeed } from './policy-data';
+import { KeyFormFields } from './KeyFormFields';
+import { conditionWarningStyle, dialogActionsStyle, formStyle } from './api-keys-styles';
+import type { KeyPayload } from './key-owner';
 
 export function EditKeyDialog({
   payload,
@@ -73,42 +61,15 @@ export function EditKeyDialog({
       }}
     >
       <div style={formStyle}>
-        <div>
-          <label style={fieldLabelStyle} htmlFor="edit-key-user">
-            User ID
-          </label>
-          <TextInput id="edit-key-user" aria-label="User ID" value={payload.user_id} disabled />
-        </div>
-        <div>
-          <label style={fieldLabelStyle} htmlFor="edit-key-desc">
-            Description
-          </label>
-          <TextInput
-            id="edit-key-desc"
-            aria-label="Description"
-            value={description}
-            autoComplete="off"
-            onChange={(event) => {
-              setDescription(event.target.value);
-            }}
-          />
-        </div>
-        <div>
-          <span style={fieldLabelStyle}>Scopes</span>
-          <ScopePicker
-            scopeIds={scopeIds}
-            selected={selected}
-            disabled={false}
-            onToggle={(scopeId, next) => {
-              setSelected((current) => {
-                const updated = new Set(current);
-                if (next) updated.add(scopeId);
-                else updated.delete(scopeId);
-                return updated;
-              });
-            }}
-          />
-        </div>
+        <KeyFormFields
+          idPrefix="edit-key"
+          userId={payload.user_id}
+          description={description}
+          onDescriptionChange={setDescription}
+          scopeIds={scopeIds}
+          selected={selected}
+          onSelectedChange={setSelected}
+        />
         <PolicySection
           idPrefix="edit-key"
           seed={seed}

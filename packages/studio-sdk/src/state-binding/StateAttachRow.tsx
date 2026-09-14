@@ -127,163 +127,238 @@ export function StateAttachRow({
         borderRadius: 'var(--tai-radius-md)',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          gap: 'var(--tai-space-2)',
-          alignItems: 'flex-end',
-          flexWrap: 'wrap',
+      <AttachStateHeader
+        state={attach.state}
+        statesCatalog={statesCatalog}
+        onSelectState={(next) => {
+          // A new state resets the template picks (its attachments differ).
+          onChange({ ...attach, state: next, templates: [] });
         }}
-      >
-        <Field label="State">
-          <Select
-            aria-label="State"
-            placeholder="Choose a state"
-            value={attach.state}
-            onValueChange={(next) => {
-              // A new state resets the template picks (its attachments differ).
-              onChange({ ...attach, state: next, templates: [] });
-            }}
-            options={statesCatalog.map((option) => ({ value: option.name, label: option.name }))}
-          />
-        </Field>
-        <Button
-          type="button"
-          variant="ghost"
-          aria-label={`Remove state ${attach.state === '' ? '(unset)' : attach.state}`}
-          onClick={onRemove}
-        >
-          <CloseIcon aria-hidden="true" />
-        </Button>
-      </div>
+        onRemove={onRemove}
+      />
 
       {inherited !== undefined && attach.state !== '' ? (
-        <div
-          role="status"
-          style={{
-            display: 'flex',
-            gap: 'var(--tai-space-2)',
-            alignItems: 'flex-start',
-            padding: 'var(--tai-space-2)',
-            borderRadius: 'var(--tai-radius-md)',
-            background: 'var(--tai-color-warn-tint)',
-            color: 'var(--tai-color-warn-text)',
-          }}
-        >
-          <AlertTriangleIcon aria-hidden="true" />
-          <div>
-            <strong>Overrides the preset&rsquo;s subject</strong>
-            <div style={{ display: 'flex', gap: 'var(--tai-space-2)', flexWrap: 'wrap' }}>
-              <span
-                style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}
-              >
-                Preset default:
-              </span>
-              <span style={{ fontFamily: 'var(--tai-font-mono)', fontSize: 'var(--tai-text-sm)' }}>
-                {`subject: ${templatedTextSummary(inherited.subject_expr)}`}
-                {inherited.scope_expr !== null
-                  ? `, scope: ${templatedTextSummary(inherited.scope_expr)}`
-                  : ''}
-              </span>
-            </div>
-          </div>
-        </div>
+        <InheritedSubjectNote inherited={inherited} />
       ) : null}
 
-      {attach.state !== '' && unresolved ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
-          <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
-            Template not attached.
-          </p>
-          <CodeBlock code={rawBindingLines(attach)} language="text" />
-        </div>
-      ) : null}
+      {attach.state !== '' && unresolved ? <UnresolvedBinding attach={attach} /> : null}
 
       {attach.state !== '' && !unresolved ? (
-        <>
-          <Field
-            label="Templates"
-            group
-            description="One or more templates this binding attaches to the state."
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
-              {templatesCatalog.length === 0 ? (
-                <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
-                  No templates available.
-                </p>
-              ) : (
-                templatesCatalog.map((template) => {
-                  const checked = attach.templates.includes(template.name);
-                  const willAttach = checked && !attachedTemplates.includes(template.name);
-                  return (
-                    <div
-                      key={template.name}
-                      style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        label={template.name}
-                        onCheckedChange={(next) => {
-                          toggleTemplate(template.name, next);
-                        }}
-                      />
-                      {willAttach ? (
-                        <span
-                          style={{
-                            color: 'var(--tai-color-text-muted)',
-                            fontSize: 'var(--tai-text-sm)',
-                          }}
-                        >
-                          {ATTACH_ON_USE_HINT}
-                        </span>
-                      ) : null}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </Field>
-
-          <SubjectScopeFields
-            subjectExpr={attach.subject_expr}
-            scopeExpr={attach.scope_expr}
-            subjectError={subjectError}
-            suggestions={suggestions}
-            templates={templates}
-            onSubjectChange={(next) => {
-              onChange({ ...attach, subject_expr: next });
-            }}
-            onScopeChange={(next) => {
-              onChange({ ...attach, scope_expr: next });
-            }}
-          />
-
-          <Field label="Inputs" group>
-            <InjectionList
-              injections={attach.input_injections}
-              inputJq={inputJq}
-              suggestions={suggestions}
-              templates={templates}
-              onChange={(next) => {
-                onChange({ ...attach, input_injections: [...next] });
-              }}
-            />
-          </Field>
-
-          <Field label="Updates" group>
-            <UpdateList
-              updates={attach.updates}
-              updateJq={updateJq}
-              sources={sources}
-              suggestions={suggestions}
-              templates={templates}
-              onChange={(next) => {
-                onChange({ ...attach, updates: [...next] });
-              }}
-            />
-          </Field>
-        </>
+        <ResolvedAttachBody
+          attach={attach}
+          templatesCatalog={templatesCatalog}
+          attachedTemplates={attachedTemplates}
+          subjectError={subjectError}
+          suggestions={suggestions}
+          templates={templates}
+          sources={sources}
+          inputJq={inputJq}
+          updateJq={updateJq}
+          onChange={onChange}
+          onToggleTemplate={toggleTemplate}
+        />
       ) : null}
     </div>
+  );
+}
+
+/** The state selector plus the remove control. */
+function AttachStateHeader({
+  state,
+  statesCatalog,
+  onSelectState,
+  onRemove,
+}: {
+  readonly state: string;
+  readonly statesCatalog: readonly BindingStateOption[];
+  readonly onSelectState: (next: string) => void;
+  readonly onRemove: () => void;
+}): ReactNode {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        gap: 'var(--tai-space-2)',
+        alignItems: 'flex-end',
+        flexWrap: 'wrap',
+      }}
+    >
+      <Field label="State">
+        <Select
+          aria-label="State"
+          placeholder="Choose a state"
+          value={state}
+          onValueChange={onSelectState}
+          options={statesCatalog.map((option) => ({ value: option.name, label: option.name }))}
+        />
+      </Field>
+      <Button
+        type="button"
+        variant="ghost"
+        aria-label={`Remove state ${state === '' ? '(unset)' : state}`}
+        onClick={onRemove}
+      >
+        <CloseIcon aria-hidden="true" />
+      </Button>
+    </div>
+  );
+}
+
+/** The precedence warning shown when the target's own binding already sets this state's subject. */
+function InheritedSubjectNote({ inherited }: { readonly inherited: InheritedSubject }): ReactNode {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        gap: 'var(--tai-space-2)',
+        alignItems: 'flex-start',
+        padding: 'var(--tai-space-2)',
+        borderRadius: 'var(--tai-radius-md)',
+        background: 'var(--tai-color-warn-tint)',
+        color: 'var(--tai-color-warn-text)',
+      }}
+    >
+      <AlertTriangleIcon aria-hidden="true" />
+      <div>
+        <strong>Overrides the preset&rsquo;s subject</strong>
+        <div style={{ display: 'flex', gap: 'var(--tai-space-2)', flexWrap: 'wrap' }}>
+          <span style={{ color: 'var(--tai-color-text-muted)', fontSize: 'var(--tai-text-sm)' }}>
+            Preset default:
+          </span>
+          <span style={{ fontFamily: 'var(--tai-font-mono)', fontSize: 'var(--tai-text-sm)' }}>
+            {`subject: ${templatedTextSummary(inherited.subject_expr)}`}
+            {inherited.scope_expr !== null
+              ? `, scope: ${templatedTextSummary(inherited.scope_expr)}`
+              : ''}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The read-only fallback for a state/template the server no longer resolves: the raw jq. */
+function UnresolvedBinding({ attach }: { readonly attach: StateAttach }): ReactNode {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)' }}>
+      <p role="alert" style={{ margin: 0, color: 'var(--tai-color-err-text)' }}>
+        Template not attached.
+      </p>
+      <CodeBlock code={rawBindingLines(attach)} language="text" />
+    </div>
+  );
+}
+
+/** The resolved binding editor: the template checklist, subject/scope, inputs and updates. */
+function ResolvedAttachBody({
+  attach,
+  templatesCatalog,
+  attachedTemplates,
+  subjectError,
+  suggestions,
+  templates,
+  sources,
+  inputJq,
+  updateJq,
+  onChange,
+  onToggleTemplate,
+}: {
+  readonly attach: StateAttach;
+  readonly templatesCatalog: readonly BindingTemplateOption[];
+  readonly attachedTemplates: readonly string[];
+  readonly subjectError?: string;
+  readonly suggestions: readonly TemplateJqSuggestion[];
+  readonly templates?: TemplatedTextCatalog;
+  readonly sources?: BindingSourceSchemas;
+  readonly inputJq: ReturnType<typeof resolveTemplateJq>;
+  readonly updateJq: ReturnType<typeof resolveTemplateJq>;
+  readonly onChange: (attach: StateAttach) => void;
+  readonly onToggleTemplate: (name: string, checked: boolean) => void;
+}): ReactNode {
+  return (
+    <>
+      <Field
+        label="Templates"
+        group
+        description="One or more templates this binding attaches to the state."
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-1)' }}>
+          {templatesCatalog.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
+              No templates available.
+            </p>
+          ) : (
+            templatesCatalog.map((template) => {
+              const checked = attach.templates.includes(template.name);
+              const willAttach = checked && !attachedTemplates.includes(template.name);
+              return (
+                <div
+                  key={template.name}
+                  style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
+                >
+                  <Checkbox
+                    checked={checked}
+                    label={template.name}
+                    onCheckedChange={(next) => {
+                      onToggleTemplate(template.name, next);
+                    }}
+                  />
+                  {willAttach ? (
+                    <span
+                      style={{
+                        color: 'var(--tai-color-text-muted)',
+                        fontSize: 'var(--tai-text-sm)',
+                      }}
+                    >
+                      {ATTACH_ON_USE_HINT}
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </Field>
+
+      <SubjectScopeFields
+        subjectExpr={attach.subject_expr}
+        scopeExpr={attach.scope_expr}
+        subjectError={subjectError}
+        suggestions={suggestions}
+        templates={templates}
+        onSubjectChange={(next) => {
+          onChange({ ...attach, subject_expr: next });
+        }}
+        onScopeChange={(next) => {
+          onChange({ ...attach, scope_expr: next });
+        }}
+      />
+
+      <Field label="Inputs" group>
+        <InjectionList
+          injections={attach.input_injections}
+          inputJq={inputJq}
+          suggestions={suggestions}
+          templates={templates}
+          onChange={(next) => {
+            onChange({ ...attach, input_injections: [...next] });
+          }}
+        />
+      </Field>
+
+      <Field label="Updates" group>
+        <UpdateList
+          updates={attach.updates}
+          updateJq={updateJq}
+          sources={sources}
+          suggestions={suggestions}
+          templates={templates}
+          onChange={(next) => {
+            onChange({ ...attach, updates: [...next] });
+          }}
+        />
+      </Field>
+    </>
   );
 }

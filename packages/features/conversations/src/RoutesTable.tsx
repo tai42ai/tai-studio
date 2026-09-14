@@ -13,11 +13,9 @@
  * Every server-supplied value renders as escaped React text (a table cell); no
  * route field is ever interpreted as markup.
  */
-import { useState, type ReactNode, type RefObject } from 'react';
+import { useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  AppLink,
-  Badge,
   Button,
   Card,
   ConfirmDialog,
@@ -25,7 +23,6 @@ import {
   ScrollRegion,
   Skeleton,
   TBody,
-  TD,
   TH,
   THead,
   TR,
@@ -36,15 +33,20 @@ import {
 } from '@tai42/studio-sdk';
 import type { ConversationRoute } from '@tai42/api-client';
 
-import { EMPTY_PLACEHOLDER } from './format';
 import { conversationRoutesKey } from './keys';
 import { ReadFailure } from './read-states';
 import { RouteFormDialog } from './RouteFormDialog';
+import { RouteRow } from './RouteRow';
 
-/** The accessible name of a route row's link; the return-focus target after Back. */
-export function routeRowLabel(routeName: string): string {
-  return `Open route ${routeName}`;
-}
+export { routeRowLabel } from './RouteRow';
+
+const headerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 'var(--tai-space-3)',
+  marginBottom: 'var(--tai-space-4)',
+};
 
 export function RoutesTable({
   listRef,
@@ -115,61 +117,21 @@ export function RoutesTable({
           </THead>
           <TBody>
             {routes.data.items.map((route) => (
-              <TR key={route.route_name}>
-                <TD>
-                  <AppLink
-                    to="conversations"
-                    search={{ route: route.route_name }}
-                    className="tai-table-id"
-                    aria-label={routeRowLabel(route.route_name)}
-                  >
-                    {route.route_name}
-                  </AppLink>
-                </TD>
-                <TD>
-                  <Badge>{route.channel ?? route.door}</Badge>
-                </TD>
-                <TD>
-                  <span className="tai-mono">{route.our_identity ?? EMPTY_PLACEHOLDER}</span>
-                </TD>
-                <TD>
-                  <span className="tai-mono">{`${route.target_kind}: ${route.target_name}`}</span>
-                </TD>
-                <TD style={{ textAlign: 'right' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      gap: 'var(--tai-space-2)',
-                      justifyContent: 'flex-end',
-                    }}
-                  >
-                    {canWrite ? (
-                      <Button
-                        aria-label={`Edit route ${route.route_name}`}
-                        onClick={() => {
-                          setEditing(route);
-                        }}
-                      >
-                        Edit
-                      </Button>
-                    ) : null}
-                    {canDelete ? (
-                      <Button
-                        variant="ghost"
-                        aria-label={`Delete route ${route.route_name}`}
-                        onClick={() => {
-                          // Clear any prior delete failure so this confirm opens clean,
-                          // never carrying a stale error from a different route's attempt.
-                          deleteMutation.reset();
-                          setPendingDelete(route.route_name);
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                  </div>
-                </TD>
-              </TR>
+              <RouteRow
+                key={route.route_name}
+                route={route}
+                canWrite={canWrite}
+                canDelete={canDelete}
+                onEdit={() => {
+                  setEditing(route);
+                }}
+                onDelete={() => {
+                  // Clear any prior delete failure so this confirm opens clean, never
+                  // carrying a stale error from a different route's attempt.
+                  deleteMutation.reset();
+                  setPendingDelete(route.route_name);
+                }}
+              />
             ))}
           </TBody>
         </Table>
@@ -178,20 +140,11 @@ export function RoutesTable({
   }
 
   return (
-    // Focusable, unreachable by Tab: it is where focus lands on the way back from
-    // a route whose row is no longer listed. Unnamed on purpose — what it holds
-    // (the routes table, or the empty note in its place) is what should be read.
+    // Focusable, unreachable by Tab: where focus lands on the way back from a route
+    // whose row is no longer listed. Unnamed on purpose.
     <div ref={listRef} tabIndex={-1} data-testid="conversation-routes-list">
       <Card>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--tai-space-3)',
-            marginBottom: 'var(--tai-space-4)',
-          }}
-        >
+        <div style={headerStyle}>
           <h2 style={{ margin: 0, fontSize: 'var(--tai-text-lg)' }}>Conversation routes</h2>
           {canWrite ? (
             <Button

@@ -24,117 +24,115 @@ const pages: RegisteredPage[] = [];
 const settingsTabs: RegisteredSettingsTab[] = [];
 const navEntries: RegisteredNavEntry[] = [];
 
+/** The contributions one plugin stages before they commit as a batch. */
+interface StagedContributions {
+  readonly pages: RegisteredPage[];
+  readonly toolPanels: Map<string, ToolPanelContribution>;
+  readonly settingsTabs: RegisteredSettingsTab[];
+  readonly tabIds: Set<string>;
+  readonly navEntries: RegisteredNavEntry[];
+}
+
 /**
- * Load one plugin: call its `register` entry with a context bound to `pluginId`,
- * then commit everything it staged into the global registry.
- *
- * Contributions are STAGED into local arrays (identity captured in the closure,
- * never read from ambient state) and only committed after `entry` settles
- * successfully. `entry` is AWAITED before commit, so a synchronous or an `async`
- * entry is fully done first: a post-`await` throw skips the commit (atomicity
- * holds for async too) and a post-`await` registration cannot slip past the batch.
- * The seal is set after `entry` has SETTLED — for a sync entry, after it returns
- * and the `await` continuation runs; for an async entry, after its returned promise
- * resolves. A registration attempted from that point on (a deferred timer, a
- * callback scheduled after settle) throws loudly instead of pushing into an
- * orphaned staged array that never commits. Registrations made during `entry`'s
- * synchronous body — including a microtask it enqueues then, which runs before the
- * `await` continuation — are still captured and committed with the batch. A
- * `register` that throws commits nothing and leaves the registry untouched.
- * Duplicate guards run against BOTH the staged contributions and what is already
+ * A mutable seal flag passed BY REFERENCE into the staging context, so the seal set
+ * in {@link loadPlugin}'s `finally` is seen by every `register*` method's closure.
+ */
+interface Seal {
+  closed: boolean;
+}
+
+function emptyStaged(): StagedContributions {
+  return {
+    pages: [],
+    toolPanels: new Map(),
+    settingsTabs: [],
+    tabIds: new Set(),
+    navEntries: [],
+  };
+}
+
+/**
+ * Build the {@link PluginContext} a plugin's `register` entry contributes through.
+ * Every method stages into `staged` (never ambient state) and refuses once `seal` is
+ * closed — a registration after `entry` settles (a deferred timer, a post-settle
+ * callback) throws loudly rather than pushing into an orphaned array that never
+ * commits. Duplicate guards run against BOTH the staged set and what is already
  * committed, and fail loudly.
  */
-export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void> {
-  const stagedPages: RegisteredPage[] = [];
-  const stagedToolPanels = new Map<string, ToolPanelContribution>();
-  const stagedSettingsTabs: RegisteredSettingsTab[] = [];
-  const stagedTabIds = new Set<string>();
-  const stagedNavEntries: RegisteredNavEntry[] = [];
-  let sealed = false;
-
-  const context: PluginContext = {
+function makeStagingContext(
+  pluginId: string,
+  staged: StagedContributions,
+  seal: Seal,
+): PluginContext {
+  const assertOpen = (): void => {
+    if (seal.closed) {
+      throw new Error(
+        'registration is closed: a plugin must register during register(), not after it resolves',
+      );
+    }
+  };
+  return {
     registerPage(contribution: PageContribution): void {
-      if (sealed) {
-        throw new Error(
-          'registration is closed: a plugin must register during register(), not after it resolves',
-        );
-      }
-      const staged = stagedPages.some((p) => p.path === contribution.path);
-      const committed = pages.some((p) => p.pluginId === pluginId && p.path === contribution.path);
-      if (staged || committed) {
+      assertOpen();
+      const duplicate =
+        staged.pages.some((p) => p.path === contribution.path) ||
+        pages.some((p) => p.pluginId === pluginId && p.path === contribution.path);
+      if (duplicate) {
         // A duplicate path within one plugin is an author mistake that would
         // leave one page unreachable — fail loudly, as registerToolPanel does.
         throw new Error(`plugin “${pluginId}” already registered a page at “${contribution.path}”`);
       }
-      stagedPages.push({ ...contribution, pluginId });
+      staged.pages.push({ ...contribution, pluginId });
     },
     registerToolPanel(contribution: ToolPanelContribution): void {
-      if (sealed) {
-        throw new Error(
-          'registration is closed: a plugin must register during register(), not after it resolves',
-        );
-      }
-      if (stagedToolPanels.has(contribution.toolName) || toolPanels.has(contribution.toolName)) {
+      assertOpen();
+      if (staged.toolPanels.has(contribution.toolName) || toolPanels.has(contribution.toolName)) {
         throw new Error(`a tool panel is already registered for ${contribution.toolName}`);
       }
-      stagedToolPanels.set(contribution.toolName, contribution);
+      staged.toolPanels.set(contribution.toolName, contribution);
     },
     registerSettingsTab(contribution: SettingsTabContribution): void {
-      if (sealed) {
-        throw new Error(
-          'registration is closed: a plugin must register during register(), not after it resolves',
-        );
-      }
+      assertOpen();
       const committed = settingsTabs.some(
         (t) => t.pluginId === pluginId && t.id === contribution.id,
       );
-      if (stagedTabIds.has(contribution.id) || committed) {
+      if (staged.tabIds.has(contribution.id) || committed) {
         // A duplicate tab id within one plugin would leave one tab unreachable —
         // fail loudly, mirroring the page-path guard.
         throw new Error(
           `plugin “${pluginId}” already registered a settings tab “${contribution.id}”`,
         );
       }
-      stagedTabIds.add(contribution.id);
-      stagedSettingsTabs.push({ ...contribution, pluginId });
+      staged.tabIds.add(contribution.id);
+      staged.settingsTabs.push({ ...contribution, pluginId });
     },
     registerNavEntry(contribution: NavEntryContribution): void {
-      if (sealed) {
-        throw new Error(
-          'registration is closed: a plugin must register during register(), not after it resolves',
-        );
-      }
-      const staged = stagedNavEntries.some((e) => e.path === contribution.path);
-      const committed = navEntries.some(
-        (e) => e.pluginId === pluginId && e.path === contribution.path,
-      );
-      if (staged || committed) {
+      assertOpen();
+      const duplicate =
+        staged.navEntries.some((e) => e.path === contribution.path) ||
+        navEntries.some((e) => e.pluginId === pluginId && e.path === contribution.path);
+      if (duplicate) {
         // A duplicate nav path within one plugin is an author mistake — two
         // entries pointing at the same page — so fail loudly like the page guard.
         throw new Error(
           `plugin “${pluginId}” already registered a nav entry at “${contribution.path}”`,
         );
       }
-      stagedNavEntries.push({ ...contribution, pluginId });
+      staged.navEntries.push({ ...contribution, pluginId });
     },
   };
+}
 
-  try {
-    await entry(context);
-  } finally {
-    // Whether `entry` resolved or threw, no further registration is valid — seal
-    // so a deferred call fails loudly rather than pushing into an orphaned array.
-    sealed = true;
-  }
-
-  // Every nav entry must link to a page THIS plugin registers — staged in this
-  // call or already committed. A nav entry with no matching page is a guaranteed
-  // dead link (the plugin page surface renders "Page not found"), so reject it
-  // loudly. This throws BEFORE the commit loops, so it propagates out of
-  // `loadPlugin` and NOTHING (pages, panels, tabs, nav) commits — atomicity holds.
-  for (const navEntry of stagedNavEntries) {
+/**
+ * Every nav entry must link to a page THIS plugin registers — staged in this call or
+ * already committed. A nav entry with no matching page is a guaranteed dead link (the
+ * plugin page surface renders "Page not found"), so reject it loudly. Throwing here —
+ * BEFORE any commit — keeps atomicity: nothing (pages, panels, tabs, nav) commits.
+ */
+function assertNavEntriesHavePages(pluginId: string, staged: StagedContributions): void {
+  for (const navEntry of staged.navEntries) {
     const hasPage =
-      stagedPages.some((p) => p.path === navEntry.path) ||
+      staged.pages.some((p) => p.path === navEntry.path) ||
       pages.some((p) => p.pluginId === pluginId && p.path === navEntry.path);
     if (!hasPage) {
       throw new Error(
@@ -142,22 +140,45 @@ export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<
       );
     }
   }
+}
 
-  // `entry` resolved without throwing: commit the staged contributions as one
-  // batch, so the registry only ever holds a plugin's complete set — never a
-  // partial set left behind by a mid-registration failure.
-  for (const page of stagedPages) {
-    pages.push(page);
+/**
+ * Commit the staged contributions as one batch, so the registry only ever holds a
+ * plugin's complete set — never a partial set left behind by a mid-registration failure.
+ */
+function commitStaged(staged: StagedContributions): void {
+  for (const page of staged.pages) pages.push(page);
+  for (const [toolName, contribution] of staged.toolPanels) toolPanels.set(toolName, contribution);
+  for (const tab of staged.settingsTabs) settingsTabs.push(tab);
+  for (const navEntry of staged.navEntries) navEntries.push(navEntry);
+}
+
+/**
+ * Load one plugin: call its `register` entry with a context bound to `pluginId`,
+ * then commit everything it staged into the global registry.
+ *
+ * `entry` is AWAITED before commit, so a synchronous or an `async` entry is fully
+ * done first: a post-`await` throw skips the commit (atomicity holds for async too)
+ * and a post-`await` registration cannot slip past the batch. The seal is set after
+ * `entry` has SETTLED, so a later registration throws loudly; registrations made
+ * during `entry`'s synchronous body — including a microtask it enqueues then — are
+ * still captured and committed. A `register` that throws commits nothing.
+ */
+export async function loadPlugin(pluginId: string, entry: PluginEntry): Promise<void> {
+  const staged = emptyStaged();
+  const seal: Seal = { closed: false };
+  const context = makeStagingContext(pluginId, staged, seal);
+
+  try {
+    await entry(context);
+  } finally {
+    // Whether `entry` resolved or threw, no further registration is valid — seal
+    // so a deferred call fails loudly rather than pushing into an orphaned array.
+    seal.closed = true;
   }
-  for (const [toolName, contribution] of stagedToolPanels) {
-    toolPanels.set(toolName, contribution);
-  }
-  for (const tab of stagedSettingsTabs) {
-    settingsTabs.push(tab);
-  }
-  for (const navEntry of stagedNavEntries) {
-    navEntries.push(navEntry);
-  }
+
+  assertNavEntriesHavePages(pluginId, staged);
+  commitStaged(staged);
 }
 
 /** The shell reads this after loading every installed plugin bundle. */

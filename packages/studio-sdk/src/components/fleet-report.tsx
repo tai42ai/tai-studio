@@ -28,7 +28,11 @@
  * report is readable without color perception.
  */
 import type { ReactNode } from 'react';
-import type { FleetReportSummary, FleetFailureOutcome } from '@tai42/api-client';
+import type {
+  FleetReportSummary,
+  FleetFailureOutcome,
+  FleetWorkerFailure,
+} from '@tai42/api-client';
 
 import { AlertTriangleIcon, PendingIcon, XCircleIcon, type IconComponent } from './icons';
 
@@ -86,62 +90,75 @@ export interface FleetReportProps {
   readonly action?: 'save' | 'reload' | 'deregister' | 'remove';
 }
 
-export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
-  if (summary === null || summary.status === 'converged') return null;
+type FleetAction = NonNullable<FleetReportProps['action']>;
 
-  // Only a saved config change carries the "Change saved" framing; a reload or a
-  // deregister saved nothing.
-  const savedFraming = action === 'save';
-
-  if (summary.status === 'unreachable') {
-    // Where to send the operator once the bus is back: re-run the same op, except a
-    // saved change reloads from the System page.
-    const unreachableRemediation =
-      action === 'deregister'
-        ? 'Re-run the deregister once the bus is back.'
-        : action === 'remove'
-          ? 'Re-run the remove once the bus is back.'
-          : action === 'reload'
-            ? 'Re-run the reload once the bus is back.'
-            : 'Re-run the reload from the System page once the bus is back.';
-    return (
-      <div role="alert" className="tai-error-state tai-stack tai-stack-2">
-        <strong className="tai-status tai-status-err">
-          <XCircleIcon />
-          {savedFraming
-            ? 'Change saved, but the worker fleet was not reached'
-            : 'The worker fleet was not reached'}
-        </strong>
-        <p>
-          {`The worker bus was unreachable, so other workers may still be running the old config. ${unreachableRemediation}`}
-        </p>
-        {/* The bus error is a message, not a listing: it wraps rather than scrolls. */}
-        {summary.error !== null ? (
-          <p className="tai-code-block tai-code-block-wrap">{summary.error}</p>
-        ) : null}
-      </div>
-    );
+/**
+ * Where to send the operator, per action and phase. On `unreachable` the copy
+ * is a full sentence ending "once the bus is back."; on `degraded` it is the
+ * verb phrase spliced into the sentence the panel builds. A saved change reloads
+ * from the System page; a detach re-runs itself, since a reload would re-attach.
+ */
+function remediationText(action: FleetAction, phase: FleetReportStatusPhase): string {
+  if (phase === 'unreachable') {
+    if (action === 'deregister') return 'Re-run the deregister once the bus is back.';
+    if (action === 'remove') return 'Re-run the remove once the bus is back.';
+    if (action === 'reload') return 'Re-run the reload once the bus is back.';
+    return 'Re-run the reload from the System page once the bus is back.';
   }
+  if (action === 'deregister') return 're-run the deregister';
+  if (action === 'remove') return 're-run the remove';
+  if (action === 'reload') return 're-run the reload';
+  return 'reload the fleet from the System page';
+}
 
-  // degraded — the bus was reached but named workers did not converge. That is a
-  // warning, not a failure, so it takes the warning surface: a warn-toned
-  // headline inside an error-toned panel would state two different severities.
-  //
-  // A count and its noun agree. `worker(s)` is machine output at the one moment
-  // an operator is being told something went wrong, and a single unconverged
-  // worker is the commonest degraded fleet there is.
-  const count = summary.failures.length;
+type FleetReportStatusPhase = 'unreachable' | 'degraded';
+
+/** The loud panel for a bus that could not be reached: no sibling was told. */
+function UnreachableReport({
+  error,
+  savedFraming,
+  remediation,
+}: {
+  readonly error: string | null;
+  readonly savedFraming: boolean;
+  readonly remediation: string;
+}): ReactNode {
+  return (
+    <div role="alert" className="tai-error-state tai-stack tai-stack-2">
+      <strong className="tai-status tai-status-err">
+        <XCircleIcon />
+        {savedFraming
+          ? 'Change saved, but the worker fleet was not reached'
+          : 'The worker fleet was not reached'}
+      </strong>
+      <p>
+        {`The worker bus was unreachable, so other workers may still be running the old config. ${remediation}`}
+      </p>
+      {/* The bus error is a message, not a listing: it wraps rather than scrolls. */}
+      {error !== null ? <p className="tai-code-block tai-code-block-wrap">{error}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * The loud panel for a reachable bus whose named workers did not converge. A
+ * warning, not a failure, so it takes the warning surface: a warn-toned headline
+ * inside an error-toned panel would state two different severities.
+ */
+function DegradedReport({
+  failures,
+  savedFraming,
+  remediation,
+}: {
+  readonly failures: readonly FleetWorkerFailure[];
+  readonly savedFraming: boolean;
+  readonly remediation: string;
+}): ReactNode {
+  // A count and its noun agree. `worker(s)` is machine output at the one moment an
+  // operator is being told something went wrong, and a single unconverged worker
+  // is the commonest degraded fleet there is.
+  const count = failures.length;
   const workers = `${String(count)} worker${count === 1 ? '' : 's'}`;
-  // How the operator converges the stranded workers: re-run the same op, except a
-  // saved change reloads the fleet from the System page.
-  const remediation =
-    action === 'deregister'
-      ? 're-run the deregister'
-      : action === 'remove'
-        ? 're-run the remove'
-        : action === 'reload'
-          ? 're-run the reload'
-          : 'reload the fleet from the System page';
   return (
     <div role="alert" className="tai-warn-state tai-stack tai-stack-2">
       <strong className="tai-status tai-status-warn">
@@ -156,7 +173,7 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
           ` to converge ${count === 1 ? 'it' : 'them'}.`}
       </p>
       <ul className="tai-stack tai-stack-2">
-        {summary.failures.map((failure) => {
+        {failures.map((failure) => {
           const { tone, Icon } = OUTCOME_STATUS[failure.outcome];
           return (
             <li key={failure.name} className="tai-row">
@@ -173,5 +190,31 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
         })}
       </ul>
     </div>
+  );
+}
+
+export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
+  if (summary === null || summary.status === 'converged') return null;
+
+  // Only a saved config change carries the "Change saved" framing; a reload or a
+  // deregister saved nothing.
+  const savedFraming = action === 'save';
+
+  if (summary.status === 'unreachable') {
+    return (
+      <UnreachableReport
+        error={summary.error}
+        savedFraming={savedFraming}
+        remediation={remediationText(action, 'unreachable')}
+      />
+    );
+  }
+
+  return (
+    <DegradedReport
+      failures={summary.failures}
+      savedFraming={savedFraming}
+      remediation={remediationText(action, 'degraded')}
+    />
   );
 }

@@ -5,22 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiError, type ApiClient, type AuthRoute } from '@tai42/api-client';
 
-import type { DragEndEvent } from '@dnd-kit/core';
-
-import {
-  ScopesMapper,
-  PinPublicDialog,
-  UnpinPublicDialog,
-  DeleteScopeDialog,
-  RemoveLastUrlDialog,
-  resolveDrop,
-  dropFromDragEvent,
-  dispatchDrop,
-  describeZone,
-  scopeGroupsOf,
-  subMcpPattern,
-} from './ScopesMapper';
-import type { ChipData, ZoneRef } from './ScopeItemChip';
+import { ScopesMapper } from './ScopesMapper';
 import { authRoutesKey, publicRoutesKey, scopesKey, tokensPayloadKey } from './keys';
 import { decorBorderedControls, renderWithProviders } from './test-utils';
 
@@ -55,182 +40,6 @@ function zoneEl(domId: string): HTMLElement {
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-// -- pure resolveDrop --------------------------------------------------------
-
-describe('resolveDrop', () => {
-  const routeChip = (origin: ZoneRef): ChipData => ({
-    url: '/c',
-    itemType: 'route',
-    slug: null,
-    origin,
-    methods: ['GET'],
-  });
-  const subMcpChip = (origin: ZoneRef): ChipData => ({
-    url: '/app/y',
-    itemType: 'sub-mcp',
-    slug: 'y',
-    origin,
-    methods: [],
-  });
-
-  it('maps a route chip onto a scope with a plain body', () => {
-    const action = resolveDrop(routeChip({ kind: 'unassigned' }), {
-      zone: { kind: 'scope', scopeId: 's1' },
-    });
-    expect(action).toEqual({ kind: 'assign', body: { scope_id: 's1', url: '/c' } });
-  });
-
-  it('carries the subtree pattern for a sub-MCP chip dropped on a scope', () => {
-    const action = resolveDrop(subMcpChip({ kind: 'unassigned' }), {
-      zone: { kind: 'scope', scopeId: 's2' },
-    });
-    expect(action).toEqual({
-      kind: 'assign',
-      body: { scope_id: 's2', url: '/app/y', pattern: subMcpPattern('y') },
-    });
-    expect(subMcpPattern('y')).toBe('^/app/y/.*$');
-  });
-
-  it('is a no-op for a same-zone drop', () => {
-    const action = resolveDrop(routeChip({ kind: 'scope', scopeId: 's1' }), {
-      zone: { kind: 'scope', scopeId: 's1' },
-    });
-    expect(action).toEqual({ kind: 'noop' });
-  });
-
-  it('is a no-op when dropped on the unassigned bucket or off any zone', () => {
-    expect(
-      resolveDrop(routeChip({ kind: 'scope', scopeId: 's1' }), { zone: { kind: 'unassigned' } }),
-    ).toEqual({
-      kind: 'noop',
-    });
-    expect(resolveDrop(routeChip({ kind: 'scope', scopeId: 's1' }), null)).toEqual({
-      kind: 'noop',
-    });
-  });
-
-  it('pins a chip dropped on the Public zone (sub-MCP carries its pattern)', () => {
-    expect(resolveDrop(routeChip({ kind: 'unassigned' }), { zone: { kind: 'public' } })).toEqual({
-      kind: 'pin',
-      url: '/c',
-    });
-    expect(resolveDrop(subMcpChip({ kind: 'unassigned' }), { zone: { kind: 'public' } })).toEqual({
-      kind: 'pin',
-      url: '/app/y',
-      pattern: subMcpPattern('y'),
-    });
-  });
-
-  it('re-points a public chip into a scope as a plain assign', () => {
-    const action = resolveDrop(routeChip({ kind: 'public' }), {
-      zone: { kind: 'scope', scopeId: 's1' },
-    });
-    expect(action).toEqual({ kind: 'assign', body: { scope_id: 's1', url: '/c' } });
-  });
-
-  it('is a no-op re-dropping a public chip onto the Public zone', () => {
-    expect(resolveDrop(routeChip({ kind: 'public' }), { zone: { kind: 'public' } })).toEqual({
-      kind: 'noop',
-    });
-  });
-});
-
-// -- dropFromDragEvent (event adapter) ---------------------------------------
-
-describe('dropFromDragEvent', () => {
-  const chip: ChipData = {
-    url: '/c',
-    itemType: 'route',
-    slug: null,
-    origin: { kind: 'unassigned' },
-    methods: ['GET'],
-  };
-  const subMcp: ChipData = {
-    url: '/app/y',
-    itemType: 'sub-mcp',
-    slug: 'y',
-    origin: { kind: 'unassigned' },
-    methods: [],
-  };
-  const event = (active: ChipData | undefined, zone: ZoneRef | undefined): DragEndEvent =>
-    ({
-      active: { data: { current: active } },
-      over: zone === undefined ? null : { data: { current: { zone } } },
-    }) as unknown as DragEndEvent;
-
-  it('maps a route chip dropped over a scope to an assign action', () => {
-    expect(dropFromDragEvent(event(chip, { kind: 'scope', scopeId: 's1' }))).toEqual({
-      kind: 'assign',
-      body: { scope_id: 's1', url: '/c' },
-    });
-  });
-
-  it('carries the sub-MCP subtree pattern from the event to the assign body', () => {
-    expect(dropFromDragEvent(event(subMcp, { kind: 'scope', scopeId: 's2' }))).toEqual({
-      kind: 'assign',
-      body: { scope_id: 's2', url: '/app/y', pattern: subMcpPattern('y') },
-    });
-  });
-
-  it('resolves a drop over the Public zone to a pin action', () => {
-    expect(dropFromDragEvent(event(chip, { kind: 'public' }))).toEqual({ kind: 'pin', url: '/c' });
-  });
-
-  it('is a no-op when released off any zone', () => {
-    expect(dropFromDragEvent(event(chip, undefined))).toEqual({ kind: 'noop' });
-  });
-
-  it('is a no-op when the active chip carries no payload', () => {
-    expect(dropFromDragEvent(event(undefined, { kind: 'scope', scopeId: 's1' }))).toEqual({
-      kind: 'noop',
-    });
-  });
-});
-
-describe('dispatchDrop', () => {
-  it('runs an assign action through the assign handler only', () => {
-    const assign = vi.fn();
-    const pin = vi.fn();
-    dispatchDrop({ kind: 'assign', body: { scope_id: 's1', url: '/c' } }, { assign, pin });
-    expect(assign).toHaveBeenCalledWith({ scope_id: 's1', url: '/c' });
-    expect(pin).not.toHaveBeenCalled();
-  });
-
-  it('routes a pin action to the pin handler (the confirm), never the assign mutation', () => {
-    const assign = vi.fn();
-    const pin = vi.fn();
-    dispatchDrop({ kind: 'pin', url: '/app/y', pattern: subMcpPattern('y') }, { assign, pin });
-    expect(pin).toHaveBeenCalledWith('/app/y', '^/app/y/.*$');
-    expect(assign).not.toHaveBeenCalled();
-  });
-
-  it('does nothing for a no-op action', () => {
-    const assign = vi.fn();
-    const pin = vi.fn();
-    dispatchDrop({ kind: 'noop' }, { assign, pin });
-    expect(assign).not.toHaveBeenCalled();
-    expect(pin).not.toHaveBeenCalled();
-  });
-});
-
-describe('describeZone', () => {
-  it('names every zone kind', () => {
-    expect(describeZone({ kind: 'scope', scopeId: 's1' })).toBe('scope s1');
-    expect(describeZone({ kind: 'unassigned' })).toBe('the Unassigned bucket');
-    expect(describeZone({ kind: 'public' })).toBe('the Public zone');
-  });
-});
-
-describe('scopeGroupsOf', () => {
-  it('inverts the {url: scope_id} map into sorted per-scope url lists', () => {
-    const groups = scopeGroupsOf({ '/b': 's1', '/a': 's1', '/app/x': 's2' });
-    expect(groups.get('s1')).toEqual(['/a', '/b']);
-    expect(groups.get('s2')).toEqual(['/app/x']);
-  });
-});
-
-// -- grouping / rendering ----------------------------------------------------
 
 describe('ScopesMapper rendering', () => {
   const scopes = { '/a': 's1', '/b': 's1', '/app/x': 's2' };
@@ -330,8 +139,6 @@ describe('ScopesMapper rendering', () => {
   });
 });
 
-// -- create scope ------------------------------------------------------------
-
 describe('ScopesMapper create-scope', () => {
   function renderMapper(overrides: Stub = {}) {
     return renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
@@ -390,8 +197,6 @@ describe('ScopesMapper create-scope', () => {
     });
   });
 });
-
-// -- add-route row -----------------------------------------------------------
 
 describe('ScopesMapper add-route row', () => {
   function renderMapper(overrides: Stub = {}) {
@@ -505,8 +310,6 @@ describe('ScopesMapper add-route row', () => {
   });
 });
 
-// -- remove url / delete scope -----------------------------------------------
-
 describe('ScopesMapper remove/delete', () => {
   it('removes a non-last url without a confirm and invalidates the token payloads', async () => {
     const user = userEvent.setup();
@@ -586,80 +389,6 @@ describe('ScopesMapper remove/delete', () => {
   });
 });
 
-// -- public pin / unpin dialogs ----------------------------------------------
-
-describe('PinPublicDialog', () => {
-  it('pins a plain url on confirm and states the enforcement effect', async () => {
-    const user = userEvent.setup();
-    const pinRoutePublic = vi.fn().mockResolvedValue({ url: '/c' });
-    const onClose = vi.fn();
-    renderWithProviders(<PinPublicDialog url="/c" onClose={onClose} />, {
-      client: mapperStub({ pinRoutePublic }),
-    });
-
-    expect(screen.getByText(/without API-key authentication/i)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Pin public' }));
-    await waitFor(() => {
-      expect(pinRoutePublic).toHaveBeenCalledWith({ url: '/c' });
-    });
-  });
-
-  it('carries the sub-MCP pattern into the pin', async () => {
-    const user = userEvent.setup();
-    const pinRoutePublic = vi.fn().mockResolvedValue({ url: '/app/y' });
-    renderWithProviders(
-      <PinPublicDialog url="/app/y" pattern={subMcpPattern('y')} onClose={vi.fn()} />,
-      { client: mapperStub({ pinRoutePublic }) },
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Pin public' }));
-    await waitFor(() => {
-      expect(pinRoutePublic).toHaveBeenCalledWith({ url: '/app/y', pattern: '^/app/y/.*$' });
-    });
-  });
-
-  it('does not pin when cancelled', async () => {
-    const user = userEvent.setup();
-    const pinRoutePublic = vi.fn();
-    renderWithProviders(<PinPublicDialog url="/c" onClose={vi.fn()} />, {
-      client: mapperStub({ pinRoutePublic }),
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(pinRoutePublic).not.toHaveBeenCalled();
-  });
-});
-
-describe('UnpinPublicDialog', () => {
-  it('unpins on confirm', async () => {
-    const user = userEvent.setup();
-    const unpinPublicRoute = vi.fn().mockResolvedValue({ url: '/c' });
-    renderWithProviders(<UnpinPublicDialog url="/c" onClose={vi.fn()} />, {
-      client: mapperStub({ unpinPublicRoute }),
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Unpin' }));
-    await waitFor(() => {
-      expect(unpinPublicRoute).toHaveBeenCalledWith('/c');
-    });
-  });
-
-  it('surfaces a 404 (already unpinned) VERBATIM', async () => {
-    const user = userEvent.setup();
-    const unpinPublicRoute = vi
-      .fn()
-      .mockRejectedValue(new ApiError("url is not pinned public: '/c'", 404));
-    renderWithProviders(<UnpinPublicDialog url="/c" onClose={vi.fn()} />, {
-      client: mapperStub({ unpinPublicRoute }),
-    });
-
-    await user.click(screen.getByRole('button', { name: 'Unpin' }));
-    expect(await screen.findByText("url is not pinned public: '/c'")).toBeInTheDocument();
-  });
-});
-
-// -- pin/unpin surfaced by the mapper ----------------------------------------
-
 describe('ScopesMapper public surface interactions', () => {
   it('opens the unpin confirm from a public chip and unpins verbatim on 404', async () => {
     const user = userEvent.setup();
@@ -680,24 +409,5 @@ describe('ScopesMapper public surface interactions', () => {
     await user.click(screen.getByRole('button', { name: 'Unpin /health' }));
     await user.click(screen.getByRole('button', { name: 'Unpin' }));
     expect(await screen.findByText("url is not pinned public: '/health'")).toBeInTheDocument();
-  });
-});
-
-// -- DeleteScopeDialog / RemoveLastUrlDialog copy -----------------------------
-
-describe('confirm dialog copy states the cascade', () => {
-  it('DeleteScopeDialog names the key-policy rewrite', () => {
-    renderWithProviders(<DeleteScopeDialog scopeId="s1" itemCount={3} onClose={vi.fn()} />, {
-      client: mapperStub(),
-    });
-    expect(screen.getByText(/removes the scope from every API key/)).toBeInTheDocument();
-    expect(screen.getByText(/3 items/)).toBeInTheDocument();
-  });
-
-  it('RemoveLastUrlDialog names the key-policy rewrite', () => {
-    renderWithProviders(<RemoveLastUrlDialog scopeId="s1" url="/a" onClose={vi.fn()} />, {
-      client: mapperStub(),
-    });
-    expect(screen.getByText(/stripped from every API key/)).toBeInTheDocument();
   });
 });

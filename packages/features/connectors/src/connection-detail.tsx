@@ -9,11 +9,7 @@ import {
   AlertTriangleIcon,
   AppLink,
   ArrowLeftIcon,
-  Badge,
   Button,
-  Card,
-  Checkbox,
-  Dialog,
   EmptyState,
   ErrorState,
   FleetReport,
@@ -33,40 +29,21 @@ import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { CONNECTIONS_KEY, PROVIDERS_KEY, connectionKey } from './keys';
-import { ConnectorRefusalNotice, Notice, readConnectorRefusal } from './notice';
+import { readConnectorRefusal } from './notice';
 import { useOAuthPopup } from './oauth';
+import {
+  ConnectionNotices,
+  ConnectionSummaryCard,
+  DisconnectDialog,
+  SubServicesCard,
+} from './connection-detail-cards';
+import type { SubServiceChoice } from './connection-detail-cards';
 
 /** The captured result of a disconnect that stays on the page to surface an outcome. */
 interface DisconnectOutcome {
   readonly revokeOutcome: 'success' | 'failed' | 'skipped';
   readonly revokeStatus: number | null;
   readonly fleet: FleetReportSummary | null;
-}
-
-const HEALTH_VARIANT: Record<ConnectionView['auth_health_state'], string> = {
-  healthy: 'success',
-  reconnect_required: 'warning',
-  refresh_failing: 'danger',
-};
-
-const HEALTH_LABEL: Record<ConnectionView['auth_health_state'], string> = {
-  healthy: 'Healthy',
-  reconnect_required: 'Reconnect required',
-  refresh_failing: 'Refresh failing',
-};
-
-interface SubServiceChoice {
-  readonly id: string;
-  readonly label: string;
-}
-
-function DetailRow({ label, children }: { label: string; children: ReactNode }): ReactNode {
-  return (
-    <div style={{ display: 'flex', gap: 'var(--tai-space-3)' }}>
-      <dt style={{ minWidth: '10rem', color: 'var(--tai-color-text-muted)' }}>{label}</dt>
-      <dd style={{ margin: 0 }}>{children}</dd>
-    </div>
-  );
 }
 
 /**
@@ -110,21 +87,10 @@ function RevokeNote({
   return null;
 }
 
-export function ConnectionDetail({ connectionId }: { connectionId: string }): ReactNode {
+/** The connection read + its provider metadata, plus the sub-service choices and the
+ *  unreachable-sub-service labels derived from them. */
+function useConnectionData(connectionId: string) {
   const api = useApi();
-  const queryClient = useQueryClient();
-  const navigate = useAppNavigate();
-  // A reconnect / consent completion runs through the OAuth popup, which writes the
-  // manifest and broadcasts a reload; a broadcast that stranded a sibling stays visible
-  // here as the honest per-origin report rather than vanishing behind a bare notice.
-  const [oauthFleet, setOauthFleet] = useState<FleetReportSummary | null>(null);
-  const oauth = useOAuthPopup({
-    onSuccess: (fleet) => {
-      void queryClient.invalidateQueries({ queryKey: connectionKey(connectionId) });
-      setOauthFleet(fleet !== null && fleet.status !== 'converged' ? fleet : null);
-    },
-  });
-
   const connectionQuery = useQuery({
     queryKey: connectionKey(connectionId),
     queryFn: ({ signal }) => api.getConnection(connectionId, signal),
@@ -133,7 +99,6 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
     queryKey: PROVIDERS_KEY,
     queryFn: ({ signal }) => api.listProviders(signal),
   });
-
   const connection = connectionQuery.data;
 
   const choices = useMemo<SubServiceChoice[]>(() => {
@@ -160,9 +125,29 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
     );
   }, [connection, choices]);
 
+  return { connectionQuery, providersQuery, connection, choices, unreachableLabels };
+}
+
+/** The sub-service selection, the patch/reconnect/disconnect mutations, and the OAuth
+ *  popup a reconnect or consent-requiring change re-enters. */
+function useConnectionMutations(connectionId: string, connection: ConnectionView | undefined) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const navigate = useAppNavigate();
+
+  // A reconnect / consent completion runs through the OAuth popup, which writes the
+  // manifest and broadcasts a reload; a broadcast that stranded a sibling stays visible
+  // here as the honest per-origin report rather than vanishing behind a bare notice.
+  const [oauthFleet, setOauthFleet] = useState<FleetReportSummary | null>(null);
+  const oauth = useOAuthPopup({
+    onSuccess: (fleet) => {
+      void queryClient.invalidateQueries({ queryKey: connectionKey(connectionId) });
+      setOauthFleet(fleet !== null && fleet.status !== 'converged' ? fleet : null);
+    },
+  });
+
   const [enabled, setEnabled] = useState<ReadonlySet<string> | null>(null);
   const effectiveEnabled = enabled ?? new Set(connection?.enabled_sub_services ?? []);
-
   const toggle = useCallback(
     (id: string, checked: boolean) => {
       const base = enabled ?? new Set(connection?.enabled_sub_services ?? []);
@@ -229,6 +214,69 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
     },
   });
 
+  return {
+    oauth,
+    oauthFleet,
+    effectiveEnabled,
+    toggle,
+    consentBlocked,
+    setConsentBlocked,
+    patch,
+    reconnect,
+    confirmOpen,
+    setConfirmOpen,
+    disconnect,
+    disconnectOutcome,
+  };
+}
+
+/** The connection detail's data + actions: the reads and their derivations, the
+ *  mutations and OAuth flow, and the mutation-refusal/error and busy derivations. */
+function useConnectionActions(connectionId: string) {
+  const data = useConnectionData(connectionId);
+  const actions = useConnectionMutations(connectionId, data.connection);
+
+  // A mutation may refuse with a named 501 (store off, or this provider's OAuth
+  // credentials unset) — surface that as the muted, actionable note, and reserve the
+  // loud ErrorState for genuine errors (validation, upstream, 5xx).
+  const mutationErrorObj =
+    actions.patch.error ?? actions.reconnect.error ?? actions.disconnect.error;
+  const refusal = readConnectorRefusal(mutationErrorObj);
+  const mutationError =
+    refusal === null && mutationErrorObj instanceof Error ? mutationErrorObj.message : null;
+  const busy =
+    actions.patch.isPending ||
+    actions.reconnect.isPending ||
+    actions.disconnect.isPending ||
+    actions.oauth.pending;
+
+  return { ...data, ...actions, refusal, mutationError, busy };
+}
+
+export function ConnectionDetail({ connectionId }: { connectionId: string }): ReactNode {
+  const {
+    connectionQuery,
+    providersQuery,
+    connection,
+    choices,
+    unreachableLabels,
+    effectiveEnabled,
+    toggle,
+    consentBlocked,
+    setConsentBlocked,
+    patch,
+    reconnect,
+    confirmOpen,
+    setConfirmOpen,
+    disconnect,
+    disconnectOutcome,
+    oauth,
+    oauthFleet,
+    refusal,
+    mutationError,
+    busy,
+  } = useConnectionActions(connectionId);
+
   if (connectionQuery.isPending) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-3)' }}>
@@ -255,16 +303,6 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
     return <EmptyState title="Connection not found" description={connectionId} />;
   }
 
-  // A mutation may refuse with a named 501 (store off, or this provider's OAuth
-  // credentials unset) — surface that as the muted, actionable note, and reserve the
-  // loud ErrorState for genuine errors (validation, upstream, 5xx).
-  const mutationErrorObj = patch.error ?? reconnect.error ?? disconnect.error;
-  const refusal = readConnectorRefusal(mutationErrorObj);
-  const mutationError =
-    refusal === null && mutationErrorObj instanceof Error ? mutationErrorObj.message : null;
-
-  const busy = patch.isPending || reconnect.isPending || disconnect.isPending || oauth.pending;
-
   return (
     <Stack gap={4}>
       <div>
@@ -273,128 +311,33 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
           Back
         </AppLink>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
-        <h1 className="tai-page-title" style={{ margin: 0 }}>
-          {connection.alias}
-        </h1>
-        <Badge variant={HEALTH_VARIANT[connection.auth_health_state]}>
-          {HEALTH_LABEL[connection.auth_health_state]}
-        </Badge>
-      </div>
-
-      <Card>
-        <dl
-          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-2)', margin: 0 }}
-        >
-          <DetailRow label="Provider">{connection.provider_id}</DetailRow>
-          <DetailRow label="Kind">{connection.kind}</DetailRow>
-          <DetailRow label="Account">{connection.account_identity ?? '—'}</DetailRow>
-          <DetailRow label="Granted scopes">
-            {connection.granted_scopes.length > 0 ? connection.granted_scopes.join(', ') : '—'}
-          </DetailRow>
-          <DetailRow label="Created">{connection.created_at}</DetailRow>
-        </dl>
-      </Card>
-
-      {providersQuery.isError ? (
-        <p
-          role="status"
-          style={{
-            margin: 0,
-            fontSize: 'var(--tai-text-sm)',
-            color: 'var(--tai-color-text-muted)',
-          }}
-        >
-          Provider names could not be loaded — sub-services are shown by their identifiers.
-        </p>
-      ) : null}
+      <ConnectionSummaryCard connection={connection} />
 
       {choices.length > 0 ? (
-        <Card>
-          <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
-            <legend style={{ fontSize: 'var(--tai-text-sm)', fontWeight: 600 }}>
-              Sub-services
-            </legend>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 'var(--tai-space-2)',
-                marginTop: 'var(--tai-space-2)',
-              }}
-            >
-              {choices.map((choice) => (
-                <Checkbox
-                  key={choice.id}
-                  label={choice.label}
-                  checked={effectiveEnabled.has(choice.id)}
-                  disabled={busy}
-                  onCheckedChange={(checked) => {
-                    toggle(choice.id, checked);
-                  }}
-                />
-              ))}
-            </div>
-          </fieldset>
-          <div style={{ marginTop: 'var(--tai-space-3)' }}>
-            <Button
-              variant="primary"
-              disabled={busy}
-              onClick={() => {
-                setConsentBlocked(false);
-                patch.mutate([...effectiveEnabled]);
-              }}
-            >
-              {patch.isPending ? <Spinner label="Saving" /> : null}
-              Save sub-services
-            </Button>
-          </div>
-        </Card>
+        <SubServicesCard
+          choices={choices}
+          effectiveEnabled={effectiveEnabled}
+          busy={busy}
+          patchPending={patch.isPending}
+          onToggle={toggle}
+          onSave={() => {
+            setConsentBlocked(false);
+            patch.mutate([...effectiveEnabled]);
+          }}
+        />
       ) : null}
 
-      {/* A sub-service whose MCP server did not answer the live reachability probe:
-          distinct from auth health (a healthy connection can still have a down
-          sub-service), so it is context the operator came to find, not an interrupt. */}
-      {unreachableLabels.length > 0 ? (
-        <div role="status" className="tai-warn-state tai-stack tai-stack-2">
-          <strong className="tai-status tai-status-warn">
-            <AlertTriangleIcon />
-            Some sub-services did not respond
-          </strong>
-          <p>{`These sub-services did not answer a reachability check: ${unreachableLabels.join(', ')}. Their MCP server may be down — this is separate from the connection's auth health.`}</p>
-        </div>
-      ) : null}
-
-      {/* A consent-requiring change that returned no authorization URL cannot take
-          effect without a reconnect — surface it loudly rather than as a silent no-op. */}
-      {consentBlocked ? (
-        <div role="alert" className="tai-warn-state tai-stack tai-stack-2">
-          <strong className="tai-status tai-status-warn">
-            <AlertTriangleIcon />
-            Consent required
-          </strong>
-          <p>
-            This change needs the provider&rsquo;s consent, but no authorization link was returned.
-            Reconnect this connection to grant it.
-          </p>
-        </div>
-      ) : null}
-
-      {refusal !== null ? (
-        <ConnectorRefusalNotice refusal={refusal} />
-      ) : mutationError !== null ? (
-        <ErrorState message={mutationError} />
-      ) : null}
-      {/* A sub-service change that writes the manifest broadcasts a reload to the
-          fleet; surface any failed propagation honestly (nothing on a converged
-          save or a consent-only toggle that wrote nothing). */}
-      {patch.isSuccess ? <FleetReport summary={summarizeFleetFanout(patch.data.fanout)} /> : null}
-      {oauth.notice !== null ? (
-        <Notice notice={oauth.notice} onDismiss={oauth.clearNotice} />
-      ) : null}
-      {/* A reconnect / consent OAuth completion whose reload did not converge surfaces
-          the stranded origins here instead of closing behind a bare success notice. */}
-      {oauthFleet !== null ? <FleetReport summary={oauthFleet} /> : null}
+      <ConnectionNotices
+        providersError={providersQuery.isError}
+        unreachableLabels={unreachableLabels}
+        consentBlocked={consentBlocked}
+        refusal={refusal}
+        mutationError={mutationError}
+        patchFleet={patch.isSuccess ? summarizeFleetFanout(patch.data.fanout) : null}
+        oauthNotice={oauth.notice}
+        onClearOauthNotice={oauth.clearNotice}
+        oauthFleet={oauthFleet}
+      />
 
       <div style={{ display: 'flex', gap: 'var(--tai-space-2)' }}>
         {/* Reconnect re-enters the OAuth grant. A `none` (no-auth) connection has no
@@ -411,37 +354,16 @@ export function ConnectionDetail({ connectionId }: { connectionId: string }): Re
             Reconnect
           </Button>
         ) : null}
-        <Dialog
-          title="Disconnect this connection?"
-          description={`This removes “${connection.alias}” and revokes its access upstream where possible.`}
+        <DisconnectDialog
+          alias={connection.alias}
           open={confirmOpen}
           onOpenChange={setConfirmOpen}
-          trigger={
-            <Button variant="danger" disabled={busy}>
-              Disconnect
-            </Button>
-          }
-        >
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
-            <Button
-              onClick={() => {
-                setConfirmOpen(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              disabled={disconnect.isPending}
-              onClick={() => {
-                disconnect.mutate();
-              }}
-            >
-              {disconnect.isPending ? <Spinner label="Disconnecting" /> : null}
-              Disconnect
-            </Button>
-          </div>
-        </Dialog>
+          busy={busy}
+          disconnectPending={disconnect.isPending}
+          onConfirm={() => {
+            disconnect.mutate();
+          }}
+        />
       </div>
 
       {/* A disconnect that stayed on the page: the upstream revoke outcome (a failed
