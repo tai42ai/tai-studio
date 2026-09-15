@@ -2,10 +2,9 @@
  * The shared advisory helpers: the severity → Badge-variant map, the listing
  * filter (matching ref, non-withdrawn), and the loud warning container.
  */
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
-
 import type { MarketplaceAdvisory } from '@tai42/api-client';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { advisoriesForListing, severityVariant, WarningBlock } from './advisories';
 

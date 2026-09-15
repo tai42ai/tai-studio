@@ -1,11 +1,10 @@
-import type { MouseEvent, ReactNode } from 'react';
-
-import { AppLink, Badge, Card, useAppNavigate } from '@tai42/studio-sdk';
 import type { MarketplaceSearchRow } from '@tai42/api-client';
+import { AppLink, Badge, Card, useAppNavigate } from '@tai42/studio-sdk';
+import type { MouseEvent, ReactNode } from 'react';
 
 import { listingBadges } from './badges';
 import { ListingIcon, listingTitle } from './display';
-import { mergeSearch, type MarketplaceSearch } from './filters';
+import { type MarketplaceSearch, mergeSearch } from './filters';
 
 /**
  * An ISO-8601 `updated_at` rendered as a plain date for the card's recency line.

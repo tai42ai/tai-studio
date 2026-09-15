@@ -3,11 +3,11 @@
  * (`KwargsEditor`) for editable values, and the read-only listing
  * (`ReadOnlyKwargs`) shown beside a read-only stored id.
  */
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
-import { Button } from './primitives';
-import { TextInput } from './inputs';
 import { CloseIcon } from './icons';
+import { TextInput } from './inputs';
+import { Button } from './primitives';
 import type { KwargRow } from './templated-text-kwargs';
 
 /** The add/remove kwargs editor, revealed on demand and open when kwargs already exist. */

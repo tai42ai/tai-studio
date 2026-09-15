@@ -15,11 +15,11 @@ import {
   useOAuthRedirectResume,
 } from './oauth';
 import {
+  type FakePopup,
   makeClient,
   makeFakePopup,
   postMessageFrom,
   renderWithProviders,
-  type FakePopup,
 } from './test-utils';
 
 function Harness({ url, onSuccess }: { url: string; onSuccess?: () => void }): React.ReactNode {

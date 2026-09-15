@@ -18,21 +18,21 @@
  * State follows the shared convention: <Spinner> while loading, a loud <ErrorState>
  * on any failure; every server-supplied string renders as escaped React text.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
-  ErrorState,
-  Spinner,
   errorMessage,
+  ErrorState,
   isFullProjection,
+  Spinner,
   useApi,
   useCapabilities,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { settingsProfilesKey, settingsSchemaKey } from './keys';
-import { ownedSecretMap } from './settings-secrets';
+import { type OpenDialog, ProfileDialogHost } from './ProfileDialogHost';
 import { ProfilesTable } from './ProfilesTable';
-import { ProfileDialogHost, type OpenDialog } from './ProfileDialogHost';
+import { ownedSecretMap } from './settings-secrets';
 
 const stackStyle: CSSProperties = {
   display: 'flex',

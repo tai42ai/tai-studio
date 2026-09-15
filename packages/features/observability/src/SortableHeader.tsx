@@ -4,8 +4,8 @@
  * it would send the one combo the reader answers 501 to (the mirror guard disables
  * those filters under a metric sort in the filter bar).
  */
-import type { ReactNode } from 'react';
 import { SortAscIcon, SortDescIcon, TH, useAppNavigate } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import {
   hasMetricIncompatibleFilter,

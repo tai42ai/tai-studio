@@ -3,10 +3,10 @@
  * upload/delete/clear-cache mutations, the escaped render preview, and the
  * single-pane focus behaviour. Renders the real page through the shell harness.
  */
-import { useState, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { type ReactNode, useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TemplatesPage } from './TemplatesPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';

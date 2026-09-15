@@ -2,7 +2,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import * as iconModule from './icons';
-import { NAV_ICONS, type IconComponent } from './icons';
+import { type IconComponent, NAV_ICONS } from './icons';
 
 /**
  * The suite is driven off the module's own exports, so a newly added icon is

@@ -1,9 +1,10 @@
 /** Generated served-document schema aliases and templated-text re-exports. */
 import { z } from 'zod';
+
 import * as generated from '../generated/served-schemas';
 
-export { templatedText, requiredTemplatedText } from '../templated-text';
 export type { TemplatedText } from '../templated-text';
+export { requiredTemplatedText, templatedText } from '../templated-text';
 
 // Served-document schemas are GENERATED from the platform contract JSON-schema
 // bundle (src/generated/served-schemas.ts) and re-exported here under the names the

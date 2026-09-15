@@ -2,15 +2,15 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { McpServersSection } from './mcp-servers';
 import {
-  MANIFEST,
-  MCP_SCHEMA,
   failedReport,
   fleetOk,
+  MANIFEST,
+  MCP_SCHEMA,
   renderWithProviders,
   status,
 } from './test-utils-mcp-servers';
-import { McpServersSection } from './mcp-servers';
 
 describe('McpServersSection — mounted + failed status', () => {
   it('lists mounted servers with their status', async () => {

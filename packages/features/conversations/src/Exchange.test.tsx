@@ -4,8 +4,8 @@
  * message and an agent's answer both reach the screen as escaped text, never as
  * live markup.
  */
-import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { Exchange } from './Exchange';
 import { makeMessage, renderWithProviders } from './test-utils';

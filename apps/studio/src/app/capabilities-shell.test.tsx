@@ -4,17 +4,17 @@
  * failed → a loud retryable ErrorState), and the content-area route boundary gates the
  * same way.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { PluginContext } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { installServer, renderStudio, server, FULL_PROJECTION } from './test-harness';
 import { FEATURE_TOKENS } from './routes';
-import { TOKEN_REQUIREMENTS, contributionCovered, tokenCovered } from './token-requirements';
 import { landAuthed, meHandler, okChannels, okPlugins, scoped } from './test-capabilities-support';
+import { FULL_PROJECTION, installServer, renderStudio, server } from './test-harness';
+import { contributionCovered, TOKEN_REQUIREMENTS, tokenCovered } from './token-requirements';
 
 installServer();
 

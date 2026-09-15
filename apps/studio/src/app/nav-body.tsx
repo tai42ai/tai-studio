@@ -5,31 +5,31 @@
  * followed by the single generic "Plugins" section. Core rows are capability-filtered;
  * plugin entries arrive already filtered. A section with no visible item renders nothing.
  */
-import { useCallback, useId, type MouseEvent, type ReactNode } from 'react';
-import { Link, useLocation } from '@tanstack/react-router';
+import type { MeProjection } from '@tai42/api-client';
 import {
   AppLink,
+  type CapabilityState,
   ErrorState,
   NAV_ICONS,
   PluginIcon,
+  type RegisteredNavEntry,
   Skeleton,
   usePluginNavigation,
-  type CapabilityState,
-  type RegisteredNavEntry,
 } from '@tai42/studio-sdk';
-import type { MeProjection } from '@tai42/api-client';
+import { Link, useLocation } from '@tanstack/react-router';
+import { type MouseEvent, type ReactNode, useCallback, useId } from 'react';
 
-import { DASHBOARD_TOKEN, NAV_SECTIONS, PATH, type FeatureToken } from './routes';
-import { tokenCovered } from './token-requirements';
 import {
   activeNavKey,
   coreSectionOf,
   navEntryKey,
-  pluginSectionEntries,
-  sortNavEntries,
   PLUGINS_SECTION_LABEL,
+  pluginSectionEntries,
   type PluginVersions,
+  sortNavEntries,
 } from './nav-entries';
+import { DASHBOARD_TOKEN, type FeatureToken, NAV_SECTIONS, PATH } from './routes';
+import { tokenCovered } from './token-requirements';
 
 const NAV_LABELS: Record<FeatureToken, string> = {
   tools: 'Tools',

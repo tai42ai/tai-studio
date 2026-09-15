@@ -22,8 +22,8 @@
  * rather than being pinned to one.
  */
 import * as RadixRadioGroup from '@radix-ui/react-radio-group';
-import { useId } from 'react';
 import type { ReactNode } from 'react';
+import { useId } from 'react';
 
 import { useFieldControl } from './field';
 

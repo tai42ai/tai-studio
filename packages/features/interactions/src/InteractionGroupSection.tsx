@@ -1,11 +1,10 @@
-import { useId, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
-
-import { Badge, Card, ChevronDownIcon, ChevronRightIcon } from '@tai42/studio-sdk';
 import type { StreamInteraction } from '@tai42/studio-sdk';
+import { Badge, Card, ChevronDownIcon, ChevronRightIcon } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
+import { useId, useState } from 'react';
 
-import { groupPendingLabel } from './inbox-grouping';
 import type { InteractionGroup } from './inbox-grouping';
+import { groupPendingLabel } from './inbox-grouping';
 import { InteractionCard } from './renderers';
 
 export const listStyle: CSSProperties = {

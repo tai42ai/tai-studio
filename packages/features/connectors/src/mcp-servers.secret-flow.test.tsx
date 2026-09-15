@@ -5,22 +5,21 @@
 // userEvent runs without its inter-key delay, so a loaded runner cannot push a keystroke
 // chain past the timeout; correctness stays gated by the real assertions and awaited
 // signals below.
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { ApiError } from '@tai42/api-client';
 import { QueryClient } from '@tanstack/react-query';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '@tai42/api-client';
-
+import { McpServersSection } from './mcp-servers';
 import {
-  SECRET_SCHEMA,
-  renderWithProviders,
   reload,
+  renderWithProviders,
+  SECRET_SCHEMA,
   status,
   withEnvBlank,
   withEnvMarker,
 } from './test-utils-mcp-servers';
-import { McpServersSection } from './mcp-servers';
 
 vi.setConfig({ testTimeout: 15_000 });
 

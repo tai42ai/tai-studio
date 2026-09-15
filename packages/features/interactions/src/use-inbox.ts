@@ -3,12 +3,11 @@
  * tail-only SSE stream, refetched on every (re)connect. Both the page and the
  * always-mounted badge consume it.
  */
-import { useCallback, useMemo } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-
 import type { Interaction } from '@tai42/api-client';
-import { useApi, useInteractionsStream } from '@tai42/studio-sdk';
 import type { StreamInteraction } from '@tai42/studio-sdk';
+import { useApi, useInteractionsStream } from '@tai42/studio-sdk';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
 
 import { inboxKey } from './keys';
 

@@ -20,28 +20,28 @@
  * sinks are the media renderer's gated image `src` and link `href`. There is no
  * HTML sink anywhere on this page.
  */
-import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { ChannelTemplate, Notification } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
+  isFullProjection,
   PageHeader,
+  type PageProps,
   Skeleton,
   Stack,
-  errorMessage,
-  isFullProjection,
   useApi,
   useCapabilities,
-  type PageProps,
 } from '@tai42/studio-sdk';
-import type { ChannelTemplate, Notification } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import type { CSSProperties, ReactNode } from 'react';
+import { useState } from 'react';
 
-import { NotificationMedia } from './media';
 import { notificationsKey } from './keys';
+import { NotificationMedia } from './media';
 
 /** How many notifications the inbox reveals per page. The feed arrives whole (a
  *  bounded ring buffer up to ~1000 records, each possibly carrying an inline

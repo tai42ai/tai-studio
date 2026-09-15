@@ -3,18 +3,18 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  Card,
-  ExplorerView,
-  TD,
-  UNTAGGED_TOKEN,
   buildTagVocabulary,
-  matchesSelectedTags,
+  Card,
   type ExplorerColumn,
   type ExplorerEmptyStates,
   type ExplorerSearch,
   type ExplorerTags,
+  ExplorerView,
   type ExplorerViewProps,
   type Folder,
+  matchesSelectedTags,
+  TD,
+  UNTAGGED_TOKEN,
 } from '../index';
 
 afterEach(() => {

@@ -8,10 +8,9 @@
  * (`MediaGallery`); links through the scheme-gated `ExternalLinkButton`. Pinned by the
  * XSS tests.
  */
-import type { ReactNode } from 'react';
-
-import { Badge, Button, Card } from '@tai42/studio-sdk';
 import type { StreamInteraction } from '@tai42/studio-sdk';
+import { Badge, Button, Card } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { MediaGallery } from '../media';
 import type { AnswerRendererProps } from './answer-schema';

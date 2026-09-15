@@ -1,25 +1,24 @@
 /** The resource browser, rendered only when a storage provider is present: the id
  * list explored through {@link ResourceExplorer}, the upload dialog, and the
  * per-resource stat/delete and per-directory delete dialogs. */
-import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-
 import {
   Button,
   Card,
-  ErrorState,
-  Skeleton,
   downloadBlob,
   errorMessage,
+  ErrorState,
+  type RouteSearch,
+  Skeleton,
   useApi,
   useSearchCommit,
-  type RouteSearch,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 
 import { storageResourcesKey } from './keys';
-import { DeleteDirDialog, DeleteResourceDialog, StatDialog } from './storage-dialogs';
 import { ResourceExplorer } from './resource-views';
-import { SEARCH_LABEL, basename } from './storage-view';
+import { DeleteDirDialog, DeleteResourceDialog, StatDialog } from './storage-dialogs';
+import { basename, SEARCH_LABEL } from './storage-view';
 import { UploadDialog } from './UploadDialog';
 
 export function ResourceBrowser({ initialFilter }: { initialFilter: string }): ReactNode {

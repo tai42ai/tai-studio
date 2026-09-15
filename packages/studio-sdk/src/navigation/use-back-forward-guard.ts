@@ -5,8 +5,8 @@
  * and installs a `beforeunload` prompt. It attaches the listeners only while armed,
  * mirroring the registry's armed state into React.
  */
-import { useEffect, useState } from 'react';
 import type { RefObject } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { NavigationGuardRegistry } from './guard-registry';
 import type { CommittedEntry } from './guarded-navigation';

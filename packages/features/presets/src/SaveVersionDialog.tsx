@@ -11,25 +11,25 @@
  * version read withholds the binding editor behind a loud error rather than showing it
  * empty (which would read as "no binding").
  */
-import type { ReactNode, SyntheticEvent } from 'react';
 import type { PresetDetail } from '@tai42/api-client';
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
   SchemaEditor,
   Spinner,
   StateBindingSection,
-  TextInput,
   Textarea,
-  errorMessage,
+  TextInput,
 } from '@tai42/studio-sdk';
+import type { ReactNode, SyntheticEvent } from 'react';
 
-import { ValidateVerdict } from './verdict';
 import { ExtensionsField } from './ExtensionsField';
-import { useStateBindingSources } from './useStateBindingSources';
 import { useSaveVersionDraft } from './useSaveVersionDraft';
+import { useStateBindingSources } from './useStateBindingSources';
+import { ValidateVerdict } from './verdict';
 
 export function SaveVersionDialog({
   detail,

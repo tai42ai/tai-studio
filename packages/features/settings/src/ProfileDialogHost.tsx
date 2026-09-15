@@ -3,14 +3,14 @@
  * (create / edit / diff / apply / revert / versions / delete) and owns the delete
  * mutation. Revert re-applies the reserved `@previous` profile each apply auto-saves.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { settingsProfilesKey } from './keys';
-import { ProfileFormDialog } from './ProfileFormDialog';
-import { DiffDialog } from './ProfileDiffDialog';
 import { ApplyProfileDialog } from './ApplyProfileDialog';
+import { settingsProfilesKey } from './keys';
+import { DiffDialog } from './ProfileDiffDialog';
+import { ProfileFormDialog } from './ProfileFormDialog';
 import { ProfileVersionsDialog } from './ProfileVersionsDialog';
 
 /** The reserved profile that every apply auto-saves the replaced env into. */

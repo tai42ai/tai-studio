@@ -10,7 +10,9 @@
  * capability context stays `loading` and every write affordance fails closed (hidden),
  * the shape every read-only manifest test expects.
  */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { MeProjection } from '@tai42/api-client';
+import type { ApiClient } from '@tai42/studio-sdk';
+import type { NavigationContextValue } from '@tai42/studio-sdk';
 import {
   ApiProvider,
   AuthProvider,
@@ -18,11 +20,9 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
-import type { ApiClient } from '@tai42/studio-sdk';
-import type { MeProjection } from '@tai42/api-client';
-import type { NavigationContextValue } from '@tai42/studio-sdk';
-import { render } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { RenderResult } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { vi } from 'vitest';
 

@@ -14,9 +14,9 @@
  * down its leading edge on top of the danger chip, so the failure is visible
  * without relying on the chip's colour alone.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { Badge, CodeBlock, Markdown } from '@tai42/studio-sdk';
 import type { ConversationMessage } from '@tai42/api-client';
+import { Badge, CodeBlock, Markdown } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { formatAbsoluteEpoch, formatRelativeEpoch } from './format';
 import {

@@ -6,11 +6,11 @@ import {
   fieldPathToJq,
   generateTemplateCall,
   jqKey,
+  type MappingRow,
   parseAdapter,
   parseFieldPath,
   parseTemplateCall,
   rowValueJq,
-  type MappingRow,
 } from './adapter';
 
 describe('jqKey', () => {

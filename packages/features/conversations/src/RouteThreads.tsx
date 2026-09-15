@@ -8,9 +8,9 @@
  * Routing is shell-owned: every move is an `AppLink` writing the page's search,
  * never a path this feature composes.
  */
-import type { ReactNode, RefObject } from 'react';
-import { AppLink, ArrowLeftIcon, Card, EmptyState, useBreakpoint } from '@tai42/studio-sdk';
 import type { ConversationDeliveryStatus } from '@tai42/api-client';
+import { AppLink, ArrowLeftIcon, Card, EmptyState, useBreakpoint } from '@tai42/studio-sdk';
+import type { ReactNode, RefObject } from 'react';
 
 import { ComposeMessage } from './ComposeMessage';
 import { ConversationFilters } from './ConversationFilters';

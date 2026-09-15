@@ -4,8 +4,8 @@
  * or falls back to the monogram badge (an unsafe/absent URL never becomes an
  * image src).
  */
-import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { ListingIcon, listingTitle, monogramInitials } from './display';
 

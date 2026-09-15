@@ -8,8 +8,8 @@
  * known — the fields a picker offers.
  */
 import type {
-  StateBinding,
   StateAttach,
+  StateBinding,
   StateInjection,
   StateUpdate,
   TemplatedText,
@@ -17,7 +17,7 @@ import type {
 
 import type { TemplatedTextTemplateOption } from '../components/templated-text-field';
 
-export type { StateBinding, StateAttach, StateInjection, StateUpdate, TemplatedText };
+export type { StateAttach, StateBinding, StateInjection, StateUpdate, TemplatedText };
 
 /**
  * The stored templates a {@link TemplatedText} field's id picker offers, with the

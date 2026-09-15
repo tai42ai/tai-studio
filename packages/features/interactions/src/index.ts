@@ -5,15 +5,15 @@
  * global floating count badge. The card wrapper and per-format answer renderers
  * are exported for direct unit testing.
  */
+export { ChannelsCard } from './ChannelsCard';
 export { InteractionsPage } from './interactions';
 export { InteractionsBadge } from './InteractionsBadge';
-export { ChannelsCard } from './ChannelsCard';
-export {
-  InteractionCard,
-  TextAnswer,
-  ConfirmAnswer,
-  SelectAnswer,
-  FormAnswer,
-  ExternalLinkCard,
-} from './renderers';
 export type { AnswerRendererProps } from './renderers';
+export {
+  ConfirmAnswer,
+  ExternalLinkCard,
+  FormAnswer,
+  InteractionCard,
+  SelectAnswer,
+  TextAnswer,
+} from './renderers';

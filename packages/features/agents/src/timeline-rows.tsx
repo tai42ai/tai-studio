@@ -8,9 +8,8 @@
  * React elements and text children (no `dangerouslySetInnerHTML`), so the message
  * row honours the same no-HTML-sink contract as the raw-text rows.
  */
-import type { CSSProperties, ReactNode } from 'react';
-
 import { AppLink, Badge, Card, CodeBlock, ErrorState, Markdown } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { TimelineItem } from './timeline-model';
 

@@ -3,14 +3,14 @@
  * the wire-shape frame builders, the seed factory, and the `renderStream` harness
  * that mounts `useInteractionsStream` behind the API + unauthorized providers.
  */
+import type { ApiClient, Interaction, SseFrame } from '@tai42/api-client';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { vi } from 'vitest';
-import type { ApiClient, Interaction, SseFrame } from '@tai42/api-client';
 
 import { ApiProvider } from './useApi';
-import { UnauthorizedProvider } from './useUnauthorized';
 import { useInteractionsStream } from './useSse';
+import { UnauthorizedProvider } from './useUnauthorized';
 
 export function iterate(frames: SseFrame[]): AsyncGenerator<SseFrame> {
   async function* gen(): AsyncGenerator<SseFrame> {

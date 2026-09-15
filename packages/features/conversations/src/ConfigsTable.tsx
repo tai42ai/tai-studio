@@ -13,30 +13,30 @@
  * Every server-supplied value renders as escaped React text; no config field is ever
  * interpreted as markup.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { TargetConversationConfig } from '@tai42/api-client';
 import {
   Button,
   Card,
   ConfirmDialog,
   EmptyState,
+  errorMessage,
   ScrollRegion,
   Skeleton,
+  Table,
   TBody,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
   useCanWrite,
 } from '@tai42/studio-sdk';
-import type { TargetConversationConfig } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { conversationConfigsKey } from './keys';
 import { ConfigFormDialog } from './ConfigFormDialog';
-import { ReadFailure } from './read-states';
 import { ConfigRow, configRowKey } from './ConfigRow';
+import { conversationConfigsKey } from './keys';
+import { ReadFailure } from './read-states';
 
 const headerStyle: CSSProperties = {
   display: 'flex',

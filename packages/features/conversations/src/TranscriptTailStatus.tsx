@@ -4,9 +4,8 @@
  * stopped because the read itself is failing. Paused wins over stopped; the one
  * control clears both. Neither notice is a live region of its own.
  */
-import type { ReactNode, RefObject } from 'react';
-
 import { Button } from '@tai42/studio-sdk';
+import type { ReactNode, RefObject } from 'react';
 
 import { StaleRead } from './read-states';
 

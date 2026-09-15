@@ -3,24 +3,24 @@
  * (a plain monotonic life counter), state badge, relative seen-since (absolute in the
  * tooltip), and last op. Every server-supplied string renders as escaped React text.
  */
-import type { ReactNode } from 'react';
+import type { FleetWorker } from '@tai42/api-client';
 import {
   Badge,
   Checkbox,
   ScrollRegion,
+  Table,
   TBody,
   TD,
   TH,
   THead,
-  TR,
-  Table,
   Tooltip,
+  TR,
 } from '@tai42/studio-sdk';
-import type { FleetWorker } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 
 import { monoStyle } from './cardChrome';
-import { workerStateBadge } from './workerStateBadge';
 import { formatAbsoluteInstant, formatRelativeInstant } from './relativeTime';
+import { workerStateBadge } from './workerStateBadge';
 
 export interface FleetWorkersTableProps {
   readonly workers: readonly FleetWorker[];

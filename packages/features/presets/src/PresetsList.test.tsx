@@ -3,9 +3,9 @@
  * badge + delete-to-resolve note, selecting a row navigates `?preset=`, and the
  * four-state render (loading skeleton / loud error / empty / data) holds.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PresetsList } from './PresetsList';
 import { renderWithProviders, type StubApiClient } from './test-utils';

@@ -2,8 +2,8 @@
  * Unit tests for the pure connect-form helpers: the OAuth-result discriminator and
  * the start-connect args assembly.
  */
-import { describe, expect, it } from 'vitest';
 import type { ProviderView } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { buildConnectArgs, hasAuthorizeUrl } from './connect-dialog-model';
 

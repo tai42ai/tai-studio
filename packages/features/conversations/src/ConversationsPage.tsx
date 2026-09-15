@@ -10,13 +10,13 @@
  * render a state that cannot exist, the page REPAIRS the URL — the source of
  * truth — back to the legal search.
  */
-import { useEffect, type ReactNode } from 'react';
-import { PageHeader, Stack, Tabs, useAppNavigate, type PageProps } from '@tai42/studio-sdk';
+import { PageHeader, type PageProps, Stack, Tabs, useAppNavigate } from '@tai42/studio-sdk';
+import { type ReactNode, useEffect } from 'react';
 
 import { ConfigsTable } from './ConfigsTable';
 import { FailedMessages } from './FailedMessages';
 import { useSelectionFocus } from './focus';
-import { RoutesTable, routeRowLabel } from './RoutesTable';
+import { routeRowLabel, RoutesTable } from './RoutesTable';
 import { RouteThreads } from './RouteThreads';
 import { sanitizeSearch } from './search';
 

@@ -1,5 +1,6 @@
 /** Settings-profile record, version, diff and apply response schemas. */
 import { z } from 'zod';
+
 import { fleetReportFanout } from './fleet';
 
 // The admin-only `/api/config/profiles/*` surface. Secrets ride the wire in the

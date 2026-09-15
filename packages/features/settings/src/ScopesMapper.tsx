@@ -14,32 +14,32 @@
  * inside its confirm dialog (delete-scope/last-url/pin/unpin) — never swallowed.
  * Every server-supplied string renders as escaped text through the design system.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext,
+  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from '@dnd-kit/core';
-import { Card, ErrorState, Spinner, errorMessage, useApi } from '@tai42/studio-sdk';
 import type { AddUrlToScopeBody } from '@tai42/api-client';
+import { Card, errorMessage, ErrorState, Spinner, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
+import { CreateScopeRow } from './CreateScopeRow';
 import { authRoutesKey, publicRoutesKey, subMcpKey } from './keys';
-import type { ChipData } from './ScopeItemChip';
+import { MapperZones } from './MapperZones';
+import { announcements } from './scope-announcements';
+import { MapperConfirmDialogs } from './scope-confirm-dialogs';
 import {
-  PUBLIC_MARKER,
   deriveMapperChips,
   dispatchDrop,
   dropFromDragEvent,
   invalidateMapperKeys,
+  PUBLIC_MARKER,
 } from './scope-mapping';
-import { announcements } from './scope-announcements';
-import { CreateScopeRow } from './CreateScopeRow';
-import { MapperZones } from './MapperZones';
-import { MapperConfirmDialogs } from './scope-confirm-dialogs';
+import type { ChipData } from './ScopeItemChip';
 
 const cardHeaderStyle: CSSProperties = {
   display: 'flex',

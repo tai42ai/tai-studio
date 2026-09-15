@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { RecordEntryRendererContext } from './context';
 import type { RecordEntryRenderer } from './context';
+import { RecordEntryRendererContext } from './context';
 import { RecordField } from './record-field';
-import { SecretRefField } from './SecretRefField';
 import type { SecretRef } from './SecretRefField';
+import { SecretRefField } from './SecretRefField';
 import type { JsonSchema } from './types';
 
 const PLAINTEXT = 's3cr3t-PLAINTEXT-value';

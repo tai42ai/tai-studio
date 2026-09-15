@@ -5,8 +5,8 @@
  * it also closes the mobile drawer (via `onForwardNav`) so a drawer nav-click lands on
  * the heading, not the hamburger.
  */
-import { useEffect, useRef } from 'react';
 import { useRouter, useRouterState } from '@tanstack/react-router';
+import { useEffect, useRef } from 'react';
 
 export function useRouteChangeFocus(onForwardNav: () => void): void {
   // Only a PUSH that CHANGES the pathname arms the focus move. A same-pathname

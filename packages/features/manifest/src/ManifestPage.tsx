@@ -6,8 +6,8 @@
  * inspector. State is server state, so its one section drives its own TanStack Query;
  * this component owns no data of its own.
  */
-import { PageHeader, Stack } from '@tai42/studio-sdk';
 import type { PageProps } from '@tai42/studio-sdk';
+import { PageHeader, Stack } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
 import { ManifestSectionsCard } from './tabs/ManifestSectionsCard';

@@ -5,13 +5,13 @@
  * VERBATIM, invalidates the three affected caches on success, and swaps the editor
  * for a presets-page hint when the selected tool is a preset.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type Extension, type PresetRecord } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type Extension, type PresetRecord } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ToolExtensionsCard } from './ToolExtensionsCard';
 import { renderWithProviders, type StubApiClient } from './test-utils';
+import { ToolExtensionsCard } from './ToolExtensionsCard';
 
 const available: Extension[] = [
   { name: 'marka', kind: 'wrapper' },

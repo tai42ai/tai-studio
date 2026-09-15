@@ -24,7 +24,7 @@
  * through a matcher scoped to the star/globstar syntax those entries use — the
  * excluded set stays derived from the manifest and cannot drift from what npm ships.
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

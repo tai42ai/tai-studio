@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import {
-  OverlayDetailsFields,
-  overlayDetailsPatch,
   type OverlayDetails,
+  OverlayDetailsFields,
   type OverlayDetailsFieldsProps,
+  overlayDetailsPatch,
 } from '../index';
 
 /** A controlled host so the fields drive real state through `onChange`. */

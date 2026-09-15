@@ -5,8 +5,7 @@
  * every tab, so a feature that is OFF surfaces once here as the muted `FeatureDisabled`
  * note; a name that does not resolve shows a not-found empty state.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@tai42/api-client';
 import {
   AppLink,
   ArrowLeftIcon,
@@ -15,24 +14,25 @@ import {
   Card,
   ConfirmDialog,
   EmptyState,
+  errorMessage,
   ErrorState,
+  FeatureDisabled,
+  featureDisabledMessage,
+  isFeatureDisabled,
+  type RouteSearch,
   Skeleton,
   Tabs,
-  errorMessage,
-  isFeatureDisabled,
-  featureDisabledMessage,
-  FeatureDisabled,
   useApi,
   useAppNavigate,
-  type RouteSearch,
 } from '@tai42/studio-sdk';
-import { ApiError } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { DeclarationTab } from './DeclarationTab';
-import { TemplatesTab } from './TemplatesTab';
-import { RecordsTab } from './RecordsTab';
 import { ConsumersTab } from './ConsumersTab';
+import { DeclarationTab } from './DeclarationTab';
 import { stateDetailKey, statesListKey } from './keys';
+import { RecordsTab } from './RecordsTab';
+import { TemplatesTab } from './TemplatesTab';
 
 const PERSON_KIND = 'person';
 

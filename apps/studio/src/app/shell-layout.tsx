@@ -17,25 +17,25 @@
  * footer at >=640, in the top bar below 640 — never both in one DOM. Sign-out lives
  * in the sidebar footer at >=640 and in the drawer footer below 640.
  */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { InteractionsBadge } from '@tai42/feature-interactions';
 import {
+  coversAnyRoute,
   Drawer,
+  isFullProjection,
   MenuIcon,
   PageFillProvider,
-  coversAnyRoute,
-  isFullProjection,
   useBreakpoint,
   useCapabilities,
 } from '@tai42/studio-sdk';
-import { InteractionsBadge } from '@tai42/feature-interactions';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { importMapIntegrityEnforced } from './integrity';
 import { NavBody } from './nav-body';
+import type { PluginLoader } from './plugin-loader';
 import { Brand, ShellMain, SignOutButton, ThemeControl } from './shell-chrome';
 import { usePluginLoadPass } from './use-plugin-load-pass';
 import { useRouteChangeFocus } from './use-route-change-focus';
 import { useSignOut } from './use-sign-out';
-import type { PluginLoader } from './plugin-loader';
 
 /** The interactions surface the floating badge subscribes to over SSE; a scoped
  * session mounts the badge only when its projection reaches it (fail closed — an

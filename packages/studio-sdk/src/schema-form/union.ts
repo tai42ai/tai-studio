@@ -5,8 +5,8 @@
  * when Pydantic emitted no discriminator). Returns `-1` when no variant is
  * active (an unset/`null` value, or nothing matches).
  */
-import { resolveRef } from './resolve';
 import type { UnionVariant } from './field-model';
+import { resolveRef } from './resolve';
 import type { JsonSchema } from './types';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

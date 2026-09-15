@@ -6,16 +6,16 @@
  * confirm; a save invalidates the tool's combos, the extension catalog, and the tool
  * list (a combo change binds or tears down branch tools).
  */
-import { useState } from 'react';
+import type { ApiClient, PresetExtensionElement } from '@tai42/api-client';
+import { extensionsQueryKey, useApi } from '@tai42/studio-sdk';
 import {
   useMutation,
+  type UseMutationResult,
   useQuery,
   useQueryClient,
-  type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { extensionsQueryKey, useApi } from '@tai42/studio-sdk';
-import type { ApiClient, PresetExtensionElement } from '@tai42/api-client';
+import { useState } from 'react';
 
 import { toolExtensionsKey, toolPresetsKey, toolsListKey } from './keys';
 

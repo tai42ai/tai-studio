@@ -21,33 +21,32 @@
  * The route carries no search parameters, so the props are unused; the typed
  * signature keeps this page interchangeable with every other feature the shell mounts.
  */
-import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-
+import type { PageProps } from '@tai42/studio-sdk';
 import {
   Badge,
   Card,
+  errorMessage,
   ErrorState,
   GuardedTabs,
   PageHeader,
   Skeleton,
   Stack,
-  errorMessage,
   useApi,
   useCapabilities,
 } from '@tai42/studio-sdk';
-import type { PageProps } from '@tai42/studio-sdk';
 import { usePluginContributions } from '@tai42/studio-sdk/host';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { ReloadConfigButton } from './ReloadConfigButton';
 import { configModeKey } from './keys';
+import { ReloadConfigButton } from './ReloadConfigButton';
 import {
   BACKUP_READ_ROUTE,
+  buildSettingsTabs,
   CONFIG_READ_ROUTES,
+  coreTabVisible,
   PROFILES_READ_ROUTES,
   ROLES_READ_ROUTE,
-  buildSettingsTabs,
-  coreTabVisible,
 } from './settings-tabs';
 
 /** The loading placeholder: a skeleton stand-in for the mode card. */

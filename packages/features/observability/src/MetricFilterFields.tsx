@@ -4,10 +4,10 @@
  * metric sort cannot carry those filters (the reader answers 501), so the combo is
  * never composed.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import { Field, NumberInput, Select, TextInput } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
-import { STATUS_ANY, type FilterDraft } from './filterDraft';
+import { type FilterDraft, STATUS_ANY } from './filterDraft';
 
 const fieldRowStyle: CSSProperties = {
   display: 'grid',

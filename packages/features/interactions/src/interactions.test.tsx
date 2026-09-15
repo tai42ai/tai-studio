@@ -1,8 +1,7 @@
+import { type ApiClient, ApiError } from '@tai42/api-client';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, type ApiClient } from '@tai42/api-client';
 
 import { InteractionsPage } from './interactions';
 import { InteractionsBadge } from './InteractionsBadge';

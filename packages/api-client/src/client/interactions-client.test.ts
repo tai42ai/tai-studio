@@ -11,8 +11,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
+import { type ApiConfig, ApiConflictError, ApiError } from '../index';
 import { createApiClient } from './index';
-import { ApiConflictError, ApiError, type ApiConfig } from '../index';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

@@ -4,8 +4,8 @@
  * selection, the token allowlist (cost keys excluded, total fallback), and the
  * leaf-only token roll-up that does not double-count a wrapper span.
  */
-import { describe, expect, it } from 'vitest';
 import type { RunSpan, RunTrace } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import {
   buildTree,

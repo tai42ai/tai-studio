@@ -7,13 +7,13 @@
  * `usage` and `metadata` render as their own guarded trees. Every payload is
  * escaped — this pane is never an HTML sink.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import type { RunSpan } from '@tai42/api-client';
 import { Badge, JsonTree } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { formatLatencyMs, formatTokenCount } from './format';
-import { spanDurationMs, isErrorSpan, spanTokens } from './trace-tree';
 import { asMessages, SpanMessages } from './SpanMessages';
+import { isErrorSpan, spanDurationMs, spanTokens } from './trace-tree';
 
 const emptyStyle: CSSProperties = {
   display: 'flex',

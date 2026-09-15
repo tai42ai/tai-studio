@@ -1,6 +1,5 @@
 /** Composition root: assembles the per-resource sub-clients into the client. */
 import type { ApiConfig } from '../http';
-import { makeTransport } from './transport';
 import { agentsClient } from './agents-client';
 import { authClient } from './auth-client';
 import { backendClient } from './backend-client';
@@ -32,42 +31,43 @@ import { templatesClient } from './templates-client';
 import { toolExtensionsClient } from './tool-extensions-client';
 import { toolMetaClient } from './tool-meta-client';
 import { toolsClient } from './tools-client';
+import { makeTransport } from './transport';
 import { triggerLinksClient } from './trigger-links-client';
 import { webEntryGateClient } from './web-entry-gate-client';
 
-export { isSafeApiPath } from './login-client';
 export type {
+  AddUrlToScopeBody,
   ApiKeyBody,
   ClaimLinkBody,
-  AddUrlToScopeBody,
+  PinRoutePublicBody,
   RoleCreateBody,
   RoleUpdateBody,
-  PinRoutePublicBody,
 } from './auth-client';
 export type { StartConnectArgs } from './connectors-client';
 export type {
-  ConversationThreadFilters,
-  ConversationTranscriptQuery,
   ConversationMessageSearchQuery,
+  ConversationThreadFilters,
   ConversationThreadMessageBody,
+  ConversationTranscriptQuery,
 } from './conversations-client';
 export type { TopicVerifierBody } from './hooks-client';
+export { isSafeApiPath } from './login-client';
 export type { ApiToolsListsBody } from './manifest-client';
 export type {
-  MarketplaceSearchQuery,
   MarketplaceInstallBody,
   MarketplaceInstallPreviewBody,
+  MarketplaceSearchQuery,
   MarketplaceUninstallBody,
 } from './marketplace-client';
 export type { MetricsQuery, RunsQuery } from './observability-client';
 export type { ValidateConditionBody } from './policy-client';
 export type { CreatePresetBody, SavePresetVersionBody, ValidatePresetBody } from './presets-client';
 export type {
-  StateDeclarationBody,
-  StateTemplateBody,
   StateAttachmentBody,
-  StateSubjectRef,
+  StateDeclarationBody,
   StatePageQuery,
+  StateSubjectRef,
+  StateTemplateBody,
 } from './states-client';
 export type { StorageUploadBody } from './storage-client';
 export type { ToolMetaPatch } from './tool-meta-client';

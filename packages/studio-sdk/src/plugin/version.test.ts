@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { STUDIO_PLUGIN_API_VERSION, checkPluginApiVersion } from './version';
+import { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './version';
 
 describe('checkPluginApiVersion', () => {
   it('accepts a plugin targeting the exact current version', () => {

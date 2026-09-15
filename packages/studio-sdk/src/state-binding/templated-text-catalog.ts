@@ -16,7 +16,6 @@
  * no data-layer dependency to the SDK.
  */
 import { errorMessage } from '../errors';
-
 import type { TemplatedTextCatalog } from './types';
 
 /** The storage-presence query result (`GET /api/storage`) fields this helper reads. */

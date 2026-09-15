@@ -4,12 +4,11 @@
  * `VersionHistoryPanel` and wires its rollback to `rollbackPolicy`, invalidating
  * both the policy-versions and tokens-payload queries on success.
  */
+import { type ApiClient, ApiError, ApiSchemaError, type PolicyVersion } from '@tai42/api-client';
 import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, ApiSchemaError, type ApiClient, type PolicyVersion } from '@tai42/api-client';
 
 import { PolicyVersionsDialog } from './PolicyVersionsDialog';
 import { renderWithProviders } from './test-utils';

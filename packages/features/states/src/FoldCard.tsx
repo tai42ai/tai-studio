@@ -1,17 +1,17 @@
 /** The fold card: merge this subject's document into another subject of a chosen kind. */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { StateSubjectRef } from '@tai42/api-client';
 import {
   Button,
   Card,
+  errorMessage,
   Field,
   Select,
   Spinner,
   TextInput,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { StateSubjectRef } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { stateRecordKey } from './keys';
 

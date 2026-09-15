@@ -4,23 +4,23 @@
  * that reads the PRESERVED manifest (`!ENV` markers intact) and the auxiliary reads
  * feeding the pickers and the marker checklist.
  */
-import { useQuery } from '@tanstack/react-query';
-import { summarizeFleetFanout } from '@tai42/api-client';
 import type { Extension, McpEnvRef } from '@tai42/api-client';
+import { summarizeFleetFanout } from '@tai42/api-client';
+import type { JsonSchema } from '@tai42/studio-sdk';
 import {
   Badge,
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
   FleetReport,
   Skeleton,
   Spinner,
   Textarea,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { JsonSchema } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import {
@@ -32,9 +32,9 @@ import {
   mcpStatusKey,
   preservedManifestKey,
 } from './keys';
-import { asRecord } from './mcp-config-parse';
-import { useMcpConfigDraft } from './mcp-config-draft';
 import type { ConfigView } from './mcp-config-draft';
+import { useMcpConfigDraft } from './mcp-config-draft';
+import { asRecord } from './mcp-config-parse';
 import { EntryList } from './mcp-entry-list';
 
 /** The Form / JSON view toggle. */

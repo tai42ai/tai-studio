@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -6,8 +6,8 @@ import { act, render } from '@testing-library/react';
 import { createElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { useBreakpoint } from './useBreakpoint';
 import type { BreakpointState } from './useBreakpoint';
+import { useBreakpoint } from './useBreakpoint';
 
 /** The band edges, spelled once here and cross-read against BOTH halves below. */
 const BAND_EDGES = [639, 1023, 1279];

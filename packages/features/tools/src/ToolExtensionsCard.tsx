@@ -12,24 +12,24 @@
  * STATED with a retry, and the card falls through to the manifest editor rather than
  * walling. Every 400/409 on save renders VERBATIM in the dialog.
  */
-import type { ReactNode } from 'react';
-import { summarizeFleetFanout, type PresetExtensionElement } from '@tai42/api-client';
+import { type PresetExtensionElement, summarizeFleetFanout } from '@tai42/api-client';
 import {
   AppLink,
   Badge,
   Button,
+  comboElementNames,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   ExtensionComboBuilder,
   FleetReport,
   Skeleton,
   Spinner,
-  comboElementNames,
-  errorMessage,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import { useToolExtensions, type ToolExtensionsController } from './useToolExtensions';
+import { type ToolExtensionsController, useToolExtensions } from './useToolExtensions';
 
 /** A single authored combo, shown as an ordered row of extension-name badges. */
 function ComboBadges({ combo }: { readonly combo: readonly string[] }): ReactNode {

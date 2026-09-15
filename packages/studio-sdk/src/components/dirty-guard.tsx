@@ -11,19 +11,19 @@
  */
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useId,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
 
-import { ConfirmDialog } from './confirm-dialog';
-import { Tabs } from './tabs';
-import type { TabItem } from './tabs';
 import { useNavigationGuard } from '../navigation';
+import { ConfirmDialog } from './confirm-dialog';
+import type { TabItem } from './tabs';
+import { Tabs } from './tabs';
 
 interface DirtyGuardValue {
   /** Register (or clear) one editor's dirty state, keyed by a stable id. */

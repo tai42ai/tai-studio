@@ -18,14 +18,14 @@
  * The editor drives its own text; validity flows up through `onChange` so the caller gates
  * its save on it (never a silently disabled control). An empty editor is an unset schema.
  */
-import { useRef, type ReactNode } from 'react';
+import { schemas, type TemplatedText } from '@tai42/api-client';
 import {
   SchemaEditor,
-  TemplatedTextField,
   type SchemaEditorChange,
   type TemplatedTextCatalog,
+  TemplatedTextField,
 } from '@tai42/studio-sdk';
-import { schemas, type TemplatedText } from '@tai42/api-client';
+import { type ReactNode, useRef } from 'react';
 
 /** The served base-schema value: an inline JSON-schema dict or a templated-text reference. */
 export type SchemaUnion = TemplatedText | Record<string, unknown>;

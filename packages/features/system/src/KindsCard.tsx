@@ -3,29 +3,29 @@
  * the serving plugin/module (when known), and a short detail. Every server-supplied
  * string renders as escaped React text, never an HTML sink.
  */
-import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { KindStatus } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   ScrollRegion,
   Skeleton,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { KindStatus } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { systemKindsKey } from './keys';
 import { cardHeaderStyle, monoStyle } from './cardChrome';
+import { systemKindsKey } from './keys';
 
 /** Badge variant per kind state: `active` reads success, `default` (a built-in
  * fallback) a warning worth an eye, `off` (nothing registered) a calm neutral. */

@@ -7,8 +7,6 @@
  * server state flows through TanStack Query:
  * loading → `Skeleton`, empty → `EmptyState`, error → a loud `ErrorState`.
  */
-import { useCallback, useRef, useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AppLink,
   ArrowLeftIcon,
@@ -16,28 +14,30 @@ import {
   Card,
   ConfirmDialog,
   EmptyState,
+  errorMessage,
   ErrorState,
+  type ExplorerColumn,
+  type ExplorerEmptyStates,
   ExplorerView,
+  type Folder,
   PageHeader,
+  type PageProps,
+  type RouteSearch,
   Skeleton,
   Spinner,
   TD,
-  errorMessage,
   useApi,
   useAppNavigate,
   useBreakpoint,
   useSearchCommit,
-  type ExplorerColumn,
-  type ExplorerEmptyStates,
-  type Folder,
-  type PageProps,
-  type RouteSearch,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 
-import { TemplateDetail } from './TemplateDetail';
-import { UploadTemplateForm } from './UploadTemplateForm';
 import { deriveTemplateFolders, templateFolderId, templateLabel } from './folders';
 import { storageInfoKey, templatesListKey } from './keys';
+import { TemplateDetail } from './TemplateDetail';
+import { UploadTemplateForm } from './UploadTemplateForm';
 import { useTemplateDetailFocus } from './use-template-detail-focus';
 
 /** The explorer's list/card view-mode persistence key. */

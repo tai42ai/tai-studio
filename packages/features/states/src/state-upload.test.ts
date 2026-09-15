@@ -3,12 +3,12 @@
  * document, the state vs state-template PUT shapes, and the 409 handling — only a
  * state-template clash opens the Replace confirm; a state's 409 surfaces loudly.
  */
+import { type ApiClient, ApiError } from '@tai42/api-client';
+import { ApiProvider } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { ApiProvider } from '@tai42/studio-sdk';
-import { ApiError, type ApiClient } from '@tai42/api-client';
 
 import { useStateUpload } from './state-upload';
 

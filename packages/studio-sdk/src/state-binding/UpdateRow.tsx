@@ -7,14 +7,14 @@
 import type { ReactNode } from 'react';
 
 import { Badge } from '../components/badge';
-import { Button } from '../components/primitives';
 import { Field } from '../components/field';
+import { CloseIcon } from '../components/icons';
+import { Button } from '../components/primitives';
 import { Select } from '../components/select';
 import { TemplatedTextField } from '../components/templated-text-field';
-import { CloseIcon } from '../components/icons';
 import { AdapterMapping } from './AdapterMapping';
-import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import type { TemplateJqSuggestion } from './BindingJqField';
+import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import { findByRef, type ResolvedTemplateJq } from './catalog';
 import type { BindingSourceSchemas, StateUpdate, TemplatedTextCatalog } from './types';
 

@@ -14,7 +14,7 @@
  * sentence tied to a condition ({@link useStandingNotice}) is taken back out of
  * the region when that condition lifts instead, so its return is a change again.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 export interface LiveRegion {
   /** Say `message`. Identical text twice in a row is one change, so it is said once. */

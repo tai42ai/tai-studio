@@ -12,6 +12,13 @@
  * shared empty state, or a LOUD, always-visible error surface — a failed request or a
  * zod mismatch is never a silent empty render, and a 401 is not special-cased here.
  */
+import type {
+  ConnectionView,
+  ConnectorCategoryView,
+  FleetReportSummary,
+  ProviderView,
+} from '@tai42/api-client';
+import type { PageProps } from '@tai42/studio-sdk';
 import {
   AppLink,
   Badge,
@@ -24,21 +31,14 @@ import {
   Skeleton,
   Stack,
 } from '@tai42/studio-sdk';
-import type { PageProps } from '@tai42/studio-sdk';
-import type {
-  ConnectionView,
-  ConnectorCategoryView,
-  FleetReportSummary,
-  ProviderView,
-} from '@tai42/api-client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '@tai42/studio-sdk';
-import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 
-import { CONNECTIONS_KEY, PROVIDERS_KEY, connectionKey } from './keys';
 import { ConnectDialog } from './connect-dialog';
 import { ConnectionDetail } from './connection-detail';
+import { connectionKey, CONNECTIONS_KEY, PROVIDERS_KEY } from './keys';
 import { McpServersSection } from './mcp-servers';
 import { Notice } from './notice';
 import { useOAuthRedirectResume } from './oauth';

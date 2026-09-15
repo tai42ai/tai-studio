@@ -12,17 +12,17 @@
  * on any failure — a rejected request or a zod mismatch is always a visible error,
  * never a silent render. Read-only config mode disables every input and Save.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { envConfigKey, settingsSchemaKey } from './keys';
 import { SettingsField } from './SettingsField';

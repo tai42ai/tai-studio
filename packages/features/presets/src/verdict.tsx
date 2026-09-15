@@ -12,8 +12,8 @@
  * interrupts what the author is typing. A request that never REACHED a verdict
  * (a 503) is a real failure and stays loud — that branch belongs to the caller.
  */
-import type { ReactNode } from 'react';
 import { Badge } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function ValidateVerdict({
   valid,

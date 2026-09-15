@@ -3,12 +3,11 @@
  * (agent suffix, overlay display names), and the enrichment/state-binding read
  * resilience (a failed enrichment read is stated per-line without walling the form).
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { CreatePresetForm } from './CreatePresetForm';
 import {

@@ -12,37 +12,37 @@
  * additive schema changes; a change that removes or alters an existing field (or a
  * stranding subject-kind removal) is refused with a 409 whose message is shown inline.
  */
-import { useMemo, useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type StateDeclarationBody, type StateDetail } from '@tai42/api-client';
 import {
   Badge,
   Button,
+  errorMessage,
   ErrorState,
+  FeatureDisabled,
+  featureDisabledMessage,
   Field,
   FormDialog,
+  isFeatureDisabled,
   JsonTree,
   NumberInput,
   Select,
   Skeleton,
   Spinner,
   TagsInput,
-  TextInput,
-  errorMessage,
-  isFeatureDisabled,
-  featureDisabledMessage,
   templatedTextCatalog,
-  FeatureDisabled,
+  TextInput,
   useApi,
 } from '@tai42/studio-sdk';
-import { type StateDeclarationBody, type StateDetail } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useMemo, useState } from 'react';
 
+import { stateDetailKey, statesListKey, stateStatsKey } from './keys';
 import {
   SchemaField,
-  storedSchemaRef,
   type SchemaFieldChange,
   type SchemaUnion,
+  storedSchemaRef,
 } from './SchemaField';
-import { stateDetailKey, stateStatsKey, statesListKey } from './keys';
 
 const PERSON_KIND = 'person';
 

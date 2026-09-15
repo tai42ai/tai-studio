@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import type { TemplatedText } from '@tai42/api-client';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { TemplatedText } from '@tai42/api-client';
 
 import { SubjectScopeFields } from './SubjectScopeFields';
 

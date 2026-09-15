@@ -1,6 +1,6 @@
 /** Storage resource CRUD sub-client. */
-import * as s from '../schemas';
 import { apiDownload, isUnsafePathSegment } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 /**

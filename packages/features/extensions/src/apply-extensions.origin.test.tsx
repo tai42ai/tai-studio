@@ -3,18 +3,16 @@
  * states, hidden-tool exclusion, and display-name overlay. The manifest save/edit
  * flow lives in the sibling test file; these render the same panel.
  */
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
 import {
-  ApiSchemaError,
   type ApiClient,
+  ApiSchemaError,
   type Extension,
   type PresetRecord,
 } from '@tai42/api-client';
-
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';

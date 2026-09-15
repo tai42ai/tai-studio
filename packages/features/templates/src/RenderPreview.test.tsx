@@ -6,9 +6,9 @@
  * Rendered output is shown as ESCAPED text — a `<script>` payload is displayed
  * verbatim, never injected — and a rejected render surfaces in an `ErrorState`.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { RenderPreview } from './RenderPreview';
 import { renderWithProviders, type StubApiClient } from './test-utils';

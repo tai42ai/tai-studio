@@ -3,18 +3,18 @@
  * on an existing record, drives create/edit through {@link DocumentEditor}, and hosts
  * the danger-confirm erase. Loading and read errors surface loudly in place.
  */
-import type { ReactNode } from 'react';
+import type { StateSubjectRef } from '@tai42/api-client';
 import {
   Button,
   Card,
   ConfirmDialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   JsonTree,
   Skeleton,
-  errorMessage,
 } from '@tai42/studio-sdk';
-import type { StateSubjectRef } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 
 import { DocumentEditor } from './DocumentEditor';
 import type { StateRecordController } from './useStateRecord';

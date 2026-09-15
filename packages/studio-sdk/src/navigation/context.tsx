@@ -1,18 +1,18 @@
 import {
   createContext,
   createElement,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useRef,
-  type ReactNode,
 } from 'react';
 
-import { NavigationGuardRegistry, type GuardEntry } from './guard-registry';
+import { type GuardEntry, NavigationGuardRegistry } from './guard-registry';
 import { buildGuardedNavigation, type CommittedEntry } from './guarded-navigation';
-import { useBackForwardGuard } from './use-back-forward-guard';
 import type { NavigationContextValue, NavigationGuardHandler } from './types';
+import { useBackForwardGuard } from './use-back-forward-guard';
 
 /** Shell-provided navigation; no default, so use outside {@link NavigationProvider} throws. */
 const NavigationContext = createContext<NavigationContextValue | null>(null);

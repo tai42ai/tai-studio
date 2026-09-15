@@ -2,8 +2,8 @@
  * The execution-key picker driven DIRECTLY — a host-form test cannot reach a
  * failed/empty read while still passing a required-field error.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ExecutionKeyPicker } from './ExecutionKeyPicker';
 import {

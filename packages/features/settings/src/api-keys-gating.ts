@@ -3,7 +3,7 @@
  * the deployment-wide scopes mapper is reachable, whether the caller may mint a key,
  * and the scope options a scoped session is capped to.
  */
-import { coversAnyRoute, isFullProjection, type CapabilityState } from '@tai42/studio-sdk';
+import { type CapabilityState, coversAnyRoute, isFullProjection } from '@tai42/studio-sdk';
 
 /** Unique scope ids across the scope map, excluding the implicit `public` scope. */
 export function scopeIdsOf(scopes: Record<string, string>): string[] {

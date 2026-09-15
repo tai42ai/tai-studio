@@ -1,27 +1,26 @@
-import { useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import {
   Badge,
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
   RadioGroup,
   Spinner,
-  TextInput,
   Textarea,
-  errorMessage,
+  TextInput,
   useApi,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ChangeEvent, type CSSProperties, type ReactNode, useRef, useState } from 'react';
 
 import { storageResourcesKey } from './keys';
 import { monoStyle } from './storage-view';
 import {
-  STATUS_BADGE,
-  readFileBase64,
-  uploadConflicts,
   type FileEntry,
+  readFileBase64,
+  STATUS_BADGE,
+  uploadConflicts,
   type UploadMode,
 } from './upload-data';
 

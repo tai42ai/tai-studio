@@ -6,25 +6,25 @@
 import type { RouteToken } from '../../navigation/types';
 import type { IconComponent } from './icon-frame';
 import {
-  DashboardIcon,
-  ToolsIcon,
   AgentsIcon,
-  PresetsIcon,
+  ConnectorsIcon,
+  ConversationsIcon,
+  DashboardIcon,
   DatabaseIcon,
   ExtensionsIcon,
-  TemplatesIcon,
-  ConnectorsIcon,
-  ServedEndpointsIcon,
   HooksIcon,
-  StorageIcon,
-  SchedulingIcon,
   InteractionsIcon,
-  NotificationsIcon,
-  ConversationsIcon,
-  MarketplaceIcon,
   ManifestIcon,
+  MarketplaceIcon,
+  NotificationsIcon,
+  PresetsIcon,
+  SchedulingIcon,
+  ServedEndpointsIcon,
   SettingsIcon,
+  StorageIcon,
   SystemIcon,
+  TemplatesIcon,
+  ToolsIcon,
 } from './nav-marks';
 
 /**

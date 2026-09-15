@@ -1,7 +1,7 @@
 /** The fire-path submit gate: which execution-key read states block. */
-import { describe, expect, it } from 'vitest';
-import type { UseQueryResult } from '@tanstack/react-query';
 import type { TokensPayload } from '@tai42/api-client';
+import type { UseQueryResult } from '@tanstack/react-query';
+import { describe, expect, it } from 'vitest';
 
 import { fireGateUnsatisfiable, isExecutionKeyListEmpty } from './fire-path-gate';
 

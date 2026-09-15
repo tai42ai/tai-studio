@@ -1,8 +1,8 @@
 /**
  * The inline row for naming a new scope, validated before it becomes a pending zone.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Button, Field, TextInput } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { PUBLIC_MARKER } from './scope-mapping';
 

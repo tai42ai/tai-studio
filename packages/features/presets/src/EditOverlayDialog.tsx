@@ -5,24 +5,23 @@
  * `hidden` are left untouched — this surface never owns them. Seeded from the tool's
  * current overlay row so an unedited save round-trips the same values.
  */
-import { useEffect, useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
-  OverlayDetailsFields,
-  Spinner,
-  errorMessage,
   featureDisabledMessage,
   isFeatureDisabled,
+  type OverlayDetails,
+  OverlayDetailsFields,
   overlayDetailsPatch,
+  Spinner,
   useApi,
   useReloadToolDisplayNames,
-  type OverlayDetails,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { presetToolMetaKey } from './keys';
 

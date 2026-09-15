@@ -6,14 +6,13 @@
  * switch never fails silently). Rendered with an admin projection so the write
  * controls are present.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '@tai42/api-client';
-
+import { fullProjection, renderWithProviders, type StubApiClient, triggerLink } from './test-utils';
 import { TriggerLinksList } from './TriggerLinksList';
-import { fullProjection, renderWithProviders, triggerLink, type StubApiClient } from './test-utils';
 
 describe('TriggerLinksList — table', () => {
   it('renders a permanent row and a params Badge only for a NON-empty tool_kwargs', async () => {

@@ -6,11 +6,10 @@
  * the api-key requirement rides as `require_api_key`, and every server status — the
  * pass-role / token-free-evaluable refusals included — renders verbatim.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiConflictError, ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { ApiConflictError, ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
 import { apiKey, renderWithProviders, type StubApiClient } from './test-utils';

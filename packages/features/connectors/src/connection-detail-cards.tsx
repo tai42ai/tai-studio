@@ -3,6 +3,7 @@
  * sub-service toggle card, the disconnect confirm dialog, and the contextual notice
  * cluster. All are stateless — the orchestrator owns the data and actions.
  */
+import type { ConnectionView, FleetReportSummary } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
   Badge,
@@ -14,7 +15,6 @@ import {
   FleetReport,
   Spinner,
 } from '@tai42/studio-sdk';
-import type { ConnectionView, FleetReportSummary } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { ConnectorRefusalNotice, Notice, readConnectorRefusal } from './notice';

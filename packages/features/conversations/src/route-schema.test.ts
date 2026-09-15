@@ -4,18 +4,18 @@
  * body a form value flattens to (with the per-variant field exclusivity the contract
  * enforces), and the inline required-field guard.
  */
-import { describe, expect, it } from 'vitest';
 import { validateAgainstSchema } from '@tai42/studio-sdk';
+import { describe, expect, it } from 'vitest';
 
-import { makeRoute } from './test-utils';
 import {
   blankRouteValue,
   formValueToBody,
   requiredFieldErrors,
   routeFormSchema,
-  routeToFormValue,
   type RouteFormValue,
+  routeToFormValue,
 } from './route-schema';
+import { makeRoute } from './test-utils';
 
 describe('routeFormSchema', () => {
   it('makes route_name an editable string on create', () => {

@@ -5,29 +5,30 @@
  * The routes are built in per-domain groups so each builder stays small; the tree is
  * flat (path-matched, order-independent), so grouping is a code-shape choice only.
  */
-import type { ReactNode } from 'react';
-import { createRoute, useParams, useSearch } from '@tanstack/react-router';
 import { schemas } from '@tai42/api-client';
-import type { RouteSearch } from '@tai42/studio-sdk';
-import { ToolsPage } from '@tai42/feature-tools';
 import { AgentsPage } from '@tai42/feature-agents';
-import { PresetsPage } from '@tai42/feature-presets';
-import { StatesPage } from '@tai42/feature-states';
-import { ExtensionsPage } from '@tai42/feature-extensions';
-import { InteractionsPage } from '@tai42/feature-interactions';
-import { NotificationsPage } from '@tai42/feature-notifications';
-import { ConversationsPage } from '@tai42/feature-conversations';
 import { ConnectorsPage } from '@tai42/feature-connectors';
+import { ConversationsPage } from '@tai42/feature-conversations';
+import { ExtensionsPage } from '@tai42/feature-extensions';
 import { HooksPage } from '@tai42/feature-hooks';
-import { TemplatesPage } from '@tai42/feature-templates';
-import { StoragePage } from '@tai42/feature-storage';
+import { InteractionsPage } from '@tai42/feature-interactions';
 import { ManifestPage, ServedEndpointsPage } from '@tai42/feature-manifest';
-import { SettingsPage } from '@tai42/feature-settings';
-import { SystemPage } from '@tai42/feature-system';
-import { SchedulingPage } from '@tai42/feature-scheduling';
-import { ObservabilityPage } from '@tai42/feature-observability';
 import { MarketplacePage } from '@tai42/feature-marketplace';
+import { NotificationsPage } from '@tai42/feature-notifications';
+import { ObservabilityPage } from '@tai42/feature-observability';
+import { PresetsPage } from '@tai42/feature-presets';
+import { SchedulingPage } from '@tai42/feature-scheduling';
+import { SettingsPage } from '@tai42/feature-settings';
+import { StatesPage } from '@tai42/feature-states';
+import { StoragePage } from '@tai42/feature-storage';
+import { SystemPage } from '@tai42/feature-system';
+import { TemplatesPage } from '@tai42/feature-templates';
+import { ToolsPage } from '@tai42/feature-tools';
+import type { RouteSearch } from '@tai42/studio-sdk';
+import { createRoute, useParams, useSearch } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
+import type { PluginLoader } from './plugin-loader';
 import { PluginPage } from './plugin-page';
 import {
   parseEnum,
@@ -36,7 +37,6 @@ import {
   parseTags,
 } from './route-search';
 import type { AuthedLayoutRoute } from './shell-routes';
-import type { PluginLoader } from './plugin-loader';
 
 /** The authoring surfaces: tools, agents, presets, states, extensions. */
 function buildWorkbenchRoutes(authedLayout: AuthedLayoutRoute) {

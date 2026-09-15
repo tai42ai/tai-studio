@@ -4,7 +4,7 @@
  * plugin's SRI'd stylesheets before its JS, and loading one bundle's `register`
  * entry through {@link loadPlugin} with full cleanup on any failure.
  */
-import { ApiError, ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
+import { type ApiClient, ApiError, ApiUnauthorizedError } from '@tai42/api-client';
 import { checkPluginApiVersion, errorMessage, type PluginEntry } from '@tai42/studio-sdk';
 import { loadPlugin } from '@tai42/studio-sdk/host';
 

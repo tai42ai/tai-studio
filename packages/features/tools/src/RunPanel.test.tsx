@@ -11,17 +11,17 @@
  *  - with no contribution the auto-form renders; after a plugin registers a
  *    panel the contributed panel renders instead.
  */
-import type { ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { type ToolPanelProps } from '@tai42/studio-sdk';
 import { ApiError } from '@tai42/api-client';
+import { type ToolPanelProps } from '@tai42/studio-sdk';
 import { loadPlugin } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AutoFormRunPanel, RunPanel } from './RunPanel';
 import { RUN_TIMEOUT_MS } from './run';
+import { AutoFormRunPanel, RunPanel } from './RunPanel';
 import {
   fullProjection,
   renderWithProviders,

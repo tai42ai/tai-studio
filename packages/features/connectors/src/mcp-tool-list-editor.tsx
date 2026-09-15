@@ -1,6 +1,7 @@
 /** The tool-list editor for one MCP entry (`include` or `exclude`): removable token
  *  chips plus an add row that picks a discovered tool and, for `include`, stacks
  *  extensions into a composed `tool:ext[:ext]` token. */
+import type { Extension } from '@tai42/api-client';
 import {
   Badge,
   Button,
@@ -10,7 +11,6 @@ import {
   ToolPicker,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
-import type { Extension } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 

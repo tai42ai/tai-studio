@@ -14,8 +14,8 @@
  */
 import { z } from 'zod';
 
-import { apiRequest, encodeSegment } from './http';
 import type { ApiConfig } from './http';
+import { apiRequest, encodeSegment } from './http';
 
 /** A run's lifecycle state. `lost` = the server restarted mid-run; the result is
  * unrecoverable. `running` is the only non-terminal state. */

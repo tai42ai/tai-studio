@@ -13,26 +13,26 @@
  * It doubles as author documentation (the smallest complete plugin) and as the
  * e2e test subject the boot recipe drives.
  */
-import * as React from 'react';
-import { useState } from 'react';
-import {
-  Button,
-  Card,
-  ErrorState,
-  JsonTree,
-  Spinner,
-  TextInput,
-  Checkbox,
-  useApi,
-  type PluginContext,
-  type PluginPageProps,
-  type SettingsTabProps,
-  type ToolPanelProps,
-} from '@tai42/studio-sdk';
-
 // The plugin's own scoped stylesheet. Importing it makes the build emit one CSS
 // asset, which the host injects (SRI'd) before this bundle's JS runs.
 import './styles.css';
+
+import {
+  Button,
+  Card,
+  Checkbox,
+  ErrorState,
+  JsonTree,
+  type PluginContext,
+  type PluginPageProps,
+  type SettingsTabProps,
+  Spinner,
+  TextInput,
+  type ToolPanelProps,
+  useApi,
+} from '@tai42/studio-sdk';
+import * as React from 'react';
+import { useState } from 'react';
 
 /**
  * Expose this bundle's React reference so the e2e singleton test can assert it is

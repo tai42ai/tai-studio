@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import * as barrel from '../index';
 import { AlertTriangleIcon, XCircleIcon } from './icons';
 import { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './primitives';
-import * as barrel from '../index';
 
 describe('the link-safety pair on the published surface', () => {
   it('publishes BOTH halves, so a caller never re-parses to get the URL', () => {

@@ -2,8 +2,8 @@
  * Unit tests for the pure combo updaters behind the tool-extensions editor: replace,
  * remove, and the boundary-safe reorders.
  */
-import { describe, expect, it } from 'vitest';
 import type { PresetExtensionElement } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import {
   applyComboChange,

@@ -6,24 +6,24 @@
  * so navigation can be asserted. Only test dependencies are imported here; no
  * production module is stubbed.
  */
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
-import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
 import type {
   ApiClient,
   MarketplaceAdvisory,
-  MarketplaceInstallPreview,
-  MarketplaceInstallResult,
   MarketplaceInstalled,
   MarketplaceInstalledPlugin,
+  MarketplaceInstallPreview,
+  MarketplaceInstallResult,
   MarketplacePluginDetail,
   MarketplaceSearchPage,
   MarketplaceSearchRow,
 } from '@tai42/api-client';
-import { act, render, screen, type RenderResult } from '@testing-library/react';
+import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
+import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
-import { vi, type Mock } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, type RenderResult, screen } from '@testing-library/react';
+import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
+import { type Mock, vi } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;

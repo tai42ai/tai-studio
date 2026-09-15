@@ -3,8 +3,6 @@
  * control, the sign-out button, the routed content column, and the guarded-chrome-link
  * click handler for targets outside the route-token map.
  */
-import { useCallback, type MouseEvent, type ReactNode } from 'react';
-import { Link, Outlet, useRouter } from '@tanstack/react-router';
 import {
   Button,
   MonitorIcon,
@@ -12,14 +10,16 @@ import {
   RadioGroup,
   SignOutIcon,
   SunIcon,
+  type ThemePreference,
   useNavigationGate,
   usePageFillActive,
   useTheme,
-  type ThemePreference,
 } from '@tai42/studio-sdk';
+import { Link, Outlet, useRouter } from '@tanstack/react-router';
+import { type MouseEvent, type ReactNode, useCallback } from 'react';
 
-import { RouteCapabilityBoundary } from './route-capability-boundary';
 import { IntegrityBanner } from './integrity';
+import { RouteCapabilityBoundary } from './route-capability-boundary';
 
 /**
  * Click handler for a chrome link whose target lies outside the route-token map.

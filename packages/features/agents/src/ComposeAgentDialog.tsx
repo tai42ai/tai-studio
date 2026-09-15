@@ -16,28 +16,27 @@
  * rendered as ESCAPED text through the DS components (React escapes them) — never an
  * HTML sink. Pinned by a test.
  */
-import { useMemo, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
-
 import type { AgentSummary } from '@tai42/api-client';
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
-  Select,
-  Spinner,
-  errorMessage,
   type JsonSchema,
   type SchemaEditorChange,
+  Select,
+  Spinner,
 } from '@tai42/studio-sdk';
+import { type ReactNode, type SyntheticEvent, useMemo, useRef, useState } from 'react';
 
-import { RESPONSE_FORMAT_FIELD, extraSpecSchema, hasField } from './authoring-schema';
+import { extraSpecSchema, hasField, RESPONSE_FORMAT_FIELD } from './authoring-schema';
 import { buildCreateBody } from './compose-body';
-import { useComposeAgentData } from './useComposeAgentData';
-import { useCreateComposedAgent } from './useCreateComposedAgent';
+import { ComposeFallbackFields, type ComposeFallbackHandle } from './ComposeFallbackFields';
 import { ComposeIdentityFields } from './ComposeIdentityFields';
 import { ComposeSpecFields, type ComposeSpecHandle } from './ComposeSpecFields';
-import { ComposeFallbackFields, type ComposeFallbackHandle } from './ComposeFallbackFields';
+import { useComposeAgentData } from './useComposeAgentData';
+import { useCreateComposedAgent } from './useCreateComposedAgent';
 
 export function ComposeAgentDialog({
   agents,

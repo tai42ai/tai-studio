@@ -29,20 +29,22 @@
  * (`useBreakpoint().isSinglePane`) exactly one pane shows, driven by `data-pane`.
  * Selecting a tool moves focus to the detail heading; Back returns focus to the list.
  */
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ToolMetaPatch } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Button,
   Card,
   EmptyState,
-  ErrorState,
-  PageHeader,
-  Skeleton,
-  Stack,
   errorMessage,
+  ErrorState,
+  type Folder,
   isFeatureDisabled,
   isFullProjection,
+  PageHeader,
+  type PageProps,
+  type RouteSearch,
+  Skeleton,
+  Stack,
   useApi,
   useAppNavigate,
   useBreakpoint,
@@ -50,21 +52,19 @@ import {
   useCapabilities,
   useReloadToolDisplayNames,
   useSearchCommit,
-  type Folder,
-  type PageProps,
-  type RouteSearch,
 } from '@tai42/studio-sdk';
-import type { ToolMetaPatch } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type RefObject, useCallback, useEffect, useRef, useState } from 'react';
 
-import { toolMetaKey } from './keys';
 import { FolderActionsMenu } from './FolderActions';
+import { toolMetaKey } from './keys';
 import { RunPanel } from './RunPanel';
 import { ToolAdminCard } from './ToolAdminCard';
+import { SEARCH_LABEL, ToolExplorer } from './ToolExplorer';
 import { ToolExtensionsCard } from './ToolExtensionsCard';
 import { ToolMetaEditDialog } from './ToolMetaEditDialog';
 import type { ToolView } from './toolView';
 import { useToolCatalog } from './useToolCatalog';
-import { ToolExplorer, SEARCH_LABEL } from './ToolExplorer';
 
 /** The overlay-write door the edit affordance is gated on (merge-patch a tool's row). */
 const TOOL_META_WRITE_ROUTE = '/api/tool-meta/tools';

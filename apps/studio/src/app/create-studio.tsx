@@ -10,24 +10,24 @@
  * SystemKindsProvider ▸ ToolDisplayNamesProvider ▸ NavigationProvider ▸
  * JqPrimitivesProvider ▸ ExpressionFieldContext ▸ RouterProvider.
  */
-import { type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
+import { type ApiClient, ApiUnauthorizedError } from '@tai42/api-client';
+import { type AuthState, type NavigationContextValue } from '@tai42/studio-sdk';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
 import { type RouterHistory } from '@tanstack/react-router';
-import { type AuthState, type NavigationContextValue } from '@tai42/studio-sdk';
-import { ApiUnauthorizedError, type ApiClient } from '@tai42/api-client';
+import { type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 
-import { PATH } from './routes';
-import { buildRouter, type AppRouter } from './router';
 import { createNavigation } from './navigation';
-import { nativeImport, nativeLoadStylesheet } from './plugin-loader-native';
-import { createStudioApp } from './studio-app';
 import {
   createPluginLoader,
   type ImportModule,
   type LoadStylesheet,
   type PluginLoader,
 } from './plugin-loader';
+import { nativeImport, nativeLoadStylesheet } from './plugin-loader-native';
+import { type AppRouter, buildRouter } from './router';
+import { PATH } from './routes';
+import { createStudioApp } from './studio-app';
 
 export interface StudioDeps {
   /** Build the typed client around the shell's live token getter. */

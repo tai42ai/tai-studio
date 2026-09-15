@@ -4,10 +4,10 @@
  * granularity control and window feeding the metrics query, the drill-through to
  * the runs tab, the empty/loading states, and the 501 and loud-error paths.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type DashboardMetrics } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type DashboardMetrics } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { StatsTab } from './StatsTab';
 import { renderWithProviders, type StubApiClient } from './test-utils';

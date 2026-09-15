@@ -3,12 +3,12 @@
  * card renders unconditionally — the census and reload work over the worker bus with
  * or without a registered backend.
  */
-import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { backendInfoKey } from './keys';
 import { BackendCard } from './BackendCard';
+import { backendInfoKey } from './keys';
 import { WorkersCard } from './WorkersCard';
 
 export function BackendFleet(): ReactNode {

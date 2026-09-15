@@ -1,8 +1,7 @@
+import { type ApiClient, ApiConflictError, ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiConflictError, ApiError, type ApiClient } from '@tai42/api-client';
 
 import { InteractionsPage } from './interactions';
 import {
@@ -16,8 +15,8 @@ import {
   pendingItem,
   renderInbox,
   renderWithProviders,
-  stubClient,
   type StreamChannel,
+  stubClient,
 } from './test-utils';
 
 describe('TextAnswer — empty submit guard', () => {

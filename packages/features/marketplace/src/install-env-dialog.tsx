@@ -1,14 +1,13 @@
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
 import {
   ConfirmDialog,
   FeatureDisabled,
-  Skeleton,
   featureDisabledMessage,
   isFeatureDisabled,
+  Skeleton,
   useApi,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { collectEnv, EnvVarFields } from './install-dialog';
 import { installEnvBands } from './install-env';

@@ -3,9 +3,9 @@
  * server-derived trigger-auth door, a condition and/or expr badge when either gate
  * is set, and per-row Edit / Delete doors.
  */
-import type { ReactNode } from 'react';
-import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
 import type { HookParams, TriggerAuth } from '@tai42/api-client';
+import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { describeTriggerAuth } from './trigger-auth';
 

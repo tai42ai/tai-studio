@@ -2,10 +2,10 @@
  * Import-map integrity honesty: the feature-detect predicate and the loud
  * non-blocking banner it drives when the browser does not enforce integrity.
  */
-import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-import { IntegrityBanner, importMapIntegrityEnforced } from './integrity';
+import { importMapIntegrityEnforced, IntegrityBanner } from './integrity';
 
 describe('import-map integrity feature-detect', () => {
   it('reports NOT enforced when HTMLScriptElement.supports is absent', () => {

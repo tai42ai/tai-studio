@@ -8,7 +8,7 @@
 import { useDroppable } from '@dnd-kit/core';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { ScopeItemChip, type ChipData, type ZoneRef } from './ScopeItemChip';
+import { type ChipData, ScopeItemChip, type ZoneRef } from './ScopeItemChip';
 
 function zoneDomId(zone: ZoneRef): string {
   switch (zone.kind) {

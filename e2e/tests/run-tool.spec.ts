@@ -16,8 +16,10 @@
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { test, expect } from '@playwright/test';
-import { seedCredential, findInteractionId, answerInteraction } from './helpers';
+
+import { expect, test } from '@playwright/test';
+
+import { answerInteraction, findInteractionId, seedCredential } from './helpers';
 
 const RUN_PANEL = fileURLToPath(
   new URL('../../packages/features/tools/src/RunPanel.tsx', import.meta.url),

@@ -10,20 +10,20 @@
  * writes invalidate the overlay so the tree re-reads. Rendered only for a caller that
  * can write the overlay (the same gate the per-tool edit affordance uses).
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
+  type Folder,
   FolderPicker,
   Spinner,
   TextInput,
-  errorMessage,
   useApi,
-  type Folder,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { toolMetaKey } from './keys';
 

@@ -4,7 +4,7 @@ import { createRef } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import { Field } from './field';
-import { NumberInput, TextInput, Textarea } from './inputs';
+import { NumberInput, Textarea, TextInput } from './inputs';
 
 describe('TextInput', () => {
   it('renders a textbox and typing updates its value', async () => {

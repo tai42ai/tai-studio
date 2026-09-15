@@ -15,7 +15,7 @@
  *  - folder  = overlay `folder_id` else unfiled (`null`).
  */
 import type { FolderRecord, ToolMetaRecord, ToolTagEntry } from '@tai42/api-client';
-import { effectiveHidden, mergeToolBadges, type Folder } from '@tai42/studio-sdk';
+import { effectiveHidden, type Folder, mergeToolBadges } from '@tai42/studio-sdk';
 
 export interface ToolView {
   readonly name: string;

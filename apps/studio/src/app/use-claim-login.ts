@@ -7,9 +7,9 @@
  * SUCCESSFUL login. The fragment is stripped immediately so the token never persists.
  * Returns the in-flight `claiming` flag for the busy indicator.
  */
-import { useEffect, useRef, useState } from 'react';
-import { useApi, useAuth } from '@tai42/studio-sdk';
 import { ApiLoginFailedError } from '@tai42/api-client';
+import { useApi, useAuth } from '@tai42/studio-sdk';
+import { useEffect, useRef, useState } from 'react';
 
 import { GENERIC_ERROR, readClaimToken } from './login-methods';
 

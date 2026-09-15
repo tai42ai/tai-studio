@@ -5,10 +5,9 @@
  * `fixed_kwargs` can carry credentials: it is rendered on this authed surface but
  * NEVER logged or toasted.
  */
-import type { ReactNode } from 'react';
 import type { PresetDetail } from '@tai42/api-client';
-
 import { Card, JsonTree } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function PresetBodyCards({ preset }: { readonly preset: PresetDetail }): ReactNode {
   return (

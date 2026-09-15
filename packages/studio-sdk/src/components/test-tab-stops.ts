@@ -34,17 +34,17 @@
  * element that component renders, so such a bearer is not derived here and its
  * caller must account for it.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 
 import {
   balancedFrom,
   createTabStopResolver,
+  type OpeningTag,
   readAssignmentValue,
   scanToTagClose,
   tagDeclaresTab,
   taiClassesOf,
-  type OpeningTag,
 } from './tab-stop-parse';
 
 export type { OpeningTag } from './tab-stop-parse';

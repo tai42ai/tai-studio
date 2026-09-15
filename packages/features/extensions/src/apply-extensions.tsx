@@ -22,37 +22,36 @@
  * is surfaced LOUDLY as ESCAPED text, never swallowed. Every server-supplied string
  * renders as text through the DS components (React escapes it) — no HTML sink.
  */
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import type { Extension, PresetExtensionElement, PresetRecord } from '@tai42/api-client';
-
 import {
   ArrowDownIcon,
   ArrowUpIcon,
   Badge,
   Button,
   Card,
+  comboElementNames,
   EmptyState,
+  errorMessage,
   ErrorState,
+  extensionElementName,
   ExtensionPicker,
   Field,
+  hiddenToolNames,
   Skeleton,
   Spinner,
-  ToolPicker,
-  comboElementNames,
-  errorMessage,
-  extensionElementName,
-  hiddenToolNames,
   toolBadgesByName,
+  ToolPicker,
   useApi,
   useToolDisplayNames,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 
 import {
   applyPresetsKey,
   applyToolMetaKey,
-  applyToolTagsKey,
   applyToolsKey,
+  applyToolTagsKey,
   type ToolExtensionsOrigin,
 } from './keys';
 import { useToolExtensionsEditor } from './use-tool-extensions-editor';

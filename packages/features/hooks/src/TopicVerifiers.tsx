@@ -8,9 +8,9 @@
  * topic's ingress is OPEN/unauthenticated) that calls `api.deleteTopicVerifier`;
  * success invalidates the whole hooks list. A 404 surfaces loudly — never swallowed.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, ConfirmDialog, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { HOOKS_KEY_ROOT } from './keys';
 

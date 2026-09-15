@@ -3,10 +3,10 @@
  * the empty-series degradation, the single-point geometry, and the proportional
  * bar widths — the parts a charting dependency would otherwise hide.
  */
-import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-import { AreaChart, BarList, type AreaPoint, type BarItem } from './charts';
+import { AreaChart, type AreaPoint, type BarItem, BarList } from './charts';
 
 /** The proportional fill span within a bar row, as its inline-width string. */
 function fillWidth(row: Element | undefined): string {

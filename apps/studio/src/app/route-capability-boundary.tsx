@@ -20,11 +20,11 @@
  * A pathname that maps to NO token (the plugin catch-all `/plugins/*`) passes
  * through untouched — that surface gates itself via `contributionCovered`.
  */
-import type { ReactNode } from 'react';
-import { useLocation } from '@tanstack/react-router';
 import { EmptyState, Skeleton, useCapabilities } from '@tai42/studio-sdk';
+import { useLocation } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
-import { FEATURE_TOKENS, PATH, type FeatureToken } from './routes';
+import { FEATURE_TOKENS, type FeatureToken, PATH } from './routes';
 import { tokenCovered } from './token-requirements';
 
 /**

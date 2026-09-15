@@ -6,9 +6,9 @@
  * to the un-selected view, a failed delete stays loud inside the open dialog, and
  * cancelling never touches the api. It also hosts the render preview end to end.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { TemplateDetail } from './TemplateDetail';
 import { renderWithProviders, type StubApiClient } from './test-utils';

@@ -3,15 +3,15 @@
  * rendered as a collapsible `<JsonTree>`. Every value is escaped React text, so
  * a manifest carrying markup is displayed literally and never interpreted.
  */
-import { useQuery } from '@tanstack/react-query';
 import {
   EmptyState,
+  errorMessage,
   ErrorState,
   JsonTree,
   Skeleton,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import { manifestKey } from '../keys';

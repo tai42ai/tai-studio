@@ -22,26 +22,27 @@
  * mounts later than the hook (a README that arrives with the second render) and
  * would never notice one being swapped for another.
  */
-import { useCallback, useState } from 'react';
 import type { CSSProperties, ReactNode, Ref, RefCallback } from 'react';
+import { useCallback, useState } from 'react';
+
 import {
+  holdContentTarget,
+  holdResizeTarget,
+  releaseContentTarget,
+  releaseResizeTarget,
+} from './observer-registry';
+import {
+  clearScrollRegionAttributes,
   needsRegion,
   refreshRegions,
-  clearScrollRegionAttributes,
   SCROLL_REGION_CLASS,
   type TrackedSurface,
 } from './overflow-measure';
 import {
-  holdResizeTarget,
-  releaseResizeTarget,
-  holdContentTarget,
-  releaseContentTarget,
-} from './observer-registry';
-import {
   DEFAULT_PROSE_LABELS,
-  MAX_PROSE_REGIONS,
-  labelledProseSurfaces,
   ensureScrollWrapper,
+  labelledProseSurfaces,
+  MAX_PROSE_REGIONS,
   uniquelyNamed,
 } from './prose-regions';
 

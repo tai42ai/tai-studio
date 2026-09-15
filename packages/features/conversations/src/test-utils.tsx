@@ -16,11 +16,6 @@
  * expects, and the reason a render that never touches a write control drives no
  * capability fetch (so it schedules no late state update to warn about).
  */
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult } from '@testing-library/react';
-import { vi, type Mock } from 'vitest';
-
 import type {
   ApiClient,
   ConversationMessage,
@@ -29,6 +24,7 @@ import type {
   MeProjection,
   TargetConversationConfig,
 } from '@tai42/api-client';
+import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
 import {
   ApiProvider,
   AuthProvider,
@@ -36,7 +32,10 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
-import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, type RenderResult } from '@testing-library/react';
+import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
+import { type Mock, vi } from 'vitest';
 
 import type { ConversationsSearch } from './search';
 

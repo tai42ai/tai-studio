@@ -1,5 +1,6 @@
 /** Preset record, version and validation response schemas. */
 import { z } from 'zod';
+
 import { presetExtensionElement } from './extensions';
 import { presetBody } from './served';
 

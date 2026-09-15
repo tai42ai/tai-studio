@@ -3,9 +3,9 @@
  * conflict oracle (existing keys + repeats in the batch), and the per-file upload
  * loop over the single-item door.
  */
-import { useRef, useState, type ChangeEvent } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { errorMessage, useApi } from '@tai42/studio-sdk';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ChangeEvent, useRef, useState } from 'react';
 
 import { templateDetailKey, templatesListKey } from './keys';
 

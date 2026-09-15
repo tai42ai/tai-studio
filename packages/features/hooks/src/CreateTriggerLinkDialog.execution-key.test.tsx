@@ -4,9 +4,9 @@
  * missing key blocks submit, and the loading / empty / failed key-list states all
  * keep the mint out of reach and surface loudly.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
 import { apiKey, renderWithProviders, type StubApiClient } from './test-utils';

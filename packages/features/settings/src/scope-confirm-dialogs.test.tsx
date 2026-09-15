@@ -1,14 +1,13 @@
+import { type ApiClient, ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, type ApiClient } from '@tai42/api-client';
-
 import {
-  PinPublicDialog,
-  UnpinPublicDialog,
   DeleteScopeDialog,
+  PinPublicDialog,
   RemoveLastUrlDialog,
+  UnpinPublicDialog,
 } from './scope-confirm-dialogs';
 import { subMcpPattern } from './scope-mapping';
 import { renderWithProviders } from './test-utils';

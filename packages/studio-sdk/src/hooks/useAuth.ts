@@ -4,8 +4,8 @@
  * sessionStorage. localStorage is NEVER written: the README documents the
  * XSS trade-off and why localStorage persistence is not offered.
  */
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { createElement } from 'react';
 
 const SESSION_KEY = 'tai-studio.apiKey';

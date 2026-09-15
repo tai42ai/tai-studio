@@ -4,8 +4,8 @@
  * chrome and no way back. Driven through the REAL composition root over a memory
  * history pointed at a path no route claims.
  */
-import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { installServer, renderStudio } from './test-harness';
 

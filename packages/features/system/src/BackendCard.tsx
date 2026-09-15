@@ -3,10 +3,10 @@
  * never an error) is the calm empty state; a genuine failure of the identity door
  * surfaces loudly.
  */
-import type { ReactNode } from 'react';
-import type { UseQueryResult } from '@tanstack/react-query';
-import { AppLink, Card, EmptyState, ErrorState, Skeleton, errorMessage } from '@tai42/studio-sdk';
 import type { BackendInfo } from '@tai42/api-client';
+import { AppLink, Card, EmptyState, errorMessage, ErrorState, Skeleton } from '@tai42/studio-sdk';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { cardHeaderStyle, monoStyle } from './cardChrome';
 

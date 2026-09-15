@@ -9,28 +9,28 @@
  * The body is authored through the SDK's `SchemaForm` over a client-authored schema
  * (see `config-schema`). Submit/error house style follows the route form.
  */
-import { useMemo, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { TargetConversationConfig } from '@tai42/api-client';
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   SchemaForm,
+  type SchemaFormErrors,
   Spinner,
-  errorMessage,
   useApi,
   validateAgainstSchema,
-  type SchemaFormErrors,
 } from '@tai42/studio-sdk';
-import type { TargetConversationConfig } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type SyntheticEvent, useMemo, useState } from 'react';
 
 import {
   blankConfigValue,
   configFormSchema,
+  type ConfigFormValue,
   configToFormValue,
   formValueToBody,
   requiredFieldErrors,
-  type ConfigFormValue,
 } from './config-schema';
 import { conversationConfigsKey } from './keys';
 

@@ -3,26 +3,26 @@
  * fetched on its own (secret route) and rendered read-only, and a fenced rollback
  * that re-points the stored profile at a version's body.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Card,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  VersionHistoryPanel,
-  errorMessage,
   useApi,
   type VersionHistoryEntry,
+  VersionHistoryPanel,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import {
   settingsProfileKey,
+  settingsProfilesKey,
   settingsProfileVersionKey,
   settingsProfileVersionsKey,
-  settingsProfilesKey,
 } from './keys';
 import { maskBody, type ProfileVersion } from './profile-secrets';
 

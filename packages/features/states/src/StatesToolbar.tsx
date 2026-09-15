@@ -3,8 +3,8 @@
  * Upload button triggers), and Declare state. A spinner rides Refresh while the list
  * refetches and Upload while a document uploads.
  */
-import { useRef, type ChangeEvent, type ReactNode } from 'react';
 import { Button, Spinner } from '@tai42/studio-sdk';
+import { type ChangeEvent, type ReactNode, useRef } from 'react';
 
 export interface StatesToolbarProps {
   readonly refreshing: boolean;

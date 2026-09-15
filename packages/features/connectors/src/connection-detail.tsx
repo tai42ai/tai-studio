@@ -6,6 +6,11 @@
  * the OAuth popup flow.
  */
 import {
+  type ConnectionView,
+  type FleetReportSummary,
+  summarizeFleetFanout,
+} from '@tai42/api-client';
+import {
   AlertTriangleIcon,
   AppLink,
   ArrowLeftIcon,
@@ -19,25 +24,20 @@ import {
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
-import {
-  summarizeFleetFanout,
-  type ConnectionView,
-  type FleetReportSummary,
-} from '@tai42/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { CONNECTIONS_KEY, PROVIDERS_KEY, connectionKey } from './keys';
-import { readConnectorRefusal } from './notice';
-import { useOAuthPopup } from './oauth';
+import type { SubServiceChoice } from './connection-detail-cards';
 import {
   ConnectionNotices,
   ConnectionSummaryCard,
   DisconnectDialog,
   SubServicesCard,
 } from './connection-detail-cards';
-import type { SubServiceChoice } from './connection-detail-cards';
+import { connectionKey, CONNECTIONS_KEY, PROVIDERS_KEY } from './keys';
+import { readConnectorRefusal } from './notice';
+import { useOAuthPopup } from './oauth';
 
 /** The captured result of a disconnect that stays on the page to surface an outcome. */
 interface DisconnectOutcome {

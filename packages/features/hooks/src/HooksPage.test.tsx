@@ -6,11 +6,10 @@
  * invalidation), the loud invalid-JSON field error, the fire-path authorization
  * choices and the server's typed bind refusals, and delete behind a confirm dialog.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { HooksPage } from './HooksPage';
 import {

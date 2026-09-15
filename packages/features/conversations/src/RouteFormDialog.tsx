@@ -21,21 +21,21 @@
  * `channel` write carries no secret and closes straight away. Submit/error house
  * style follows the hooks `RegisterHookForm`.
  */
-import { useMemo, useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ConversationRoute } from '@tai42/api-client';
 import {
   Button,
   CopyField,
   Dialog,
+  errorMessage,
   ErrorState,
   SchemaForm,
+  type SchemaFormErrors,
   Spinner,
-  errorMessage,
   useApi,
   validateAgainstSchema,
-  type SchemaFormErrors,
 } from '@tai42/studio-sdk';
-import type { ConversationRoute } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type SyntheticEvent, useMemo, useState } from 'react';
 
 import { conversationRoutesKey } from './keys';
 import {
@@ -43,8 +43,8 @@ import {
   formValueToBody,
   requiredFieldErrors,
   routeFormSchema,
-  routeToFormValue,
   type RouteFormValue,
+  routeToFormValue,
 } from './route-schema';
 
 export interface RouteFormDialogProps {

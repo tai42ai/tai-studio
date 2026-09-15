@@ -3,16 +3,16 @@
  * fields, mints a new key, and hands the raw `sk-…` string back to the caller
  * exactly once before clearing the form and mutation state.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Dialog, ErrorState, Spinner, errorMessage, useApi } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
+import { Button, Dialog, errorMessage, ErrorState, Spinner, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { tokensPayloadKey } from './keys';
-import { PolicySection } from './PolicySection';
-import type { PolicyFields } from './policy-data';
-import { KeyFormFields } from './KeyFormFields';
 import { conditionWarningStyle, dialogActionsStyle, formStyle } from './api-keys-styles';
+import { KeyFormFields } from './KeyFormFields';
+import { tokensPayloadKey } from './keys';
+import type { PolicyFields } from './policy-data';
+import { PolicySection } from './PolicySection';
 
 export function CreateKeyDialog({
   open,

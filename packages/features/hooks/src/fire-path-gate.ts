@@ -1,6 +1,6 @@
 /** The fire-path form submit gate. */
-import type { UseQueryResult } from '@tanstack/react-query';
 import type { TokensPayload } from '@tai42/api-client';
+import type { UseQueryResult } from '@tanstack/react-query';
 
 /** Resolved, and holding no key at all. */
 export function isExecutionKeyListEmpty(keys: UseQueryResult<TokensPayload>): boolean {

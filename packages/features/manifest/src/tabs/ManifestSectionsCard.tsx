@@ -15,30 +15,30 @@
  * any failed fleet propagation. Removes are destructive and ask the house confirm.
  * Each section renders only for a caller whose projection can reach its door.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ApiClient } from '@tai42/api-client';
+import { summarizeFleetFanout } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
   ConfirmDialog,
+  errorMessage,
   ErrorState,
   Field,
   FleetReport,
   Select,
   Spinner,
   Stack,
-  TextInput,
   Textarea,
-  errorMessage,
+  TextInput,
   useApi,
   useCanWrite,
 } from '@tai42/studio-sdk';
-import { summarizeFleetFanout } from '@tai42/api-client';
-import type { ApiClient } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { manifestKey } from '../keys';
-import { useEntrySection, type ApplyFanout } from './use-entry-section';
+import { type ApplyFanout, useEntrySection } from './use-entry-section';
 
 /** One section's add-entries + remove-by-title surface (tools or agents). The remove
  *  affordance rides its OWN door (a DELETE, distinct from add's POST), so it is gated

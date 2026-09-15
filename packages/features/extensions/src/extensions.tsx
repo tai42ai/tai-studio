@@ -10,25 +10,24 @@
  * (a rejected request or a zod mismatch is always a visible error, never a silent
  * empty render).
  */
-import { useQuery } from '@tanstack/react-query';
-import type { CSSProperties, ReactNode } from 'react';
-
 import type { Extension } from '@tai42/api-client';
+import type { ExtensionFamily, PageProps } from '@tai42/studio-sdk';
 import {
   AppLink,
   Badge,
   Card,
   ChevronRightIcon,
   EmptyState,
-  ErrorState,
-  PageHeader,
-  Skeleton,
   errorMessage,
+  ErrorState,
   groupIntoFamilies,
   kindVariant,
+  PageHeader,
+  Skeleton,
   useApi,
 } from '@tai42/studio-sdk';
-import type { ExtensionFamily, PageProps } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { ApplyExtensionsPanel } from './apply-extensions';
 import { extensionsQueryKey } from './keys';

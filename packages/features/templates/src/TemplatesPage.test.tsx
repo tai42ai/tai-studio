@@ -5,10 +5,10 @@
  * detail view, upload/delete/render/clear-cache mutations, the loud invalid-JSON
  * field error, and the XSS pin that rendered output is ESCAPED text.
  */
-import { useState, type ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { type ReactNode, useState } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TemplatesPage } from './TemplatesPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';

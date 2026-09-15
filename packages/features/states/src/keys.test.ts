@@ -2,23 +2,23 @@
  * The query-key factory: keys are stable tuples, a subject's identity distinguishes two
  * subjects of the same state, and the template/target reads sit as siblings of the list.
  */
-import { describe, expect, it } from 'vitest';
 import {
   statesListKey as sdkStatesListKey,
   stateTemplatesKey as sdkStateTemplatesKey,
 } from '@tai42/studio-sdk';
+import { describe, expect, it } from 'vitest';
 
 import {
   conversationTargetsKey,
   stateConsumersKey,
   stateDetailKey,
-  stateTemplatesKey,
   stateRecordKey,
   stateSearchKey,
+  statesListKey,
   stateStatsKey,
   stateSubjectsKey,
+  stateTemplatesKey,
   stateWritesKey,
-  statesListKey,
   subjectIdentity,
 } from './keys';
 

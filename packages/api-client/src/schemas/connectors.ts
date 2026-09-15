@@ -1,5 +1,6 @@
 /** Connector provider catalog and connection lifecycle schemas. */
 import { z } from 'zod';
+
 import { fleetReportFanout } from './fleet';
 
 export const subServiceView = z.object({

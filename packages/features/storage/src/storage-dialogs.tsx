@@ -1,17 +1,16 @@
 /** The storage browser's per-resource and per-directory dialogs: stat, delete
  * resource, and delete directory. */
-import type { ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import {
   ConfirmDialog,
   Dialog,
+  errorMessage,
   ErrorState,
   JsonTree,
   Skeleton,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { storageResourcesKey, storageStatKey } from './keys';
 import { monoStyle } from './storage-view';

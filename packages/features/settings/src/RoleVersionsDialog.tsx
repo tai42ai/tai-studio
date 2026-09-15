@@ -12,20 +12,20 @@
  * History is a READ surface; `readOnly` hides the per-row Rollback (the reserved
  * admin role has no editable history, so it is opened read-only).
  */
-import { type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Card,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  VersionHistoryPanel,
-  errorMessage,
   useApi,
   type VersionHistoryEntry,
+  VersionHistoryPanel,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode } from 'react';
 
 import { rolesKey, roleVersionsKey } from './keys';
 

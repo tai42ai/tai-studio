@@ -8,8 +8,8 @@
  * paint neutral-gray. The SDK `Badge` echoes its resolved variant on `data-variant`,
  * so each row below asserts the tint the SDK actually paints.
  */
-import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { JqBadge } from './jq-primitives';
 

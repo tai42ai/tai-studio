@@ -16,15 +16,15 @@
  * as not-off until the table is `ready`, and a failed fetch leaves every kind not-off
  * so the surface falls back to its reactive 501 handling, never a hard-failed page.
  */
+import type { KindStatus } from '@tai42/api-client';
 import {
   createContext,
   createElement,
+  type ReactNode,
   useContext,
   useEffect,
   useState,
-  type ReactNode,
 } from 'react';
-import type { KindStatus } from '@tai42/api-client';
 
 import { useApi } from './useApi';
 import { useAuth } from './useAuth';

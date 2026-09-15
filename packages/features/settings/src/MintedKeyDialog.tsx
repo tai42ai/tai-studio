@@ -10,19 +10,19 @@
  * token is NEVER logged, stored, or persisted; regenerating mints an independent
  * one-time link. Failures surface loudly inline.
  */
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { renderSVG } from 'uqr';
+import type { ClaimLinkCreated } from '@tai42/api-client';
 import {
   Button,
   CopyField,
   Dialog,
+  errorMessage,
   ErrorState,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { ClaimLinkCreated } from '@tai42/api-client';
+import { useMutation } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
+import { renderSVG } from 'uqr';
 
 import { dialogActionsStyle } from './api-keys-styles';
 

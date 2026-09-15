@@ -6,9 +6,9 @@
  * is authoritative; the 501 status is the fallback signal. Either earns a dedicated
  * full-page explanation, never a retry loop or an error toast.
  */
-import type { ReactNode } from 'react';
 import { ApiError } from '@tai42/api-client';
 import { AppLink, EmptyState } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 /** True when `error` is the monitoring read-not-supported failure from the skeleton. */
 export function isReadNotSupported(error: unknown): boolean {

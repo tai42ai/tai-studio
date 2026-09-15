@@ -7,18 +7,18 @@
  * All server state flows through TanStack Query with loud loading / empty /
  * error surfaces owned by {@link HooksList} and {@link RegisterHookForm}.
  */
-import { useState, type ReactNode } from 'react';
 import {
   Card,
+  coversAnyRoute,
   Field,
+  isFullProjection,
   PageHeader,
+  type PageProps,
   Stack,
   TextInput,
-  coversAnyRoute,
-  isFullProjection,
   useCapabilities,
-  type PageProps,
 } from '@tai42/studio-sdk';
+import { type ReactNode, useState } from 'react';
 
 import { HooksList } from './HooksList';
 import { RegisterHookForm } from './RegisterHookForm';

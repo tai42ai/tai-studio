@@ -1,8 +1,7 @@
+import type { ApiClient, SettingsSchema } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
 
 import { SettingsTab } from './SettingsTab';
 import { renderWithProviders } from './test-utils';

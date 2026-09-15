@@ -3,11 +3,11 @@
  * catalogue, and the rows themselves, including the api-door row that carries no
  * channel identity.
  */
-import { createRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { createRef } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
 import { RoutesTable } from './RoutesTable';
 import {

@@ -1,7 +1,6 @@
 /** Shared constants and the id-basename helper for the storage browser. */
-import type { CSSProperties } from 'react';
-
 import type { ExplorerEmptyStates } from '@tai42/studio-sdk';
+import type { CSSProperties } from 'react';
 
 export const monoStyle: CSSProperties = {
   fontFamily: 'var(--tai-font-mono)',

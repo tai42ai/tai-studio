@@ -2,9 +2,9 @@
  * The read-only route detail under a feature group: each route's method + action
  * class, shown as an escaped mono line with an action badge.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { Badge } from '@tai42/studio-sdk';
 import type { AuthRoute } from '@tai42/api-client';
+import { Badge } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 const routeListStyle: CSSProperties = {
   listStyle: 'none',

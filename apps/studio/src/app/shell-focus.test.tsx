@@ -17,11 +17,11 @@
  * twice to the Dashboard must leave focus alone on the BACK, never yanking it
  * onto the Dashboard <h1>.
  */
-import { describe, expect, it } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { describe, expect, it } from 'vitest';
 
-import { installServer, renderStudio, server, type HarnessResult } from './test-harness';
+import { type HarnessResult, installServer, renderStudio, server } from './test-harness';
 
 installServer();
 

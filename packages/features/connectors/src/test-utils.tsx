@@ -10,14 +10,6 @@
  * still render); the connectors surfaces under test carry their own coverage. A test
  * that needs a gated affordance present drives it through the dedicated MCP harness.
  */
-import {
-  ApiProvider,
-  AuthProvider,
-  CapabilityProvider,
-  NavigationProvider,
-  ThemeProvider,
-} from '@tai42/studio-sdk';
-import type { NavigationContextValue } from '@tai42/studio-sdk';
 import type {
   ApiClient,
   ConnectionView,
@@ -25,9 +17,17 @@ import type {
   ProviderCatalogResponse,
   ProviderView,
 } from '@tai42/api-client';
+import type { NavigationContextValue } from '@tai42/studio-sdk';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render } from '@testing-library/react';
 import type { RenderResult } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { vi } from 'vitest';
 

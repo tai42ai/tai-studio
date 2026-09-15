@@ -1,9 +1,8 @@
+import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { Extension, PresetExtensionElement } from '@tai42/api-client';
 
 import { ExtensionComboBuilder } from './extension-combo-builder';
 import { AlertTriangleIcon, XCircleIcon } from './icons';

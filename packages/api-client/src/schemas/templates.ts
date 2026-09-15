@@ -1,5 +1,6 @@
 /** Prompt-template listing, render and mutation ack schemas. */
 import { z } from 'zod';
+
 import { jsonSchema } from './shared';
 
 export const templateNames = z.array(z.string());

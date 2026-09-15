@@ -11,16 +11,17 @@
  * that endpoint — so a skeleton response-shape drift is caught in CI.
  */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 import type { ZodType } from 'zod';
 
 import {
-  FIXTURE_ENDPOINTS,
-  EXCLUDED_FROM_CAPTURE,
-  isExcluded,
   assertCaptureSetSafe,
+  EXCLUDED_FROM_CAPTURE,
+  FIXTURE_ENDPOINTS,
+  isExcluded,
 } from '../fixtures/contract.mjs';
 import * as schemas from './schemas';
 

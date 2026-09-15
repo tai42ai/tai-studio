@@ -1,10 +1,9 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-
 import { Button, Field, RadioGroup, Select } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
 
-import { asStringArray } from './answer-schema';
 import type { AnswerRendererProps } from './answer-schema';
+import { asStringArray } from './answer-schema';
 import { MalformedPayload } from './malformed-payload';
 import { answerStackStyle } from './renderer-styles';
 

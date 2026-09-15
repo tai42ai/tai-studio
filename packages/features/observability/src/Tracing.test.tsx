@@ -4,13 +4,12 @@
  * escaping pinned, a surfaced 404, the two export actions, and the runs pane's
  * keyboard reachability once it outruns its column.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, type Run, type RunTrace } from '@tai42/api-client';
+import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
-import { ApiError, type Run, type RunTrace } from '@tai42/api-client';
-
 import type { ReactElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ObservabilityPage } from './ObservabilityPage';
 import { renderWithLiveUrl, renderWithProviders, type StubApiClient } from './test-utils';

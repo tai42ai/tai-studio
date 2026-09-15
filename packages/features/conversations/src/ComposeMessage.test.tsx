@@ -4,10 +4,10 @@
  * and the loud send failure that keeps the typed text — a read-only session sees
  * the refusal, never a hidden control.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ComposeMessage } from './ComposeMessage';
 import { conversationTranscriptPrefix } from './keys';

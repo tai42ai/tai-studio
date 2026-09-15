@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Button } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import type { AnswerRendererProps } from './answer-schema';
 import { buttonRowStyle } from './renderer-styles';

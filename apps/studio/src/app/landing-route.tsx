@@ -15,9 +15,9 @@
  *   ready   → replace-navigate to the first covered entry;
  *   failed  → the shell's own retry treatment, plus a sign-out escape.
  */
-import { useEffect, type ReactNode } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { Button, ErrorState, Skeleton, useAuth, useCapabilities } from '@tai42/studio-sdk';
+import { useNavigate } from '@tanstack/react-router';
+import { type ReactNode, useEffect } from 'react';
 
 import { FEATURE_TOKENS, PATH } from './routes';
 import { tokenCovered } from './token-requirements';

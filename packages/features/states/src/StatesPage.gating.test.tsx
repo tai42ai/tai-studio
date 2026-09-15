@@ -4,8 +4,8 @@
  * server's own remediation line) and never reads the list. With the kind on, the list
  * renders.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import { StatesPage } from './StatesPage';
 import { renderWithProviders, statesOffKind, type StubApiClient } from './test-utils';

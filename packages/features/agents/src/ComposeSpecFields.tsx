@@ -8,22 +8,21 @@
  * same screen); a tags failure degrades the group to flat mode but is stated, never
  * silently ungrouped.
  */
-import { forwardRef, useEffect, useImperativeHandle, useState, type ReactNode } from 'react';
-
 import {
-  ErrorState,
-  Field,
-  SchemaEditor,
-  SchemaForm,
-  Textarea,
   defaultValueForSchema,
   errorMessage,
+  ErrorState,
+  Field,
   type JsonSchema,
+  SchemaEditor,
   type SchemaEditorChange,
+  SchemaForm,
+  Textarea,
 } from '@tai42/studio-sdk';
+import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useState } from 'react';
 
-import type { InlinePresetSpec, InlineSubAgentSpec } from './authoring-types';
 import { hasField } from './authoring-schema';
+import type { InlinePresetSpec, InlineSubAgentSpec } from './authoring-types';
 import { MultiToolPicker } from './MultiToolPicker';
 import { PresetSpecEditor } from './PresetSpecEditor';
 import { SubAgentComposer } from './SubAgentComposer';

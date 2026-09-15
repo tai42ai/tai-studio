@@ -17,9 +17,9 @@
  * TRUNCATED with a download action that streams the FULL result as a Blob, so a
  * huge result never floods the DOM yet is never silently lost.
  */
-import type { ReactNode } from 'react';
-import { Button, CodeBlock, EmptyState, JsonTree } from '@tai42/studio-sdk';
 import { schemas } from '@tai42/api-client';
+import { Button, CodeBlock, EmptyState, JsonTree } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 /** Serialized-length threshold above which a result is truncated + downloadable. */
 export const RESULT_MAX_CHARS = 50_000;

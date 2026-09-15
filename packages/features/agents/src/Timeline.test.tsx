@@ -1,20 +1,19 @@
-import { describe, expect, it } from 'vitest';
-import { fireEvent, screen, within, type RenderResult } from '@testing-library/react';
-
 import type { ParsedAgentEvent } from '@tai42/api-client';
+import { fireEvent, type RenderResult, screen, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
-import { isAtBottom, Timeline } from './Timeline';
 import {
   ERROR_TRANSCRIPT,
   FULL_TRANSCRIPT,
   INTERRUPT_TRANSCRIPT,
   NO_DATA_TRANSCRIPT,
   OPEN_TRANSCRIPT,
+  parse,
   UNKNOWN_TRANSCRIPT,
   XSS_TRANSCRIPT,
-  parse,
 } from './fixtures';
 import { renderWithProviders, stubClient } from './test-utils';
+import { isAtBottom, Timeline } from './Timeline';
 
 function renderTimeline(transcript: string): void {
   renderWithProviders(<Timeline events={parse(transcript)} />, stubClient({}));

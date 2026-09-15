@@ -11,10 +11,10 @@
  * a source module importing it would put the door (and its worker and wasm) back
  * in every consumer's graph.
  */
+import { JqField } from '@tai42/jq-studio';
 import type { ComponentProps } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { JqField } from '@tai42/jq-studio';
 import type { ExpressionFieldComponent } from './context';
 
 describe('the injected expression-field contract', () => {

@@ -24,11 +24,11 @@ import { Suspense, useCallback, useContext, useMemo, useState } from 'react';
 import { CompletionInput } from '../components/completion-input';
 import { Field } from '../components/field';
 import { AlertTriangleIcon } from '../components/icons';
-import { TextInput, Textarea } from '../components/inputs';
+import { Textarea, TextInput } from '../components/inputs';
 import { errorMessage } from '../errors';
-import type { ExpressionAnnotation, MediaUpload } from './field-model';
 import type { ExpressionFieldComponent, ExpressionInputShape } from './context';
 import { CompletionProviderContext, ExpressionFieldContext } from './context';
+import type { ExpressionAnnotation, MediaUpload } from './field-model';
 import { MediaField } from './media-field';
 import type { CompletionProvider } from './SchemaForm';
 

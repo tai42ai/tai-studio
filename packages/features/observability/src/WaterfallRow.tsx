@@ -4,8 +4,8 @@
  * {@link DisclosureToggle} (expand/collapse) and a {@link SpanBarRow} (the selectable
  * label + bar + duration); {@link Row} owns the geometry and recurses over children.
  */
-import { type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { AlertTriangleIcon, ChevronDownIcon, ChevronRightIcon } from '@tai42/studio-sdk';
+import { type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 
 import { formatLatencyMs } from './format';
 import { isErrorSpan, type SpanNode, type TraceTree } from './trace-tree';

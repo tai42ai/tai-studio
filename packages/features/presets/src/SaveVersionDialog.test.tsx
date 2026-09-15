@@ -4,14 +4,13 @@
  * builder sends an explicit `[]`; an edited-blank description is rejected client
  * side; and a 409 renders verbatim.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { toolsListKey } from '@tai42/studio-sdk';
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
-import { toolsListKey } from '@tai42/studio-sdk';
-
+import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { SaveVersionDialog } from './SaveVersionDialog';
-import { presetDetailKey, presetVersionsKey, presetsListKey } from './keys';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 const detail = {

@@ -16,7 +16,8 @@
  * so each measurement is of a page laid out at that width rather than of a page
  * restyled into it.
  */
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
+
 import { API_KEY, EXECUTION_KEY_ID, seedCredential } from './helpers';
 
 /** The viewport widths the layout contract is stated at. */

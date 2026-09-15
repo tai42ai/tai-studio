@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiClient, SseFrame } from '@tai42/api-client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   add,

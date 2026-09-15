@@ -3,12 +3,12 @@
  * default, the sessionStorage opt-in, the 401→/login redirect, and the invariant
  * that localStorage is NEVER written.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { type PluginContext } from '@tai42/studio-sdk';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installServer, renderStudio, server } from './test-harness';
 

@@ -1,9 +1,8 @@
+import type { ApiClient, SettingsSchema } from '@tai42/api-client';
 import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
 
 import { ProfilesTab } from './ProfilesTab';
 import { fullProjection, renderWithProviders } from './test-utils';

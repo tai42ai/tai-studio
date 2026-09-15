@@ -9,8 +9,8 @@
  * runtime dependency on @tai42/api-client (the SDK imports nothing internal at
  * runtime).
  */
-import { createContext, useContext } from 'react';
 import type { ApiClient } from '@tai42/api-client';
+import { createContext, useContext } from 'react';
 
 const ApiContext = createContext<ApiClient | null>(null);
 

@@ -12,27 +12,27 @@
  * lands, the flow finishes exactly once and every listener/timer is torn down (also on
  * unmount).
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useApi, isSafeHttpUrl } from '@tai42/studio-sdk';
 import type { FleetReportSummary } from '@tai42/api-client';
+import { isSafeHttpUrl, useApi } from '@tai42/studio-sdk';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { OAuthCallbackMessage, OAuthNotice } from './oauth-callback';
 import {
-  OAUTH_REDIRECT_STORAGE_KEY,
-  OAUTH_RESUME_PARAMS,
   applyCompletion,
   currentReturnPath,
+  OAUTH_REDIRECT_STORAGE_KEY,
+  OAUTH_RESUME_PARAMS,
   openOAuthWindow,
   watchOAuthPopup,
 } from './oauth-callback';
-import type { OAuthCallbackMessage, OAuthNotice } from './oauth-callback';
 
+export type { OAuthNotice } from './oauth-callback';
 export {
   OAUTH_MESSAGE_TYPE,
   OAUTH_REDIRECT_STORAGE_KEY,
   OAUTH_RESUME_PARAMS,
 } from './oauth-callback';
-export type { OAuthNotice } from './oauth-callback';
 
 export interface UseOAuthPopupOptions {
   /**

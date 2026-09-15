@@ -3,12 +3,12 @@
  * each route's `validateSearch` (from `route-search`) lands its parsed shape on the
  * match, and a malformed hand-edited URL is tolerated rather than thrown.
  */
-import { describe, expect, it } from 'vitest';
-import { createMemoryHistory } from '@tanstack/react-router';
 import type { RouteSearch } from '@tai42/studio-sdk';
+import { createMemoryHistory } from '@tanstack/react-router';
+import { describe, expect, it } from 'vitest';
 
-import { buildRouter } from './router';
 import { createPluginLoader } from './plugin-loader';
+import { buildRouter } from './router';
 
 describe('observability search parsing', () => {
   async function loadObservabilitySearch(url: string): Promise<RouteSearch<'observability'>> {

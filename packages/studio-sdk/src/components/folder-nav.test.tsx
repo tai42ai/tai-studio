@@ -3,12 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  childFolders,
+  type Folder,
   FolderBreadcrumb,
+  folderPathTo,
   FolderPicker,
   FolderRow,
-  childFolders,
-  folderPathTo,
-  type Folder,
 } from '../index';
 
 const FOLDERS: Folder[] = [

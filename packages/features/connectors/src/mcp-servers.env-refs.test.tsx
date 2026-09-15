@@ -1,8 +1,8 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { MCP_SCHEMA, renderWithProviders, status } from './test-utils-mcp-servers';
 import { McpServersSection } from './mcp-servers';
+import { MCP_SCHEMA, renderWithProviders, status } from './test-utils-mcp-servers';
 
 describe('McpServersSection — installed mcp-server entry + env-refs checklist', () => {
   // Entry 0 is installer-written (its title matches an installed mcp-server item

@@ -6,12 +6,12 @@
  * installed and advisory queries never blank it — their failures surface as loud
  * inline strips in their own sections.
  */
+import { Card, CopyField, errorMessage, ErrorState, Skeleton, Stack } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-
-import { Card, CopyField, ErrorState, Skeleton, Stack, errorMessage } from '@tai42/studio-sdk';
 
 import { AdvisoriesStrip } from './advisories';
 import { routeItemsOf } from './install-dialog';
+import { ActionsCard } from './plugin-detail-actions';
 import {
   ActionResultCard,
   BackButton,
@@ -20,7 +20,6 @@ import {
   RoutesCard,
   VersionsCard,
 } from './plugin-detail-cards';
-import { ActionsCard } from './plugin-detail-actions';
 import { requiredEnvFromDetail } from './plugin-detail-data';
 import { PluginDetailDialogs } from './plugin-detail-dialogs';
 import { usePluginDetail } from './use-plugin-detail';

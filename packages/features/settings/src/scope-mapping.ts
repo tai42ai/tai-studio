@@ -3,9 +3,9 @@
  * scope map, resolving what a drag-drop does, and invalidating the source surface
  * after a mutation.
  */
-import type { QueryClient } from '@tanstack/react-query';
 import type { DragEndEvent } from '@dnd-kit/core';
 import type { AddUrlToScopeBody, AuthRoute } from '@tai42/api-client';
+import type { QueryClient } from '@tanstack/react-query';
 
 import { authRoutesKey, publicRoutesKey, scopesKey, tokensPayloadKey } from './keys';
 import type { ChipData, ZoneRef } from './ScopeItemChip';

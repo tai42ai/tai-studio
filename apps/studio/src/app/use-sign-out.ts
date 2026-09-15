@@ -6,9 +6,9 @@
  * it surfaces loudly (console.error) AND threads a one-shot notice onto the /login
  * screen the sign-out redirects to.
  */
-import { useCallback } from 'react';
-import { useApi, useAuth } from '@tai42/studio-sdk';
 import { ApiError } from '@tai42/api-client';
+import { useApi, useAuth } from '@tai42/studio-sdk';
+import { useCallback } from 'react';
 
 import { SIGN_OUT_NOTICE_KEY } from './sign-out-notice';
 

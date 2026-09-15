@@ -1,6 +1,6 @@
 /** Public sign-in aggregator and session-logout sub-clients. */
-import * as s from '../schemas';
 import { ApiError, ApiLoginFailedError, ApiUnauthorizedError } from '../errors';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 /**

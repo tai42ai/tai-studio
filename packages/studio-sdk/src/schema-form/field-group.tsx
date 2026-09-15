@@ -4,8 +4,8 @@
  * heading, an optional description, an optional error — the ERROR mark beside
  * the message, never a hue on its own — and the nested group surface.
  */
-import { useId } from 'react';
 import type { ReactNode } from 'react';
+import { useId } from 'react';
 
 import { XCircleIcon } from '../components/icons';
 import { groupClass, groupHeaderClass, stackClass } from './styles';

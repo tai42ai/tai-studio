@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { StateListItem, StateTemplateListItem } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import {
   fieldPathsFromSchema,

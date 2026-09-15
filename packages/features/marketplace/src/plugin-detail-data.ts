@@ -1,7 +1,5 @@
 /** Pure derivations for the plugin detail: delivery, version-status tiers, and the
  * env picture a listing's items declare. */
-import type { UseMutationResult } from '@tanstack/react-query';
-
 import type {
   MarketplaceDelivery,
   MarketplaceInstallBody,
@@ -9,6 +7,7 @@ import type {
   MarketplacePluginDetail,
   MarketplaceUninstallResult,
 } from '@tai42/api-client';
+import type { UseMutationResult } from '@tanstack/react-query';
 
 /** Which mutation dialog is open (each is mounted only while active). */
 export type ActiveAction = 'install' | 'update' | 'uninstall';

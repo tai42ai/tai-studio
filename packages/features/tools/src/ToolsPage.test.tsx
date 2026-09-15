@@ -8,14 +8,13 @@
  * static "+N more" — and the responsive master/detail behaviour: single-pane Back
  * control and focus management on selection change.
  */
-import { useState, type ReactNode } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, type MeProjection, type ToolTagEntry } from '@tai42/api-client';
+import { __resetContributions, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { __resetContributions, StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
-import { ApiError, type MeProjection, type ToolTagEntry } from '@tai42/api-client';
+import { type ReactNode, useState } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ToolsPage } from './ToolsPage';
 import { toolMetaKey } from './keys';
 import {
   fullProjection,
@@ -23,6 +22,7 @@ import {
   scopedProjection,
   type StubApiClient,
 } from './test-utils';
+import { ToolsPage } from './ToolsPage';
 
 afterEach(() => {
   __resetContributions();

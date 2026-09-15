@@ -8,16 +8,23 @@
  * the table when any non-withdrawn advisory matches an installed plugin.
  * Per-plugin install / update / uninstall actions live on the detail view.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  MarketplaceAdvisory,
+  MarketplaceInstalledPlugin,
+  MarketplaceQuarantinedPlugin,
+  MarketplaceUpgradeAllRow,
+} from '@tai42/api-client';
 import {
   AppLink,
   Badge,
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
+  featureDisabledMessage,
+  isFeatureDisabled,
   ScrollRegion,
   Skeleton,
   Table,
@@ -26,21 +33,14 @@ import {
   TH,
   THead,
   TR,
-  errorMessage,
-  featureDisabledMessage,
-  isFeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
-import type {
-  MarketplaceAdvisory,
-  MarketplaceInstalledPlugin,
-  MarketplaceQuarantinedPlugin,
-  MarketplaceUpgradeAllRow,
-} from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { severityVariant, WarningBlock } from './advisories';
 import { sourceLabel } from './badges';
-import { mergeSearch, type MarketplaceSearch } from './filters';
+import { type MarketplaceSearch, mergeSearch } from './filters';
 import { marketplaceAdvisoriesKey, marketplaceInstalledKey } from './keys';
 
 /** The advisory status badge for one installed row. */

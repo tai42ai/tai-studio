@@ -3,8 +3,8 @@
  * workers still served, so a selection left over from a since-refreshed fleet never
  * reloads a worker that has left. Reload targets are worker NAMES.
  */
-import { useState } from 'react';
 import type { FleetWorker } from '@tai42/api-client';
+import { useState } from 'react';
 
 export interface WorkerSelection {
   readonly selected: ReadonlySet<string>;

@@ -5,21 +5,21 @@
  * unsatisfiable fire gate disables the mint. Every server failure surfaces loudly
  * inline.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import {
   Button,
   Checkbox,
+  errorMessage,
   ErrorState,
   Field,
   RadioGroup,
   Spinner,
-  TextInput,
   Textarea,
-  errorMessage,
+  TextInput,
 } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
-import { EXPIRY_OPTIONS, type ExpiryChoice } from './expiry';
 import { ExecutionKeyPicker } from './ExecutionKeyPicker';
+import { EXPIRY_OPTIONS, type ExpiryChoice } from './expiry';
 import type { CreateTriggerLinkForm } from './useCreateTriggerLink';
 
 const sectionStyle: CSSProperties = {

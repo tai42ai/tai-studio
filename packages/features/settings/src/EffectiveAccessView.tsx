@@ -5,9 +5,9 @@
  * effective level. The base-tier ceiling that can further cap a grant is the role's
  * tier badge — surfaced, not recomputed here.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { Badge, Card } from '@tai42/studio-sdk';
 import type { RoleBody } from '@tai42/api-client';
+import { Badge, Card } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { baseTierLabel, effectiveLevelsOf, type FeatureGroup } from './role-grants';
 

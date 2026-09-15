@@ -4,19 +4,19 @@
  * value is invalid, so no `PUT` fires on a malformed document. A `create` seeds the
  * value from the schema.
  */
-import { useMemo, useState, type ReactNode } from 'react';
 import {
   Button,
+  defaultValueForSchema,
+  errorMessage,
   ErrorState,
   Field,
+  type JsonSchema,
   SchemaForm,
   Spinner,
   Textarea,
-  defaultValueForSchema,
-  errorMessage,
   validateAgainstSchema,
-  type JsonSchema,
 } from '@tai42/studio-sdk';
+import { type ReactNode, useMemo, useState } from 'react';
 
 /** Whether a schema can drive the visual `SchemaForm` (an object shape), else JSON. */
 function isRepresentable(schema: JsonSchema | null): schema is JsonSchema {

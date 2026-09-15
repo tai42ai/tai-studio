@@ -3,17 +3,17 @@
  * object-level path, and set its parameter and up-front declaration values.
  * Declarations can also be edited later on the attachment.
  */
-import { useState, type ReactNode } from 'react';
+import type { StateTemplateListItem } from '@tai42/api-client';
+import type { JsonSchema } from '@tai42/studio-sdk';
 import {
+  defaultValueForSchema,
   Field,
   FormDialog,
-  Select,
   SchemaForm,
-  defaultValueForSchema,
+  Select,
   useApi,
 } from '@tai42/studio-sdk';
-import type { JsonSchema } from '@tai42/studio-sdk';
-import type { StateTemplateListItem } from '@tai42/api-client';
+import { type ReactNode, useState } from 'react';
 
 import {
   declarationsSchema,

@@ -1,6 +1,6 @@
 /** Tool catalog, run, live-registry admin and tag sub-client. */
-import * as s from '../schemas';
 import { encodeSegment } from '../http';
+import * as s from '../schemas';
 import { getToolRun, listToolRuns, submitToolRun, type SubmitToolRunArgs } from '../tool-runs';
 import type { Transport } from './transport';
 

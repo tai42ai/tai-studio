@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  XSS,
   emitFrame,
   encodeInteraction,
   fullProjection,
   idJson,
   interactionJson,
   renderInbox,
+  XSS,
 } from './test-utils';
 
 describe('MediaGallery — display-only question media (gated render + loud fallbacks)', () => {

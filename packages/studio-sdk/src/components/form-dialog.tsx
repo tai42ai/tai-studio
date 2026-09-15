@@ -12,11 +12,11 @@
  * (Cancel, Escape, overlay) calls `onClose`. `submitDisabled` blocks submission by
  * click AND by Enter — a disabled default button is not an implicit-submission target.
  */
-import { useEffect, useRef, useState, type ReactNode, type SyntheticEvent } from 'react';
+import { type ReactNode, type SyntheticEvent, useEffect, useRef, useState } from 'react';
 
+import { errorMessage } from '../errors';
 import { Dialog } from './dialog';
 import { Button, ErrorState, Spinner } from './primitives';
-import { errorMessage } from '../errors';
 
 export interface FormDialogProps {
   readonly title: string;

@@ -1,6 +1,6 @@
 /** Backup section listing, export and import sub-client. */
-import * as s from '../schemas';
 import { apiDownload } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 export function backupClient(t: Transport) {

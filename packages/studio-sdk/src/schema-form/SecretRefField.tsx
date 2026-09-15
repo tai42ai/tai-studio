@@ -14,8 +14,8 @@
  * explicitly true (the host passes it from whether the projection carries the env
  * route). Absent, the field is paste-only.
  */
-import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Field } from '../components/field';
 import { EyeIcon, EyeOffIcon } from '../components/icons';

@@ -1,7 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import type { PresetExtensionElement, StateBinding } from '@tai42/api-client';
 import type { JsonSchema } from '@tai42/studio-sdk';
+import { describe, expect, it } from 'vitest';
 
 import { buildCreatePresetBody, inputFieldNames, type PresetBodyDraft } from './preset-body';
 

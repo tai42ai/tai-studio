@@ -7,15 +7,14 @@
  * clicks, badge assertions) over the test-utils stream stubs, so the settling
  * path is exercised end to end rather than by poking hook internals.
  */
-import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import type { JsonSchema } from '@tai42/studio-sdk';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
-import type { JsonSchema } from '@tai42/studio-sdk';
-
-import { StreamRunView, useStreamRun, type StreamOpener } from './run-view';
 import { ERROR_TRANSCRIPT, FULL_TRANSCRIPT, OPEN_TRANSCRIPT, parse } from './fixtures';
+import { type StreamOpener, StreamRunView, useStreamRun } from './run-view';
 import { hangingStream, renderWithProviders, scriptedStream, stubClient } from './test-utils';
 
 // An input schema with no fields, so the empty auto-form validates and Run fires

@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Button } from './primitives';
 import { Dialog } from './dialog';
+import { Button } from './primitives';
 
 describe('Dialog', () => {
   it('opens from its trigger and exposes an accessible modal labelled by its title', async () => {

@@ -8,7 +8,8 @@
  * questions sharing a `group_id` fold into one grouped section; a free-text answer
  * cannot be submitted empty (a one-shot answer, so an empty submit is blocked).
  */
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
 import { seedCredential } from './helpers';
 
 /** Two pending text questions in one group — the paged base the inbox seeds from. */

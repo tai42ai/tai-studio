@@ -6,12 +6,6 @@
  * sequence and then parks until its abort signal fires, so a Stop/disconnect can
  * be exercised.
  */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, type RenderResult } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import type { ReactElement, ReactNode } from 'react';
-import { vi, type Mock } from 'vitest';
-
 import type {
   AgentSummary,
   ApiClient,
@@ -30,6 +24,11 @@ import {
   SystemKindsProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, type RenderResult, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ReactElement, ReactNode } from 'react';
+import { type Mock, vi } from 'vitest';
 
 /** The session key `AuthProvider` seeds from, set so `CapabilityProvider` fetches. */
 const SESSION_KEY = 'tai-studio.apiKey';

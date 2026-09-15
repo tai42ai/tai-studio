@@ -1,11 +1,10 @@
+import type { DragEndEvent } from '@dnd-kit/core';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { DragEndEvent } from '@dnd-kit/core';
-
 import {
-  resolveDrop,
-  dropFromDragEvent,
   dispatchDrop,
+  dropFromDragEvent,
+  resolveDrop,
   scopeGroupsOf,
   subMcpPattern,
 } from './scope-mapping';

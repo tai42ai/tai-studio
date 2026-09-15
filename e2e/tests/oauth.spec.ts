@@ -12,9 +12,10 @@
  *  - the standalone bridge artifact is directory-self-contained (CI check).
  */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { test, expect, type Page } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+
+import { expect, type Page, test } from '@playwright/test';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const distBridgeDir = resolve(here, '../../apps/studio/dist/bridge');

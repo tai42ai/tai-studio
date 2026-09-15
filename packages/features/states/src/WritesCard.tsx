@@ -1,24 +1,24 @@
 /** The write audit trail: a paged table of every write to this subject's document. */
-import { useMemo, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { StateSubjectRef, WriteEntry } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
   Spinner,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { StateSubjectRef, WriteEntry } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useMemo, useState } from 'react';
 
 import { stateWritesKey } from './keys';
 

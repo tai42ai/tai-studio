@@ -1,8 +1,7 @@
+import { type ApiClient, ApiError, type ClaimLinkCreated } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, type ApiClient, type ClaimLinkCreated } from '@tai42/api-client';
 
 import { MintedKeyDialog } from './MintedKeyDialog';
 import { renderWithProviders } from './test-utils';

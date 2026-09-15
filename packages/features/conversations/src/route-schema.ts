@@ -23,12 +23,12 @@
  * field renders the visual jq editor; with none it degrades to a plain text box.
  * The feature builds NO seam of its own.
  */
-import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 import type {
   ConversationMode,
   ConversationRoute,
   ConversationRouteCreate,
 } from '@tai42/api-client';
+import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 
 /** The route-name slug the server enforces (`:`-free, so thread namespaces cannot collide). */
 const ROUTE_NAME_RE = /^[a-z0-9-]+$/;

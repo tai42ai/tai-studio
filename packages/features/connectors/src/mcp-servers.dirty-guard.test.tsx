@@ -1,9 +1,9 @@
+import { AppLink } from '@tai42/studio-sdk';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AppLink } from '@tai42/studio-sdk';
-
+import { McpServersSection } from './mcp-servers';
 import {
   DISCARD_PROMPT,
   MANIFEST,
@@ -11,7 +11,6 @@ import {
   renderWithProviders,
   status,
 } from './test-utils-mcp-servers';
-import { McpServersSection } from './mcp-servers';
 
 describe('McpServersSection — dirty-editor navigation guard', () => {
   /** Base stub for the config editor with one editable entry to dirty. */

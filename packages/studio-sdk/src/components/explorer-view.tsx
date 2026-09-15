@@ -12,21 +12,21 @@
  * {@link matchesSelectedTags}, {@link UNTAGGED_TOKEN}) so every consuming screen
  * shares one vocabulary/untagged-sentinel/OR-match rule rather than copying it.
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 
-import { childFolders, FolderBreadcrumb, type Folder } from './folder-nav';
-import { SearchIcon } from './icons';
-import { TextInput } from './inputs';
-import { openTargetProps, type OpenTargetProps } from './open-target';
-import { EmptyState } from './primitives';
-import { useViewMode, ViewToggle, type ViewMode } from './view-toggle';
-import { buildTagVocabulary, matchesSelectedTags } from './explorer-tags';
+import { ExplorerBody, type ExplorerEntry } from './explorer-body';
 import { usePageSize } from './explorer-page-size';
 import { TagFilterRow } from './explorer-tag-filter';
-import { ExplorerBody, type ExplorerEntry } from './explorer-body';
+import { buildTagVocabulary, matchesSelectedTags } from './explorer-tags';
+import { childFolders, type Folder, FolderBreadcrumb } from './folder-nav';
+import { SearchIcon } from './icons';
+import { TextInput } from './inputs';
+import { type OpenTargetProps, openTargetProps } from './open-target';
+import { EmptyState } from './primitives';
+import { useViewMode, type ViewMode, ViewToggle } from './view-toggle';
 
-export { UNTAGGED_TOKEN, buildTagVocabulary, matchesSelectedTags } from './explorer-tags';
 export type { TagVocabularyEntry } from './explorer-tags';
+export { buildTagVocabulary, matchesSelectedTags, UNTAGGED_TOKEN } from './explorer-tags';
 
 /** One header cell of the table view. `renderRow` must emit exactly this many
  *  `<TD>`s per item; folder rows span all of them. */

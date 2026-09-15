@@ -41,112 +41,112 @@ import './components/components.css';
 
 // -- Plugin API --------------------------------------------------------------
 export type {
-  PluginContext,
-  PluginEntry,
-  ToolPanelProps,
-  PluginPageProps,
-  PluginPageParamsSchema,
-  SettingsTabProps,
-  ToolPanelContribution,
-  PageContribution,
-  RegisteredPage,
-  SettingsTabContribution,
-  RegisteredSettingsTab,
   NavEntryContribution,
   NavEntrySection,
-  RegisteredNavEntry,
+  PageContribution,
+  PluginContext,
   PluginContributions,
+  PluginEntry,
+  PluginPageParamsSchema,
+  PluginPageProps,
+  RegisteredNavEntry,
+  RegisteredPage,
+  RegisteredSettingsTab,
   RequiredCapabilities,
+  SettingsTabContribution,
+  SettingsTabProps,
+  ToolPanelContribution,
+  ToolPanelProps,
 } from './plugin/types';
-export { STUDIO_PLUGIN_API_VERSION, checkPluginApiVersion } from './plugin/version';
 export type { VersionGateResult } from './plugin/version';
+export { checkPluginApiVersion, STUDIO_PLUGIN_API_VERSION } from './plugin/version';
 
 // -- Hooks -------------------------------------------------------------------
-export { ApiProvider, useApi } from './hooks/useApi';
 export type { ApiClient } from './hooks/useApi';
-export { UnauthorizedProvider, useOnUnauthorized } from './hooks/useUnauthorized';
-export { AuthProvider, useAuth } from './hooks/useAuth';
+export { ApiProvider, useApi } from './hooks/useApi';
 export type { AuthState } from './hooks/useAuth';
+export { AuthProvider, useAuth } from './hooks/useAuth';
+export type { Breakpoint, BreakpointState } from './hooks/useBreakpoint';
+export { useBreakpoint } from './hooks/useBreakpoint';
+export type { CapabilityContextValue, CapabilityState } from './hooks/useCapabilities';
 export {
   CapabilityProvider,
-  useCapabilities,
-  useCanWrite,
-  isFullProjection,
   coversAnyRoute,
   coversRoute,
   coversWrite,
+  isFullProjection,
+  useCanWrite,
+  useCapabilities,
 } from './hooks/useCapabilities';
-export type { CapabilityState, CapabilityContextValue } from './hooks/useCapabilities';
-export {
-  SystemKindsProvider,
-  useSystemKinds,
-  useFeatureOff,
-  useFeatureOffMessage,
-} from './hooks/useSystemKinds';
-export type { SystemKindsState } from './hooks/useSystemKinds';
-export {
-  ToolDisplayNamesProvider,
-  useToolDisplayNames,
-  useReloadToolDisplayNames,
-  toolDisplayLabel,
-} from './hooks/useToolDisplayNames';
-export type {
-  ToolDisplayNamesState,
-  ToolDisplayNamesContextValue,
-} from './hooks/useToolDisplayNames';
-export { ThemeProvider, useTheme } from './hooks/useTheme';
-export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
-export { useBreakpoint } from './hooks/useBreakpoint';
-export type { Breakpoint, BreakpointState } from './hooks/useBreakpoint';
-export { useInteractionsStream } from './hooks/useSse';
 export type {
   InteractionsStreamOptions,
   InteractionsStreamState,
   StreamInteraction,
 } from './hooks/useSse';
+export { useInteractionsStream } from './hooks/useSse';
+export type { SystemKindsState } from './hooks/useSystemKinds';
+export {
+  SystemKindsProvider,
+  useFeatureOff,
+  useFeatureOffMessage,
+  useSystemKinds,
+} from './hooks/useSystemKinds';
+export type { Theme, ThemePreference, ThemeState } from './hooks/useTheme';
+export { ThemeProvider, useTheme } from './hooks/useTheme';
+export type {
+  ToolDisplayNamesContextValue,
+  ToolDisplayNamesState,
+} from './hooks/useToolDisplayNames';
+export {
+  toolDisplayLabel,
+  ToolDisplayNamesProvider,
+  useReloadToolDisplayNames,
+  useToolDisplayNames,
+} from './hooks/useToolDisplayNames';
+export { UnauthorizedProvider, useOnUnauthorized } from './hooks/useUnauthorized';
 
 // -- Navigation (shell ⇄ feature route-token contract) -----------------------
-export {
-  NavigationProvider,
-  AppLink,
-  useAppNavigate,
-  useResolvePath,
-  usePluginNavigation,
-  usePluginEntryNavigation,
-  useNavigationGuard,
-  useNavigationGate,
-  useSearchCommit,
-} from './navigation';
 export type {
   AppLinkProps,
-  SearchCommitParams,
-  RouteToken,
-  RouteSearch,
-  RouteSearchByToken,
-  PageProps,
-  NavigationContextValue,
   NavigateOptions,
+  NavigationContextValue,
+  NavigationGuardHandler,
+  PageProps,
   PluginNavigateOptions,
   PluginSearch,
-  NavigationGuardHandler,
+  RouteSearch,
+  RouteSearchByToken,
+  RouteToken,
+  SearchCommitParams,
+} from './navigation';
+export {
+  AppLink,
+  NavigationProvider,
+  useAppNavigate,
+  useNavigationGate,
+  useNavigationGuard,
+  usePluginEntryNavigation,
+  usePluginNavigation,
+  useResolvePath,
+  useSearchCommit,
 } from './navigation';
 
 // -- Utilities ---------------------------------------------------------------
-export { errorMessage } from './errors';
 export { downloadBlob } from './download';
+export { errorMessage } from './errors';
 
 // -- Disabled-feature idiom (one helper + component, every consumer) ----------
-export { isFeatureDisabled, featureDisabledMessage, FeatureDisabled } from './feature-disabled';
 export type { FeatureDisabledProps } from './feature-disabled';
+export { FeatureDisabled, featureDisabledMessage, isFeatureDisabled } from './feature-disabled';
 
 // -- Cross-feature query keys ------------------------------------------------
 export {
-  toolsListKey,
   extensionsQueryKey,
-  subMcpKey,
-  tokensPayloadKey,
   statesListKey,
   stateTemplatesKey,
+  subMcpKey,
+  tokensPayloadKey,
+  toolsListKey,
 } from './query-keys';
 
 // -- Extension-combo editing helpers -----------------------------------------
@@ -159,228 +159,243 @@ export { effectiveHidden, hiddenToolNames } from './tool-visibility';
 export { mergeToolBadges, toolBadgesByName } from './tool-badges';
 
 // -- Design system -----------------------------------------------------------
-export { Button, Card, Skeleton, EmptyState, ErrorState, Spinner } from './components/primitives';
+export type { BadgeProps } from './components/badge';
+export { Badge } from './components/badge';
+export type { CheckboxProps } from './components/checkbox';
+export { Checkbox } from './components/checkbox';
+export type { ConfirmDialogProps } from './components/confirm-dialog';
+export { ConfirmDialog } from './components/confirm-dialog';
+export type { DialogProps } from './components/dialog';
+export { Dialog } from './components/dialog';
+export { DirtyGuardBoundary, GuardedTabs, useRegisterDirty } from './components/dirty-guard';
+export type { DrawerProps } from './components/drawer';
+export { Drawer } from './components/drawer';
+export type { EntityCardGridProps } from './components/entity-card-grid';
+export { EntityCardGrid } from './components/entity-card-grid';
+export type { ErrorBoundaryProps } from './components/error-boundary';
+export { ErrorBoundary } from './components/error-boundary';
+export type {
+  ExplorerColumn,
+  ExplorerEmptyState,
+  ExplorerEmptyStates,
+  ExplorerSearch,
+  ExplorerTags,
+  ExplorerViewProps,
+  TagVocabularyEntry,
+} from './components/explorer-view';
+export {
+  buildTagVocabulary,
+  ExplorerView,
+  matchesSelectedTags,
+  UNTAGGED_TOKEN,
+} from './components/explorer-view';
+export type { FieldControlProps, FieldProps } from './components/field';
+export { Field, useFieldControl } from './components/field';
+export type { FormDialogProps } from './components/form-dialog';
+export { FormDialog } from './components/form-dialog';
+export type { NumberInputProps, TextareaProps, TextInputProps } from './components/inputs';
+export { NumberInput, Textarea, TextInput } from './components/inputs';
+export type { JsonDiffProps, JsonDiffRow } from './components/json-diff';
+export { diffJson, JsonDiff } from './components/json-diff';
+export type { JsonTreeProps } from './components/json-tree';
+export { JsonTree } from './components/json-tree';
+export type {
+  OverlayDetails,
+  OverlayDetailsFieldsProps,
+} from './components/overlay-details-fields';
+export { OverlayDetailsFields, overlayDetailsPatch } from './components/overlay-details-fields';
+export { PageFillProvider, useFillViewport, usePageFillActive } from './components/page-fill';
+export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
+export { Page, PageHeader, Stack } from './components/page-header';
 export type {
   ButtonProps,
-  LinkButtonProps,
   ButtonVariant,
   CardProps,
-  SkeletonProps,
   EmptyStateProps,
   ErrorStateProps,
+  LinkButtonProps,
+  SkeletonProps,
   SpinnerProps,
 } from './components/primitives';
-export { PageHeader, Page, Stack } from './components/page-header';
-export type { PageHeaderProps, PageLayoutProps, StackProps } from './components/page-header';
-export { PageFillProvider, useFillViewport, usePageFillActive } from './components/page-fill';
-export { ErrorBoundary } from './components/error-boundary';
-export type { ErrorBoundaryProps } from './components/error-boundary';
-export { Field, useFieldControl } from './components/field';
-export type { FieldProps, FieldControlProps } from './components/field';
-export { TextInput, Textarea, NumberInput } from './components/inputs';
-export type { TextInputProps, TextareaProps, NumberInputProps } from './components/inputs';
-export { Select } from './components/select';
+export { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './components/primitives';
+export type { RadioGroupProps, RadioOption } from './components/radio-group';
+export { RadioGroup } from './components/radio-group';
 export type {
-  SelectProps,
+  OverflowRegionAttributes,
+  ProseScrollLabels,
+  ScrollRegionProps,
+} from './components/scroll-region';
+export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
+export type {
+  SelectGroup,
   SelectGroupsProps,
   SelectOption,
-  SelectGroup,
+  SelectProps,
 } from './components/select';
-export { Checkbox } from './components/checkbox';
-export type { CheckboxProps } from './components/checkbox';
-export { RadioGroup } from './components/radio-group';
-export type { RadioGroupProps, RadioOption } from './components/radio-group';
-export { TemplatedTextField, templatedTextSummary } from './components/templated-text-field';
+export { Select } from './components/select';
+export type {
+  NumericColumnProps,
+  TableProps,
+  TableRowProps,
+  TableSectionProps,
+  TDProps,
+  THProps,
+} from './components/table';
+export { Table, TBody, TD, TH, THead, TR } from './components/table';
+export type { TabItem, TabsProps } from './components/tabs';
+export { Tabs } from './components/tabs';
+export type { TagChipsProps, TagsInputProps } from './components/tags';
+export { TagChips, TagsInput } from './components/tags';
 export type {
   TemplatedTextFieldProps,
   TemplatedTextInlineProps,
   TemplatedTextTemplateOption,
 } from './components/templated-text-field';
-export { Badge } from './components/badge';
-export type { BadgeProps } from './components/badge';
-export { Tabs } from './components/tabs';
-export type { TabsProps, TabItem } from './components/tabs';
-export { Dialog } from './components/dialog';
-export type { DialogProps } from './components/dialog';
-export { ConfirmDialog } from './components/confirm-dialog';
-export type { ConfirmDialogProps } from './components/confirm-dialog';
-export { GuardedTabs, DirtyGuardBoundary, useRegisterDirty } from './components/dirty-guard';
-export { FormDialog } from './components/form-dialog';
-export type { FormDialogProps } from './components/form-dialog';
-export { Drawer } from './components/drawer';
-export type { DrawerProps } from './components/drawer';
-export { Tooltip } from './components/tooltip';
+export { TemplatedTextField, templatedTextSummary } from './components/templated-text-field';
 export type { TooltipProps } from './components/tooltip';
-export { Table, THead, TBody, TR, TH, TD } from './components/table';
-export type {
-  TableProps,
-  TableSectionProps,
-  TableRowProps,
-  THProps,
-  TDProps,
-  NumericColumnProps,
-} from './components/table';
-export { ScrollRegion, useOverflowRegion, useProseScrollRegions } from './components/scroll-region';
-export type {
-  ScrollRegionProps,
-  OverflowRegionAttributes,
-  ProseScrollLabels,
-} from './components/scroll-region';
-export { JsonTree } from './components/json-tree';
-export type { JsonTreeProps } from './components/json-tree';
-export { JsonDiff, diffJson } from './components/json-diff';
-export type { JsonDiffProps, JsonDiffRow } from './components/json-diff';
-export { TagChips, TagsInput } from './components/tags';
-export type { TagChipsProps, TagsInputProps } from './components/tags';
-export { OverlayDetailsFields, overlayDetailsPatch } from './components/overlay-details-fields';
-export type {
-  OverlayDetails,
-  OverlayDetailsFieldsProps,
-} from './components/overlay-details-fields';
-export { ViewToggle, useViewMode } from './components/view-toggle';
+export { Tooltip } from './components/tooltip';
 export type { ViewMode, ViewToggleProps } from './components/view-toggle';
-export { EntityCardGrid } from './components/entity-card-grid';
-export type { EntityCardGridProps } from './components/entity-card-grid';
-export {
-  ExplorerView,
-  buildTagVocabulary,
-  matchesSelectedTags,
-  UNTAGGED_TOKEN,
-} from './components/explorer-view';
-export type {
-  ExplorerViewProps,
-  ExplorerColumn,
-  ExplorerTags,
-  ExplorerSearch,
-  ExplorerEmptyState,
-  ExplorerEmptyStates,
-  TagVocabularyEntry,
-} from './components/explorer-view';
+export { useViewMode, ViewToggle } from './components/view-toggle';
 // The canonical whole-row/whole-card "open" affordance: one helper every
 // navigable list surface spreads onto its entry (see the module doc).
-export { openTargetProps } from './components/open-target';
-export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
-export {
-  FolderBreadcrumb,
-  FolderRow,
-  FolderPicker,
-  childFolders,
-  folderPathTo,
-} from './components/folder-nav';
-export type {
-  Folder,
-  FolderBreadcrumbProps,
-  FolderRowProps,
-  FolderPickerProps,
-} from './components/folder-nav';
-export { CodeBlock } from './components/code-block';
 export type { CodeBlockProps } from './components/code-block';
-export { Markdown, parseMarkdown } from './components/markdown';
-export type { MarkdownProps, MarkdownBlock, HeadingLevel } from './components/markdown';
-export {
-  DateRangePicker,
-  formatRangeLabel,
-  normalizeCustomRange,
-  DEFAULT_DATE_RANGE_PRESETS,
-} from './components/date-range-picker';
+export { CodeBlock } from './components/code-block';
 export type {
   DateRangePickerProps,
   DateRangePreset,
   DateRangeValue,
 } from './components/date-range-picker';
-export { FleetReport } from './components/fleet-report';
-export type { FleetReportProps } from './components/fleet-report';
+export {
+  DateRangePicker,
+  DEFAULT_DATE_RANGE_PRESETS,
+  formatRangeLabel,
+  normalizeCustomRange,
+} from './components/date-range-picker';
 export { ExternalLinkButton, isSafeHttpUrl } from './components/external-link';
+export type { FleetReportProps } from './components/fleet-report';
+export { FleetReport } from './components/fleet-report';
+export type {
+  Folder,
+  FolderBreadcrumbProps,
+  FolderPickerProps,
+  FolderRowProps,
+} from './components/folder-nav';
+export {
+  childFolders,
+  FolderBreadcrumb,
+  folderPathTo,
+  FolderPicker,
+  FolderRow,
+} from './components/folder-nav';
+export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/markdown';
+export { Markdown, parseMarkdown } from './components/markdown';
+export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
+export { openTargetProps } from './components/open-target';
 // The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
 // hands back the parsed URL, so a caller that needs the URL does not re-parse it.
-export { safeHttpUrl } from './components/primitives';
-export type { ExternalLinkButtonProps } from './components/external-link';
-export { ToolPicker, BADGES_NOTE } from './components/tool-picker';
-export type { ToolPickerProps } from './components/tool-picker';
-export { ExtensionPicker } from './components/extension-picker';
-export type { ExtensionPickerProps } from './components/extension-picker';
-export { ExtensionComboBuilder } from './components/extension-combo-builder';
+export type { CopyFieldProps } from './components/copy-field';
+export { CopyField } from './components/copy-field';
 export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
+export { ExtensionComboBuilder } from './components/extension-combo-builder';
+export type { ExtensionFamily, ExtensionKindGroup } from './components/extension-grouping';
 export {
   baseNameOf,
-  groupIntoFamilies,
   groupByKind,
+  groupIntoFamilies,
   kindVariant,
   NON_STACKABLE_KIND,
 } from './components/extension-grouping';
-export type { ExtensionFamily, ExtensionKindGroup } from './components/extension-grouping';
-export { VersionHistoryPanel } from './components/version-history-panel';
-export type {
-  VersionHistoryPanelProps,
-  VersionHistoryEntry,
-} from './components/version-history-panel';
-export { RevealInput } from './components/reveal-input';
+export type { ExtensionPickerProps } from './components/extension-picker';
+export { ExtensionPicker } from './components/extension-picker';
+export type { ExternalLinkButtonProps } from './components/external-link';
+export { safeHttpUrl } from './components/primitives';
 export type { RevealInputProps } from './components/reveal-input';
-export { CopyField } from './components/copy-field';
-export type { CopyFieldProps } from './components/copy-field';
-export { TOKEN_NAMES } from './components/tokens';
+export { RevealInput } from './components/reveal-input';
 export type { TokenName } from './components/tokens';
+export { TOKEN_NAMES } from './components/tokens';
+export type { ToolPickerProps } from './components/tool-picker';
+export { BADGES_NOTE, ToolPicker } from './components/tool-picker';
+export type {
+  VersionHistoryEntry,
+  VersionHistoryPanelProps,
+} from './components/version-history-panel';
+export { VersionHistoryPanel } from './components/version-history-panel';
 
 // -- Iconography (the only sanctioned marks; Unicode glyphs are banned) -------
+export type { IconComponent, IconProps } from './components/icons';
 export {
-  NAV_ICONS,
-  DashboardIcon,
-  ToolsIcon,
   AgentsIcon,
-  PresetsIcon,
-  DatabaseIcon,
-  ExtensionsIcon,
-  TemplatesIcon,
-  ConnectorsIcon,
-  ServedEndpointsIcon,
-  PluginIcon,
-  HooksIcon,
-  StorageIcon,
-  SchedulingIcon,
-  InteractionsIcon,
-  NotificationsIcon,
-  ConversationsIcon,
-  MarketplaceIcon,
-  ManifestIcon,
-  SettingsIcon,
-  SystemIcon,
-  SearchIcon,
-  SignOutIcon,
-  MenuIcon,
-  CloseIcon,
-  FolderIcon,
-  GridIcon,
-  FilterIcon,
+  AlertTriangleIcon,
+  ArrowDownIcon,
   ArrowLeftIcon,
   ArrowUpIcon,
-  ArrowDownIcon,
+  CheckCircleIcon,
+  CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  CheckIcon,
-  MinusIcon,
-  PlusIcon,
-  EditIcon,
-  UnplugIcon,
+  CloseIcon,
+  ConnectorsIcon,
+  ConversationsIcon,
   CopyIcon,
+  DashboardIcon,
+  DatabaseIcon,
+  EditIcon,
+  ExtensionsIcon,
   ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
+  FilterIcon,
+  FolderIcon,
+  GridIcon,
+  HooksIcon,
+  InteractionsIcon,
+  ManifestIcon,
+  MarketplaceIcon,
+  MenuIcon,
+  MinusIcon,
+  MonitorIcon,
+  MoonIcon,
+  NAV_ICONS,
+  NotificationsIcon,
+  PendingIcon,
+  PluginIcon,
+  PlusIcon,
+  PresetsIcon,
+  SchedulingIcon,
+  SearchIcon,
+  ServedEndpointsIcon,
+  SettingsIcon,
+  SignOutIcon,
   SortAscIcon,
   SortDescIcon,
+  StorageIcon,
   SunIcon,
-  MoonIcon,
-  MonitorIcon,
-  CheckCircleIcon,
-  AlertTriangleIcon,
+  SystemIcon,
+  TemplatesIcon,
+  ToolsIcon,
+  UnplugIcon,
   XCircleIcon,
-  PendingIcon,
 } from './components/icons';
-export type { IconProps, IconComponent } from './components/icons';
 
 // -- Schema-driven forms -----------------------------------------------------
+export type {
+  CompletionProvider,
+  Discriminator,
+  ExpressionFieldComponent,
+  ExpressionFieldProps,
+  ExpressionInputKey,
+  ExpressionInputShape,
+  JsonSchema,
+  JsonSchemaType,
+  RecordEntryContext,
+  RecordEntryRenderer,
+  SchemaFormErrors,
+  SchemaFormProps,
+  SecretRef,
+  SecretRefFieldProps,
+} from './schema-form';
 export {
-  SchemaForm,
-  RecordEntryRendererContext,
+  defaultValueForSchema,
   // The expression-door injection point: a host that wants `x-tai42-expression`
   // fields to author through the visual editor imports `JqField` from
   // `@tai42/jq-studio` and hands it to a form (the `expressionField` prop) or
@@ -388,99 +403,84 @@ export {
   // as plain string inputs and stays free of the jq subgraph — the editor, its
   // worker, and its wasm — entirely.
   ExpressionFieldContext,
-  SecretRefField,
-  defaultValueForSchema,
-  validateAgainstSchema,
+  RecordEntryRendererContext,
   resolveRef,
-} from './schema-form';
-export type {
-  SchemaFormProps,
-  CompletionProvider,
-  RecordEntryRenderer,
-  RecordEntryContext,
-  ExpressionFieldComponent,
-  ExpressionFieldProps,
-  ExpressionInputShape,
-  ExpressionInputKey,
-  SecretRefFieldProps,
-  SecretRef,
-  JsonSchema,
-  JsonSchemaType,
-  Discriminator,
-  SchemaFormErrors,
+  SchemaForm,
+  SecretRefField,
+  validateAgainstSchema,
 } from './schema-form';
 
 // -- Schema-editor (validated JSON-Schema authoring control) -----------------
-export { SchemaEditor, lintSchemaText } from './schema-editor';
-export type { SchemaEditorProps, SchemaEditorChange, SchemaLintResult } from './schema-editor';
+export type { SchemaEditorChange, SchemaEditorProps, SchemaLintResult } from './schema-editor';
+export { lintSchemaText, SchemaEditor } from './schema-editor';
 
 // -- State-binding editor (the one binding shape every door + flow node authors) --
-export {
-  StateBindingEditor,
-  StateBindingSection,
-  StateAttachRow,
-  InjectionList,
-  UpdateList,
-  AdapterMapping,
-  SubjectScopeFields,
-  BindingJqField,
-  BindingTemplatedJqField,
-  appendTjq,
-  resolveTemplateJq,
-  findByRef,
-  resolveCallName,
-  templatesCatalogFromList,
-  statesCatalogFromList,
-  fieldPathsFromSchema,
-  compileAdapter,
-  rowValueJq,
-  fieldPathToJq,
-  jqKey,
-  defaultRowsForInput,
-  parseAdapter,
-  parseFieldPath,
-  generateTemplateCall,
-  parseTemplateCall,
-  encodeTemplateSegment,
-  templatedTextCatalog,
-} from './state-binding';
 export type {
-  StoragePresenceQueryLike,
-  TemplateNamesQueryLike,
-  StateBindingEditorProps,
-  StateBindingSectionProps,
-  StateAttachRowProps,
+  AdapterCompileResult,
+  AdapterMappingProps,
+  BindingJqFieldProps,
+  BindingSourceSchemas,
+  BindingStateOption,
+  BindingTemplatedJqFieldProps,
+  BindingTemplateJqOption,
+  BindingTemplateOption,
+  FieldRoot,
+  FieldSource,
   InheritedSubject,
   InjectionListProps,
-  UpdateListProps,
-  AdapterMappingProps,
-  SubjectScopeFieldsProps,
-  BindingJqFieldProps,
-  BindingTemplatedJqFieldProps,
-  TemplateJqSuggestion,
-  ResolvedTemplateJq,
+  JqSource,
+  LiteralSource,
   MappingRow,
   MappingSource,
-  FieldSource,
-  LiteralSource,
-  JqSource,
-  FieldRoot,
-  AdapterCompileResult,
-  BindingStateOption,
-  BindingTemplateOption,
-  BindingTemplateJqOption,
-  BindingSourceSchemas,
+  ResolvedTemplateJq,
   SchemaFieldPath,
+  StateAttachRowProps,
+  StateBindingEditorProps,
+  StateBindingSectionProps,
+  StoragePresenceQueryLike,
+  SubjectScopeFieldsProps,
   TemplatedText,
   TemplatedTextCatalog,
+  TemplateJqSuggestion,
+  TemplateNamesQueryLike,
+  UpdateListProps,
+} from './state-binding';
+export {
+  AdapterMapping,
+  appendTjq,
+  BindingJqField,
+  BindingTemplatedJqField,
+  compileAdapter,
+  defaultRowsForInput,
+  encodeTemplateSegment,
+  fieldPathsFromSchema,
+  fieldPathToJq,
+  findByRef,
+  generateTemplateCall,
+  InjectionList,
+  jqKey,
+  parseAdapter,
+  parseFieldPath,
+  parseTemplateCall,
+  resolveCallName,
+  resolveTemplateJq,
+  rowValueJq,
+  StateAttachRow,
+  StateBindingEditor,
+  StateBindingSection,
+  statesCatalogFromList,
+  SubjectScopeFields,
+  templatedTextCatalog,
+  templatesCatalogFromList,
+  UpdateList,
 } from './state-binding';
 
 // -- MCP context widgets (elicitation / progress / completions / output) -----
-export { ProgressBar } from './components/progress-bar';
-export type { ProgressBarProps } from './components/progress-bar';
-export { CompletionInput } from './components/completion-input';
 export type { CompletionInputProps } from './components/completion-input';
-export { ElicitationForm } from './elicitation/ElicitationForm';
+export { CompletionInput } from './components/completion-input';
+export type { ProgressBarProps } from './components/progress-bar';
+export { ProgressBar } from './components/progress-bar';
 export type { ElicitationFormProps } from './elicitation/ElicitationForm';
-export { StructuredOutput } from './structured-output/StructuredOutput';
+export { ElicitationForm } from './elicitation/ElicitationForm';
 export type { StructuredOutputProps } from './structured-output/StructuredOutput';
+export { StructuredOutput } from './structured-output/StructuredOutput';

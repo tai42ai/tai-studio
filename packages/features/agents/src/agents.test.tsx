@@ -1,8 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import type { AgentSummary } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import type { AgentSummary } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { AgentsPage } from './agents';
 import { ERROR_TRANSCRIPT, FULL_TRANSCRIPT, OPEN_TRANSCRIPT, parse } from './fixtures';

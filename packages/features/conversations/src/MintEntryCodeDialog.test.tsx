@@ -5,11 +5,10 @@
  * optional expiry is sent as an ISO instant and a past value is blocked locally,
  * and every server status renders verbatim.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MintEntryCodeDialog } from './MintEntryCodeDialog';
 import { renderWithProviders, type StubApiClient } from './test-utils';

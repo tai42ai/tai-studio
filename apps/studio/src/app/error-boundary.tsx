@@ -14,9 +14,9 @@
  * still caught and shown loudly. React logs the caught error to the console on its
  * own; this only adds the visible surface and a Retry that re-mounts the subtree.
  */
+import { errorMessage, ErrorState } from '@tai42/studio-sdk';
+import { type ErrorComponentProps, useRouter } from '@tanstack/react-router';
 import { Component, type ReactNode } from 'react';
-import { useRouter, type ErrorComponentProps } from '@tanstack/react-router';
-import { ErrorState, errorMessage } from '@tai42/studio-sdk';
 
 const wrapperStyle = { padding: 'var(--tai-space-6)' } as const;
 

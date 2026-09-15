@@ -13,29 +13,29 @@
  * since they are one hooks-tag `write` tier — a `read`-only grantee sees the list
  * without controls that would 403 on submit.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   ScrollRegion,
   Skeleton,
+  Table,
   TBody,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
   useCanWrite,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { triggerLinksListKey } from './keys';
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
-import { TriggerLinkRow } from './TriggerLinkRow';
+import { triggerLinksListKey } from './keys';
 import { RevokeTriggerLinkDialog } from './RevokeTriggerLinkDialog';
+import { TriggerLinkRow } from './TriggerLinkRow';
 
 /** The write route whose POST capability gates create AND revoke (see the header). */
 const TRIGGER_LINKS_WRITE_ROUTE = '/api/hooks/trigger-links';

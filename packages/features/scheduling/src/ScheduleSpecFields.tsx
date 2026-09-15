@@ -2,8 +2,8 @@
  * The schedule-spec fields for the add-schedule dialog: the interval/crontab mode
  * radio and the interval-seconds or cron-string field the chosen mode reveals.
  */
-import type { ReactNode } from 'react';
 import { Field, NumberInput, RadioGroup, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { MODE_OPTIONS, type ScheduleMode } from './schedule-form';
 

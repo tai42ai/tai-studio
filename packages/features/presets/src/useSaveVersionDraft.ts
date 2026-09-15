@@ -7,8 +7,6 @@
  * version list and its dirtiness is gated on the seed so a pre-seed `null` never reads
  * as a user clear.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   PresetDetail,
   PresetExtensionElement,
@@ -16,10 +14,12 @@ import type {
   StateBinding,
   ValidatePresetBody,
 } from '@tai42/api-client';
-import { toolsListKey, useApi, type SchemaEditorChange } from '@tai42/studio-sdk';
+import { type SchemaEditorChange, toolsListKey, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 
+import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { jsonEqual, parseJsonObject } from './parse';
-import { presetDetailKey, presetVersionsKey, presetsListKey } from './keys';
 
 /** The seeded field state plus the per-field dirtiness the save/validate bodies read. */
 function useVersionDraftState(detail: PresetDetail) {

@@ -3,10 +3,10 @@
  * switch (navigating `?tab=`), the Delete-state danger flow, and the not-found / OFF
  * branches of the composite read.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { StateDetail } from './StateDetail';
 import { renderWithProviders, type StubApiClient } from './test-utils';

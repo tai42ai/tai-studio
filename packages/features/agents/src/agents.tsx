@@ -12,27 +12,26 @@
  * The streaming engine and the shared run view live in `./run-view`; the authoring
  * surface lives in `./authoring`. This module composes them into the page.
  */
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-
 import type { AgentSummary } from '@tai42/api-client';
 import {
   AppLink,
   Button,
+  type CapabilityState,
   Card,
   EmptyState,
   ErrorState,
+  isFullProjection,
   PageHeader,
   Skeleton,
   Stack,
-  isFullProjection,
   useApi,
   useCapabilities,
-  type CapabilityState,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
 
-import { AuthoringSection, AuthoredRunView, type AuthoredRunTarget } from './authoring';
+import { type AuthoredRunTarget, AuthoredRunView, AuthoringSection } from './authoring';
 import { agentsListKey } from './keys';
 import { StreamRunView, useAgentRun } from './run-view';
 

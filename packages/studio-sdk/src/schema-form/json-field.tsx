@@ -17,8 +17,8 @@
  * `lastEmitted` guard `record-field` uses, so a parent echoing our own commit back
  * does not clobber what is being typed.
  */
-import { useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useRef, useState } from 'react';
 
 import { Field } from '../components/field';
 import { Textarea } from '../components/inputs';

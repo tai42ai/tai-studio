@@ -5,9 +5,9 @@
  * ready registry offers the names. The `<Field>` marks itself `group` on the
  * error/empty branches, where no labelable control claims its id.
  */
-import type { ReactNode } from 'react';
-import { AppLink, ErrorState, Field, Select, errorMessage } from '@tai42/studio-sdk';
+import { AppLink, errorMessage, ErrorState, Field, Select } from '@tai42/studio-sdk';
 import type { UseQueryResult } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 export interface VerifierSelectFieldProps {
   readonly verifiersQuery: UseQueryResult<readonly string[]>;

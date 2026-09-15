@@ -4,8 +4,8 @@
  * adjust-state-on-prop-change pattern) rather than by remounting on a `key`, so the
  * focused control keeps its keyboard caret the instant Apply commits (WCAG 2.4.3).
  */
-import { useState, type ReactNode } from 'react';
 import { Button, Card, DateRangePicker, useAppNavigate } from '@tai42/studio-sdk';
+import { type ReactNode, useState } from 'react';
 
 import {
   ADVANCED_FILTER_KEYS,
@@ -13,14 +13,14 @@ import {
   draftToPatch,
   type FilterDraft,
 } from './filterDraft';
-import { MetricFilterFields } from './MetricFilterFields';
 import {
   isMetricSort,
   mergeSearch,
+  type ObservabilitySearch,
   rangeToPatch,
   searchToRange,
-  type ObservabilitySearch,
 } from './filters';
+import { MetricFilterFields } from './MetricFilterFields';
 
 export interface FilterBarProps {
   readonly search: ObservabilitySearch;

@@ -4,12 +4,12 @@
  * light dismissal is disabled — only the explicit Done button closes it; the form
  * phase stays an ordinary dismissable modal.
  */
-import type { ReactNode } from 'react';
 import { Dialog } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import { useCreateTriggerLink } from './useCreateTriggerLink';
 import { MintedLinkReveal } from './MintedLinkReveal';
 import { TriggerLinkForm } from './TriggerLinkForm';
+import { useCreateTriggerLink } from './useCreateTriggerLink';
 
 export function CreateTriggerLinkDialog({ onClose }: { readonly onClose: () => void }): ReactNode {
   const form = useCreateTriggerLink();

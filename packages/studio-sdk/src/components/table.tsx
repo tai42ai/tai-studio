@@ -13,7 +13,7 @@
  * so a caller that has to measure or scroll a cell is not forced back to a raw
  * `<td>` and out of the system.
  */
-import type { HTMLAttributes, Ref, ReactNode, TdHTMLAttributes, ThHTMLAttributes } from 'react';
+import type { HTMLAttributes, ReactNode, Ref, TdHTMLAttributes, ThHTMLAttributes } from 'react';
 
 export interface TableProps extends HTMLAttributes<HTMLTableElement> {
   readonly children?: ReactNode;

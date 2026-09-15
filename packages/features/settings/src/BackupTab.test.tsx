@@ -1,8 +1,7 @@
+import type { ApiClient, BackupImportReport } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-
-import type { ApiClient, BackupImportReport } from '@tai42/api-client';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 import { BackupTab } from './BackupTab';
 import { renderWithProviders } from './test-utils';

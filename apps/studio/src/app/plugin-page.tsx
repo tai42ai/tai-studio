@@ -16,17 +16,17 @@
  * ErrorState is the loud surface), and only a ready projection reaches the
  * registry/plugin-error checks and the page's own contribution gate.
  */
-import { useMemo, type ReactNode } from 'react';
-import { useStore } from 'zustand';
-import { EmptyState, ErrorState, useCapabilities } from '@tai42/studio-sdk';
 import type { RegisteredPage } from '@tai42/studio-sdk';
+import { EmptyState, ErrorState, useCapabilities } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
 import { useLocation } from '@tanstack/react-router';
+import { type ReactNode, useMemo } from 'react';
+import { useStore } from 'zustand';
 
-import { contributionCovered } from './token-requirements';
-import { ContentSkeleton } from './route-capability-boundary';
-import { resolvePluginPage, type PluginPageResolution } from './plugin-page-resolve';
 import type { PluginLoader } from './plugin-loader';
+import { type PluginPageResolution, resolvePluginPage } from './plugin-page-resolve';
+import { ContentSkeleton } from './route-capability-boundary';
+import { contributionCovered } from './token-requirements';
 
 export function PluginPage({
   loader,

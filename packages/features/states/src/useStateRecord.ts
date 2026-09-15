@@ -4,16 +4,16 @@
  * A successful save closes the editor and invalidates the record + its write trail; a
  * successful erase closes the confirm and invalidates the record.
  */
-import { useState } from 'react';
+import type { StateDetail, StateRecord, StateSubjectRef } from '@tai42/api-client';
+import { type JsonSchema, useApi } from '@tai42/studio-sdk';
 import {
   useMutation,
+  type UseMutationResult,
   useQuery,
   useQueryClient,
-  type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { useApi, type JsonSchema } from '@tai42/studio-sdk';
-import type { StateDetail, StateRecord, StateSubjectRef } from '@tai42/api-client';
+import { useState } from 'react';
 
 import { stateDetailKey, stateRecordKey, stateWritesKey } from './keys';
 

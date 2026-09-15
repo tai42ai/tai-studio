@@ -5,13 +5,13 @@
  * Writes card pages the audit trail. Also the subject-param codec (split on the first
  * colon, URL-decoded).
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type StateDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type StateDetail } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
+import { formatSubjectParam, parseSubjectRef } from './record-subject';
 import { RecordPage } from './RecordPage';
-import { parseSubjectRef, formatSubjectParam } from './record-subject';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 const subject = { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'p-1' };

@@ -12,11 +12,6 @@
  * and flushes React so assertions see the result. The paged pending base is the
  * `listInteractions` stub (`interactionsPage` builds a page).
  */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, render, type RenderOptions, type RenderResult } from '@testing-library/react';
-import type { ReactElement, ReactNode } from 'react';
-import { vi } from 'vitest';
-
 import type { ApiClient, Interaction, InteractionsPage, MeProjection } from '@tai42/api-client';
 import {
   ApiProvider,
@@ -25,6 +20,10 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, type RenderOptions, type RenderResult } from '@testing-library/react';
+import type { ReactElement, ReactNode } from 'react';
+import { vi } from 'vitest';
 
 // Aliased so the `InteractionsPage` response TYPE (above) is not shadowed by the page
 // component the inbox render helper mounts.

@@ -9,9 +9,9 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { createApiClient } from './index';
-import { ApiError, ApiLoginFailedError, ApiSchemaError, type ApiConfig } from '../index';
+import { type ApiConfig, ApiError, ApiLoginFailedError, ApiSchemaError } from '../index';
 import { loginResult, meProjection } from '../schemas';
+import { createApiClient } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

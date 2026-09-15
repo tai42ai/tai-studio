@@ -5,8 +5,8 @@
  * message under the offending control and fire no request. An untouched subject is
  * omitted; a partially-filled one is refused loudly.
  */
-import { errorMessage } from '@tai42/studio-sdk';
 import type { HookRegister, HookSubject, StateBinding, TemplatedText } from '@tai42/api-client';
+import { errorMessage } from '@tai42/studio-sdk';
 
 import { parseJsonObject } from './jsonObjectField';
 

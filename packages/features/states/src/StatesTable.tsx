@@ -1,7 +1,7 @@
 /** The states master table: header columns (trimmed in split mode) and one row per state. */
-import type { ReactNode } from 'react';
-import { ScrollRegion, TBody, TH, THead, TR, Table } from '@tai42/studio-sdk';
 import type { StateListItem } from '@tai42/api-client';
+import { ScrollRegion, Table, TBody, TH, THead, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { StateRow } from './StateRow';
 

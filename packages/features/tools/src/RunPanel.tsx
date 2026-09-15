@@ -12,28 +12,28 @@
  * typed `ResultViewer`; a timeout → a DISTINCT "still executing server-side" notice;
  * any other failure → the generic loud `ErrorState`.
  */
-import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Button,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
+  featureDisabledMessage,
+  type JsonSchema,
   SchemaForm,
   Skeleton,
   Spinner,
-  errorMessage,
-  featureDisabledMessage,
-  useApi,
-  type JsonSchema,
   type ToolPanelProps,
+  useApi,
 } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
+import { BackgroundRuns } from './BackgroundRuns';
 import { toolSchemaKey } from './keys';
 import { ResultViewer } from './ResultViewer';
 import { runToolWithTimeout } from './run';
-import { BackgroundRuns } from './BackgroundRuns';
-import { useAutoFormRun, type AutoFormRun } from './useAutoFormRun';
+import { type AutoFormRun, useAutoFormRun } from './useAutoFormRun';
 
 /** The distinct, loud "run still executing server-side" state (honest limit).
  * Deliberately NOT the generic `ErrorState`: a different heading, colour, and a

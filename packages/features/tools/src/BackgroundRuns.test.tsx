@@ -7,10 +7,10 @@
  *  - the failed and lost states render their distinct surfaces;
  *  - selecting a recent run shows that run's detail.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ToolRunListItem, ToolRunRecord } from '@tai42/api-client';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ToolRunListItem, ToolRunRecord } from '@tai42/api-client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BackgroundRuns } from './BackgroundRuns';
 import { POLL_INTERVAL_MS } from './backgroundRunsCommon';

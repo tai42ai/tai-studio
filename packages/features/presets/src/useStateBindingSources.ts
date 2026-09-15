@@ -4,20 +4,19 @@
  * input/output field paths. Backs the `StateBindingSection` on both the create form
  * and the save-version dialog, so its wiring lives in one place.
  */
-import { useQuery } from '@tanstack/react-query';
-
 import {
+  type BindingSourceSchemas,
   errorMessage,
   fieldPathsFromSchema,
+  type JsonSchema,
   statesCatalogFromList,
-  templatesCatalogFromList,
   statesListKey,
   stateTemplatesKey,
   templatedTextCatalog,
+  templatesCatalogFromList,
   useApi,
-  type BindingSourceSchemas,
-  type JsonSchema,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
 
 /** The prop bundle a `StateBindingSection` consumes (minus `value`/`onChange`). */
 export type StateBindingSources = ReturnType<typeof useStateBindingSources>;

@@ -3,12 +3,12 @@
  * fires; `expr` shapes the event before the tool runs. Both are authored as
  * templated text (inline jq or a stored template id) and default to unset.
  */
-import type { ReactNode } from 'react';
 import type { TemplatedTextCatalog } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import type { HookFormFields } from './useHookFormFields';
 import { HOOK_CONDITION_DECLARATION, HOOK_EXPR_DECLARATION } from './hookJqDeclarations';
 import { HookTemplatedJqField } from './HookTemplatedJqField';
+import type { HookFormFields } from './useHookFormFields';
 
 export interface HookConditionExprFieldsProps {
   readonly fields: HookFormFields;

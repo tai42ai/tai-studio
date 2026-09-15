@@ -18,9 +18,9 @@
  */
 import type { ReactNode } from 'react';
 
+import { errorMessage } from '../errors';
 import { Dialog } from './dialog';
 import { Button, ErrorState, Spinner } from './primitives';
-import { errorMessage } from '../errors';
 
 export interface ConfirmDialogProps {
   readonly title: string;

@@ -14,25 +14,25 @@
  * another hook (never the one being edited). A failed request surfaces loudly and
  * inline in an `ErrorState`.
  */
-import { type ReactNode, type SyntheticEvent } from 'react';
+import type { HookParams } from '@tai42/api-client';
 import {
   Button,
   Card,
+  errorMessage,
   ErrorState,
   Spinner,
   StateBindingSection,
-  errorMessage,
 } from '@tai42/studio-sdk';
-import type { HookParams } from '@tai42/api-client';
+import { type ReactNode, type SyntheticEvent } from 'react';
 
-import { fireGateUnsatisfiable } from './fire-path-gate';
-import { useHookFormFields } from './useHookFormFields';
-import { useHookFormData } from './useHookFormData';
-import { useRegisterHook } from './useRegisterHook';
 import { buildHookParams } from './buildHookParams';
+import { fireGateUnsatisfiable } from './fire-path-gate';
+import { HookConditionExprFields } from './HookConditionExprFields';
 import { HookIdentityFields } from './HookIdentityFields';
 import { HookSubjectSection } from './HookSubjectSection';
-import { HookConditionExprFields } from './HookConditionExprFields';
+import { useHookFormData } from './useHookFormData';
+import { useHookFormFields } from './useHookFormFields';
+import { useRegisterHook } from './useRegisterHook';
 
 export interface RegisterHookFormProps {
   /**

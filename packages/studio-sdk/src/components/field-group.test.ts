@@ -50,7 +50,7 @@
  * a red test until someone reads it. The count floors below keep the sites the
  * regex DOES reach from silently dropping out.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

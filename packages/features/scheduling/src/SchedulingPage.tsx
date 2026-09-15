@@ -16,8 +16,6 @@
  * arbitrary tool names / kwargs, so every cell renders server strings as ESCAPED
  * text through the DS components (React escapes them) — never an HTML sink.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, type ScheduleItem } from '@tai42/api-client';
 import {
   AppLink,
@@ -26,21 +24,23 @@ import {
   Card,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   PageHeader,
+  type PageProps,
   ScrollRegion,
   Skeleton,
   Spinner,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
-  type PageProps,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { AddScheduleDialog } from './AddScheduleDialog';
 import { schedulesKey, serverDateTimeKey } from './keys';

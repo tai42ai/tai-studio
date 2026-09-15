@@ -14,6 +14,8 @@
  * `ErrorState` with `retry` in the nav region — never an optimistic full nav on
  * error. The UI fails closed exactly as the server would.
  */
+import type { MeProjection } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 import {
   createContext,
   useCallback,
@@ -23,9 +25,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
 import { createElement } from 'react';
-import type { MeProjection } from '@tai42/api-client';
 
 import { useApi } from './useApi';
 import { useAuth } from './useAuth';

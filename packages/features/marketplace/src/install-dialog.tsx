@@ -4,7 +4,7 @@
  * and explicit acceptance of the routes served without authentication — composed
  * with the preview's missing-env collection into one install dialog.
  */
-import type { ReactNode } from 'react';
+import type { MarketplaceInstallPreview, MarketplaceRoutesDecl } from '@tai42/api-client';
 import {
   Badge,
   Checkbox,
@@ -15,13 +15,13 @@ import {
   TextInput,
   XCircleIcon,
 } from '@tai42/studio-sdk';
-import type { MarketplaceInstallPreview, MarketplaceRoutesDecl } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 
-import { useMountInstall } from './use-mount-install';
 import type { InstallExtras } from './install-mount';
+import { useMountInstall } from './use-mount-install';
 
-export { collectEnv } from './install-mount';
 export type { InstallExtras } from './install-mount';
+export { collectEnv } from './install-mount';
 export { useDebouncedValue } from './use-mount-install';
 
 /** A route-carrying item as the dialog drives it: its name, kind, and declaration. */

@@ -4,15 +4,15 @@
  * server session before clearing local auth (quiet on the expected 404, loud on a real
  * failure).
  */
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { ApiClient } from '@tai42/api-client';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
-import { installServer, renderStudio, server } from './test-harness';
 import { meHandler, okChannels, okPlugins, scoped } from './test-capabilities-support';
+import { installServer, renderStudio, server } from './test-harness';
 
 installServer();
 

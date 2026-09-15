@@ -15,28 +15,28 @@
  * On success it invalidates the presets list AND the tools master list (a create
  * binds a live tool), closes, and navigates the detail to the new preset.
  */
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
 import type { PresetExtensionElement, StateBinding } from '@tai42/api-client';
 import {
   Dialog,
   Field,
   SchemaEditor,
+  type SchemaEditorChange,
   StateBindingSection,
   useFeatureOff,
-  type SchemaEditorChange,
 } from '@tai42/studio-sdk';
+import { type ReactNode, type SyntheticEvent, useState } from 'react';
 
-import { TagsInput } from './tags';
-import { usePresetToolCatalog } from './usePresetToolCatalog';
-import { useStateBindingSources } from './useStateBindingSources';
-import { usePresetMutations } from './usePresetMutations';
+import { ExtensionsField } from './ExtensionsField';
 import { PresetBaseToolField } from './PresetBaseToolField';
 import { PresetEnrichmentErrors } from './PresetEnrichmentErrors';
-import { ExtensionsField } from './ExtensionsField';
-import { PresetSubmitFeedback } from './PresetSubmitFeedback';
 import { PresetFormActions } from './PresetFormActions';
 import { PresetIdentityFields } from './PresetIdentityFields';
 import { PresetKwargsField } from './PresetKwargsField';
+import { PresetSubmitFeedback } from './PresetSubmitFeedback';
+import { TagsInput } from './tags';
+import { usePresetMutations } from './usePresetMutations';
+import { usePresetToolCatalog } from './usePresetToolCatalog';
+import { useStateBindingSources } from './useStateBindingSources';
 
 export function CreatePresetForm({ onClose }: { readonly onClose: () => void }): ReactNode {
   // The overlay tags input is HIDDEN when the tool_meta store is OFF: an author must

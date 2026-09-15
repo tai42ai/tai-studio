@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { createRef } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { Table, TBody, TD, TH, THead, TR } from './table';
 import type {
   NumericColumnProps,
   TableProps,
@@ -11,6 +10,7 @@ import type {
   TDProps,
   THProps,
 } from '../index';
+import { Table, TBody, TD, TH, THead, TR } from './table';
 
 /**
  * PUBLISHED-TYPE GATE, enforced by `pnpm typecheck` (`tsc --noEmit` covers every

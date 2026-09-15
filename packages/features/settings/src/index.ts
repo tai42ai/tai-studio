@@ -5,33 +5,33 @@
  * `SettingsPage` is the shell-mounted page. The individual tab components and
  * the query keys are exported for direct unit testing.
  */
-export { SettingsPage } from './SettingsPage';
-export { SettingsTab } from './SettingsTab';
-export type { SettingsTabProps } from './SettingsTab';
-export { EnvironmentTab } from './EnvironmentTab';
-export type { EnvironmentTabProps } from './EnvironmentTab';
-export { ApiKeysTab } from './ApiKeysTab';
 export type { ApiKeysTabProps } from './ApiKeysTab';
-export { BackupTab } from './BackupTab';
+export { ApiKeysTab } from './ApiKeysTab';
 export type { BackupTabProps } from './BackupTab';
-export { RolesTab } from './RolesTab';
-export type { RolesTabProps } from './RolesTab';
-export { ProfilesTab } from './ProfilesTab';
-export type { ProfilesTabProps } from './ProfilesTab';
-export { ReloadConfigButton } from './ReloadConfigButton';
+export { BackupTab } from './BackupTab';
+export type { EnvironmentTabProps } from './EnvironmentTab';
+export { EnvironmentTab } from './EnvironmentTab';
 export {
+  authRoutesKey,
+  backupSectionsKey,
   configModeKey,
   envConfigKey,
-  settingsSchemaKey,
-  scopesKey,
-  authRoutesKey,
   publicRoutesKey,
-  tokensPayloadKey,
   rolesKey,
   roleVersionsKey,
-  backupSectionsKey,
-  settingsProfilesKey,
+  scopesKey,
   settingsProfileKey,
-  settingsProfileVersionsKey,
+  settingsProfilesKey,
   settingsProfileVersionKey,
+  settingsProfileVersionsKey,
+  settingsSchemaKey,
+  tokensPayloadKey,
 } from './keys';
+export type { ProfilesTabProps } from './ProfilesTab';
+export { ProfilesTab } from './ProfilesTab';
+export { ReloadConfigButton } from './ReloadConfigButton';
+export type { RolesTabProps } from './RolesTab';
+export { RolesTab } from './RolesTab';
+export { SettingsPage } from './SettingsPage';
+export type { SettingsTabProps } from './SettingsTab';
+export { SettingsTab } from './SettingsTab';

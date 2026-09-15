@@ -8,7 +8,8 @@
  * control; typing an already-registered slug into the create form warns that
  * registering will REPLACE it (register is a silent-swap upsert server-side).
  */
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
 import { seedCredential } from './helpers';
 
 async function stubSubMcp(page: Page): Promise<void> {

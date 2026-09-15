@@ -4,8 +4,8 @@
  * fields after a successful create and bumps `formResetToken` so the seeded-once
  * condition/expr controls remount blank.
  */
-import { useState } from 'react';
 import type { HookParams, StateBinding, TemplatedText } from '@tai42/api-client';
+import { useState } from 'react';
 
 /** Serialize a hook's `tool_kwargs` for the textarea; an empty map prefills blank. */
 function serializeToolKwargs(kwargs: Record<string, unknown>): string {

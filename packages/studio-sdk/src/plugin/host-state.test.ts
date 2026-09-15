@@ -1,15 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { __resetContributions, getContributions, loadPlugin } from './registry';
 import {
   __resetPluginHostState,
   getPluginHostState,
+  type PluginLoaderState,
   setPluginHostState,
   subscribePluginHost,
   usePluginContributions,
-  type PluginLoaderState,
 } from './host-state';
+import { __resetContributions, getContributions, loadPlugin } from './registry';
 
 afterEach(() => {
   __resetPluginHostState();

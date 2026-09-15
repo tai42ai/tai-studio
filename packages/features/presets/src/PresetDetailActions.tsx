@@ -4,9 +4,8 @@
  * stays disabled until the overlay read lands (a merge-patch on unread tags would
  * clear them) and is withdrawn entirely once a write reveals the store off.
  */
-import type { ReactNode } from 'react';
-
 import { Button } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function PresetDetailActions({
   presetName,

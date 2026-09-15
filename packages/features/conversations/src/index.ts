@@ -5,21 +5,21 @@
  * master/detail pane pairing the last two, the exchange row a transcript is
  * built from, and the search sanitizer are exported for direct unit testing.
  */
-export { ConversationsPage } from './ConversationsPage';
-export { RoutesTable } from './RoutesTable';
-export { RouteFormDialog } from './RouteFormDialog';
-export { RouteThreads } from './RouteThreads';
-export { ConfigsTable } from './ConfigsTable';
+export { ComposeMessage } from './ComposeMessage';
 export { ConfigFormDialog } from './ConfigFormDialog';
-export { FailedMessages } from './FailedMessages';
-export { ThreadActions } from './ThreadActions';
+export { ConfigsTable } from './ConfigsTable';
+export { ConversationFilters } from './ConversationFilters';
+export { ConversationsPage } from './ConversationsPage';
 export { EntryGate } from './EntryGate';
+export { Exchange } from './Exchange';
+export { FailedMessages } from './FailedMessages';
+export { MessageSearch } from './MessageSearch';
+export { RouteFormDialog } from './RouteFormDialog';
+export { RoutesTable } from './RoutesTable';
+export { RouteThreads } from './RouteThreads';
+export type { ConversationsSearch } from './search';
+export { mergeSearch, sanitizeSearch, textQuery, threadFilters } from './search';
+export { ThreadActions } from './ThreadActions';
 export { ThreadList } from './ThreadList';
 export { ThreadMode } from './ThreadMode';
 export { Transcript } from './Transcript';
-export { ComposeMessage } from './ComposeMessage';
-export { Exchange } from './Exchange';
-export { ConversationFilters } from './ConversationFilters';
-export { MessageSearch } from './MessageSearch';
-export { sanitizeSearch, threadFilters, textQuery, mergeSearch } from './search';
-export type { ConversationsSearch } from './search';

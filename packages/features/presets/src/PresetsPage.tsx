@@ -5,19 +5,19 @@
  * (`PresetDetail`: record, active baked kwargs, version history, save-version,
  * rollback, delete). Mirrors the tools page's `?tool=` master/detail shape.
  */
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import {
   AppLink,
   ArrowLeftIcon,
   Card,
   EmptyState,
   PageHeader,
-  useBreakpoint,
   type PageProps,
+  useBreakpoint,
 } from '@tai42/studio-sdk';
+import { type ReactNode, useCallback, useEffect, useRef } from 'react';
 
-import { PresetsList } from './PresetsList';
 import { PresetDetail } from './PresetDetail';
+import { PresetsList } from './PresetsList';
 
 export function PresetsPage({ search }: PageProps<'presets'>): ReactNode {
   const selected = search.preset;

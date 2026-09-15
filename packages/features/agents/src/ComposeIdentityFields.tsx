@@ -3,9 +3,8 @@
  * overlay Tags input (hidden when the tool_meta store is off, so an author never
  * types categorization tags the OFF overlay would silently drop).
  */
-import type { ReactNode } from 'react';
-
 import { Field, TagsInput, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function ComposeIdentityFields({
   name,

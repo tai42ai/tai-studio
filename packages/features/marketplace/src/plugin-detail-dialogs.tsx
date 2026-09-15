@@ -1,27 +1,26 @@
 /** The plugin-detail mutation dialogs: the non-route install (env-aware), and the
  * dispatcher that mounts the install / update / uninstall dialog for the active action. */
-import { useQuery } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-
+import type { MarketplaceInstallBody, MarketplacePluginDetail } from '@tai42/api-client';
 import {
   AppLink,
   ConfirmDialog,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
-  Skeleton,
-  errorMessage,
   featureDisabledMessage,
   isFeatureDisabled,
+  Skeleton,
   useApi,
 } from '@tai42/studio-sdk';
-import type { MarketplaceInstallBody, MarketplacePluginDetail } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { MountInstallDialog, type RouteItem } from './install-dialog';
 import { InstallEnvDialog } from './install-env-dialog';
 import { marketplacePreviewKey } from './keys';
 import {
-  deliveryOf,
   type ActiveAction,
+  deliveryOf,
   type InstallMutation,
   type UninstallMutation,
 } from './plugin-detail-data';

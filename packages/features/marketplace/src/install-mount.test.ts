@@ -2,8 +2,8 @@
  * Unit tests for the pure install-mount model: the per-var secret band derivation
  * and the install/update body assembly (route-mount diff + env attachment).
  */
-import { describe, expect, it } from 'vitest';
 import type { MarketplaceInstallPreview } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { buildInstallExtras, deriveEnvSecretMap } from './install-mount';
 

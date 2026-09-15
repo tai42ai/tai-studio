@@ -5,13 +5,13 @@
  */
 import type { ReactNode } from 'react';
 
-import { Button } from '../components/primitives';
 import { Field } from '../components/field';
-import { Select } from '../components/select';
-import { TextInput } from '../components/inputs';
 import { CloseIcon } from '../components/icons';
-import { BindingTemplatedJqField } from './BindingTemplatedJqField';
+import { TextInput } from '../components/inputs';
+import { Button } from '../components/primitives';
+import { Select } from '../components/select';
 import type { TemplateJqSuggestion } from './BindingJqField';
+import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import type { ResolvedTemplateJq } from './catalog';
 import type { StateInjection, TemplatedTextCatalog } from './types';
 

@@ -2,9 +2,9 @@
  * The per-scope inline row for mapping a route onto a scope, with an optional
  * dynamic-pattern regex covering the route's subtree.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { Button, Checkbox, Field, TextInput } from '@tai42/studio-sdk';
 import type { AddUrlToScopeBody } from '@tai42/api-client';
+import { Button, Checkbox, Field, TextInput } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 const inlineFormStyle: CSSProperties = {
   display: 'flex',

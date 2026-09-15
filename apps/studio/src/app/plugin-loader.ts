@@ -29,9 +29,9 @@
  *  - core routes never wait on this; only `/plugins/*` resolution gates on the
  *    pass having completed via {@link PluginLoader.ensureLoaded}.
  */
-import { createStore, type StoreApi } from 'zustand/vanilla';
 import { type ApiClient, type ApiUnauthorizedError } from '@tai42/api-client';
-import { setPluginHostState, type PluginLoaderState } from '@tai42/studio-sdk/host';
+import { type PluginLoaderState, setPluginHostState } from '@tai42/studio-sdk/host';
+import { createStore, type StoreApi } from 'zustand/vanilla';
 
 import { classifyRegistryError, loadOnePlugin } from './plugin-load';
 

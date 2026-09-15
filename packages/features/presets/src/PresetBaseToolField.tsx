@@ -4,9 +4,8 @@
  * preset names and effective-hidden tools. A failed tools/preset read is surfaced
  * loudly instead of a silently-empty picker.
  */
+import { errorMessage, ErrorState, Field, ToolPicker } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-
-import { ErrorState, Field, ToolPicker, errorMessage } from '@tai42/studio-sdk';
 
 import type { PresetToolCatalog } from './usePresetToolCatalog';
 

@@ -2,9 +2,9 @@
  * The sub-services consent fieldset for the connect form: one checkbox per
  * sub-service, each showing its description AND the scopes it grants.
  */
-import type { ReactNode } from 'react';
-import { Checkbox } from '@tai42/studio-sdk';
 import type { ProviderView } from '@tai42/api-client';
+import { Checkbox } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function SubServicesFieldset({
   subServices,

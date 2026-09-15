@@ -4,10 +4,10 @@
  * preserved), and the two dedicated failure states — the monitoring 501 full-page
  * state and a loud error surface for any other failure (e.g. a zod mismatch).
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, ApiSchemaError, type DashboardMetrics } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, ApiSchemaError, type DashboardMetrics } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ObservabilityPage } from './ObservabilityPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';

@@ -1,8 +1,7 @@
+import { type ApiClient, ApiError, type TokensPayload } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, type ApiClient, type TokensPayload } from '@tai42/api-client';
 
 import { ApiKeysTab } from './ApiKeysTab';
 import {

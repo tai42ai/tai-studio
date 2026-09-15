@@ -1,6 +1,6 @@
 /** System health and pluggable-kind status sub-client. */
-import * as s from '../schemas';
 import { apiText } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 export function systemClient(t: Transport) {

@@ -3,10 +3,10 @@
  * declaration PUT. A schema change over existing records that the server refuses (a 409
  * for removing or altering a declared field) surfaces the refusal message inline.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type StateDetail } from '@tai42/api-client';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type StateDetail } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { DeclarationTab, DeclareStateDialog } from './DeclarationTab';
 import { renderWithProviders, type StubApiClient } from './test-utils';

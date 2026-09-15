@@ -1,12 +1,12 @@
 /** Page-level tests for the Storage surface: honesty layers, folder folding,
  * navigation, and the in-memory filter with its URL commit. */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within, type RenderResult } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
 import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, type RenderResult, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { StoragePage } from './StoragePage';

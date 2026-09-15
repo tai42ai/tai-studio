@@ -28,8 +28,8 @@ import type {
   RouteToken,
 } from '@tai42/studio-sdk';
 
-import { PATH } from './routes';
 import type { AppRouter } from './router';
+import { PATH } from './routes';
 
 type NavigateArg = Parameters<AppRouter['navigate']>[0];
 type BuildArg = Parameters<AppRouter['buildLocation']>[0];

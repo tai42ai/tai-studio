@@ -23,7 +23,7 @@
  * this), never on `<body>`: 2.4.3 asks for a deliberate next place, and the list
  * the reader came back to is that place.
  */
-import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
+import { type RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
 
 export interface SelectionFocus {
   /**

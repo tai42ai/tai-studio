@@ -12,17 +12,17 @@
  * display name is cosmetic: a picker with an empty map falls back to the bare raw
  * name, never a hard-failed page.
  */
+import type { ToolMetaOverlay } from '@tai42/api-client';
 import {
   createContext,
   createElement,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react';
-import type { ToolMetaOverlay } from '@tai42/api-client';
 
 import { useApi } from './useApi';
 import { useAuth } from './useAuth';

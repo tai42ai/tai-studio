@@ -1,6 +1,6 @@
 /** Conversation route, thread, transcript, config and admin sub-client. */
-import * as s from '../schemas';
 import { encodeSegment } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 /**

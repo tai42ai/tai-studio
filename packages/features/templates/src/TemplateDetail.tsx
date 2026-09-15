@@ -5,23 +5,23 @@
  * and navigates back to the un-selected templates view so the removed template's
  * stale detail is never shown.
  */
-import { useState, type ReactNode, type Ref } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Card,
   CodeBlock,
   Dialog,
+  errorMessage,
   ErrorState,
   Skeleton,
   Spinner,
-  errorMessage,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type Ref, useState } from 'react';
 
-import { RenderPreview } from './RenderPreview';
 import { templateDetailKey, templatesListKey } from './keys';
+import { RenderPreview } from './RenderPreview';
 
 export function TemplateDetail({
   templateId,

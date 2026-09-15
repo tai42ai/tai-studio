@@ -5,24 +5,24 @@
  * request, since the door overwrites silently on a colliding path. FILES resets only
  * when every file succeeded, leaving failures listed to retry.
  */
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
   Button,
   Card,
+  errorMessage,
   ErrorState,
   Field,
   RadioGroup,
   Spinner,
   Textarea,
   TextInput,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type SyntheticEvent, useState } from 'react';
 
 import { templateDetailKey, templatesListKey } from './keys';
-import { useFilesUpload, type FileEntry } from './use-files-upload';
+import { type FileEntry, useFilesUpload } from './use-files-upload';
 
 type UploadMode = 'text' | 'files';
 

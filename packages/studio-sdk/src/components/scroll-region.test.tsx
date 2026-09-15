@@ -2,9 +2,9 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import { createRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ScrollRegion, useProseScrollRegions } from './scroll-region';
-import type { ProseScrollLabels } from './scroll-region';
 import { flushResizeObservers, flushResizeObserversFor, setElementOverflow } from '../testing';
+import type { ProseScrollLabels } from './scroll-region';
+import { ScrollRegion, useProseScrollRegions } from './scroll-region';
 
 /** The one `.tai-scroll-region` in the tree, failing loudly when it is missing. */
 function scrollRegion(container: HTMLElement): HTMLElement {

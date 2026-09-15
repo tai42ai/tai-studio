@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { activeTab, mergeSearch, searchParams, type MarketplaceSearch } from './filters';
+import { activeTab, type MarketplaceSearch, mergeSearch, searchParams } from './filters';
 
 describe('activeTab', () => {
   it('defaults to browse when no tab is set', () => {

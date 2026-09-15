@@ -4,11 +4,11 @@
  * exchange a single-use code for a session, latch to run exactly once, and strip the
  * consumed value from the URL.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
+import { __resetContributions } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { __resetContributions } from '@tai42/studio-sdk/testing';
+import { http, HttpResponse } from 'msw';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installServer, renderStudio, server } from './test-harness';
 import {

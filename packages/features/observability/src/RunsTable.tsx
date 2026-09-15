@@ -4,32 +4,32 @@
  * already-loaded table renders inline instead of blanking the tab. A row click drills
  * into the run's trace via the URL.
  */
-import { useState, type ReactNode } from 'react';
 import {
   Button,
   Card,
+  downloadBlob,
   EmptyState,
+  errorMessage,
   ErrorState,
   ScrollRegion,
   Skeleton,
+  Table,
   TBody,
   TH,
   THead,
   TR,
-  Table,
-  downloadBlob,
-  errorMessage,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { type ReactNode, useState } from 'react';
 
+import { FilterBar } from './FilterBar';
 import { mergeSearch, type ObservabilitySearch } from './filters';
 import { isReadNotSupported, ReadNotSupported } from './read-support';
-import { useRunsQuery } from './useRunsQuery';
-import { FilterBar } from './FilterBar';
-import { SortableHeader } from './SortableHeader';
 import { RunRow } from './RunRow';
 import { RunsPagination } from './RunsPagination';
+import { SortableHeader } from './SortableHeader';
+import { useRunsQuery } from './useRunsQuery';
 
 export function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactNode {
   const api = useApi();

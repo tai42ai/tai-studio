@@ -1,8 +1,8 @@
 import { act, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { JsonDiff, diffJson } from './json-diff';
 import { flushResizeObservers, setElementOverflow } from '../testing';
+import { diffJson, JsonDiff } from './json-diff';
 
 describe('diffJson — pure structural diff', () => {
   it('emits added / removed / changed rows over object keys', () => {

@@ -1,15 +1,15 @@
+import { render, screen } from '@testing-library/react';
 import { isValidElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { CodeBlock } from './code-block';
 import {
+  type HeadingLevel,
   Markdown,
+  type MarkdownBlock,
   parseMarkdown,
   scanInline,
-  type HeadingLevel,
-  type MarkdownBlock,
 } from './markdown';
 import { safeHttpUrl } from './primitives';
 

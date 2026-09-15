@@ -4,6 +4,8 @@
  * hand-authored entry is editable (transport config + include/exclude composer +
  * masked secret fields for its `env` map).
  */
+import type { ConnectorRef, Extension, McpEnvRef } from '@tai42/api-client';
+import type { JsonSchema, RecordEntryContext, RecordEntryRenderer } from '@tai42/studio-sdk';
 import {
   AppLink,
   Badge,
@@ -13,8 +15,6 @@ import {
   SchemaForm,
   SecretRefField,
 } from '@tai42/studio-sdk';
-import type { JsonSchema, RecordEntryContext, RecordEntryRenderer } from '@tai42/studio-sdk';
-import type { ConnectorRef, Extension, McpEnvRef } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { asRecord, stringArray } from './mcp-config-parse';

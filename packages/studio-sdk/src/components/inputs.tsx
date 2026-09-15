@@ -40,7 +40,7 @@
 import type { AriaAttributes, InputHTMLAttributes, Ref, TextareaHTMLAttributes } from 'react';
 
 import { controlClassName, INPUT_CLASS, TEXTAREA_CLASS } from './control-styles';
-import { useFieldControl, type FieldControlProps } from './field';
+import { type FieldControlProps, useFieldControl } from './field';
 
 /** The three attributes a `Field` and its control can both want to own. */
 interface WiredControlAttributes {

@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ThemeProvider, useTheme, type ThemePreference } from './useTheme';
+import { type ThemePreference, ThemeProvider, useTheme } from './useTheme';
 
 /** The persistence key the provider uses — asserted here so the write contract is
  * pinned. Kept in lockstep with the constant in `useTheme.ts`. */

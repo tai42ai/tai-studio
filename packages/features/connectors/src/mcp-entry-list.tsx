@@ -1,11 +1,11 @@
 /** The form-view list of MCP entries: managed + installed entries render read-only,
  *  hand-authored entries editable, plus the Add server affordance. */
-import { Button, EmptyState, defaultValueForSchema } from '@tai42/studio-sdk';
-import type { JsonSchema } from '@tai42/studio-sdk';
 import type { Extension, McpEnvRef } from '@tai42/api-client';
+import type { JsonSchema } from '@tai42/studio-sdk';
+import { Button, defaultValueForSchema, EmptyState } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
-import { asRecord, connectorRefOf, stripSchemaFields, STRIPPED_FIELDS } from './mcp-config-parse';
+import { asRecord, connectorRefOf, STRIPPED_FIELDS, stripSchemaFields } from './mcp-config-parse';
 import { EditableEntryCard, InstalledEntryCard, ManagedEntryCard } from './mcp-entry-cards';
 
 export function EntryList({

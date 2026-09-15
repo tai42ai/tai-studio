@@ -1,19 +1,18 @@
 /** The marketplace browse facets: the search box and the sort/category/kind/tag controls. */
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
 import {
   Button,
+  errorMessage,
   ErrorState,
   Field,
   Select,
   TextInput,
-  errorMessage,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { mergeSearch, type MarketplaceSearch } from './filters';
+import { type MarketplaceSearch, mergeSearch } from './filters';
 import { marketplaceCategoriesKey, marketplaceKindsKey } from './keys';
 
 /** The Select sentinel for the cleared / default option (empty item values are invalid). */

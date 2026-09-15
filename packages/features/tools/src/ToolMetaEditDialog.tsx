@@ -18,22 +18,22 @@
  * On save the dialog sends ONE merge-patch carrying all five fields it owns — this is
  * the surface that owns them, so re-sending them clobbers nothing.
  */
-import { useState, type ReactNode } from 'react';
+import type { ToolMetaPatch } from '@tai42/api-client';
 import {
   Button,
   Dialog,
   FeatureDisabled,
+  featureDisabledMessage,
   Field,
+  type Folder,
   FolderPicker,
+  isFeatureDisabled,
   OverlayDetailsFields,
+  overlayDetailsPatch,
   RadioGroup,
   TagsInput,
-  featureDisabledMessage,
-  isFeatureDisabled,
-  overlayDetailsPatch,
-  type Folder,
 } from '@tai42/studio-sdk';
-import type { ToolMetaPatch } from '@tai42/api-client';
+import { type ReactNode, useState } from 'react';
 
 import { BADGES_INFORMATIONAL_NOTE, ToolBadges } from './badges';
 import type { ToolView } from './toolView';

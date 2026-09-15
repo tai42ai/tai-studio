@@ -9,7 +9,7 @@
  * {@link useViewMode}. The two live in the SDK so every entity screen (and the
  * flows page) toggles identically; `EntityCardGrid` renders the card half.
  */
-import { useCallback, useState, type ReactNode } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 
 import { GridIcon, MenuIcon } from './icons';
 import { RadioGroup } from './radio-group';

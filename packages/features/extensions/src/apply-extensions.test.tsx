@@ -9,12 +9,11 @@
  * The four combos-load states (loading / error / empty / data) and a loud save error
  * are all pinned here.
  */
+import { type ApiClient, ApiError, type Extension, type PresetRecord } from '@tai42/api-client';
+import { focusManager, QueryClient } from '@tanstack/react-query';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient, focusManager } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, type ApiClient, type Extension, type PresetRecord } from '@tai42/api-client';
 
 import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';

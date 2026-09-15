@@ -17,8 +17,8 @@
  */
 import type { CSSProperties } from 'react';
 
-import { CheckIcon, CopyIcon, XCircleIcon } from './icons';
 import { COPIED_LABEL, useClipboardCopy } from '../hooks/useClipboardCopy';
+import { CheckIcon, CopyIcon, XCircleIcon } from './icons';
 
 export interface CopyFieldProps {
   readonly value: string;

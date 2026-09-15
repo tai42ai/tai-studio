@@ -8,28 +8,28 @@
  * Server state is surfaced loudly: loading → `Skeleton`, empty → `EmptyState`, and
  * any failed request → an always-visible `ErrorState` — never a silent empty render.
  */
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { HookList, HookParams, TriggerAuth } from '@tai42/api-client';
 import {
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   ScrollRegion,
   Skeleton,
+  Table,
   TBody,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { HookList, HookParams, TriggerAuth } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { hooksListKey } from './keys';
-import { HookRow } from './HookRow';
 import { DeleteHookDialog } from './DeleteHookDialog';
 import { EditHookDialog } from './EditHookDialog';
+import { HookRow } from './HookRow';
+import { hooksListKey } from './keys';
 import { TopicVerifiers } from './TopicVerifiers';
 
 /** A topic's server-derived door; `undefined` when the list omits it. */

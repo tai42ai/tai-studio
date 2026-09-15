@@ -11,11 +11,11 @@ import {
   isMetricSort,
   mergeSearch,
   metricsParams,
+  type ObservabilitySearch,
   rangeToPatch,
   runsParams,
   sanitizeSearch,
   searchToRange,
-  type ObservabilitySearch,
 } from './filters';
 
 describe('activeTab', () => {

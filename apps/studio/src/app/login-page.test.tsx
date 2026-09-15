@@ -4,9 +4,9 @@
  * anchor styled like a secondary `Button`, and that anchor is a CONTROL, so its
  * only boundary may not be the decorative border token.
  */
-import { describe, expect, it } from 'vitest';
-import { http, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it } from 'vitest';
 
 import { installServer, renderStudio, server } from './test-harness';
 

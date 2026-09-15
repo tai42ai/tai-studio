@@ -9,8 +9,8 @@
  * `content` part or a `tool_calls` array renders through {@link CodeBlock} (also
  * text-only, with copy). No payload string is ever interpreted as markup.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import { Badge, CodeBlock, Markdown } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 interface Message {
   readonly role: string;

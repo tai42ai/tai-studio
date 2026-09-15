@@ -13,8 +13,8 @@
  * cannot enforce integrity. The probe is injectable so the unit test can drive the
  * unsupported path.
  */
-import type { ReactNode } from 'react';
 import { AlertTriangleIcon } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 interface ScriptSupport {
   supports?: (type: string) => boolean;

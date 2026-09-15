@@ -13,11 +13,11 @@
  * failed, or one that a retry has cleared, must not keep the standing it had when
  * the pane was opened.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Card, EmptyState, ScrollRegion, Skeleton, useApi } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import type { CSSProperties, ReactNode } from 'react';
 
-import { useNow, RELATIVE_TICK_MS } from './clock';
+import { RELATIVE_TICK_MS, useNow } from './clock';
 import { Exchange } from './Exchange';
 import { countOf } from './format';
 import { conversationFailedMessagesKey } from './keys';

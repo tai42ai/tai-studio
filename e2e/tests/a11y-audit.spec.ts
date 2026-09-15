@@ -18,10 +18,12 @@
  * two of those that a laid-out document reveals mechanically: the 11 px type
  * floor (nothing renders below it) and the reduced-motion token collapse.
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import AxeBuilder from '@axe-core/playwright';
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
 import { seedCredential } from './helpers';
 
 /** The A + AA rule tags across WCAG 2.0 and 2.1 — this repository's conformance target. */

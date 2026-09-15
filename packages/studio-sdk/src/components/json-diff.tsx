@@ -21,10 +21,10 @@
  */
 import { type ReactNode } from 'react';
 
+import { isRecord } from '../guards';
 import { Badge } from './badge';
 import { JsonTree } from './json-tree';
 import { Table, TBody, TD, TH, THead, TR } from './table';
-import { isRecord } from '../guards';
 
 /** One leaf difference between the two JSON values. */
 export interface JsonDiffRow {

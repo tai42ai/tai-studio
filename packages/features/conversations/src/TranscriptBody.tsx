@@ -3,10 +3,9 @@
  * states (filtered vs whole thread), or the ordered list of exchanges with its
  * "Load older messages" control and per-page error.
  */
-import type { ReactNode, RefObject } from 'react';
-
-import { Button, EmptyState, Skeleton, errorMessage } from '@tai42/studio-sdk';
 import type { ConversationMessage } from '@tai42/api-client';
+import { Button, EmptyState, errorMessage, Skeleton } from '@tai42/studio-sdk';
+import type { ReactNode, RefObject } from 'react';
 
 import { Exchange } from './Exchange';
 import { ReadFailure } from './read-states';

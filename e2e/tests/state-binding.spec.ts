@@ -11,11 +11,11 @@
  * surfaces: born-red until the composed backend serves them, green once it does.
  */
 import {
-  test,
-  expect,
-  request as apiRequest,
   type APIRequestContext,
+  expect,
   type Page,
+  request as apiRequest,
+  test,
 } from '@playwright/test';
 
 import { API_KEY, seedCredential } from './helpers';

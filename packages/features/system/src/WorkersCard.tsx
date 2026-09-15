@@ -8,28 +8,28 @@
  * closed while the projection is not ready; once ready and denied, the button is not
  * rendered so a non-admin never sees a control that 403s.
  */
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { summarizeFleetResult, type FleetResult } from '@tai42/api-client';
+import { type FleetResult, summarizeFleetResult } from '@tai42/api-client';
 import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   FleetReport,
   Skeleton,
   Spinner,
-  errorMessage,
   useApi,
   useCanWrite,
   useCapabilities,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { fleetWorkersKey } from './keys';
 import { cardHeaderStyle, readOnlyNoteStyle } from './cardChrome';
-import { useWorkerSelection } from './useWorkerSelection';
 import { FleetWorkersTable } from './FleetWorkersTable';
+import { fleetWorkersKey } from './keys';
 import { ReloadConfigDialog } from './ReloadConfigDialog';
+import { useWorkerSelection } from './useWorkerSelection';
 
 /** The fleet census poll cadence; react-query pauses the interval on a hidden tab. */
 const FLEET_POLL_MS = 5000;

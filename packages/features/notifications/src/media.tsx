@@ -26,12 +26,11 @@
  * gate is a blocked notice (its url shown as escaped text, never a live attribute);
  * an image that fails to LOAD is a visible notice, never a bare broken-image glyph.
  */
-import { useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
-
-import { schemas } from '@tai42/api-client';
 import type { InteractionMediaItem } from '@tai42/api-client';
+import { schemas } from '@tai42/api-client';
 import { Badge, ExternalLinkButton, isSafeHttpUrl, useApi } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
+import { useState } from 'react';
 
 /**
  * The served-media route: media stored BY REFERENCE is served from the API origin

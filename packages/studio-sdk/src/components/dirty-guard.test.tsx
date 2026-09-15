@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { GuardedTabs, useRegisterDirty } from './dirty-guard';
-import { NavigationProvider } from '../navigation';
 import type { NavigationContextValue } from '../navigation';
+import { NavigationProvider } from '../navigation';
+import { GuardedTabs, useRegisterDirty } from './dirty-guard';
 
 const navigation: NavigationContextValue = {
   navigate: vi.fn(),

@@ -2,24 +2,23 @@
  * The authored agents list: DEFAULT-list presets whose `base_tool` is an agent's run
  * tool, with a Run action and a Manage link out to the presets page.
  */
-import { useMemo, type ReactNode } from 'react';
-
 import type { AgentSummary, PresetRecord } from '@tai42/api-client';
 import {
   AppLink,
   Button,
   Card,
   EmptyState,
+  openTargetProps,
   ScrollRegion,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  openTargetProps,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { type ReactNode, useMemo } from 'react';
 
 import type { AuthoredRunTarget } from './authoring-types';
 

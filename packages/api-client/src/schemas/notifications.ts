@@ -1,5 +1,6 @@
 /** Notification-sink record response schemas. */
 import { z } from 'zod';
+
 import { channelTemplate } from './served';
 
 // The internal notifications sink: the messages the `notify_user` operation records

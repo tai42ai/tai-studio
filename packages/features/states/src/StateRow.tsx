@@ -4,9 +4,9 @@
  * Name + Subject kinds stay. The Records/Templates/Consumers columns load lazily per
  * row via {@link LazyCountCell}.
  */
-import type { ReactNode } from 'react';
-import { AppLink, Badge, TD, TR, openTargetProps, useAppNavigate } from '@tai42/studio-sdk';
 import type { StateListItem } from '@tai42/api-client';
+import { AppLink, Badge, openTargetProps, TD, TR, useAppNavigate } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { stateAttachmentsKey, stateConsumersKey, stateStatsKey } from './keys';
 import { LazyCountCell } from './LazyCountCell';

@@ -6,18 +6,17 @@
  * flow. The pure helpers (`collectEnv`, `routeItemsOf`, `useDebouncedValue`) are
  * covered directly.
  */
-import { describe, expect, it, vi } from 'vitest';
+import type { MarketplaceInstallPreview } from '@tai42/api-client';
 import { renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import type { MarketplaceInstallPreview } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
-  MountInstallDialog,
   collectEnv,
+  MountInstallDialog,
+  type RouteItem,
   routeItemsOf,
   useDebouncedValue,
-  type RouteItem,
 } from './install-dialog';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 

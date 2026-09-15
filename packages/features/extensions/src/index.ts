@@ -6,10 +6,10 @@
  * direct unit testing. The extension grouping helpers live in `@tai42/studio-sdk`
  * (shared with its `ExtensionPicker`) and are imported from there directly.
  */
+export { ApplyExtensionsPanel } from './apply-extensions';
 export {
-  ExtensionsPage,
   ExtensionEntry,
   ExtensionFamilyCard,
+  ExtensionsPage,
   extensionsQueryKey,
 } from './extensions';
-export { ApplyExtensionsPanel } from './apply-extensions';

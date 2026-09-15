@@ -8,11 +8,11 @@
  */
 import { useEffect, useRef } from 'react';
 
-import { dedupeBy, withinRefreshWindow } from './paging';
-import { staleReadMessage } from './read-states';
 import type { FocusHandoff } from './focus';
 import type { LiveRegion } from './live-region';
 import { useStandingNotice } from './live-region';
+import { dedupeBy, withinRefreshWindow } from './paging';
+import { staleReadMessage } from './read-states';
 
 /** The infinite-query surface the pager reads, narrowed to what it uses. */
 interface TailQuery<Item> {

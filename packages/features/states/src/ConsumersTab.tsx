@@ -6,31 +6,31 @@
  * opens its own screen: a feature token (hooks / scheduling / agents) navigates in-shell,
  * a plugin path opens the plugin's screen.
  */
-import { type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { ConsumerRow, StateDetail } from '@tai42/api-client';
 import {
   Badge,
   Button,
   EmptyState,
+  errorMessage,
   ErrorState,
+  FeatureDisabled,
+  featureDisabledMessage,
+  isFeatureDisabled,
+  type RouteSearch,
+  type RouteToken,
   Skeleton,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
-  isFeatureDisabled,
-  featureDisabledMessage,
-  FeatureDisabled,
   useApi,
   useAppNavigate,
   usePluginNavigation,
-  type RouteSearch,
-  type RouteToken,
 } from '@tai42/studio-sdk';
-import type { ConsumerRow, StateDetail } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode } from 'react';
 
 import { stateConsumersKey } from './keys';
 

@@ -12,15 +12,15 @@ import type { ReactNode } from 'react';
 import { Field } from '../components/field';
 import { Select } from '../components/select';
 import { classifySchema } from './classify';
-import type { FieldModel, UnionVariant } from './field-model';
 import { skeletonValueForSchema } from './default-value';
 import { FieldGroup } from './field-group';
+import type { FieldModel, UnionVariant } from './field-model';
 import { FieldNode } from './field-node';
 import { ObjectFields } from './object-fields';
 import { resolveRef } from './resolve';
 import { groupClass } from './styles';
-import { activeVariantIndex } from './union';
 import type { JsonSchema, SchemaFormErrors } from './types';
+import { activeVariantIndex } from './union';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

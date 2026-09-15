@@ -16,20 +16,19 @@
  * start time. The selected row carries `aria-pressed` and the accent tint so the
  * detail above it and the row it came from read as one selection.
  */
-import { useEffect, useState, type ReactNode } from 'react';
-import { useQuery, type Query } from '@tanstack/react-query';
+import { isTerminalRunStatus, type ToolRunListItem, type ToolRunRecord } from '@tai42/api-client';
 import {
   Badge,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import { isTerminalRunStatus, type ToolRunListItem, type ToolRunRecord } from '@tai42/api-client';
+import { type Query, useQuery } from '@tanstack/react-query';
+import { type ReactNode, useEffect, useState } from 'react';
 
-import { ResultViewer } from './ResultViewer';
 import {
   POLL_INTERVAL_MS,
   STATUS_LABEL,
@@ -37,6 +36,7 @@ import {
   toolRunKey,
   toolRunsListKey,
 } from './backgroundRunsCommon';
+import { ResultViewer } from './ResultViewer';
 
 /** One status chip; the running state pairs the chip with a live spinner. */
 function StatusChip({ status }: { readonly status: ToolRunRecord['status'] }): ReactNode {

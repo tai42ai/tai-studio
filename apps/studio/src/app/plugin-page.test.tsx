@@ -4,11 +4,11 @@
  * `search`; a schema throw renders a LOUD error card, never a blank view; a sub-path
  * against a schemaless page is a not-found card.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
 import type { PluginContext, PluginPageProps } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
+import { screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installServer, renderStudio, server } from './test-harness';
 

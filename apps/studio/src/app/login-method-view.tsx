@@ -4,11 +4,11 @@
  * notices (`LoginNotices`), and the permanent API-key paste fallback (`KeyPasteForm`).
  * All state and effects live in `LoginPage`; these are pure views over its props.
  */
-import type { ReactNode } from 'react';
-import { Button, Field, Spinner, TextInput } from '@tai42/studio-sdk';
 import { isSafeApiPath, type LoginMethod } from '@tai42/api-client';
+import { Button, Field, Spinner, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import { errorStyle, sectionStyle, type MethodsState } from './login-methods';
+import { errorStyle, type MethodsState, sectionStyle } from './login-methods';
 
 /** One rendered login method — a `form` (fields + submit) or a `button`
  * (full-page-navigation anchor). An invalid `/api/` target renders a loud inline

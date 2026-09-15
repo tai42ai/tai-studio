@@ -8,11 +8,10 @@
 // delay so a loaded runner cannot push a keystroke chain past the suite timeout, and
 // no timer-scheduled keystroke can outlive its test to leak into the next. No
 // assertion depends on typing cadence.
+import { ApiError, ApiSchemaError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, ApiSchemaError } from '@tai42/api-client';
 
 import { SchedulingPage } from './SchedulingPage';
 import { makeClient, renderWithProviders, schedule } from './test-utils';

@@ -11,12 +11,13 @@
  * and that no redacted value looks like committed secret material.
  */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 import { ZodType } from 'zod';
 
-import { MUTATION_FIXTURES, REDACTED_FIXTURES, isExcluded } from '../fixtures/contract.mjs';
+import { isExcluded, MUTATION_FIXTURES, REDACTED_FIXTURES } from '../fixtures/contract.mjs';
 import * as schemas from './schemas';
 
 const fixturesDir = resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures');

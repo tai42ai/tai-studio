@@ -13,7 +13,7 @@
  * the SOURCE tree, not `dist`: `dist` is build output a test run cannot assume
  * exists, and the `public/` → root copy is Vite's own contract.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

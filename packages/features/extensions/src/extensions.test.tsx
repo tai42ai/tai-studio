@@ -1,7 +1,6 @@
+import type { ApiClient, Extension } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, Extension } from '@tai42/api-client';
 
 import { ExtensionsPage } from './extensions';
 import { renderWithProviders } from './test-utils';

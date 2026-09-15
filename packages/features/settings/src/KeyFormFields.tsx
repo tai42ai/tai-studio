@@ -3,8 +3,8 @@
  * dialogs. State-free: the User ID renders editable when `onUserIdChange` is given
  * (create) and read-only when it is absent (edit, where the identity is fixed).
  */
-import type { ReactNode } from 'react';
 import { TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { fieldLabelStyle } from './api-keys-styles';
 import { ScopePicker } from './ScopePicker';

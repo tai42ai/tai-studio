@@ -10,27 +10,27 @@
  * tears the editor down the instant its own Save lands, dropping the keyboard
  * caret from the Save button onto `document.body` (WCAG 2.4.3).
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { GrantLevel, RoleBody, RoleGrants } from '@tai42/api-client';
 import {
   Badge,
   Button,
+  errorMessage,
   ErrorState,
   Field,
   RadioGroup,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { GrantLevel, RoleBody, RoleGrants } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { rolesKey, roleVersionsKey } from './keys';
 import {
-  GRANT_LEVELS,
   effectiveLevelsOf,
+  type FeatureGroup,
+  GRANT_LEVELS,
   grantsEqual,
   grantsSignature,
-  type FeatureGroup,
 } from './role-grants';
 import { RouteDetail } from './RouteDetail';
 

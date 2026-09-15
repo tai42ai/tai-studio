@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import type { JsonSchema } from '@tai42/studio-sdk';
+import { describe, expect, it } from 'vitest';
 
 import { buildCreateBody, type ComposeBodySpec } from './compose-body';
 import { authorableAgent } from './test-utils';

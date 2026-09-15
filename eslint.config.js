@@ -3,6 +3,7 @@ import js from '@eslint/js';
 import boundaries from 'eslint-plugin-boundaries';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import reactHooks from 'eslint-plugin-react-hooks';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import tseslint from 'typescript-eslint';
 
 /**
@@ -244,6 +245,18 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: '^_',
         },
       ],
+    },
+  },
+  // Deterministic import and export ordering across every source and test file.
+  // Unlike the size/complexity floor this is not source-only: consistent ordering
+  // applies to tests too. The rules only reorder — behaviour is unchanged — and
+  // the fixer keeps side-effect imports in place.
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: { 'simple-import-sort': simpleImportSort },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
     },
   },
   // Size and complexity floor for product source (SOURCE-ONLY — see

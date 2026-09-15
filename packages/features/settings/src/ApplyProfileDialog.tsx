@@ -5,28 +5,28 @@
  * aborts, it is never sent). On success the dedicated apply report replaces the
  * review; on failure the review stays with a loud error.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { summarizeFleetFanout } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   FleetReport,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import { summarizeFleetFanout } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CSSProperties, ReactNode } from 'react';
 
 import {
   envConfigKey,
   settingsProfileKey,
-  settingsProfileVersionsKey,
   settingsProfilesKey,
+  settingsProfileVersionsKey,
 } from './keys';
-import type { ApplyResponse } from './profile-secrets';
 import { assertApplyable } from './profile-apply';
+import type { ApplyResponse } from './profile-secrets';
 import { DiffCallouts } from './ProfileDiffDialog';
 
 const dangerPanelStyle: CSSProperties = {

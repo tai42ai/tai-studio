@@ -3,14 +3,14 @@
  * scope, one per pending (unsaved) scope, the Unassigned bucket, and the Public
  * zone. Presentational over the derived chip surface; every action is a callback.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { Badge, Button, EmptyState } from '@tai42/studio-sdk';
 import type { AddUrlToScopeBody } from '@tai42/api-client';
+import { Badge, Button, EmptyState } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
-import { ScopeZone } from './ScopeZone';
-import type { ChipData } from './ScopeItemChip';
 import { AddRouteRow } from './AddRouteRow';
-import { chipFor, scopeUrls, type MapperChips } from './scope-mapping';
+import { chipFor, type MapperChips, scopeUrls } from './scope-mapping';
+import type { ChipData } from './ScopeItemChip';
+import { ScopeZone } from './ScopeZone';
 
 const publicNoteStyle: CSSProperties = {
   margin: '0 0 var(--tai-space-3)',

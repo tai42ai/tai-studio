@@ -9,12 +9,12 @@ import type { ReactNode } from 'react';
 import { useContext, useId, useState } from 'react';
 
 import { Badge } from '../components/badge';
+import { Field, type FieldControlProps, useFieldControl } from '../components/field';
 import { XCircleIcon } from '../components/icons';
-import { Button } from '../components/primitives';
-import { Field, useFieldControl, type FieldControlProps } from '../components/field';
 import { TextInput } from '../components/inputs';
-import type { MediaUpload } from './field-model';
+import { Button } from '../components/primitives';
 import { MaxUploadBytesContext } from './context';
+import type { MediaUpload } from './field-model';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
 
 /**

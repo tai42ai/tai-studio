@@ -2,8 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { NavigationProvider, useAppNavigate, usePluginNavigation } from './context';
 import { AppLink } from './app-link';
+import { NavigationProvider, useAppNavigate, usePluginNavigation } from './context';
 import type { NavigationContextValue, PluginSearch, RouteSearch, RouteToken } from './types';
 
 function makeNav(): NavigationContextValue {

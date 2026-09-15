@@ -1,7 +1,7 @@
 /** Interaction listing/answer and the SSE stream sub-clients. */
-import * as s from '../schemas';
 import { ApiError, ApiUnauthorizedError } from '../errors';
 import { encodeSegment, extractError } from '../http';
+import * as s from '../schemas';
 import { readSseFrames, sseOpenToken } from '../sse';
 import type { Transport } from './transport';
 

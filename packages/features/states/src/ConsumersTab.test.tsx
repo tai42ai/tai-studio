@@ -4,10 +4,10 @@
  * consumer family that cannot be listed (no scheduling backend) shows the muted line; an
  * empty union shows the empty state; a 501 shows FeatureDisabled.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type StateDetail } from '@tai42/api-client';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type StateDetail } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ConsumersTab } from './ConsumersTab';
 import { renderWithProviders } from './test-utils';

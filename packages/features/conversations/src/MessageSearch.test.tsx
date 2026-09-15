@@ -5,10 +5,10 @@
  * read, and pages forward through the matches without blanking the hits on screen
  * even when a further page fails.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MessageSearch } from './MessageSearch';
 import { makeMessage, page, renderWithProviders } from './test-utils';

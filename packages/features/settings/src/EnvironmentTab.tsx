@@ -17,24 +17,24 @@
  * State follows the shared convention: <Spinner> while loading, <ErrorState>
  * (loud) on any failure. Read-only config mode disables every control.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { summarizeFleetFanout } from '@tai42/api-client';
 import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   FleetReport,
   Spinner,
-  errorMessage,
   useApi,
   useRegisterDirty,
 } from '@tai42/studio-sdk';
-import { summarizeFleetFanout } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
+import { type EnvVarRow, EnvVarRows, useEnvVarRows } from './env-var-rows';
 import { envConfigKey, settingsSchemaKey } from './keys';
-import { SECRET_MARKS_ENV_VAR, ownedSecretMap } from './settings-secrets';
-import { EnvVarRows, useEnvVarRows, type EnvVarRow } from './env-var-rows';
+import { ownedSecretMap, SECRET_MARKS_ENV_VAR } from './settings-secrets';
 
 const headerStyle: CSSProperties = {
   display: 'flex',

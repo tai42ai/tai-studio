@@ -18,7 +18,7 @@
  * cannot assume exists. The `public/` → root copy is Vite's own contract and is
  * exercised by the build.
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

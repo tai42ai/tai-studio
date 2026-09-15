@@ -4,8 +4,8 @@
  * list never lays out a tree per row. The subtree is marked `data-run-preview` so a
  * click inside it never drills the row into the trace.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
 import { JsonTree } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { previewTree, previewValue } from './format';
 

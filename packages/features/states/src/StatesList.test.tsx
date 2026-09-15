@@ -4,10 +4,10 @@
  * row navigates `?state=`, the four render states hold, and the Upload door routes a
  * document by its `kind` (a missing kind is a loud alert; a name clash prompts Replace).
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { StatesList } from './StatesList';
 import { fileInput, renderWithProviders, type StubApiClient } from './test-utils';

@@ -1,11 +1,10 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ApiClient, MeProjection } from '@tai42/api-client';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 import { ApiProvider } from './useApi';
 import { AuthProvider, useAuth } from './useAuth';
-import { UnauthorizedProvider } from './useUnauthorized';
 import {
   CapabilityProvider,
   coversAnyRoute,
@@ -15,6 +14,7 @@ import {
   useCanWrite,
   useCapabilities,
 } from './useCapabilities';
+import { UnauthorizedProvider } from './useUnauthorized';
 
 function projection(overrides: Partial<MeProjection> = {}): MeProjection {
   return {

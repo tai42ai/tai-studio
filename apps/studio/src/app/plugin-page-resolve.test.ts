@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import type { ComponentType } from 'react';
 import type { PluginPageParamsSchema, PluginPageProps, RegisteredPage } from '@tai42/studio-sdk';
+import type { ComponentType } from 'react';
+import { describe, expect, it } from 'vitest';
 
 import { resolvePluginPage } from './plugin-page-resolve';
 

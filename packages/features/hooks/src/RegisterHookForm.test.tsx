@@ -4,11 +4,10 @@
  * prefill and id-gate preservation on save, the inline charset-400 surface, the
  * edit-dialog Cancel/close contract, and the honest "list unavailable" fallback.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { RegisterHookForm } from './RegisterHookForm';
 import { apiKey, hook, renderWithProviders, type StubApiClient } from './test-utils';

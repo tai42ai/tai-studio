@@ -6,10 +6,10 @@
  * back to the URL — the source of truth — before any read. Drilling into a trace shows
  * the per-run {@link TraceView}.
  */
-import { useEffect, type ReactNode } from 'react';
 import { useAppNavigate } from '@tai42/studio-sdk';
+import { type ReactNode, useEffect } from 'react';
 
-import { mergeSearch, sanitizeSearch, type ObservabilitySearch } from './filters';
+import { mergeSearch, type ObservabilitySearch, sanitizeSearch } from './filters';
 import { RunsTable } from './RunsTable';
 import { TraceView } from './TraceView';
 

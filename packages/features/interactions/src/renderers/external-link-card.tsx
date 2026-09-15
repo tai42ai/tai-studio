@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react';
-
 import type { Interaction } from '@tai42/api-client';
 import { ExternalLinkButton } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { MalformedPayload } from './malformed-payload';
 

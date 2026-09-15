@@ -3,11 +3,12 @@
  * and a node's paged children. State is read from the tree context; layout uses
  * the code-block rhythm.
  */
-import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, MouseEvent as ReactMouseEvent, ReactElement } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { CheckIcon, CopyIcon } from './icons';
 import { COPIED_LABEL, COPIED_RESET_MS } from '../hooks/useClipboardCopy';
+import { CheckIcon, CopyIcon } from './icons';
+import { useJsonTreeContext } from './json-tree-context';
 import {
   childPath,
   containerCount,
@@ -16,7 +17,6 @@ import {
   sliceEntries,
 } from './json-tree-model';
 import { primitiveClass, primitiveText } from './json-value-format';
-import { useJsonTreeContext } from './json-tree-context';
 
 /** A copy control's resting face; whichever is exposed is also its accessible name. */
 export const COPY_LABEL = 'Copy';

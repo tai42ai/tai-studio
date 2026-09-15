@@ -11,7 +11,7 @@
  * No `/api/storage` stub here: these cases prove the LIVE boot behaviour, unlike the
  * design-frame specs that stub the signal to drive each state deterministically.
  */
-import { test, expect, request as apiRequest } from '@playwright/test';
+import { expect, request as apiRequest, test } from '@playwright/test';
 
 import { API_KEY, seedCredential } from './helpers';
 

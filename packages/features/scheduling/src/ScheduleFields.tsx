@@ -2,15 +2,15 @@
  * The top fields of the add-schedule dialog: the schedule name, the tool picker
  * (with its list-error branch), and the tool-kwargs JSON textarea.
  */
-import type { ReactNode } from 'react';
 import {
+  errorMessage,
   ErrorState,
   Field,
   Textarea,
   TextInput,
   ToolPicker,
-  errorMessage,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 /** The minimal tools-list query shape this surface reads. */
 interface ToolsQueryLike {

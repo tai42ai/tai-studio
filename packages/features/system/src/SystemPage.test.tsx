@@ -1,6 +1,10 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  type ApiClient,
+  ApiError,
+  type FleetResult,
+  type FleetWorker,
+  type MeProjection,
+} from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -8,13 +12,9 @@ import {
   NavigationProvider,
   ThemeProvider,
 } from '@tai42/studio-sdk';
-import {
-  ApiError,
-  type ApiClient,
-  type FleetResult,
-  type FleetWorker,
-  type MeProjection,
-} from '@tai42/api-client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 

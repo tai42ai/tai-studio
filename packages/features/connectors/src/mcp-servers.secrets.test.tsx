@@ -1,17 +1,17 @@
-import { act, screen, waitFor } from '@testing-library/react';
 import { QueryClient } from '@tanstack/react-query';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { McpServersSection } from './mcp-servers';
 import {
-  SECRET_SCHEMA,
-  renderWithProviders,
   reload,
+  renderWithProviders,
+  SECRET_SCHEMA,
   status,
   withEnvBlank,
   withEnvMarker,
 } from './test-utils-mcp-servers';
-import { McpServersSection } from './mcp-servers';
 
 // -- SecretRefField / combined env+manifest op ----------------------------
 describe('McpServersSection — secret env op', () => {

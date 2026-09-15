@@ -2,17 +2,17 @@
  * The edit-key dialog: changes an existing key's description, scopes and policy
  * fields. The user_id is fixed and shown read-only.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Button, Dialog, ErrorState, Spinner, errorMessage, useApi } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
+import { Button, Dialog, errorMessage, ErrorState, Spinner, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { tokensPayloadKey } from './keys';
-import { PolicySection } from './PolicySection';
-import type { PolicyFields, PolicySeed } from './policy-data';
-import { KeyFormFields } from './KeyFormFields';
 import { conditionWarningStyle, dialogActionsStyle, formStyle } from './api-keys-styles';
 import type { KeyPayload } from './key-owner';
+import { KeyFormFields } from './KeyFormFields';
+import { tokensPayloadKey } from './keys';
+import type { PolicyFields, PolicySeed } from './policy-data';
+import { PolicySection } from './PolicySection';
 
 export function EditKeyDialog({
   payload,

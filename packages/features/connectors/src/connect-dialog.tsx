@@ -5,6 +5,7 @@
  * text). `startConnect` either returns an OAuth `authorize_url` — handed to the
  * popup flow — or completes immediately as a no-auth connection.
  */
+import type { ProviderView } from '@tai42/api-client';
 import {
   Button,
   Dialog,
@@ -14,12 +15,11 @@ import {
   Spinner,
   TextInput,
 } from '@tai42/studio-sdk';
-import type { ProviderView } from '@tai42/api-client';
 import type { ReactNode } from 'react';
 
 import { ConnectorRefusalNotice, Notice } from './notice';
-import { useConnectDialog } from './use-connect-dialog';
 import { SubServicesFieldset } from './SubServicesFieldset';
+import { useConnectDialog } from './use-connect-dialog';
 
 export function ConnectDialog({
   provider,

@@ -19,21 +19,21 @@
  * every retained page — by PAUSING past that depth, never by dropping the page it
  * refreshes for. A paused list says so and offers the way back.
  */
-import { useRef, type ReactNode, type RefObject } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '@tai42/studio-sdk';
 import type { ConversationDeliveryStatus } from '@tai42/api-client';
+import { useApi } from '@tai42/studio-sdk';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type RefObject, useRef } from 'react';
 
-import { useNow, RELATIVE_TICK_MS } from './clock';
+import { RELATIVE_TICK_MS, useNow } from './clock';
 import { useFocusHandoff } from './focus';
 import { countOf } from './format';
 import { conversationThreadsKey } from './keys';
 import { useLiveRegion } from './live-region';
 import { boundedRefresh, trimToNewestPage } from './paging';
 import { TruncatedNotice } from './read-states';
-import { useTailingPager } from './useTailingPager';
 import { ThreadListBody } from './ThreadListBody';
 import { ThreadRefreshNotice } from './ThreadRefreshNotice';
+import { useTailingPager } from './useTailingPager';
 
 export { threadRowLabel } from './ThreadListBody';
 

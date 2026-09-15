@@ -8,8 +8,8 @@
  * unassigned bucket also render their HTTP methods as a secondary label.
  */
 import { useDraggable } from '@dnd-kit/core';
-import type { CSSProperties, ReactNode } from 'react';
 import { CloseIcon } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 /** Where a chip currently lives — its origin zone. */
 export type ZoneRef =

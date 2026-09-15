@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AlertTriangleIcon, XCircleIcon } from '../components/icons';
-import { RecordEntryRendererContext, type RecordEntryRenderer } from './context';
+import { type RecordEntryRenderer, RecordEntryRendererContext } from './context';
 import { defaultValueForSchema } from './default-value';
-import { SchemaForm, type CompletionProvider } from './SchemaForm';
+import { type CompletionProvider, SchemaForm } from './SchemaForm';
 import type { JsonSchema } from './types';
 import { validateAgainstSchema } from './validate';
 

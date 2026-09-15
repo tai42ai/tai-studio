@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, ApiUnauthorizedError } from './errors';
 import {
   agentList,
   agentSummary,
   parseAgentFrame,
   parseAgentTranscript,
+  type ParsedAgentEvent,
   streamAgentRun,
   streamAuthoredAgentRun,
-  type ParsedAgentEvent,
 } from './agents';
+import { ApiError, ApiUnauthorizedError } from './errors';
 
 // A hand-authored SSE transcript: one data-only frame per agent event, a
 // keep-alive comment, and the terminal stream.end — the exact shape the run

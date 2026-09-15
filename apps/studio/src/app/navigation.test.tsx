@@ -3,18 +3,18 @@
  * `NavigationContextValue` resolves tokens → hrefs (what an `AppLink` anchors to)
  * and drives real client-side transitions.
  */
-import type { ReactElement } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import type { PluginContext, RouteToken } from '@tai42/studio-sdk';
 import { getPluginHostState } from '@tai42/studio-sdk/host';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import type { ReactElement } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { buildRouter } from './router';
 import { createNavigation } from './navigation';
 import { createPluginLoader } from './plugin-loader';
+import { buildRouter } from './router';
 import { PATH } from './routes';
 import { installServer, renderStudio, server } from './test-harness';
 

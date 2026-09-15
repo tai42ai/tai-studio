@@ -1,10 +1,8 @@
+import type { ApiClient, SettingsSchema } from '@tai42/api-client';
+import { GuardedTabs } from '@tai42/studio-sdk';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
-
-import { GuardedTabs } from '@tai42/studio-sdk';
 
 import { EnvironmentTab } from './EnvironmentTab';
 import { renderWithProviders } from './test-utils';

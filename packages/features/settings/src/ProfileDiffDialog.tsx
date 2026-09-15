@@ -4,18 +4,18 @@
  * so the preview masks every value — the key names and the recycle/refused lists are
  * the actionable safety information.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   JsonDiff,
   ScrollRegion,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { settingsProfileKey } from './keys';
 import { maskedDiffSides, type ProfileDiff } from './profile-secrets';

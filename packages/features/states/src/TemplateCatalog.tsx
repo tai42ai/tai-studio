@@ -1,21 +1,21 @@
 /** The state-template catalog: every platform template, with an upload door and a
  * guarded delete (refused while any state still attaches the template). */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { StateTemplateListItem } from '@tai42/api-client';
 import {
   ConfirmDialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { StateTemplateListItem } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { stateTemplatesKey } from './keys';
-import { useTemplateUpload } from './useTemplateUpload';
-import { TemplateCatalogTable } from './TemplateCatalogTable';
 import { ReplaceConfirmDialog } from './ReplaceConfirmDialog';
+import { TemplateCatalogTable } from './TemplateCatalogTable';
+import { useTemplateUpload } from './useTemplateUpload';
 
 export interface TemplateCatalogProps {
   readonly templates: readonly StateTemplateListItem[];

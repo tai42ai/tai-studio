@@ -8,7 +8,7 @@
  * siblings: the gated `AuthoringSection`, the `ComposeAgentDialog`, and the
  * `AuthoredRunView`, plus the inline spec shapes and run target.
  */
-export { AuthoringSection } from './AuthoringSection';
-export { ComposeAgentDialog } from './ComposeAgentDialog';
 export { AuthoredRunView } from './AuthoredRunView';
 export type { AuthoredRunTarget, InlinePresetSpec, InlineSubAgentSpec } from './authoring-types';
+export { AuthoringSection } from './AuthoringSection';
+export { ComposeAgentDialog } from './ComposeAgentDialog';

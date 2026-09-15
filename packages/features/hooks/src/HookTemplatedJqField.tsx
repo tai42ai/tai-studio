@@ -4,11 +4,11 @@
  * gated on a storage backend; a fresh `resetToken` remounts the control blank after
  * a successful create.
  */
-import type { ReactNode } from 'react';
-import { TemplatedTextField, type TemplatedTextCatalog } from '@tai42/studio-sdk';
-import { JqField } from '@tai42/jq-studio';
-import type { JqFieldDeclaration } from '@tai42/jq-studio';
 import type { TemplatedText } from '@tai42/api-client';
+import type { JqFieldDeclaration } from '@tai42/jq-studio';
+import { JqField } from '@tai42/jq-studio';
+import { type TemplatedTextCatalog, TemplatedTextField } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export interface HookTemplatedJqFieldProps {
   readonly label: string;

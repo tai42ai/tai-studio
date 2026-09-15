@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-
 import { Button, Field, Textarea } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 import type { AnswerRendererProps } from './answer-schema';
 import { answerStackStyle } from './renderer-styles';

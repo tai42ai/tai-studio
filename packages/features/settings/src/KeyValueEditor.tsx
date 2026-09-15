@@ -1,8 +1,8 @@
 /**
  * An add/remove key/value editor whose rows round-trip through `rowsToObject`.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import { Button, TextInput } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import type { PolicyRow } from './policy-data';
 

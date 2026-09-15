@@ -11,8 +11,9 @@
  * The API-version gate is `version-gate.spec.ts`, which pins EQUALITY in all
  * three directions (lower, higher, equal) against this same live boot.
  */
-import { test, expect } from '@playwright/test';
-import { loginViaUi, seedCredential, expectPluginErrorCard, openToolRow } from './helpers';
+import { expect, test } from '@playwright/test';
+
+import { expectPluginErrorCard, loginViaUi, openToolRow, seedCredential } from './helpers';
 
 const REGISTRY_PATH = '/api/plugins';
 const BUNDLE_GLOB = '**/api/plugins/reference_plugin/studio/*.js';

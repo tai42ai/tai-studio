@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Button, CloseIcon, ToolPicker } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 /**
  * A multi-select over tool names, built by REUSING the shared single-select

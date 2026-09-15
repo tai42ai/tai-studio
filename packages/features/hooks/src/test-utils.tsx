@@ -11,15 +11,6 @@
  * `getMe`. With no projection the context stays `loading` and the gated section
  * stays hidden (fail closed) — the shape the pre-existing tests expect.
  */
-import type { ReactElement, ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-  ApiProvider,
-  AuthProvider,
-  CapabilityProvider,
-  NavigationProvider,
-  ThemeProvider,
-} from '@tai42/studio-sdk';
 import type {
   ApiClient,
   HookParams,
@@ -27,8 +18,17 @@ import type {
   TokensPayload,
   TriggerLinkRecord,
 } from '@tai42/api-client';
+import {
+  ApiProvider,
+  AuthProvider,
+  CapabilityProvider,
+  NavigationProvider,
+  ThemeProvider,
+} from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult } from '@testing-library/react';
-import { vi, type Mock } from 'vitest';
+import type { ReactElement, ReactNode } from 'react';
+import { type Mock, vi } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;

@@ -7,11 +7,11 @@
  * selected must NOT steal focus on load. The detail record loads async, so the
  * heading takes focus as soon as it mounts, not only on the selection tick.
  */
-import { useState, type ReactNode } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { PresetRecord } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { PresetRecord } from '@tai42/api-client';
+import { type ReactNode, useState } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PresetsPage } from './PresetsPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';

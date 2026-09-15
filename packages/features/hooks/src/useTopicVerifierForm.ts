@@ -4,19 +4,19 @@
  * "replaces the current binding" notice), and the PUT mutation. `config` is parsed
  * as an optional JSON object; a bad value is a loud field error that blocks submit.
  */
-import { useState, type SyntheticEvent } from 'react';
+import type { HookList, TopicVerifierBody } from '@tai42/api-client';
+import { errorMessage, useApi } from '@tai42/studio-sdk';
 import {
   useMutation,
+  type UseMutationResult,
   useQuery,
   useQueryClient,
-  type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
-import { errorMessage, useApi } from '@tai42/studio-sdk';
-import type { HookList, TopicVerifierBody } from '@tai42/api-client';
+import { type SyntheticEvent, useState } from 'react';
 
-import { HOOKS_KEY_ROOT, hookVerifiersKey, hooksListKey } from './keys';
 import { parseJsonObject } from './jsonObjectField';
+import { HOOKS_KEY_ROOT, hooksListKey, hookVerifiersKey } from './keys';
 
 export interface TopicVerifierFormState {
   readonly topic: string;

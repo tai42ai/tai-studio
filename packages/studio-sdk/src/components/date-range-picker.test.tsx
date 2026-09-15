@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   DateRangePicker,
+  type DateRangeValue,
   DEFAULT_DATE_RANGE_PRESETS,
   formatRangeLabel,
   normalizeCustomRange,
-  type DateRangeValue,
 } from './date-range-picker';
 
 /** A fixed local wall clock the clamp reads, so "now" is deterministic. */

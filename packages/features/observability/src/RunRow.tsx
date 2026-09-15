@@ -3,9 +3,9 @@
  * except when the gesture started inside a {@link RunPreview} (its expand button or
  * the JSON tree it opens) — that is the preview's own interaction.
  */
-import type { ReactNode } from 'react';
-import { Badge, TD, TR } from '@tai42/studio-sdk';
 import type { Run } from '@tai42/api-client';
+import { Badge, TD, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { formatCost, formatLatencyMs, formatTimestamp, formatTokenCount } from './format';
 import { RunPreview } from './RunPreview';

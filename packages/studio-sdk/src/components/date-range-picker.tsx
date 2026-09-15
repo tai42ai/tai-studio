@@ -12,7 +12,7 @@
  * Absolute ranges are normalized by {@link normalizeCustomRange}; the active window
  * is rendered by {@link formatRangeLabel}, always with the YEAR present.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { Field } from './field';
 import { TextInput } from './inputs';

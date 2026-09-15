@@ -7,8 +7,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
+import { type ApiConfig, ApiSchemaError } from '../index';
 import { createApiClient } from './index';
-import { ApiSchemaError, type ApiConfig } from '../index';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

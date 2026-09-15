@@ -13,21 +13,21 @@
  * preset's versions. Editing a tag annotation rebinds nothing (labels on an
  * immutable body), so only the versions query is invalidated — not the tool list.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  VersionHistoryPanel,
-  errorMessage,
   toolsListKey,
   useApi,
   type VersionHistoryEntry,
+  VersionHistoryPanel,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { presetDetailKey, presetVersionsKey, presetsListKey } from './keys';
+import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 
 export function PresetVersions({ name }: { readonly name: string }): ReactNode {
   const api = useApi();

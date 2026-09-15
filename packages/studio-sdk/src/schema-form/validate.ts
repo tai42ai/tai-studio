@@ -5,13 +5,13 @@
  * container constraint on a free-form `json` field. It never throws on a
  * malformed value — a malformed value IS the error it reports.
  */
+import { isRecord } from '../guards';
 import { classifySchema } from './classify';
 import type { FieldModel } from './field-model';
-import { isRecord } from '../guards';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
 import { scalarLabel } from './resolve';
-import { activeVariantIndex } from './union';
 import type { JsonSchema, SchemaFormErrors } from './types';
+import { activeVariantIndex } from './union';
 
 /** Options for {@link validateAgainstSchema}. */
 export interface ValidateOptions {

@@ -7,7 +7,9 @@
  * kind (a free-form JSON textarea) — a field is never silently dropped, and a
  * shapeless one is edited as the JSON it is rather than dead-ending on a badge.
  */
+import type { ClassifiedField, UnionVariant } from './field-model';
 import {
+  type EnumOption,
   isNullSchema,
   resolveRef,
   scalarLabel,
@@ -15,9 +17,7 @@ import {
   unionMembers,
   variantLabel,
   variantTag,
-  type EnumOption,
 } from './resolve';
-import type { ClassifiedField, UnionVariant } from './field-model';
 import { expressionAnnotation, mediaUpload } from './string-annotations';
 import type { JsonSchema } from './types';
 

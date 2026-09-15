@@ -5,20 +5,19 @@
  * None is load-bearing, so a failure surfaces loudly (`enrichmentFailed`) but keeps
  * the form usable — never a silently ungrouped, unlabelled picker.
  */
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
 import { hiddenToolNames, toolBadgesByName, useApi, useToolDisplayNames } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
-import { inputFieldNames } from './preset-body';
 import {
   presetAgentsKey,
   presetSchemaKey,
-  presetToolMetaKey,
-  presetToolTagsKey,
-  presetToolsKey,
   presetsListKey,
+  presetToolMetaKey,
+  presetToolsKey,
+  presetToolTagsKey,
 } from './keys';
+import { inputFieldNames } from './preset-body';
 
 /** The base-picker's enrichment reads plus their derived maps. */
 export type PresetToolCatalog = ReturnType<typeof usePresetToolCatalog>;

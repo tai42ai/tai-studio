@@ -1,18 +1,17 @@
 /** The resource browser's presentational views: the per-resource action cluster and
  * the ExplorerView wiring (row, card, folder actions, search, empty states). */
-import type { ReactNode } from 'react';
-
 import {
   Button,
   Card,
-  ExplorerView,
-  TD,
   type ExplorerColumn,
+  ExplorerView,
   type Folder,
+  TD,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { deriveFolders, parentPrefix } from './folders';
-import { EMPTY_STATES, SEARCH_LABEL, STORAGE_VIEW_SURFACE, basename } from './storage-view';
+import { basename, EMPTY_STATES, SEARCH_LABEL, STORAGE_VIEW_SURFACE } from './storage-view';
 
 /** The resource table's columns; folder rows span both. */
 const COLUMNS: ExplorerColumn[] = [

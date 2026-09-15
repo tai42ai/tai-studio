@@ -1,5 +1,6 @@
 /** Run metrics, listing, span and trace response schemas. */
 import { z } from 'zod';
+
 import { jsonValue } from './shared';
 
 export const dashboardMetrics = z.object({

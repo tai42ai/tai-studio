@@ -3,10 +3,10 @@
  * it. A first upload never overwrites — a name clash (409) surfaces a Replace confirm,
  * and only a confirm retries with replace=true. Every failure is a loud inline message.
  */
-import { useState, type ChangeEvent } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { errorMessage, useApi } from '@tai42/studio-sdk';
 import { ApiError, type StateTemplateBody } from '@tai42/api-client';
+import { errorMessage, useApi } from '@tai42/studio-sdk';
+import { useQueryClient } from '@tanstack/react-query';
+import { type ChangeEvent, useState } from 'react';
 
 import { stateTemplatesKey } from './keys';
 import { readJsonObjectFile } from './readJsonObjectFile';

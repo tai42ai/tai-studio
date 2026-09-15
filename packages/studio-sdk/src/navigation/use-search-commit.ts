@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { type RefObject, useCallback, useEffect, useRef } from 'react';
 
 import { useAppNavigate } from './context';
 import type { RouteSearch, RouteToken } from './types';

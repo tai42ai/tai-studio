@@ -27,7 +27,7 @@
  * such family in this repo also writes its full names as literals, which is what
  * the forward direction actually reads.
  */
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

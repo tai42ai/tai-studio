@@ -3,12 +3,11 @@
  * base agent, tools/preset pickers, overlay tags (written after create), the
  * conflicted/hidden exclusions, and the server-error surfacing.
  */
-import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-
 import { ApiError, type CreatePresetBody } from '@tai42/api-client';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ComposeAgentDialog } from './authoring';
 import {

@@ -3,18 +3,18 @@
  * queries, the scheduled tool's schema and inherited binding, folded into a
  * ready-to-spread `bindingProps` for `StateBindingSection` (value/onChange stay local).
  */
-import { useQuery } from '@tanstack/react-query';
+import type { StateBinding, StateListItem, StateTemplateListItem } from '@tai42/api-client';
 import {
   errorMessage,
   fieldPathsFromSchema,
   statesCatalogFromList,
-  templatesCatalogFromList,
   statesListKey,
   stateTemplatesKey,
   templatedTextCatalog,
+  templatesCatalogFromList,
   useApi,
 } from '@tai42/studio-sdk';
-import type { StateBinding, StateListItem, StateTemplateListItem } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
 
 /** The minimal list-query shape the props assembly reads. */
 interface ListQueryLike<T> {

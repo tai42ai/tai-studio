@@ -3,7 +3,7 @@
  * the tools its projection lists; a full session — and any not-yet-ready projection —
  * sees the whole catalog, with the server the final authority on every run.
  */
-import { isFullProjection, type CapabilityState } from '@tai42/studio-sdk';
+import { type CapabilityState, isFullProjection } from '@tai42/studio-sdk';
 
 import type { ToolView } from './toolView';
 

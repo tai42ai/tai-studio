@@ -5,32 +5,32 @@
  * server-side match over the records and lists the hits. Every result opens the record
  * page through the shell router (`?state=&subject=&target=`).
  */
-import { useState, type ReactNode, type SyntheticEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import type { StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
 import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
+  FeatureDisabled,
+  featureDisabledMessage,
   Field,
+  isFeatureDisabled,
   Select,
   Skeleton,
   Spinner,
+  Table,
   TBody,
   TD,
+  TextInput,
   TH,
   THead,
   TR,
-  Table,
-  TextInput,
-  errorMessage,
-  isFeatureDisabled,
-  featureDisabledMessage,
-  FeatureDisabled,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
-import type { StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, type SyntheticEvent, useState } from 'react';
 
 import { conversationTargetsKey, stateSearchKey, stateSubjectsKey } from './keys';
 import { formatSubjectParam, formatTargetParam } from './record-subject';

@@ -2,7 +2,7 @@ import { act, render, renderHook, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ViewToggle, useViewMode, type ViewMode } from '../index';
+import { useViewMode, type ViewMode, ViewToggle } from '../index';
 
 afterEach(() => {
   globalThis.localStorage.clear();

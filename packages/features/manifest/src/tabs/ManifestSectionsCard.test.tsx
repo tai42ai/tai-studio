@@ -8,7 +8,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders, fullProjection, scopedProjection } from '../test-utils';
+import { fullProjection, renderWithProviders, scopedProjection } from '../test-utils';
 import { ManifestSectionsCard } from './ManifestSectionsCard';
 
 const applyResult = {

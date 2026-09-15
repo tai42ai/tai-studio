@@ -13,6 +13,7 @@
  * storage untouched. A `'system'` preference clears any pinned choice and hands
  * the theme back to the OS.
  */
+import type { ReactNode } from 'react';
 import {
   createContext,
   createElement,
@@ -22,7 +23,6 @@ import {
   useMemo,
   useState,
 } from 'react';
-import type { ReactNode } from 'react';
 
 export type Theme = 'light' | 'dark';
 export type ThemePreference = 'light' | 'dark' | 'system';

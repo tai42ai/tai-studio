@@ -12,9 +12,9 @@
 import type { ReactNode } from 'react';
 
 import { JsonTree } from '../components/json-tree';
+import { isRecord } from '../guards';
 import { resolveRef } from '../schema-form/resolve';
 import type { JsonSchema } from '../schema-form/types';
-import { isRecord } from '../guards';
 
 export interface StructuredOutputProps {
   /** The tool's declared MCP output schema, if any. */

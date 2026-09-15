@@ -6,9 +6,8 @@
  * never the only signal, and `.tai-field-error` wraps so a 320 px viewport never
  * widens on it.
  */
+import { Button, errorMessage, XCircleIcon } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-
-import { Button, XCircleIcon, errorMessage } from '@tai42/studio-sdk';
 
 import type { PresetToolCatalog } from './usePresetToolCatalog';
 

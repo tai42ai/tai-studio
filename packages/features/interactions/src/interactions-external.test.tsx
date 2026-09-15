@@ -2,12 +2,12 @@ import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import {
-  XSS,
   emitFrame,
   encodeInteraction,
   idJson,
   interactionJson,
   renderInbox,
+  XSS,
 } from './test-utils';
 
 describe('ExternalLinkCard — render → flip → drop lifecycle', () => {

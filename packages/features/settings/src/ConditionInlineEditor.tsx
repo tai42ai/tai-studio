@@ -5,33 +5,33 @@
  * a failed test surfaces the verbatim message and reports `onTestFailedChange(true)`
  * (a non-blocking Save warning), but never blocks the save.
  */
+import { JqField } from '@tai42/jq-studio';
 import {
+  Badge,
+  Button,
+  errorMessage,
+  ErrorState,
+  Spinner,
+  Textarea,
+  useApi,
+} from '@tai42/studio-sdk';
+import { useMutation } from '@tanstack/react-query';
+import {
+  type CSSProperties,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
   useState,
-  type CSSProperties,
-  type ReactNode,
 } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import {
-  Badge,
-  Button,
-  ErrorState,
-  Spinner,
-  Textarea,
-  errorMessage,
-  useApi,
-} from '@tai42/studio-sdk';
-import { JqField } from '@tai42/jq-studio';
 
 import {
   CONDITION_SHAPE,
   JQ_CONTEXT_HINTS,
-  SAMPLE_CONTEXT_SKELETON,
   liveSampleInput,
   makeConditionServerValidate,
   parseSampleContext,
+  SAMPLE_CONTEXT_SKELETON,
 } from './policy-condition';
 
 const fieldLabelStyle: CSSProperties = {

@@ -23,12 +23,12 @@ import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 import {
-  test,
-  expect,
-  request as apiRequest,
   type APIRequestContext,
+  expect,
   type Locator,
   type Page,
+  request as apiRequest,
+  test,
 } from '@playwright/test';
 
 import { API_KEY, seedCredential } from './helpers';

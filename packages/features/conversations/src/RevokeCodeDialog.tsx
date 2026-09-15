@@ -2,9 +2,8 @@
  * The revoke-entry-code confirm. Revoking is immediate and irreversible — the code's
  * chat link stops working at once, and a replacement means revoke-then-mint.
  */
+import { Button, Dialog, errorMessage, ErrorState, Spinner } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-
-import { Button, Dialog, ErrorState, Spinner, errorMessage } from '@tai42/studio-sdk';
 
 export function RevokeCodeDialog({
   isError,

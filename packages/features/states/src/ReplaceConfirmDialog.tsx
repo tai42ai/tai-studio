@@ -3,8 +3,8 @@
  * Owns the in-dialog busy/error state so a failed replace renders in place rather than
  * closing; the caller supplies the title, confirm label and prompt body.
  */
-import { useState, type ReactNode } from 'react';
 import { ConfirmDialog } from '@tai42/studio-sdk';
+import { type ReactNode, useState } from 'react';
 
 export interface ReplaceConfirmDialogProps {
   readonly title: string;

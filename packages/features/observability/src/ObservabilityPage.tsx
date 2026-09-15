@@ -9,8 +9,8 @@
  * shared UI conventions; the monitoring "read not supported" 501 gets its own
  * dedicated state, rendered by each tab.
  */
+import { PageHeader, type PageProps, Tabs, useAppNavigate } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-import { PageHeader, Tabs, useAppNavigate, type PageProps } from '@tai42/studio-sdk';
 
 import { activeTab, mergeSearch, type TabId } from './filters';
 import { StatsTab } from './StatsTab';

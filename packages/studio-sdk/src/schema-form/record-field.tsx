@@ -10,11 +10,11 @@
  * silently merged): the map cannot represent two entries under one key, so the
  * later duplicate is withheld and flagged rather than overwriting the first.
  */
-import { useContext, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useContext, useRef, useState } from 'react';
 
-import { CloseIcon } from '../components/icons';
 import { Field } from '../components/field';
+import { CloseIcon } from '../components/icons';
 import { TextInput } from '../components/inputs';
 import { Button } from '../components/primitives';
 import { classifySchema } from './classify';

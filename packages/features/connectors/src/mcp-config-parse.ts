@@ -1,8 +1,8 @@
 /** Entry/schema shaping for the MCP config editor: loose-shape readers plus the
  *  JSON-buffer parse both config views persist through. */
-import { errorMessage } from '@tai42/studio-sdk';
-import type { JsonSchema } from '@tai42/studio-sdk';
 import type { ConnectorRef } from '@tai42/api-client';
+import type { JsonSchema } from '@tai42/studio-sdk';
+import { errorMessage } from '@tai42/studio-sdk';
 
 /** A plain object view of one entry, tolerating a loose/absent shape. */
 export function asRecord(value: unknown): Record<string, unknown> {

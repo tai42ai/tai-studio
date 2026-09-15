@@ -1,5 +1,6 @@
 /** Trigger-link record and lifecycle response schemas. */
 import { z } from 'zod';
+
 import { triggerAuth } from './hooks';
 
 // A trigger link is a minted, token-bearing PUBLIC URL (`GET|POST /trigger/{token}`)

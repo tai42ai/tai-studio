@@ -12,12 +12,12 @@
  * expression — the attachment-qualified `tjq_<attachment>__<name>` form when a name is
  * ambiguous across attachments.
  */
-import { useContext, type ReactNode } from 'react';
+import { type ReactNode, useContext } from 'react';
 
-import { Button } from '../components/primitives';
-import { PlusIcon } from '../components/icons';
 import { Field } from '../components/field';
+import { PlusIcon } from '../components/icons';
 import { Textarea } from '../components/inputs';
+import { Button } from '../components/primitives';
 import { ExpressionFieldContext } from '../schema-form/context';
 import { generateTemplateCall } from './adapter';
 

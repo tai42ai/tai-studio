@@ -3,9 +3,9 @@
  * `usePageFillActive`, and the flag is ref-counted so it clears exactly when the
  * last fill page unmounts. Outside a provider the opt-in throws (no silent no-op).
  */
+import { act, render, screen } from '@testing-library/react';
+import { type ReactNode, useState } from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
-import { useState, type ReactNode } from 'react';
 
 import { PageFillProvider, useFillViewport, usePageFillActive } from './page-fill';
 

@@ -2,19 +2,18 @@
  * The entry-code list for a gated web route: an empty state to prompt minting, or a
  * table of live codes (label, created, expiry) each with a Revoke action.
  */
-import type { ReactNode } from 'react';
-
 import {
   Button,
   EmptyState,
   ScrollRegion,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { EMPTY_PLACEHOLDER, formatInstant } from './format';
 

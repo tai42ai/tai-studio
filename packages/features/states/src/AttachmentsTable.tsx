@@ -4,24 +4,24 @@
  * actions, plus an `Attach template` button. Detach runs behind a danger confirm; on
  * success the caller re-reads the affected queries via `onInvalidate`.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import type { StateAttachment, StateDetail } from '@tai42/api-client';
 import {
   Badge,
   Button,
   ConfirmDialog,
   EditIcon,
   EmptyState,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
   UnplugIcon,
   useApi,
 } from '@tai42/studio-sdk';
-import type { StateAttachment, StateDetail } from '@tai42/api-client';
+import { useMutation } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 export interface AttachmentsTableProps {
   readonly state: StateDetail;

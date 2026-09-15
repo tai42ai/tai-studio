@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ExpressionFieldContext, type ExpressionFieldProps } from '../schema-form';
-import { BindingJqField, appendTjq } from './BindingJqField';
+import { appendTjq, BindingJqField } from './BindingJqField';
 
 describe('appendTjq', () => {
   it('inserts a tjq_<name>({…}) call, space-separated when the field is non-empty', () => {

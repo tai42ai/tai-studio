@@ -9,7 +9,8 @@
  * real-UI path, not a unit mock). Leg 3 mints a link on the token + api-key door and
  * asserts the row states both the bound execution key and that combined door.
  */
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+
 import { EXECUTION_KEY_ID, loginViaUi, pickExecutionKey } from './helpers';
 
 /** Open the create dialog, fill the form, submit, and stop on the QR step. */

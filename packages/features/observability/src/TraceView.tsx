@@ -10,8 +10,6 @@
  * renders a dedicated "not available" state — never a retry-forever error — while
  * a trace with no spans still shows its summary and empty waterfall.
  */
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { ApiError, type RunTrace } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
@@ -19,20 +17,22 @@ import {
   Button,
   Card,
   Checkbox,
+  downloadBlob,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  downloadBlob,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 
 import { formatCost, formatLatencyMs, formatTokenCount } from './format';
 import { traceKey } from './keys';
 import { isReadNotSupported, ReadNotSupported } from './read-support';
+import { SpanDetail } from './SpanDetail';
 import { buildTree, defaultSelectedId, traceTotals } from './trace-tree';
 import { TraceWaterfall } from './TraceWaterfall';
-import { SpanDetail } from './SpanDetail';
 
 /** True when the failure is a 404 — a trace that does not exist. Retrying is futile. */
 function isNotFound(error: unknown): boolean {

@@ -3,12 +3,12 @@
  * intercepted for a client-side transition.
  */
 import {
-  createElement,
-  useCallback,
   type AriaAttributes,
+  createElement,
   type CSSProperties,
   type MouseEvent,
   type ReactNode,
+  useCallback,
 } from 'react';
 
 import { useNavigation } from './context';

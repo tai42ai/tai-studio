@@ -4,26 +4,25 @@
  * its "Load more threads" control and per-page error. Each row's whole surface opens
  * the thread; the address-cell link stays the accessible activation path.
  */
-import type { ReactNode, RefObject } from 'react';
-
+import type { ConversationThread } from '@tai42/api-client';
 import {
   AppLink,
   Badge,
   Button,
   EmptyState,
+  errorMessage,
+  openTargetProps,
   ScrollRegion,
   Skeleton,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
-  openTargetProps,
   useAppNavigate,
 } from '@tai42/studio-sdk';
-import type { ConversationThread } from '@tai42/api-client';
+import type { ReactNode, RefObject } from 'react';
 
 import { formatAbsoluteEpoch, formatRelativeEpoch } from './format';
 import { ReadFailure } from './read-states';

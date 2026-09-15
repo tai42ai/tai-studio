@@ -4,19 +4,19 @@
  * Edit / Apply / Delete write actions. Every management control is gated so a
  * list-only editor sees the rows without a control whose call would 403.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import {
   Button,
   Card,
   EmptyState,
   ScrollRegion,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
 } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 const stackHeaderStyle: CSSProperties = {
   display: 'flex',

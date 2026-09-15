@@ -2,14 +2,13 @@
  * Version-history tests: rows render newest-first with the current badge, and a
  * rollback confirm calls `rollbackPreset` and invalidates the list + detail keys.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { toolsListKey } from '@tai42/studio-sdk';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
-import { toolsListKey } from '@tai42/studio-sdk';
-
+import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { PresetVersions } from './PresetVersions';
-import { presetDetailKey, presetVersionsKey, presetsListKey } from './keys';
 import { renderWithProviders, type StubApiClient } from './test-utils';
 
 function version(v: number, isCurrent: boolean) {

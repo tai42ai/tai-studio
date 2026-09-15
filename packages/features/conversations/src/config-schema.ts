@@ -20,8 +20,8 @@
  * (unbalanced braces, format specs) stays server-enforced and surfaces via
  * `ErrorState`.
  */
-import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 import type { ConversationTargetKind, TargetConversationConfig } from '@tai42/api-client';
+import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 
 /** The one placeholder a greeting template may reference (minted at greeting time). */
 const GREETING_PLACEHOLDER = 'pairing_code';

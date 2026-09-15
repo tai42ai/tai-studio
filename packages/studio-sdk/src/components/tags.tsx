@@ -11,11 +11,11 @@
  * version-history panel's per-version tag editor) needs the same control; a single
  * canonical copy keeps the affordance identical everywhere.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { CloseIcon } from './icons';
-import { Button } from './primitives';
 import { TextInput } from './inputs';
+import { Button } from './primitives';
 
 /** A tag and its remove control read as one unit, tighter than the row default. */
 const tagGroupStyle: CSSProperties = { gap: 'var(--tai-space-1)' };

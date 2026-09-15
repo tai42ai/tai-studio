@@ -4,11 +4,11 @@
  * optional `tool_kwargs` JSON textarea. Required-field errors show only after a
  * submit attempt.
  */
-import type { ReactNode } from 'react';
 import { Field, Textarea, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import type { HookFormFields } from './useHookFormFields';
 import { ExecutionKeyPicker } from './ExecutionKeyPicker';
+import type { HookFormFields } from './useHookFormFields';
 
 export interface HookIdentityFieldsProps {
   readonly fields: HookFormFields;

@@ -3,8 +3,8 @@
  * active `?tags=` and `?q=`), the real name shown secondary+mono when a display name
  * overrides it, and — for writers — an Edit affordance opening the overlay dialog.
  */
-import type { ReactNode } from 'react';
 import { AppLink, Button } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { ToolBadges } from './badges';
 import type { ToolView } from './toolView';

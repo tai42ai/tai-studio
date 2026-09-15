@@ -1,8 +1,7 @@
+import { type MarketplaceSearchPage } from '@tai42/api-client';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { type MarketplaceSearchPage } from '@tai42/api-client';
 
 import { MarketplacePage } from './MarketplacePage';
 import {

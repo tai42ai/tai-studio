@@ -1,12 +1,11 @@
+import { type ApiClient, ApiError, type AuthRoute } from '@tai42/api-client';
+import { QueryClient } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueryClient } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, type ApiClient, type AuthRoute } from '@tai42/api-client';
-
-import { ScopesMapper } from './ScopesMapper';
 import { authRoutesKey, publicRoutesKey, scopesKey, tokensPayloadKey } from './keys';
+import { ScopesMapper } from './ScopesMapper';
 import { decorBorderedControls, renderWithProviders } from './test-utils';
 
 type Stub = Partial<Record<keyof ApiClient, unknown>>;

@@ -11,24 +11,23 @@
  * `fixed_kwargs` can carry credentials: it is rendered on this authed surface but
  * NEVER logged or toasted.
  */
-import { useState, type ReactNode, type Ref } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
 import {
   Card,
+  errorMessage,
   ErrorState,
   Skeleton,
-  errorMessage,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, type Ref, useState } from 'react';
 
-import { PresetVersions } from './PresetVersions';
-import { PresetDetailHeader } from './PresetDetailHeader';
-import { PresetRecordFields } from './PresetRecordFields';
+import { presetDetailKey, presetToolMetaKey } from './keys';
 import { PresetBodyCards } from './PresetBodyCards';
 import { PresetDetailDialogs } from './PresetDetailDialogs';
-import { presetDetailKey, presetToolMetaKey } from './keys';
+import { PresetDetailHeader } from './PresetDetailHeader';
+import { PresetRecordFields } from './PresetRecordFields';
+import { PresetVersions } from './PresetVersions';
 
 export function PresetDetail({
   name,

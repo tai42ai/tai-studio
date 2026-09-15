@@ -3,9 +3,9 @@
  * outlet, which sits inside the app's Navigation/Theme providers, so design tokens
  * apply here.
  */
-import type { ReactNode } from 'react';
-import { Link } from '@tanstack/react-router';
 import { EmptyState } from '@tai42/studio-sdk';
+import { Link } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
 const wrapperStyle = { padding: 'var(--tai-space-6)' } as const;
 

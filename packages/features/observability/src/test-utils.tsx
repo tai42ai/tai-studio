@@ -5,14 +5,13 @@
  * theme, and a `NavigationProvider` whose `navigate` is a spy so URL writes can be
  * asserted. Only test dependencies are imported; no production module is stubbed.
  */
-import { useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import type { ApiClient } from '@tai42/api-client';
+import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
+import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult } from '@testing-library/react';
-import { vi, type Mock } from 'vitest';
-
-import type { ApiClient } from '@tai42/api-client';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
-import type { NavigationContextValue, RouteSearch, RouteToken } from '@tai42/studio-sdk';
+import { type ReactElement, type ReactNode, useMemo, useState } from 'react';
+import { type Mock, vi } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;

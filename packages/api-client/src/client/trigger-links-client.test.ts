@@ -10,14 +10,14 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { createApiClient } from './index';
 import {
+  type ApiConfig,
   ApiConflictError,
   ApiError,
   ApiSchemaError,
-  type ApiConfig,
   type TriggerLinkCreateBody,
 } from '../index';
+import { createApiClient } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

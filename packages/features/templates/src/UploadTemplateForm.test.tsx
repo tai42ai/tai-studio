@@ -5,14 +5,13 @@
  * in flight; a rejected upload surfaces loudly in an `ErrorState` and leaves the
  * typed values intact so the user can retry.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { deferred } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { deferred } from '@tai42/studio-sdk/testing';
-
-import { UploadTemplateForm } from './UploadTemplateForm';
 import { renderWithProviders, type StubApiClient } from './test-utils';
+import { UploadTemplateForm } from './UploadTemplateForm';
 
 describe('UploadTemplateForm', () => {
   it('posts the exact path and content and resets the fields on success', async () => {

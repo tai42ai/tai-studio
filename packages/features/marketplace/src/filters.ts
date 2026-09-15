@@ -5,8 +5,8 @@
  * onto the api-client query shape and merge partial edits back into a full
  * search object for `navigate`.
  */
-import type { PageProps } from '@tai42/studio-sdk';
 import type { MarketplaceSearchQuery } from '@tai42/api-client';
+import type { PageProps } from '@tai42/studio-sdk';
 
 /** The full marketplace route search state (tab + drill-in plugin + filters). */
 export type MarketplaceSearch = PageProps<'marketplace'>['search'];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateAgainstSchema } from './validate';
 import type { JsonSchema } from './types';
+import { validateAgainstSchema } from './validate';
 
 describe('validateAgainstSchema', () => {
   it('flags a missing required field', () => {

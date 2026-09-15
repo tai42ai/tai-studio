@@ -3,13 +3,13 @@
  * door; Move writes the chosen parent; and the move target set excludes the folder
  * itself and its descendants (a folder can never become its own ancestor).
  */
+import type { Folder } from '@tai42/studio-sdk';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { Folder } from '@tai42/studio-sdk';
 
-import { renderWithProviders } from './test-utils';
 import { FolderActionsMenu, subtreeIds } from './FolderActions';
+import { renderWithProviders } from './test-utils';
 
 const ALPHA: Folder = { id: 'f1', name: 'Alpha', parentId: null };
 const BETA: Folder = { id: 'f2', name: 'Beta', parentId: null };

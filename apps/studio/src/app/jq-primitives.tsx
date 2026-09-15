@@ -17,7 +17,7 @@
  * vocabulary before rendering the SDK `Badge`; it is not a chrome wrapper, just the
  * word map the two contracts need to agree.
  */
-import type { ComponentProps, ReactNode } from 'react';
+import { type Primitives, PrimitivesProvider } from '@tai42/jq-studio';
 import {
   Badge,
   Button,
@@ -25,11 +25,11 @@ import {
   ConfirmDialog,
   Dialog,
   Select,
-  TextInput,
   Textarea,
+  TextInput,
   Tooltip,
 } from '@tai42/studio-sdk';
-import { PrimitivesProvider, type Primitives } from '@tai42/jq-studio';
+import type { ComponentProps, ReactNode } from 'react';
 
 /**
  * The `Badge` primitive's prop shape as jq-studio hands it to the injected

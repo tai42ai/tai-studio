@@ -1,13 +1,12 @@
-import { useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
-
-import { schemas } from '@tai42/api-client';
 import type { FormOption, FormPage } from '@tai42/api-client';
-import { Button, SchemaForm, validateAgainstSchema } from '@tai42/studio-sdk';
+import { schemas } from '@tai42/api-client';
 import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
+import { Button, SchemaForm, validateAgainstSchema } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 
-import { initialFormValue, isPlainObject, schemaWithSendOptions } from './answer-schema';
 import type { AnswerRendererProps } from './answer-schema';
+import { initialFormValue, isPlainObject, schemaWithSendOptions } from './answer-schema';
 import { MalformedPayload } from './malformed-payload';
 import {
   answerStackStyle,

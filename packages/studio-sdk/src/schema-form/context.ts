@@ -4,8 +4,8 @@
  * renderer, and the expression-field door. A field deep in the tree reads these
  * here rather than every intermediate node drilling the prop.
  */
-import { createContext } from 'react';
 import type { ComponentType, ReactNode } from 'react';
+import { createContext } from 'react';
 
 import { DEFAULT_MAX_UPLOAD_BYTES } from './media';
 import type { CompletionProvider } from './SchemaForm';

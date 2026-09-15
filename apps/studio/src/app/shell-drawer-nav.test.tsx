@@ -13,10 +13,10 @@
  *      is an orphaned modal AND a second VISIBLE "Primary" landmark beside the
  *      re-shown sidebar.
  */
-import { afterEach, describe, expect, it } from 'vitest';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { installServer, renderStudio, server } from './test-harness';
 

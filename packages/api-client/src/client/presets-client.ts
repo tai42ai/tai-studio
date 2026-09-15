@@ -1,6 +1,6 @@
 /** Preset CRUD, versioning and validation sub-client. */
-import * as s from '../schemas';
 import { encodeSegment } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 /**

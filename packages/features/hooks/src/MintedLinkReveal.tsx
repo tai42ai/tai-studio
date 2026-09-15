@@ -3,9 +3,9 @@
  * caption and a loud "shown once" note. There is no reopen/regenerate affordance —
  * the server cannot reproduce the token — so the only way out is the Done button.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { Button, CopyField } from '@tai42/studio-sdk';
 import type { TriggerLinkCreated } from '@tai42/api-client';
+import { Button, CopyField } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { formatExpiry } from './expiry';
 

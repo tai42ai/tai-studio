@@ -10,10 +10,11 @@ import './styles.css';
 // editor chrome that the injected SDK primitives (see JqPrimitivesProvider) don't
 // already style.
 import '@tai42/jq-studio/styles.css';
+
+import { createApiClient } from '@tai42/api-client';
+import { installDefaultJqWorker } from '@tai42/jq-studio';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { installDefaultJqWorker } from '@tai42/jq-studio';
-import { createApiClient } from '@tai42/api-client';
 
 import { createStudio } from './app/create-studio';
 import { installStaleChunkReload } from './stale-chunk-reload';

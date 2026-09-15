@@ -6,12 +6,12 @@
  * card; and a cold deep link to a plugin page resolves through the gate (no 404 on
  * first paint).
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor } from '@testing-library/react';
 import { type PluginContext } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
+import { screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { installServer, renderStudio, server } from './test-harness';
 

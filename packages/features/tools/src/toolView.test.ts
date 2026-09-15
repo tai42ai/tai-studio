@@ -3,8 +3,8 @@
  * the view exposes native and overlay apart (the edit dialog wants them apart) AND
  * their deduped, sorted UNION (every other surface shows the merged set).
  */
-import { describe, expect, it } from 'vitest';
 import type { ToolMetaRecord, ToolTagEntry } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { buildToolViews } from './toolView';
 

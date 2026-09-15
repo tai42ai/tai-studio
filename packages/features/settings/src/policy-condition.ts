@@ -3,8 +3,8 @@
  * editor authors against, the sample-context parse rules, and the fail-closed
  * server-validate hook bound to the `validate-condition` guard.
  */
-import { errorMessage, type useApi } from '@tai42/studio-sdk';
 import { type JqInputShapeDescriptor, type ServerValidateHook } from '@tai42/jq-studio';
+import { errorMessage, type useApi } from '@tai42/studio-sdk';
 
 import { isPlainObject } from './policy-data';
 

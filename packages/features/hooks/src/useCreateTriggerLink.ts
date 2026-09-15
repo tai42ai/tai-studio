@@ -6,18 +6,18 @@
  * params values are validated locally, so a bad value blocks submit before any
  * request fires.
  */
-import { useMemo, useState, type SyntheticEvent } from 'react';
-import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
-import { renderSVG } from 'uqr';
-import { errorMessage, useApi } from '@tai42/studio-sdk';
 import type { TriggerLinkCreateBody, TriggerLinkCreated } from '@tai42/api-client';
+import { errorMessage, useApi } from '@tai42/studio-sdk';
+import { useMutation, type UseMutationResult, useQueryClient } from '@tanstack/react-query';
+import { type SyntheticEvent, useMemo, useState } from 'react';
+import { renderSVG } from 'uqr';
 
-import { TRIGGER_LINKS_KEY_ROOT } from './keys';
 import { composeTriggerUrl } from './compose-trigger-url';
-import { resolveTtlSeconds, type ExpiryChoice } from './expiry';
 import { useExecutionKeys } from './ExecutionKeyPicker';
+import { type ExpiryChoice, resolveTtlSeconds } from './expiry';
 import { fireGateUnsatisfiable } from './fire-path-gate';
 import { parseJsonObject } from './jsonObjectField';
+import { TRIGGER_LINKS_KEY_ROOT } from './keys';
 
 interface CreateBodyValues {
   readonly topic: string;

@@ -9,7 +9,8 @@
  * populating the topic → door map, so they run against the booted skeleton this
  * config starts, not against a stub.
  */
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
+
 import { API_KEY, EXECUTION_KEY_ID, loginViaUi, pickExecutionKey } from './helpers';
 
 /** The register form — the page also carries a topic filter and the bind form. */

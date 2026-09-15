@@ -1,15 +1,15 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
 import type { ReactElement } from 'react';
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Dialog } from './dialog';
 import type { DialogProps } from './dialog';
-import { Drawer } from './drawer';
+import { Dialog } from './dialog';
 import type { DrawerProps } from './drawer';
-import { Tooltip } from './tooltip';
+import { Drawer } from './drawer';
 import type { TooltipProps } from './tooltip';
+import { Tooltip } from './tooltip';
 
 /**
  * Non-distributive on purpose: `T extends U` distributes over a union and

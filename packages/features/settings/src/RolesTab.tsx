@@ -19,26 +19,26 @@
  * only for a caller whose projection reaches it. Every server-supplied string renders
  * as escaped text through the design system; every failure surfaces loudly.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { RoleBody } from '@tai42/api-client';
 import {
   Badge,
   Button,
   Card,
   ConfirmDialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   Spinner,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { RoleBody } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { authRoutesKey, rolesKey } from './keys';
 import { CreateRoleDialog } from './CreateRoleDialog';
-import { RoleVersionsDialog } from './RoleVersionsDialog';
-import { RESERVED_ADMIN_ROLE, baseTierLabel, featureGroupsOf } from './role-grants';
+import { authRoutesKey, rolesKey } from './keys';
+import { baseTierLabel, featureGroupsOf, RESERVED_ADMIN_ROLE } from './role-grants';
 import { RoleDetailPanel } from './RoleDetailPanel';
+import { RoleVersionsDialog } from './RoleVersionsDialog';
 
 const stackStyle: CSSProperties = {
   display: 'flex',

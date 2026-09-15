@@ -8,13 +8,13 @@
  * globally-mounted `InteractionsBadge` opens it, and none of these tests exercise
  * live interactions, so an empty stream keeps them from needing an SSE mock.
  */
-import { StrictMode } from 'react';
-import { cleanup, render, type RenderResult } from '@testing-library/react';
+import { type ApiClient, createApiClient, type MeProjection } from '@tai42/api-client';
 import { createMemoryHistory } from '@tanstack/react-router';
+import { cleanup, render, type RenderResult } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { setupServer, type SetupServer } from 'msw/node';
+import { type SetupServer, setupServer } from 'msw/node';
+import { StrictMode } from 'react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
-import { createApiClient, type ApiClient, type MeProjection } from '@tai42/api-client';
 
 import { createStudio, type Studio } from './create-studio';
 import type { ImportModule, LoadStylesheet } from './plugin-loader';

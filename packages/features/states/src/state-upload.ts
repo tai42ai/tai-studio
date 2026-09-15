@@ -5,9 +5,9 @@
  * conflict (a narrowing over records, or a stranding kind removal) with no replace flag,
  * so it surfaces loudly. Every upload failure is a loud inline message, never swallowed.
  */
-import { useState, type ChangeEvent } from 'react';
-import { errorMessage, useApi } from '@tai42/studio-sdk';
 import { ApiError, type StateTemplateBody } from '@tai42/api-client';
+import { errorMessage, useApi } from '@tai42/studio-sdk';
+import { type ChangeEvent, useState } from 'react';
 
 import { readJsonObjectFile } from './readJsonObjectFile';
 

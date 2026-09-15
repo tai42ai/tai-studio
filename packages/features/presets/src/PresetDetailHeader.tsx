@@ -3,9 +3,8 @@
  * quarantined record) and the lifecycle action cluster. The heading is the focus
  * target for the page's master/detail focus management (WCAG 2.4.3).
  */
-import type { CSSProperties, ReactNode, Ref } from 'react';
-
 import { Badge } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode, Ref } from 'react';
 
 import { PresetDetailActions } from './PresetDetailActions';
 

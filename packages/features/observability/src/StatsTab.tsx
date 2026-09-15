@@ -5,23 +5,31 @@
  * the current filter set in the URL. A 501 from the reader renders the dedicated
  * read-not-supported state; every other failure is a loud, visible error.
  */
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import type { DashboardMetrics } from '@tai42/api-client';
 import {
   Button,
   Card,
   DateRangePicker,
   EmptyState,
+  errorMessage,
   ErrorState,
   Select,
   Skeleton,
-  errorMessage,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { AreaChart, BarList, type AreaPoint, type BarItem } from './charts';
+import { AreaChart, type AreaPoint, type BarItem, BarList } from './charts';
+import {
+  type Granularity,
+  mergeSearch,
+  metricsParams,
+  type ObservabilitySearch,
+  rangeToPatch,
+  searchToRange,
+} from './filters';
 import {
   formatCost,
   formatLatencyMs,
@@ -29,14 +37,6 @@ import {
   formatTimestamp,
   formatTokenCount,
 } from './format';
-import {
-  metricsParams,
-  mergeSearch,
-  rangeToPatch,
-  searchToRange,
-  type Granularity,
-  type ObservabilitySearch,
-} from './filters';
 import { metricsKey } from './keys';
 import { isReadNotSupported, ReadNotSupported } from './read-support';
 

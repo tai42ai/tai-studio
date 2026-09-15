@@ -3,13 +3,13 @@
  * save version), mounted only while open. Grouped so the detail panel composes one
  * host rather than four inline conditional mounts.
  */
-import type { ReactNode } from 'react';
 import type { PresetDetail } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 
-import { SaveVersionDialog } from './SaveVersionDialog';
 import { DeletePresetDialog } from './DeletePresetDialog';
-import { RenamePresetDialog } from './RenamePresetDialog';
 import { EditOverlayDialog } from './EditOverlayDialog';
+import { RenamePresetDialog } from './RenamePresetDialog';
+import { SaveVersionDialog } from './SaveVersionDialog';
 
 export function PresetDetailDialogs({
   preset,

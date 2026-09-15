@@ -14,7 +14,7 @@
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 import { seedCredential } from './helpers';
 

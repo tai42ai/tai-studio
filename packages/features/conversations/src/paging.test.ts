@@ -4,8 +4,8 @@
  * within its cap, and the trim that restarts a paused pane keeps the newest page
  * alone — a no-op when the query holds nothing yet.
  */
+import { type InfiniteData, QueryClient } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
-import { QueryClient, type InfiniteData } from '@tanstack/react-query';
 
 import { boundedRefresh, dedupeBy, trimToNewestPage, withinRefreshWindow } from './paging';
 

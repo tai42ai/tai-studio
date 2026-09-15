@@ -7,25 +7,25 @@
  * `useRegisterDirty` reports a diverging draft so a tab switch confirms before the
  * unsaved profile is dropped.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   FormDialog,
   Skeleton,
   TextInput,
-  errorMessage,
   useApi,
   useRegisterDirty,
 } from '@tai42/studio-sdk';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { settingsProfileKey, settingsProfileVersionsKey, settingsProfilesKey } from './keys';
-import { SECRET_MARKS_ENV_VAR } from './settings-secrets';
-import { EnvVarRows, useEnvVarRows, type EnvVarRowsState } from './env-var-rows';
+import { EnvVarRows, type EnvVarRowsState, useEnvVarRows } from './env-var-rows';
+import { settingsProfileKey, settingsProfilesKey, settingsProfileVersionsKey } from './keys';
 import { isSecretKey, type ProfileBody } from './profile-secrets';
+import { SECRET_MARKS_ENV_VAR } from './settings-secrets';
 
 const fieldStyle: CSSProperties = {
   display: 'flex',

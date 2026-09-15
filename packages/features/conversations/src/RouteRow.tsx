@@ -4,10 +4,9 @@
  * target, and the write-gated Edit / Delete actions. Every server-supplied value
  * renders as escaped React text; no route field is interpreted as markup.
  */
-import type { ReactNode } from 'react';
-
-import { AppLink, Badge, Button, TD, TR } from '@tai42/studio-sdk';
 import type { ConversationRoute } from '@tai42/api-client';
+import { AppLink, Badge, Button, TD, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { EMPTY_PLACEHOLDER } from './format';
 

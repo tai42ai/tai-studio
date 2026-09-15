@@ -27,14 +27,14 @@
  * icon MARK plus a word LABEL, with the tone color only reinforcing them, so the
  * report is readable without color perception.
  */
-import type { ReactNode } from 'react';
 import type {
-  FleetReportSummary,
   FleetFailureOutcome,
+  FleetReportSummary,
   FleetWorkerFailure,
 } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 
-import { AlertTriangleIcon, PendingIcon, XCircleIcon, type IconComponent } from './icons';
+import { AlertTriangleIcon, type IconComponent, PendingIcon, XCircleIcon } from './icons';
 
 /** Human labels for the per-worker non-applied outcomes. */
 const OUTCOME_LABEL: Record<FleetFailureOutcome, string> = {

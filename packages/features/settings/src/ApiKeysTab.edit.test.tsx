@@ -1,11 +1,10 @@
 // The edit dialog mounts the full policy editor plus the template and condition
 // seams, so its flows are a heavy render chain — the file gets explicit testTimeout
 // headroom, and userEvent runs without its inter-key delay.
+import type { ApiClient, TokensPayload } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, TokensPayload } from '@tai42/api-client';
 
 import { ApiKeysTab } from './ApiKeysTab';
 import { fullProjection, renderWithProviders } from './test-utils';

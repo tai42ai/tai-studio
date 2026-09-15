@@ -21,12 +21,12 @@
  * relative `/api/` path (checked in the method view) or it renders a loud error
  * card instead of a credential-leaking off-origin request.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { Card, Checkbox, useAuth, useTheme } from '@tai42/studio-sdk';
+import { useNavigate } from '@tanstack/react-router';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
-import { SIGN_OUT_NOTICE, visibleMethods } from './login-methods';
 import { KeyPasteForm, LoginNotices, MethodView } from './login-method-view';
+import { SIGN_OUT_NOTICE, visibleMethods } from './login-methods';
 import { SIGN_OUT_NOTICE_KEY } from './sign-out-notice';
 import { useClaimLogin } from './use-claim-login';
 import { useLoginForm } from './use-login-form';

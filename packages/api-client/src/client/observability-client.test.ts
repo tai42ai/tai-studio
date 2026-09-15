@@ -9,8 +9,8 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
+import { type ApiConfig, ApiError, ApiSchemaError, type RunsQuery } from '../index';
 import { createApiClient } from './index';
-import { ApiError, ApiSchemaError, type ApiConfig, type RunsQuery } from '../index';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

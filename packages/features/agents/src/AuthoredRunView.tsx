@@ -3,25 +3,24 @@
  * authored-run endpoint, with the run form showing only the NON-baked `ToolInput`
  * fields (the baked spec keys are resolved server-side).
  */
-import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
 import {
   ArrowLeftIcon,
   Button,
+  errorMessage,
   ErrorState,
+  type JsonSchema,
   Skeleton,
   Stack,
-  errorMessage,
   useApi,
   useCanWrite,
-  type JsonSchema,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { StreamRunView, useAuthoredAgentRun } from './run-view';
-import { authoredPresetKey } from './keys';
-import type { AuthoredRunTarget } from './authoring-types';
 import { ALL_SPEC_FIELDS, schemaProps } from './authoring-schema';
+import type { AuthoredRunTarget } from './authoring-types';
+import { authoredPresetKey } from './keys';
+import { StreamRunView, useAuthoredAgentRun } from './run-view';
 
 /**
  * The run input schema: the base agent's `ToolInput` with BOTH the baked (fixed)

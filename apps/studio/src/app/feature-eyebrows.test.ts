@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { DASHBOARD_TOKEN, FEATURE_TOKENS, NAV_SECTIONS, type FeatureToken } from './routes';
+import { DASHBOARD_TOKEN, FEATURE_TOKENS, type FeatureToken, NAV_SECTIONS } from './routes';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
 const featuresDir = resolve(repoRoot, 'packages/features');

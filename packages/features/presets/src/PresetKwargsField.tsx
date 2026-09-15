@@ -3,9 +3,8 @@
  * declared input field names when they resolve. A malformed body blocks submit with
  * the parser message (surfaced via `error`), never a silent empty bake.
  */
-import type { ReactNode } from 'react';
-
 import { Field, Textarea } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function PresetKwargsField({
   hints,

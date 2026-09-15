@@ -1,12 +1,11 @@
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-
 import {
   ApiError,
   type MarketplaceInstallPreview,
   type MarketplacePluginDetail,
 } from '@tai42/api-client';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { PluginDetail } from './PluginDetail';
 import {

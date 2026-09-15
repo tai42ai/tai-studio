@@ -4,9 +4,9 @@
  * slow or failing per-row read never walls the list. The caller supplies the query and a
  * selector that derives the count from its data.
  */
-import type { ReactNode } from 'react';
+import { errorMessage, Skeleton, useApi } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
-import { Skeleton, errorMessage, useApi } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export interface LazyCountCellProps<T> {
   readonly queryKey: readonly unknown[];

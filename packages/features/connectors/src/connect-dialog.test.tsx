@@ -2,10 +2,10 @@
  * Tests for the CONNECT form: OAuth providers hand off to the popup flow; no-auth
  * providers complete immediately; the alias is required before submit.
  */
+import { ApiError } from '@tai42/api-client';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError } from '@tai42/api-client';
 
 import { ConnectDialog } from './connect-dialog';
 import { OAUTH_MESSAGE_TYPE } from './oauth';

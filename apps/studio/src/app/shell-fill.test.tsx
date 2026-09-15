@@ -4,14 +4,14 @@
  * that does not keeps the default content-sized `.tai-page`; and navigating away
  * from a fill page removes the modifiers again.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor, act } from '@testing-library/react';
 import type { PluginContext } from '@tai42/studio-sdk';
 import { useFillViewport } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
+import { act, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { installServer, renderStudio, server, type HarnessResult } from './test-harness';
+import { type HarnessResult, installServer, renderStudio, server } from './test-harness';
 
 installServer();
 

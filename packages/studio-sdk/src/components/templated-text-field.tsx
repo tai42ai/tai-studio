@@ -24,17 +24,16 @@
  * its kwargs, never converted or dropped. See `storageAbsent` /
  * `storagePresenceLoading`.
  */
-import { useState, type ReactNode } from 'react';
-
 import type { TemplatedText } from '@tai42/api-client';
+import { type ReactNode, useState } from 'react';
 
 import { Field } from './field';
 import {
   initialMode,
-  objectToRows,
-  templatedValueFrom,
   type KwargRow,
   type Mode,
+  objectToRows,
+  templatedValueFrom,
 } from './templated-text-kwargs';
 import { KwargsEditor, ReadOnlyKwargs } from './templated-text-kwargs-editor';
 import { TemplatedTextSource } from './templated-text-source';

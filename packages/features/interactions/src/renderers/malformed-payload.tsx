@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Badge } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { malformedStyle } from './renderer-styles';
 

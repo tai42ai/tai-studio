@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApiClient } from './client';
 import { ApiError, ApiSchemaError } from './errors';
 import type { ApiConfig } from './http';
-import { toolRunList, toolRunRecord, isTerminalRunStatus } from './tool-runs';
+import { isTerminalRunStatus, toolRunList, toolRunRecord } from './tool-runs';
 
 /** A fetch mock whose first arg is always the (string) request URL our transport
  * builds; the cast bridges the narrowed signature to `typeof fetch`. */

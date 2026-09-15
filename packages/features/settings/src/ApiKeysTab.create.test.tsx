@@ -3,11 +3,10 @@
 // but slow. The whole file gets explicit testTimeout headroom; correctness stays gated
 // by real assertions and awaited signals. userEvent runs without its inter-key delay so
 // a loaded runner cannot push a keystroke chain past the suite timeout.
+import { type ApiClient, ApiError, type TokensPayload } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, type ApiClient, type TokensPayload } from '@tai42/api-client';
 
 import { ApiKeysTab } from './ApiKeysTab';
 import { fullProjection, renderWithProviders } from './test-utils';

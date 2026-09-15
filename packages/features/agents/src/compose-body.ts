@@ -6,8 +6,8 @@
 import type { AgentSummary, CreatePresetBody } from '@tai42/api-client';
 import type { JsonSchema } from '@tai42/studio-sdk';
 
+import { hasField, RESPONSE_FORMAT_FIELD, SCHEMA_FORM_EXTRA_FIELDS } from './authoring-schema';
 import type { InlinePresetSpec, InlineSubAgentSpec } from './authoring-types';
-import { RESPONSE_FORMAT_FIELD, SCHEMA_FORM_EXTRA_FIELDS, hasField } from './authoring-schema';
 
 /** Every input the compose dialog bakes into a create body. */
 export interface ComposeBodySpec {

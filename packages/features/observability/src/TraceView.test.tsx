@@ -6,13 +6,13 @@
  * metadata panes, escaped payloads, jump-to-error / jump-to-slowest, and the
  * export → download flow.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, type RunSpan, type RunTrace } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type RunSpan, type RunTrace } from '@tai42/api-client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TraceView } from './TraceView';
 import { renderWithProviders, type StubApiClient } from './test-utils';
+import { TraceView } from './TraceView';
 
 afterEach(() => {
   vi.restoreAllMocks();

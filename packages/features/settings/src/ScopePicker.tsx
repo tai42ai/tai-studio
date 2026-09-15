@@ -2,8 +2,8 @@
  * A multi-select of scope ids rendered as a row of checkboxes, used by the
  * create and edit key dialogs to pick the scopes a key is granted.
  */
-import type { ReactNode } from 'react';
 import { Checkbox } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { badgeRowStyle } from './api-keys-styles';
 

@@ -1,5 +1,6 @@
 /** Hook listing, registration and topic-verifier response schemas. */
 import { z } from 'zod';
+
 import { hookParams } from './served';
 
 // The hand-written hook response DTOs: the fire-door authority enum, the list rows and

@@ -19,7 +19,7 @@
  * SAFETY: the schema text is operator-authored and every derived value renders as
  * React TEXT (through the DS controls / `JsonTree` / `SchemaForm`), never an HTML sink.
  */
-import { Component, useMemo, useState, type ReactNode } from 'react';
+import { Component, type ReactNode, useMemo, useState } from 'react';
 
 import { Field } from '../components/field';
 import { Textarea } from '../components/inputs';

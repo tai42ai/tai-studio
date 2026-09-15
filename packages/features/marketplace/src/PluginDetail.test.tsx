@@ -1,8 +1,7 @@
+import { type MarketplacePluginDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { type MarketplacePluginDetail } from '@tai42/api-client';
 
 import { PluginDetail } from './PluginDetail';
 import {

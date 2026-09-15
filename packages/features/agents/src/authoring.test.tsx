@@ -8,11 +8,10 @@
  *  - a run whose stream open 400s surfaces the server message verbatim;
  *  - user-supplied names render as ESCAPED text (XSS-safe).
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { AgentsPage } from './agents';
 import { FULL_TRANSCRIPT, parse } from './fixtures';

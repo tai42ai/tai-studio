@@ -4,24 +4,24 @@
  * of the page shell so the visibility gating and the ordering are testable and the
  * page component stays thin.
  */
-import type { ReactNode } from 'react';
+import type { MeProjection } from '@tai42/api-client';
 import {
-  ErrorBoundary,
-  coversAnyRoute,
-  isFullProjection,
   type CapabilityState,
+  coversAnyRoute,
+  ErrorBoundary,
+  isFullProjection,
   type RequiredCapabilities,
   type TabItem,
 } from '@tai42/studio-sdk';
-import type { MeProjection } from '@tai42/api-client';
 import type { usePluginContributions } from '@tai42/studio-sdk/host';
+import type { ReactNode } from 'react';
 
-import { SettingsTab } from './SettingsTab';
-import { EnvironmentTab } from './EnvironmentTab';
 import { ApiKeysTab } from './ApiKeysTab';
 import { BackupTab } from './BackupTab';
-import { RolesTab } from './RolesTab';
+import { EnvironmentTab } from './EnvironmentTab';
 import { ProfilesTab } from './ProfilesTab';
+import { RolesTab } from './RolesTab';
+import { SettingsTab } from './SettingsTab';
 
 type PluginContributions = ReturnType<typeof usePluginContributions>;
 

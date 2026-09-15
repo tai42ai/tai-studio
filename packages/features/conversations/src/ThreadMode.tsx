@@ -9,10 +9,10 @@
  * hiding the control — a read-only session may set neither, and the refusal is
  * shown, never swallowed.
  */
-import { type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Card, Checkbox, ErrorState, Skeleton, errorMessage, useApi } from '@tai42/studio-sdk';
 import type { ConversationThreadMode } from '@tai42/api-client';
+import { Card, Checkbox, errorMessage, ErrorState, Skeleton, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode } from 'react';
 
 import { conversationThreadModeKey } from './keys';
 

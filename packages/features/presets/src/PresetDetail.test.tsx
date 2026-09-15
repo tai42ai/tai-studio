@@ -4,17 +4,16 @@
  * reload, tool_meta-off note), the New version / output-schema / conflicted-record
  * surfaces, and the basic rename affordance + a successful rename.
  */
-import { describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-
+import { ApiError } from '@tai42/api-client';
 import { toolsListKey } from '@tai42/studio-sdk';
 import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
-import { ApiError } from '@tai42/api-client';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
+import { presetDetailKey, presetsListKey, presetToolMetaKey, presetVersionsKey } from './keys';
 import { PresetDetail } from './PresetDetail';
-import { presetDetailKey, presetToolMetaKey, presetVersionsKey, presetsListKey } from './keys';
-import { detail, emptyMeta, renderWithProviders, versions, type StubApiClient } from './test-utils';
+import { detail, emptyMeta, renderWithProviders, type StubApiClient, versions } from './test-utils';
 
 describe('PresetDetail', () => {
   it('renders the active fixed_kwargs via JsonTree and the active version', async () => {

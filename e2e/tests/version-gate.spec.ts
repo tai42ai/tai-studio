@@ -6,8 +6,9 @@
  * higher-version fixture would wrongly pass), and a `>=` bug would reject valid
  * plugins.
  */
-import { test, expect } from '@playwright/test';
-import { seedCredential, expectPluginErrorCard } from './helpers';
+import { expect, test } from '@playwright/test';
+
+import { expectPluginErrorCard, seedCredential } from './helpers';
 
 const REGISTRY_PATH = '/api/plugins';
 

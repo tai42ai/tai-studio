@@ -4,8 +4,8 @@
  * shared completion side effects, and the popup open/watch primitives. A message is
  * acted on ONLY when its origin, source, and type all match.
  */
-import { summarizeFleetFanout } from '@tai42/api-client';
 import type { FleetReportSummary, OAuthCompleteResult } from '@tai42/api-client';
+import { summarizeFleetFanout } from '@tai42/api-client';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { CONNECTIONS_KEY } from './keys';

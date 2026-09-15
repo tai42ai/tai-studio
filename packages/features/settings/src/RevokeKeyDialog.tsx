@@ -2,9 +2,9 @@
  * The revoke confirmation dialog: deletes a key after the user confirms,
  * immediately stopping it from authenticating.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { tokensPayloadKey } from './keys';
 

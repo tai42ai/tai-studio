@@ -10,10 +10,10 @@
  * `![alt](url)` collapses to its `alt` text, so no source URL is fetched. Fenced
  * code goes to `CodeBlock`, itself text-only.
  */
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
 import { CodeBlock } from './code-block';
-import { parseMarkdown, type HeadingLevel, type MarkdownBlock } from './markdown-blocks';
+import { type HeadingLevel, type MarkdownBlock, parseMarkdown } from './markdown-blocks';
 import { renderInline } from './markdown-inline';
 
 export type { HeadingLevel, MarkdownBlock } from './markdown-blocks';

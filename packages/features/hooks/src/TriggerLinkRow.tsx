@@ -3,12 +3,12 @@
  * door, expiry, a params indicator, the token hash prefix, and a per-row revoke
  * (shown only to a writer). The raw token is never shown — only its hash prefix.
  */
-import type { ReactNode } from 'react';
-import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
 import type { TriggerLinkRecord } from '@tai42/api-client';
+import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import { describeTriggerAuth } from './trigger-auth';
 import { formatExpiry } from './expiry';
+import { describeTriggerAuth } from './trigger-auth';
 
 /** A link carries params when `tool_kwargs` is a NON-EMPTY object; `{}` and `null`
  * both read as param-less. */

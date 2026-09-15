@@ -5,9 +5,9 @@ import {
   ERROR_TRANSCRIPT,
   FULL_TRANSCRIPT,
   INTERLEAVED_DELTA_TRANSCRIPT,
+  parse,
   UNKNOWN_TRANSCRIPT,
   UNMATCHED_RESULT_TRANSCRIPT,
-  parse,
 } from './fixtures';
 
 describe('buildTimeline', () => {

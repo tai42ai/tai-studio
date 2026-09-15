@@ -1,6 +1,5 @@
-import { describe, expect, it } from 'vitest';
-
 import type { ToolMetaRecord, ToolTagEntry } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { mergeToolBadges, toolBadgesByName } from './tool-badges';
 

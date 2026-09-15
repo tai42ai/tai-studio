@@ -6,8 +6,8 @@
  * `aria-describedby`, and its `aria-invalid` stay wired without the caller
  * threading ids by hand.
  */
-import { createContext, useContext, useId } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { createContext, useContext, useId } from 'react';
 
 import { XCircleIcon } from './icons';
 

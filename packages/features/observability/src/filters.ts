@@ -11,8 +11,8 @@
  * hand-edited URL is repaired to a legal query before it reaches the backend, and
  * the widgets that would create the combo interactively are guarded on both sides.
  */
-import type { PageProps, DateRangeValue } from '@tai42/studio-sdk';
 import type { MetricsQuery, RunsQuery } from '@tai42/api-client';
+import type { DateRangeValue, PageProps } from '@tai42/studio-sdk';
 
 /** The full observability route search state (tab + drill-in trace + filters). */
 export type ObservabilitySearch = PageProps<'observability'>['search'];

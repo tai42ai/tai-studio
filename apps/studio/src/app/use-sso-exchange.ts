@@ -4,10 +4,10 @@
  * strip the param. A `useRef` latch runs the exchange exactly once — strict-mode's
  * double effect invoke would otherwise consume the single-use code twice and fail.
  */
-import { useEffect, useRef, type RefObject } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useApi, useAuth } from '@tai42/studio-sdk';
 import { ApiLoginFailedError } from '@tai42/api-client';
+import { useApi, useAuth } from '@tai42/studio-sdk';
+import { useNavigate } from '@tanstack/react-router';
+import { type RefObject, useEffect, useRef } from 'react';
 
 import { GENERIC_ERROR } from './login-methods';
 

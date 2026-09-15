@@ -3,10 +3,10 @@
  * queries, the editable working copy, and the save mutation — plus the pure combo
  * updaters the row controls drive.
  */
-import { useCallback, useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { toolsListKey, useApi } from '@tai42/studio-sdk';
 import type { PresetExtensionElement } from '@tai42/api-client';
+import { toolsListKey, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useState } from 'react';
 
 import { applyToolsKey, comboLoadKey, extensionsQueryKey, type ToolExtensionsOrigin } from './keys';
 

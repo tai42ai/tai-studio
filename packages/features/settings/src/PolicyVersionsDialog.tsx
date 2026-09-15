@@ -16,21 +16,21 @@
  * history) is the honest EMPTY state, distinguished from a real load failure by
  * `ApiError.status === 404`; any other error stays a loud `ErrorState`.
  */
-import { type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '@tai42/api-client';
 import {
   Button,
   Card,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  VersionHistoryPanel,
-  errorMessage,
   useApi,
   type VersionHistoryEntry,
+  VersionHistoryPanel,
 } from '@tai42/studio-sdk';
-import { ApiError } from '@tai42/api-client';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode } from 'react';
 
 import { policyVersionsKey, tokensPayloadKey } from './keys';
 

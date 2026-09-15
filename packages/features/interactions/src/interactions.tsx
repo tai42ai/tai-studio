@@ -13,27 +13,26 @@
  *     answering it and refetches the paged base. A failed cancel keeps the dialog
  *     open with its specific, non-retryable copy — never a half-open state.
  */
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-
+import type { PageProps, StreamInteraction } from '@tai42/studio-sdk';
 import {
   ConfirmDialog,
   EmptyState,
   ErrorState,
   FeatureDisabled,
   featureDisabledMessage,
+  isFullProjection,
   PageHeader,
   Stack,
-  isFullProjection,
   useApi,
   useCapabilities,
 } from '@tai42/studio-sdk';
-import type { PageProps, StreamInteraction } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 import { ChannelsCard } from './ChannelsCard';
-import { InboxList, InboxLoading } from './InboxList';
 import { resolveCancelError, resolveErrorMessage } from './inbox-messages';
+import { InboxList, InboxLoading } from './InboxList';
 import { inboxKey } from './keys';
 import { INBOX_PAGE_SIZE, useInbox } from './use-inbox';
 

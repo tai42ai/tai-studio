@@ -4,15 +4,14 @@
  * non-empty list, allows on empty, degrades to advisory on a fetch error), and the
  * post-delete `?preset=` clear.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { toolsListKey } from '@tai42/studio-sdk';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
-import { toolsListKey } from '@tai42/studio-sdk';
-
+import { presetDetailKey, presetRefereesKey, presetsListKey, presetVersionsKey } from './keys';
 import { PresetDetail } from './PresetDetail';
-import { presetDetailKey, presetRefereesKey, presetVersionsKey, presetsListKey } from './keys';
-import { detail, emptyMeta, renderWithProviders, versions, type StubApiClient } from './test-utils';
+import { detail, emptyMeta, renderWithProviders, type StubApiClient, versions } from './test-utils';
 
 describe('PresetDetail — rename preflight + delete', () => {
   it('renders a rejected rename’s server message verbatim, including the referee list', async () => {

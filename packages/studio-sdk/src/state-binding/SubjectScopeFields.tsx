@@ -6,8 +6,8 @@
  */
 import type { ReactNode } from 'react';
 
-import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import type { TemplateJqSuggestion } from './BindingJqField';
+import { BindingTemplatedJqField } from './BindingTemplatedJqField';
 import type { TemplatedText, TemplatedTextCatalog } from './types';
 
 export interface SubjectScopeFieldsProps {

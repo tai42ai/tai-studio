@@ -1,6 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react';
-
 import { AlertTriangleIcon, AppLink, Badge } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { useInbox } from './use-inbox';
 

@@ -2,8 +2,8 @@
  * The multi-select tools fieldset for the create-sub-MCP form: a scrollable
  * checkbox list of the available tools, with the loading/error/empty branches.
  */
+import { Checkbox, EmptyState, errorMessage, ErrorState, Skeleton } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-import { Checkbox, EmptyState, ErrorState, Skeleton, errorMessage } from '@tai42/studio-sdk';
 
 /** The minimal tools-list query shape this fieldset reads. */
 interface ToolsQueryLike {

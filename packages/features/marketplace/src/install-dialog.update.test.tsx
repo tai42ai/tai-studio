@@ -3,11 +3,10 @@
  * edit-free update omits untouched items, so a non-default base survives. Renders the
  * same dialog as the sibling install test.
  */
-import { describe, expect, it, vi } from 'vitest';
+import type { MarketplaceInstallPreview } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import type { MarketplaceInstallPreview } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MountInstallDialog, type RouteItem } from './install-dialog';
 import { renderWithProviders, type StubApiClient } from './test-utils';

@@ -15,8 +15,6 @@
  * SAFETY: a preset carries arbitrary server-supplied strings, so every cell renders
  * them as ESCAPED text through the DS components, never an HTML sink.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import type { PresetRecord } from '@tai42/api-client';
 import {
   AppLink,
@@ -24,27 +22,29 @@ import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
+  openTargetProps,
   ScrollRegion,
   Skeleton,
   Spinner,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
-  openTargetProps,
   useApi,
   useAppNavigate,
   useFeatureOffMessage,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import { CreatePresetForm } from './CreatePresetForm';
+import { presetsListKey, presetToolMetaKey } from './keys';
 import { TagChips } from './tags';
-import { presetToolMetaKey, presetsListKey } from './keys';
 
 /** A tool's overlay projection the table cells read: its display name + user tags. */
 interface OverlayDetail {

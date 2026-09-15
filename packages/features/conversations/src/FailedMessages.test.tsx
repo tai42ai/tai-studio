@@ -3,10 +3,10 @@
  * state, the rows with their route/address preface and the admin `error` detail, and
  * the 403 capability boundary a scoped session hits.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { FailedMessages } from './FailedMessages';
 import { makeMessage, renderWithProviders } from './test-utils';

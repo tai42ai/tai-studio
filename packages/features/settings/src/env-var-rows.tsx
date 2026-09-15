@@ -5,8 +5,8 @@
  * merge-vs-replace save, dirty signature, and the secret predicate — are injected
  * as props/callbacks; none is branched inside this module.
  */
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Badge, Button, Checkbox, RevealInput, TextInput } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react';
 
 import { SECRET_MARKS_ENV_VAR } from './settings-secrets';
 

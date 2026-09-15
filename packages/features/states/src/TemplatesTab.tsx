@@ -5,20 +5,20 @@
  * guarded delete. Attach / edit run through {@link AttachTemplateDialog} and
  * {@link EditDeclarationsDialog}.
  */
-import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { StateAttachment, StateDetail } from '@tai42/api-client';
 import {
   FeatureDisabled,
   featureDisabledMessage,
   isFeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
-import type { StateAttachment, StateDetail } from '@tai42/api-client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { stateAttachmentsKey, stateDetailKey, stateTemplatesKey, statesListKey } from './keys';
 import { AttachmentsTable } from './AttachmentsTable';
 import { AttachTemplateDialog } from './AttachTemplateDialog';
 import { EditDeclarationsDialog } from './EditDeclarationsDialog';
+import { stateAttachmentsKey, stateDetailKey, statesListKey, stateTemplatesKey } from './keys';
 import { TemplateCatalog } from './TemplateCatalog';
 
 export function TemplatesTab({ state }: { readonly state: StateDetail }): ReactNode {

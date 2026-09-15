@@ -18,8 +18,8 @@ import { ObjectFields } from './object-fields';
 import { RecordField } from './record-field';
 import { scalarLabel } from './resolve';
 import { StringField } from './string-field';
-import { UnionField } from './union-field';
 import type { JsonSchema, SchemaFormErrors } from './types';
+import { UnionField } from './union-field';
 
 interface FieldNodeProps {
   readonly schema: JsonSchema;

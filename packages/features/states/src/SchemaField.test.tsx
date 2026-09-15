@@ -4,12 +4,12 @@
  * tests pin that the generated zod accepts BOTH arms, that an inline edit emits the parsed
  * dict, and that a stored reference is shown read-only when storage is absent.
  */
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
 import { schemas } from '@tai42/api-client';
 import type { TemplatedTextCatalog } from '@tai42/studio-sdk';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
-import { SchemaField, storedSchemaRef, type SchemaFieldChange } from './SchemaField';
+import { SchemaField, type SchemaFieldChange, storedSchemaRef } from './SchemaField';
 
 /** A minimal valid served declaration, its `schema` swapped per case. */
 function declaration(schema: unknown): Record<string, unknown> {

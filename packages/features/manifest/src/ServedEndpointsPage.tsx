@@ -14,8 +14,8 @@
  *
  * Every mutation invalidates `subMcpKey` so the list re-fetches.
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SubMcpMount } from '@tai42/api-client';
+import type { PageProps, RadioOption } from '@tai42/studio-sdk';
 import {
   Badge,
   Button,
@@ -24,6 +24,7 @@ import {
   CopyField,
   Dialog,
   EmptyState,
+  errorMessage,
   ErrorState,
   Field,
   PageHeader,
@@ -32,23 +33,22 @@ import {
   Skeleton,
   Spinner,
   Stack,
+  Table,
   TBody,
   TD,
+  TextInput,
   TH,
   THead,
   TR,
-  Table,
-  TextInput,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { PageProps, RadioOption } from '@tai42/studio-sdk';
-import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 
 import { subMcpKey } from './keys';
-import { useCreateSubMcp } from './use-create-sub-mcp';
 import { SubMcpToolsField } from './SubMcpToolsField';
+import { useCreateSubMcp } from './use-create-sub-mcp';
 
 /** The transports the sub-MCP build path supports end to end (`http` default). */
 const TRANSPORT_OPTIONS: readonly RadioOption[] = [

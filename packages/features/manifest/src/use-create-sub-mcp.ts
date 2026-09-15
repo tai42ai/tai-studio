@@ -2,9 +2,9 @@
  * The view-model for the create-sub-MCP form: the tools/list queries, the form
  * state, the create mutation (a silent-swap upsert), and the slug-swap pre-check.
  */
-import { useState, type SyntheticEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type SyntheticEvent, useState } from 'react';
 
 import { subMcpAvailableToolsKey, subMcpKey } from './keys';
 

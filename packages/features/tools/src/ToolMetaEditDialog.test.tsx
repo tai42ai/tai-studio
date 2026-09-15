@@ -6,10 +6,10 @@
  * that owns them, and selecting Default clears the visibility override without a row
  * delete.
  */
-import { describe, expect, it, vi } from 'vitest';
+import type { Folder } from '@tai42/studio-sdk';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { Folder } from '@tai42/studio-sdk';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ToolMetaEditDialog } from './ToolMetaEditDialog';
 import type { ToolView } from './toolView';

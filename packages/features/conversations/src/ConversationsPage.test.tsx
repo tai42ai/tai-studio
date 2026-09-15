@@ -3,13 +3,12 @@
  * between them, the URL self-repair, and the WCAG 2.4.3 focus choreography that
  * makes those moves keyboard-usable.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConversationsPage } from './ConversationsPage';
-import { THREADS_MAX_PAGES } from './ThreadList';
 import {
   installViewportBand,
   makeConfig,
@@ -21,6 +20,7 @@ import {
   renderWithProviders,
   transcriptPage,
 } from './test-utils';
+import { THREADS_MAX_PAGES } from './ThreadList';
 
 /** A client serving one route, one thread on it, and that thread's transcript. */
 function fullClient() {

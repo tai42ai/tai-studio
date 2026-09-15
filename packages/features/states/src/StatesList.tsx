@@ -5,25 +5,25 @@
  * prompts a danger Replace confirm — see {@link useStateUpload}). Loading and read
  * errors surface loudly; an empty list offers the declare door.
  */
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Button,
   Card,
   EmptyState,
+  errorMessage,
   ErrorState,
   Skeleton,
-  errorMessage,
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { DeclareStateDialog } from './DeclarationTab';
 import { statesListKey } from './keys';
-import { useStateUpload } from './state-upload';
-import { StatesToolbar } from './StatesToolbar';
-import { StatesTable } from './StatesTable';
 import { ReplaceConfirmDialog } from './ReplaceConfirmDialog';
+import { useStateUpload } from './state-upload';
+import { StatesTable } from './StatesTable';
+import { StatesToolbar } from './StatesToolbar';
 
 export function StatesList({ selected }: { readonly selected: string | undefined }): ReactNode {
   const api = useApi();

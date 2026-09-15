@@ -3,16 +3,16 @@
  * (read-only), a secret RevealInput, a boolean checkbox, a numeric input, or a text
  * input. A pending edit (keyed by env var) overrides the reported value.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import { Checkbox, Field, NumberInput, RevealInput, TextInput } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 import {
   isNestedRef,
   labelOf,
   placeholderOf,
+  type SettingsFieldModel,
   toBool,
   toText,
-  type SettingsFieldModel,
 } from './settings-field';
 
 const fieldStyle: CSSProperties = {

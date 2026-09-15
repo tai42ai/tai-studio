@@ -1,9 +1,8 @@
-import type { ReactElement } from 'react';
+import { type MarketplaceSearchPage, type MarketplaceSearchQuery } from '@tai42/api-client';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-
-import { type MarketplaceSearchPage, type MarketplaceSearchQuery } from '@tai42/api-client';
 
 import { MarketplacePage } from './MarketplacePage';
 import {

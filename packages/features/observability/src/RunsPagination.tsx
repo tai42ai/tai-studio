@@ -3,8 +3,8 @@
  * loud inline error when a Load-more fails (kept separate from a background-refresh
  * error so each retries the right fetch).
  */
-import type { ReactNode } from 'react';
 import { Button, errorMessage } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export interface RunsPaginationProps {
   readonly hasNextPage: boolean;

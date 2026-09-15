@@ -2,8 +2,8 @@
  * Pure model, validation, and submit-body assembly for the add-schedule form —
  * no React, so the branchy parts are unit-testable apart from the dialog.
  */
-import { errorMessage } from '@tai42/studio-sdk';
 import type { StateBinding } from '@tai42/api-client';
+import { errorMessage } from '@tai42/studio-sdk';
 
 export type ScheduleMode = 'interval' | 'crontab';
 

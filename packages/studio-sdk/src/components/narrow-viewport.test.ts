@@ -91,7 +91,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { type Rule, readRules } from './test-css-reader';
+import { readRules, type Rule } from './test-css-reader';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const stylesheet = readFileSync(resolve(here, 'components.css'), 'utf8');

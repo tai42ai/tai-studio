@@ -1,11 +1,11 @@
-import { useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { describe, expect, it } from 'vitest';
 
-import { UpdateList } from './UpdateRow';
 import type { ResolvedTemplateJq } from './catalog';
 import type { BindingSourceSchemas, StateUpdate } from './types';
+import { UpdateList } from './UpdateRow';
 
 const UPDATE_JQ: ResolvedTemplateJq[] = [
   {

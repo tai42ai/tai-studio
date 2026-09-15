@@ -5,11 +5,11 @@
  * escaped-string XSS pin (`<script>` stays literal text, never a script element)
  * and the oversized-payload truncation with a working Blob download.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ResultViewer, RESULT_MAX_CHARS } from './ResultViewer';
+import { RESULT_MAX_CHARS, ResultViewer } from './ResultViewer';
 
 describe('ResultViewer', () => {
   it('renders an object result as a collapsible JSON tree', () => {

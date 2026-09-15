@@ -10,16 +10,16 @@
  * BOTH mutations (the DELETE route is templated, so the projection carries it only
  * method-lessly); a hooks-READ grantee carries only GET on that path.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import { HooksPage } from './HooksPage';
 import {
   fullProjection,
   renderWithProviders,
   scopedProjection,
-  triggerLink,
   type StubApiClient,
+  triggerLink,
 } from './test-utils';
 
 function client(): StubApiClient {

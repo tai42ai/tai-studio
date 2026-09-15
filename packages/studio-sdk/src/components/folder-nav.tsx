@@ -13,12 +13,12 @@
  * BOTH consuming screens through this one component — never a flows-page-only
  * affordance.
  */
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { ChevronRightIcon, FolderIcon } from './icons';
+import { TextInput } from './inputs';
 import { Button } from './primitives';
 import { Select } from './select';
-import { TextInput } from './inputs';
 
 /** A folder in the tree, in the SDK's camelCase UI shape (`parentId`, `null` = root). */
 export interface Folder {

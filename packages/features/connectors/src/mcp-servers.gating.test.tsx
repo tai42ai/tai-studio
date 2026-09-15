@@ -1,14 +1,14 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { McpServersSection } from './mcp-servers';
 import {
+  failedReport,
   MANIFEST_CONFIGURED,
   MCP_SCHEMA,
-  failedReport,
   renderWithProviders,
   scopedProjection,
 } from './test-utils-mcp-servers';
-import { McpServersSection } from './mcp-servers';
 
 describe('McpServersSection — write gating (projection ⊆ gate)', () => {
   function gatingClient() {

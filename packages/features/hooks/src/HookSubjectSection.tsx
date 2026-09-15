@@ -4,12 +4,12 @@
  * either all filled or all left blank; a partially-filled subject is refused loudly
  * on submit (the error is surfaced here).
  */
-import type { ReactNode } from 'react';
-import { Field, Select, TextInput } from '@tai42/studio-sdk';
 import { JqField } from '@tai42/jq-studio';
+import { Field, Select, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import type { HookFormFields } from './useHookFormFields';
 import { HOOK_SUBJECT_KEY_DECLARATION } from './hookJqDeclarations';
+import type { HookFormFields } from './useHookFormFields';
 
 export interface HookSubjectSectionProps {
   readonly fields: HookFormFields;

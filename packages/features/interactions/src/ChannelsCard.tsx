@@ -4,10 +4,9 @@
  * besides this inbox. Purely informational; binding a channel to a question is
  * the tool author's call (the `channel` argument), not a Studio action.
  */
+import { AppLink, Badge, Card, ErrorState, Skeleton, useApi } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
 import type { CSSProperties, ReactNode } from 'react';
-
-import { AppLink, Badge, Card, ErrorState, Skeleton, useApi } from '@tai42/studio-sdk';
 
 import { channelsKey } from './keys';
 

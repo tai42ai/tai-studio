@@ -12,7 +12,7 @@
  * failing leg skips the rest (the composed scenario's own semantics). `beforeAll` clears a
  * prior run's artifacts so a re-run against a persisted backend starts clean.
  */
-import { test, expect, request as apiRequest, type Page } from '@playwright/test';
+import { expect, type Page, request as apiRequest, test } from '@playwright/test';
 
 import { API_KEY, EXECUTION_KEY_ID, seedCredential } from './helpers';
 

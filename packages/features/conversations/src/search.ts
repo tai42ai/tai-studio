@@ -9,8 +9,8 @@
  * truth), and the api-client query shapes are projected from it — the same pattern
  * the observability and marketplace filters follow.
  */
-import type { RouteSearch } from '@tai42/studio-sdk';
 import type { ConversationThreadFilters } from '@tai42/api-client';
+import type { RouteSearch } from '@tai42/studio-sdk';
 
 export type ConversationsSearch = RouteSearch<'conversations'>;
 

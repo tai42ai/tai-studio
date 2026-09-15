@@ -3,8 +3,8 @@
  * shows the list and the no-selection prompt; `?state=` mounts the detail; `?state=` plus
  * `?subject=`/`?target=` mounts the record page.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import { StatesPage } from './StatesPage';
 import { renderWithProviders, type StubApiClient } from './test-utils';

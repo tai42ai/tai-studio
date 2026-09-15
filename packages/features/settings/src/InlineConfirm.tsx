@@ -3,8 +3,8 @@
  * Cancel/Confirm prompt in place (no heavy modal — this lives inside a dialog);
  * confirming fires `onConfirm` and collapses back.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Button } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 const inlineConfirmStyle: CSSProperties = {
   display: 'flex',

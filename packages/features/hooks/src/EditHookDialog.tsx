@@ -3,9 +3,9 @@
  * {@link RegisterHookForm} prefilled from the row's hook, saving back over it and
  * closing on success.
  */
-import type { ReactNode } from 'react';
-import { Dialog } from '@tai42/studio-sdk';
 import type { HookParams } from '@tai42/api-client';
+import { Dialog } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { RegisterHookForm } from './RegisterHookForm';
 

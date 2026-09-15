@@ -1,11 +1,11 @@
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { ApiError } from '@tai42/api-client';
+import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
 import { QueryClient } from '@tanstack/react-query';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError } from '@tai42/api-client';
-import { StaticToolDisplayNamesProvider } from '@tai42/studio-sdk/testing';
-
+import { McpServersSection } from './mcp-servers';
 import {
   MANIFEST,
   MANIFEST_CONFIGURED,
@@ -13,7 +13,6 @@ import {
   renderWithProviders,
   status,
 } from './test-utils-mcp-servers';
-import { McpServersSection } from './mcp-servers';
 
 describe('McpServersSection — config editor', () => {
   it('renders a schema-driven form per entry from the fetched schema', async () => {

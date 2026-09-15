@@ -1,6 +1,6 @@
 /** State declaration, record, template and consumer sub-client. */
-import * as s from '../schemas';
 import { encodeSegment } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 /**

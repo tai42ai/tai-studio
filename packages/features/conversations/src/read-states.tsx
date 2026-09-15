@@ -21,17 +21,17 @@
  *
  * Anything else is a real failure and lands in a loud, retryable `ErrorState`.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import { ApiError } from '@tai42/api-client';
 import {
   Button,
   EmptyState,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
-  errorMessage,
   featureDisabledMessage,
   isFeatureDisabled,
 } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 /** The Studio-facing name of this feature, used in the OFF note. */
 const FEATURE_NAME = 'Conversations';

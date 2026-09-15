@@ -4,13 +4,13 @@
  * Detach confirms and removes it; a template attached elsewhere cannot be deleted; a 501
  * shows FeatureDisabled.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type StateDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type StateDetail } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
-import { TemplatesTab } from './TemplatesTab';
 import { stateTemplatesKey } from './keys';
+import { TemplatesTab } from './TemplatesTab';
 import { lastFileInput, renderWithProviders, type StubApiClient } from './test-utils';
 
 function detail(attachments: unknown[] = []): StateDetail {

@@ -10,20 +10,20 @@
  * Every failure (an invalid/past expiry, a 403, or any other status) surfaces
  * LOUDLY inline — never swallowed.
  */
-import { useState, type CSSProperties, type ReactNode, type SyntheticEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { WebEntryCodeMintBody, WebEntryCodeMinted } from '@tai42/api-client';
 import {
   Button,
   CopyField,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
   Spinner,
   TextInput,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import type { WebEntryCodeMintBody, WebEntryCodeMinted } from '@tai42/api-client';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, type SyntheticEvent, useState } from 'react';
 
 import { composeChatUrl } from './compose-chat-url';
 import { formatInstant } from './format';

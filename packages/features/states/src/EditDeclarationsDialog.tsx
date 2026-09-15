@@ -1,16 +1,16 @@
 /** Edit one attachment's static declaration values, over the template's declarations schema. */
-import { useState, type ReactNode } from 'react';
-import { FormDialog, SchemaForm } from '@tai42/studio-sdk';
 import type {
   StateAttachment,
   StateAttachmentBody,
   StateTemplateListItem,
 } from '@tai42/api-client';
+import { FormDialog, SchemaForm } from '@tai42/studio-sdk';
 import { useApi } from '@tai42/studio-sdk';
+import { type ReactNode, useState } from 'react';
 
-import { declarationsSchema, declaresAnything } from './stateTemplateSchemas';
-import { reconcileOrphans, type OrphanRecord } from './reconcileOrphans';
 import { OrphanResolveFields } from './OrphanResolveFields';
+import { type OrphanRecord, reconcileOrphans } from './reconcileOrphans';
+import { declarationsSchema, declaresAnything } from './stateTemplateSchemas';
 
 export interface EditDeclarationsDialogProps {
   readonly stateName: string;

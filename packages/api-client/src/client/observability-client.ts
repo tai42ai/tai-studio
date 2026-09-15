@@ -1,6 +1,6 @@
 /** Run metrics, listing, trace and export sub-client. */
-import * as s from '../schemas';
 import { apiDownload, encodeSegment, type RequestOptions } from '../http';
+import * as s from '../schemas';
 import type { Transport } from './transport';
 
 /** The observability-metrics window + bucket size (GET query params). */

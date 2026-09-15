@@ -5,8 +5,8 @@
  */
 import type { RegisteredNavEntry } from '@tai42/studio-sdk';
 
-import { NAV_SECTIONS } from './routes';
 import { pathHasPrefix } from './plugin-page-resolve';
+import { NAV_SECTIONS } from './routes';
 
 /** Plugin id → its version, for the provenance badge. */
 export type PluginVersions = ReadonlyMap<string, string>;

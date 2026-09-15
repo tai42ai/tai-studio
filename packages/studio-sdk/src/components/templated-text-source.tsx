@@ -6,13 +6,13 @@
  */
 import type { ReactNode } from 'react';
 
-import { ErrorState, Skeleton } from './primitives';
 import { Field } from './field';
+import { Textarea } from './inputs';
+import { ErrorState, Skeleton } from './primitives';
 import { RadioGroup } from './radio-group';
 import { Select } from './select';
-import { Textarea } from './inputs';
-import type { Mode } from './templated-text-kwargs';
 import type { TemplatedTextInlineProps, TemplatedTextTemplateOption } from './templated-text-field';
+import type { Mode } from './templated-text-kwargs';
 
 /** A labeled read-only reference to a stored template id, plus the note that
  *  stored templates are unavailable here — NOT an editable field. */

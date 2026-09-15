@@ -653,7 +653,7 @@ methods: string[];
 mapped: string | null;
 tags: string[];
 summary: string;
-action: "read" | "write" | "secret" | "fenced" | null;
+action: "read" | "write" | "fenced" | "secret" | null;
 }[]>;
 readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
 readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
@@ -808,7 +808,7 @@ items: {
 name: string;
 topic: string;
 execution_key: string;
-trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
+trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
 tool_kwargs: Record<string, unknown> | null;
 created_by: string | null;
 created_at: string;
@@ -898,7 +898,7 @@ topic_verifiers: Record<string, {
 verifier: string;
 config: Record<string, unknown>;
 }>;
-trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
+trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
 }>;
 readonly registerHook: (params: HookRegister) => Promise<{
 registered: boolean;
@@ -2983,7 +2983,7 @@ run_id: string;
 readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "failed" | "running" | "succeeded" | "lost";
+status: "running" | "succeeded" | "failed" | "lost";
 started_at: string;
 finished_at?: string | undefined;
 result?: unknown;
@@ -2992,7 +2992,7 @@ error?: string | undefined;
 readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "failed" | "running" | "succeeded" | "lost";
+status: "running" | "succeeded" | "failed" | "lost";
 started_at: string;
 finished_at?: string | undefined;
 }[]>;
@@ -3091,8 +3091,8 @@ const authRoute: z.ZodObject<{
     action: z.ZodNullable<z.ZodEnum<{
         read: "read";
         write: "write";
-        secret: "secret";
         fenced: "fenced";
+        secret: "secret";
     }>>;
 }, z.core.$strip>;
 
@@ -3106,8 +3106,8 @@ const authRoutes: z.ZodArray<z.ZodObject<{
     action: z.ZodNullable<z.ZodEnum<{
         read: "read";
         write: "write";
-        secret: "secret";
         fenced: "fenced";
+        secret: "secret";
     }>>;
 }, z.core.$strip>>;
 
@@ -4913,7 +4913,7 @@ function createApiClient(config: ApiConfig): {
         mapped: string | null;
         tags: string[];
         summary: string;
-        action: "read" | "write" | "secret" | "fenced" | null;
+        action: "read" | "write" | "fenced" | "secret" | null;
     }[]>;
     readonly listPublicRoutes: (signal?: AbortSignal) => Promise<string[]>;
     readonly pinRoutePublic: (body: PinRoutePublicBody) => Promise<{
@@ -5068,7 +5068,7 @@ function createApiClient(config: ApiConfig): {
             name: string;
             topic: string;
             execution_key: string;
-            trigger_auth: "public" | "verifier" | "token" | "token+api_key" | "out-of-service";
+            trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
             tool_kwargs: Record<string, unknown> | null;
             created_by: string | null;
             created_at: string;
@@ -5158,7 +5158,7 @@ function createApiClient(config: ApiConfig): {
             verifier: string;
             config: Record<string, unknown>;
         }>;
-        trigger_auth: Record<string, "public" | "verifier" | "token" | "token+api_key" | "out-of-service">;
+        trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
     }>;
     readonly registerHook: (params: HookRegister) => Promise<{
         registered: boolean;
@@ -7243,7 +7243,7 @@ function createApiClient(config: ApiConfig): {
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "failed" | "running" | "succeeded" | "lost";
+        status: "running" | "succeeded" | "failed" | "lost";
         started_at: string;
         finished_at?: string | undefined;
         result?: unknown;
@@ -7252,7 +7252,7 @@ function createApiClient(config: ApiConfig): {
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "failed" | "running" | "succeeded" | "lost";
+        status: "running" | "succeeded" | "failed" | "lost";
         started_at: string;
         finished_at?: string | undefined;
     }[]>;
@@ -8369,9 +8369,9 @@ const hookList: z.ZodObject<{
         config: z.ZodRecord<z.ZodString, z.ZodUnknown>;
     }, z.core.$strip>>>;
     trigger_auth: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodEnum<{
+        token: "token";
         public: "public";
         verifier: "verifier";
-        token: "token";
         "token+api_key": "token+api_key";
         "out-of-service": "out-of-service";
     }>>>;
@@ -11307,8 +11307,8 @@ type RouteAction = z.infer<typeof routeAction>;
 const routeAction: z.ZodEnum<{
     read: "read";
     write: "write";
-    secret: "secret";
     fenced: "fenced";
+    secret: "secret";
 }>;
 
 // @public (undocumented)
@@ -11572,178 +11572,51 @@ const runTrace: z.ZodObject<{
 
 declare namespace s {
     export {
+        toolRunList,
+        toolRunRecord,
+        toolRunSubmitResult,
         jsonSchema,
         jsonValue,
-        toolRunSubmitResult,
-        toolRunRecord,
-        toolRunList,
-        templatedText,
-        requiredTemplatedText,
-        TemplatedText,
-        stateInjection,
-        StateInjection,
-        stateUpdate,
-        StateUpdate,
-        stateAttach,
-        StateAttach,
-        stateBinding,
-        StateBinding,
-        presetBody,
-        PresetBody,
-        conversationRoute,
-        ConversationRoute,
-        conversationRouteCreate,
-        ConversationRouteCreate,
-        targetConversationConfig,
-        TargetConversationConfig,
-        channelTemplate,
-        ChannelTemplate,
-        hookSubject,
-        HookSubject,
-        hookParams,
-        HookParams,
-        hookRegister,
-        HookRegister,
-        stateDeclaration,
-        StateDeclaration,
-        stateTemplateDocument,
-        StateTemplateDocument,
-        templateJq,
-        TemplateJq,
-        templateReconcile,
-        TemplateReconcile,
-        templateDeclarations,
-        TemplateDeclarations,
-        policyBody,
-        PolicyBody,
-        roleBody,
-        RoleBody,
-        toolNames,
-        toolSchema,
-        ToolSchema,
-        allToolSchemas,
-        runToolResult,
-        toolMediaResult,
-        ToolMediaResult,
-        toolTagEntry,
-        toolTags,
-        ToolTagEntry,
-        extension,
-        extensions,
-        Extension,
-        presetExtensionElement,
-        PresetExtensionElement,
-        toolExtensions,
-        ToolExtensions,
-        presetExtensions,
-        presetRecord,
-        PresetRecord,
-        presetList,
-        presetDetail,
-        PresetDetail,
-        presetVersion,
-        PresetVersion,
-        presetVersionList,
-        presetRollback,
-        presetDeleted,
-        presetRenamed,
-        PresetRenamed,
-        presetReferees,
-        PresetReferees,
-        presetValidation,
-        PresetValidation,
-        presetVersionTags,
-        PresetVersionTags,
-        folderRecord,
-        FolderRecord,
-        toolMetaRecord,
-        ToolMetaRecord,
-        toolMetaOverlay,
-        ToolMetaOverlay,
-        toolMetaDeleted,
-        folderDeleted,
-        templateNames,
-        templateDetail,
-        templateUploaded,
-        templateDeleted,
-        templateDirDeleted,
-        templateRendered,
-        templateCacheCleared,
-        storageInfo,
-        StorageInfo,
-        storageResourceList,
-        storageResourceStat,
-        StorageResourceStat,
-        storageResourceStored,
-        storageResourceDeleted,
-        storageDirDeleted,
-        backendInfo,
-        BackendInfo,
-        workerKind,
-        WorkerKind,
-        workerState,
-        WorkerState,
-        workerLastOp,
-        WorkerLastOp,
-        fleetWorker,
-        FleetWorker,
-        fleetWorkers,
-        FleetWorkers,
-        fleetOutcome,
-        FleetOutcome,
-        fleetWorkerResult,
-        FleetWorkerResult,
-        fleetResult,
-        FleetResult,
-        fleetReloadResult,
-        FleetReloadResult,
-        fleetReportFanout,
-        FleetReportFanout,
-        connectorRef,
-        ConnectorRef,
-        manifestMcpEntry,
-        ManifestMcpEntry,
-        manifestView,
-        mcpEnvRef,
-        McpEnvRef,
-        mcpEnvRefs,
-        McpEnvRefs,
-        reloadConfigResult,
-        ReloadConfigResult,
-        kindStatus,
-        kindStatusList,
-        KindStatus,
-        toolExtensionsApplyResult,
-        ToolExtensionsApplyResult,
-        mcpStatus,
-        mcpReloadResult,
-        McpReloadResult,
-        subMcpMount,
-        SubMcpMount,
-        subMcpList,
-        subMcpCreated,
-        subMcpRemoved,
+        tokensPayload,
+        TokensPayload,
+        createdApiKey,
+        editApiKeyResult,
+        revokeApiKeyResult,
+        authScopes,
+        addUrlToScopeResult,
+        removeUrlFromScopeResult,
+        removeScopeResult,
+        routeAction,
+        RouteAction,
+        authRoute,
+        AuthRoute,
+        authRoutes,
+        publicRoutes,
+        pinPublicResult,
+        unpinPublicResult,
+        backupSections,
+        backupDocument,
+        BackupDocument,
+        backupImportReport,
+        BackupImportReport,
+        routeEntry,
+        RouteEntry,
+        patternEntry,
+        PatternEntry,
+        subMcpEntry,
+        SubMcpEntry,
+        meProjection,
+        MeProjection,
+        claimLinkCreated,
+        ClaimLinkCreated,
+        logoutResult,
+        LogoutResult,
+        authCapabilities,
+        AuthCapabilities,
+        channels,
+        Channels,
         envConfig,
         configMode,
-        settingsProfileSummary,
-        SettingsProfileSummary,
-        settingsProfileList,
-        settingsProfileBody,
-        SettingsProfileBody,
-        settingsProfileSaved,
-        SettingsProfileSaved,
-        settingsProfileDeleted,
-        settingsProfileRollback,
-        SettingsProfileRollback,
-        settingsProfileDiff,
-        SettingsProfileDiff,
-        profileApplyResponse,
-        ProfileApplyResponse,
-        settingsProfileVersionMeta,
-        SettingsProfileVersionMeta,
-        settingsProfileVersionList,
-        settingsProfileVersion,
-        SettingsProfileVersion,
         subServiceView,
         configFieldView,
         providerView,
@@ -11761,33 +11634,6 @@ declare namespace s {
         patchSubServicesResult,
         oauthCompleteResult,
         OAuthCompleteResult,
-        studioPluginManifest,
-        studioPluginRegistry,
-        StudioPluginManifest,
-        answerFormat,
-        AnswerFormat,
-        mediaKind,
-        MediaKind,
-        interactionMediaItem,
-        InteractionMediaItem,
-        formOption,
-        FormOption,
-        formData,
-        FormData_2 as FormData,
-        formPage,
-        FormPage,
-        formPages,
-        FormPages,
-        interaction,
-        Interaction,
-        interactionAnswered,
-        InteractionAnswered,
-        interactionCancelled,
-        InteractionCancelled,
-        interactionsPage,
-        InteractionsPage,
-        channels,
-        Channels,
         conversationDoor,
         ConversationDoor,
         conversationTargetKind,
@@ -11836,20 +11682,35 @@ declare namespace s {
         ConversationThreadDeleted,
         conversationPersonDeleted,
         ConversationPersonDeleted,
-        webEntryCode,
-        WebEntryCode,
-        webEntryGate,
-        WebEntryGate,
-        webEntryGateState,
-        WebEntryGateState,
-        webEntryCodeMinted,
-        WebEntryCodeMinted,
-        webEntryCodeRevoked,
-        WebEntryCodeRevoked,
-        notification,
-        Notification_2 as Notification,
-        notifications,
-        Notifications,
+        extension,
+        extensions,
+        Extension,
+        presetExtensionElement,
+        PresetExtensionElement,
+        toolExtensions,
+        ToolExtensions,
+        backendInfo,
+        BackendInfo,
+        workerKind,
+        WorkerKind,
+        workerState,
+        WorkerState,
+        workerLastOp,
+        WorkerLastOp,
+        fleetWorker,
+        FleetWorker,
+        fleetWorkers,
+        FleetWorkers,
+        fleetOutcome,
+        FleetOutcome,
+        fleetWorkerResult,
+        FleetWorkerResult,
+        fleetResult,
+        FleetResult,
+        fleetReloadResult,
+        FleetReloadResult,
+        fleetReportFanout,
+        FleetReportFanout,
         triggerAuth,
         TriggerAuth,
         hookList,
@@ -11859,45 +11720,28 @@ declare namespace s {
         hookVerifiers,
         topicVerifierSet,
         topicVerifierRemoved,
-        triggerLinkCreated,
-        TriggerLinkCreated,
-        triggerLinkRecord,
-        TriggerLinkRecord,
-        triggerLinkList,
-        TriggerLinkList,
-        triggerLinkDeleted,
-        TriggerLinkDeleted,
-        settingsSchema,
-        SettingsSchema,
-        authScopes,
-        addUrlToScopeResult,
-        removeUrlFromScopeResult,
-        removeScopeResult,
-        routeAction,
-        RouteAction,
-        authRoute,
-        AuthRoute,
-        authRoutes,
-        publicRoutes,
-        pinPublicResult,
-        unpinPublicResult,
-        grantLevel,
-        GrantLevel,
-        roleGrants,
-        RoleGrants,
-        roleList,
-        roleDeleted,
-        roleVersion,
-        RoleVersion,
-        roleAuditEvent,
-        RoleAuditEvent,
-        roleVersions,
-        RoleVersions,
-        tokensPayload,
-        TokensPayload,
-        createdApiKey,
-        editApiKeyResult,
-        revokeApiKeyResult,
+        answerFormat,
+        AnswerFormat,
+        mediaKind,
+        MediaKind,
+        interactionMediaItem,
+        InteractionMediaItem,
+        formOption,
+        FormOption,
+        formData,
+        FormData_2 as FormData,
+        formPage,
+        FormPage,
+        formPages,
+        FormPages,
+        interaction,
+        Interaction,
+        interactionAnswered,
+        InteractionAnswered,
+        interactionCancelled,
+        InteractionCancelled,
+        interactionsPage,
+        InteractionsPage,
         loginFormField,
         loginMethod,
         loginMethods,
@@ -11906,44 +11750,17 @@ declare namespace s {
         LoginMethod,
         LoginMethods,
         LoginResult,
-        routeEntry,
-        RouteEntry,
-        patternEntry,
-        PatternEntry,
-        subMcpEntry,
-        SubMcpEntry,
-        meProjection,
-        MeProjection,
-        claimLinkCreated,
-        ClaimLinkCreated,
-        logoutResult,
-        LogoutResult,
-        authCapabilities,
-        AuthCapabilities,
-        validateConditionResult,
-        ValidateConditionResult,
-        policyVersion,
-        PolicyVersion,
-        policyVersionList,
-        policyRollback,
-        backupSections,
-        backupDocument,
-        BackupDocument,
-        backupImportReport,
-        BackupImportReport,
-        scheduleItem,
-        scheduleList,
-        ScheduleItem,
-        serverDateTime,
-        dashboardMetrics,
-        DashboardMetrics,
-        run,
-        Run,
-        runsPage,
-        runSpan,
-        RunSpan,
-        runTrace,
-        RunTrace,
+        connectorRef,
+        ConnectorRef,
+        manifestMcpEntry,
+        ManifestMcpEntry,
+        manifestView,
+        mcpEnvRef,
+        McpEnvRef,
+        mcpEnvRefs,
+        McpEnvRefs,
+        reloadConfigResult,
+        ReloadConfigResult,
         routeMethod,
         RouteMethod,
         marketplaceDelivery,
@@ -12005,6 +11822,122 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
+        notification,
+        Notification_2 as Notification,
+        notifications,
+        Notifications,
+        dashboardMetrics,
+        DashboardMetrics,
+        run,
+        Run,
+        runsPage,
+        runSpan,
+        RunSpan,
+        runTrace,
+        RunTrace,
+        validateConditionResult,
+        ValidateConditionResult,
+        policyVersion,
+        PolicyVersion,
+        policyVersionList,
+        policyRollback,
+        presetExtensions,
+        presetRecord,
+        PresetRecord,
+        presetList,
+        presetDetail,
+        PresetDetail,
+        presetVersion,
+        PresetVersion,
+        presetVersionList,
+        presetRollback,
+        presetDeleted,
+        presetRenamed,
+        PresetRenamed,
+        presetReferees,
+        PresetReferees,
+        presetValidation,
+        PresetValidation,
+        presetVersionTags,
+        PresetVersionTags,
+        settingsProfileSummary,
+        SettingsProfileSummary,
+        settingsProfileList,
+        settingsProfileBody,
+        SettingsProfileBody,
+        settingsProfileSaved,
+        SettingsProfileSaved,
+        settingsProfileDeleted,
+        settingsProfileRollback,
+        SettingsProfileRollback,
+        settingsProfileDiff,
+        SettingsProfileDiff,
+        profileApplyResponse,
+        ProfileApplyResponse,
+        settingsProfileVersionMeta,
+        SettingsProfileVersionMeta,
+        settingsProfileVersionList,
+        settingsProfileVersion,
+        SettingsProfileVersion,
+        grantLevel,
+        GrantLevel,
+        roleGrants,
+        RoleGrants,
+        roleList,
+        roleDeleted,
+        roleVersion,
+        RoleVersion,
+        roleAuditEvent,
+        RoleAuditEvent,
+        roleVersions,
+        RoleVersions,
+        scheduleItem,
+        scheduleList,
+        ScheduleItem,
+        serverDateTime,
+        TemplatedText,
+        requiredTemplatedText,
+        templatedText,
+        stateInjection,
+        StateInjection,
+        stateUpdate,
+        StateUpdate,
+        stateAttach,
+        StateAttach,
+        stateBinding,
+        StateBinding,
+        presetBody,
+        PresetBody,
+        conversationRoute,
+        ConversationRoute,
+        conversationRouteCreate,
+        ConversationRouteCreate,
+        targetConversationConfig,
+        TargetConversationConfig,
+        channelTemplate,
+        ChannelTemplate,
+        hookSubject,
+        HookSubject,
+        hookParams,
+        HookParams,
+        hookRegister,
+        HookRegister,
+        stateDeclaration,
+        StateDeclaration,
+        stateTemplateDocument,
+        StateTemplateDocument,
+        templateJq,
+        TemplateJq,
+        templateReconcile,
+        TemplateReconcile,
+        templateDeclarations,
+        TemplateDeclarations,
+        policyBody,
+        PolicyBody,
+        roleBody,
+        RoleBody,
+        settingsSchema,
+        SettingsSchema,
         stateSubject,
         StateSubject,
         stateRegime,
@@ -12059,7 +11992,74 @@ declare namespace s {
         stateTemplateDeleted,
         recordErased,
         stateRetentionPruned,
-        StateRetentionPruned
+        StateRetentionPruned,
+        storageInfo,
+        StorageInfo,
+        storageResourceList,
+        storageResourceStat,
+        StorageResourceStat,
+        storageResourceStored,
+        storageResourceDeleted,
+        storageDirDeleted,
+        studioPluginManifest,
+        studioPluginRegistry,
+        StudioPluginManifest,
+        subMcpMount,
+        SubMcpMount,
+        subMcpList,
+        subMcpCreated,
+        subMcpRemoved,
+        kindStatus,
+        kindStatusList,
+        KindStatus,
+        toolExtensionsApplyResult,
+        ToolExtensionsApplyResult,
+        mcpStatus,
+        mcpReloadResult,
+        McpReloadResult,
+        templateNames,
+        templateDetail,
+        templateUploaded,
+        templateDeleted,
+        templateDirDeleted,
+        templateRendered,
+        templateCacheCleared,
+        folderRecord,
+        FolderRecord,
+        toolMetaRecord,
+        ToolMetaRecord,
+        toolMetaOverlay,
+        ToolMetaOverlay,
+        toolMetaDeleted,
+        folderDeleted,
+        toolNames,
+        toolSchema,
+        ToolSchema,
+        allToolSchemas,
+        runToolResult,
+        toolMediaResult,
+        ToolMediaResult,
+        toolTagEntry,
+        toolTags,
+        ToolTagEntry,
+        triggerLinkCreated,
+        TriggerLinkCreated,
+        triggerLinkRecord,
+        TriggerLinkRecord,
+        triggerLinkList,
+        TriggerLinkList,
+        triggerLinkDeleted,
+        TriggerLinkDeleted,
+        webEntryCode,
+        WebEntryCode,
+        webEntryGate,
+        WebEntryGate,
+        webEntryGateState,
+        WebEntryGateState,
+        webEntryCodeMinted,
+        WebEntryCodeMinted,
+        webEntryCodeRevoked,
+        WebEntryCodeRevoked
     }
 }
 
@@ -14192,9 +14192,9 @@ const toolRunList: z.ZodArray<z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
     status: z.ZodEnum<{
-        failed: "failed";
         running: "running";
         succeeded: "succeeded";
+        failed: "failed";
         lost: "lost";
     }>;
     started_at: z.ZodString;
@@ -14206,9 +14206,9 @@ const toolRunRecord: z.ZodObject<{
     run_id: z.ZodString;
     tool_name: z.ZodString;
     status: z.ZodEnum<{
-        failed: "failed";
         running: "running";
         succeeded: "succeeded";
+        failed: "failed";
         lost: "lost";
     }>;
     started_at: z.ZodString;
@@ -14306,9 +14306,9 @@ type TriggerAuth = z.infer<typeof triggerAuth>;
 
 // @public
 const triggerAuth: z.ZodEnum<{
+    token: "token";
     public: "public";
     verifier: "verifier";
-    token: "token";
     "token+api_key": "token+api_key";
     "out-of-service": "out-of-service";
 }>;
@@ -14360,9 +14360,9 @@ const triggerLinkList: z.ZodObject<{
         topic: z.ZodString;
         execution_key: z.ZodString;
         trigger_auth: z.ZodEnum<{
+            token: "token";
             public: "public";
             verifier: "verifier";
-            token: "token";
             "token+api_key": "token+api_key";
             "out-of-service": "out-of-service";
         }>;
@@ -14384,9 +14384,9 @@ const triggerLinkRecord: z.ZodObject<{
     topic: z.ZodString;
     execution_key: z.ZodString;
     trigger_auth: z.ZodEnum<{
+        token: "token";
         public: "public";
         verifier: "verifier";
-        token: "token";
         "token+api_key": "token+api_key";
         "out-of-service": "out-of-service";
     }>;

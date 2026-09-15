@@ -11,7 +11,7 @@
  * (see the props) reshape the panel without giving up any Radix behaviour.
  */
 import * as RadixDialog from '@radix-ui/react-dialog';
-import { useRef, type ReactElement, type ReactNode } from 'react';
+import { type ReactElement, type ReactNode, useRef } from 'react';
 
 import { assertSlotElement } from '../element-slot';
 import { useModalFocusReturn } from './modal-focus';

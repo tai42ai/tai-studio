@@ -3,13 +3,13 @@
  * and (non-admin) Delete actions, the editable grant editor, and the read-only
  * effective-access view.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { Badge, Button } from '@tai42/studio-sdk';
 import type { RoleBody } from '@tai42/api-client';
+import { Badge, Button } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
+import { EffectiveAccessView } from './EffectiveAccessView';
 import { baseTierLabel, type FeatureGroup } from './role-grants';
 import { RoleGrantEditor } from './RoleGrantEditor';
-import { EffectiveAccessView } from './EffectiveAccessView';
 
 const detailStyle: CSSProperties = {
   flex: '1 1 22rem',

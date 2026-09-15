@@ -9,11 +9,10 @@
  * directly against the exported {@link CONDITION_SHAPE}, {@link makeConditionServerValidate},
  * and {@link liveSampleInput} — the real objects/providers the field receives.
  */
+import { type ApiClient, ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import { ApiError, type ApiClient } from '@tai42/api-client';
 
 import { CONDITION_SHAPE, liveSampleInput, makeConditionServerValidate } from './policy-condition';
 import { PolicySection } from './PolicySection';

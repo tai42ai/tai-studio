@@ -3,8 +3,8 @@
  * version, overlay tags, and the extension-set count. The record does not carry the
  * display name or categorization tags — both come from the tool_meta overlay.
  */
-import type { ReactNode } from 'react';
 import type { PresetDetail } from '@tai42/api-client';
+import type { ReactNode } from 'react';
 
 import { TagChips } from './tags';
 

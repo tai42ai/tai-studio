@@ -8,25 +8,24 @@
  * state. A Stop button aborts the fetch — the server treats the disconnect as a
  * cancel, matching the contract. Errors surface loudly; nothing is swallowed.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-
 import type { ParsedAgentEvent } from '@tai42/api-client';
+import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
 import {
   ArrowLeftIcon,
   Badge,
   Button,
   Card,
+  defaultValueForSchema,
   ErrorState,
   JsonTree,
   PageHeader,
   SchemaForm,
   Stack,
-  defaultValueForSchema,
   useApi,
   validateAgainstSchema,
 } from '@tai42/studio-sdk';
-import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Timeline } from './Timeline';
 

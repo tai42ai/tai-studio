@@ -16,8 +16,6 @@
  * leave the (now-forgotten) thread on success — the transcript it named no longer
  * exists — by navigating back to the route's thread list.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Card,
@@ -27,6 +25,8 @@ import {
   useAppNavigate,
   useCanWrite,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
 import { personIdOfThread } from './persons';
 

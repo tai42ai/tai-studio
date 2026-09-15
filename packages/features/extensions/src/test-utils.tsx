@@ -4,13 +4,12 @@
  * query surfaces the error state immediately), the typed API client, the theme,
  * and a stub navigation context.
  */
+import type { ApiClient } from '@tai42/api-client';
+import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { vi } from 'vitest';
-
-import type { ApiClient } from '@tai42/api-client';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 
 export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
   readonly client: ApiClient;

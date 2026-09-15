@@ -4,8 +4,8 @@
  * beside it — a rounded thumbnail when the registry serves a safe http(s)
  * `icon_url`, otherwise a generated monogram badge from the title's initials.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
 import { isSafeHttpUrl } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 /** The title to show for a listing: its display name, or its name titleized. */
 export function listingTitle(displayName: string | null, name: string): string {

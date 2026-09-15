@@ -3,10 +3,10 @@
  * loud failure, the 403/404 capability boundaries, the empty state, the rows, and
  * create / edit / delete behind the confirm — mirroring the route table's coverage.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ConfigsTable } from './ConfigsTable';
 import {

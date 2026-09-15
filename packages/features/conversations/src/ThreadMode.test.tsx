@@ -4,14 +4,14 @@
  * the loud failure of both the read and the flip — a read-only session sees the
  * refusal, never a hidden control.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ThreadMode } from './ThreadMode';
 import { conversationThreadModeKey } from './keys';
 import { renderWithProviders, type StubApiClient } from './test-utils';
+import { ThreadMode } from './ThreadMode';
 
 function renderMode(client: StubApiClient) {
   return renderWithProviders(<ThreadMode route="chat" threadId="svc-chat/u1" />, { client });

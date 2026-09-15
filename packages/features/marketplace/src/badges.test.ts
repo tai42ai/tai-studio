@@ -3,9 +3,8 @@
  * item names, hidden kinds omitted, other kinds as counted kind badges, and the
  * all-hidden fallback. Every policy branch is exercised on its own row.
  */
-import { describe, expect, it } from 'vitest';
-
 import type { MarketplaceSearchRow } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { listingBadges, sourceLabel } from './badges';
 

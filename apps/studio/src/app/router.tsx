@@ -8,14 +8,14 @@
  * Studio-plugin pages mount under the shell-owned catch-all `/plugins/$pluginId/$`,
  * resolved from the runtime registry — never part of the compile-time typed tree.
  */
-import { createRouter, type RouterHistory } from '@tanstack/react-router';
 import type { AuthState } from '@tai42/studio-sdk';
+import { createRouter, type RouterHistory } from '@tanstack/react-router';
 
 import { RouteErrorComponent } from './error-boundary';
-import { NotFoundComponent } from './not-found';
 import { buildFeatureRoutes } from './feature-routes';
-import { buildShellRoutes } from './shell-routes';
+import { NotFoundComponent } from './not-found';
 import type { PluginLoader } from './plugin-loader';
+import { buildShellRoutes } from './shell-routes';
 
 export interface BuildRouterOptions {
   readonly plugins: PluginLoader;

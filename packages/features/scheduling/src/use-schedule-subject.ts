@@ -2,9 +2,9 @@
  * The optional-subject sub-form for the add-schedule dialog: the subject fields, the
  * collapse toggle, and the conversation-target options (read only while expanded).
  */
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
 /** Subject state + setters + the target options; the targets read is gated on `open`
  *  so the dialog's default (collapsed) shape mounts no extra query. */

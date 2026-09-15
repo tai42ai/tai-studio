@@ -35,15 +35,14 @@
  * SAFETY: an extension name is server-supplied, so every name renders as TEXT through
  * the DS `Badge`/`Checkbox` (React escapes it) — never an HTML sink.
  */
-import { useEffect, useState, type ReactNode } from 'react';
-
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
+import { type ReactNode, useEffect, useState } from 'react';
 
 import { comboElementNames, extensionElementName } from '../extension-combos';
 import { type SchemaEditorChange } from '../schema-editor';
 import {
-  CommittedComboList,
   ComboDraftEditor,
+  CommittedComboList,
   OUTPUT_SCHEMA,
   outputSchemaConfig,
   sameNames,

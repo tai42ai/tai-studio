@@ -1,10 +1,10 @@
 /** Page-level tests for the Storage surface: stat, upload (text + files), download,
  * and the delete / delete-directory confirms with their invalidations. */
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within, type RenderResult } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
+import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, type RenderResult, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { type ReactElement, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 

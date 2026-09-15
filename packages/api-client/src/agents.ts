@@ -17,8 +17,8 @@
 import { z } from 'zod';
 
 import { ApiError, ApiUnauthorizedError } from './errors';
-import { encodeSegment, extractError, type ApiConfig } from './http';
-import { SseFrameParser, readSseFrames, sseOpenToken, type SseFrame } from './sse';
+import { type ApiConfig, encodeSegment, extractError } from './http';
+import { readSseFrames, type SseFrame, SseFrameParser, sseOpenToken } from './sse';
 
 // -- list schema -------------------------------------------------------------
 

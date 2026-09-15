@@ -6,23 +6,25 @@
  * cards, one card per listing row. Every filter lives in the URL; the page number
  * does not (the infinite query owns it).
  */
-import { type ReactNode } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   Button,
   EmptyState,
+  errorMessage,
   ErrorState,
   PageHeader,
+  type PageProps,
   Skeleton,
   Stack,
   Tabs,
-  errorMessage,
   useApi,
   useAppNavigate,
-  type PageProps,
 } from '@tai42/studio-sdk';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { type ReactNode } from 'react';
 
-import { activeTab, mergeSearch, searchParams, type MarketplaceSearch } from './filters';
+import { activeTab, type MarketplaceSearch, mergeSearch, searchParams } from './filters';
+import { InstalledTab } from './InstalledTab';
+import { marketplaceSearchKey } from './keys';
 import {
   CategoryFacet,
   FacetChip,
@@ -31,8 +33,6 @@ import {
   SortFacet,
   vocabularyWith,
 } from './marketplace-facets';
-import { marketplaceSearchKey } from './keys';
-import { InstalledTab } from './InstalledTab';
 import { PluginCard } from './PluginCard';
 import { PluginDetail } from './PluginDetail';
 

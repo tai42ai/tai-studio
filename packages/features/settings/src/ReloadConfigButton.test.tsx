@@ -6,11 +6,10 @@
  * the loud error path — all driving the real DS components through TanStack Query and
  * the SDK capability context.
  */
+import type { ApiClient, FleetResult, FleetWorkerResult } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, FleetResult, FleetWorkerResult } from '@tai42/api-client';
 
 import { ReloadConfigButton } from './ReloadConfigButton';
 import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';

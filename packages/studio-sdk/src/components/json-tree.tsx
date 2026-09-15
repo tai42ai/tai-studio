@@ -18,23 +18,23 @@
  * The scrolling pane IS the scrolling box, carrying the region attributes itself
  * rather than nesting a `ScrollRegion` that would add a second scroller.
  */
-import { useCallback, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { XCircleIcon } from './icons';
-import { useOverflowRegion } from './scroll-region';
 import { useClipboardCopy } from '../hooks/useClipboardCopy';
+import { XCircleIcon } from './icons';
+import { JsonTreeContext, type JsonTreeContextValue } from './json-tree-context';
 import {
-  PAGE_SIZE,
+  type Baseline,
   computeOpen,
   expandedOpenPaths,
   initialBaseline,
   isContainer,
-  type Baseline,
+  PAGE_SIZE,
 } from './json-tree-model';
-import { NO_CLIPBOARD, copyFailed, serializeForCopy } from './json-value-format';
-import { JsonTreeContext, type JsonTreeContextValue } from './json-tree-context';
 import { COPY_LABEL, CopyButton, JsonNode } from './json-tree-nodes';
+import { copyFailed, NO_CLIPBOARD, serializeForCopy } from './json-value-format';
+import { useOverflowRegion } from './scroll-region';
 
 export interface JsonTreeProps {
   readonly data: unknown;

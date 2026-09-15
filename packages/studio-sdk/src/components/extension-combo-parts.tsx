@@ -3,9 +3,8 @@
  * (`CommittedComboList`), the under-construction combo editor (`ComboDraftEditor`),
  * and the shared combo helpers. The builder owns the state and composes these.
  */
-import { Fragment, type ReactNode } from 'react';
-
 import type { Extension, PresetExtensionElement } from '@tai42/api-client';
+import { Fragment, type ReactNode } from 'react';
 
 import { comboElementNames } from '../extension-combos';
 import { SchemaEditor, type SchemaEditorChange } from '../schema-editor';

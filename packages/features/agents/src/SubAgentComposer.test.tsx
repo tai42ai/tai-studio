@@ -3,12 +3,11 @@
  * per-item Remove is a routine list-item control in a repeated editor, so it wears
  * the low-emphasis (ghost) style rather than filled danger.
  */
-import { useState, type ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import type { PresetDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import type { PresetDetail } from '@tai42/api-client';
+import { type ReactNode, useState } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { InlineSubAgentSpec } from './authoring-types';
 import { SubAgentComposer } from './SubAgentComposer';

@@ -4,20 +4,19 @@
  * the record (no live tool exists). Drops the deleted preset's own caches so a later
  * same-name revisit cannot flash the removed record's (credential-bearing) kwargs.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Spinner,
-  errorMessage,
   toolsListKey,
   useApi,
 } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { presetDetailKey, presetVersionsKey, presetsListKey } from './keys';
+import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 
 export function DeletePresetDialog({
   name,

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { openTargetProps, type OpenTargetOptions } from './open-target';
+import { type OpenTargetOptions, openTargetProps } from './open-target';
 
 /**
  * A minimal entry that spreads the helper onto its container and renders the

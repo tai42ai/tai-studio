@@ -13,9 +13,9 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { createApiClient } from './index';
+import { type ApiConfig, ApiSchemaError } from '../index';
 import * as schemas from '../schemas';
-import { ApiSchemaError, type ApiConfig } from '../index';
+import { createApiClient } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

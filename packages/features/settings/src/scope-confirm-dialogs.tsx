@@ -3,9 +3,9 @@
  * pin public, unpin public — and the host that renders whichever the mapper has
  * armed. Each names the cascade its mutation triggers and surfaces its error inline.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { invalidateMapperKeys } from './scope-mapping';
 

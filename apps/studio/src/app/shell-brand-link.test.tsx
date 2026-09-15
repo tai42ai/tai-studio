@@ -4,9 +4,9 @@
  * unsaved-changes guard is consulted first — that gate is pinned in the SDK
  * (`navigation-guard.test.tsx`); here the link contract itself is pinned.
  */
-import { describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
 
 import { installServer, renderStudio } from './test-harness';
 

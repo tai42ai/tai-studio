@@ -3,8 +3,8 @@
  * a table of the orphaned records and a resolution field the operator fills to close
  * them. Rendered only after the server's 422 reveals the orphans.
  */
+import { Field, Table, TBody, TD, TextInput, TH, THead, TR } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
-import { Field, TBody, TD, TH, THead, TR, Table, TextInput } from '@tai42/studio-sdk';
 
 import type { OrphanRecord } from './reconcileOrphans';
 

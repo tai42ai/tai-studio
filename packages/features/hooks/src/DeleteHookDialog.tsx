@@ -3,9 +3,9 @@
  * calls `api.unregisterHook` and, on success, invalidates the hooks list and closes;
  * a rejected removal keeps the dialog open with a loud error.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { HOOKS_KEY_ROOT } from './keys';
 

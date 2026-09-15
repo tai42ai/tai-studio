@@ -12,8 +12,13 @@
  * The document is uploaded whole by `tai state-templates put`; this screen never
  * edits it.
  */
-import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  ApiError,
+  schemas,
+  type StateTemplateDocument,
+  type TemplatedText,
+  type TemplateJq,
+} from '@tai42/api-client';
 import {
   AppLink,
   ArrowLeftIcon,
@@ -22,30 +27,25 @@ import {
   CodeBlock,
   EmptyState,
   ErrorState,
+  FeatureDisabled,
+  featureDisabledMessage,
+  isFeatureDisabled,
   JsonTree,
   Skeleton,
+  Table,
   Tabs,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  isFeatureDisabled,
-  featureDisabledMessage,
-  FeatureDisabled,
   useApi,
 } from '@tai42/studio-sdk';
-import {
-  ApiError,
-  schemas,
-  type StateTemplateDocument,
-  type TemplateJq,
-  type TemplatedText,
-} from '@tai42/api-client';
+import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { storedSchemaRef } from './SchemaField';
 import { stateTemplateDetailKey } from './keys';
+import { storedSchemaRef } from './SchemaField';
 
 /** The check a template declares, read from `declarations.check`; `null` when absent. */
 function checkBody(document: StateTemplateDocument): TemplatedText | null {

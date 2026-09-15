@@ -1,5 +1,6 @@
 /** Schedule listing and server-clock response schemas. */
 import { z } from 'zod';
+
 import { jsonValue } from './shared';
 
 // The skeleton returns opaque backend-tool results; the table reads a few known

@@ -15,9 +15,9 @@
  */
 import type { CSSProperties } from 'react';
 
+import { COPIED_LABEL, useClipboardCopy } from '../hooks/useClipboardCopy';
 import { CheckIcon, CopyIcon, XCircleIcon } from './icons';
 import { useOverflowRegion } from './scroll-region';
-import { COPIED_LABEL, useClipboardCopy } from '../hooks/useClipboardCopy';
 
 export interface CodeBlockProps {
   readonly code: string;

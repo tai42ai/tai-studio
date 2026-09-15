@@ -3,21 +3,21 @@
  * the start-connect mutation (OAuth popup vs no-auth completion), and the derived
  * submit gate / error surfaces.
  */
-import { useCallback, useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '@tai42/studio-sdk';
 import {
-  summarizeFleetFanout,
   type ApiClient,
   type FleetReportSummary,
   type ProviderView,
   type StartConnectArgs,
+  summarizeFleetFanout,
 } from '@tai42/api-client';
+import { useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
 
+import { buildConnectArgs, hasAuthorizeUrl } from './connect-dialog-model';
 import { CONNECTIONS_KEY } from './keys';
 import { readConnectorRefusal } from './notice';
 import { useOAuthPopup } from './oauth';
-import { buildConnectArgs, hasAuthorizeUrl } from './connect-dialog-model';
 
 type StartConnectResult = Awaited<ReturnType<ApiClient['startConnect']>>;
 

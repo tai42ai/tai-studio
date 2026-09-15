@@ -8,25 +8,25 @@
  * ({@link FoldCard}) merges this subject into another; `Writes` ({@link WritesCard}) is
  * the paged audit trail.
  */
-import { useMemo, type ReactNode } from 'react';
+import type { StateSubjectRef } from '@tai42/api-client';
 import {
   AppLink,
   ArrowLeftIcon,
   Card,
   CopyField,
   EmptyState,
+  errorMessage,
   ErrorState,
   FeatureDisabled,
-  errorMessage,
   featureDisabledMessage,
   isFeatureDisabled,
 } from '@tai42/studio-sdk';
-import type { StateSubjectRef } from '@tai42/api-client';
+import { type ReactNode, useMemo } from 'react';
 
-import { parseSubjectRef } from './record-subject';
-import { useStateRecord } from './useStateRecord';
-import { RecordDocumentCard } from './RecordDocumentCard';
 import { FoldCard } from './FoldCard';
+import { parseSubjectRef } from './record-subject';
+import { RecordDocumentCard } from './RecordDocumentCard';
+import { useStateRecord } from './useStateRecord';
 import { WritesCard } from './WritesCard';
 
 export function RecordPage({

@@ -19,20 +19,20 @@
  * Polling stops while the tab is in the background (TanStack's default), so a
  * parked Studio tab never holds the reader open.
  */
-import { useRef, type ReactNode, type RefObject } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, useApi } from '@tai42/studio-sdk';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, type RefObject, useRef } from 'react';
 
-import { useNow, RELATIVE_TICK_MS } from './clock';
-import { countOf } from './format';
+import { RELATIVE_TICK_MS, useNow } from './clock';
 import { useFocusHandoff } from './focus';
+import { countOf } from './format';
 import { conversationTranscriptKey } from './keys';
 import { useLiveRegion } from './live-region';
 import { boundedRefresh, trimToNewestPage } from './paging';
 import { TruncatedNotice } from './read-states';
-import { useTailingPager } from './useTailingPager';
 import { TranscriptBody } from './TranscriptBody';
 import { TranscriptTailStatus } from './TranscriptTailStatus';
+import { useTailingPager } from './useTailingPager';
 
 /**
  * Exchanges per request. Large on purpose: an ordinary thread arrives in one page,

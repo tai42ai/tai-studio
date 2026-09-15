@@ -16,22 +16,18 @@
  * components. Failures surface loudly through <ErrorState>. Read-only config mode
  * disables every mutation.
  */
-import { useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import {
   Button,
+  errorMessage,
   ErrorState,
   Spinner,
-  errorMessage,
   useApi,
   useCanWrite,
   useCapabilities,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { authCapabilitiesKey, scopesKey, tokensPayloadKey } from './keys';
-import { PolicyVersionsDialog } from './PolicyVersionsDialog';
-import { ScopesMapper } from './ScopesMapper';
-import type { KeyPayload } from './key-owner';
 import {
   MINT_ROUTE,
   mintableScopeIds,
@@ -39,11 +35,15 @@ import {
   scopeIdsOf,
   scopesMapperVisible,
 } from './api-keys-gating';
-import { KeysTable } from './KeysTable';
 import { CreateKeyDialog } from './CreateKeyDialog';
-import { MintedKeyDialog } from './MintedKeyDialog';
 import { EditKeyDialog } from './EditKeyDialog';
+import type { KeyPayload } from './key-owner';
+import { authCapabilitiesKey, scopesKey, tokensPayloadKey } from './keys';
+import { KeysTable } from './KeysTable';
+import { MintedKeyDialog } from './MintedKeyDialog';
+import { PolicyVersionsDialog } from './PolicyVersionsDialog';
 import { RevokeKeyDialog } from './RevokeKeyDialog';
+import { ScopesMapper } from './ScopesMapper';
 
 const stackStyle: CSSProperties = {
   display: 'flex',

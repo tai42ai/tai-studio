@@ -1,6 +1,6 @@
+import type { FleetReportSummary } from '@tai42/api-client';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { FleetReportSummary } from '@tai42/api-client';
 
 import { FleetReport } from './fleet-report';
 

@@ -4,10 +4,9 @@
  * write-gated Edit / Delete actions. Every server-supplied value renders as escaped
  * React text; no config field is interpreted as markup.
  */
-import type { ReactNode } from 'react';
-
-import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
 import type { TargetConversationConfig } from '@tai42/api-client';
+import { Badge, Button, TD, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { EMPTY_PLACEHOLDER } from './format';
 

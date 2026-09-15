@@ -13,8 +13,6 @@
  * store so the spec can compare the router's snapshot against what the browser
  * actually persisted).
  */
-import { StrictMode, useSyncExternalStore, type ReactElement } from 'react';
-import { createRoot } from 'react-dom/client';
 import {
   createRootRoute,
   createRoute,
@@ -24,6 +22,8 @@ import {
   useLocation,
   useRouter,
 } from '@tanstack/react-router';
+import { type ReactElement, StrictMode, useSyncExternalStore } from 'react';
+import { createRoot } from 'react-dom/client';
 
 /** The per-history-entry bag the fixture writes — the same namespace the Studio host
  *  stamps onto `history.state`, so the test reads the real channel's shape. */

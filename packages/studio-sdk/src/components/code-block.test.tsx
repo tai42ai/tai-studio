@@ -2,8 +2,8 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { CodeBlock } from './code-block';
 import { deferred, setElementOverflow } from '../testing';
+import { CodeBlock } from './code-block';
 
 /** The `<pre>` — the scrolling box itself — failing loudly if it is missing. */
 function codeBox(container: HTMLElement): HTMLElement {

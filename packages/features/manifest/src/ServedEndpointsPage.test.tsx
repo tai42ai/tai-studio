@@ -2,8 +2,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from './test-utils';
 import { ServedEndpointsPage } from './ServedEndpointsPage';
+import { renderWithProviders } from './test-utils';
 
 const TOOLS = ['echo', 'sum'];
 

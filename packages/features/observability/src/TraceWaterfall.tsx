@@ -6,8 +6,8 @@
  * keyboard-select. A text filter, jump-to-error / jump-to-slowest, and
  * collapse-all speed navigation through a large trace.
  */
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { AlertTriangleIcon, Button, TextInput } from '@tai42/studio-sdk';
+import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 
 import { type SpanNode, type TraceTree } from './trace-tree';
 import { Row } from './WaterfallRow';

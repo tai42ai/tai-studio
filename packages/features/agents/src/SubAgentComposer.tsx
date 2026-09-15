@@ -1,8 +1,7 @@
 /** The `subagents` field editor: a list of inline sub-agent cards with add/remove. */
-import type { ReactNode } from 'react';
-
 import type { PresetRecord } from '@tai42/api-client';
 import { Button } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import type { InlineSubAgentSpec } from './authoring-types';
 import { SubAgentCard } from './SubAgentCard';

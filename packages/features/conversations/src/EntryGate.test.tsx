@@ -6,11 +6,10 @@
  * point, and the revoke confirm. The api client is stubbed; the gate is reached
  * through the shared route catalogue, exactly as the running screen reaches it.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { EntryGate } from './EntryGate';
 import { conversationRoutesKey } from './keys';

@@ -3,9 +3,9 @@
  * address + text fields commit on submit, and a blank field is dropped (never an
  * empty `?address=`). The current URL is preserved through each merge-edit.
  */
-import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
 
 import { ConversationFilters } from './ConversationFilters';
 import { renderWithProviders } from './test-utils';

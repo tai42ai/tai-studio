@@ -5,19 +5,19 @@
  * capability-filtered visible nav entries + their provenance versions from the loader
  * store. Core nav never waits on the pass.
  */
-import { useEffect, useMemo } from 'react';
-import { useStore } from 'zustand';
 import {
+  type CapabilityState,
   coversAnyRoute,
   isFullProjection,
-  type CapabilityState,
   type RegisteredNavEntry,
 } from '@tai42/studio-sdk';
 import { getContributions } from '@tai42/studio-sdk/host';
+import { useEffect, useMemo } from 'react';
+import { useStore } from 'zustand';
 
-import { contributionCovered } from './token-requirements';
 import type { PluginVersions } from './nav-entries';
 import type { PluginLoader } from './plugin-loader';
+import { contributionCovered } from './token-requirements';
 
 /** The authed plugin-registry read route the load pass fetches; a scoped session
  * loads plugins only when its projection reaches it. */

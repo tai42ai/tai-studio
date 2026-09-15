@@ -19,8 +19,8 @@
  * sink. Read-only config mode disables importing (a write); export stays
  * available.
  */
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import type { BackupImportReport } from '@tai42/api-client';
+import { schemas, summarizeFleetFanout } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
   Badge,
@@ -29,21 +29,21 @@ import {
   Checkbox,
   CopyField,
   EmptyState,
+  errorMessage,
   ErrorState,
   FleetReport,
   ScrollRegion,
   Spinner,
+  Table,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  errorMessage,
   useApi,
 } from '@tai42/studio-sdk';
-import { schemas, summarizeFleetFanout } from '@tai42/api-client';
-import type { BackupImportReport } from '@tai42/api-client';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react';
 
 import { backupSectionsKey } from './keys';
 

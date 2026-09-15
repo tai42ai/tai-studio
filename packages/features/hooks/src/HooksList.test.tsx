@@ -3,9 +3,9 @@
  * Edit alongside Delete, Edit opens the register form prefilled from that row in a
  * dialog, and a save posts through `registerHook` and closes on success.
  */
-import { describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { HooksList } from './HooksList';
 import { apiKey, hook, renderWithProviders, type StubApiClient } from './test-utils';

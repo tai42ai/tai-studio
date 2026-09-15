@@ -2,10 +2,9 @@
  * Tests for the CONNECTION DETAIL view: sub-service save, reconnect (re-entering
  * the popup flow), and the confirm-gated disconnect that navigates back.
  */
+import { ApiError } from '@tai42/api-client';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import { ApiError } from '@tai42/api-client';
 
 import { ConnectionDetail } from './connection-detail';
 import { OAUTH_MESSAGE_TYPE } from './oauth';

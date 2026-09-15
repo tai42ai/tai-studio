@@ -2,8 +2,8 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { VersionHistoryPanel, type VersionHistoryEntry } from './version-history-panel';
 import { flushResizeObservers, setElementOverflow } from '../testing';
+import { type VersionHistoryEntry, VersionHistoryPanel } from './version-history-panel';
 
 const VERSIONS: VersionHistoryEntry[] = [
   {

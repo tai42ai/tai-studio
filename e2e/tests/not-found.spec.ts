@@ -4,7 +4,8 @@
  * app-styled "page not found" with a link home — never TanStack's bare built-in text
  * with no chrome and no way back.
  */
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
 import { seedCredential } from './helpers';
 
 test('an unknown route renders the app 404 with a working way home', async ({ page }) => {

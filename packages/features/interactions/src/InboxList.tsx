@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react';
-
-import { Badge, Button, Card, Skeleton } from '@tai42/studio-sdk';
 import type { StreamInteraction } from '@tai42/studio-sdk';
+import { Badge, Button, Card, Skeleton } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { groupInteractions } from './inbox-grouping';
 import { groupStyle, InteractionGroupSection, listStyle } from './InteractionGroupSection';

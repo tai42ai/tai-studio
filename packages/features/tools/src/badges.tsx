@@ -5,8 +5,8 @@
  * enforces. Every surface renders the same chips under the same tooltip so the
  * label can never be mistaken for a permission.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import { Badge, BADGES_NOTE, Tooltip } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
 /** The shared informational note, re-exported under this package's local name. */
 export { BADGES_NOTE as BADGES_INFORMATIONAL_NOTE };

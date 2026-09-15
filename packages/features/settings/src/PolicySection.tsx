@@ -22,12 +22,15 @@
  * Every server-supplied string renders as ESCAPED text through the design-system
  * components — never an HTML sink.
  */
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { TemplatedTextField, templatedTextCatalog, useApi } from '@tai42/studio-sdk';
 import type { TemplatedText } from '@tai42/api-client';
+import { templatedTextCatalog, TemplatedTextField, useApi } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useState } from 'react';
 
+import { ConditionInlineEditor } from './ConditionInlineEditor';
+import { InlineConfirm } from './InlineConfirm';
 import { templateNamesKey } from './keys';
+import { KeyValueEditor } from './KeyValueEditor';
 import {
   computePolicyFields,
   isPlainObject,
@@ -36,9 +39,6 @@ import {
   type PolicyRow,
   type PolicySeed,
 } from './policy-data';
-import { KeyValueEditor } from './KeyValueEditor';
-import { InlineConfirm } from './InlineConfirm';
-import { ConditionInlineEditor } from './ConditionInlineEditor';
 
 const sectionStyle: CSSProperties = {
   display: 'flex',

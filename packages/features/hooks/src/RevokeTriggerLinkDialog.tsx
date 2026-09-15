@@ -4,9 +4,9 @@
  * rejected revoke keeps the dialog open with a loud error, so the kill switch never
  * fails silently. Mounted fresh per open, so no prior row's error leaks in.
  */
-import type { ReactNode } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
 import { TRIGGER_LINKS_KEY_ROOT } from './keys';
 

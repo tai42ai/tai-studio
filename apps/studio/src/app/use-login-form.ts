@@ -3,9 +3,9 @@
  * form POST. `submitForm` posts a FLAT body (the invite token merged in for an
  * invite form), signs in with the minted token, and surfaces a failure loudly.
  */
-import { useState } from 'react';
-import { useApi, useAuth } from '@tai42/studio-sdk';
 import { ApiLoginFailedError, type LoginMethod } from '@tai42/api-client';
+import { useApi, useAuth } from '@tai42/studio-sdk';
+import { useState } from 'react';
 
 import { GENERIC_ERROR } from './login-methods';
 

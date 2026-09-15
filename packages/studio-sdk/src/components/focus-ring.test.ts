@@ -24,10 +24,10 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import {
-  type Rule,
   declarationsOf,
   everywhere,
   readRules,
+  type Rule,
   selectorsOf,
   sheetText,
   stylesheetsWithin,

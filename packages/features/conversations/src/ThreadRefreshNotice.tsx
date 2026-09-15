@@ -3,9 +3,8 @@
  * itself current" — paused this far down (with the Back-to-the-newest that resumes
  * it), or refreshing and failing. Paused wins; the one control clears both.
  */
-import type { ReactNode, RefObject } from 'react';
-
 import { Button } from '@tai42/studio-sdk';
+import type { ReactNode, RefObject } from 'react';
 
 import { StaleRead } from './read-states';
 

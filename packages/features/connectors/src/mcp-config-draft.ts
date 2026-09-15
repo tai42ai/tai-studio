@@ -3,15 +3,15 @@
  * (form ⇄ JSON), the combined secret-paste op, the manifest save with its
  * session-generated orphan-key sweep, and the composed hook the editor consumes.
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@tai42/api-client';
+import { useApi, useCanWrite, useRegisterDirty } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { RefObject } from 'react';
 import { useRef, useState } from 'react';
-import { useApi, useCanWrite, useRegisterDirty } from '@tai42/studio-sdk';
 
 import { envConfigKey, manifestKey, mcpStatusKey, preservedManifestKey } from './keys';
-import { collectEnvRefs, parseEnvMarker, resolveManifestPointer } from './mcp-env-markers';
 import { parseEntries } from './mcp-config-parse';
+import { collectEnvRefs, parseEnvMarker, resolveManifestPointer } from './mcp-env-markers';
 
 export type ConfigView = 'form' | 'json';
 

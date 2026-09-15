@@ -13,8 +13,8 @@
  */
 import { useSyncExternalStore } from 'react';
 
-import type { PluginContributions } from './types';
 import { getContributions } from './registry';
+import type { PluginContributions } from './types';
 
 /**
  * Identity of a successfully-loaded plugin, for host chrome that must attribute a

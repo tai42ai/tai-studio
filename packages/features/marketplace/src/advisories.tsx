@@ -4,10 +4,9 @@
  * warning tokens), and the filter that selects the advisories that currently
  * apply to a listing ref (non-withdrawn, matching `listing`).
  */
-import type { ReactNode } from 'react';
-
-import { Badge, ErrorState, errorMessage } from '@tai42/studio-sdk';
 import type { MarketplaceAdvisory } from '@tai42/api-client';
+import { Badge, errorMessage, ErrorState } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 /** Map an advisory severity to a Badge variant; unknown severities read neutral. */
 export function severityVariant(severity: string): string {

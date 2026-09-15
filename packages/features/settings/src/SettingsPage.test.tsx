@@ -1,12 +1,11 @@
+import type { ApiClient, SettingsSchema } from '@tai42/api-client';
+import type { SettingsTabProps } from '@tai42/studio-sdk';
+import { loadPlugin, type PluginLoaderState, setPluginHostState } from '@tai42/studio-sdk/host';
+import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-
-import type { ApiClient, SettingsSchema } from '@tai42/api-client';
-import type { SettingsTabProps } from '@tai42/studio-sdk';
-import { loadPlugin, setPluginHostState, type PluginLoaderState } from '@tai42/studio-sdk/host';
-import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 
 import { SettingsPage } from './SettingsPage';
 import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';

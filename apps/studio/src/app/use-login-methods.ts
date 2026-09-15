@@ -5,8 +5,8 @@
  * nothing. The permanent key-paste fallback IS the recovery — no retry loop — and any
  * error is loud (the inline notice alone would discard the diagnostic).
  */
-import { useEffect, useState } from 'react';
 import { useApi } from '@tai42/studio-sdk';
+import { useEffect, useState } from 'react';
 
 import type { MethodsState } from './login-methods';
 

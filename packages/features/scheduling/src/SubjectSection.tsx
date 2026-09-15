@@ -2,8 +2,8 @@
  * The optional-subject group for the add-schedule dialog: a collapsible block whose
  * target/kind/key fields (and the targets read) mount only while expanded.
  */
-import type { ReactNode } from 'react';
 import { Field, Select, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function SubjectSection({
   open,

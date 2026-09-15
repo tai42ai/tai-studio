@@ -1,6 +1,6 @@
 /** The read-only plugin-detail cards: listing info + readme, contained items, routes,
  * version history, the back control, and the post-action receipt. */
-import { useMemo, type ReactNode } from 'react';
+import type { MarketplacePluginDetail, MarketplaceVersion } from '@tai42/api-client';
 import {
   ArrowLeftIcon,
   Badge,
@@ -10,21 +10,21 @@ import {
   EmptyState,
   ExternalLinkButton,
   ScrollRegion,
+  Table,
+  TagChips,
   TBody,
   TD,
   TH,
   THead,
   TR,
-  Table,
-  TagChips,
   useProseScrollRegions,
 } from '@tai42/studio-sdk';
-import type { MarketplacePluginDetail, MarketplaceVersion } from '@tai42/api-client';
+import { type ReactNode, useMemo } from 'react';
 
 import { severityVariant } from './advisories';
 import { ListingIcon, listingTitle } from './display';
 import type { RouteItem } from './install-dialog';
-import { deliveryOf, versionStatusVariant, type ActionResult } from './plugin-detail-data';
+import { type ActionResult, deliveryOf, versionStatusVariant } from './plugin-detail-data';
 
 export function BackButton({ onBack }: { readonly onBack: () => void }): ReactNode {
   return (

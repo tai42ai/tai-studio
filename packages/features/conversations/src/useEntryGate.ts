@@ -3,10 +3,9 @@
  * toggle and code-revoke mutations, and the confirm-first rule for turning the gate
  * ON while no live code exists (which would lock the route to everyone).
  */
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import { useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { webEntryGateKey } from './keys';
 

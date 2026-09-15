@@ -5,22 +5,21 @@
  * leaves submit enabled and the server 409 backstops. On success it moves the record
  * and history to the new key and drops the OLD name's (credential-bearing) caches.
  */
-import { useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
 import {
   Button,
   Dialog,
+  errorMessage,
   ErrorState,
   Field,
   Spinner,
   TextInput,
-  errorMessage,
   toolsListKey,
   useApi,
 } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useState } from 'react';
 
-import { presetDetailKey, presetRefereesKey, presetVersionsKey, presetsListKey } from './keys';
+import { presetDetailKey, presetRefereesKey, presetsListKey, presetVersionsKey } from './keys';
 
 export function RenamePresetDialog({
   name,

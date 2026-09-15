@@ -1,6 +1,6 @@
 /** The door-display helper. The door itself is a server-derived string enum. */
-import { describe, expect, it } from 'vitest';
 import type { TriggerAuth } from '@tai42/api-client';
+import { describe, expect, it } from 'vitest';
 
 import { describeTriggerAuth } from './trigger-auth';
 

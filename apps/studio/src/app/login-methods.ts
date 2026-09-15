@@ -3,8 +3,8 @@
  * rules for the metadata-declared sign-in methods, the URL-fragment claim-token
  * reader, and the copy + shared styles the screen and its method views share.
  */
-import type { CSSProperties } from 'react';
 import type { LoginMethod, LoginMethods } from '@tai42/api-client';
+import type { CSSProperties } from 'react';
 
 export const GENERIC_ERROR = 'Something went wrong signing in. Please try again.';
 

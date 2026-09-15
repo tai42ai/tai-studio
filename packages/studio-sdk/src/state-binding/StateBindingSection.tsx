@@ -4,7 +4,7 @@
  * own api-client + query stack) and passes them in; this wraps `StateBindingEditor`
  * in a keyboard-native disclosure that opens when a binding already exists.
  */
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { Button } from '../components/primitives';
 import { StateBindingEditor, type StateBindingEditorProps } from './StateBindingEditor';

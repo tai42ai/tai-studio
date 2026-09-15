@@ -5,23 +5,23 @@
  * catalogs, inherited binding and tool-schema field sources. Every fetch is a
  * shared React Query so the page serves each once.
  */
-import { useMemo } from 'react';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import type { HookList, TokensPayload } from '@tai42/api-client';
 import {
   errorMessage,
   fieldPathsFromSchema,
+  type StateBindingEditorProps,
   statesCatalogFromList,
-  templatesCatalogFromList,
   statesListKey,
   stateTemplatesKey,
   templatedTextCatalog,
+  templatesCatalogFromList,
   useApi,
-  type StateBindingEditorProps,
 } from '@tai42/studio-sdk';
-import type { HookList, TokensPayload } from '@tai42/api-client';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
-import { hooksListKey } from './keys';
 import { useExecutionKeys } from './ExecutionKeyPicker';
+import { hooksListKey } from './keys';
 
 type TemplatedTextTemplates = ReturnType<typeof templatedTextCatalog>;
 type StateBindingProps = Omit<StateBindingEditorProps, 'value' | 'onChange'>;

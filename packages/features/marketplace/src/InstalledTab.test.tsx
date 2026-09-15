@@ -7,11 +7,6 @@
  * fallback that keeps the table, and the table pane's keyboard reachability
  * once it outruns its column.
  */
-import { describe, expect, it, vi } from 'vitest';
-import { act, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
-
 import {
   ApiError,
   type MarketplaceAdvisory,
@@ -19,6 +14,10 @@ import {
   type MarketplaceInstalledPlugin,
   type MarketplaceQuarantinedPlugin,
 } from '@tai42/api-client';
+import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
+import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { InstalledTab } from './InstalledTab';
 import { renderWithProviders, type StubApiClient } from './test-utils';

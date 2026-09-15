@@ -29,19 +29,19 @@
  * `answered` is not a wire field — it is a client flag flipped on an
  * `interaction.answered` event.
  */
-import { useEffect, useRef, useState } from 'react';
 import type { Interaction } from '@tai42/api-client';
+import { useEffect, useRef, useState } from 'react';
 
-import { useApi } from './useApi';
-import { useOnUnauthorized } from './useUnauthorized';
+import { type ConnectionState, startInteractionsStream } from './interactions-connection';
 import {
   emptyOverlay,
+  type LiveOverlay,
   merge,
   pendingCount,
-  type LiveOverlay,
   type StreamInteraction,
 } from './interactions-stream';
-import { startInteractionsStream, type ConnectionState } from './interactions-connection';
+import { useApi } from './useApi';
+import { useOnUnauthorized } from './useUnauthorized';
 
 export type { StreamInteraction } from './interactions-stream';
 

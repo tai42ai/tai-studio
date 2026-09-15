@@ -9,10 +9,10 @@
  * timeline are exported for direct unit testing.
  */
 export { AgentsPage } from './agents';
-export { useAgentRun, useAuthoredAgentRun, useStreamRun, StreamRunView } from './run-view';
-export type { AgentRun, StreamOpener } from './run-view';
-export { AuthoringSection, ComposeAgentDialog, AuthoredRunView } from './authoring';
 export type { AuthoredRunTarget, InlinePresetSpec, InlineSubAgentSpec } from './authoring';
-export { Timeline } from './Timeline';
+export { AuthoredRunView, AuthoringSection, ComposeAgentDialog } from './authoring';
 export { buildTimeline } from './build-timeline';
-export type { TimelineItem, TimelineFold } from './timeline-model';
+export type { AgentRun, StreamOpener } from './run-view';
+export { StreamRunView, useAgentRun, useAuthoredAgentRun, useStreamRun } from './run-view';
+export { Timeline } from './Timeline';
+export type { TimelineFold, TimelineItem } from './timeline-model';

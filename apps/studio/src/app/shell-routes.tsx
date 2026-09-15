@@ -4,15 +4,15 @@
  * pin), and the capability-gated landing index. The feature routes hang off the
  * returned `authedLayout` (see `feature-routes`).
  */
-import type { ReactNode } from 'react';
-import { createRootRoute, createRoute, redirect, Outlet, useSearch } from '@tanstack/react-router';
 import type { AuthState } from '@tai42/studio-sdk';
+import { createRootRoute, createRoute, Outlet, redirect, useSearch } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
-import { ShellLayout } from './shell-layout';
-import { LoginPage } from './login-page';
 import { LandingRoute } from './landing-route';
-import { safeInternalPath } from './route-search';
+import { LoginPage } from './login-page';
 import type { PluginLoader } from './plugin-loader';
+import { safeInternalPath } from './route-search';
+import { ShellLayout } from './shell-layout';
 
 export interface ShellRoutesOptions {
   readonly plugins: PluginLoader;

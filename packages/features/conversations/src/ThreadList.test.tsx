@@ -5,15 +5,15 @@
  * transcript from going stale — and what that refresh may never do: list one
  * thread twice, drop the newest page, or fail without saying so.
  */
-import { createRef } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, type ConversationDeliveryStatus } from '@tai42/api-client';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type ConversationDeliveryStatus } from '@tai42/api-client';
+import { createRef } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RELATIVE_TICK_MS } from './clock';
-import { ThreadList, THREADS_MAX_PAGES, THREADS_PAGE_SIZE, THREADS_REFRESH_MS } from './ThreadList';
 import { makeThread, page, renderWithProviders } from './test-utils';
+import { ThreadList, THREADS_MAX_PAGES, THREADS_PAGE_SIZE, THREADS_REFRESH_MS } from './ThreadList';
 
 function renderList(
   listConversationThreads: unknown,

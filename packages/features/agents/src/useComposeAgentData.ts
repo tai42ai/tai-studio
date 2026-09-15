@@ -3,25 +3,24 @@
  * derived from them. A failed read the rendered spec fields depend on is surfaced
  * loudly and blocks submit (`readFailed`) — never a silently-empty picker.
  */
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-
 import type { AgentSummary } from '@tai42/api-client';
 import {
   hiddenToolNames,
+  type JsonSchema,
   useApi,
   useFeatureOff,
   useToolDisplayNames,
-  type JsonSchema,
 } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 
+import { hasField } from './authoring-schema';
 import {
   authoredPresetsKey,
   authoredToolMetaKey,
-  authoredToolTagsKey,
   authoredToolsKey,
+  authoredToolTagsKey,
 } from './keys';
-import { hasField } from './authoring-schema';
 
 /** The compose dialog's read layer plus the memos derived from it. */
 export type ComposeAgentData = ReturnType<typeof useComposeAgentData>;

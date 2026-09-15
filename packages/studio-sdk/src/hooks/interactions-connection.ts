@@ -6,21 +6,21 @@
  * overlay reducer and republishes the merged list. React state flows in as the
  * dispatchers the hook passes; this file holds no React.
  */
-import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { ApiClient, Interaction } from '@tai42/api-client';
+import type { Dispatch, RefObject, SetStateAction } from 'react';
 
 import { isFeatureDisabled } from '../feature-disabled';
 import {
   emptyOverlay,
+  type LiveOverlay,
   merge,
   overlayApplyAdd,
   overlayApplyAnswered,
   overlayApplyRemoved,
   parseAddFrame,
   parseId,
-  sweepAnswered,
-  type LiveOverlay,
   type StreamInteraction,
+  sweepAnswered,
 } from './interactions-stream';
 
 // Reconnect backoff: capped exponential with full jitter. The delay for attempt

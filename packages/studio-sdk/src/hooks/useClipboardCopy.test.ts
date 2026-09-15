@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { deferred } from '../testing';
-import { COPIED_RESET_MS, useClipboardCopy, type ClipboardCopyMessages } from './useClipboardCopy';
+import { type ClipboardCopyMessages, COPIED_RESET_MS, useClipboardCopy } from './useClipboardCopy';
 
 /** Per-control wording; asserted verbatim so the two branches never blur. */
 const messages: ClipboardCopyMessages = {

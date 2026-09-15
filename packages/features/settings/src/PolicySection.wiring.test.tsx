@@ -18,15 +18,14 @@
  * LIVE "Sample context (JSON)" editor — a valid object when it parses, `undefined`
  * (upstream skeleton fallback) when it is blank or malformed.
  */
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
 import type { ApiClient } from '@tai42/api-client';
-import { ApiProvider } from '@tai42/studio-sdk';
 // Only `JqField` is stubbed (below); the props type comes from the real module.
 import type { JqFieldProps } from '@tai42/jq-studio';
+import { ApiProvider } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CONDITION_SHAPE } from './policy-condition';
 import { PolicySection } from './PolicySection';

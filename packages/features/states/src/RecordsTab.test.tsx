@@ -4,10 +4,10 @@
  * hit. Every open navigates `?state=&subject=&target=` with the subject/target params
  * encoded on their first colon.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError, type StateDetail } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError, type StateDetail } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
 import { RecordsTab } from './RecordsTab';
 import { renderWithProviders, type StubApiClient } from './test-utils';

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { createApiClient } from './client';
 import { ApiError, ApiSchemaError, ApiUnauthorizedError } from './errors';
-import { apiRequest, apiText, encodeSegment, type ApiConfig } from './http';
+import { type ApiConfig, apiRequest, apiText, encodeSegment } from './http';
 
 function textResponse(body: string, status = 200): Response {
   return new Response(body, { status, headers: { 'content-type': 'text/plain' } });

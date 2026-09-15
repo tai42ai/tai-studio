@@ -7,19 +7,19 @@
  * Each hit renders as its exchange with a link into the thread it belongs to. A
  * capped result set surfaces a LOUD partial-set notice — never a silent cut.
  */
-import type { ReactNode } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   AppLink,
   Button,
   Card,
   EmptyState,
-  Skeleton,
   errorMessage,
+  Skeleton,
   useApi,
 } from '@tai42/studio-sdk';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 
-import { useNow, RELATIVE_TICK_MS } from './clock';
+import { RELATIVE_TICK_MS, useNow } from './clock';
 import { Exchange } from './Exchange';
 import { conversationMessageSearchKey } from './keys';
 import { dedupeBy } from './paging';

@@ -1,13 +1,12 @@
+import type { Extension } from '@tai42/api-client';
 import { describe, expect, it } from 'vitest';
 
-import type { Extension } from '@tai42/api-client';
-
 import {
-  NON_STACKABLE_KIND,
   baseNameOf,
   groupByKind,
   groupIntoFamilies,
   kindVariant,
+  NON_STACKABLE_KIND,
 } from './extension-grouping';
 
 describe('baseNameOf', () => {

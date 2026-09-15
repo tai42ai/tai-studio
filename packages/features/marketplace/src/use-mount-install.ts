@@ -3,13 +3,13 @@
  * state, the debounced live preview, the derived collision/public/env surfaces, and
  * the submit-body assembly. The parent owns the mutation via `onSubmit`.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useApi } from '@tai42/studio-sdk';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 
-import { marketplacePreviewKey } from './keys';
 import type { RouteItem } from './install-dialog';
 import { buildInstallExtras, deriveEnvSecretMap, type InstallExtras } from './install-mount';
+import { marketplacePreviewKey } from './keys';
 
 /** How long after the last base keystroke the preview refetches. */
 const PREVIEW_DEBOUNCE_MS = 250;

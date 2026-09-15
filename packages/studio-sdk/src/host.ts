@@ -5,15 +5,15 @@
  * carries no way to forge, wipe, or enumerate the registry. Only the host bundle
  * imports this. See SECURITY.md for the trust boundary.
  */
-export { loadPlugin, getContributions } from './plugin/registry';
+export type {
+  LoadedPlugin,
+  PluginContributionsSnapshot,
+  PluginLoaderState,
+} from './plugin/host-state';
 export {
-  setPluginHostState,
   getPluginHostState,
+  setPluginHostState,
   subscribePluginHost,
   usePluginContributions,
 } from './plugin/host-state';
-export type {
-  PluginLoaderState,
-  LoadedPlugin,
-  PluginContributionsSnapshot,
-} from './plugin/host-state';
+export { getContributions, loadPlugin } from './plugin/registry';

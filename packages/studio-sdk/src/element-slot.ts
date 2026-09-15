@@ -9,8 +9,8 @@
  * onto it: the opener renders, carries no `aria-haspopup`/`aria-expanded`/
  * `aria-controls` and no handler, and fails nothing.
  */
-import { Fragment } from 'react';
 import type { ReactElement } from 'react';
+import { Fragment } from 'react';
 
 /** Raises when an `asChild` slot is handed a fragment. `slot` names the prop. */
 export function assertSlotElement(element: ReactElement, slot: string): void {

@@ -4,24 +4,24 @@
  * with per-row Edit / History / Revoke actions. Key MATERIAL is never returned by the
  * server, so it never appears here.
  */
-import type { CSSProperties, ReactNode } from 'react';
 import {
   Badge,
   Button,
   Card,
   EmptyState,
   ScrollRegion,
+  Table,
   TBody,
   TD,
   TH,
   THead,
-  TR,
-  Table,
   Tooltip,
+  TR,
 } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
 
-import { ownerOf, type KeyPayload } from './key-owner';
 import { badgeRowStyle } from './api-keys-styles';
+import { type KeyPayload, ownerOf } from './key-owner';
 
 const cardHeaderStyle: CSSProperties = {
   display: 'flex',

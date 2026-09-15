@@ -4,15 +4,15 @@
  * hardcoded literal, or a jq expression — and shows the row's own compiled jq on
  * demand. {@link AdapterMapping} composes one editor per declared key.
  */
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { Badge } from '../components/badge';
-import { Button, Skeleton } from '../components/primitives';
 import { Field } from '../components/field';
-import { Select } from '../components/select';
 import { TextInput } from '../components/inputs';
+import { Button, Skeleton } from '../components/primitives';
+import { Select } from '../components/select';
+import { type FieldRoot, type MappingRow, type MappingSource, rowValueJq } from './adapter';
 import { BindingJqField, type TemplateJqSuggestion } from './BindingJqField';
-import { rowValueJq, type FieldRoot, type MappingRow, type MappingSource } from './adapter';
 import type { BindingSourceSchemas, SchemaFieldPath } from './types';
 
 const ROOT_OPTIONS: readonly { value: FieldRoot; label: string }[] = [

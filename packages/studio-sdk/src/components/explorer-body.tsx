@@ -6,15 +6,15 @@
 import type { ReactNode } from 'react';
 
 import { EntityCardGrid } from './entity-card-grid';
-import { FolderRow, type Folder } from './folder-nav';
+import { PAGE_SIZES } from './explorer-page-size';
+import type { ExplorerColumn, ExplorerEmptyStates } from './explorer-view';
+import { type Folder, FolderRow } from './folder-nav';
 import { type OpenTargetProps } from './open-target';
 import { Button, Card, EmptyState } from './primitives';
 import { ScrollRegion } from './scroll-region';
 import { Select } from './select';
 import { Table, TBody, TD, TH, THead, TR } from './table';
 import type { ViewMode } from './view-toggle';
-import { PAGE_SIZES } from './explorer-page-size';
-import type { ExplorerColumn, ExplorerEmptyStates } from './explorer-view';
 
 /** One page entry: a subfolder (sorted first) or a filtered item, in one array. */
 export type ExplorerEntry<T> =

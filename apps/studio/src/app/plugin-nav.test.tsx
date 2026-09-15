@@ -4,14 +4,14 @@
  * Plugins section, and the eager load pass skips for a scoped session that cannot reach
  * the registry route.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { http, HttpResponse } from 'msw';
-import { screen, waitFor, within } from '@testing-library/react';
 import type { NavEntrySection, PluginContext } from '@tai42/studio-sdk';
 import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
+import { screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { installServer, renderStudio, server } from './test-harness';
 import { meHandler, okChannels, scoped } from './test-capabilities-support';
+import { installServer, renderStudio, server } from './test-harness';
 
 installServer();
 

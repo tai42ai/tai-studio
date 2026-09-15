@@ -4,13 +4,12 @@
  * failure resilience (a failed load walls the picker and blocks submit; a tags
  * failure is stated but degrades gracefully).
  */
-import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient } from '@tanstack/react-query';
-
 import { type CreatePresetBody } from '@tai42/api-client';
 import { toolsListKey } from '@tai42/studio-sdk';
+import { QueryClient } from '@tanstack/react-query';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ComposeAgentDialog } from './authoring';
 import {

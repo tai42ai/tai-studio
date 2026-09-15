@@ -16,17 +16,17 @@
  * inline notice of the binding it will replace. Any 4xx surfaces verbatim in a loud
  * inline `ErrorState`.
  */
-import type { ReactNode } from 'react';
 import {
   Button,
   Card,
+  errorMessage,
   ErrorState,
   Field,
   Spinner,
   Textarea,
   TextInput,
-  errorMessage,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { useTopicVerifierForm } from './useTopicVerifierForm';
 import { VerifierSelectField } from './VerifierSelectField';

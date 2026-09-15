@@ -6,12 +6,12 @@
  * so navigation can be asserted. Only test dependencies are imported here; no
  * production module is stubbed.
  */
-import type { ReactElement } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import type { ApiClient } from '@tai42/api-client';
+import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderResult } from '@testing-library/react';
-import { vi, type Mock } from 'vitest';
+import type { ReactElement } from 'react';
+import { type Mock, vi } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;

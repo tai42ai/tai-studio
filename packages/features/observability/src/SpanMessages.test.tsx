@@ -6,8 +6,8 @@
  * tool_calls code block. Covers the role/content rendering variants the shell
  * shows for an LLM span payload.
  */
-import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
 
 import { SpanMessages } from './SpanMessages';
 import { renderWithProviders } from './test-utils';

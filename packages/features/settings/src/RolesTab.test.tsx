@@ -5,19 +5,18 @@
  * reserved-admin read-only guard, the save-as-grant-map flow, and the read-only
  * effective-access view.
  */
+import type { ApiClient, AuthRoute, RoleBody, RoleGrants } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ApiClient, AuthRoute, RoleBody, RoleGrants } from '@tai42/api-client';
-
-import { RolesTab } from './RolesTab';
 import {
   baseTierLabel,
   effectiveLevelsOf,
   featureGroupsOf,
   isGrantableAction,
 } from './role-grants';
+import { RolesTab } from './RolesTab';
 import { decorBorderedControls, renderWithProviders } from './test-utils';
 
 // -- fixtures ----------------------------------------------------------------

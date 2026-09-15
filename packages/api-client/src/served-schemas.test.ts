@@ -4,15 +4,16 @@
  * detects a drifted bundle (the freshness gate reds on real drift).
  */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
 
-import * as schemas from './schemas';
-import { templatedText } from './templated-text';
 // The generator is the freshness gate's engine; `generate` is pure (no I/O). Its
 // types come from scripts/gen-schemas.d.mts.
 import { generate } from '../scripts/gen-schemas.mjs';
+import * as schemas from './schemas';
+import { templatedText } from './templated-text';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bundlePath = resolve(here, '../contract-schema/contract-schema.json');

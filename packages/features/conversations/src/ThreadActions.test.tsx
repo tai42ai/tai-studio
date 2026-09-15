@@ -5,12 +5,11 @@
  * the reset-on-open (a reopened confirm carries no stale error), and the leave-to-list
  * navigation on success.
  */
-import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { describe, expect, it, vi } from 'vitest';
 
-import { ThreadActions } from './ThreadActions';
 import { PERSON_THREAD_PREFIX } from './persons';
 import {
   fullProjection,
@@ -18,6 +17,7 @@ import {
   scopedProjection,
   type StubApiClient,
 } from './test-utils';
+import { ThreadActions } from './ThreadActions';
 
 const ROUTE = 'support';
 const THREAD = 'support/+15551234567';

@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Field } from './field';
+import { MonitorIcon, MoonIcon, SunIcon } from './icons';
 import { TextInput } from './inputs';
-import { MoonIcon, MonitorIcon, SunIcon } from './icons';
 import { RadioGroup } from './radio-group';
 
 const OPTIONS = [

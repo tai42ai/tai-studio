@@ -4,11 +4,10 @@
  * while the viewport is pinned to the bottom, new content pulls the tail into view;
  * scrolling up detaches the follow, and a "Jump to latest" affordance re-pins.
  */
-import type { CSSProperties, ReactNode } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-
 import type { ParsedAgentEvent } from '@tai42/api-client';
 import { ArrowDownIcon, Button } from '@tai42/studio-sdk';
+import type { CSSProperties, ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { buildTimeline } from './build-timeline';
 import { TimelineRow } from './timeline-rows';

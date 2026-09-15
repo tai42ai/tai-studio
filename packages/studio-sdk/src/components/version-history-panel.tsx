@@ -25,7 +25,7 @@
  * machine voice (`tai-table-id` / `tai-mono`). The table itself sits in a
  * `ScrollRegion` so a narrow viewport scrolls it instead of the page.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { errorMessage } from '../errors';
 import { Dialog } from './dialog';

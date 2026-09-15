@@ -4,8 +4,8 @@
  * per-send schema the form answer validates against.
  */
 import type { FormOption, Interaction } from '@tai42/api-client';
-import { defaultValueForSchema } from '@tai42/studio-sdk';
 import type { JsonSchema } from '@tai42/studio-sdk';
+import { defaultValueForSchema } from '@tai42/studio-sdk';
 
 /** Props every submittable renderer takes. `onSubmit` emits the format's answer. */
 export interface AnswerRendererProps {

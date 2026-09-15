@@ -3,8 +3,8 @@
  * projection builder, a `me` handler override, the common empty msw handlers, and the
  * "land authenticated on /interactions" helper the nav-inspecting tests build on.
  */
-import { http, HttpResponse } from 'msw';
 import type { MeProjection } from '@tai42/api-client';
+import { http, HttpResponse } from 'msw';
 
 import { renderStudio, server } from './test-harness';
 

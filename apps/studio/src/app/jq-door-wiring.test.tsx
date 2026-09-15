@@ -12,12 +12,12 @@
  * fortiori. The real `JqField` renders here — no double — so the assertion is the
  * door's own affordance, not a stand-in.
  */
-import { useState, type ReactNode } from 'react';
+import { type JsonSchema, type PluginContext, SchemaForm } from '@tai42/studio-sdk';
+import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 import { screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import { type ReactNode, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SchemaForm, type JsonSchema, type PluginContext } from '@tai42/studio-sdk';
-import { __resetContributions, __resetPluginHostState } from '@tai42/studio-sdk/testing';
 
 import { installServer, renderStudio, server } from './test-harness';
 

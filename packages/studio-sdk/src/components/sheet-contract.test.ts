@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { type Rule, readRules, withoutComments } from './test-css-reader';
+import { readRules, type Rule, withoutComments } from './test-css-reader';
 import { productSourcesWithin, tabStopsIn } from './test-tab-stops';
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -2,10 +2,10 @@
  * The view-model for one manifest-section add/remove editor: the add-entries form
  * state, the add/remove mutations, and the parse-then-add handler.
  */
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { errorMessage } from '@tai42/studio-sdk';
 import { summarizeFleetFanout } from '@tai42/api-client';
+import { errorMessage } from '@tai42/studio-sdk';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { manifestKey } from '../keys';
 

@@ -3,8 +3,8 @@
  * declaration schema (the shape of the static values an attachment stores), whether a
  * declaration schema carries any field, and the object-level paths a fragment may land on.
  */
-import type { JsonSchema } from '@tai42/studio-sdk';
 import type { StateTemplateListItem } from '@tai42/api-client';
+import type { JsonSchema } from '@tai42/studio-sdk';
 
 /** A template's parameter descriptor read as a JSON Schema for the attach form. */
 export function paramsSchema(template: StateTemplateListItem | undefined): JsonSchema {

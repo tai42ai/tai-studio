@@ -1,7 +1,7 @@
 /** The state-template catalog table: name, description, attach count, shipped flag, delete. */
-import type { ReactNode } from 'react';
-import { AppLink, Badge, Button, TBody, TD, TH, THead, TR, Table } from '@tai42/studio-sdk';
 import type { StateTemplateListItem } from '@tai42/api-client';
+import { AppLink, Badge, Button, Table, TBody, TD, TH, THead, TR } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export interface TemplateCatalogTableProps {
   readonly templates: readonly StateTemplateListItem[];

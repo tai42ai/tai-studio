@@ -3,20 +3,19 @@
  * (attach-on-use — a not-yet-attached pick shows the "attached on save" hint), the subject
  * and scope expressions, the input injections, and the updates.
  */
-import { useMemo, type ReactNode } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
-import { Button } from '../components/primitives';
-import { CodeBlock } from '../components/code-block';
 import { Checkbox } from '../components/checkbox';
+import { CodeBlock } from '../components/code-block';
 import { Field } from '../components/field';
+import { AlertTriangleIcon, CloseIcon } from '../components/icons';
+import { Button } from '../components/primitives';
 import { Select } from '../components/select';
 import { templatedTextSummary } from '../components/templated-text-field';
-import { AlertTriangleIcon, CloseIcon } from '../components/icons';
-import { InjectionList } from './InputInjectionRow';
-import { UpdateList } from './UpdateRow';
-import { SubjectScopeFields } from './SubjectScopeFields';
 import type { TemplateJqSuggestion } from './BindingJqField';
 import { resolveTemplateJq } from './catalog';
+import { InjectionList } from './InputInjectionRow';
+import { SubjectScopeFields } from './SubjectScopeFields';
 import type {
   BindingSourceSchemas,
   BindingStateOption,
@@ -25,6 +24,7 @@ import type {
   TemplatedText,
   TemplatedTextCatalog,
 } from './types';
+import { UpdateList } from './UpdateRow';
 
 const ATTACH_ON_USE_HINT = 'This template will be attached to the state when you save.';
 

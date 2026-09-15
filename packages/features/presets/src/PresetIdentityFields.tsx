@@ -3,9 +3,8 @@
  * submit (the API rejects an empty description with a 422), shown as a loud inline
  * field error once the form is submitted.
  */
-import type { ReactNode } from 'react';
-
 import { Field, TextInput } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 export function PresetIdentityFields({
   name,

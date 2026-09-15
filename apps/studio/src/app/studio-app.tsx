@@ -4,29 +4,29 @@
  * router. Built by {@link createStudioApp} from the already-wired runtime pieces so
  * the shell tests drive the real tree.
  */
-import { useEffect, type ReactNode } from 'react';
-import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
-import { RouterProvider } from '@tanstack/react-router';
+import type { ApiClient } from '@tai42/api-client';
+// The expression-authoring door, imported STRAIGHT from the standalone editor
+// package — the SDK re-exports nothing of jq. The import map resolves this bare
+// specifier to the one served copy, so the door injected here, the primitives
+// injected above it, and the worker installed at boot all bind the same instance.
+import { JqField } from '@tai42/jq-studio';
 import {
   ApiProvider,
   AuthProvider,
+  type AuthState,
   CapabilityProvider,
   ExpressionFieldContext,
+  type NavigationContextValue,
   NavigationProvider,
   SystemKindsProvider,
   ThemeProvider,
   ToolDisplayNamesProvider,
   UnauthorizedProvider,
   useAuth,
-  type AuthState,
-  type NavigationContextValue,
 } from '@tai42/studio-sdk';
-// The expression-authoring door, imported STRAIGHT from the standalone editor
-// package — the SDK re-exports nothing of jq. The import map resolves this bare
-// specifier to the one served copy, so the door injected here, the primitives
-// injected above it, and the worker installed at boot all bind the same instance.
-import { JqField } from '@tai42/jq-studio';
-import type { ApiClient } from '@tai42/api-client';
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider } from '@tanstack/react-router';
+import { type ReactNode, useEffect } from 'react';
 
 import { AppErrorBoundary } from './error-boundary';
 import { JqPrimitivesProvider } from './jq-primitives';

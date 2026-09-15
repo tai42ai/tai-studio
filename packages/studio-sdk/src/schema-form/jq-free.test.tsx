@@ -19,10 +19,11 @@
  * pin the runtime half: an annotated field with no injected door renders the plain
  * input.
  */
-import { render, screen } from '@testing-library/react';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { render, screen } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 

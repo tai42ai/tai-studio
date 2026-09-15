@@ -5,24 +5,23 @@
  * run-time input. Owns the checklist state and exposes the checked values plus a
  * validate handle to the dialog's submit through a ref.
  */
+import type { AgentSummary } from '@tai42/api-client';
+import {
+  Checkbox,
+  defaultValueForSchema,
+  type JsonSchema,
+  SchemaForm,
+  type SchemaFormErrors,
+  validateAgainstSchema,
+} from '@tai42/studio-sdk';
 import {
   forwardRef,
+  type ReactNode,
   useEffect,
   useImperativeHandle,
   useMemo,
   useState,
-  type ReactNode,
 } from 'react';
-
-import type { AgentSummary } from '@tai42/api-client';
-import {
-  Checkbox,
-  SchemaForm,
-  defaultValueForSchema,
-  validateAgainstSchema,
-  type JsonSchema,
-  type SchemaFormErrors,
-} from '@tai42/studio-sdk';
 
 import { fallbackFieldNames, schemaProps, subsetSchema } from './authoring-schema';
 

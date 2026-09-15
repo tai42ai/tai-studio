@@ -5,20 +5,20 @@
  * notice above the list and suppresses the tag chips, never a filter built from
  * partial data.
  */
-import type { ReactNode } from 'react';
 import {
   AppLink,
   Card,
   EmptyState,
-  ErrorState,
-  ExplorerView,
-  TD,
   errorMessage,
-  useAppNavigate,
+  ErrorState,
   type ExplorerColumn,
   type ExplorerEmptyStates,
+  ExplorerView,
   type Folder,
+  TD,
+  useAppNavigate,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
 import { ToolItem } from './ToolItem';
 import { toolMatches, type ToolView } from './toolView';

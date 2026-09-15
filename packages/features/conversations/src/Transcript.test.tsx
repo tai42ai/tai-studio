@@ -4,19 +4,19 @@
  * paging into history, what the tail does at the bottom of that window, and the
  * states a thread read can land in (gone, empty, broken, no longer updating).
  */
-import { createRef } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '@tai42/api-client';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ApiError } from '@tai42/api-client';
+import { createRef } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { makeMessage, renderWithProviders, transcriptPage } from './test-utils';
 import {
   TAIL_INTERVAL_MS,
+  Transcript,
   TRANSCRIPT_MAX_PAGES,
   TRANSCRIPT_PAGE_SIZE,
-  Transcript,
 } from './Transcript';
-import { makeMessage, renderWithProviders, transcriptPage } from './test-utils';
 
 function renderTranscript(readConversationTranscript: unknown, q?: string) {
   return renderWithProviders(

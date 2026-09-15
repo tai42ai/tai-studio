@@ -10,21 +10,21 @@
  * the `states` kind `off`, so the page shows the muted `FeatureDisabled` note instead
  * of a list whose every read is empty and every write refuses.
  */
-import type { ReactNode } from 'react';
 import {
   Card,
   EmptyState,
   FeatureDisabled,
   PageHeader,
+  type PageProps,
   useFeatureOff,
   useFeatureOffMessage,
-  type PageProps,
 } from '@tai42/studio-sdk';
+import type { ReactNode } from 'react';
 
-import { StatesList } from './StatesList';
-import { StateDetail } from './StateDetail';
-import { StateTemplateDetail } from './StateTemplateDetail';
 import { RecordPage } from './RecordPage';
+import { StateDetail } from './StateDetail';
+import { StatesList } from './StatesList';
+import { StateTemplateDetail } from './StateTemplateDetail';
 
 export function StatesPage({ search }: PageProps<'states'>): ReactNode {
   const selected = search.state;

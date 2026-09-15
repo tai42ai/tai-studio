@@ -1,10 +1,9 @@
 /** The plugin-detail state machine: the detail/installed/advisory reads, the
  * install/update/uninstall mutations, the active dialog, and the last receipt. */
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
-import { featureDisabledMessage, isFeatureDisabled, useApi } from '@tai42/studio-sdk';
 import type { MarketplaceInstallBody, MarketplaceInstallResult } from '@tai42/api-client';
+import { featureDisabledMessage, isFeatureDisabled, useApi } from '@tai42/studio-sdk';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
 import { marketplaceAdvisoriesKey, marketplaceInstalledKey, marketplacePluginKey } from './keys';
 import type { ActionResult, ActiveAction } from './plugin-detail-data';
