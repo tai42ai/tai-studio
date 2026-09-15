@@ -197,12 +197,12 @@ jobs:
   # Freshness gate for the docs-demo marketplace fixture's contract pin. The
   # fixture (e2e/docs-demo/marketplace-registry.py) hard-codes a `contract` range
   # in its seeded PluginSpec; the docs-screenshots install-preview only resolves
-  # when the running tai42-contract falls inside it. When the platform bumped its
-  # major, that pin silently excluded the new release and the screenshot run
-  # errored for weeks until a hand fix (a1d9442 bumped it to `>=4.1,<5`). This
-  # job reads the fixture's own pin, asks PyPI for the latest published
-  # tai42-contract, and fails loudly the moment the pin would exclude it so the
-  # bump lands before the next docs run breaks. Self-contained (no siblings).
+  # when the running tai42-contract falls inside it. A pin that excludes the
+  # latest published tai42-contract makes the install-preview error and the
+  # screenshot run fail. This job reads the fixture's own pin, asks PyPI for the
+  # latest published tai42-contract, and fails loudly the moment the pin would
+  # exclude it so the bump lands before the next docs run breaks. Self-contained
+  # (no siblings).
   docs-demo-contract-pin:
     needs: reuse
     if: ${{ needs.reuse.outputs.should_skip != 'true' }}
@@ -246,7 +246,7 @@ jobs:
                   f"tai42-contract '{pin}', but the latest published release is "
                   f"{latest}, which that range EXCLUDES. The docs-screenshots "
                   f"install-preview will error until the pin is bumped. Update the "
-                  f"`contract` value in {fixture} to admit {latest} (as a1d9442 did)."
+                  f"`contract` value in {fixture} to admit {latest}."
               )
               sys.exit(1)
           print(f"OK: latest tai42-contract {latest} satisfies the fixture pin '{pin}'.")
