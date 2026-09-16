@@ -27,6 +27,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import { KeyPasteForm, LoginNotices, MethodView } from './login-method-view';
 import { SIGN_OUT_NOTICE, visibleMethods } from './login-methods';
+import { SetupEntry } from './setup-entry';
 import { SIGN_OUT_NOTICE_KEY } from './sign-out-notice';
 import { useClaimLogin } from './use-claim-login';
 import { useLoginForm } from './use-login-form';
@@ -114,52 +115,69 @@ export function LoginPage({
           height={40}
           style={{ display: 'block', borderRadius: 'var(--tai-radius-tile)' }}
         />
-        <h1 style={{ margin: 'var(--tai-space-4) 0 0' }}>Sign in to the Studio</h1>
 
-        <LoginNotices
-          methods={methods}
-          loginError={loginError}
-          signOutNotice={signOutNotice}
-          claiming={claiming}
-        />
-
-        {shown.map((method) => (
-          <MethodView
-            key={method.id}
-            method={method}
-            submitting={submitting === method.id}
-            values={formValues[method.id] ?? {}}
-            onFieldChange={(name, value) => {
-              setFieldValue(method.id, name, value);
-            }}
-            onSubmit={() => {
-              if (method.shape === 'form') void submitForm(method);
+        {methods.status === 'ready' && methods.data.needs_setup ? (
+          <SetupEntry
+            setupLogin={methods.data.setup_login}
+            remember={remember}
+            onRememberChange={setRemember}
+            keyValue={key}
+            onKeyChange={setKey}
+            keyPasteOpen={keyPasteOpen}
+            onKeyPasteOpen={() => {
+              setKeyPasteOpen(true);
             }}
           />
-        ))}
+        ) : (
+          <>
+            <h1 style={{ margin: 'var(--tai-space-4) 0 0' }}>Sign in to the Studio</h1>
 
-        <div style={{ marginTop: 'var(--tai-space-4)' }}>
-          <Checkbox
-            label="Remember on this device (this browser session)"
-            checked={remember}
-            onCheckedChange={setRemember}
-          />
-        </div>
+            <LoginNotices
+              methods={methods}
+              loginError={loginError}
+              signOutNotice={signOutNotice}
+              claiming={claiming}
+            />
 
-        <KeyPasteForm
-          hasMethods={hasMethods}
-          expanded={keyPasteExpanded}
-          keyValue={key}
-          onKeyChange={setKey}
-          onOpen={() => {
-            setKeyPasteOpen(true);
-          }}
-          onSubmit={() => {
-            const trimmed = key.trim();
-            if (trimmed === '') return;
-            login(trimmed, remember);
-          }}
-        />
+            {shown.map((method) => (
+              <MethodView
+                key={method.id}
+                method={method}
+                submitting={submitting === method.id}
+                values={formValues[method.id] ?? {}}
+                onFieldChange={(name, value) => {
+                  setFieldValue(method.id, name, value);
+                }}
+                onSubmit={() => {
+                  if (method.shape === 'form') void submitForm(method);
+                }}
+              />
+            ))}
+
+            <div style={{ marginTop: 'var(--tai-space-4)' }}>
+              <Checkbox
+                label="Remember on this device (this browser session)"
+                checked={remember}
+                onCheckedChange={setRemember}
+              />
+            </div>
+
+            <KeyPasteForm
+              hasMethods={hasMethods}
+              expanded={keyPasteExpanded}
+              keyValue={key}
+              onKeyChange={setKey}
+              onOpen={() => {
+                setKeyPasteOpen(true);
+              }}
+              onSubmit={() => {
+                const trimmed = key.trim();
+                if (trimmed === '') return;
+                login(trimmed, remember);
+              }}
+            />
+          </>
+        )}
       </Card>
     </main>
   );

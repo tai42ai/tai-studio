@@ -17,7 +17,7 @@ function buttonMethod(): ReturnType<typeof http.get> {
   return http.get('*/api/login/methods', () =>
     HttpResponse.json({
       data: {
-        bootstrap: false,
+        needs_setup: false,
         methods: [
           {
             shape: 'button',

@@ -24,7 +24,7 @@ describe('login renderer', () => {
     const tools = capturingTools();
     let body: unknown;
     server.use(
-      methods({ bootstrap: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, methods: [passwordForm] }),
       http.post('*/api/login/password', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({ data: { token: 'tai-sess-x', user_id: 'u1' } });
@@ -54,7 +54,7 @@ describe('login renderer', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1H0z"/></svg>';
     server.use(
       methods({
-        bootstrap: false,
+        needs_setup: false,
         methods: [
           {
             shape: 'button',
@@ -80,7 +80,7 @@ describe('login renderer', () => {
   it('renders an inline error card (not a request) for a method with an off-origin target', async () => {
     server.use(
       methods({
-        bootstrap: false,
+        needs_setup: false,
         methods: [
           { shape: 'button', id: 'evil', label: 'Off-origin', href: 'https://evil.test/api/x' },
         ],
@@ -116,7 +116,7 @@ describe('login renderer', () => {
     const tools = capturingTools();
     server.use(
       methods({
-        bootstrap: false,
+        needs_setup: false,
         methods: [
           {
             shape: 'button',
@@ -146,29 +146,13 @@ describe('login renderer', () => {
     expect(tools.header()).toBe('toggle-key');
   });
 
-  it('bootstrap mode shows the banner and the owner form; bootstrap:false hides the owner form', async () => {
-    const ownerForm = {
-      shape: 'form',
-      id: 'owner',
-      title: 'Create the owner account',
-      purpose: 'bootstrap',
-      fields: [{ name: 'password', label: 'Password', secret: true }],
-      submit_path: '/api/login/bootstrap',
-    };
-
-    server.use(methods({ bootstrap: true, methods: [passwordForm, ownerForm] }));
-    const { unmount } = renderStudio({ initialPath: '/login' });
-    expect(await screen.findByText(/No accounts exist yet/)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Create the owner account' })).toBeInTheDocument();
-    unmount();
-
-    server.resetHandlers();
-    server.use(methods({ bootstrap: false, methods: [passwordForm, ownerForm] }));
+  it('needs_setup:false renders the sign-in forms and no setup entry', async () => {
+    server.use(methods({ needs_setup: false, methods: [passwordForm] }));
     renderStudio({ initialPath: '/login' });
-    // The same owner form is hidden when the deployment already has accounts.
+
     await screen.findByRole('heading', { name: 'Sign in' });
-    expect(screen.queryByRole('heading', { name: 'Create the owner account' })).toBeNull();
-    expect(screen.queryByText(/No accounts exist yet/)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Set up this deployment' })).toBeNull();
+    expect(screen.queryByLabelText('Setup token')).toBeNull();
   });
 
   it('invite mode renders the invite form only with ?invite and merges invite_token into the body', async () => {
@@ -184,7 +168,7 @@ describe('login renderer', () => {
     const tools = capturingTools();
     let body: unknown;
     server.use(
-      methods({ bootstrap: false, methods: [inviteForm] }),
+      methods({ needs_setup: false, methods: [inviteForm] }),
       http.post('*/api/login/accept-invite', async ({ request }) => {
         body = await request.json();
         return HttpResponse.json({ data: { token: 'tai-sess-inv', user_id: 'invitee' } });
@@ -215,7 +199,7 @@ describe('login renderer', () => {
       fields: [{ name: 'password', label: 'Password', secret: true }],
       submit_path: '/api/login/accept-invite',
     };
-    server.use(methods({ bootstrap: false, methods: [passwordForm, inviteForm] }));
+    server.use(methods({ needs_setup: false, methods: [passwordForm, inviteForm] }));
     renderStudio({ initialPath: '/login' });
 
     await screen.findByRole('heading', { name: 'Sign in' });
@@ -225,7 +209,7 @@ describe('login renderer', () => {
   it('a login-submit 401 renders inline and never redirect-loops', async () => {
     const user = userEvent.setup();
     server.use(
-      methods({ bootstrap: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, methods: [passwordForm] }),
       http.post('*/api/login/password', () =>
         HttpResponse.json({ error: 'bad creds' }, { status: 401 }),
       ),
@@ -246,7 +230,7 @@ describe('login renderer', () => {
   it('passes a 429 rate-limit message through to the inline error surface', async () => {
     const user = userEvent.setup();
     server.use(
-      methods({ bootstrap: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, methods: [passwordForm] }),
       http.post('*/api/login/password', () =>
         HttpResponse.json(
           { error: 'Too many attempts — try again in 15 minutes' },
@@ -269,7 +253,7 @@ describe('login renderer', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const user = userEvent.setup();
     server.use(
-      methods({ bootstrap: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, methods: [passwordForm] }),
       http.post('*/api/login/password', () =>
         HttpResponse.json({ error: 'boom' }, { status: 500 }),
       ),
@@ -288,26 +272,6 @@ describe('login renderer', () => {
     expect(studio.router.state.location.pathname).toBe('/login');
     expect(studio.router.state.location.search).toEqual({ redirect: '/tools' });
     spy.mockRestore();
-  });
-
-  it('bootstrap sorts the owner-creation form ahead of the standard login form', async () => {
-    const ownerForm = {
-      shape: 'form',
-      id: 'owner',
-      title: 'Create the owner account',
-      purpose: 'bootstrap',
-      fields: [{ name: 'password', label: 'Password', secret: true }],
-      submit_path: '/api/login/bootstrap',
-    };
-    // List the standard login form FIRST — the renderer must still rank the
-    // bootstrap owner form ahead of it.
-    server.use(methods({ bootstrap: true, methods: [passwordForm, ownerForm] }));
-    renderStudio({ initialPath: '/login' });
-
-    const owner = await screen.findByRole('heading', { name: 'Create the owner account' });
-    const login = screen.getByRole('heading', { name: 'Sign in' });
-    // The owner form precedes the login form in document order.
-    expect(owner.compareDocumentPosition(login) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('a methods-discovery failure shows a loud notice and the expanded key-paste still signs in', async () => {

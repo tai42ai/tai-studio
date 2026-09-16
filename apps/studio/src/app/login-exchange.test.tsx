@@ -98,7 +98,7 @@ describe('SSO hand-back exchange', () => {
     try {
       const tools = capturingTools();
       server.use(
-        methods({ bootstrap: false, methods: [passwordForm] }),
+        methods({ needs_setup: false, methods: [passwordForm] }),
         http.post('*/api/login/password', () =>
           HttpResponse.json({ data: { token: 'tai-sess-x', user_id: 'u1' } }),
         ),
@@ -239,7 +239,7 @@ describe('claim login leg (#claim=<token>)', () => {
 
   it('a 404 (unknown/used/expired) renders inline and expands the key-paste fallback', async () => {
     server.use(
-      methods({ bootstrap: false, methods: [passwordForm] }),
+      methods({ needs_setup: false, methods: [passwordForm] }),
       http.post('*/api/login/claim', () =>
         HttpResponse.json(
           { error: 'This claim link is invalid, expired, or already used' },

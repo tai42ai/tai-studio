@@ -92,9 +92,9 @@ function InvalidMethod({ id }: { id: string }): ReactNode {
 }
 
 /**
- * The status/error notices above the methods: the bootstrap owner-creation hint, the
- * login error, the one-shot sign-out notice, the claim-in-flight spinner, and the
- * methods-discovery loading/failed states.
+ * The status/error notices above the methods: the login error, the one-shot
+ * sign-out notice, the claim-in-flight spinner, and the methods-discovery
+ * loading/failed states.
  */
 export function LoginNotices({
   methods,
@@ -109,15 +109,6 @@ export function LoginNotices({
 }): ReactNode {
   return (
     <>
-      {methods.status === 'ready' && methods.data.bootstrap ? (
-        <p
-          role="status"
-          style={{ color: 'var(--tai-color-text-muted)', marginTop: 'var(--tai-space-2)' }}
-        >
-          No accounts exist yet — create the admin account.
-        </p>
-      ) : null}
-
       {loginError !== null ? (
         <p role="alert" style={errorStyle}>
           {loginError}
