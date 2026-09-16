@@ -30,6 +30,14 @@ export const dialogActionsStyle: CSSProperties = {
   marginTop: 'var(--tai-space-4)',
 };
 
+// The muted "Owned by …" line: the read-only owner a non-admin sees in the create
+// dialog, and the owning-principal line under the minted-key dialog's title.
+export const ownerLineStyle: CSSProperties = {
+  margin: 0,
+  fontSize: 'var(--tai-text-sm)',
+  color: 'var(--tai-color-text-muted)',
+};
+
 // The advisory, NON-BLOCKING notice shown next to Save when the condition's last
 // Test failed and it is unchanged since. The Test guard is advisory — it never
 // gates the save (the server re-validates the condition at enforcement).

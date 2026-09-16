@@ -16,6 +16,7 @@
  * components. Failures surface loudly through <ErrorState>. Read-only config mode
  * disables every mutation.
  */
+import type { PrincipalRef } from '@tai42/api-client';
 import {
   Button,
   errorMessage,
@@ -107,7 +108,7 @@ function ApiKeysDialogHost({
   onCreateOpenChange,
   dialogScopeIds,
   onMinted,
-  mintedKey,
+  minted,
   editPayload,
   revokeUser,
   policyUser,
@@ -119,8 +120,8 @@ function ApiKeysDialogHost({
   readonly createOpen: boolean;
   readonly onCreateOpenChange: (open: boolean) => void;
   readonly dialogScopeIds: readonly string[];
-  readonly onMinted: (apiKey: string) => void;
-  readonly mintedKey: string | null;
+  readonly onMinted: (apiKey: string, principal: PrincipalRef | null) => void;
+  readonly minted: { readonly apiKey: string; readonly principal: PrincipalRef | null } | null;
   readonly editPayload: KeyPayload | null;
   readonly revokeUser: string | null;
   readonly policyUser: string | null;
@@ -138,7 +139,9 @@ function ApiKeysDialogHost({
           onMinted={onMinted}
         />
       ) : null}
-      {mintedKey !== null ? <MintedKeyDialog apiKey={mintedKey} onClose={onClose} /> : null}
+      {minted !== null ? (
+        <MintedKeyDialog apiKey={minted.apiKey} principal={minted.principal} onClose={onClose} />
+      ) : null}
       {editPayload !== null ? (
         <EditKeyDialog
           key={editPayload.user_id}
@@ -182,7 +185,10 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
   });
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [mintedKey, setMintedKey] = useState<string | null>(null);
+  const [minted, setMinted] = useState<{
+    readonly apiKey: string;
+    readonly principal: PrincipalRef | null;
+  } | null>(null);
   const [editPayload, setEditPayload] = useState<KeyPayload | null>(null);
   const [revokeUser, setRevokeUser] = useState<string | null>(null);
   const [policyUser, setPolicyUser] = useState<string | null>(null);
@@ -245,15 +251,17 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
         createOpen={createOpen}
         onCreateOpenChange={setCreateOpen}
         dialogScopeIds={dialogScopeIds}
-        onMinted={setMintedKey}
-        mintedKey={mintedKey}
+        onMinted={(apiKey, principal) => {
+          setMinted({ apiKey, principal });
+        }}
+        minted={minted}
         editPayload={editPayload}
         revokeUser={revokeUser}
         policyUser={policyUser}
         scopeIds={scopeIds}
         readOnly={readOnly}
         onClose={() => {
-          setMintedKey(null);
+          setMinted(null);
           setEditPayload(null);
           setRevokeUser(null);
           setPolicyUser(null);

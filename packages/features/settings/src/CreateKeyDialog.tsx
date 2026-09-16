@@ -3,16 +3,33 @@
  * fields, mints a new key, and hands the raw `sk-…` string back to the caller
  * exactly once before clearing the form and mutation state.
  */
-import type { ApiClient } from '@tai42/api-client';
-import { Button, Dialog, errorMessage, ErrorState, Spinner, useApi } from '@tai42/studio-sdk';
+import type { ApiClient, PrincipalRef } from '@tai42/api-client';
+import {
+  Button,
+  Dialog,
+  errorMessage,
+  ErrorState,
+  isFullProjection,
+  Spinner,
+  useApi,
+  useCapabilities,
+} from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 
-import { conditionWarningStyle, dialogActionsStyle, formStyle } from './api-keys-styles';
+import { principalLabel } from './api-keys-gating';
+import {
+  conditionWarningStyle,
+  dialogActionsStyle,
+  fieldLabelStyle,
+  formStyle,
+  ownerLineStyle,
+} from './api-keys-styles';
 import { KeyFormFields } from './KeyFormFields';
 import { tokensPayloadKey } from './keys';
 import type { PolicyFields } from './policy-data';
 import { PolicySection } from './PolicySection';
+import { PrincipalPicker } from './PrincipalPicker';
 
 export function CreateKeyDialog({
   open,
@@ -23,16 +40,22 @@ export function CreateKeyDialog({
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly scopeIds: readonly string[];
-  readonly onMinted: (apiKey: string) => void;
+  readonly onMinted: (apiKey: string, principal: PrincipalRef | null) => void;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  const { state: capabilityState } = useCapabilities();
+  const projection = capabilityState.status === 'ready' ? capabilityState.projection : null;
+  const isAdmin = projection !== null && isFullProjection(projection);
   const [userId, setUserId] = useState('');
   const [description, setDescription] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [policyFields, setPolicyFields] = useState<PolicyFields>({});
   const [conditionTestFailed, setConditionTestFailed] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // The principal that will own the minted key: the caller's own principal by
+  // default (self-ownership), swapped by the admin picker to a service principal.
+  const [owner, setOwner] = useState<PrincipalRef | null>(projection?.principal ?? null);
   // Remount the policy section (resetting its internal editors) on each open.
   const [policyNonce, setPolicyNonce] = useState(0);
 
@@ -43,6 +66,7 @@ export function CreateKeyDialog({
     setPolicyFields({});
     setConditionTestFailed(false);
     setFormError(null);
+    setOwner(projection?.principal ?? null);
     setPolicyNonce((n) => n + 1);
   };
 
@@ -50,7 +74,7 @@ export function CreateKeyDialog({
     mutationFn: (body: Parameters<ApiClient['createApiKey']>[0]) => api.createApiKey(body),
     onSuccess: (apiKey) => {
       void queryClient.invalidateQueries({ queryKey: tokensPayloadKey });
-      onMinted(apiKey);
+      onMinted(apiKey, owner);
       // Clear the form AND the mutation so the minted `sk-…` key never lingers in
       // `mutation.data` past this dialog's lifetime and the next open starts blank.
       clearForm();
@@ -70,12 +94,19 @@ export function CreateKeyDialog({
       setFormError('User ID is required.');
       return;
     }
+    // An admin names the owning principal (self by default); a non-admin sends none
+    // and the server forces self-ownership. A cleared admin picker blocks the mint.
+    if (isAdmin && owner === null) {
+      setFormError('Choose the principal that owns this key.');
+      return;
+    }
     // A failed condition Test does NOT block save — the server re-validates at
     // enforcement; a non-blocking warning next to Save is the only signal.
     mutation.mutate({
       user_id: userId,
       description,
       scopes: [...selected],
+      ...(isAdmin && owner !== null ? { owner_user_id: owner.user_id } : {}),
       ...policyFields,
     });
   };
@@ -90,6 +121,23 @@ export function CreateKeyDialog({
       }}
     >
       <div style={formStyle}>
+        <div>
+          <span style={fieldLabelStyle}>Principal</span>
+          {isAdmin ? (
+            <PrincipalPicker
+              selfPrincipal={projection.principal ?? null}
+              value={owner}
+              onChange={setOwner}
+            />
+          ) : (
+            <p style={ownerLineStyle}>
+              Owned by{' '}
+              {projection !== null
+                ? (principalLabel(projection) ?? 'your account')
+                : 'your account'}
+            </p>
+          )}
+        </div>
         <KeyFormFields
           idPrefix="create-key"
           userId={userId}

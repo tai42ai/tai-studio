@@ -19,7 +19,7 @@ function stubClient(createClaimLink: ApiClient['createClaimLink']): ApiClient {
 
 describe('MintedKeyDialog', () => {
   it('shows the freshly minted key once', () => {
-    renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
+    renderWithProviders(<MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />, {
       client: stubClient(vi.fn()),
     });
 
@@ -28,10 +28,23 @@ describe('MintedKeyDialog', () => {
     expect(screen.queryByTestId('claim-link-qr')).not.toBeInTheDocument();
   });
 
+  it('names the owning principal under the title', () => {
+    renderWithProviders(
+      <MintedKeyDialog
+        apiKey={KEY}
+        principal={{ user_id: 'svc-1', kind: 'service', display_name: 'Acme Bot' }}
+        onClose={vi.fn()}
+      />,
+      { client: stubClient(vi.fn()) },
+    );
+
+    expect(screen.getByText('Owned by Acme Bot (service)')).toBeInTheDocument();
+  });
+
   it('keeps the revealed key on Escape, then closes only on the explicit Done', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={onClose} />, {
+    renderWithProviders(<MintedKeyDialog apiKey={KEY} principal={null} onClose={onClose} />, {
       client: stubClient(vi.fn()),
     });
 
@@ -48,7 +61,7 @@ describe('MintedKeyDialog', () => {
   it('mints a claim link and renders its QR, absolute URL, and expiry', async () => {
     const user = userEvent.setup();
     const createClaimLink = vi.fn().mockResolvedValue(CLAIM);
-    renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
+    renderWithProviders(<MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />, {
       client: stubClient(createClaimLink),
     });
 
@@ -69,9 +82,12 @@ describe('MintedKeyDialog', () => {
   it('rebuilds the QR only when the claim link changes, not on every re-render', async () => {
     const user = userEvent.setup();
     const createClaimLink = vi.fn().mockResolvedValue(CLAIM);
-    const { rerender } = renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
-      client: stubClient(createClaimLink),
-    });
+    const { rerender } = renderWithProviders(
+      <MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />,
+      {
+        client: stubClient(createClaimLink),
+      },
+    );
 
     await user.click(screen.getByRole('button', { name: 'Create claim link (QR)' }));
     const qr = await screen.findByTestId('claim-link-qr');
@@ -82,7 +98,7 @@ describe('MintedKeyDialog', () => {
     // `dangerouslySetInnerHTML` prop by IDENTITY, so a fresh `{ __html }` literal
     // re-encodes the QR and re-writes the container's innerHTML, replacing every
     // node under it. Held by identity, the encode and the write do not happen.
-    rerender(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />);
+    rerender(<MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />);
 
     expect(screen.getByTestId('claim-link-qr').querySelector('svg')).toBe(svg);
   });
@@ -95,7 +111,7 @@ describe('MintedKeyDialog', () => {
       expires_at: CLAIM.expires_at,
     };
     const createClaimLink = vi.fn().mockResolvedValueOnce(CLAIM).mockResolvedValueOnce(second);
-    renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
+    renderWithProviders(<MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />, {
       client: stubClient(createClaimLink),
     });
 
@@ -118,7 +134,7 @@ describe('MintedKeyDialog', () => {
   it('surfaces a claim-link failure loudly and inline', async () => {
     const user = userEvent.setup();
     const createClaimLink = vi.fn().mockRejectedValue(new ApiError('claim link failed', 500));
-    renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
+    renderWithProviders(<MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />, {
       client: stubClient(createClaimLink),
     });
 
@@ -138,7 +154,7 @@ describe('MintedKeyDialog', () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
     try {
       const createClaimLink = vi.fn().mockResolvedValue(CLAIM);
-      renderWithProviders(<MintedKeyDialog apiKey={KEY} onClose={vi.fn()} />, {
+      renderWithProviders(<MintedKeyDialog apiKey={KEY} principal={null} onClose={vi.fn()} />, {
         client: stubClient(createClaimLink),
       });
 

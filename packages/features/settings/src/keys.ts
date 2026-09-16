@@ -28,6 +28,9 @@ export const publicRoutesKey = ['auth-public-routes'] as const;
 /** Key for the deployment's auth capabilities (`{ mintable, providers }`). */
 export const authCapabilitiesKey = ['auth-capabilities'] as const;
 
+/** Key for the deployment's principals (identities). Admin-only. */
+export const principalsKey = ['principals'] as const;
+
 /** Key for a user's append-only AC-policy version history. */
 export const policyVersionsKey = (userId: string) => ['auth-policy-versions', userId] as const;
 

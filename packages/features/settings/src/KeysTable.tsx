@@ -21,7 +21,7 @@ import {
 import type { CSSProperties, ReactNode } from 'react';
 
 import { badgeRowStyle } from './api-keys-styles';
-import { type KeyPayload, ownerOf } from './key-owner';
+import type { KeyPayload } from './key-owner';
 
 const cardHeaderStyle: CSSProperties = {
   display: 'flex',
@@ -44,7 +44,7 @@ const actionsStyle: CSSProperties = {
 };
 
 // Distinguishes an API key (a delegated credential) from an account (the managed human
-// login that holds a role), so the User ID / Owner columns read unambiguously.
+// login that holds a role), so the User ID / Principal columns read unambiguously.
 const descriptionStyle: CSSProperties = {
   margin: '0 0 var(--tai-space-4)',
   color: 'var(--tai-color-text-muted)',
@@ -74,6 +74,35 @@ const infoTriggerStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
   cursor: 'help',
 };
+
+const principalCellStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 'var(--tai-space-2)',
+};
+
+/**
+ * A key row's owning principal: a kind Badge beside the display name, the `user_id`
+ * carried on the cell's `title`. A key whose principal row is absent shows a dash and,
+ * when the row is flagged `orphaned`, a danger Badge — the restore state where a backup
+ * left a key without its principal.
+ */
+function PrincipalCell({ payload }: { readonly payload: KeyPayload }): ReactNode {
+  const { principal } = payload;
+  if (principal != null) {
+    return (
+      <span style={principalCellStyle} title={principal.user_id}>
+        <Badge variant="neutral">{principal.kind}</Badge>
+        {principal.display_name}
+      </span>
+    );
+  }
+  return (
+    <span style={principalCellStyle} title="No principal (orphaned key — re-import the backup)">
+      —{payload.orphaned === true ? <Badge variant="danger">orphaned</Badge> : null}
+    </span>
+  );
+}
 
 /** One key row's Edit / History / Revoke actions — History stays reachable in readOnly. */
 function KeyRowActions({
@@ -162,8 +191,8 @@ export function KeysTable({
       <p style={descriptionStyle}>
         An API key is a scoped credential a user creates to delegate a slice of their own access —
         it is not an account. An account is the human login an admin manages, and it carries a role.
-        Below, <strong>User ID</strong> is the account a key acts as, and <strong>Owner</strong> is
-        the account that created the key.
+        Below, <strong>User ID</strong> is the account a key acts as, and <strong>Principal</strong>{' '}
+        is the identity that owns the key.
       </p>
 
       {keys.length === 0 ? (
@@ -174,9 +203,8 @@ export function KeysTable({
             <THead>
               <TR>
                 <TH>User ID</TH>
-                {/* The owner claim the server merges into `policy_data`; an admin view
-                    distinguishes owned (delegated) keys from ownerless ones. */}
-                <TH>Owner</TH>
+                {/* The key's owning principal, resolved server-side to kind + display name. */}
+                <TH>Principal</TH>
                 <TH>Description</TH>
                 <TH>Scopes</TH>
                 {/* History is a read surface, available in readOnly too. */}
@@ -187,7 +215,9 @@ export function KeysTable({
               {keys.map((payload) => (
                 <TR key={payload.user_id}>
                   <TD className="tai-mono">{payload.user_id}</TD>
-                  <TD className="tai-mono">{ownerOf(payload) ?? '—'}</TD>
+                  <TD>
+                    <PrincipalCell payload={payload} />
+                  </TD>
                   <TD>{payload.description}</TD>
                   <TD>
                     <div style={badgeRowStyle}>

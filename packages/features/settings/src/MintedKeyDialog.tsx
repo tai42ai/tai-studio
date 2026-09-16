@@ -10,7 +10,7 @@
  * token is NEVER logged, stored, or persisted; regenerating mints an independent
  * one-time link. Failures surface loudly inline.
  */
-import type { ClaimLinkCreated } from '@tai42/api-client';
+import type { ClaimLinkCreated, PrincipalRef } from '@tai42/api-client';
 import {
   Button,
   CopyField,
@@ -24,7 +24,8 @@ import { useMutation } from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 import { renderSVG } from 'uqr';
 
-import { dialogActionsStyle } from './api-keys-styles';
+import { principalRefLabel } from './api-keys-gating';
+import { dialogActionsStyle, ownerLineStyle } from './api-keys-styles';
 
 const claimSectionStyle: CSSProperties = {
   display: 'flex',
@@ -59,9 +60,11 @@ function formatExpiry(value: string): string {
 
 export function MintedKeyDialog({
   apiKey,
+  principal,
   onClose,
 }: {
   readonly apiKey: string;
+  readonly principal: PrincipalRef | null;
   readonly onClose: () => void;
 }): ReactNode {
   const api = useApi();
@@ -99,6 +102,10 @@ export function MintedKeyDialog({
         if (!next) onClose();
       }}
     >
+      {principal !== null ? (
+        <p style={ownerLineStyle}>Owned by {principalRefLabel(principal)}</p>
+      ) : null}
+
       <CopyField
         value={apiKey}
         label="New API key"

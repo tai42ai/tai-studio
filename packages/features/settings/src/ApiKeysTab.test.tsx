@@ -42,6 +42,10 @@ function baseStub(overrides: Stub = {}): ApiClient {
     listAuthRoutes: vi.fn(() => Promise.resolve([])),
     listPublicRoutes: vi.fn(() => Promise.resolve([])),
     listSubMcp: vi.fn(() => Promise.resolve({})),
+    // The admin mint dialog's principal picker reads these; an empty catalog keeps the
+    // key-focused assertions here unaffected (the picker has its own coverage).
+    listPrincipals: vi.fn(() => Promise.resolve([])),
+    listRoles: vi.fn(() => Promise.resolve([])),
     ...overrides,
   });
 }
@@ -190,24 +194,35 @@ describe('ApiKeysTab', () => {
     expect(getAuthCapabilities).not.toHaveBeenCalled();
   });
 
-  it('renders the owner column from policy_data owner_user_id, dashing ownerless keys', async () => {
+  it('renders the principal column with a kind badge and display name, dashing a principal-less row', async () => {
     const mixed: TokensPayload = [
       {
         user_id: 'svc',
         description: 'Delegated key',
         scopes: ['read'],
-        policy_data: { owner_user_id: 'alice' },
+        policy_data: {},
+        principal: { user_id: 'usr-owner', kind: 'service', display_name: 'Acme Bot' },
       },
-      { user_id: 'plain', description: 'Ownerless key', scopes: ['read'], policy_data: {} },
+      {
+        user_id: 'plain',
+        description: 'Restored key',
+        scopes: ['read'],
+        policy_data: {},
+        principal: null,
+        orphaned: true,
+      },
     ];
     renderTab(<ApiKeysTab readOnly={false} />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(mixed)) }),
     });
 
     const ownedRow = (await screen.findByText('svc')).closest('tr') as HTMLElement;
-    expect(within(ownedRow).getByText('alice')).toBeInTheDocument();
+    expect(within(ownedRow).getByText('Acme Bot')).toBeInTheDocument();
+    expect(within(ownedRow).getByText('service')).toBeInTheDocument();
+    // A principal-less row shows a dash and, when flagged, a loud orphaned badge.
     const plainRow = screen.getByText('plain').closest('tr') as HTMLElement;
     expect(within(plainRow).getByText('—')).toBeInTheDocument();
+    expect(within(plainRow).getByText('orphaned')).toBeInTheDocument();
   });
 
   it('hides the mint button for an owned-key caller even with "*" scopes', async () => {

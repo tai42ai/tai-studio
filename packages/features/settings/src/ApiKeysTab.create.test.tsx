@@ -9,7 +9,33 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiKeysTab } from './ApiKeysTab';
-import { fullProjection, renderWithProviders } from './test-utils';
+import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
+
+/** A service-principal row as `listPrincipals` returns it. */
+function servicePrincipal(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    user_id: 'svc-1',
+    kind: 'service' as const,
+    display_name: 'Acme Bot',
+    created_by: 'u-test',
+    disabled: false,
+    created_at: '2026-01-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+/** An editable role body as `listRoles` returns it. */
+function role(name: string) {
+  return {
+    name,
+    allow_all: false,
+    base_tier: 'editor',
+    condition: null,
+    description: '',
+    grants: {},
+    scopes: [],
+  };
+}
 
 vi.setConfig({ testTimeout: 15_000 });
 
@@ -53,6 +79,8 @@ function baseStub(overrides: Stub = {}): ApiClient {
     listAuthRoutes: vi.fn(() => Promise.resolve([])),
     listPublicRoutes: vi.fn(() => Promise.resolve([])),
     listSubMcp: vi.fn(() => Promise.resolve({})),
+    listPrincipals: vi.fn(() => Promise.resolve([])),
+    listRoles: vi.fn(() => Promise.resolve([])),
     ...overrides,
   });
 }
@@ -78,10 +106,13 @@ describe('ApiKeysTab — create key', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     await waitFor(() => {
+      // Under an admin projection the picker defaults to the caller's own principal,
+      // so the mint body carries that owner explicitly.
       expect(createApiKey).toHaveBeenCalledWith({
         user_id: 'bob',
         description: 'Bob key',
         scopes: ['admin'],
+        owner_user_id: 'u-test',
       });
     });
 
@@ -140,6 +171,7 @@ describe('ApiKeysTab — create key', () => {
         user_id: 'bob',
         description: '',
         scopes: [],
+        owner_user_id: 'u-test',
         policy_data: { limit: 7 },
       });
     });
@@ -334,6 +366,101 @@ describe('ApiKeysTab — create key', () => {
 
     expect(screen.queryByRole('button', { name: 'Remove condition' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear policy data' })).not.toBeInTheDocument();
+  });
+
+  it('admin picker lists self and every service principal, and the mint body carries the chosen owner', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createApiKey = vi.fn().mockResolvedValue('sk-svc');
+    const listPrincipals = vi.fn(() => Promise.resolve([servicePrincipal()]));
+    renderTab(<ApiKeysTab readOnly={false} />, {
+      client: baseStub({ createApiKey, listPrincipals }),
+    });
+
+    await screen.findByText('alice');
+    await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+    // The caller's own principal leads the list, then every service principal.
+    await user.click(await screen.findByRole('combobox', { name: 'Principal' }));
+    expect(await screen.findByRole('option', { name: 'Test User (you)' })).toBeInTheDocument();
+    await user.click(await screen.findByRole('option', { name: 'Acme Bot' }));
+
+    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: 'bob', owner_user_id: 'svc-1' }),
+      );
+    });
+  });
+
+  it('creates a service principal inline, selects it, and mints the key owned by it', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createApiKey = vi.fn().mockResolvedValue('sk-new');
+    const createPrincipal = vi
+      .fn()
+      .mockResolvedValue(servicePrincipal({ user_id: 'svc-new', display_name: 'New Bot' }));
+    const listRoles = vi.fn(() => Promise.resolve([role('editor')]));
+    renderTab(<ApiKeysTab readOnly={false} />, {
+      client: baseStub({ createApiKey, createPrincipal, listRoles }),
+    });
+
+    await screen.findByText('alice');
+    await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+    await user.click(await screen.findByRole('combobox', { name: 'Principal' }));
+    await user.click(await screen.findByRole('option', { name: 'Create a service principal…' }));
+
+    await user.type(screen.getByLabelText('Display name'), 'New Bot');
+    await user.click(await screen.findByRole('combobox', { name: 'Role' }));
+    await user.click(await screen.findByRole('option', { name: 'editor' }));
+    await user.click(screen.getByRole('button', { name: 'Create principal' }));
+
+    await waitFor(() => {
+      expect(createPrincipal).toHaveBeenCalledWith({
+        kind: 'service',
+        display_name: 'New Bot',
+        role: 'editor',
+      });
+    });
+
+    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: 'bob', owner_user_id: 'svc-new' }),
+      );
+    });
+  });
+
+  it('a non-admin sees a fixed owner line, no picker, and mints without an owner_user_id', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createApiKey = vi.fn().mockResolvedValue('sk-self');
+    const listPrincipals = vi.fn();
+    renderWithProviders(<ApiKeysTab readOnly={false} />, {
+      client: baseStub({ createApiKey, listPrincipals }),
+      projection: scopedProjection({
+        owner_user_id: null,
+        routes: [{ path: '/api/auth/api-keys', methods: ['POST'] }],
+      }),
+    });
+
+    await screen.findByText('alice');
+    await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+    // No picker — the server forces self-ownership; the owner is shown read-only.
+    expect(screen.queryByRole('combobox', { name: 'Principal' })).not.toBeInTheDocument();
+    expect(screen.getByText('Owned by Test User (human)')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('User ID'), 'bob');
+    await user.click(screen.getByRole('button', { name: 'Create' }));
+
+    await waitFor(() => {
+      expect(createApiKey).toHaveBeenCalledWith({ user_id: 'bob', description: '', scopes: [] });
+    });
+    // A non-admin never fetches the admin-only principals list.
+    expect(listPrincipals).not.toHaveBeenCalled();
   });
 
   it('surfaces a create failure loudly', async () => {

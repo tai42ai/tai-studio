@@ -3,6 +3,7 @@
  * the deployment-wide scopes mapper is reachable, whether the caller may mint a key,
  * and the scope options a scoped session is capped to.
  */
+import type { MeProjection, PrincipalRef } from '@tai42/api-client';
 import { type CapabilityState, coversAnyRoute, isFullProjection } from '@tai42/studio-sdk';
 
 /** Unique scope ids across the scope map, excluding the implicit `public` scope. */
@@ -56,6 +57,20 @@ export function projectionCanMint(state: CapabilityState, canMintRoute: boolean)
   const { projection } = state;
   if (isFullProjection(projection)) return true;
   return projection.owner_user_id === null;
+}
+
+/** The `<display name> (<kind>)` label naming a principal in the owner lines. */
+export function principalRefLabel(principal: PrincipalRef): string {
+  return `${principal.display_name} (${principal.kind})`;
+}
+
+/**
+ * The label for the caller's OWN principal — the "Owned by" line a non-admin sees
+ * in the create dialog, where self-ownership is fixed. `null` when no principal row
+ * backs the credential (an orphaned restore state).
+ */
+export function principalLabel(projection: MeProjection): string | null {
+  return projection.principal ? principalRefLabel(projection.principal) : null;
 }
 
 /**
