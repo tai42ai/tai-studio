@@ -124,23 +124,28 @@ test.describe(() => {
     // Continue reveals it client-side (the token is not sent yet).
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.getByRole('heading', { name: COPY.setupHeading }).waitFor({ state: 'visible' });
-    // The token form and its input share the "Setup token" accessible name, so the
-    // input is addressed as the single control inside that form.
-    const tokenField = page.locator('form[aria-label="Setup token"] input');
+    // The token form and its input share the "Setup token" accessible name, so a
+    // label lookup resolves both; the input is the only control that carries the
+    // textbox role, so it is addressed by role with the exact name.
+    const tokenField = page.getByRole('textbox', { name: 'Setup token', exact: true });
     await tokenField.fill(WRONG_TOKEN);
     await frame(page, 'login-setup-token');
 
     // State A, revealed owner form. With no login-attaching provider it is the
     // keys-only variant (a note, no email/method fields); with one it carries the
-    // email and the login-method radio.
+    // email and the login-method radio, whose "Set a password now" option is the
+    // default when the provider offers a password login, so the password field is
+    // shown without selecting it. Fields are addressed unambiguously: the exact
+    // label for Display name and Email, and the textbox role for Password (its
+    // "Password" label is a substring of the "Set a password now" radio's name).
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    const displayName = page.getByLabel('Display name');
+    const displayName = page.getByLabel('Display name', { exact: true });
     await displayName.waitFor({ state: 'visible' });
     await displayName.fill(OWNER_DISPLAY_NAME);
     if (attachesLogin) {
-      await page.getByLabel('Email').fill(OWNER_EMAIL);
+      await page.getByLabel('Email', { exact: true }).fill(OWNER_EMAIL);
       if (loginKinds?.includes('password')) {
-        await page.getByLabel('Password').fill(OWNER_PASSWORD);
+        await page.getByRole('textbox', { name: 'Password' }).fill(OWNER_PASSWORD);
       }
     }
     await frame(page, 'login-setup-owner');
@@ -161,14 +166,27 @@ test.describe(() => {
     await displayName.waitFor({ state: 'visible' });
     await page.getByRole('button', { name: 'Create owner and key' }).click();
     await page.getByRole('heading', { name: COPY.successHeading }).waitFor({ state: 'visible' });
+    // With a password login attached, the success view confirms it against the
+    // owner email; the keys-only variant shows no such line.
+    if (attachesLogin && loginKinds?.includes('password')) {
+      await expect(page.getByText(`Password set for ${OWNER_EMAIL}.`)).toBeVisible();
+    }
     await frame(page, 'login-setup-success');
 
     // State B: the deployment is initialized, so a reload lands on the sign-in
-    // state — no setup entry, the key-paste form reachable (expanded when the
-    // deployment declares no sign-in method).
+    // state — no setup entry. With a login-attaching provider the deployment now
+    // declares its password sign-in form, and the key-paste fallback collapses
+    // behind its opener; with none the key-paste form is the whole surface,
+    // expanded. The frame waits on whichever the running deployment shows.
     await page.goto('/login', { waitUntil: 'domcontentloaded' });
     await page.getByRole('heading', { name: COPY.signInHeading }).waitFor({ state: 'visible' });
-    await page.getByLabel('API key').waitFor({ state: 'visible' });
+    if (attachesLogin) {
+      await page
+        .getByRole('button', { name: 'Sign in', exact: true })
+        .waitFor({ state: 'visible' });
+    } else {
+      await page.getByLabel('API key').waitFor({ state: 'visible' });
+    }
     await frame(page, 'login-signin');
   });
 });
