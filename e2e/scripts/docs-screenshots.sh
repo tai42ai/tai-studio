@@ -85,7 +85,10 @@ PLUGINS_DIR="${MONOREPO_DIR}/plugins"
 STUDIO_PORT="${STUDIO_PORT:-8765}"
 BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
 OUT_DIR="${OUT_DIR:-${TAI_DOCS_DIR}/images/studio}"
-DEMO_KEY="sk-docs-demo-full-privilege-key"  # exported as STUDIO_API_KEY; docs-screenshots.mjs reads it from there
+# The full-admin key the runner mints through POST /api/setup after boot (§6). It is
+# unknown until then — assigned there and exported as STUDIO_API_KEY for the capture
+# script (docs-screenshots.mjs reads it from there).
+DEMO_KEY=""
 PROM_DIR="${TMPDIR:-/tmp}/tai-docs-demo-prometheus"
 REGISTRY_PORT="${MARKETPLACE_REGISTRY_PORT:-8799}"
 REGISTRY_URL="http://127.0.0.1:${REGISTRY_PORT}"
@@ -97,7 +100,10 @@ mkdir -p "${OUT_DIR}" "${PROM_DIR}"
 
 # --- 2. Docs-demo configuration (exported into boot.sh) ---------------------
 export MANIFEST_PATH="${E2E_DIR}/docs-demo/manifest.yml"
-export STUDIO_API_KEY="${DEMO_KEY}"
+# Seed no identity in boot.sh: the runner initializes the deployment itself through the
+# REAL POST /api/setup door (§6), so it boots uninitialized (needs_setup) and owns the
+# minted owner key it captures with.
+export STUDIO_SEED_AUTH=0
 export STUDIO_PORT
 export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
@@ -106,14 +112,15 @@ export MONOREPO_DIR
 # that Studio page); the rest back the toolbox/agents/storage/monitoring surfaces.
 export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
-# redis claims sk- keys), pin the first-owner bootstrap gate to a known token so the
-# runner can seed the owner deterministically, and tell boot.sh to apply the accounts
-# schema (the accounts tables live in the `default` named database boot.sh configures via
-# TAI_DATABASE_DEFAULT_PG_*, see boot.sh). The
-# seeded sk- studio key still authenticates every signed-in shot (redis provider);
-# the accounts provider only adds the password-login + users-admin surfaces.
+# redis claims sk- keys), pin the setup-door token to a known value so the runner can
+# initialize the owner deterministically through POST /api/setup, and tell boot.sh to
+# apply the accounts schema (the accounts tables live in the `default` named database
+# boot.sh configures via TAI_DATABASE_DEFAULT_PG_*, see boot.sh). Setup mints the owner's
+# first key through the redis provider (an sk- key that authenticates every signed-in
+# shot) and attaches the owner's password login through the accounts provider, which also
+# powers the password-login + users-admin surfaces.
 export ACCESS_CONTROL_AUTH_PROVIDERS='["accounts-postgres", "redis"]'
-export TAI_ACCOUNTS_BOOTSTRAP_TOKEN="docs-demo-accounts-bootstrap-token"
+export TAI_SETUP_TOKEN="docs-demo-setup-token"
 export APPLY_ACCOUNTS_DDL=1
 # Storage backend: the seeded template files. CREATE_DIRS=false so a missing dir
 # fails loudly rather than being papered over with an empty templates list.
@@ -245,27 +252,43 @@ log "skeleton is up"
 
 api() { curl -s -m 8 -H "x-api-key: ${DEMO_KEY}" -H "accept: application/json" "$@"; }
 
-# --- 6. Seed realistic demo accounts (login + users-admin screens) ---------
-# Through the REAL accounts HTTP API (never poking Postgres): bootstrap the first
-# owner under the pinned token, then invite an editor + a viewer and accept their
-# invites (Active rows), and leave one editor invite pending (an "Invite pending"
-# badge) — a realistic human-accounts table. The seed is idempotent across reruns:
-# the compose Postgres persists, so a re-seed hits email-taken 409s, which are fine
-# (the rows already exist). A fresh sk- studio key authorizes the create-user calls
-# (its wildcard policy carries no admin-fence condition), so no owner session is
-# needed to populate the table.
-log "seeding demo accounts (owner + editor/viewer + a pending invite)"
+# --- 6. Initialize the owner + seed realistic demo accounts (login + users-admin) ---
+# Through the REAL public setup door and the REAL accounts HTTP API (never poking
+# Postgres): initialize the deployment (the owner principal + its admin key + the owner's
+# password login), then invite an editor + a viewer and accept their invites (Active
+# rows), and leave one editor invite pending (an "Invite pending" badge) — a realistic
+# human-accounts table. The owner's minted key is admin, so it authorizes every
+# create-user call below; no separate session is needed to populate the table.
+log "initializing the deployment via POST /api/setup (owner + first key + password login)"
 DEMO_PASSWORD="demo-password-4242"
 OWNER_EMAIL="ada.lovelace@demo.tai"
 
-# Bootstrap the first owner (public /api/login prefix). A 409 "Already initialized"
-# on a rerun is fine — the owner row persists.
-boot_resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/login/bootstrap" \
-  -d "{\"email\":\"${OWNER_EMAIL}\",\"password\":\"${DEMO_PASSWORD}\",\"bootstrap_token\":\"${TAI_ACCOUNTS_BOOTSTRAP_TOKEN}\"}")"
-case "${boot_resp}" in
-  *'"token"'*|*'Already initialized'*) : ;;
-  *) die "bootstrap owner failed: ${boot_resp}" ;;
-esac
+# POST /api/setup is the public, token-gated, ONE-SHOT owner-initializing door: it
+# creates the owner principal, mints the owner's first (admin) key, and — the accounts
+# provider is active — attaches the owner's password login from the request. The raw key
+# is returned exactly ONCE; the runner owns it from here. Because the door is one-shot it
+# 409s once any principal exists, and the key it minted is then unknowable, so an
+# already-initialized deployment is a hard failure — bring the stack down and rerun.
+setup_body="$(SETUP_TOKEN="${TAI_SETUP_TOKEN}" OWNER_EMAIL="${OWNER_EMAIL}" \
+  OWNER_DISPLAY="Ada Lovelace" DEMO_PASSWORD="${DEMO_PASSWORD}" python3 -c '
+import json, os
+print(json.dumps({
+    "setup_token": os.environ["SETUP_TOKEN"],
+    "owner_display_name": os.environ["OWNER_DISPLAY"],
+    "login": {"kind": "password", "email": os.environ["OWNER_EMAIL"], "password": os.environ["DEMO_PASSWORD"]},
+}))')"
+setup_resp="$(curl -s -m 8 -H "content-type: application/json" -H "accept: application/json" \
+  -X POST "${BASE_URL}/api/setup" -d "${setup_body}")"
+DEMO_KEY="$(printf '%s' "${setup_resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("data", {}).get("api_key", ""))' 2>/dev/null || true)"
+if [[ "${DEMO_KEY}" != sk-* ]]; then
+  case "${setup_resp}" in
+    *'Already initialized'*) die "the deployment is already initialized — POST /api/setup 409s and the minted owner key is unknowable; bring the stack down ('docker compose -f ${E2E_DIR}/boot/compose.yaml down -v') and rerun" ;;
+    *) die "POST /api/setup did not return an api_key: ${setup_resp}" ;;
+  esac
+fi
+# The capture script (docs-screenshots.mjs) reads STUDIO_API_KEY; export the minted
+# owner key so it authenticates every full-admin shot.
+export STUDIO_API_KEY="${DEMO_KEY}"
 
 # Create a user (returns a one-time invite) and, when mode=accept, consume the
 # invite to set a password so the row reads Active rather than Invite-pending. An

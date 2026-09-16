@@ -5,22 +5,34 @@
 #   1. a throwaway loopback Redis (docker compose)
 #   2. the built Studio SPA and the reference plugin's front-end bundle
 #   3. the reference Studio plugin, installed into the tai42-skeleton env
-#   4. a tai42-skeleton with ACCESS CONTROL ON, a seeded test-only API key, the
-#      two-tier route mappings, and studio_dist_path pointing at the SPA dist
+#   4. a tai42-skeleton with ACCESS CONTROL ON, the two-tier route mappings, the
+#      setup-token door, studio_dist_path pointing at the SPA dist, and — when
+#      STUDIO_SEED_AUTH=1 (the default) — a seeded owner principal plus its
+#      test-only API key, written directly to the stores so Playwright has a pinned
+#      raw key before the server is up
 #
 # Steps 2 and 3 are in that order on purpose — see the note at step 2.
 #
 # It runs the skeleton in the FOREGROUND so Playwright's `webServer` can own its
 # lifecycle (it polls the skeleton URL, then kills this process on teardown).
 #
-# NOT A PRODUCTION TEMPLATE. The API key is obviously test-only, Redis has no
-# auth, the crypto keys are throwaway, and access is granted with a wildcard
-# scope. A real deployment provisions keys out of band, runs a managed Redis, and
-# uses least-privilege scopes.
+# NOT A PRODUCTION TEMPLATE. The seeded API key and setup token are obviously
+# test-only, Redis has no auth, the crypto keys are throwaway, and the owner's key
+# is granted a wildcard scope. A real deployment initializes through POST /api/setup
+# with an operator-held token, provisions keys out of band, runs a managed Redis,
+# and uses least-privilege scopes.
 #
 # Env knobs (all have safe defaults for local runs):
+#   STUDIO_SEED_AUTH set to 1 (the default) to seed the owner principal and its key
+#                    the shape POST /api/setup produces (Playwright needs a pinned
+#                    raw key before the server is up); set to 0 to seed no identity
+#                    at all — a fresh deployment where /api/login/methods reports
+#                    needs_setup and POST /api/setup is the way in
+#   STUDIO_OWNER_ID  the owner principal the seeded key belongs to (default below)
 #   STUDIO_API_KEY   the seeded key the Studio pastes at /login (default below)
 #   STUDIO_USER_ID   the user_id that key resolves to (default below)
+#   TAI_SETUP_TOKEN  the token POST /api/setup requires; always exported so the
+#                    setup door is reachable with a known token (default below)
 #   MONOREPO_DIR     path to the tai42 monorepo checkout (default: sibling repo);
 #                    the skeleton lives at its core/skeleton and the uv workspace
 #                    venv at its .venv
@@ -52,9 +64,18 @@ MANIFEST_PATH="${MANIFEST_PATH:-${BOOT_DIR}/manifest.yml}"
 COMPOSE_FILE="${BOOT_DIR}/compose.yaml"
 
 # --- Test-only configuration (see the header — NOT for production) ----------
+# Whether to seed the owner principal + its key (1) or boot a fresh, uninitialized
+# deployment (0) whose only door in is POST /api/setup.
+STUDIO_SEED_AUTH="${STUDIO_SEED_AUTH:-1}"
 export STUDIO_API_KEY="${STUDIO_API_KEY:-sk-e2e-DO-NOT-USE-IN-PRODUCTION-000}"
 STUDIO_PORT="${STUDIO_PORT:-8765}"
+# The seeded key's user_id (the identity it resolves to) and the owner principal it
+# belongs to — every api key belongs to a principal.
 export STUDIO_USER_ID="${STUDIO_USER_ID:-studio-e2e}"
+export STUDIO_OWNER_ID="${STUDIO_OWNER_ID:-studio-owner}"
+# The setup-door token. Always exported so POST /api/setup is reachable with a known
+# token whether or not the identity is seeded (an operator sets a real one in prod).
+export TAI_SETUP_TOKEN="${TAI_SETUP_TOKEN:-e2e-setup-token-DO-NOT-USE-IN-PRODUCTION}"
 
 # Loopback host ports for the compose Redis/Postgres. Default to 6380/55432 (not
 # 6379/5432) so the recipe never collides with a Redis/Postgres a developer runs
@@ -190,30 +211,53 @@ applied = asyncio.run(apply_migrations(entries))
 print(f"[boot] applied {len(applied)} migration file(s) across {len(entries)} chain(s)")
 PY
 
-# --- 4. Seed the test API key (Redis), policy + route mappings (Postgres) ----
-log "seeding the test API key (Redis), policy + route mappings (Postgres)"
-KEY_HASH="$(printf '%s' "${STUDIO_API_KEY}" | shasum -a 256 | cut -d' ' -f1)"
-
-# Identity record — PLAIN Redis HASH `ac:key:{sha256(raw)}` -> {user_id, description}.
-# The tai42-identity-redis provider reads it with HGETALL and resolves `user_id`; no
-# RedisJSON module is involved (the whole point of the plain-redis stack).
-redis_cli HSET "ac:key:${KEY_HASH}" user_id "${STUDIO_USER_ID}" description "e2e studio key" >/dev/null
-
-# Policy body — Postgres `access_control_policies` (the SOLE policy store).
-# Full-privilege wildcard scope: the Studio key is full-execution; the `*` scope
-# satisfies every protected resource id. ON CONFLICT keeps a boot re-run idempotent.
-#
-# `policy_data` carries the `key_fingerprint` claim an execution-key binding resolves
-# at fire time. This key is seeded out-of-band, so set it here to a stable test-only value.
-STUDIO_KEY_FINGERPRINT="e2e00000000000000000000000000000"
-pg_exec -c "INSERT INTO access_control_policies (user_id, scopes, policy_data) VALUES ('${STUDIO_USER_ID}', ARRAY['*']::text[], '{\"key_fingerprint\":\"${STUDIO_KEY_FINGERPRINT}\"}'::jsonb) ON CONFLICT (user_id) DO UPDATE SET scopes = EXCLUDED.scopes, policy_data = EXCLUDED.policy_data;" >/dev/null
-
+# --- 4. Route mappings (always) + seeded identity (STUDIO_SEED_AUTH=1) --------
 # Route mappings — Postgres `access_control_routes`. Each row's `url` is the route
 # TEMPLATE the ACCESS_CONTROL_PATH_PATTERNS regexes below resolve to (the verifier
 # fullmatches a request path to a template, then reads the template's row). "public"
 # is the access-control public_resource_id; "studio" is the single protected
-# resource the wildcard key is authorized for.
+# resource the wildcard key is authorized for. These are deployment wiring, not
+# identity, so they are seeded whether or not the owner + key are.
+log "seeding the route mappings (Postgres)"
 pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('studio_authed','studio'),('public_spa','public'),('public_assets','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
+
+# Seeded identity — the owner principal + its key, written directly to the stores in
+# EXACTLY the shape POST /api/setup and the mint produce, because Playwright needs a
+# pinned raw key before the server is up. Skipped when STUDIO_SEED_AUTH=0: no principal
+# exists, so /api/login/methods reports needs_setup and POST /api/setup is the door in.
+# Every statement is idempotent, so a boot re-run against the persisted stores is a no-op.
+if [[ "${STUDIO_SEED_AUTH}" == "1" ]]; then
+  log "seeding the owner principal + its test-only API key (Redis + Postgres)"
+  KEY_HASH="$(printf '%s' "${STUDIO_API_KEY}" | shasum -a 256 | cut -d' ' -f1)"
+
+  # (a) The owner PRINCIPAL — access_control_principals. A `human`, no creator, enabled.
+  # Mirrors create_first_principal (the setup door's owner insert): kind, display_name,
+  # created_by NULL, disabled FALSE, created_at now().
+  pg_exec -c "INSERT INTO access_control_principals (user_id, kind, display_name, created_by, disabled, created_at) VALUES ('${STUDIO_OWNER_ID}', 'human', 'Studio owner', NULL, FALSE, now()) ON CONFLICT (user_id) DO NOTHING;" >/dev/null
+
+  # (b) The owner's ADMIN policy — access_control_policies. The reserved admin role is
+  # allow_all: a condition-free ['*'] policy whose empty policy_data (no role pointer,
+  # no key_fingerprint) the discriminator reads as full admin. Mirrors apply_role(admin).
+  pg_exec -c "INSERT INTO access_control_policies (user_id, scopes, policy_data, condition) VALUES ('${STUDIO_OWNER_ID}', ARRAY['*']::text[], '{}'::jsonb, NULL) ON CONFLICT (user_id) DO UPDATE SET scopes = EXCLUDED.scopes, policy_data = EXCLUDED.policy_data, condition = EXCLUDED.condition;" >/dev/null
+
+  # (c) The KEY's policy — access_control_policies, keyed on the key's own user_id. A
+  # full-privilege wildcard scope; policy_data carries the two claims the mint stamps:
+  # `key_fingerprint` (the immutable per-mint identity a hook binding resolves at fire —
+  # this key is seeded out of band, so a stable test-only value) and `owner_user_id`
+  # (the management/listing home of the key's owner). Mirrors add_user_api_key's body.
+  STUDIO_KEY_FINGERPRINT="e2e00000000000000000000000000000"
+  pg_exec -c "INSERT INTO access_control_policies (user_id, scopes, policy_data) VALUES ('${STUDIO_USER_ID}', ARRAY['*']::text[], jsonb_build_object('key_fingerprint', '${STUDIO_KEY_FINGERPRINT}', 'owner_user_id', '${STUDIO_OWNER_ID}')) ON CONFLICT (user_id) DO UPDATE SET scopes = EXCLUDED.scopes, policy_data = EXCLUDED.policy_data;" >/dev/null
+
+  # (d) The identity record — PLAIN Redis HASH `ac:key:{sha256(raw)}` ->
+  # {user_id, description, owner_user_id} — plus the provider's `user_id -> hash` reverse
+  # lookup `ac:management:key:{user_id}`. The identity-redis provider reads the hash with
+  # HGETALL and REQUIRES the owner claim (an ownerless record is refused and the key
+  # denied); it keeps the reverse index for revoke/edit. Mirrors provider.provision.
+  redis_cli HSET "ac:key:${KEY_HASH}" user_id "${STUDIO_USER_ID}" description "e2e studio key" owner_user_id "${STUDIO_OWNER_ID}" >/dev/null
+  redis_cli SET "ac:management:key:${STUDIO_USER_ID}" "${KEY_HASH}" >/dev/null
+else
+  log "STUDIO_SEED_AUTH=0 — seeding no identity; the deployment needs POST /api/setup"
+fi
 
 # Tier one: path regex -> route template (fully-anchored via fullmatch in the
 # verifier). The public matchers match ONLY their intended shape:

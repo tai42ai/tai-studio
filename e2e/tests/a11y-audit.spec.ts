@@ -80,6 +80,13 @@ for (const scheme of ['light', 'dark'] as const) {
     test.use({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
 
     test('every feature screen carries no critical or serious violation', async ({ page }) => {
+      // One test walks all 18 feature screens through `axe.analyze` so both themes
+      // are held to the same bar and each theme emits a single evidence file. A
+      // per-screen analyse of a laid-out document is heavy (~0.5-2.3 s), so the
+      // full-set walk runs an order of magnitude longer than the default single-
+      // interaction budget assumes; under CPU contention it outlasts 30 s outright.
+      // `test.slow()` triples the timeout to fit the walk rather than truncate it.
+      test.slow();
       // Disable animations for the scan. axe reads the painted document at one
       // instant; a control caught mid-transition (a button's 150 ms disabled ->
       // enabled colour fade) samples an INTERMEDIATE colour pair that neither

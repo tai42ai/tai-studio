@@ -73,15 +73,20 @@ routers_modules:
   #   api_keys     -> /api/auth/roles (the users-admin role picker) + /api/auth/keys
   #   login        -> /api/login/methods aggregator + /api/auth/logout dispatcher
   #                   (the login screen's metadata-driven password form)
+  #   setup        -> POST /api/setup (the public owner-initializing door the runner
+  #                   drives to create the owner + first key)
+  #   principals   -> /api/auth/principals* (the admin-only principal doors)
   #   system_kinds -> /api/system/kinds (the System screen's Plugin-kinds table)
-  #   routes_login -> the accounts plugin's own /api/login/{password,bootstrap,
-  #                   invite/accept} routes (public via the /api/login prefix)
+  #   routes_login -> the accounts plugin's own /api/login/{password,invite/accept}
+  #                   routes (public via the /api/login prefix)
   #   routes_users -> the accounts plugin's authed /api/auth/users* admin API
   #                   (the users-admin Studio page's data source)
   - tai42_skeleton.routers.api_keys # /api/auth/roles + /api/auth/keys
   - tai42_skeleton.routers.login # /api/login/methods    (Login screen)
+  - tai42_skeleton.routers.setup # POST /api/setup       (owner initialize door)
+  - tai42_skeleton.routers.principals # /api/auth/principals* (admin principal doors)
   - tai42_skeleton.routers.system_kinds # /api/system/kinds     (System screen kinds table)
-  - tai42_accounts_postgres.routes_login # /api/login/password + bootstrap + invite
+  - tai42_accounts_postgres.routes_login # /api/login/password + invite/accept
   - tai42_accounts_postgres.routes_users # /api/auth/users*      (Users-admin page)
   - tai42_skeleton.routers.plugins # LAST — SPA catch-all
 

@@ -102,14 +102,13 @@ const CANVAS_MAX_DIMENSION = 4096;
 
 /** sessionStorage key the SDK `useAuth` reads (mirrors e2e/tests/helpers.ts). */
 const SESSION_KEY = 'tai-studio.apiKey';
-/** The seeded, VALID skeleton key. Access control is ON in the boot, so the shell
- * must present a real key: the api-client sends this on every request and boot.sh
- * seeds it as a full-privilege key, so the authed feature routes both render and
- * fetch real data. It MUST equal the `STUDIO_API_KEY` boot.sh seeds — so the runner
- * (docs-screenshots.sh), which exports `STUDIO_API_KEY`, is the single source of
- * truth. The literal fallback is for running this script standalone against a
- * skeleton booted with this same key (i.e. `STUDIO_API_KEY=<this literal>`); it is
- * NOT boot.sh's own default key. */
+/** The full-admin skeleton key. Access control is ON in the boot, so the shell must
+ * present a real key: the api-client sends this on every request, and the authed
+ * feature routes both render and fetch real data with it. The runner
+ * (docs-screenshots.sh) initializes the deployment through `POST /api/setup` and
+ * exports the minted owner key as `STUDIO_API_KEY` — the single source of truth. The
+ * literal fallback is for running this script standalone against a skeleton whose owner
+ * key is that literal (i.e. `STUDIO_API_KEY=<this literal>`). */
 const DEMO_KEY = process.env.STUDIO_API_KEY ?? 'sk-docs-demo-full-privilege-key';
 
 /** The seeded SCOPED credential: an OWNED key (its `owner_user_id` is set), the

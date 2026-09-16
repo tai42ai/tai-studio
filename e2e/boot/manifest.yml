@@ -93,9 +93,21 @@ routers_modules:
   # this on mount; without the router that fetch 404s and the dev/Playwright login
   # screen renders a spurious "Could not load sign-in methods" notice next to a
   # working key-paste form. No accounts plugin is loaded in this boot (it would
-  # need Postgres the recipe does not provision), so the aggregator answers an
-  # empty `{methods: [], bootstrap: false}` — today's expanded key-paste screen.
+  # need Postgres the recipe does not provision), so the aggregator answers empty
+  # `methods` with `setup_login: null`; `needs_setup` is false when boot.sh seeds
+  # the owner (the default) and true under STUDIO_SEED_AUTH=0.
   - tai42_skeleton.routers.login
+  # The public setup door (`POST /api/setup`). Under STUDIO_SEED_AUTH=0 the boot
+  # seeds no identity, so the login screen renders its setup state and this door —
+  # token-gated by TAI_SETUP_TOKEN — initializes the owner + first key. Public via
+  # its `authed=False` registration (outside the reserved `/api/auth` namespace), so
+  # it needs no per-deployment route row.
+  - tai42_skeleton.routers.setup
+  # The admin-only principal doors (`/api/auth/principals*`). The users-admin and
+  # key-management surfaces list and mutate principals through these; they sit under
+  # the reserved `/api/auth` namespace, so the control-plane gate admin-gates them
+  # with no per-deployment route row.
+  - tai42_skeleton.routers.principals
   # The pluggable-kind status table (`GET /api/system/kinds`). The System page's
   # "Plugin kinds" card GETs this on mount; without the router that fetch 404s and
   # the card renders a permanent error next to the working health/metrics/fleet
