@@ -243,7 +243,9 @@ function npmPublishedVersions(packageName) {
   try {
     parsed = JSON.parse(res.stdout);
   } catch {
-    fail(`${cmd} produced unparsable output (exit ${res.status}): ${res.stderr.trim() || res.stdout.trim()}`);
+    fail(
+      `${cmd} produced unparsable output (exit ${res.status}): ${res.stderr.trim() || res.stdout.trim()}`,
+    );
   }
   if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.error) {
     if (parsed.error.code === 'E404') return [];
