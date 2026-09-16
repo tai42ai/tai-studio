@@ -24,7 +24,7 @@ export const loginMethod = z.discriminatedUnion('shape', [
     shape: z.literal('form'),
     id: z.string().min(1),
     title: z.string().min(1),
-    purpose: z.enum(['login', 'bootstrap', 'invite']).default('login'),
+    purpose: z.enum(['login', 'invite']).default('login'),
     fields: z.array(loginFormField).min(1),
     submit_path: z.string().min(1),
   }),
@@ -38,13 +38,20 @@ export const loginMethod = z.discriminatedUnion('shape', [
 ]);
 
 /**
- * `GET /api/login/methods` (PUBLIC). `bootstrap: true` ⇒ the deployment has zero
- * accounts and `methods` contains the owner-creation form. Non-strict — the
+ * `GET /api/login/methods` (PUBLIC). `needs_setup: true` ⇒ no principal exists
+ * yet, so the deployment must be initialized through the setup door before anyone
+ * can sign in. `setup_login` names the login-credential kinds the setup door can
+ * attach the owner's login with; it is `null`/absent when no login-attaching
+ * accounts provider is configured (a keys-only deployment). Non-strict — the
  * skeleton may grow additive fields.
  */
 export const loginMethods = z.object({
   methods: z.array(loginMethod),
-  bootstrap: z.boolean(),
+  needs_setup: z.boolean(),
+  setup_login: z
+    .object({ kinds: z.array(z.enum(['password', 'invite'])) })
+    .nullable()
+    .optional(),
 });
 
 /**

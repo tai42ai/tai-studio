@@ -8,6 +8,9 @@ export interface ApiKeyBody {
   readonly user_id: string;
   readonly description: string;
   readonly scopes: string[];
+  // The principal that OWNS the key. Admin-only: an admin may name a service
+  // principal; a non-admin omits it and the server forces self-ownership.
+  readonly owner_user_id?: string;
   // `null` is an explicit clear on edit (PATCH-style PUT): absent preserves the
   // stored policy data, `null` wipes it. Create never sends `null`.
   readonly policy_data?: Record<string, unknown> | null;
@@ -140,5 +143,28 @@ export function authClient(t: Transport) {
     // relative `claim_path` and the raw token ONCE.
     createClaimLink: (body: ClaimLinkBody) =>
       req('/api/auth/claim-links', s.claimLinkCreated, { method: 'POST', body }),
+
+    // The deployment's principals (identities). ADMIN-ONLY (`secret`) — a
+    // non-admin projection never reaches the route.
+    listPrincipals: (signal?: AbortSignal) =>
+      req('/api/auth/principals', s.principalList, { signal }),
+    // Create a `human` or `service` principal and apply its role (admin only).
+    // A duplicate id is a loud 409; an unknown role a loud 400.
+    createPrincipal: (body: {
+      user_id?: string;
+      kind: 'human' | 'service';
+      display_name: string;
+      role: string;
+    }) => req('/api/auth/principals', s.principal, { method: 'POST', body }),
+    // Update a principal's display name and/or `disabled` flag (omit-means-keep;
+    // an all-absent body is a loud 400). Disabling turns off every credential the
+    // principal owns.
+    updatePrincipal: (userId: string, body: { display_name?: string; disabled?: boolean }) =>
+      req(`/api/auth/principals/${encodeSegment(userId)}`, s.principal, { method: 'PUT', body }),
+    // Delete a principal — revokes every key it owns and its policy row.
+    deletePrincipal: (userId: string) =>
+      req(`/api/auth/principals/${encodeSegment(userId)}`, s.principalDeleted, {
+        method: 'DELETE',
+      }),
   };
 }

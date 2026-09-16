@@ -1,5 +1,10 @@
 /** Public sign-in aggregator and session-logout sub-clients. */
-import { ApiError, ApiLoginFailedError, ApiUnauthorizedError } from '../errors';
+import {
+  ApiError,
+  ApiLoginFailedError,
+  ApiSetupFailedError,
+  ApiUnauthorizedError,
+} from '../errors';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -22,9 +27,9 @@ export function isSafeApiPath(path: string): boolean {
  *
  * A transport 401 arrives as `ApiUnauthorizedError` before any body is read, so
  * its message is generic by construction; the domain 4xx statuses carry the
- * server's informative envelope text (rate-limit, bootstrap-already-initialized,
- * password-policy, or the claim exchange's uniform "unknown or already used"
- * 404) straight through to the inline surface.
+ * server's informative envelope text (rate-limit, password-policy, or the claim
+ * exchange's uniform "unknown or already used" 404) straight through to the
+ * inline surface.
  */
 function asLoginError(error: unknown): never {
   if (error instanceof ApiUnauthorizedError) {
@@ -40,6 +45,29 @@ function asLoginError(error: unknown): never {
       error.status === 429)
   ) {
     throw new ApiLoginFailedError(error.message, error.status);
+  }
+  throw error;
+}
+
+/**
+ * Map a transport error from the setup submission onto an `ApiSetupFailedError`
+ * (rendered inline on the setup entry, keyed on `status`) or rethrow it unchanged
+ * (schema drift, network, any other status — the generic failure branch surfaces
+ * it loudly). The mapped statuses are the setup door's own: 403/429 (a bad or
+ * throttled token — no oracle), 409 (already initialized), 501 (setup
+ * unsupported), and 400/422 (an invalid body).
+ */
+function asSetupError(error: unknown): never {
+  if (
+    error instanceof ApiError &&
+    (error.status === 400 ||
+      error.status === 403 ||
+      error.status === 409 ||
+      error.status === 422 ||
+      error.status === 429 ||
+      error.status === 501)
+  ) {
+    throw new ApiSetupFailedError(error.message, error.status);
   }
   throw error;
 }
@@ -91,6 +119,19 @@ export function loginClient(t: Transport) {
         return await req('/api/login/claim', s.loginResult, { method: 'POST', body });
       } catch (error) {
         return asLoginError(error);
+      }
+    },
+    // Initialize the deployment: create the owner principal, mint the owner's
+    // first key (returned once), and optionally attach the owner's login. PUBLIC
+    // (anonymous — no credential exists yet). A refused/throttled token, an
+    // already-initialized deployment, an unsupported setup door, or an invalid
+    // body becomes an inline `ApiSetupFailedError`; any other failure rethrows
+    // loudly.
+    submitSetup: async (body: s.SetupBody) => {
+      try {
+        return await req('/api/setup', s.setupResult, { method: 'POST', body });
+      } catch (error) {
+        return asSetupError(error);
       }
     },
   };

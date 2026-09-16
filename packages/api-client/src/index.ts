@@ -50,6 +50,7 @@ export {
   ApiError,
   ApiLoginFailedError,
   ApiSchemaError,
+  ApiSetupFailedError,
   ApiUnauthorizedError,
 } from './errors';
 export type {
@@ -188,6 +189,8 @@ export type {
   PresetValidation,
   PresetVersion,
   PresetVersionTags,
+  Principal,
+  PrincipalRef,
   ProviderCatalogResponse,
   ProviderView,
   RecordSearchPage,
@@ -204,6 +207,8 @@ export type {
   RunTrace,
   ScheduleItem,
   SettingsSchema,
+  SetupBody,
+  SetupResult,
   StateAttach,
   StateAttached,
   StateAttachment,

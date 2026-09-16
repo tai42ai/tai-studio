@@ -163,6 +163,8 @@ interface ApiKeyBody {
     // (undocumented)
     readonly description: string;
     // (undocumented)
+    readonly owner_user_id?: string;
+    // (undocumented)
     readonly policy_data?: Record<string, unknown> | null;
     // (undocumented)
     readonly scopes: string[];
@@ -580,7 +582,7 @@ methods: ({
 shape: "form";
 id: string;
 title: string;
-purpose: "login" | "bootstrap" | "invite";
+purpose: "login" | "invite";
 fields: {
 name: string;
 label: string;
@@ -595,7 +597,10 @@ label: string;
 href: string;
 icon?: string | undefined;
 })[];
-bootstrap: boolean;
+needs_setup: boolean;
+setup_login?: {
+kinds: ("invite" | "password")[];
+} | null | undefined;
 }>;
 readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
 token: string;
@@ -610,6 +615,15 @@ token: string;
 }) => Promise<{
 token: string;
 user_id: string;
+}>;
+readonly submitSetup: (body: SetupBody) => Promise<{
+owner_user_id: string;
+key_user_id: string;
+api_key: string;
+key_fingerprint: string;
+login_attached: boolean;
+invite_token?: string | null | undefined;
+login_path?: string | null | undefined;
 }>;
 readonly getMe: (signal?: AbortSignal) => Promise<{
 user_id: string;
@@ -632,6 +646,11 @@ slug: string;
 tools: string[];
 agents: string[];
 mintable: boolean;
+principal?: {
+user_id: string;
+kind: "human" | "service";
+display_name: string;
+} | null | undefined;
 }>;
 readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
 readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
@@ -761,6 +780,12 @@ content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null | undefined;
+principal?: {
+user_id: string;
+kind: "human" | "service";
+display_name: string;
+} | null | undefined;
+orphaned?: boolean | undefined;
 }[]>;
 readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
 readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
@@ -775,6 +800,42 @@ readonly createClaimLink: (body: ClaimLinkBody) => Promise<{
 claim_path: string;
 token: string;
 expires_at: string;
+}>;
+readonly listPrincipals: (signal?: AbortSignal) => Promise<{
+user_id: string;
+kind: "human" | "service";
+display_name: string;
+created_by: string | null;
+disabled: boolean;
+created_at: string;
+}[]>;
+readonly createPrincipal: (body: {
+user_id?: string;
+kind: "human" | "service";
+display_name: string;
+role: string;
+}) => Promise<{
+user_id: string;
+kind: "human" | "service";
+display_name: string;
+created_by: string | null;
+disabled: boolean;
+created_at: string;
+}>;
+readonly updatePrincipal: (userId: string, body: {
+display_name?: string;
+disabled?: boolean;
+}) => Promise<{
+user_id: string;
+kind: "human" | "service";
+display_name: string;
+created_by: string | null;
+disabled: boolean;
+created_at: string;
+}>;
+readonly deletePrincipal: (userId: string) => Promise<{
+user_id: string;
+deleted: boolean;
 }>;
 readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
 groups: {
@@ -4840,7 +4901,7 @@ function createApiClient(config: ApiConfig): {
             shape: "form";
             id: string;
             title: string;
-            purpose: "login" | "bootstrap" | "invite";
+            purpose: "login" | "invite";
             fields: {
                 name: string;
                 label: string;
@@ -4855,7 +4916,10 @@ function createApiClient(config: ApiConfig): {
             href: string;
             icon?: string | undefined;
         })[];
-        bootstrap: boolean;
+        needs_setup: boolean;
+        setup_login?: {
+            kinds: ("invite" | "password")[];
+        } | null | undefined;
     }>;
     readonly submitLoginForm: (path: string, values: Record<string, string>) => Promise<{
         token: string;
@@ -4870,6 +4934,15 @@ function createApiClient(config: ApiConfig): {
     }) => Promise<{
         token: string;
         user_id: string;
+    }>;
+    readonly submitSetup: (body: SetupBody) => Promise<{
+        owner_user_id: string;
+        key_user_id: string;
+        api_key: string;
+        key_fingerprint: string;
+        login_attached: boolean;
+        invite_token?: string | null | undefined;
+        login_path?: string | null | undefined;
     }>;
     readonly getMe: (signal?: AbortSignal) => Promise<{
         user_id: string;
@@ -4892,6 +4965,11 @@ function createApiClient(config: ApiConfig): {
         tools: string[];
         agents: string[];
         mintable: boolean;
+        principal?: {
+            user_id: string;
+            kind: "human" | "service";
+            display_name: string;
+        } | null | undefined;
     }>;
     readonly listScopes: (signal?: AbortSignal) => Promise<Record<string, string>>;
     readonly addUrlToScope: (body: AddUrlToScopeBody) => Promise<{
@@ -5021,6 +5099,12 @@ function createApiClient(config: ApiConfig): {
             id?: string | undefined;
             kwargs?: Record<string, unknown> | undefined;
         } | null | undefined;
+        principal?: {
+            user_id: string;
+            kind: "human" | "service";
+            display_name: string;
+        } | null | undefined;
+        orphaned?: boolean | undefined;
     }[]>;
     readonly createApiKey: (body: ApiKeyBody) => Promise<string>;
     readonly editApiKey: (userId: string, body: Omit<ApiKeyBody, "user_id">) => Promise<{
@@ -5035,6 +5119,42 @@ function createApiClient(config: ApiConfig): {
         claim_path: string;
         token: string;
         expires_at: string;
+    }>;
+    readonly listPrincipals: (signal?: AbortSignal) => Promise<{
+        user_id: string;
+        kind: "human" | "service";
+        display_name: string;
+        created_by: string | null;
+        disabled: boolean;
+        created_at: string;
+    }[]>;
+    readonly createPrincipal: (body: {
+        user_id?: string;
+        kind: "human" | "service";
+        display_name: string;
+        role: string;
+    }) => Promise<{
+        user_id: string;
+        kind: "human" | "service";
+        display_name: string;
+        created_by: string | null;
+        disabled: boolean;
+        created_at: string;
+    }>;
+    readonly updatePrincipal: (userId: string, body: {
+        display_name?: string;
+        disabled?: boolean;
+    }) => Promise<{
+        user_id: string;
+        kind: "human" | "service";
+        display_name: string;
+        created_by: string | null;
+        disabled: boolean;
+        created_at: string;
+    }>;
+    readonly deletePrincipal: (userId: string) => Promise<{
+        user_id: string;
+        deleted: boolean;
     }>;
     readonly getSettingsSchema: (signal?: AbortSignal) => Promise<{
         groups: {
@@ -8911,7 +9031,6 @@ const loginMethod: z.ZodDiscriminatedUnion<[z.ZodObject<{
     title: z.ZodString;
     purpose: z.ZodDefault<z.ZodEnum<{
         login: "login";
-        bootstrap: "bootstrap";
         invite: "invite";
     }>>;
     fields: z.ZodArray<z.ZodObject<{
@@ -8940,7 +9059,6 @@ const loginMethods: z.ZodObject<{
         title: z.ZodString;
         purpose: z.ZodDefault<z.ZodEnum<{
             login: "login";
-            bootstrap: "bootstrap";
             invite: "invite";
         }>>;
         fields: z.ZodArray<z.ZodObject<{
@@ -8957,7 +9075,13 @@ const loginMethods: z.ZodObject<{
         icon: z.ZodOptional<z.ZodString>;
         href: z.ZodString;
     }, z.core.$strip>], "shape">>;
-    bootstrap: z.ZodBoolean;
+    needs_setup: z.ZodBoolean;
+    setup_login: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        kinds: z.ZodArray<z.ZodEnum<{
+            invite: "invite";
+            password: "password";
+        }>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9841,6 +9965,14 @@ type MeProjection = z.infer<typeof meProjection>;
 const meProjection: z.ZodObject<{
     user_id: z.ZodString;
     owner_user_id: z.ZodNullable<z.ZodString>;
+    principal: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        user_id: z.ZodString;
+        kind: z.ZodEnum<{
+            human: "human";
+            service: "service";
+        }>;
+        display_name: z.ZodString;
+    }, z.core.$strip>>>;
     admin: z.ZodBoolean;
     scopes: z.ZodArray<z.ZodString>;
     routes: z.ZodArray<z.ZodObject<{
@@ -10737,6 +10869,60 @@ const presetVersionTags: z.ZodObject<{
     name: z.ZodString;
     version: z.ZodNumber;
     tags: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type Principal = z.infer<typeof principal>;
+
+// @public
+const principal: z.ZodObject<{
+    user_id: z.ZodString;
+    kind: z.ZodEnum<{
+        human: "human";
+        service: "service";
+    }>;
+    display_name: z.ZodString;
+    created_by: z.ZodNullable<z.ZodString>;
+    disabled: z.ZodBoolean;
+    created_at: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type PrincipalDeleted = z.infer<typeof principalDeleted>;
+
+// @public
+const principalDeleted: z.ZodObject<{
+    user_id: z.ZodString;
+    deleted: z.ZodBoolean;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type PrincipalList = z.infer<typeof principalList>;
+
+// @public
+const principalList: z.ZodArray<z.ZodObject<{
+    user_id: z.ZodString;
+    kind: z.ZodEnum<{
+        human: "human";
+        service: "service";
+    }>;
+    display_name: z.ZodString;
+    created_by: z.ZodNullable<z.ZodString>;
+    disabled: z.ZodBoolean;
+    created_at: z.ZodString;
+}, z.core.$strip>>;
+
+// @public (undocumented)
+type PrincipalRef = z.infer<typeof principalRef>;
+
+// @public
+const principalRef: z.ZodObject<{
+    user_id: z.ZodString;
+    kind: z.ZodEnum<{
+        human: "human";
+        service: "service";
+    }>;
+    display_name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11860,6 +12046,14 @@ declare namespace s {
         PresetValidation,
         presetVersionTags,
         PresetVersionTags,
+        principalRef,
+        PrincipalRef,
+        principal,
+        Principal,
+        principalList,
+        PrincipalList,
+        principalDeleted,
+        PrincipalDeleted,
         settingsProfileSummary,
         SettingsProfileSummary,
         settingsProfileList,
@@ -11938,6 +12132,9 @@ declare namespace s {
         RoleBody,
         settingsSchema,
         SettingsSchema,
+        setupResult,
+        SetupResult,
+        SetupBody,
         stateSubject,
         StateSubject,
         stateRegime,
@@ -12451,6 +12648,43 @@ export interface SettingsTabProps {
     // (undocumented)
     readonly pluginId: string;
 }
+
+// @public
+interface SetupBody {
+    // (undocumented)
+    readonly key_description?: string;
+    // (undocumented)
+    readonly key_user_id?: string;
+    // (undocumented)
+    readonly login?: {
+        readonly kind: 'password';
+        readonly email: string;
+        readonly password: string;
+    } | {
+        readonly kind: 'invite';
+        readonly email: string;
+    };
+    // (undocumented)
+    readonly owner_display_name: string;
+    // (undocumented)
+    readonly owner_user_id?: string;
+    // (undocumented)
+    readonly setup_token: string;
+}
+
+// @public (undocumented)
+type SetupResult = z.infer<typeof setupResult>;
+
+// @public
+const setupResult: z.ZodObject<{
+    owner_user_id: z.ZodString;
+    key_user_id: z.ZodString;
+    api_key: z.ZodString;
+    key_fingerprint: z.ZodString;
+    login_attached: z.ZodBoolean;
+    invite_token: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    login_path: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
 
 // @public
 export const SignOutIcon: IconComponent;
@@ -13960,6 +14194,15 @@ const tokensPayload: z.ZodArray<z.ZodObject<{
         id: z.ZodOptional<z.ZodString>;
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>>>;
+    principal: z.ZodOptional<z.ZodNullable<z.ZodObject<{
+        user_id: z.ZodString;
+        kind: z.ZodEnum<{
+            human: "human";
+            service: "service";
+        }>;
+        display_name: z.ZodString;
+    }, z.core.$strip>>>;
+    orphaned: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$strip>>;
 
 // @public

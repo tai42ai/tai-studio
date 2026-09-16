@@ -1,6 +1,7 @@
 /** Caller capability projection and auth-capabilities schemas. */
 import { z } from 'zod';
 
+import { principalRef } from './principals';
 import { subMcpMount } from './sub-mcp';
 
 /** A concrete route the caller can reach, with the methods that pass its jq fence. */
@@ -34,13 +35,16 @@ export type SubMcpEntry = z.infer<typeof subMcpEntry>;
  * can reach RIGHT NOW (derived server-side, never stored). `admin` is the
  * condition-free ownerless `"*"` discriminator (a TOTAL projection); a scoped
  * session carries `admin: false` and a jq-exact `routes` list. `owner_user_id` is
- * the key's owner claim, `null` for an ownerless key. The invariant is
- * projection ⊆ gate: every projected surface is one the server would admit, so
- * the UI can filter on it without ever advertising a door the gate denies.
+ * the key's owner claim, `null` for a key with no owner claim. `principal` is the
+ * caller's principal (kind + display name), `null` when no principal row backs the
+ * credential. The invariant is projection ⊆ gate: every projected surface is one
+ * the server would admit, so the UI can filter on it without ever advertising a
+ * door the gate denies.
  */
 export const meProjection = z.object({
   user_id: z.string(),
   owner_user_id: z.string().nullable(),
+  principal: principalRef.nullable().optional(),
   admin: z.boolean(),
   scopes: z.array(z.string()),
   routes: z.array(routeEntry),

@@ -72,6 +72,22 @@ export class ApiLoginFailedError extends Error {
 }
 
 /**
+ * A setup attempt was REJECTED — a bad or throttled token (403/429), an
+ * already-initialized deployment (409), an unsupported setup door (501), or an
+ * invalid body (400/422). Like {@link ApiLoginFailedError} it is NOT an
+ * ApiUnauthorizedError: it renders inline on the setup entry, keyed on `status`
+ * so the page shows the right copy, never a global unauthorized redirect.
+ */
+export class ApiSetupFailedError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiSetupFailedError';
+    this.status = status;
+  }
+}
+
+/**
  * The response body did not match its declared zod schema. This is a contract
  * drift between the Studio and the skeleton — a loud, visible error, never a
  * silently-coerced value.

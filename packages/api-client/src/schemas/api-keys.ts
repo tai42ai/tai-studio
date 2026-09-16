@@ -1,6 +1,7 @@
 /** API-key payload and mint/edit/revoke response schemas. */
 import { z } from 'zod';
 
+import { principalRef } from './principals';
 import { templatedText } from './served';
 import { jsonValue } from './shared';
 
@@ -14,6 +15,12 @@ export const tokensPayload = z.array(
     scopes: z.array(z.string()),
     policy_data: jsonValue,
     condition: templatedText.nullable().optional(),
+    // The key's OWNER principal (kind + display name); `null` for a key whose
+    // principal row is absent (an orphaned restore state).
+    principal: principalRef.nullable().optional(),
+    // `true` for a key whose owning principal row is gone (an orphaned key that a
+    // backup restore left without its principal).
+    orphaned: z.boolean().optional(),
   }),
 );
 export type TokensPayload = z.infer<typeof tokensPayload>;

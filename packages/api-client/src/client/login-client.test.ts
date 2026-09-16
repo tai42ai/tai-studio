@@ -8,7 +8,13 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-import { type ApiConfig, ApiError, ApiLoginFailedError, ApiSchemaError } from '../index';
+import {
+  type ApiConfig,
+  ApiError,
+  ApiLoginFailedError,
+  ApiSchemaError,
+  ApiSetupFailedError,
+} from '../index';
 import { createApiClient, isSafeApiPath } from './index';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -63,7 +69,7 @@ describe('getLoginMethods client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
-          bootstrap: false,
+          needs_setup: false,
           methods: [
             {
               shape: 'form',
@@ -83,11 +89,25 @@ describe('getLoginMethods client transport', () => {
     expect(out.methods).toHaveLength(2);
     // The `form` method's `purpose` defaults to 'login' when the payload omits it.
     expect(out.methods[0]).toMatchObject({ shape: 'form', purpose: 'login' });
+    // A false `needs_setup` and an absent `setup_login` parse.
+    expect(out.needs_setup).toBe(false);
+    expect(out.setup_login).toBeUndefined();
+  });
+
+  it('carries needs_setup:true and the setup_login kinds through', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { needs_setup: true, methods: [], setup_login: { kinds: ['password', 'invite'] } },
+      }),
+    );
+    const out = await client.getLoginMethods();
+    expect(out.needs_setup).toBe(true);
+    expect(out.setup_login).toEqual({ kinds: ['password', 'invite'] });
   });
 
   it('is public: unauthenticated (no token) carries no auth header', async () => {
     const { client, captured } = harness(
-      () => jsonResponse({ data: { methods: [], bootstrap: false } }),
+      () => jsonResponse({ data: { methods: [], needs_setup: false } }),
       null,
     );
     await client.getLoginMethods();
@@ -96,7 +116,7 @@ describe('getLoginMethods client transport', () => {
 
   it('REJECTS an unknown method shape as an ApiSchemaError (contract drift, not a soft skip)', async () => {
     const { client } = harness(() =>
-      jsonResponse({ data: { bootstrap: false, methods: [{ shape: 'magic-link', id: 'x' }] } }),
+      jsonResponse({ data: { needs_setup: false, methods: [{ shape: 'magic-link', id: 'x' }] } }),
     );
     await expect(client.getLoginMethods()).rejects.toBeInstanceOf(ApiSchemaError);
   });
@@ -183,6 +203,118 @@ describe('exchangeSsoCode client transport', () => {
     const error = await client.exchangeSsoCode('stale').catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiLoginFailedError);
     expect((error as ApiLoginFailedError).status).toBe(400);
+  });
+});
+
+describe('submitSetup client transport', () => {
+  const okResult = {
+    owner_user_id: 'usr-owner',
+    key_user_id: 'usr-owner-key',
+    api_key: 'sk-owner-1',
+    key_fingerprint: 'kf-owner-1',
+    login_attached: true,
+    invite_token: null,
+    login_path: null,
+  };
+
+  it('POSTs the setup body to /api/setup, carries no auth header, and parses the once-shown key', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: okResult }), null);
+    const body = {
+      setup_token: 'tok',
+      owner_display_name: 'Owner',
+      login: { kind: 'password' as const, email: 'a@b.co', password: 'a-strong-pass' },
+    };
+    const out = await client.submitSetup(body);
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/setup');
+    expect(captured[0]?.body).toEqual(body);
+    expect(captured[0]?.hasAuthHeader).toBe(false);
+    expect(out.api_key).toBe('sk-owner-1');
+    expect(out.login_attached).toBe(true);
+  });
+
+  it('parses a keys-only result (no login) and an invite result (token + path)', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ...okResult,
+          login_attached: false,
+          invite_token: 'inv-9',
+          login_path: '/login',
+        },
+      }),
+    );
+    const out = await client.submitSetup({ setup_token: 't', owner_display_name: 'Owner' });
+    expect(out.login_attached).toBe(false);
+    expect(out.invite_token).toBe('inv-9');
+    expect(out.login_path).toBe('/login');
+  });
+
+  it('maps a 403 bad/throttled token to an ApiSetupFailedError carrying the message', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'Forbidden' }, 403));
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiSetupFailedError).status).toBe(403);
+    expect((error as ApiSetupFailedError).message).toBe('Forbidden');
+  });
+
+  it('maps a 409 already-initialized to an ApiSetupFailedError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'Already initialized' }, 409));
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiSetupFailedError).status).toBe(409);
+  });
+
+  it('maps a 501 unsupported setup door to an ApiSetupFailedError', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ error: 'setup is not supported on this server' }, 501),
+    );
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiSetupFailedError).status).toBe(501);
+  });
+
+  it('maps a 429 throttled token to an ApiSetupFailedError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'Too many attempts' }, 429));
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiSetupFailedError).status).toBe(429);
+  });
+
+  it('maps a 400 invalid body to an ApiSetupFailedError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'invalid setup body' }, 400));
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiSetupFailedError).status).toBe(400);
+  });
+
+  it('maps a 422 invalid body to an ApiSetupFailedError', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'unprocessable setup body' }, 422));
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiSetupFailedError).status).toBe(422);
+  });
+
+  it('rethrows a 500 UNCHANGED (ApiError, the loud generic-failure branch)', async () => {
+    const { client } = harness(() => jsonResponse({ error: 'boom' }, 500));
+    const error = await client
+      .submitSetup({ setup_token: 'x', owner_display_name: 'Owner' })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).not.toBeInstanceOf(ApiSetupFailedError);
+    expect((error as ApiError).status).toBe(500);
   });
 });
 
