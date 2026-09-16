@@ -14,6 +14,7 @@ import {
   bumpClass,
   allowedBumps,
   gatePasses,
+  previousPublishedTag,
   GateError,
 } from './api-gate.mjs';
 
@@ -80,6 +81,36 @@ test('the allowed set renders comma-joined and sorted, no brackets or quotes', (
   const { reason } = gatePasses('label-honesty', '0.1.0', '0.1.1', true);
   assert.match(reason, /computed allowed bump\(s\)=major,minor, bump=patch/);
   assert.doesNotMatch(reason, /[[\]']/);
+});
+
+// ------------------------------------------------------ published baseline tag
+// The baseline is the newest surface a consumer can install: the highest v* tag
+// below the target whose version is PUBLISHED on npm. A tag whose publish was
+// refused still exists in git but is not published, so it must be skipped.
+
+test('the newest tag being unpublished is skipped for the highest published tag below the target', () => {
+  const tags = ['v16.0.0', 'v16.0.1', 'v16.1.0'];
+  const published = ['16.0.0', '16.0.1']; // v16.1.0 tagged but refused, never published
+  assert.equal(previousPublishedTag('17.0.0', tags, published), 'v16.0.1');
+  assert.equal(previousPublishedTag('16.2.0', tags, published), 'v16.0.1');
+});
+
+test('no published version below the target yields null', () => {
+  assert.equal(previousPublishedTag('1.0.0', ['v0.1.0', 'v0.2.0'], []), null);
+  assert.equal(previousPublishedTag('1.0.0', [], ['0.9.0']), null);
+});
+
+test('published versions at or above the target are ignored', () => {
+  const tags = ['v1.0.0', 'v2.0.0', 'v3.0.0'];
+  const published = ['1.0.0', '2.0.0', '3.0.0'];
+  // Choosing a baseline for 2.0.0 never picks 2.0.0 or 3.0.0, only the highest below.
+  assert.equal(previousPublishedTag('2.0.0', tags, published), 'v1.0.0');
+});
+
+test('non-semver tags are ignored', () => {
+  const tags = ['v1.0.0', 'nightly', 'v1.1', 'release-2', 'v1.2.0'];
+  const published = ['1.0.0', '1.2.0'];
+  assert.equal(previousPublishedTag('2.0.0', tags, published), 'v1.2.0');
 });
 
 // ----------------------------------------------------- interface member diff
