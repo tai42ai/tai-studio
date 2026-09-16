@@ -33,7 +33,7 @@ export type SubMcpEntry = z.infer<typeof subMcpEntry>;
  * `GET /api/auth/me` — the caller's derived capability projection: the concrete
  * (path, method) surface, dynamic patterns, sub-MCP mounts, tools, and agents it
  * can reach RIGHT NOW (derived server-side, never stored). `admin` is the
- * condition-free ownerless `"*"` discriminator (a TOTAL projection); a scoped
+ * condition-free `"*"` discriminator (a TOTAL projection); a scoped
  * session carries `admin: false` and a jq-exact `routes` list. `owner_user_id` is
  * the key's owner claim, `null` for a key with no owner claim. `principal` is the
  * caller's principal (kind + display name), `null` when no principal row backs the

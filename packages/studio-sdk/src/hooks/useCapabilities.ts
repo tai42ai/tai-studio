@@ -116,7 +116,7 @@ export function useCapabilities(): CapabilityContextValue {
 
 /**
  * Whether the projection is the synthetic TOTAL projection — the admin session
- * (the condition-free ownerless `"*"` discriminator) and the gate-off local-dev
+ * (the condition-free `"*"` discriminator) and the gate-off local-dev
  * projection alike. This is `projection.admin === true` and NOTHING else: a
  * seeded editor/viewer carries `["*"]` scopes PLUS a jq fence, so keying on `"*"`
  * scopes would hand every editor/viewer the unfiltered nav and a wall of 403s on
