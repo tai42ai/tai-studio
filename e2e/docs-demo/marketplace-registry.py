@@ -41,7 +41,7 @@ _SPEC = {
     # preview resolves (the skeleton refuses a spec whose contract_range excludes the
     # installed tai42-contract). Pinned to the current major the same way every
     # shipped plugin's tai-plugin.yml is, so it tracks the contract bump.
-    "contract": ">=12.0,<13",
+    "contract": ">=13.0,<14",
     "categories": ["channels"],
     "tags": ["alerts", "relay", "webhook"],
     "provides": [
