@@ -48,6 +48,39 @@ describe('generated served-document schemas parse served payloads', () => {
     // A nullable templated-text field the platform defaults to null is present, not undefined.
     expect(parsed.reply_expr).toBeNull();
   });
+
+  it('defaults a ConversationRoute overlap the payload omits, and keeps a supplied one', () => {
+    const base = {
+      route_name: 'r',
+      door: 'channel',
+      target_kind: 'agent',
+      target_name: 't',
+      execution_key: 'k',
+      execution_key_fingerprint: 'fp',
+    } as const;
+    expect(schemas.conversationRoute.parse(base).overlap).toEqual({
+      running: 'continue',
+      deliver: 'one',
+      settle_seconds: 0,
+    });
+    expect(
+      schemas.conversationRoute.parse({
+        ...base,
+        overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 },
+      }).overlap,
+    ).toEqual({ running: 'cancel', deliver: 'all', settle_seconds: 5 });
+  });
+
+  it('makes overlap optional on a ConversationRouteCreate body, defaulting the policy', () => {
+    const created = schemas.conversationRouteCreate.parse({
+      route_name: 'r',
+      door: 'channel',
+      target_kind: 'agent',
+      target_name: 't',
+      execution_key: 'k',
+    });
+    expect(created.overlap).toEqual({ running: 'continue', deliver: 'one', settle_seconds: 0 });
+  });
 });
 
 describe('a served body is a templated text, never a bare string (the marker guarantee)', () => {

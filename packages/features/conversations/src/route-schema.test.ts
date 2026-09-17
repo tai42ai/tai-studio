@@ -40,6 +40,23 @@ describe('routeFormSchema', () => {
     expect(agent?.properties?.payload_expr).toBeUndefined();
   });
 
+  it('documents the carry keys the deliver: all payload adds', () => {
+    const tool = (routeFormSchema().properties?.target?.oneOf ?? []).find(
+      (v) => v.properties?.target_kind?.const === 'tool',
+    );
+    const annotation = tool?.properties?.payload_expr?.['x-tai42-expression'] as
+      { readonly keys?: readonly { readonly name: string; readonly gloss: string }[] } | undefined;
+    const keys = annotation?.keys ?? [];
+    const byName = new Map(keys.map((key) => [key.name, key.gloss]));
+
+    expect(byName.get('messages')).toBe(
+      'under deliver: all, every message this turn carries, oldest first — each {id, text, accepted_at} plus form, attachments and location when present',
+    );
+    expect(byName.get('superseded')).toBe(
+      "under deliver: all, the earlier messages this turn's lead superseded or carried, oldest first — each in the same shape as messages, present only when non-empty",
+    );
+  });
+
   it('accepts a fully-populated tool + channel value under its own schema', () => {
     const value: RouteFormValue = {
       route_name: 'support',
@@ -80,6 +97,7 @@ describe('routeToFormValue', () => {
       route_name: 'acct',
       execution_key: 'svc-chat',
       initial_mode: 'manual',
+      overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
       turns_per_hour_override: 30,
       error_reply_text: 'sorry',
       target: {
@@ -188,6 +206,123 @@ describe('formValueToBody', () => {
       error_reply_text: null,
       locale: null,
     });
+  });
+});
+
+describe('overlap policy', () => {
+  it('inserts the overlap group after delivery and before execution_key', () => {
+    const keys = Object.keys(routeFormSchema().properties ?? {});
+    expect(keys.indexOf('overlap')).toBe(keys.indexOf('delivery') + 1);
+    expect(keys.indexOf('overlap')).toBe(keys.indexOf('execution_key') - 1);
+  });
+
+  it('is a plain-object group titled Overlap with no required fields', () => {
+    const overlap = routeFormSchema().properties?.overlap;
+    expect(overlap).toMatchObject({ type: 'object', title: 'Overlap' });
+    expect(overlap?.description).toMatch(/Leave every field blank for the defaults/);
+    expect(overlap?.required).toBeUndefined();
+  });
+
+  it('orders running, deliver, settle_seconds with their enums and bounds', () => {
+    const overlap = routeFormSchema().properties?.overlap;
+    expect(Object.keys(overlap?.properties ?? {})).toEqual([
+      'running',
+      'deliver',
+      'settle_seconds',
+    ]);
+    expect(overlap?.properties?.running).toMatchObject({
+      enum: ['continue', 'cancel'],
+      title: 'Running turn',
+    });
+    expect(overlap?.properties?.deliver).toMatchObject({ enum: ['one', 'all'], title: 'Deliver' });
+    expect(overlap?.properties?.settle_seconds).toMatchObject({
+      type: ['integer', 'null'],
+      minimum: 0,
+      maximum: 30,
+      title: 'Settle window (seconds)',
+    });
+  });
+
+  it('validates a partially-filled overlap group with no spurious required errors', () => {
+    const value: RouteFormValue = {
+      route_name: 'support',
+      target: { target_kind: 'agent', target_name: 'assistant' },
+      delivery: { door: 'channel', channel: 'whatsapp', our_identity: '+1' },
+      execution_key: 'svc',
+      overlap: { running: 'cancel' },
+    };
+    expect(validateAgainstSchema(routeFormSchema(), value)).toEqual({});
+  });
+
+  it('copies the stored policy in on prefill', () => {
+    const value = routeToFormValue(
+      makeRoute({ overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 } }),
+    );
+    expect(value.overlap).toEqual({ running: 'cancel', deliver: 'all', settle_seconds: 5 });
+  });
+
+  it('omits overlap from the body when the operator set nothing', () => {
+    const body = formValueToBody({
+      route_name: 'acct',
+      target: { target_kind: 'agent', target_name: 'assistant' },
+      delivery: { door: 'api', callback_url: 'https://x/y' },
+      execution_key: 'svc',
+    });
+    expect('overlap' in body).toBe(false);
+  });
+
+  it('sends only the keys the operator set, never a null policy field', () => {
+    const body = formValueToBody({
+      route_name: 'acct',
+      target: { target_kind: 'agent', target_name: 'assistant' },
+      delivery: { door: 'api', callback_url: 'https://x/y' },
+      execution_key: 'svc',
+      overlap: { deliver: 'all' },
+    });
+    expect(body.overlap).toEqual({ deliver: 'all' });
+  });
+
+  it('carries a full policy through the body', () => {
+    const body = formValueToBody({
+      route_name: 'acct',
+      target: { target_kind: 'agent', target_name: 'assistant' },
+      delivery: { door: 'api', callback_url: 'https://x/y' },
+      execution_key: 'svc',
+      overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 },
+    });
+    expect(body.overlap).toEqual({ running: 'cancel', deliver: 'all', settle_seconds: 5 });
+  });
+
+  const settleError = (overlap: RouteFormValue['overlap']): string | undefined =>
+    requiredFieldErrors(
+      {
+        route_name: 'ok',
+        execution_key: 'svc',
+        target: { target_kind: 'agent', target_name: 'assistant' },
+        delivery: { door: 'channel', channel: 'sms', our_identity: '+1' },
+        overlap,
+      },
+      false,
+    )['overlap.settle_seconds'];
+
+  it('refuses a settle window under continue + one', () => {
+    expect(settleError({ settle_seconds: 5 })).toBe(
+      'A settle window needs Deliver set to all or Running turn set to cancel.',
+    );
+    expect(settleError({ running: 'continue', deliver: 'one', settle_seconds: 5 })).toBe(
+      'A settle window needs Deliver set to all or Running turn set to cancel.',
+    );
+  });
+
+  it('allows a settle window once deliver is all or running is cancel', () => {
+    expect(settleError({ deliver: 'all', settle_seconds: 5 })).toBeUndefined();
+    expect(settleError({ running: 'cancel', settle_seconds: 5 })).toBeUndefined();
+  });
+
+  it('allows a zero (or unset) settle window under any combination', () => {
+    expect(settleError({ settle_seconds: 0 })).toBeUndefined();
+    expect(settleError({ running: 'continue', deliver: 'one' })).toBeUndefined();
+    expect(settleError(undefined)).toBeUndefined();
   });
 });
 

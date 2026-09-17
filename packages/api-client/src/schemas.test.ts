@@ -477,6 +477,7 @@ describe('conversation record schema — origin', () => {
     inbound_text: 'where is my request',
     answer_status: 'answered',
     answer: 'It completes tomorrow.',
+    successor_id: null,
     delivery_status: 'delivered',
     created_at: 1_800_000_000,
     updated_at: 1_800_000_001,

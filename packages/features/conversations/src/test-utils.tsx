@@ -256,6 +256,7 @@ export function makeRoute(overrides: Partial<ConversationRoute> = {}): Conversat
     execution_key_fingerprint: 'fp-1',
     callback_secret: null,
     locale: null,
+    overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
     ...overrides,
   };
 }
@@ -294,6 +295,7 @@ export function makeMessage(overrides: Partial<ConversationMessage> = {}): Conve
     inbound_text: 'where is my request',
     answer_status: 'answered',
     answer: 'It completes tomorrow.',
+    successor_id: null,
     origin: 'client',
     delivery_status: 'delivered',
     created_at: 1_800_000_000,

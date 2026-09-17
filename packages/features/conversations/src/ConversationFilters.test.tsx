@@ -61,4 +61,26 @@ describe('ConversationFilters', () => {
     expect(screen.getByRole('textbox', { name: 'Address' })).toHaveValue('+1555');
     expect(screen.getByRole('textbox', { name: 'Search text' })).toHaveValue('widget');
   });
+
+  it('offers the merged and superseded outcomes among the status options', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ConversationFilters search={{ route: 'chat' }} />, { client: {} });
+
+    await user.click(screen.getByRole('combobox', { name: 'Delivery status' }));
+
+    expect(screen.getByRole('option', { name: 'Merged' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Superseded' })).toBeInTheDocument();
+  });
+
+  it('commits the superseded outcome as the status filter', async () => {
+    const user = userEvent.setup();
+    const { navigate } = renderWithProviders(<ConversationFilters search={{ route: 'chat' }} />, {
+      client: {},
+    });
+
+    await user.click(screen.getByRole('combobox', { name: 'Delivery status' }));
+    await user.click(screen.getByRole('option', { name: 'Superseded' }));
+
+    expect(navigate).toHaveBeenCalledWith('conversations', { route: 'chat', status: 'superseded' });
+  });
 });

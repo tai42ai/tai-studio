@@ -175,6 +175,15 @@ export function Exchange({
             {ANSWER_LABEL[record.answer_status]}
           </Badge>
         )}
+        {record.successor_id === null ? null : (
+          <>
+            <span aria-hidden="true">·</span>
+            <span>
+              {record.delivery_status === 'merged' ? 'Merged into ' : 'Superseded by '}
+              <span className="tai-mono">{record.successor_id}</span>
+            </span>
+          </>
+        )}
       </div>
       {hasAdminDetail(record) ? <AdminDetail record={record} /> : null}
     </li>

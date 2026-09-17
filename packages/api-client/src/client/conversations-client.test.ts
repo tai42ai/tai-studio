@@ -77,6 +77,7 @@ const callerRecord = {
   inbound_text: 'where is my request',
   answer_status: 'answered',
   answer: 'It completes tomorrow.',
+  successor_id: null,
   origin: 'client',
   delivery_status: 'delivered',
   created_at: 1_800_000_000,
@@ -136,6 +137,18 @@ describe('conversation routes transport', () => {
     expect(out.items[0]?.turns_per_hour_override).toBeNull();
     expect(out.items[0]?.error_reply_text).toBeNull();
   });
+
+  it('defaults the overlap policy a stub omits, and parses a supplied one', async () => {
+    const custom = { ...route, overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 } };
+    const { client } = harness(() => jsonResponse({ data: { items: [route, custom], total: 2 } }));
+    const out = await client.listConversationRoutes();
+    expect(out.items[0]?.overlap).toEqual({
+      running: 'continue',
+      deliver: 'one',
+      settle_seconds: 0,
+    });
+    expect(out.items[1]?.overlap).toEqual({ running: 'cancel', deliver: 'all', settle_seconds: 5 });
+  });
 });
 
 describe('conversation route write transport', () => {
@@ -183,6 +196,29 @@ describe('conversation route write transport', () => {
     expect(out.created).toBe(true);
     // The api-door secret rides the reply once — the caller must capture it here.
     expect(out.callback_secret).toBe('sekret-token');
+  });
+
+  it('forwards the overlap policy in the create body', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: written }));
+    await client.createOrReplaceConversationRoute({
+      route_name: 'account',
+      door: 'channel',
+      target_kind: 'agent',
+      target_name: 'assistant',
+      payload_expr: null,
+      reply_expr: null,
+      initial_mode: 'agent',
+      execution_key: 'svc',
+      channel: 'whatsapp',
+      our_identity: '+1',
+      callback_url: null,
+      turns_per_hour_override: null,
+      error_reply_text: null,
+      overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 },
+    });
+    expect(captured[0]?.body).toMatchObject({
+      overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 },
+    });
   });
 
   it('percent-encodes a route name with unsafe path characters', async () => {
@@ -484,6 +520,28 @@ describe('thread transcript transport', () => {
     const out = await client.readConversationTranscript(transcriptQuery);
     expect(out.items[0]?.answer_status).toBeNull();
     expect(out.items[0]?.delivery_status).toBe('accepted');
+  });
+
+  it('carries a superseded record and the successor it points at', async () => {
+    const superseded = {
+      ...callerRecord,
+      answer_status: 'superseded',
+      answer: null,
+      delivery_status: 'superseded',
+      successor_id: 'm-9',
+    };
+    const { client } = harness(() => jsonResponse(transcriptPage([superseded], 'desc')));
+    const out = await client.readConversationTranscript(transcriptQuery);
+    expect(out.items[0]?.delivery_status).toBe('superseded');
+    expect(out.items[0]?.successor_id).toBe('m-9');
+  });
+
+  it('throws ApiSchemaError LOUDLY on a record missing successor_id', async () => {
+    const { successor_id: _drop, ...withoutSuccessor } = callerRecord;
+    const { client } = harness(() => jsonResponse(transcriptPage([withoutSuccessor], 'desc')));
+    await expect(client.readConversationTranscript(transcriptQuery)).rejects.toBeInstanceOf(
+      ApiSchemaError,
+    );
   });
 
   it('throws ApiSchemaError LOUDLY on a record carrying no inbound text', async () => {

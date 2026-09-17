@@ -1055,6 +1055,11 @@ execution_key_fingerprint: string;
 initial_mode: "agent" | "manual";
 locale: string | null;
 our_identity: string | null;
+overlap: {
+deliver: "one" | "all";
+running: "continue" | "cancel";
+settle_seconds: number;
+};
 payload_expr: {
 content?: string | undefined;
 id?: string | undefined;
@@ -1086,6 +1091,11 @@ execution_key_fingerprint: string;
 initial_mode: "agent" | "manual";
 locale: string | null;
 our_identity: string | null;
+overlap: {
+deliver: "one" | "all";
+running: "continue" | "cancel";
+settle_seconds: number;
+};
 payload_expr: {
 content?: string | undefined;
 id?: string | undefined;
@@ -1118,7 +1128,7 @@ thread_id: string;
 client_address: string;
 last_activity_at: number;
 message_count: number;
-last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
 }[];
 }>;
 readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
@@ -1136,10 +1146,11 @@ thread_id: string;
 client_address: string;
 caller_principal: string | null;
 inbound_text: string;
-answer_status: "error" | "silent" | "answered" | null;
+answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
+successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1165,10 +1176,11 @@ thread_id: string;
 client_address: string;
 caller_principal: string | null;
 inbound_text: string;
-answer_status: "error" | "silent" | "answered" | null;
+answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
+successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1361,10 +1373,11 @@ thread_id: string;
 client_address: string;
 caller_principal: string | null;
 inbound_text: string;
-answer_status: "error" | "silent" | "answered" | null;
+answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
+successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -3748,6 +3761,8 @@ type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 const conversationAnswerStatus: z.ZodEnum<{
     error: "error";
     silent: "silent";
+    merged: "merged";
+    superseded: "superseded";
     answered: "answered";
 }>;
 
@@ -3901,6 +3916,8 @@ const conversationDeliveryStatus: z.ZodEnum<{
     delivered: "delivered";
     shed: "shed";
     silent: "silent";
+    merged: "merged";
+    superseded: "superseded";
 }>;
 
 // @public (undocumented)
@@ -3931,9 +3948,12 @@ const conversationFailedMessages: z.ZodObject<{
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
             answered: "answered";
         }>>;
         answer: z.ZodNullable<z.ZodString>;
+        successor_id: z.ZodNullable<z.ZodString>;
         origin: z.ZodEnum<{
             client: "client";
             operator: "operator";
@@ -3946,6 +3966,8 @@ const conversationFailedMessages: z.ZodObject<{
             delivered: "delivered";
             shed: "shed";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
         }>;
         created_at: z.ZodNumber;
         updated_at: z.ZodNumber;
@@ -3978,9 +4000,12 @@ const conversationMessage: z.ZodObject<{
     answer_status: z.ZodNullable<z.ZodEnum<{
         error: "error";
         silent: "silent";
+        merged: "merged";
+        superseded: "superseded";
         answered: "answered";
     }>>;
     answer: z.ZodNullable<z.ZodString>;
+    successor_id: z.ZodNullable<z.ZodString>;
     origin: z.ZodEnum<{
         client: "client";
         operator: "operator";
@@ -3993,6 +4018,8 @@ const conversationMessage: z.ZodObject<{
         delivered: "delivered";
         shed: "shed";
         silent: "silent";
+        merged: "merged";
+        superseded: "superseded";
     }>;
     created_at: z.ZodNumber;
     updated_at: z.ZodNumber;
@@ -4029,9 +4056,12 @@ const conversationMessageSearchPage: z.ZodObject<{
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
             answered: "answered";
         }>>;
         answer: z.ZodNullable<z.ZodString>;
+        successor_id: z.ZodNullable<z.ZodString>;
         origin: z.ZodEnum<{
             client: "client";
             operator: "operator";
@@ -4044,6 +4074,8 @@ const conversationMessageSearchPage: z.ZodObject<{
             delivered: "delivered";
             shed: "shed";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
         }>;
         created_at: z.ZodNumber;
         updated_at: z.ZodNumber;
@@ -4118,6 +4150,17 @@ const conversationRoute: z.ZodObject<{
     }>>;
     locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
     our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
     payload_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -4156,6 +4199,17 @@ const conversationRouteCreate: z.ZodObject<{
     }>>;
     locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
     our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    overlap: z.ZodDefault<z.ZodObject<{
+        deliver: z.ZodDefault<z.ZodEnum<{
+            one: "one";
+            all: "all";
+        }>>;
+        running: z.ZodDefault<z.ZodEnum<{
+            continue: "continue";
+            cancel: "cancel";
+        }>>;
+        settle_seconds: z.ZodDefault<z.ZodNumber>;
+    }, z.core.$strip>>;
     payload_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -4206,6 +4260,17 @@ const conversationRoutes: z.ZodObject<{
         }>>;
         locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
         our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        overlap: z.ZodDefault<z.ZodObject<{
+            deliver: z.ZodDefault<z.ZodEnum<{
+                one: "one";
+                all: "all";
+            }>>;
+            running: z.ZodDefault<z.ZodEnum<{
+                continue: "continue";
+                cancel: "cancel";
+            }>>;
+            settle_seconds: z.ZodDefault<z.ZodNumber>;
+        }, z.core.$strip>>;
         payload_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -4251,6 +4316,17 @@ const conversationRouteWritten: z.ZodObject<{
         }>>;
         locale: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
         our_identity: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+        overlap: z.ZodDefault<z.ZodObject<{
+            deliver: z.ZodDefault<z.ZodEnum<{
+                one: "one";
+                all: "all";
+            }>>;
+            running: z.ZodDefault<z.ZodEnum<{
+                continue: "continue";
+                cancel: "cancel";
+            }>>;
+            settle_seconds: z.ZodDefault<z.ZodNumber>;
+        }, z.core.$strip>>;
         payload_expr: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
             id: z.ZodOptional<z.ZodString>;
@@ -4301,6 +4377,8 @@ const conversationThread: z.ZodObject<{
         delivered: "delivered";
         shed: "shed";
         silent: "silent";
+        merged: "merged";
+        superseded: "superseded";
     }>;
 }, z.core.$strip>;
 
@@ -4388,6 +4466,8 @@ const conversationThreadsPage: z.ZodObject<{
             delivered: "delivered";
             shed: "shed";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
         }>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
@@ -4420,9 +4500,12 @@ const conversationTranscriptPage: z.ZodObject<{
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
             answered: "answered";
         }>>;
         answer: z.ZodNullable<z.ZodString>;
+        successor_id: z.ZodNullable<z.ZodString>;
         origin: z.ZodEnum<{
             client: "client";
             operator: "operator";
@@ -4435,6 +4518,8 @@ const conversationTranscriptPage: z.ZodObject<{
             delivered: "delivered";
             shed: "shed";
             silent: "silent";
+            merged: "merged";
+            superseded: "superseded";
         }>;
         created_at: z.ZodNumber;
         updated_at: z.ZodNumber;
@@ -5374,6 +5459,11 @@ function createApiClient(config: ApiConfig): {
             initial_mode: "agent" | "manual";
             locale: string | null;
             our_identity: string | null;
+            overlap: {
+                deliver: "one" | "all";
+                running: "continue" | "cancel";
+                settle_seconds: number;
+            };
             payload_expr: {
                 content?: string | undefined;
                 id?: string | undefined;
@@ -5405,6 +5495,11 @@ function createApiClient(config: ApiConfig): {
             initial_mode: "agent" | "manual";
             locale: string | null;
             our_identity: string | null;
+            overlap: {
+                deliver: "one" | "all";
+                running: "continue" | "cancel";
+                settle_seconds: number;
+            };
             payload_expr: {
                 content?: string | undefined;
                 id?: string | undefined;
@@ -5437,7 +5532,7 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             last_activity_at: number;
             message_count: number;
-            last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
         }[];
     }>;
     readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
@@ -5455,10 +5550,11 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
+            answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
+            successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -5484,10 +5580,11 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
+            answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
+            successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -5680,10 +5777,11 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
-            answer_status: "error" | "silent" | "answered" | null;
+            answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
+            successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent";
+            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;

@@ -40,7 +40,13 @@ const refName = (ref) => {
 const parserOverride = (schema) => {
   if (schema && typeof schema === 'object' && typeof schema.$ref === 'string') {
     const name = refName(schema.$ref);
-    return name === 'TemplatedText' ? SHARED_TEMPLATED_TEXT : camel(name);
+    const base = name === 'TemplatedText' ? SHARED_TEMPLATED_TEXT : camel(name);
+    // A `$ref` property may carry its own `default` (a pydantic field default over a
+    // referenced model). The override replaces the whole node, so json-schema-to-zod
+    // never sees the sibling `default` to apply it; carry it here. The field is then
+    // optional on input and always present on output — exactly a defaulted field.
+    if ('default' in schema) return `${base}.default(${JSON.stringify(schema.default)})`;
+    return base;
   }
   if (schema && typeof schema === 'object' && 'x-tai42-templated-text' in schema) {
     return SHARED_TEMPLATED_TEXT;

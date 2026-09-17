@@ -15,6 +15,24 @@ export function routeRowLabel(routeName: string): string {
   return `Open route ${routeName}`;
 }
 
+/** The default overlap policy — a route on it needs no summary (it is today's behaviour). */
+const OVERLAP_DEFAULTS = { running: 'continue', deliver: 'one', settle_seconds: 0 } as const;
+
+/**
+ * A one-line summary of a route's overlap policy carrying ONLY the parts that differ
+ * from the default (`running: cancel · deliver: all · settle: 5s`), or `null` when the
+ * policy IS the default — the row then shows the empty placeholder.
+ */
+function routeOverlapSummary(overlap: ConversationRoute['overlap']): string | null {
+  const parts: string[] = [];
+  if (overlap.running !== OVERLAP_DEFAULTS.running) parts.push(`running: ${overlap.running}`);
+  if (overlap.deliver !== OVERLAP_DEFAULTS.deliver) parts.push(`deliver: ${overlap.deliver}`);
+  if (overlap.settle_seconds !== OVERLAP_DEFAULTS.settle_seconds) {
+    parts.push(`settle: ${String(overlap.settle_seconds)}s`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 export function RouteRow({
   route,
   canWrite,
@@ -48,6 +66,9 @@ export function RouteRow({
       </TD>
       <TD>
         <span className="tai-mono">{`${route.target_kind}: ${route.target_name}`}</span>
+      </TD>
+      <TD>
+        <span className="tai-mono">{routeOverlapSummary(route.overlap) ?? EMPTY_PLACEHOLDER}</span>
       </TD>
       <TD style={{ textAlign: 'right' }}>
         <div

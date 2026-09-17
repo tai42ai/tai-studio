@@ -67,8 +67,44 @@ describe('RoutesTable', () => {
 
     const table = await screen.findByTestId('conversation-routes-table');
     expect(within(table).getByText('api')).toBeInTheDocument();
-    expect(within(table).getByText('—')).toBeInTheDocument();
+    // Both the identity (no channel) and the default overlap policy show the placeholder.
+    expect(within(table).getAllByText('—')).toHaveLength(2);
     expect(within(table).getByText('tool: lookup_account')).toBeInTheDocument();
+  });
+
+  it('shows the overlap placeholder for a default-policy route', async () => {
+    renderTable(vi.fn().mockResolvedValue({ items: [makeRoute()], total: 1 }));
+
+    const table = await screen.findByTestId('conversation-routes-table');
+    // makeRoute carries a real identity, so the only placeholder is the default overlap.
+    expect(within(table).getByText('—')).toBeInTheDocument();
+  });
+
+  it('summarizes only the non-default parts of an overlap policy', async () => {
+    renderTable(
+      vi.fn().mockResolvedValue({
+        items: [makeRoute({ overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 } })],
+        total: 1,
+      }),
+    );
+
+    const table = await screen.findByTestId('conversation-routes-table');
+    expect(
+      within(table).getByText('running: cancel · deliver: all · settle: 5s'),
+    ).toBeInTheDocument();
+    expect(within(table).queryByText('—')).not.toBeInTheDocument();
+  });
+
+  it('summarizes a partially non-default overlap policy, omitting the defaulted parts', async () => {
+    renderTable(
+      vi.fn().mockResolvedValue({
+        items: [makeRoute({ overlap: { running: 'continue', deliver: 'all', settle_seconds: 0 } })],
+        total: 1,
+      }),
+    );
+
+    const table = await screen.findByTestId('conversation-routes-table');
+    expect(within(table).getByText('deliver: all')).toBeInTheDocument();
   });
 
   it('explains an empty catalogue rather than showing a bare table', async () => {

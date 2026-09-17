@@ -64,6 +64,16 @@ const PAYLOAD_EXPR_ANNOTATION = {
     { name: 'person_id', gloss: 'the linked person id, when the sender is a paired person' },
     { name: 'person_addresses', gloss: "the linked person's known addresses, when paired" },
     { name: 'params', gloss: 'opaque caller-supplied entry params, when present' },
+    {
+      name: 'messages',
+      gloss:
+        'under deliver: all, every message this turn carries, oldest first — each {id, text, accepted_at} plus form, attachments and location when present',
+    },
+    {
+      name: 'superseded',
+      gloss:
+        "under deliver: all, the earlier messages this turn's lead superseded or carried, oldest first — each in the same shape as messages, present only when non-empty",
+    },
   ],
   returns: 'a JSON object of the tool-call keyword arguments',
 } as const;
@@ -201,6 +211,45 @@ function deliverySchema(): JsonSchema {
   };
 }
 
+/**
+ * The `overlap` property — the route's overlap policy: what happens to a running
+ * turn and the newer participant messages that arrive while it runs. A nested plain
+ * object (rendered as a labelled group, not a union), every field optional: an unset
+ * field, or an unset whole object, is the server default (`continue` / `one` / `0`).
+ */
+function overlapProperty(): JsonSchema {
+  return {
+    title: 'Overlap',
+    type: 'object',
+    description:
+      'What happens when a message arrives while an earlier one on the same thread is still being answered. Leave every field blank for the defaults: the running turn continues, each message is delivered on its own, and there is no settle window.',
+    properties: {
+      running: {
+        type: 'string',
+        enum: ['continue', 'cancel'],
+        title: 'Running turn',
+        description:
+          'Whether a turn already in progress continues or is cancelled when a newer message arrives.',
+      },
+      deliver: {
+        type: 'string',
+        enum: ['one', 'all'],
+        title: 'Deliver',
+        description:
+          'Whether the next turn answers one message at a time or carries every message that arrived while the previous turn ran.',
+      },
+      settle_seconds: {
+        type: ['integer', 'null'],
+        minimum: 0,
+        maximum: 30,
+        title: 'Settle window (seconds)',
+        description:
+          'How long the next turn waits for further messages before it starts, 0 to 30. Needs Deliver set to all or Running turn set to cancel.',
+      },
+    },
+  };
+}
+
 /** The `execution_key` property — the api-key user_id a turn runs as. */
 function executionKeyProperty(): JsonSchema {
   return {
@@ -259,6 +308,7 @@ export function routeFormSchema(fixedRouteName?: string): JsonSchema {
       route_name: routeNameProperty(fixedRouteName),
       target: targetSchema(),
       delivery: deliverySchema(),
+      overlap: overlapProperty(),
       execution_key: executionKeyProperty(),
       initial_mode: initialModeProperty(),
       turns_per_hour_override: turnsPerHourProperty(),
@@ -277,6 +327,11 @@ export interface RouteFormValue {
   // The route locale the platform keys, not authored by this form; carried through an
   // edit so an upsert never drops one set elsewhere.
   locale?: string | null;
+  overlap?: {
+    running?: 'continue' | 'cancel';
+    deliver?: 'one' | 'all';
+    settle_seconds?: number;
+  };
   target?: {
     target_kind?: 'agent' | 'tool';
     target_name?: string;
@@ -303,6 +358,13 @@ export function routeToFormValue(route: ConversationRoute): RouteFormValue {
     route_name: route.route_name,
     execution_key: route.execution_key,
     initial_mode: route.initial_mode,
+    // The platform always returns the resolved policy on a route read; copy it in so
+    // the group shows the stored values and an edit round-trips them unchanged.
+    overlap: {
+      running: route.overlap.running,
+      deliver: route.overlap.deliver,
+      settle_seconds: route.overlap.settle_seconds,
+    },
     ...(route.locale !== null ? { locale: route.locale } : {}),
     ...(route.turns_per_hour_override !== null
       ? { turns_per_hour_override: route.turns_per_hour_override }
@@ -394,12 +456,30 @@ function deliveryErrors(delivery: NonNullable<RouteFormValue['delivery']>): Reco
   return {};
 }
 
+/**
+ * The overlap cross-field rule, mirroring the contract's `OverlapPolicy` validator:
+ * a positive settle window is only meaningful with `deliver: all` or `running:
+ * cancel`; with `continue` + `one` it would delay every turn for nothing and the
+ * server refuses it. Keyed under the settle field so the message shows inline there.
+ * The 0..30 integer bounds stay the schema's (and the server's) authority.
+ */
+function overlapError(overlap: NonNullable<RouteFormValue['overlap']>): Record<string, string> {
+  const settle = overlap.settle_seconds;
+  if (settle === undefined || settle <= 0) return {};
+  if (overlap.deliver === 'all' || overlap.running === 'cancel') return {};
+  return {
+    'overlap.settle_seconds':
+      'A settle window needs Deliver set to all or Running turn set to cancel.',
+  };
+}
+
 export function requiredFieldErrors(value: RouteFormValue, editing: boolean): SchemaFormErrors {
   return {
     ...routeNameError(value, editing),
     ...targetNameError(value.target ?? {}),
     ...executionKeyError(value),
     ...deliveryErrors(value.delivery ?? {}),
+    ...overlapError(value.overlap ?? {}),
   };
 }
 
@@ -462,6 +542,22 @@ function scalarBodyFields(
   };
 }
 
+/**
+ * The overlap-policy body: only the keys the operator actually set, and the whole
+ * `overlap` object omitted when none is — the contract defaults each field, so an
+ * absent policy IS the default policy. A policy field is never sent as `null`.
+ */
+function overlapBodyFields(
+  value: RouteFormValue,
+): Pick<ConversationRouteCreate, 'overlap'> | Record<string, never> {
+  const overlap = value.overlap ?? {};
+  const body: NonNullable<ConversationRouteCreate['overlap']> = {};
+  if (overlap.running !== undefined) body.running = overlap.running;
+  if (overlap.deliver !== undefined) body.deliver = overlap.deliver;
+  if (overlap.settle_seconds !== undefined) body.settle_seconds = overlap.settle_seconds;
+  return Object.keys(body).length > 0 ? { overlap: body } : {};
+}
+
 export function formValueToBody(value: RouteFormValue): ConversationRouteCreate {
   const target = value.target ?? {};
   const delivery = value.delivery ?? {};
@@ -471,5 +567,6 @@ export function formValueToBody(value: RouteFormValue): ConversationRouteCreate 
     ...scalarBodyFields(value),
     ...targetBodyFields(target, isTool),
     ...deliveryBodyFields(delivery, isApi),
+    ...overlapBodyFields(value),
   };
 }

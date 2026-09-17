@@ -112,6 +112,7 @@ export function RoutesTable({
               <TH>Door</TH>
               <TH>Identity</TH>
               <TH>Target</TH>
+              <TH>Overlap</TH>
               <TH aria-label="Actions" />
             </TR>
           </THead>

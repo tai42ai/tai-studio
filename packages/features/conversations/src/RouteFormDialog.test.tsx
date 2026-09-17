@@ -286,6 +286,89 @@ describe('RouteFormDialog — create', () => {
   });
 });
 
+describe('RouteFormDialog — overlap', () => {
+  it('renders the blank Overlap group with the two policy radios and the settle field', () => {
+    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
+
+    const overlap = screen.getByRole('group', { name: 'Overlap' });
+    expect(overlap).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Running turn' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Deliver' })).toBeInTheDocument();
+    const settle = screen.getByRole('spinbutton', { name: /^Settle window/ });
+    expect(settle).toHaveValue(null);
+    // Nothing is preselected: the hint carries the defaults.
+    for (const radio of within(overlap).getAllByRole('radio')) {
+      expect(radio).not.toBeChecked();
+    }
+  });
+
+  it('shows the settle-window cross-field error inline and blocks submit', async () => {
+    const user = userEvent.setup();
+    const createOrReplaceConversationRoute = vi.fn();
+    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
+      client: { createOrReplaceConversationRoute },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
+    await pickVariant(user, 'Target', 'agent');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
+    await pickVariant(user, 'Door', 'channel');
+    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'sms');
+    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    // A settle window with the default continue + one policy is refused.
+    await user.type(screen.getByRole('spinbutton', { name: /^Settle window/ }), '5');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    const message = await screen.findByText(
+      'A settle window needs Deliver set to all or Running turn set to cancel.',
+      undefined,
+      { timeout: 5000 },
+    );
+    expect(message).toBeInTheDocument();
+    expect(createOrReplaceConversationRoute).not.toHaveBeenCalled();
+  });
+
+  it('sends the set overlap policy in the submit body', async () => {
+    const user = userEvent.setup();
+    const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
+      created: true,
+      route_name: 'account',
+      route: makeRoute(),
+      callback_secret: null,
+    });
+    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
+      client: { createOrReplaceConversationRoute },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'account');
+    await pickVariant(user, 'Target', 'agent');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
+    await pickVariant(user, 'Door', 'channel');
+    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'sms');
+    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-account');
+    await user.click(
+      within(screen.getByRole('group', { name: 'Running turn' })).getByRole('radio', {
+        name: 'cancel',
+      }),
+    );
+    await user.click(
+      within(screen.getByRole('group', { name: 'Deliver' })).getByRole('radio', { name: 'all' }),
+    );
+    await user.type(screen.getByRole('spinbutton', { name: /^Settle window/ }), '5');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    await waitFor(() => {
+      expect(createOrReplaceConversationRoute).toHaveBeenCalledWith(
+        expect.objectContaining({
+          overlap: { running: 'cancel', deliver: 'all', settle_seconds: 5 },
+        }),
+      );
+    });
+  });
+});
+
 describe('RouteFormDialog — edit', () => {
   const existing = makeRoute({
     route_name: 'chat',

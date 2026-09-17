@@ -31,7 +31,9 @@ export type ConversationMode = z.infer<typeof conversationMode>;
 /**
  * Where a record sits between intake and a terminal outcome. `failed` is the one
  * the monitor surfaces loudly; `shed` and `silent` are terminal by design and
- * never send.
+ * never send. `merged` and `superseded` are the overlap-policy outcomes: this
+ * record's text was carried into (`merged`) or dropped in favour of (`superseded`)
+ * a later turn, named by `successor_id`; both are terminal and never send.
  */
 export const conversationDeliveryStatus = z.enum([
   'accepted',
@@ -41,11 +43,19 @@ export const conversationDeliveryStatus = z.enum([
   'failed',
   'shed',
   'silent',
+  'merged',
+  'superseded',
 ]);
 export type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 /** The nature of a turn's outcome, orthogonal to where its delivery stands. */
-export const conversationAnswerStatus = z.enum(['answered', 'error', 'silent']);
+export const conversationAnswerStatus = z.enum([
+  'answered',
+  'error',
+  'silent',
+  'merged',
+  'superseded',
+]);
 export type ConversationAnswerStatus = z.infer<typeof conversationAnswerStatus>;
 
 /**
@@ -112,9 +122,11 @@ export type ConversationThreadsPage = z.infer<typeof conversationThreadsPage>;
 /**
  * One exchange: the visitor's `inbound_text` — every record answers a message, so
  * both projections always carry it — and the agent's `answer`, plus where that
- * answer's delivery stands. The fields after `updated_at` are ADMIN ONLY —
- * the same door serves a caller-scoped projection that withholds them — so they
- * are optional here and absence means "not published to this reader".
+ * answer's delivery stands. `successor_id` names the later turn a `merged` or
+ * `superseded` record was folded into, `null` on every other outcome. The fields
+ * after `updated_at` are ADMIN ONLY — the same door serves a caller-scoped
+ * projection that withholds them — so they are optional here and absence means
+ * "not published to this reader".
  */
 export const conversationMessage = z.object({
   message_id: z.string(),
@@ -126,6 +138,7 @@ export const conversationMessage = z.object({
   inbound_text: z.string(),
   answer_status: conversationAnswerStatus.nullable(),
   answer: z.string().nullable(),
+  successor_id: z.string().nullable(),
   origin: conversationRecordOrigin,
   delivery_status: conversationDeliveryStatus,
   created_at: z.number(),

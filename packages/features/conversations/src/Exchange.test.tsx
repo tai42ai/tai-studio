@@ -164,4 +164,48 @@ describe('Exchange', () => {
     expect(screen.getByText('Delivered')).toBeInTheDocument();
     expect(screen.getByText('Answered')).toBeInTheDocument();
   });
+
+  it('labels a merged outcome with the successor turn it was folded into', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          delivery_status: 'merged',
+          answer_status: 'merged',
+          answer: null,
+          successor_id: 'm-42',
+        })}
+      />,
+      { client: {} },
+    );
+
+    expect(screen.getByText('Merged into')).toBeInTheDocument();
+    expect(screen.getByText('m-42')).toBeInTheDocument();
+    // Answerless: the outcome carries no agent bubble.
+    expect(document.querySelector('[data-speaker="agent"]')).toBeNull();
+  });
+
+  it('labels a superseded outcome with the successor turn that took its place', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          delivery_status: 'superseded',
+          answer_status: 'superseded',
+          answer: null,
+          successor_id: 'm-77',
+        })}
+      />,
+      { client: {} },
+    );
+
+    expect(screen.getByText('Superseded by')).toBeInTheDocument();
+    expect(screen.getByText('m-77')).toBeInTheDocument();
+    expect(document.querySelector('[data-speaker="agent"]')).toBeNull();
+  });
+
+  it('shows no successor label on an ordinary record', () => {
+    renderWithProviders(<Exchange record={makeMessage()} />, { client: {} });
+
+    expect(screen.queryByText('Merged into')).toBeNull();
+    expect(screen.queryByText('Superseded by')).toBeNull();
+  });
 });

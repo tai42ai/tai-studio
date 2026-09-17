@@ -17,6 +17,8 @@ export const DELIVERY_STATUSES: readonly ConversationDeliveryStatus[] = [
   'failed',
   'shed',
   'silent',
+  'merged',
+  'superseded',
 ];
 
 export const DELIVERY_VARIANT: Record<ConversationDeliveryStatus, string> = {
@@ -27,6 +29,8 @@ export const DELIVERY_VARIANT: Record<ConversationDeliveryStatus, string> = {
   failed: 'danger',
   shed: 'warning',
   silent: 'neutral',
+  merged: 'neutral',
+  superseded: 'neutral',
 };
 
 export const DELIVERY_LABEL: Record<ConversationDeliveryStatus, string> = {
@@ -37,18 +41,24 @@ export const DELIVERY_LABEL: Record<ConversationDeliveryStatus, string> = {
   failed: 'Failed',
   shed: 'Shed',
   silent: 'Silent',
+  merged: 'Merged',
+  superseded: 'Superseded',
 };
 
 export const ANSWER_VARIANT: Record<ConversationAnswerStatus, string> = {
   answered: 'success',
   error: 'danger',
   silent: 'neutral',
+  merged: 'neutral',
+  superseded: 'neutral',
 };
 
 export const ANSWER_LABEL: Record<ConversationAnswerStatus, string> = {
   answered: 'Answered',
   error: 'Error',
   silent: 'Silent',
+  merged: 'Merged',
+  superseded: 'Superseded',
 };
 
 /** The statuses an operator is meant to NOTICE — surfaced loudly wherever they appear. */
