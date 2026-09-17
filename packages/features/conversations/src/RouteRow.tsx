@@ -15,7 +15,7 @@ export function routeRowLabel(routeName: string): string {
   return `Open route ${routeName}`;
 }
 
-/** The default overlap policy — a route on it needs no summary (it is today's behaviour). */
+/** The default overlap policy runs one turn per message and leaves the payload unchanged, so a route on it shows no summary. */
 const OVERLAP_DEFAULTS = { running: 'continue', deliver: 'one', settle_seconds: 0 } as const;
 
 /**
