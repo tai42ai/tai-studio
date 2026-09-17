@@ -50,6 +50,12 @@
 // OPTIONAL params (`name?: T`), the old param list being a prefix of the new and
 // everything else identical — a backward-compatible minor. An added trailing REST
 // param, a param made required, or any other param/return/name change errs breaking.
+// A member line ALSO counts as surviving when its new text is the old with only an
+// ADDITIVE token insertion — a string/number-literal union widened with more members
+// (`| "x"`), or an added OPTIONAL property (`name?: T`) inside an inline object type —
+// its old tokens an ordered subsequence of the new. Any other insertion (a REQUIRED
+// property added, which the gate cannot judge safe without an input/output notion) or
+// any removed/renamed/retyped token errs breaking.
 //
 // Comparison is over each line's CANONICAL form, so an EMISSION-ONLY reshape reads as
 // no change: api-extractor emits an inferred object type's members, and a union's
@@ -69,10 +75,11 @@
 // source module or namespace (or narrowed to type-only), a default export dropped or
 // re-pointed, and a non-additive change to a type alias. Non-breaking changes — a new
 // export, a new optional member, a member added to a variable/type object or an
-// overload's inline shape (an additive superset of the old member lines), an
-// interface or class member turned from required to optional (inside an inline
-// object type that flip re-renders the member's line and reads as breaking — the
-// gate errs strict there), an added overload, an added enum member, a
+// overload's inline shape (an additive superset of the old member lines), a member
+// line whose inline object type gained a widened literal union or an added optional
+// property, an interface or class member turned from required to optional (inside an
+// inline object type that flip re-renders the member's line and reads as breaking —
+// the gate errs strict there), an added overload, an added enum member, a
 // string-literal union widened with more members. Any tooling failure —
 // unreadable config, an unknown mode, an unparseable report, a git error that is
 // not simply an absent path at the ref — throws; the gate never passes a release on
@@ -511,11 +518,108 @@ function isFunctionParamAdditive(oldLine, newLine) {
   return true;
 }
 
+// Tokenize a canonicalized declaration line into TypeScript-ish lexemes: a whole
+// string/template literal, an identifier/keyword, a numeric literal, the arrow (`=>`)
+// and rest (`...`) punctuators, and every other punctuation character as its own
+// token. Used to compare two lines that describe the same member up to an additive
+// insertion at token granularity.
+function tokenize(line) {
+  const re =
+    /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`|[A-Za-z_$][\w$]*|\d+(?:\.\d+)?|=>|\.\.\.|\S/g;
+  return line.match(re) ?? [];
+}
+
+// A string/template or numeric literal token — the only tokens a widened string- or
+// number-literal union adds. A type keyword (`number`, `string`) is an identifier, not
+// a literal, so widening a union with a real type instead of a literal member is not
+// seen as additive here.
+const isLiteralToken = (t) => /^["'`]/.test(t) || /^\d/.test(t);
+
+// Split an inserted token run into its `;`/`,`-delimited segments at bracket depth 0
+// (across `()[]{}` and generic `<>`), dropping empty segments — one segment per added
+// object-type member.
+function splitRunSegments(tokens) {
+  const segments = [];
+  let seg = [];
+  let depth = 0;
+  for (const t of tokens) {
+    if (t === '(' || t === '[' || t === '{' || t === '<') depth++;
+    else if (t === ')' || t === ']' || t === '}' || t === '>') depth--;
+    if ((t === ';' || t === ',') && depth === 0) {
+      if (seg.length) segments.push(seg);
+      seg = [];
+    } else {
+      seg.push(t);
+    }
+  }
+  if (seg.length) segments.push(seg);
+  return segments;
+}
+
+// True iff a segment is a `name?: T` OPTIONAL property: its own type colon (the first
+// at bracket depth 0) is immediately preceded by a `?`. A `name: T` required binding,
+// an index/call signature, or anything without a depth-0 colon is not optional.
+function isOptionalPropertySegment(seg) {
+  let depth = 0;
+  for (let i = 0; i < seg.length; i++) {
+    const t = seg[i];
+    if (t === '(' || t === '[' || t === '{' || t === '<') depth++;
+    else if (t === ')' || t === ']' || t === '}' || t === '>') depth--;
+    else if (t === ':' && depth === 0) return seg[i - 1] === '?';
+  }
+  return false;
+}
+
+// Classify one maximal run of tokens inserted between two matched old tokens as an
+// ADDITIVE shape or not: a union widened with more literal members (only `|` and
+// literal tokens), or one-or-more added OPTIONAL properties (every `;`/`,` segment a
+// `name?: T` binding). A run that adds a REQUIRED property (`name: T`), or has any
+// other shape, is not additive. The gate cannot tell a constructed input shape from a
+// read-only output shape, so a required-property addition fails closed as breaking.
+function isAdditiveRun(run) {
+  if (run.every((t) => t === '|' || isLiteralToken(t))) return true;
+  const segments = splitRunSegments(run);
+  return segments.length > 0 && segments.every(isOptionalPropertySegment);
+}
+
+// True iff `newLine` is `oldLine` with only ADDITIVE insertions: the old line's tokens
+// are a strict ordered subsequence of the new line's (nothing existing removed, renamed
+// or retyped), and every maximal inserted run of new tokens is an additive shape
+// (isAdditiveRun) — a union widened with more literal members, or an added optional
+// property. A removed/renamed/retyped token breaks the subsequence, and an inserted
+// required property or any other run shape is non-additive, so the line stays breaking.
+// Works on the canonicalized member lines lineMultiset already produced.
+function isAdditiveLineChange(oldLine, newLine) {
+  const oldTokens = tokenize(oldLine);
+  const newTokens = tokenize(newLine);
+  if (oldTokens.length === 0) return false;
+  const runs = [];
+  let run = [];
+  let j = 0;
+  for (const tok of newTokens) {
+    if (j < oldTokens.length && tok === oldTokens[j]) {
+      if (run.length) {
+        runs.push(run);
+        run = [];
+      }
+      j++;
+    } else {
+      run.push(tok);
+    }
+  }
+  if (run.length) runs.push(run);
+  if (j !== oldTokens.length) return false; // an old token vanished — not additive.
+  if (runs.length === 0) return false; // identical lines are matched by lineMultiset.
+  return runs.every(isAdditiveRun);
+}
+
 // True when `newText` is a purely-additive superset of `oldText`: every member line
 // of the old declaration still appears in the new one — either canonically equal (its
-// whitespace, union order and namespace-alias qualifiers folded by lineMultiset), or
-// as a function signature that only APPENDED optional params (isFunctionParamAdditive)
-// — so the change is only insertions and backward-compatible signature growth. Any old
+// whitespace, union order and namespace-alias qualifiers folded by lineMultiset), as a
+// function signature that only APPENDED optional params (isFunctionParamAdditive), or
+// as a member line changed ONLY by an additive insertion — a union widened with more
+// literal members, or an added optional property (isAdditiveLineChange) — so the change
+// is only insertions and backward-compatible growth. Any old
 // line with no canonical survivor and no function-param-additive counterpart means an
 // existing member was removed, retyped or narrowed — not additive. Deterministic and
 // structural: it compares the api.md member lines, no parsing of the type grammar
@@ -539,7 +643,10 @@ function isAdditive(oldText, newText) {
   const pool = [];
   for (const [line, count] of newLines) for (let i = 0; i < count; i++) pool.push(line);
   for (const oldLine of leftover) {
-    const idx = pool.findIndex((candidate) => isFunctionParamAdditive(oldLine, candidate));
+    const idx = pool.findIndex(
+      (candidate) =>
+        isFunctionParamAdditive(oldLine, candidate) || isAdditiveLineChange(oldLine, candidate),
+    );
     if (idx === -1) return false;
     pool.splice(idx, 1);
   }

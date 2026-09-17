@@ -201,6 +201,78 @@ test('removing a string-literal union member is breaking', () => {
   assert.ok(found.some((f) => f.includes('Color')));
 });
 
+// ----------------------------------------- additive insertions inside a member line
+
+test('widening a literal union inside a variable inline object member is non-breaking', () => {
+  const found = findings(
+    'export const client: {\n    delivery_status: "failed" | "silent";\n};',
+    'export const client: {\n    delivery_status: "failed" | "silent" | "merged" | "superseded";\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('widening a literal union inside a function inline return member is non-breaking', () => {
+  const found = findings(
+    'export function read(): {\n    delivery_status: "failed" | "silent";\n};',
+    'export function read(): {\n    delivery_status: "failed" | "silent" | "merged" | "superseded";\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('widening a union mid-member, plus a new property line and a new nested object, is non-breaking', () => {
+  // The createApiClient / ApiProvider shape: an inline output object whose members
+  // gained widened status unions, an added record field, and an added nested object.
+  const found = findings(
+    'export function read(): {\n    answer_status: "error" | "answered" | null;\n    answer: string | null;\n};',
+    'export function read(): {\n' +
+      '    answer_status: "error" | "merged" | "answered" | null;\n' +
+      '    answer: string | null;\n' +
+      '    successor_id: string | null;\n' +
+      '    overlap: {\n        deliver: "one" | "all";\n    };\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('removing a union member inside an inline object member is breaking', () => {
+  const found = findings(
+    'export const client: {\n    delivery_status: "failed" | "silent" | "merged";\n};',
+    'export const client: {\n    delivery_status: "failed" | "silent";\n};',
+  );
+  assert.ok(found.some((f) => f.includes('client')));
+});
+
+test('retyping a member inside an inline object member is breaking', () => {
+  const found = findings(
+    'export const client: {\n    message_count: number;\n};',
+    'export const client: {\n    message_count: string;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('client')));
+});
+
+test('inserting a required property inside a compact inline object member is breaking', () => {
+  const found = findings(
+    'export const client: {\n    payload: { content: string };\n};',
+    'export const client: {\n    payload: { content: string; id: number };\n};',
+  );
+  assert.ok(found.some((f) => f.includes('client')));
+});
+
+test('inserting an optional property inside a compact inline object member is non-breaking', () => {
+  const found = findings(
+    'export const client: {\n    payload: { content: string };\n};',
+    'export const client: {\n    payload: { content: string; id?: number };\n};',
+  );
+  assert.deepEqual(found, []);
+});
+
+test('changing a parameter type inside an inline function member stays breaking', () => {
+  const found = findings(
+    'export function read(): {\n    load: (id: string) => void;\n};',
+    'export function read(): {\n    load: (id: number) => void;\n};',
+  );
+  assert.ok(found.some((f) => f.includes('read')));
+});
+
 // -------------------------------------------------------------------- enums
 
 test('adding an enum member is non-breaking', () => {
