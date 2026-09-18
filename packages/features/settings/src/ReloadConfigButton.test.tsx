@@ -12,7 +12,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ReloadConfigButton } from './ReloadConfigButton';
-import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
+import {
+  clickWhenInteractable,
+  fullProjection,
+  renderWithProviders,
+  scopedProjection,
+} from './test-utils';
 
 /** The fenced door the control gates on; a scoped projection reaching it shows it. */
 const RELOAD_ROUTE = '/api/config/reload';
@@ -82,7 +87,10 @@ describe('ReloadConfigButton — reload flow', () => {
 
     await user.click(await findEnabledButton());
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Reload config' }));
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Reload config' }),
+    );
 
     await waitFor(() => {
       expect(reloadConfig).toHaveBeenCalledWith(null);
@@ -100,7 +108,10 @@ describe('ReloadConfigButton — reload flow', () => {
 
     await user.click(await findEnabledButton());
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Reload config' }));
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Reload config' }),
+    );
 
     // A degraded broadcast is a loud alert naming the stranded worker — never a faked
     // success note.
@@ -117,7 +128,10 @@ describe('ReloadConfigButton — reload flow', () => {
 
     await user.click(await findEnabledButton());
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Reload config' }));
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Reload config' }),
+    );
 
     expect(await within(dialog).findByText(message)).toBeInTheDocument();
   });

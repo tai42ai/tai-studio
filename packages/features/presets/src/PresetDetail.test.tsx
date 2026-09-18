@@ -13,7 +13,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { presetDetailKey, presetsListKey, presetToolMetaKey, presetVersionsKey } from './keys';
 import { PresetDetail } from './PresetDetail';
-import { detail, emptyMeta, renderWithProviders, type StubApiClient, versions } from './test-utils';
+import {
+  clickWhenInteractable,
+  detail,
+  emptyMeta,
+  renderWithProviders,
+  type StubApiClient,
+  versions,
+} from './test-utils';
 
 describe('PresetDetail', () => {
   it('renders the active fixed_kwargs via JsonTree and the active version', async () => {
@@ -188,7 +195,7 @@ describe('PresetDetail', () => {
     });
     await user.click(edit);
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Save details' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Save details' }));
 
     // The write revealed the tool_meta store off: the dialog body swaps to the muted
     // OFF note (the server's message) — NOT a loud red ErrorState (role="alert").
@@ -296,7 +303,7 @@ describe('PresetDetail', () => {
     renderWithProviders(<PresetDetail name="paris_weather" />, { client });
 
     await user.click(await screen.findByRole('button', { name: 'Rename preset paris_weather' }));
-    await user.click(screen.getByRole('button', { name: 'Rename' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Rename' }));
 
     expect(screen.getByText('A new name is required.')).toBeInTheDocument();
     expect(renamePreset).not.toHaveBeenCalled();

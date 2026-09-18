@@ -10,7 +10,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { StatesList } from './StatesList';
-import { fileInput, renderWithProviders, type StubApiClient } from './test-utils';
+import {
+  clickWhenInteractable,
+  fileInput,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 function stateRow(over: Record<string, unknown> = {}) {
   return {
@@ -196,7 +201,7 @@ describe('StatesList', () => {
     );
     await user.upload(input, file);
 
-    await user.click(await screen.findByRole('button', { name: 'Replace' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Replace' }));
     await waitFor(() => {
       expect(putStateTemplate).toHaveBeenCalledTimes(2);
     });
@@ -331,7 +336,7 @@ describe('StatesList', () => {
       input,
       new File([JSON.stringify(doc)], 'notes.json', { type: 'application/json' }),
     );
-    await user.click(await screen.findByRole('button', { name: 'Replace' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Replace' }));
     expect(await screen.findByText('replace denied')).toBeInTheDocument();
   });
 });

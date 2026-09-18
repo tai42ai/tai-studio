@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { StateDetail } from './StateDetail';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { clickWhenInteractable, renderWithProviders, type StubApiClient } from './test-utils';
 
 function detail(over: Record<string, unknown> = {}) {
   return {
@@ -61,7 +61,7 @@ describe('StateDetail', () => {
       client: client({ deleteState }),
     });
     await user.click(await screen.findByRole('button', { name: 'Delete state' }));
-    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Delete' }));
     expect(deleteState).toHaveBeenCalledWith('profile');
     expect(navigate).toHaveBeenCalledWith('states', {});
   });

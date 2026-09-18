@@ -8,7 +8,13 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { HooksList } from './HooksList';
-import { apiKey, hook, renderWithProviders, type StubApiClient } from './test-utils';
+import {
+  apiKey,
+  clickWhenInteractable,
+  hook,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 describe('HooksList — row doors', () => {
   it('renders an Edit door alongside Delete on every row', async () => {
@@ -58,7 +64,7 @@ describe('HooksList — row doors', () => {
     await waitFor(() =>
       expect(within(dialog).getByRole('button', { name: 'Save changes' })).toBeEnabled(),
     );
-    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Save changes' }));
 
     await waitFor(() => {
       expect(registerHook).toHaveBeenCalledOnce();

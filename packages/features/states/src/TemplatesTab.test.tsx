@@ -11,7 +11,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { stateTemplatesKey } from './keys';
 import { TemplatesTab } from './TemplatesTab';
-import { lastFileInput, renderWithProviders, type StubApiClient } from './test-utils';
+import {
+  clickWhenInteractable,
+  lastFileInput,
+  renderWithProviders,
+  type StubApiClient,
+} from './test-utils';
 
 function detail(attachments: unknown[] = []): StateDetail {
   return {
@@ -111,7 +116,7 @@ describe('TemplatesTab', () => {
     await user.click(attachBtn);
     const dialog = await screen.findByRole('dialog');
     // Pick the template (options are labelled `name — description`).
-    await user.click(within(dialog).getByLabelText('Template'));
+    await clickWhenInteractable(user, within(dialog).getByLabelText('Template'));
     await user.click(await screen.findByRole('option', { name: 'notes — A notes fragment' }));
     // Pick an attachment path from the object-level picker.
     await user.click(within(dialog).getByLabelText('Attachment path'));
@@ -136,7 +141,10 @@ describe('TemplatesTab', () => {
       { client: client({ detachStateTemplate }) },
     );
     await user.click(await screen.findByRole('button', { name: 'Detach' }));
-    await user.click(await screen.findByRole('button', { name: 'Detach', hidden: false }));
+    await clickWhenInteractable(
+      user,
+      await screen.findByRole('button', { name: 'Detach', hidden: false }),
+    );
     await waitFor(() => {
       expect(detachStateTemplate).toHaveBeenCalledWith('profile', 'notes');
     });
@@ -155,7 +163,7 @@ describe('TemplatesTab', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Detach' }));
     const confirm = await screen.findByRole('button', { name: 'Detach', hidden: false });
-    await user.click(confirm);
+    await clickWhenInteractable(user, confirm);
     await waitFor(() => {
       expect(detachStateTemplate).toHaveBeenCalledWith('profile', 'notes');
     });
@@ -206,7 +214,7 @@ describe('TemplatesTab', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Edit declarations' }));
     expect(await screen.findByText('This template declares nothing.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => {
       expect(patchStateAttachment).toHaveBeenCalledWith('profile', 'notes', { declarations: {} });
     });
@@ -220,7 +228,10 @@ describe('TemplatesTab', () => {
     });
     await user.click(await screen.findByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete template' }));
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Delete template' }),
+    );
     await waitFor(() => {
       expect(deleteStateTemplate).toHaveBeenCalledWith('notes');
     });
@@ -274,7 +285,7 @@ describe('TemplatesTab', () => {
     if (attachBtn === undefined) throw new Error('no Attach template button');
     await user.click(attachBtn);
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByLabelText('Template'));
+    await clickWhenInteractable(user, within(dialog).getByLabelText('Template'));
     await user.click(await screen.findByRole('option', { name: 'notes — A notes fragment' }));
     // The parameter field from the template schema renders.
     expect(await within(dialog).findByText('limit')).toBeInTheDocument();
@@ -295,7 +306,10 @@ describe('TemplatesTab', () => {
     });
     await user.upload(lastFileInput(container), file);
     // The 409 opens the Replace confirm; a confirm retries with replace=true.
-    await user.click(await screen.findByRole('button', { name: 'Replace template' }));
+    await clickWhenInteractable(
+      user,
+      await screen.findByRole('button', { name: 'Replace template' }),
+    );
     await waitFor(() => {
       expect(putStateTemplate).toHaveBeenCalledTimes(2);
     });
@@ -314,7 +328,7 @@ describe('TemplatesTab', () => {
       type: 'application/json',
     });
     await user.upload(lastFileInput(container), file);
-    await user.click(await screen.findByRole('button', { name: 'Keep existing' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Keep existing' }));
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
@@ -335,7 +349,10 @@ describe('TemplatesTab', () => {
       type: 'application/json',
     });
     await user.upload(lastFileInput(container), file);
-    await user.click(await screen.findByRole('button', { name: 'Replace template' }));
+    await clickWhenInteractable(
+      user,
+      await screen.findByRole('button', { name: 'Replace template' }),
+    );
     expect(await screen.findByText('replace denied')).toBeInTheDocument();
   });
 
@@ -354,7 +371,7 @@ describe('TemplatesTab', () => {
     if (attachBtn === undefined) throw new Error('no Attach template button');
     await user.click(attachBtn);
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByLabelText('Template'));
+    await clickWhenInteractable(user, within(dialog).getByLabelText('Template'));
     await user.click(await screen.findByRole('option', { name: 'notes — A notes fragment' }));
     // The Declarations group renders the template's declaration schema field.
     expect(await within(dialog).findByText('tag')).toBeInTheDocument();
@@ -396,7 +413,7 @@ describe('TemplatesTab', () => {
     if (attachBtn === undefined) throw new Error('no Attach template button');
     await user.click(attachBtn);
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByLabelText('Template'));
+    await clickWhenInteractable(user, within(dialog).getByLabelText('Template'));
     await user.click(await screen.findByRole('option', { name: 'notes — A notes fragment' }));
     await user.click(within(dialog).getByLabelText('Attachment path'));
     await user.click(await screen.findByRole('option', { name: 'notes' }));
@@ -418,7 +435,10 @@ describe('TemplatesTab', () => {
     );
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     await user.click(await screen.findByRole('button', { name: 'Detach' }));
-    await user.click(await screen.findByRole('button', { name: 'Detach', hidden: false }));
+    await clickWhenInteractable(
+      user,
+      await screen.findByRole('button', { name: 'Detach', hidden: false }),
+    );
     await waitFor(() => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: stateTemplatesKey });
     });
@@ -479,7 +499,7 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
     );
 
     await user.click(await screen.findByRole('button', { name: 'Edit declarations' }));
-    await user.click(await screen.findByRole('button', { name: 'Save changes' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Save changes' }));
 
     // The resolve view renders the orphans FROM THE STRUCTURED DATA (subject/kind/label).
     expect(await screen.findByText('Open records to close')).toBeInTheDocument();
@@ -511,7 +531,7 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
     );
 
     await user.click(await screen.findByRole('button', { name: 'Edit declarations' }));
-    await user.click(await screen.findByRole('button', { name: 'Save changes' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Save changes' }));
 
     // The error surfaces, but no resolve step (no orphan table, no resolution field, no relabel).
     expect(await screen.findByText('a declaration value failed validation')).toBeInTheDocument();

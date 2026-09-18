@@ -12,7 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { formatSubjectParam, parseSubjectRef } from './record-subject';
 import { RecordPage } from './RecordPage';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { clickWhenInteractable, renderWithProviders, type StubApiClient } from './test-utils';
 
 const subject = { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'p-1' };
 
@@ -123,7 +123,7 @@ describe('RecordPage', () => {
     );
     await user.click(await screen.findByRole('button', { name: 'Erase' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Erase' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Erase' }));
     await waitFor(() => {
       expect(deleteStateRecord).toHaveBeenCalledWith('profile', subject);
     });

@@ -7,9 +7,10 @@
 import type { ApiClient, ScheduleItem } from '@tai42/api-client';
 import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderOptions, type RenderResult } from '@testing-library/react';
+import { render, type RenderOptions, type RenderResult, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 
 export interface ProviderOptions extends Omit<RenderOptions, 'wrapper'> {
   readonly client: ApiClient;
@@ -72,4 +73,41 @@ export function schedule(overrides: Partial<ScheduleItem> = {}): ScheduleItem {
     kwargs: { backend_tool_name: 'run_report_schedule_task' },
     ...overrides,
   };
+}
+
+/**
+ * The nearest concrete `pointer-events` declaration blocks interaction — walking
+ * from `element` up, the first ancestor that declares a real value decides, and
+ * `none` there means blocked. This is the exact gate user-event asserts before a
+ * pointer interaction, so a control that clears it here cannot then throw.
+ */
+function pointerEventsBlocked(element: Element): boolean {
+  const view = element.ownerDocument.defaultView ?? globalThis;
+  for (let el: Element | null = element; el?.ownerDocument; el = el.parentElement) {
+    const declared = view.getComputedStyle(el).pointerEvents;
+    if (declared && declared !== 'inherit' && declared !== 'unset') {
+      return declared === 'none';
+    }
+  }
+  return false;
+}
+
+/**
+ * Clicks a control once it is truly interactable. A Radix Dialog marks the rest of
+ * the page inert the moment it opens — `pointer-events: none` on `document.body` —
+ * and re-enables its own panel on a following commit; a click fired in that gap
+ * lands on a control that still inherits `pointer-events: none`, which user-event
+ * refuses. Awaiting both the enabled state and a cleared pointer-events gate closes
+ * that window, so a dialog button clicked right after the dialog opens (or right
+ * after a mutation re-enables it) is deterministic rather than timing-dependent.
+ */
+export async function clickWhenInteractable(
+  user: ReturnType<typeof userEvent.setup>,
+  element: HTMLElement,
+): Promise<void> {
+  await waitFor(() => {
+    expect(element).toBeEnabled();
+    expect(pointerEventsBlocked(element)).toBe(false);
+  });
+  await user.click(element);
 }

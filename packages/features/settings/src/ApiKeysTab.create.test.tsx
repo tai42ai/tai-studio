@@ -9,7 +9,12 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiKeysTab } from './ApiKeysTab';
-import { fullProjection, renderWithProviders, scopedProjection } from './test-utils';
+import {
+  clickWhenInteractable,
+  fullProjection,
+  renderWithProviders,
+  scopedProjection,
+} from './test-utils';
 
 /** A service-principal row as `listPrincipals` returns it. */
 function servicePrincipal(overrides: Partial<Record<string, unknown>> = {}) {
@@ -119,7 +124,7 @@ describe('ApiKeysTab — create key', () => {
     // The raw key is shown once…
     expect(await screen.findByText('sk-generated-123')).toBeInTheDocument();
     // …and is gone from the DOM after the dialog is dismissed (show-once).
-    await user.click(screen.getByRole('button', { name: 'Done' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Done' }));
     await waitFor(() => {
       expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
     });
@@ -138,7 +143,7 @@ describe('ApiKeysTab — create key', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
 
     // Dismiss the show-once minted-key dialog.
-    await user.click(await screen.findByRole('button', { name: 'Done' }));
+    await clickWhenInteractable(user, await screen.findByRole('button', { name: 'Done' }));
     await waitFor(() => {
       expect(screen.queryByText('sk-generated-123')).not.toBeInTheDocument();
     });

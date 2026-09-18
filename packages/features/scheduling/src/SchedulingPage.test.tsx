@@ -14,7 +14,7 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SchedulingPage } from './SchedulingPage';
-import { makeClient, renderWithProviders, schedule } from './test-utils';
+import { clickWhenInteractable, makeClient, renderWithProviders, schedule } from './test-utils';
 
 /** The datetime tool is unavailable in most tests; a 501 keeps its note out of the way. */
 function serverTime501(): () => Promise<never> {
@@ -270,7 +270,7 @@ describe('SchedulingPage — delete', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Delete schedule')).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => {
       expect(deleteSchedule).toHaveBeenCalledWith('nightly-report');
