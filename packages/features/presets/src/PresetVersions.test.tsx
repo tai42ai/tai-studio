@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { presetDetailKey, presetsListKey, presetVersionsKey } from './keys';
 import { PresetVersions } from './PresetVersions';
-import { renderWithProviders, type StubApiClient } from './test-utils';
+import { clickWhenInteractable, renderWithProviders, type StubApiClient } from './test-utils';
 
 function version(v: number, isCurrent: boolean) {
   return {
@@ -93,7 +93,7 @@ describe('PresetVersions', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
 
     await user.click(await screen.findByRole('button', { name: 'Roll back to version 1' }));
-    await user.click(screen.getByRole('button', { name: 'Roll back' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Roll back' }));
 
     expect(rollbackPreset).toHaveBeenCalledWith('paris_weather', 1);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: presetsListKey });

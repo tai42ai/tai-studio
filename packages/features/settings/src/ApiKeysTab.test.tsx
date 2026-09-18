@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiKeysTab } from './ApiKeysTab';
 import {
+  clickWhenInteractable,
   decorBorderedControls,
   fullProjection,
   renderWithProviders,
@@ -82,7 +83,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Revoke key alice' }));
-    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Revoke' }));
 
     expect(await screen.findByText('unknown user_id')).toBeInTheDocument();
   });
@@ -105,7 +106,7 @@ describe('ApiKeysTab', () => {
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Revoke key alice' }));
-    await user.click(screen.getByRole('button', { name: 'Revoke' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Revoke' }));
 
     await waitFor(() => {
       expect(revokeApiKey).toHaveBeenCalledWith('alice');

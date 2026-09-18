@@ -11,7 +11,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { presetDetailKey, presetRefereesKey, presetsListKey, presetVersionsKey } from './keys';
 import { PresetDetail } from './PresetDetail';
-import { detail, emptyMeta, renderWithProviders, type StubApiClient, versions } from './test-utils';
+import {
+  clickWhenInteractable,
+  detail,
+  emptyMeta,
+  renderWithProviders,
+  type StubApiClient,
+  versions,
+} from './test-utils';
 
 describe('PresetDetail — rename preflight + delete', () => {
   it('renders a rejected rename’s server message verbatim, including the referee list', async () => {
@@ -147,7 +154,7 @@ describe('PresetDetail — rename preflight + delete', () => {
     const remove = vi.spyOn(queryClient, 'removeQueries');
 
     await user.click(await screen.findByRole('button', { name: 'Delete preset paris_weather' }));
-    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Delete' }));
 
     expect(deletePreset).toHaveBeenCalledWith('paris_weather');
     expect(navigate).toHaveBeenCalledWith('presets', {});

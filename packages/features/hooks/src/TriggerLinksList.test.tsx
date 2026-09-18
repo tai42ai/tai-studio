@@ -11,7 +11,13 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { fullProjection, renderWithProviders, type StubApiClient, triggerLink } from './test-utils';
+import {
+  clickWhenInteractable,
+  fullProjection,
+  renderWithProviders,
+  type StubApiClient,
+  triggerLink,
+} from './test-utils';
 import { TriggerLinksList } from './TriggerLinksList';
 
 describe('TriggerLinksList — table', () => {
@@ -133,7 +139,7 @@ describe('TriggerLinksList — revoke', () => {
       await screen.findByRole('button', { name: 'Revoke trigger link wall-poster' }),
     );
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Cancel' }));
 
     expect(deleteTriggerLink).not.toHaveBeenCalled();
     expect(screen.getByText('wall-poster')).toBeInTheDocument();
@@ -150,7 +156,7 @@ describe('TriggerLinksList — revoke', () => {
       await screen.findByRole('button', { name: 'Revoke trigger link wall-poster' }),
     );
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Revoke link' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Revoke link' }));
 
     await waitFor(() => {
       expect(deleteTriggerLink).toHaveBeenCalledWith('wall-poster');
@@ -174,7 +180,7 @@ describe('TriggerLinksList — revoke', () => {
       await screen.findByRole('button', { name: 'Revoke trigger link wall-poster' }),
     );
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Revoke link' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Revoke link' }));
 
     expect(await screen.findByText('unknown trigger link')).toBeInTheDocument();
     // The row survives a failed revoke.
@@ -199,7 +205,7 @@ describe('TriggerLinksList — revoke', () => {
     // Row A: open the confirm, revoke, and it fails loudly — the row survives.
     await user.click(await screen.findByRole('button', { name: 'Revoke trigger link link-a' }));
     const dialogA = await screen.findByRole('dialog');
-    await user.click(within(dialogA).getByRole('button', { name: 'Revoke link' }));
+    await clickWhenInteractable(user, within(dialogA).getByRole('button', { name: 'Revoke link' }));
     expect(await screen.findByText('revoke of link-a forbidden')).toBeInTheDocument();
     expect(screen.getByText('link-a')).toBeInTheDocument();
 

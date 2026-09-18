@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { HooksPage } from './HooksPage';
 import {
   apiKey,
+  clickWhenInteractable,
   fullProjection,
   hook,
   openSelect,
@@ -866,7 +867,10 @@ describe('HooksPage — unbind topic verifier', () => {
     );
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent(/ingress becomes OPEN/);
-    await user.click(within(dialog).getByRole('button', { name: 'Unbind verifier' }));
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Unbind verifier' }),
+    );
 
     await waitFor(() => {
       expect(deleteTopicVerifier).toHaveBeenCalledWith('events.created');
@@ -894,7 +898,7 @@ describe('HooksPage — unbind topic verifier', () => {
       await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
     );
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Cancel' }));
 
     expect(deleteTopicVerifier).not.toHaveBeenCalled();
   });
@@ -922,7 +926,10 @@ describe('HooksPage — unbind topic verifier', () => {
       await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
     );
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Unbind verifier' }));
+    await clickWhenInteractable(
+      user,
+      within(dialog).getByRole('button', { name: 'Unbind verifier' }),
+    );
 
     expect(await screen.findByText('no verifier bound to topic')).toBeInTheDocument();
   });
@@ -953,7 +960,10 @@ describe('HooksPage — unbind topic verifier', () => {
       await screen.findByRole('button', { name: 'Unbind verifier from events.created' }),
     );
     const dialogA = await screen.findByRole('dialog');
-    await user.click(within(dialogA).getByRole('button', { name: 'Unbind verifier' }));
+    await clickWhenInteractable(
+      user,
+      within(dialogA).getByRole('button', { name: 'Unbind verifier' }),
+    );
     expect(await screen.findByText('unbind of events.created is forbidden')).toBeInTheDocument();
 
     // Cancel A's dialog.
@@ -990,7 +1000,7 @@ describe('HooksPage — delete', () => {
 
     await user.click(screen.getByRole('button', { name: 'Delete hook notify-event' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Delete hook' }));
+    await clickWhenInteractable(user, within(dialog).getByRole('button', { name: 'Delete hook' }));
 
     await waitFor(() => {
       expect(unregisterHook).toHaveBeenCalledWith('notify-event');

@@ -143,6 +143,43 @@ export async function openBasePicker(
   return combobox;
 }
 
+/**
+ * The nearest concrete `pointer-events` declaration blocks interaction — walking
+ * from `element` up, the first ancestor that declares a real value decides, and
+ * `none` there means blocked. This is the exact gate user-event asserts before a
+ * pointer interaction, so a control that clears it here cannot then throw.
+ */
+function pointerEventsBlocked(element: Element): boolean {
+  const view = element.ownerDocument.defaultView ?? globalThis;
+  for (let el: Element | null = element; el?.ownerDocument; el = el.parentElement) {
+    const declared = view.getComputedStyle(el).pointerEvents;
+    if (declared && declared !== 'inherit' && declared !== 'unset') {
+      return declared === 'none';
+    }
+  }
+  return false;
+}
+
+/**
+ * Clicks a control once it is truly interactable. A Radix Dialog marks the rest of
+ * the page inert the moment it opens — `pointer-events: none` on `document.body` —
+ * and re-enables its own panel on a following commit; a click fired in that gap
+ * lands on a control that still inherits `pointer-events: none`, which user-event
+ * refuses. Awaiting both the enabled state and a cleared pointer-events gate closes
+ * that window, so a dialog button clicked right after the dialog opens (or right
+ * after a mutation re-enables it) is deterministic rather than timing-dependent.
+ */
+export async function clickWhenInteractable(
+  user: ReturnType<typeof userEvent.setup>,
+  element: HTMLElement,
+): Promise<void> {
+  await waitFor(() => {
+    expect(element).toBeEnabled();
+    expect(pointerEventsBlocked(element)).toBe(false);
+  });
+  await user.click(element);
+}
+
 /** Name + base only — used by the validate tests (an empty description is valid to validate). */
 export async function fillNameAndBase(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.type(screen.getByPlaceholderText('paris_weather'), 'paris_weather');

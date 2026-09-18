@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ApiKeysTab } from './ApiKeysTab';
-import { fullProjection, renderWithProviders } from './test-utils';
+import { clickWhenInteractable, fullProjection, renderWithProviders } from './test-utils';
 
 vi.setConfig({ testTimeout: 15_000 });
 
@@ -119,7 +119,7 @@ describe('ApiKeysTab — edit key', () => {
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
 
     // Behind an inline confirm: the trigger reveals a Confirm/Cancel prompt in place.
-    await user.click(screen.getByRole('button', { name: 'Remove condition' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Remove condition' }));
     await user.click(screen.getByRole('button', { name: 'Yes, remove condition' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -168,7 +168,7 @@ describe('ApiKeysTab — edit key', () => {
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
 
-    await user.click(screen.getByRole('button', { name: 'Clear policy data' }));
+    await clickWhenInteractable(user, screen.getByRole('button', { name: 'Clear policy data' }));
     await user.click(screen.getByRole('button', { name: 'Yes, clear policy data' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -194,7 +194,10 @@ describe('ApiKeysTab — edit key', () => {
     await user.click(screen.getByRole('button', { name: 'Edit key alice' }));
 
     // Emptying the editor rows is NOT a delete — policy_data is omitted, not nulled.
-    await user.click(screen.getByRole('button', { name: 'Remove Policy data row 1' }));
+    await clickWhenInteractable(
+      user,
+      screen.getByRole('button', { name: 'Remove Policy data row 1' }),
+    );
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {

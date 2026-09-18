@@ -55,7 +55,7 @@ const FIELD_NAMES = [
   'echo',
   'foxtrot',
   'golf',
-  'hotel',
+  'kilo',
 ] as const;
 
 const EIGHT_FIELDS: JsonSchema = {
