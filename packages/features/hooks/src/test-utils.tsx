@@ -26,9 +26,10 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult } from '@testing-library/react';
+import { render, type RenderResult, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
-import { type Mock, vi } from 'vitest';
+import { expect, type Mock, vi } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;
@@ -161,4 +162,22 @@ export function fullProjection(overrides: Partial<MeProjection> = {}): MeProject
 /** A scoped (non-admin) projection restricted to the given slice. */
 export function scopedProjection(overrides: Partial<MeProjection> = {}): MeProjection {
   return { ...baseProjection, ...overrides };
+}
+
+/**
+ * Opens a named combobox once its option list has loaded. A picker backed by an
+ * async query renders disabled while the query is pending; clicking then lands on
+ * an inert control and no listbox opens, so wait for the enabled state the field
+ * emits before opening it.
+ */
+export async function openSelect(
+  user: ReturnType<typeof userEvent.setup>,
+  name: RegExp | string,
+): Promise<HTMLElement> {
+  const combobox = await screen.findByRole('combobox', { name });
+  await waitFor(() => {
+    expect(combobox).toBeEnabled();
+  });
+  await user.click(combobox);
+  return combobox;
 }

@@ -43,7 +43,7 @@ function withStorage(
 
 describe('DeclareStateDialog', () => {
   it('PUTs a new state and reports the created name', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi.fn().mockResolvedValue(detail());
     const onCreated = vi.fn();
     renderWithProviders(<DeclareStateDialog onClose={vi.fn()} onCreated={onCreated} />, {
@@ -68,7 +68,7 @@ describe('DeclarationTab', () => {
   const CHANGED_SCHEMA = '{"type":"object","properties":{"a":{"type":"string"}}}';
 
   it('a change on an empty state saves through the declaration PUT', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi.fn().mockResolvedValue(detail());
     renderWithProviders(<DeclarationTab state={detail()} />, {
       client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 0 }), putState }),
@@ -81,7 +81,7 @@ describe('DeclarationTab', () => {
   });
 
   it('a refused schema change over existing records surfaces the server message', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi
       .fn()
       .mockRejectedValue(
@@ -108,7 +108,7 @@ describe('DeclarationTab', () => {
   });
 
   it('a subject change over existing records saves through the declaration PUT', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi.fn().mockResolvedValue(detail());
     renderWithProviders(<DeclarationTab state={detail()} />, {
       client: withStorage({ getStateStats: vi.fn().mockResolvedValue({ records: 3 }), putState }),
@@ -139,7 +139,7 @@ describe('DeclarationTab', () => {
   });
 
   it('round-trips a stored-reference base schema through the declaration PUT', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi.fn().mockResolvedValue(detail());
     const state = detail({
       schema: { id: 'profile-schema' },

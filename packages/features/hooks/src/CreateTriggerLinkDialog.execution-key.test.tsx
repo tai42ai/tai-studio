@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
-import { apiKey, renderWithProviders, type StubApiClient } from './test-utils';
+import { apiKey, openSelect, renderWithProviders, type StubApiClient } from './test-utils';
 
 function baseClient(
   createTriggerLink: NonNullable<StubApiClient['createTriggerLink']>,
@@ -27,19 +27,19 @@ function baseClient(
 
 describe('CreateTriggerLinkDialog — execution key', () => {
   it('lists the api keys with their description and mint fingerprint', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn()),
     });
 
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(
       await screen.findByRole('option', { name: 'svc-events — Event service key · kf-9f2c1d' }),
     ).toBeInTheDocument();
   });
 
   it('blocks submit with a loud field error when no key is picked; never calls the API', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -54,7 +54,7 @@ describe('CreateTriggerLinkDialog — execution key', () => {
   });
 
   it('disables the mint and says why when the deployment has no pickable key', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), { listTokensPayload: vi.fn().mockResolvedValue([]) }),
     });
@@ -83,7 +83,7 @@ describe('CreateTriggerLinkDialog — key list still loading', () => {
   const neverResolves = () => vi.fn().mockReturnValue(new Promise(() => undefined));
 
   it('keeps the mint out of reach while the key list loads', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink, { listTokensPayload: neverResolves() }),
@@ -110,7 +110,7 @@ describe('CreateTriggerLinkDialog — key list still loading', () => {
 
 describe('CreateTriggerLinkDialog — execution-key errors', () => {
   it('refetches the key list when the error state is retried', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listTokensPayload = vi.fn().mockRejectedValue(new Error('keys boom'));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), { listTokensPayload }),
@@ -126,7 +126,7 @@ describe('CreateTriggerLinkDialog — execution-key errors', () => {
   });
 
   it('keeps the mint out of reach when the key list FAILED', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink, {
@@ -146,7 +146,7 @@ describe('CreateTriggerLinkDialog — execution-key errors', () => {
 
 describe('CreateTriggerLinkDialog — execution-key label', () => {
   it('falls back to the bare id when a key has neither description nor fingerprint', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), {
         listTokensPayload: vi
@@ -155,26 +155,26 @@ describe('CreateTriggerLinkDialog — execution-key label', () => {
       }),
     });
 
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(await screen.findByRole('option', { name: 'svc-events' })).toBeInTheDocument();
   });
 
   it('omits the description segment when a key has only a fingerprint', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), {
         listTokensPayload: vi.fn().mockResolvedValue([apiKey({ description: '' })]),
       }),
     });
 
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(
       await screen.findByRole('option', { name: 'svc-events — kf-9f2c1d' }),
     ).toBeInTheDocument();
   });
 
   it('offers ONE option per user_id when two mints share it', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), {
         listTokensPayload: vi
@@ -184,12 +184,12 @@ describe('CreateTriggerLinkDialog — execution-key label', () => {
     });
 
     // Both rows name the same binding; two options would collide on the item value.
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(await screen.findAllByRole('option')).toHaveLength(1);
   });
 
   it('omits an EMPTY fingerprint, leaving no dangling separator', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), {
         listTokensPayload: vi
@@ -198,21 +198,21 @@ describe('CreateTriggerLinkDialog — execution-key label', () => {
       }),
     });
 
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(
       await screen.findByRole('option', { name: 'svc-events — Event service key' }),
     ).toBeInTheDocument();
   });
 
   it('omits the fingerprint segment on a deployment that surfaces none', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(vi.fn(), {
         listTokensPayload: vi.fn().mockResolvedValue([apiKey({ policy_data: {} })]),
       }),
     });
 
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(
       await screen.findByRole('option', { name: 'svc-events — Event service key' }),
     ).toBeInTheDocument();

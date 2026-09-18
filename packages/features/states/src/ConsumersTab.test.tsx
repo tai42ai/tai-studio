@@ -28,7 +28,7 @@ function row(over: Record<string, unknown>) {
 
 describe('ConsumersTab', () => {
   it('renders bound rows and opens a token link in-shell', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<ConsumersTab state={state} />, {
       client: {
         stateConsumers: vi.fn().mockResolvedValue([
@@ -48,7 +48,7 @@ describe('ConsumersTab', () => {
   });
 
   it('opens a plugin-path link through the plugin navigator', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigatePlugin } = renderWithProviders(<ConsumersTab state={state} />, {
       client: {
         stateConsumers: vi.fn().mockResolvedValue([
@@ -73,7 +73,7 @@ describe('ConsumersTab', () => {
   });
 
   it('opens a preset consumer on the presets page', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<ConsumersTab state={state} />, {
       client: {
         stateConsumers: vi.fn().mockResolvedValue([

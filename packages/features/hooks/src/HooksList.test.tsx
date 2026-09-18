@@ -28,7 +28,7 @@ describe('HooksList — row doors', () => {
   });
 
   it('opens the Edit dialog prefilled from the row and saves it through registerHook', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'notify-event' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),

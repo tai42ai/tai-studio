@@ -37,9 +37,12 @@ function StubExpressionField({ label, value, onChange }: ExpressionFieldProps): 
   );
 }
 
-// Every case drives a full Radix dialog flow (portal mount, combobox pickers,
-// multi-field typing); loaded CI runners overrun the default timeout, so the
-// whole file gets explicit headroom.
+// Every case drives a full Radix dialog flow — portal mount, combobox pickers, and a
+// schema-driven form that re-renders on each keystroke — so these flows are a heavy
+// render chain that runs slowly under coverage instrumentation on a loaded runner.
+// userEvent runs without its inter-key delay so a loaded runner cannot push a keystroke
+// chain past the timeout, and the file gets explicit testTimeout headroom; correctness
+// stays gated by the real assertions and awaited signals below.
 vi.setConfig({ testTimeout: 15_000 });
 
 /** Open a discriminated-union variant picker inside the named field group. */
@@ -68,7 +71,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('shows the tool-only jq fields for a tool target and hides them for an agent', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
 
     await pickVariant(user, 'Target', 'agent');
@@ -83,7 +86,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('shows only the api door field for the api door and the channel fields for channel', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
 
     await pickVariant(user, 'Door', 'api');
@@ -97,7 +100,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('renders the jq expression door through an injected ExpressionFieldContext', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <ExpressionFieldContext.Provider value={StubExpressionField}>
         <RouteFormDialog onClose={vi.fn()} />
@@ -116,7 +119,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('sends the flat wire body a tool + channel route composes on submit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: true,
       route_name: 'support',
@@ -157,7 +160,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('blocks submit with inline errors and never calls the API when required fields are blank', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
       client: { createOrReplaceConversationRoute },
@@ -173,7 +176,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('rejects a non-slug route name locally before any request', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
       client: { createOrReplaceConversationRoute },
@@ -193,7 +196,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('rejects a non-https callback URL locally before any request', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
       client: { createOrReplaceConversationRoute },
@@ -217,7 +220,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('reveals the api-door callback secret once, then closes on Done', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: true,
@@ -249,7 +252,7 @@ describe('RouteFormDialog — create', () => {
   });
 
   it('keeps the revealed secret on Escape, then closes only on the explicit Done', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: true,
@@ -303,7 +306,7 @@ describe('RouteFormDialog — overlap', () => {
   });
 
   it('shows the settle-window cross-field error inline and blocks submit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn();
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
       client: { createOrReplaceConversationRoute },
@@ -330,7 +333,7 @@ describe('RouteFormDialog — overlap', () => {
   });
 
   it('sends the set overlap policy in the submit body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: true,
       route_name: 'account',
@@ -398,7 +401,7 @@ describe('RouteFormDialog — edit', () => {
   });
 
   it('saves back over the same route on submit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: false,
       route_name: 'chat',

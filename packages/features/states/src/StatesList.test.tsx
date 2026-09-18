@@ -102,7 +102,7 @@ describe('StatesList', () => {
   });
 
   it('selecting a row navigates to ?state=', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()]),
     });
@@ -120,7 +120,7 @@ describe('StatesList', () => {
       .fn()
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce([stateRow()]);
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<StatesList selected={undefined} />, {
       client: {
         listStates,
@@ -134,7 +134,7 @@ describe('StatesList', () => {
   });
 
   it('Upload rejects a document with no kind (loud alert)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi.fn();
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()], { putState }),
@@ -152,7 +152,7 @@ describe('StatesList', () => {
   });
 
   it('a state upload that conflicts surfaces the error (no replace door for a declaration)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi
       .fn()
       .mockRejectedValue(new ApiError('state has records; cannot change a declared field', 409));
@@ -179,7 +179,7 @@ describe('StatesList', () => {
   });
 
   it('a state-template upload prompts Replace on a 409 and retries with replace=true', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi
       .fn()
       .mockRejectedValueOnce(new ApiError('template_exists', 409))
@@ -205,7 +205,7 @@ describe('StatesList', () => {
   });
 
   it('Upload routes a state-template document to putStateTemplate', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi.fn().mockResolvedValue({ kind: 'state-template', name: 'notes' });
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()], { putStateTemplate }),
@@ -278,7 +278,7 @@ describe('StatesList', () => {
   });
 
   it('Declare state opens the create dialog and navigates on success', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putState = vi.fn().mockResolvedValue({ name: 'newone', attachments: [] });
     const { navigate } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()], { putState }),
@@ -294,7 +294,7 @@ describe('StatesList', () => {
   });
 
   it('the empty state opens the create dialog', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<StatesList selected={undefined} />, { client: listClient([]) });
     await user.click(await screen.findByText('No states declared'));
     // The empty-state action button is present and opens the dialog.
@@ -305,7 +305,7 @@ describe('StatesList', () => {
   });
 
   it('Upload rejects a file that is not JSON', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { container } = renderWithProviders(<StatesList selected={undefined} />, {
       client: listClient([stateRow()]),
     });
@@ -316,7 +316,7 @@ describe('StatesList', () => {
   });
 
   it('a failed template Replace renders its error in the dialog', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi
       .fn()
       .mockRejectedValueOnce(new ApiError('template_exists', 409))

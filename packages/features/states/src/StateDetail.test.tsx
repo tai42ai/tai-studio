@@ -46,7 +46,7 @@ describe('StateDetail', () => {
   });
 
   it('switching a tab navigates ?tab=', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<StateDetail name="profile" tab={undefined} />, {
       client: client(),
     });
@@ -55,7 +55,7 @@ describe('StateDetail', () => {
   });
 
   it('Delete state confirms, deletes, and clears the selection', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deleteState = vi.fn().mockResolvedValue({ name: 'profile', deleted: true });
     const { navigate } = renderWithProviders(<StateDetail name="profile" tab={undefined} />, {
       client: client({ deleteState }),

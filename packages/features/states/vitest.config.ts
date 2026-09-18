@@ -19,9 +19,9 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
-    // The record and declaration tests drive full typed forms through userEvent
-    // and run several seconds wall on shared CI runners; the 5s default leaves no
-    // headroom.
+    // user-event drives these forms without its per-key delay; the headroom above
+    // the 5s default covers the Radix portal and combobox render chain the record
+    // and declaration forms walk while coverage instrumentation is active.
     testTimeout: 15_000,
     coverage: {
       provider: 'v8',

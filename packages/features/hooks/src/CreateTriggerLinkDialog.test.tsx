@@ -12,7 +12,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { CreateTriggerLinkDialog } from './CreateTriggerLinkDialog';
-import { apiKey, renderWithProviders, type StubApiClient } from './test-utils';
+import { apiKey, openSelect, renderWithProviders, type StubApiClient } from './test-utils';
 
 const CREATED = {
   name: 'wall-poster',
@@ -38,7 +38,7 @@ function baseClient(
 
 /** Pick the seeded key in the execution-key `Select`. */
 async function pickExecutionKey(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+  await openSelect(user, 'Execution key');
   await user.click(await screen.findByRole('option', { name: /svc-events/ }));
 }
 
@@ -54,7 +54,7 @@ async function fillRequired(
 
 describe('CreateTriggerLinkDialog — create + QR', () => {
   it('creates a permanent link and shows the QR (shown once, no reopen affordance)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -84,7 +84,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
   });
 
   it('keeps the revealed QR on Escape, then closes only on the explicit Done', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={onClose} />, {
@@ -107,7 +107,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
   });
 
   it('rebuilds the QR only when the link changes, not on every re-render', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     const { rerender } = renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -130,7 +130,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
   });
 
   it('disables submit while the mint is IN FLIGHT, so a double click cannot mint twice', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockReturnValue(new Promise(() => undefined));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -147,7 +147,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
   });
 
   it('maps the expiry presets (1 hour → 3600) into the body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi
       .fn()
       .mockResolvedValue({ ...CREATED, expires_at: '2026-07-22T10:00:00Z' });
@@ -166,7 +166,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
   });
 
   it('sends a validated custom seconds value', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -184,7 +184,7 @@ describe('CreateTriggerLinkDialog — create + QR', () => {
   });
 
   it('blocks submit with a loud error on a fractional custom value; never calls the API', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -208,7 +208,7 @@ describe('CreateTriggerLinkDialog — require api key', () => {
   });
 
   it('sends require_api_key: true when the toggle is on (never a trigger_auth object)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -227,7 +227,7 @@ describe('CreateTriggerLinkDialog — require api key', () => {
   });
 
   it('sends require_api_key: false when the toggle is left off', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -246,7 +246,7 @@ describe('CreateTriggerLinkDialog — require api key', () => {
 
 describe('CreateTriggerLinkDialog — params editor', () => {
   it('lands valid JSON in the body tool_kwargs', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -264,7 +264,7 @@ describe('CreateTriggerLinkDialog — params editor', () => {
   });
 
   it('blocks submit with a loud error on invalid JSON; never calls the API', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -279,7 +279,7 @@ describe('CreateTriggerLinkDialog — params editor', () => {
   });
 
   it('omits tool_kwargs from the body when the params editor is blank', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn().mockResolvedValue(CREATED);
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -297,7 +297,7 @@ describe('CreateTriggerLinkDialog — params editor', () => {
 
 describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   it('names the missing TOPIC when everything else is supplied', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -313,7 +313,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it('names the missing EXPIRY when everything else is supplied', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -338,7 +338,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it('blocks a non-object params value locally, never shipping it', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -354,7 +354,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it('clears a stale params error on the next submit, while still mounted', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -376,7 +376,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it('clears a stale EXPIRY error on the next submit, while still mounted', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi.fn();
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
       client: baseClient(createTriggerLink),
@@ -400,7 +400,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it('renders a 409 taken-name error loudly', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi
       .fn()
       .mockRejectedValue(new ApiConflictError('trigger link name already exists'));
@@ -415,7 +415,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it("surfaces the server's pass-role refusal VERBATIM", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const message = 'execution_key svc-events is not yours to delegate';
     const createTriggerLink = vi.fn().mockRejectedValue(new ApiError(message, 403, 'pass_role'));
     renderWithProviders(<CreateTriggerLinkDialog onClose={vi.fn()} />, {
@@ -429,7 +429,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it("surfaces the server's token-free-evaluable refusal VERBATIM", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const message =
       'execution_key svc-events has a request-context-conditional policy and cannot be bound';
     const createTriggerLink = vi
@@ -446,7 +446,7 @@ describe('CreateTriggerLinkDialog — required choices + loud errors', () => {
   });
 
   it('renders the in-memory 501 refusal (an unenumerated status) loudly', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createTriggerLink = vi
       .fn()
       .mockRejectedValue(new ApiError('trigger links require the redis hooks backend', 501));

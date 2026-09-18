@@ -10,17 +10,17 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RegisterHookForm } from './RegisterHookForm';
-import { apiKey, hook, renderWithProviders, type StubApiClient } from './test-utils';
+import { apiKey, hook, openSelect, renderWithProviders, type StubApiClient } from './test-utils';
 
 /** Open the execution-key Select and pick the seeded svc-events key. */
 async function pickExecutionKey(user: ReturnType<typeof userEvent.setup>): Promise<void> {
-  await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+  await openSelect(user, 'Execution key');
   await user.click(await screen.findByRole('option', { name: /svc-events/ }));
 }
 
 describe('RegisterHookForm — overwrite notice (create)', () => {
   it('warns that a register replaces an existing hook once the typed name collides', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHooks: vi.fn().mockResolvedValue({ items: [hook({ name: 'notify-event' })], total: 1 }),
@@ -45,7 +45,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
   });
 
   it('still allows a register when the hooks list cannot load, with a loud fallback', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -68,7 +68,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
   });
 
   it('attaches a subject built from the optional Subject group', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -110,7 +110,7 @@ describe('RegisterHookForm — overwrite notice (create)', () => {
 
 describe('RegisterHookForm — edit mode', () => {
   it('prefills from the hook and saves back over it, carrying id-based gates through', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'notify-event' });
     const onClose = vi.fn();
     const client: StubApiClient = {
@@ -159,7 +159,7 @@ describe('RegisterHookForm — edit mode', () => {
   });
 
   it('does not warn on the edited hook itself, only when renamed onto another hook', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHooks: vi.fn().mockResolvedValue({
@@ -186,7 +186,7 @@ describe('RegisterHookForm — edit mode', () => {
   });
 
   it('Cancel closes the edit dialog through onClose without registering', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const registerHook = vi.fn();
     const client: StubApiClient = {
@@ -204,7 +204,7 @@ describe('RegisterHookForm — edit mode', () => {
 
 describe('RegisterHookForm — jq condition/expr expression fields', () => {
   it('round-trips the inline condition and expr through the jq expression fields', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -216,7 +216,7 @@ describe('RegisterHookForm — jq condition/expr expression fields', () => {
     await user.type(screen.getByLabelText('Name'), 'greet');
     await user.type(screen.getByLabelText('Topic'), 'events.created');
     await user.type(screen.getByLabelText('Tool'), 'notify');
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     await user.click(await screen.findByRole('option', { name: /svc-events/ }));
     await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.amount > 100');
     await user.type(screen.getByRole('textbox', { name: 'Expr' }), '.message.text');
@@ -260,7 +260,7 @@ describe('RegisterHookForm — jq condition/expr expression fields', () => {
 
 describe('RegisterHookForm — charset rule', () => {
   it("surfaces the backend's name/topic charset 400 loudly and inline", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const message = 'hook name may only contain letters, digits, ., _ and -';
     const registerHook = vi.fn().mockRejectedValue(new ApiError(message, 400));
     const client: StubApiClient = {
@@ -285,7 +285,7 @@ describe('RegisterHookForm — charset rule', () => {
 
 describe('RegisterHookForm — state binding source resolution', () => {
   it("resolves the hook tool's schema into the binding field pickers", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const getToolSchema = vi.fn().mockResolvedValue({
       input: { type: 'object', properties: { memo: { type: 'string' } } },
       output: { type: 'object', properties: { total: { type: 'number' } } },
@@ -375,10 +375,15 @@ describe('RegisterHookForm — inherited advisory + binding serialization', () =
   });
 
   it('serializes a SET binding into the register body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'tally-hook' });
     renderWithProviders(<RegisterHookForm initial={boundHook()} onClose={vi.fn()} />, {
       client: presetClient(registerHook),
+    });
+    // The fire gate is unsatisfiable — and submit a no-op — until the key list
+    // resolves, which is exactly when the picker sheds its disabled state.
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Execution key' })).toBeEnabled();
     });
     await user.click(await screen.findByRole('button', { name: 'Save changes' }));
     await waitFor(() => {

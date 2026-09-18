@@ -15,7 +15,7 @@ import { detail, emptyMeta, renderWithProviders, type StubApiClient, versions } 
 
 describe('PresetDetail — rename preflight + delete', () => {
   it('renders a rejected rename’s server message verbatim, including the referee list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const serverMessage =
       "preset 'paris_weather' cannot be renamed: it is referenced by preset(s) ['a_ref', 'z_ref']; update those presets first";
     const client: StubApiClient = {
@@ -51,7 +51,7 @@ describe('PresetDetail — rename preflight + delete', () => {
   });
 
   it('preflight: a non-empty referee list blocks the rename with a danger callout', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const renamePreset = vi.fn();
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
@@ -78,7 +78,7 @@ describe('PresetDetail — rename preflight + delete', () => {
   });
 
   it('preflight: an empty referee list allows the rename', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const renamePreset = vi.fn().mockResolvedValue({
       name: 'london_weather',
       renamed_from: 'paris_weather',
@@ -105,7 +105,7 @@ describe('PresetDetail — rename preflight + delete', () => {
   });
 
   it('preflight: a referees fetch error degrades to advisory (submit stays enabled)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const renamePreset = vi.fn().mockResolvedValue({
       name: 'london_weather',
       renamed_from: 'paris_weather',
@@ -132,7 +132,7 @@ describe('PresetDetail — rename preflight + delete', () => {
   });
 
   it('clears the ?preset= selection after a successful delete', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deletePreset = vi.fn().mockResolvedValue({ name: 'paris_weather', deleted: true });
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),

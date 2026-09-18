@@ -14,13 +14,14 @@ import {
   baseClient,
   fillCreatable,
   fillNameAndBase,
+  openBasePicker,
   record,
   renderWithProviders,
 } from './test-utils';
 
 describe('CreatePresetForm — validate + base labelling + enrichment', () => {
   it('validate — a store-off 501 is the muted OFF note, never an error state', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi
       .fn()
       .mockRejectedValue(
@@ -46,7 +47,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
   });
 
   it('validate — clean verdict: sends the full create draft and shows a success badge', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
     const client = baseClient({ validatePreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
@@ -70,7 +71,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     // answer, so it reads as the counterpart of the clean verdict — a badge plus
     // the reason verbatim — not as the crossed-circle surface that says the system
     // broke. It still ANNOUNCES: the verdict lands after the press.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi
       .fn()
       .mockResolvedValue({ valid: false, error: "base tool 'weather' is not a registered tool" });
@@ -88,7 +89,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
   });
 
   it('validate — a stale verdict clears on further edits', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
     const client = baseClient({ validatePreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
@@ -103,7 +104,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
   });
 
   it('labels an agent run tool in the base picker with a " (agent)" suffix', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client = baseClient({
       listTools: vi.fn().mockResolvedValue(['weather', 'writer_agent']),
       listAgents: vi
@@ -112,14 +113,14 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
-    await user.click(await screen.findByRole('combobox'));
+    await openBasePicker(user);
     expect(await screen.findByRole('option', { name: 'writer_agent (agent)' })).toBeInTheDocument();
     // A non-agent tool keeps its bare label.
     expect(screen.getByRole('option', { name: 'weather' })).toBeInTheDocument();
   });
 
   it('labels a base-picker option "Display (raw)" from the tool-meta overlay', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client = baseClient({ listTools: vi.fn().mockResolvedValue(['weather']) });
     renderWithProviders(
       <StaticToolDisplayNamesProvider names={{ weather: 'Weather' }}>
@@ -128,12 +129,12 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
       { client },
     );
 
-    await user.click(await screen.findByRole('combobox'));
+    await openBasePicker(user);
     expect(await screen.findByRole('option', { name: 'Weather (weather)' })).toBeInTheDocument();
   });
 
   it('renders a 400 base-is-a-preset message verbatim', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi
       .fn()
       .mockRejectedValue(new Error("base tool 'weather' is itself a preset"));
@@ -179,7 +180,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     // The schema supplies only the "Base tool inputs: …" hint. On a failure the
     // code must keep a sentence in that slot, so a hintless kwargs box never reads
     // as "this base declares no inputs".
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({ getToolSchema: vi.fn().mockRejectedValue(new Error('schema down')) }),
     });
@@ -218,7 +219,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
 
 describe('CreatePresetForm — state binding source resolution', () => {
   it("resolves the base tool's schema into the binding field pickers", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const getToolSchema = vi.fn().mockResolvedValue({
       input: { type: 'object', properties: { memo: { type: 'string' } } },
       output: { type: 'object', properties: { total: { type: 'number' } } },
@@ -240,7 +241,7 @@ describe('CreatePresetForm — state binding source resolution', () => {
 
 describe('CreatePresetForm — binding serialization', () => {
   it('serializes a SET binding into the create body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({
@@ -278,7 +279,7 @@ describe('CreatePresetForm — binding serialization', () => {
 
 describe('CreatePresetForm — binding validation', () => {
   it('validate — sends the current binding editor value in the draft body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({
@@ -314,7 +315,7 @@ describe('CreatePresetForm — binding validation', () => {
   });
 
   it('validate — renders a state_binding verdict issue verbatim', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi.fn().mockResolvedValue({
       valid: false,
       error: 'invalid state_binding: state "counters" is not declared',

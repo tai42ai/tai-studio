@@ -38,7 +38,7 @@ function client(over: Partial<StubApiClient> = {}): StubApiClient {
 
 describe('RecordsTab', () => {
   it('the lookup form opens a record by kind + key + target', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<RecordsTab state={state} />, { client: client() });
     await user.type(await screen.findByLabelText('Key'), 'p-1');
     await user.type(screen.getByLabelText('Target name'), 'assistant');
@@ -51,7 +51,7 @@ describe('RecordsTab', () => {
   });
 
   it('the subjects browser lists a kind and opens a row', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<RecordsTab state={state} />, { client: client() });
     // The subjects table row renders its key.
     const subjectsCard = (await screen.findByText('Subjects')).closest('div');
@@ -74,7 +74,7 @@ describe('RecordsTab', () => {
   });
 
   it('the content search matches records and opens a hit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<RecordsTab state={state} />, {
       client: client({
         searchStateRecords: vi.fn().mockResolvedValue({
@@ -96,7 +96,7 @@ describe('RecordsTab', () => {
   });
 
   it('the subjects browser pages with Load more', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const second = { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'p-2' };
     const listStateSubjects = vi
       .fn()
@@ -115,7 +115,7 @@ describe('RecordsTab', () => {
   });
 
   it('a known target fills the lookup target', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<RecordsTab state={state} />, {
       client: client({
         listConversationRoutes: vi
@@ -144,7 +144,7 @@ describe('RecordsTab', () => {
   });
 
   it('a content search with no hits shows the no-matches state', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<RecordsTab state={state} />, { client: client() });
     await user.type(await screen.findByLabelText('Filters (JSON)'), '{{"x":"nope"}');
     await user.click(screen.getByRole('button', { name: 'Search' }));
@@ -152,7 +152,7 @@ describe('RecordsTab', () => {
   });
 
   it('a content search error surfaces loudly', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<RecordsTab state={state} />, {
       client: client({ searchStateRecords: vi.fn().mockRejectedValue(new Error('search down')) }),
     });
@@ -162,7 +162,7 @@ describe('RecordsTab', () => {
   });
 
   it('a search box that is not a JSON object shows the parse error and never queries', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const searchStateRecords = vi.fn().mockResolvedValue({ matches: [], next_cursor: null });
     renderWithProviders(<RecordsTab state={state} />, { client: client({ searchStateRecords }) });
     // A bare scalar is not a containment object.
@@ -175,7 +175,7 @@ describe('RecordsTab', () => {
   });
 
   it('a failed targets read surfaces inline while the free-entry target stays usable', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<RecordsTab state={state} />, {
       client: client({
         listConversationRoutes: vi.fn().mockRejectedValue(new Error('targets down')),
@@ -200,7 +200,7 @@ describe('RecordsTab', () => {
   });
 
   it('a 501 from the content search shows FeatureDisabled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<RecordsTab state={state} />, {
       client: client({
         searchStateRecords: vi.fn().mockRejectedValue(new ApiError('no store', 501)),

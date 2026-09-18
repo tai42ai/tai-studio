@@ -121,7 +121,7 @@ describe('TriggerLinksList — table', () => {
 
 describe('TriggerLinksList — revoke', () => {
   it('does NOT revoke when the confirm dialog is cancelled; the row stays', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deleteTriggerLink = vi.fn();
     const client: StubApiClient = {
       listTriggerLinks: vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 }),
@@ -140,7 +140,7 @@ describe('TriggerLinksList — revoke', () => {
   });
 
   it('revokes behind the confirm dialog and invalidates the list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listTriggerLinks = vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 });
     const deleteTriggerLink = vi.fn().mockResolvedValue({ removed: true, name: 'wall-poster' });
     const client: StubApiClient = { listTriggerLinks, deleteTriggerLink };
@@ -162,7 +162,7 @@ describe('TriggerLinksList — revoke', () => {
   });
 
   it('keeps the row and shows a loud error when the revoke rejects', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deleteTriggerLink = vi.fn().mockRejectedValue(new ApiError('unknown trigger link', 404));
     const client: StubApiClient = {
       listTriggerLinks: vi.fn().mockResolvedValue({ items: [triggerLink()], total: 1 }),
@@ -182,7 +182,7 @@ describe('TriggerLinksList — revoke', () => {
   });
 
   it("resets the mutation on open, so one row's failed revoke does not leak its error into the next row's dialog", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // The revoke fails for the first row; the second row never submits.
     const deleteTriggerLink = vi
       .fn()

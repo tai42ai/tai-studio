@@ -84,7 +84,7 @@ function stubSinglePane(): void {
 
 describe('PresetsPage — responsive master/detail focus', () => {
   it('moves focus to the detail heading when a preset is selected (client-side change)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderPresetsHarness(detailClient(['paris']));
 
     await user.click(await screen.findByRole('link', { name: 'Open preset paris' }));
@@ -106,7 +106,7 @@ describe('PresetsPage — responsive master/detail focus', () => {
   });
 
   it('returns focus to the originating row on Back (single-pane)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     stubSinglePane();
     renderPresetsHarness(detailClient(['paris']), { preset: 'paris' });
 

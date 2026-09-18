@@ -56,7 +56,7 @@ describe('PresetDetail', () => {
   });
 
   it('edits the overlay display name + tags via the two-field merge-patch', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const upsertToolMeta = vi.fn().mockResolvedValue({
       tool_name: 'paris_weather',
       display_name: 'Paris Weather',
@@ -112,7 +112,7 @@ describe('PresetDetail', () => {
   });
 
   it('reloads the SDK display-name overlay on a successful details edit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const reload = vi.fn();
     const upsertToolMeta = vi.fn().mockResolvedValue({
       tool_name: 'paris_weather',
@@ -163,7 +163,7 @@ describe('PresetDetail', () => {
   });
 
   it('swaps the edit dialog to the muted OFF note and withdraws Edit details on a tool_meta 501', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const upsertToolMeta = vi
       .fn()
       .mockRejectedValue(
@@ -209,7 +209,7 @@ describe('PresetDetail', () => {
   });
 
   it('offers New version + version history and the soft-delete copy on a normal record', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
       listPresetVersions: vi.fn().mockResolvedValue(versions),
@@ -244,7 +244,7 @@ describe('PresetDetail', () => {
   });
 
   it('is delete-only with the quarantine copy on a conflicted record', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue({ ...detail, conflicted: true }),
       listToolMeta: vi.fn().mockResolvedValue(emptyMeta),
@@ -285,7 +285,7 @@ describe('PresetDetail', () => {
   });
 
   it('blocks an empty-name submit with a field error and makes no api call', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const renamePreset = vi.fn();
     const client: StubApiClient = {
       getPreset: vi.fn().mockResolvedValue(detail),
@@ -303,7 +303,7 @@ describe('PresetDetail', () => {
   });
 
   it('renames, navigates to the new name, and moves the caches', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const renamePreset = vi.fn().mockResolvedValue({
       name: 'london_weather',
       renamed_from: 'paris_weather',

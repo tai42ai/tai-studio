@@ -96,7 +96,7 @@ describe('TemplatesTab', () => {
   });
 
   it('Attach template PUTs the chosen template at its path', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const attachStateTemplate = vi.fn().mockResolvedValue({
       template: 'notes',
       path: ['notes'],
@@ -127,7 +127,7 @@ describe('TemplatesTab', () => {
   });
 
   it('Detach confirms and removes the attachment', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const detachStateTemplate = vi.fn().mockResolvedValue({ name: 'notes', deleted: true });
     renderWithProviders(
       <TemplatesTab
@@ -143,7 +143,7 @@ describe('TemplatesTab', () => {
   });
 
   it('a detach vetoed by a live binding shows the platform refusal verbatim and keeps the row', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const veto =
       "template 'notes' on state 'profile' cannot be detached — referenced by: preset 'welcome' version 1; hook 'greeter'";
     const detachStateTemplate = vi.fn().mockRejectedValue(new ApiError(veto, 409));
@@ -191,7 +191,7 @@ describe('TemplatesTab', () => {
   });
 
   it('Edit declarations saves the attachment when the template declares none', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const patchStateAttachment = vi.fn().mockResolvedValue({
       template: 'notes',
       path: [],
@@ -213,7 +213,7 @@ describe('TemplatesTab', () => {
   });
 
   it('deletes a detached template behind a confirm', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deleteStateTemplate = vi.fn().mockResolvedValue({ name: 'notes', deleted: true });
     renderWithProviders(<TemplatesTab state={detail()} />, {
       client: client({ deleteStateTemplate }),
@@ -227,7 +227,7 @@ describe('TemplatesTab', () => {
   });
 
   it('Upload template PUTs the parsed document', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi.fn().mockResolvedValue(templateDoc());
     const { container } = renderWithProviders(<TemplatesTab state={detail()} />, {
       client: client({ putStateTemplate }),
@@ -249,7 +249,7 @@ describe('TemplatesTab', () => {
   });
 
   it('a bad template upload surfaces a loud alert', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { container } = renderWithProviders(<TemplatesTab state={detail()} />, {
       client: client(),
     });
@@ -260,7 +260,7 @@ describe('TemplatesTab', () => {
   });
 
   it('the attach form renders the template parameter schema', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<TemplatesTab state={detail()} />, {
       client: client({
         listStateTemplates: vi.fn().mockResolvedValue([
@@ -281,7 +281,7 @@ describe('TemplatesTab', () => {
   });
 
   it('a template upload that clashes prompts Replace and retries with replace=true', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi
       .fn()
       .mockRejectedValueOnce(new ApiError('template_exists', 409))
@@ -304,7 +304,7 @@ describe('TemplatesTab', () => {
   });
 
   it('a template upload clash cancelled fires no second PUT', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi.fn().mockRejectedValueOnce(new ApiError('template_exists', 409));
     const { container } = renderWithProviders(<TemplatesTab state={detail()} />, {
       client: client({ putStateTemplate }),
@@ -322,7 +322,7 @@ describe('TemplatesTab', () => {
   });
 
   it('a failed template replace renders its error in the dialog', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateTemplate = vi
       .fn()
       .mockRejectedValueOnce(new ApiError('template_exists', 409))
@@ -340,7 +340,7 @@ describe('TemplatesTab', () => {
   });
 
   it('the attach form renders the template declaration schema up front', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<TemplatesTab state={detail()} />, {
       client: client({
         listStateTemplates: vi.fn().mockResolvedValue([
@@ -361,7 +361,7 @@ describe('TemplatesTab', () => {
   });
 
   it('Edit declarations renders the schema when the template declares fields', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <TemplatesTab
         state={detail([{ template: 'notes', path: [], parameters: {}, declarations: {} }])}
@@ -381,7 +381,7 @@ describe('TemplatesTab', () => {
   });
 
   it('invalidates the template catalog after an attach (the attached_to count changes)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const attachStateTemplate = vi.fn().mockResolvedValue({
       template: 'notes',
       path: ['notes'],
@@ -408,7 +408,7 @@ describe('TemplatesTab', () => {
   });
 
   it('invalidates the template catalog after a detach (the attached_to count changes)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const detachStateTemplate = vi.fn().mockResolvedValue({ name: 'notes', deleted: true });
     const { queryClient } = renderWithProviders(
       <TemplatesTab
@@ -425,7 +425,7 @@ describe('TemplatesTab', () => {
   });
 
   it('the attachments empty state action opens the attach dialog', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<TemplatesTab state={detail()} />, { client: client() });
     const buttons = await screen.findAllByRole('button', { name: 'Attach template' });
     const emptyAction = buttons[1];
@@ -453,7 +453,7 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
     );
 
   it('renders the structured orphan list and retries with a close resolution', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const patchStateAttachment = vi
       .fn()
       .mockRejectedValueOnce(orphanRefusal())
@@ -499,7 +499,7 @@ describe('TemplatesTab — orphan reconcile on a declarations edit', () => {
   });
 
   it('does NOT show the resolve step for a 422 without a reconcile orphan payload', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const patchStateAttachment = vi
       .fn()
       .mockRejectedValue(new ApiError('a declaration value failed validation', 422));

@@ -164,7 +164,7 @@ describe('PresetsList', () => {
   });
 
   it('navigates ?preset= when a row is selected', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
       client: listClient([normal]),
     });
@@ -174,7 +174,7 @@ describe('PresetsList', () => {
   });
 
   it('opens the preset when the row body (a non-link cell) is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
       client: listClient([normal]),
     });
@@ -186,7 +186,7 @@ describe('PresetsList', () => {
   });
 
   it('navigates once — not twice — when the name link itself is clicked', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const { navigate } = renderWithProviders(<PresetsList selected={undefined} />, {
       client: listClient([normal]),
     });

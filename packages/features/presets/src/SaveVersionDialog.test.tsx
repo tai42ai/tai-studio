@@ -71,7 +71,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('sends ONLY the changed description field (untouched fields carry forward)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { ...detail, output_schema: null },
@@ -101,7 +101,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('rejects an edited-blank description client side (inline error, submit blocked)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn();
     renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
       client: client({ savePresetVersion }),
@@ -119,7 +119,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('sends an explicit [] when the extensions builder is cleared', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { ...detail, output_schema: null },
@@ -139,7 +139,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it("preserves an untouched combo's author config when a sibling combo is edited", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { ...detail, output_schema: null },
@@ -178,7 +178,7 @@ describe('SaveVersionDialog', () => {
   };
 
   it('carry-forward — EXPLICIT set: sends a newly-authored output_schema', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { ...detail, output_schema: null },
@@ -200,7 +200,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('carry-forward — ABSENT: an untouched output_schema is omitted (carries forward)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { ...withSchema },
@@ -222,7 +222,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('carry-forward — EXPLICIT clear: clearing the editor sends output_schema: null', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({
       version: 3,
       body: { ...detail, output_schema: null },
@@ -242,7 +242,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('renders the field-vs-extension conflict 400 verbatim inline', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const message =
       'output_schema cannot be set both as a field and as an explicit output_schema extension';
     const savePresetVersion = vi.fn().mockRejectedValue(new Error(message));
@@ -259,7 +259,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('blocks submit and shows the parser message on malformed fixed_kwargs JSON', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn();
     renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
       client: client({ savePresetVersion }),
@@ -277,7 +277,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('renders a 409 conflicted message verbatim', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi
       .fn()
       .mockRejectedValue(new Error("preset 'paris_weather' is conflicted and is delete-only"));
@@ -295,7 +295,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('validate — sends the MERGED editable draft (seed + edits, no base_tool/description)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
     renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
       client: client({ validatePreset }),
@@ -316,7 +316,7 @@ describe('SaveVersionDialog', () => {
   });
 
   it('flags a seeded stale combo (unknown name) with ZERO edits and blocks submit', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // The catalog resolves WITHOUT `chain`, so the seeded `[['chain']]` is stale.
     const savePresetVersion = vi.fn();
     renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
@@ -376,7 +376,7 @@ describe('SaveVersionDialog', () => {
     });
 
     it('carries an edited binding into the save-version body', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const savePresetVersion = vi.fn().mockResolvedValue({
         version: 3,
         body: { ...detail, state_binding: null },
@@ -415,7 +415,7 @@ describe('SaveVersionDialog', () => {
     });
 
     it('sends an explicit null when the seeded binding is removed', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const savePresetVersion = vi.fn().mockResolvedValue({
         version: 3,
         body: { ...detail, state_binding: null },
@@ -442,7 +442,7 @@ describe('SaveVersionDialog', () => {
     });
 
     it('validate — sends an explicit null state_binding when the seeded binding is cleared', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const validatePreset = vi.fn().mockResolvedValue({ valid: true, error: null });
       renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
         client: client({
@@ -469,7 +469,7 @@ describe('SaveVersionDialog', () => {
     });
 
     it('validate — renders a state_binding verdict issue verbatim', async () => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ delay: null });
       const validatePreset = vi.fn().mockResolvedValue({
         valid: false,
         error: 'invalid state_binding: state "counters" is not declared',

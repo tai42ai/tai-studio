@@ -75,7 +75,7 @@ describe('RecordPage', () => {
   });
 
   it('a missing document creates one through the form (no blind PUT {})', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateRecord = vi.fn().mockResolvedValue(record({ tone: 'calm' }));
     renderWithProviders(
       <RecordPage stateName="profile" subjectParam="person:p-1" targetParam="agent:assistant" />,
@@ -98,7 +98,7 @@ describe('RecordPage', () => {
   });
 
   it('an existing document edits and saves', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateRecord = vi.fn().mockResolvedValue(record({ tone: 'cool' }));
     renderWithProviders(
       <RecordPage stateName="profile" subjectParam="person:p-1" targetParam="agent:assistant" />,
@@ -115,7 +115,7 @@ describe('RecordPage', () => {
   });
 
   it('Erase deletes the record behind a danger confirm', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const deleteStateRecord = vi.fn().mockResolvedValue({ erased: true });
     renderWithProviders(
       <RecordPage stateName="profile" subjectParam="person:p-1" targetParam="agent:assistant" />,
@@ -130,7 +130,7 @@ describe('RecordPage', () => {
   });
 
   it('Fold merges this subject into another', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const foldStateRecord = vi.fn().mockResolvedValue(record({ tone: 'warm' }));
     renderWithProviders(
       <RecordPage stateName="profile" subjectParam="person:p-1" targetParam="agent:assistant" />,
@@ -222,7 +222,7 @@ describe('RecordPage', () => {
   });
 
   it('a representable schema edits through the SchemaForm and saves the value', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateRecord = vi.fn().mockResolvedValue(record({ tone: 'warm' }));
     const representable = {
       ...detail(),
@@ -242,7 +242,7 @@ describe('RecordPage', () => {
   });
 
   it('a malformed JSON document blocks the save with a loud inline error', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const putStateRecord = vi.fn();
     renderWithProviders(
       <RecordPage stateName="profile" subjectParam="person:p-1" targetParam="agent:assistant" />,
@@ -258,7 +258,7 @@ describe('RecordPage', () => {
   });
 
   it('a refused fold renders inline', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(
       <RecordPage stateName="profile" subjectParam="person:p-1" targetParam="agent:assistant" />,
       {
@@ -298,7 +298,7 @@ describe('RecordPage', () => {
   });
 
   it('the Writes card pages with Load more', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const entry = (seq: number) => ({
       seq,
       at: '2026-01-01T00:00:00Z',

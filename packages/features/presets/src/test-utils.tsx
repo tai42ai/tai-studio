@@ -15,10 +15,10 @@ import {
   ThemeProvider,
 } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, type RenderResult, screen } from '@testing-library/react';
+import { render, type RenderResult, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
-import { type Mock, vi } from 'vitest';
+import { expect, type Mock, vi } from 'vitest';
 
 /** A stub client: only the methods the unit under test calls need to be present. */
 export type StubApiClient = Partial<ApiClient>;
@@ -127,10 +127,26 @@ export function baseClient(overrides: StubApiClient = {}): StubApiClient {
   };
 }
 
+/**
+ * Opens the base-tool picker once its tool list has loaded. The picker renders
+ * disabled while `listTools` is pending; clicking then lands on an inert control
+ * and no listbox opens, so wait for the enabled state before opening it.
+ */
+export async function openBasePicker(
+  user: ReturnType<typeof userEvent.setup>,
+): Promise<HTMLElement> {
+  const combobox = await screen.findByRole('combobox');
+  await waitFor(() => {
+    expect(combobox).toBeEnabled();
+  });
+  await user.click(combobox);
+  return combobox;
+}
+
 /** Name + base only — used by the validate tests (an empty description is valid to validate). */
 export async function fillNameAndBase(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.type(screen.getByPlaceholderText('paris_weather'), 'paris_weather');
-  await user.click(await screen.findByRole('combobox'));
+  await openBasePicker(user);
   await user.click(await screen.findByRole('option', { name: 'weather' }));
 }
 

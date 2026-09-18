@@ -56,7 +56,7 @@ describe('PresetVersions', () => {
   });
 
   it('edits a version tag through the dialog and invalidates the versions key', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const setPresetVersionTags = vi
       .fn()
       .mockResolvedValue({ name: 'paris_weather', version: 2, tags: ['stable', 'reviewed'] });
@@ -81,7 +81,7 @@ describe('PresetVersions', () => {
   });
 
   it('rolls back through the confirm and invalidates the list + detail keys', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const rollbackPreset = vi.fn().mockResolvedValue({ name: 'paris_weather', active_version: 1 });
     const client: StubApiClient = {
       listPresetVersions: vi.fn().mockResolvedValue([version(1, false), version(2, true)]),

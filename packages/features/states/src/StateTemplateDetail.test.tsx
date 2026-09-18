@@ -74,7 +74,7 @@ describe('StateTemplateDetail', () => {
   });
 
   it('lists template jq by name, purpose, description and params/writes on the Jq tab', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = { getStateTemplate: vi.fn().mockResolvedValue(doc()) };
     renderWithProviders(<StateTemplateDetail name="tally" />, { client });
     await screen.findByTestId('state-template-detail');
@@ -90,7 +90,7 @@ describe('StateTemplateDetail', () => {
   });
 
   it('shows the empty jq state when the template declares none', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       getStateTemplate: vi.fn().mockResolvedValue(doc({ template_jq: null })),
     };

@@ -16,6 +16,7 @@ import {
   apiKey,
   fullProjection,
   hook,
+  openSelect,
   renderWithProviders,
   type StubApiClient,
 } from './test-utils';
@@ -31,7 +32,7 @@ async function fillRegisterRequired(
     topic,
   );
   await user.type(screen.getByLabelText('Tool'), tool);
-  await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+  await openSelect(user, 'Execution key');
   await user.click(await screen.findByRole('option', { name: /svc-events/ }));
 }
 
@@ -157,7 +158,7 @@ describe('HooksPage — list', () => {
 
 describe('HooksPage — topic filter', () => {
   it('refetches with the entered topic as the listHooks argument', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0 });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -181,7 +182,7 @@ describe('HooksPage — topic filter', () => {
 
 describe('HooksPage — register', () => {
   it('registers a hook with the built params and invalidates the list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0 });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
@@ -217,7 +218,7 @@ describe('HooksPage — register', () => {
   });
 
   it('disables Register while the POST is IN FLIGHT, so a double click cannot register twice', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockReturnValue(new Promise(() => undefined));
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -239,7 +240,7 @@ describe('HooksPage — register', () => {
   });
 
   it('shows a loud field error on invalid tool_kwargs JSON and never calls registerHook', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn();
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -259,7 +260,7 @@ describe('HooksPage — register', () => {
   });
 
   it('shows a loud inline field error for a valid-JSON but non-object tool_kwargs and never calls registerHook', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn();
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -280,7 +281,7 @@ describe('HooksPage — register', () => {
   });
 
   it('renders a loud ErrorState when registerHook fails', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockRejectedValue(new Error('register boom'));
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -301,7 +302,7 @@ describe('HooksPage — register', () => {
   });
 
   it('blocks submit with every required-field error when the form is blank', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn();
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -324,7 +325,7 @@ describe('HooksPage — register', () => {
 
 describe('HooksPage — register: execution key + trigger auth', () => {
   it('lists the api-keys surface in the picker, description and mint fingerprint included', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHookVerifiers: vi.fn().mockResolvedValue([]),
@@ -332,14 +333,14 @@ describe('HooksPage — register: execution key + trigger auth', () => {
     };
     renderWithProviders(<HooksPage search={{}} />, { client });
 
-    await user.click(await screen.findByRole('combobox', { name: 'Execution key' }));
+    await openSelect(user, 'Execution key');
     expect(
       await screen.findByRole('option', { name: 'svc-events — Event service key · kf-9f2c1d' }),
     ).toBeInTheDocument();
   });
 
   it("surfaces the server's pass-role refusal VERBATIM", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const message = 'execution_key svc-events is not yours to delegate';
     const registerHook = vi.fn().mockRejectedValue(new ApiError(message, 403, 'pass_role'));
     const client: StubApiClient = {
@@ -358,7 +359,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
   });
 
   it("surfaces the server's token-free-evaluable refusal VERBATIM", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const message =
       'execution_key svc-events has a request-context-conditional policy and cannot be bound';
     const registerHook = vi
@@ -380,7 +381,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
   });
 
   it('RESETS the bound key after a successful register', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -419,7 +420,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
   });
 
   it('clears the required-field errors after a successful register', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -444,7 +445,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
   });
 
   it('clears a stale kwargs error on the next submit, while still mounted', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn();
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -471,7 +472,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
   });
 
   it('blocks submit when every field but the execution key is filled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const registerHook = vi.fn();
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
@@ -559,7 +560,7 @@ describe('HooksPage — register: execution key + trigger auth', () => {
 
 describe('HooksPage — the dialog opened over the register form', () => {
   it('makes the register form inert, so the pickers cannot collide', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listTokensPayload = vi.fn().mockResolvedValue([apiKey()]);
     const client: StubApiClient = {
       baseUrl: '',
@@ -629,7 +630,7 @@ describe('HooksPage — topic verifiers', () => {
 
 describe('HooksPage — bind topic verifier', () => {
   it('feeds the verifier picker from listHookVerifiers and binds with the parsed body', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} });
     const listHookVerifiers = vi.fn().mockResolvedValue(['shared_secret', 'hmac_sha256']);
     const setTopicVerifier = vi
@@ -647,7 +648,7 @@ describe('HooksPage — bind topic verifier', () => {
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
       'events.created',
     );
-    await user.click(await screen.findByRole('combobox', { name: 'Verifier' }));
+    await openSelect(user, 'Verifier');
     await user.click(await screen.findByRole('option', { name: 'shared_secret' }));
     await user.type(
       screen.getByLabelText('Config (JSON)'),
@@ -668,7 +669,7 @@ describe('HooksPage — bind topic verifier', () => {
   });
 
   it('omits config from the body when the config textarea is blank', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} });
     const listHookVerifiers = vi.fn().mockResolvedValue(['shared_secret']);
     const setTopicVerifier = vi
@@ -686,7 +687,7 @@ describe('HooksPage — bind topic verifier', () => {
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
       'events.created',
     );
-    await user.click(await screen.findByRole('combobox', { name: 'Verifier' }));
+    await openSelect(user, 'Verifier');
     await user.click(await screen.findByRole('option', { name: 'shared_secret' }));
     await user.click(screen.getByRole('button', { name: 'Bind verifier' }));
 
@@ -726,7 +727,7 @@ describe('HooksPage — bind topic verifier', () => {
   });
 
   it('blocks the bind (no request) on a missing topic or verifier', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} });
     const listHookVerifiers = vi.fn().mockResolvedValue(['shared_secret']);
     const setTopicVerifier = vi.fn();
@@ -747,7 +748,7 @@ describe('HooksPage — bind topic verifier', () => {
   });
 
   it('blocks the bind with a loud field error on malformed config JSON', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} });
     const listHookVerifiers = vi.fn().mockResolvedValue(['shared_secret']);
     const setTopicVerifier = vi.fn();
@@ -763,7 +764,7 @@ describe('HooksPage — bind topic verifier', () => {
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
       'events.created',
     );
-    await user.click(await screen.findByRole('combobox', { name: 'Verifier' }));
+    await openSelect(user, 'Verifier');
     await user.click(await screen.findByRole('option', { name: 'shared_secret' }));
     await user.type(screen.getByLabelText('Config (JSON)'), 'not json');
     await user.click(screen.getByRole('button', { name: 'Bind verifier' }));
@@ -773,7 +774,7 @@ describe('HooksPage — bind topic verifier', () => {
   });
 
   it('surfaces an unknown-verifier 400 verbatim', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({ items: [], total: 0, topic_verifiers: {} });
     const listHookVerifiers = vi.fn().mockResolvedValue(['shared_secret']);
     const setTopicVerifier = vi
@@ -791,7 +792,7 @@ describe('HooksPage — bind topic verifier', () => {
       within(screen.getByRole('form', { name: 'Bind topic verifier' })).getByLabelText('Topic'),
       'events.created',
     );
-    await user.click(await screen.findByRole('combobox', { name: 'Verifier' }));
+    await openSelect(user, 'Verifier');
     await user.click(await screen.findByRole('option', { name: 'shared_secret' }));
     await user.click(screen.getByRole('button', { name: 'Bind verifier' }));
 
@@ -799,7 +800,7 @@ describe('HooksPage — bind topic verifier', () => {
   });
 
   it('shows the binding a re-bind will replace on an already-bound topic', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({
       items: [],
       total: 0,
@@ -822,7 +823,7 @@ describe('HooksPage — bind topic verifier', () => {
   });
 
   it('treats a topic named after an Object.prototype member as UNBOUND', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHookVerifiers: vi.fn().mockResolvedValue(['shared_secret']),
@@ -842,7 +843,7 @@ describe('HooksPage — bind topic verifier', () => {
 
 describe('HooksPage — unbind topic verifier', () => {
   it('unbinds a topic behind a confirm dialog and invalidates the list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({
       items: [],
       total: 0,
@@ -873,7 +874,7 @@ describe('HooksPage — unbind topic verifier', () => {
   });
 
   it('does not unbind when the confirm dialog is cancelled', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({
       items: [],
       total: 0,
@@ -899,7 +900,7 @@ describe('HooksPage — unbind topic verifier', () => {
   });
 
   it('surfaces a 404 verbatim in the unbind dialog', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const listHooks = vi.fn().mockResolvedValue({
       items: [],
       total: 0,
@@ -927,7 +928,7 @@ describe('HooksPage — unbind topic verifier', () => {
   });
 
   it("resets the mutation on open, so one topic's failed unbind does not leak its error into the next topic's dialog", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // The unbind fails for the first topic; the second topic's dialog never submits.
     const deleteTopicVerifier = vi
       .fn()
@@ -974,7 +975,7 @@ describe('HooksPage — unbind topic verifier', () => {
 
 describe('HooksPage — delete', () => {
   it('unregisters a hook behind a confirm dialog', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const unregisterHook = vi.fn().mockResolvedValue({ removed: true, name: 'notify-event' });
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),

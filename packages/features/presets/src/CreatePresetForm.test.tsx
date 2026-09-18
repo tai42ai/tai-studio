@@ -16,13 +16,14 @@ import {
   baseClient,
   fillCreatable,
   fillNameAndBase,
+  openBasePicker,
   record,
   renderWithProviders,
 } from './test-utils';
 
 describe('CreatePresetForm', () => {
   it('assembles a TAGLESS body, writes the tags to the overlay AFTER create, and OMITS extensions', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi.fn().mockResolvedValue({
       tool_name: 'paris_weather',
@@ -69,7 +70,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('completes the create even when the overlay tag write is refused as not-configured', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi
       .fn()
@@ -94,7 +95,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('does NOT write the overlay when no tags were entered', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi.fn();
     const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
@@ -116,7 +117,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('HIDES the tags input when the tool_meta kind is OFF, and still creates', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const upsertToolMeta = vi.fn();
     const { navigate } = renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
@@ -156,7 +157,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('blocks submit and shows the field error when the description is empty', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({ createPreset }),
@@ -172,7 +173,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('groups the base picker on the MERGED native + overlay tag map (union of both reads)', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     // `weather` carries a NATIVE tag; `radar` carries only an OVERLAY tag. The tag
     // filter lists the UNION, so a tag from either read proves the map is merged.
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
@@ -207,7 +208,7 @@ describe('CreatePresetForm', () => {
     // `secret` is plugin-hidden with no overlay opinion → excluded. `radar` is
     // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
     // `weather` is a plain visible tool → offered.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({
         listTools: vi.fn().mockResolvedValue(['weather', 'secret', 'radar']),
@@ -225,16 +226,17 @@ describe('CreatePresetForm', () => {
       }),
     });
 
-    await user.click(await screen.findByRole('combobox'));
-    expect(await screen.findByRole('option', { name: 'weather' })).toBeInTheDocument();
-    // The overlay UNHIDES the plugin-hidden `radar`, so it IS a selectable base.
-    expect(screen.getByRole('option', { name: 'radar' })).toBeInTheDocument();
+    await openBasePicker(user);
+    // `radar` is offered only once the overlay unhides it, so its option settles
+    // last: awaiting it proves the tool-meta read applied and the exclusion is final.
+    expect(await screen.findByRole('option', { name: 'radar' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'weather' })).toBeInTheDocument();
     // The effective-hidden `secret` is absent from the picker.
     expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
   });
 
   it('includes output_schema in the body when the author sets one', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
@@ -252,7 +254,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('blocks submit and shows the parse error when output_schema is invalid JSON', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
@@ -268,7 +270,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('renders a 400 invalid-output-schema message verbatim', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi
       .fn()
       .mockRejectedValue(
@@ -289,7 +291,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('blocks submit with the parser message when fixed_kwargs is not valid JSON', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
@@ -306,7 +308,7 @@ describe('CreatePresetForm', () => {
   });
 
   it('renders a 409 duplicate message verbatim', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi
       .fn()
       .mockRejectedValue(new Error("preset 'paris_weather' already exists"));
@@ -326,7 +328,7 @@ describe('CreatePresetForm', () => {
     // OFF is a state, not an error — the muted note replaces the red alert, and both
     // Create and Validate (they write the same store) are withdrawn so the
     // certain-to-refuse writes cannot re-fire.
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const createPreset = vi
       .fn()
       .mockRejectedValue(

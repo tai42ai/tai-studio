@@ -19,8 +19,9 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
-    // The register/create-flow tests drive full typed forms through userEvent and
-    // run 2-5s wall on shared CI runners; the 5s default leaves no headroom.
+    // user-event drives these forms without its per-key delay; the headroom above
+    // the 5s default covers the Radix portal and combobox render chain the register
+    // and create-link forms walk while coverage instrumentation is active.
     testTimeout: 15_000,
     coverage: {
       provider: 'v8',
