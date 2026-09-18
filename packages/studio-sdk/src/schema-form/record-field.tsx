@@ -22,6 +22,7 @@ import { RecordEntryRendererContext } from './context';
 import { defaultValueForSchema } from './default-value';
 import { FieldGroup } from './field-group';
 import { FieldNode } from './field-node';
+import { useKeyedCallbacks } from './keyed-callbacks';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
 interface Row {
@@ -119,6 +120,10 @@ export function RecordField({
   const setValue = (id: number, next: unknown): void => {
     commit(rows.map((row) => (row.id === id ? { ...row, value: next } : row)));
   };
+  const valueChangeFor = useKeyedCallbacks<number, unknown>(
+    setValue,
+    rows.map((row) => row.id),
+  );
   const addRow = (): void => {
     commit([...rows, { id: nextId.current++, key: '', value: newEntryValue(values, root) }]);
   };
@@ -146,9 +151,7 @@ export function RecordField({
             schema={values}
             root={root}
             value={row.value}
-            onChange={(next) => {
-              setValue(row.id, next);
-            }}
+            onChange={valueChangeFor(row.id)}
             path={entryPath}
             label={undefined}
             required
@@ -179,9 +182,7 @@ export function RecordField({
                     path: entryPath,
                     valueSchema: values,
                     value: row.value,
-                    onChange: (next) => {
-                      setValue(row.id, next);
-                    },
+                    onChange: valueChangeFor(row.id),
                     defaultField,
                   })}
             </div>

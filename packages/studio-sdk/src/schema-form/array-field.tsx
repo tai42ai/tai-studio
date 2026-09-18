@@ -11,6 +11,7 @@ import { classifySchema } from './classify';
 import { defaultValueForSchema } from './default-value';
 import { FieldGroup } from './field-group';
 import { FieldNode } from './field-node';
+import { useKeyedCallbacks } from './keyed-callbacks';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
 export function ArrayField({
@@ -46,6 +47,7 @@ export function ArrayField({
   const setItem = (index: number, next: unknown): void => {
     onChange(list.map((item, position) => (position === index ? next : item)));
   };
+  const changeFor = useKeyedCallbacks<number, unknown>(setItem, list.keys());
 
   return (
     <FieldGroup heading={heading} description={description} error={error} atRoot={false}>
@@ -63,9 +65,7 @@ export function ArrayField({
               schema={items}
               root={root}
               value={item}
-              onChange={(next) => {
-                setItem(index, next);
-              }}
+              onChange={changeFor(index)}
               path={`${path}[${String(index)}]`}
               label={`Item ${String(index + 1)}`}
               required

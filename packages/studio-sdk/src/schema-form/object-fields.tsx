@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react';
 
 import { FieldNode } from './field-node';
+import { useKeyedCallbacks } from './keyed-callbacks';
 import type { JsonSchema, SchemaFormErrors } from './types';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -38,6 +39,12 @@ export function ObjectFields({
   markRequired?: boolean;
 }): ReactNode {
   const obj = isPlainObject(value) ? value : {};
+  const changeFor = useKeyedCallbacks<string, unknown>(
+    (name, next) => {
+      onChange(setKey(obj, name, next));
+    },
+    properties.map(([name]) => name),
+  );
   return (
     <>
       {properties.map(([name, propSchema]) => {
@@ -49,9 +56,7 @@ export function ObjectFields({
             schema={propSchema}
             root={root}
             value={obj[name]}
-            onChange={(next) => {
-              onChange(setKey(obj, name, next));
-            }}
+            onChange={changeFor(name)}
             path={childPath}
             label={name}
             required={requiredKeys.has(name)}

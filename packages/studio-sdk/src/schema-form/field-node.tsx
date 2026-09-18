@@ -4,7 +4,7 @@
  * inline; every other kind delegates to a dedicated field component). Object,
  * array, and union renderers recurse back through here for their children.
  */
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 
 import { Checkbox } from '../components/checkbox';
 import { Field } from '../components/field';
@@ -45,8 +45,14 @@ function labelText(explicit: string | undefined, label: string | undefined): str
   return explicit ?? label ?? 'Value';
 }
 
-/** A single schema node, dispatched on its classified model kind. */
-export function FieldNode(props: FieldNodeProps): ReactNode {
+/**
+ * A single schema node, dispatched on its classified model kind. Wrapped in
+ * `memo` so a field whose props are unchanged is skipped: the containers hand
+ * each child a referentially-stable `onChange` (see {@link useKeyedCallbacks})
+ * and the controlled value keeps unedited branches identity-equal, so editing
+ * one field re-renders only that field's subtree, not every sibling.
+ */
+function FieldNodeImpl(props: FieldNodeProps): ReactNode {
   const { root, value, onChange, path, required, idPrefix, errors } = props;
   const classified = classifySchema(props.schema, root);
   const base = labelText(classified.title, props.label);
@@ -186,6 +192,8 @@ export function FieldNode(props: FieldNodeProps): ReactNode {
       );
   }
 }
+
+export const FieldNode = memo(FieldNodeImpl);
 
 /** The label/description/error chrome every scalar leaf field shares. */
 interface ScalarFieldChrome {
