@@ -58,10 +58,10 @@ describe('login renderer', () => {
         methods: [
           {
             shape: 'button',
-            id: 'oidc',
+            id: 'sso',
             label: 'Continue with SSO',
             icon: svg,
-            href: '/api/login/oidc/start',
+            href: '/api/login/sso/start',
           },
         ],
       }),
@@ -69,7 +69,7 @@ describe('login renderer', () => {
     renderStudio({ initialPath: '/login' });
 
     const link = await screen.findByRole('link', { name: /Continue with SSO/ });
-    expect(link).toHaveAttribute('href', '/api/login/oidc/start');
+    expect(link).toHaveAttribute('href', '/api/login/sso/start');
     const img = link.querySelector('img');
     expect(img?.getAttribute('src')?.startsWith('data:image/svg+xml')).toBe(true);
     // The SVG markup never became live DOM.
@@ -120,9 +120,9 @@ describe('login renderer', () => {
         methods: [
           {
             shape: 'button',
-            id: 'oidc',
+            id: 'sso',
             label: 'Continue with SSO',
-            href: '/api/login/oidc/start',
+            href: '/api/login/sso/start',
           },
         ],
       }),

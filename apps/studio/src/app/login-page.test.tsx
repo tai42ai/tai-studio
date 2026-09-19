@@ -21,9 +21,9 @@ function buttonMethod(): ReturnType<typeof http.get> {
         methods: [
           {
             shape: 'button',
-            id: 'oidc',
+            id: 'sso',
             label: 'Continue with SSO',
-            href: '/api/login/oidc/start',
+            href: '/api/login/sso/start',
           },
         ],
       },

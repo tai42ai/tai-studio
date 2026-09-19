@@ -30,7 +30,7 @@ export function MethodView({
     if (!isSafeApiPath(method.href)) return <InvalidMethod id={method.id} />;
     return (
       <div style={sectionStyle}>
-        {/* A full-page navigation — the OIDC flow leaves the SPA — so the Button
+        {/* A full-page navigation — the sign-in flow leaves the SPA — so the Button
             link variant renders a plain same-origin anchor for this `/api/` path,
             not a router link. */}
         <Button href={method.href} variant="secondary">

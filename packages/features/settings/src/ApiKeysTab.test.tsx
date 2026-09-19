@@ -133,7 +133,7 @@ describe('ApiKeysTab', () => {
         getAuthCapabilities: vi.fn(() =>
           Promise.resolve({
             mintable: false,
-            providers: [{ name: 'oidc-external', mintable: false }],
+            providers: [{ name: 'sso-external', mintable: false }],
           }),
         ),
       }),

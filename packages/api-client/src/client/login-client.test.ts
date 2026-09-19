@@ -78,7 +78,7 @@ describe('getLoginMethods client transport', () => {
               fields: [{ name: 'email', label: 'Email', secret: false }],
               submit_path: '/api/login/password',
             },
-            { shape: 'button', id: 'oidc', label: 'Continue', href: '/api/login/oidc/start' },
+            { shape: 'button', id: 'sso', label: 'Continue', href: '/api/login/sso/start' },
           ],
         },
       }),
@@ -321,11 +321,11 @@ describe('submitSetup client transport', () => {
 describe('getAuthCapabilities client transport', () => {
   it('GETs /api/auth/capabilities and parses { mintable, providers }', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { mintable: false, providers: [{ name: 'oidc', mintable: false }] } }),
+      jsonResponse({ data: { mintable: false, providers: [{ name: 'sso', mintable: false }] } }),
     );
     const out = await client.getAuthCapabilities();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/auth/capabilities');
-    expect(out).toEqual({ mintable: false, providers: [{ name: 'oidc', mintable: false }] });
+    expect(out).toEqual({ mintable: false, providers: [{ name: 'sso', mintable: false }] });
   });
 });

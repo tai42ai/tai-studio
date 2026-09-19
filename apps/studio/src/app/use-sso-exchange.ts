@@ -1,5 +1,5 @@
 /**
- * The SSO hand-back: the OIDC callback route 302s to `/login?sso=<code>` after
+ * The SSO hand-back: the server-side login callback route 302s to `/login?sso=<code>` after
  * minting a session server-side; exchange the one-time code for a token here, then
  * strip the param. A `useRef` latch runs the exchange exactly once — strict-mode's
  * double effect invoke would otherwise consume the single-use code twice and fail.
