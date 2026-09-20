@@ -429,7 +429,7 @@ describe('configMode schema — read_only default', () => {
   });
 
   it('honors an explicit read_only: true when a deployment opts in', () => {
-    const parsed = schemas.configMode.parse({ config_mode: 'k8s', read_only: true });
+    const parsed = schemas.configMode.parse({ config_mode: 'kubernetes', read_only: true });
     expect(parsed.read_only).toBe(true);
   });
 

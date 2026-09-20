@@ -82,11 +82,11 @@ describe('config client transport', () => {
 
   it('getConfigMode GETs /api/config/mode and parses config_mode', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { config_mode: 'k8s', read_only: true } }),
+      jsonResponse({ data: { config_mode: 'kubernetes', read_only: true } }),
     );
     const out = await client.getConfigMode();
     expect(captured[0]?.url).toBe('/api/config/mode');
-    expect(out.config_mode).toBe('k8s');
+    expect(out.config_mode).toBe('kubernetes');
     expect(out.read_only).toBe(true);
   });
 
