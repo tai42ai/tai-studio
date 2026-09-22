@@ -10,6 +10,7 @@ import {
   Checkbox,
   errorMessage,
   ErrorState,
+  ExecutionKeyPicker,
   Field,
   RadioGroup,
   Spinner,
@@ -18,7 +19,6 @@ import {
 } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { ExecutionKeyPicker } from './ExecutionKeyPicker';
 import { EXPIRY_OPTIONS, type ExpiryChoice } from './expiry';
 import type { CreateTriggerLinkForm } from './useCreateTriggerLink';
 
@@ -59,6 +59,7 @@ export function TriggerLinkForm({ form, onClose }: TriggerLinkFormProps): ReactN
         />
       </Field>
       <ExecutionKeyPicker
+        query={form.keysQuery}
         value={form.executionKey}
         onValueChange={form.setExecutionKey}
         error={

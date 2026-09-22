@@ -296,12 +296,14 @@ function expressionShape(
   argName: string,
 ): ExpressionInputShape | undefined {
   const declared =
-    expression.label !== undefined ||
-    expression.blurb !== undefined ||
-    expression.keys !== undefined ||
-    expression.returns !== undefined ||
-    expression.caveats !== undefined ||
-    expression.hasSample;
+    [
+      expression.label,
+      expression.blurb,
+      expression.keys,
+      expression.variables,
+      expression.returns,
+      expression.caveats,
+    ].some((field) => field !== undefined) || expression.hasSample;
   if (!declared) return undefined;
   return {
     // Opaque, host-namespaced, stable per field (memoisation/telemetry only).
@@ -312,6 +314,23 @@ function expressionShape(
     returns: expression.returns ?? '',
     ...(expression.caveats === undefined ? {} : { caveats: expression.caveats }),
     ...(expression.hasSample ? { sample: expression.sample } : {}),
+    ...(expression.variables === undefined
+      ? {}
+      : { variables: expression.variables.map(expressionVariable) }),
+  };
+}
+
+/** Map one classified annotation variable onto the door's variable descriptor. */
+function expressionVariable(
+  variable: NonNullable<ExpressionAnnotation['variables']>[number],
+): NonNullable<ExpressionInputShape['variables']>[number] {
+  return {
+    name: variable.name,
+    blurb: variable.blurb,
+    // The annotation glosses no sub-keys of a variable's value, so the door gets
+    // the variable's shape as untyped (empty keys).
+    keys: [],
+    ...(variable.hasSample ? { sample: variable.sample } : {}),
   };
 }
 

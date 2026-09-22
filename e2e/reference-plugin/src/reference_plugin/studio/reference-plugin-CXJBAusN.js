@@ -1,8 +1,8 @@
 import { jsx as e, jsxs as r } from "react/jsx-runtime";
-import * as y from "react";
+import { useApi as y, Card as c, TextInput as R, Checkbox as S, Button as x, Spinner as k, ErrorState as v, JsonTree as T } from "@tai42/studio-sdk";
+import * as _ from "react";
 import { useState as i } from "react";
-import { useApi as R, Card as c, TextInput as S, Checkbox as x, Button as k, Spinner as v, ErrorState as T, JsonTree as _ } from "@tai42/studio-sdk";
-window.__pluginReact = y;
+window.__pluginReact = _;
 const s = "studio_demo_echo";
 function w(t) {
   if (typeof t != "object" || t === null) return !1;
@@ -10,7 +10,7 @@ function w(t) {
   return typeof o.original == "string" && typeof o.echoed == "string" && typeof o.shouted == "boolean";
 }
 function E(t) {
-  const o = R(), [d, m] = i("hello from the reference plugin"), [a, b] = i(!1), [l, h] = i("idle"), [u, g] = i(null), [p, f] = i(null);
+  const o = y(), [d, m] = i("hello from the reference plugin"), [a, b] = i(!1), [l, h] = i("idle"), [u, g] = i(null), [p, f] = i(null);
   return /* @__PURE__ */ e(c, { children: /* @__PURE__ */ r(
     "div",
     {
@@ -22,7 +22,7 @@ function E(t) {
           s
         ] }),
         /* @__PURE__ */ e(
-          S,
+          R,
           {
             "aria-label": "message",
             "data-testid": "echo-message",
@@ -32,9 +32,9 @@ function E(t) {
             }
           }
         ),
-        /* @__PURE__ */ e(x, { checked: a, onCheckedChange: b, label: "Shout (upper-case the echo)" }),
+        /* @__PURE__ */ e(S, { checked: a, onCheckedChange: b, label: "Shout (upper-case the echo)" }),
         /* @__PURE__ */ e(
-          k,
+          x,
           {
             variant: "primary",
             "data-testid": "echo-run",
@@ -53,9 +53,9 @@ function E(t) {
             children: l === "running" ? "Running…" : "Run echo"
           }
         ),
-        l === "running" && /* @__PURE__ */ e(v, {}),
-        p !== null && /* @__PURE__ */ e(T, { message: p }),
-        u !== null && /* @__PURE__ */ e("div", { "data-testid": "echo-result", children: /* @__PURE__ */ e(_, { data: u, label: `${s} result` }) })
+        l === "running" && /* @__PURE__ */ e(k, {}),
+        p !== null && /* @__PURE__ */ e(v, { message: p }),
+        u !== null && /* @__PURE__ */ e("div", { "data-testid": "echo-result", children: /* @__PURE__ */ e(T, { data: u, label: `${s} result` }) })
       ]
     }
   ) });

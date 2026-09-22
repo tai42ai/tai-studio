@@ -18,7 +18,10 @@ const HOOK = {
   execution_key_fingerprint: 'e2e00000000000000000000000000000',
   tool_kwargs: {},
   condition: null,
-  expr: null,
+  start_expr: null,
+  cancel_expr: null,
+  resume_expr: null,
+  extras_expr: null,
 };
 
 async function stubHooks(page: Page): Promise<void> {

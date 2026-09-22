@@ -6,7 +6,12 @@
  * renders differently from the plain string it falls back to.
  */
 import { isRecord } from '../guards';
-import type { ExpressionAnnotation, ExpressionAnnotationKey, MediaUpload } from './field-model';
+import type {
+  ExpressionAnnotation,
+  ExpressionAnnotationKey,
+  ExpressionAnnotationVariable,
+  MediaUpload,
+} from './field-model';
 import type { JsonSchema } from './types';
 
 const EXPRESSION_KEYWORD = 'x-tai42-expression';
@@ -58,6 +63,29 @@ function parseAnnotationKeys(
   return keys;
 }
 
+/** Parse the optional `variables` array: absent → `undefined`, malformed → `null`
+ *  (reject). Each entry needs a string `name` and `blurb`; `sample` is any JSON
+ *  (including `null`), so its presence is tracked rather than typed. */
+function parseAnnotationVariables(
+  value: unknown,
+): readonly ExpressionAnnotationVariable[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) return null;
+  const variables: ExpressionAnnotationVariable[] = [];
+  for (const entry of value as readonly unknown[]) {
+    if (!isRecord(entry) || typeof entry.name !== 'string' || typeof entry.blurb !== 'string') {
+      return null;
+    }
+    variables.push({
+      name: entry.name,
+      blurb: entry.blurb,
+      hasSample: 'sample' in entry,
+      sample: entry.sample,
+    });
+  }
+  return variables;
+}
+
 /** Parse the optional `caveats` array: absent → `undefined`, malformed → `null` (reject). */
 function parseCaveatList(value: unknown): readonly string[] | undefined | null {
   if (value === undefined) return undefined;
@@ -94,6 +122,8 @@ export function expressionAnnotation(schema: JsonSchema): ExpressionAnnotation |
 
   const keys = parseAnnotationKeys(raw.keys);
   if (keys === null) return undefined;
+  const variables = parseAnnotationVariables(raw.variables);
+  if (variables === null) return undefined;
   const caveats = parseCaveatList(raw.caveats);
   if (caveats === null) return undefined;
 
@@ -103,6 +133,7 @@ export function expressionAnnotation(schema: JsonSchema): ExpressionAnnotation |
     label: label.value,
     blurb: blurb.value,
     keys,
+    variables,
     returns: returns.value,
     caveats,
     hasSample: 'sample' in raw,

@@ -12,16 +12,18 @@
  * URL, a colon in a channel name) stay server-enforced and surface through
  * `ErrorState`; the value checks in `requiredFieldErrors` catch the common ones
  * in-form first.
- *   - `target` is discriminated on `target_kind`: an `agent` target carries no
- *     `payload_expr`/`reply_expr`; only a `tool` target shows those two jq fields.
+ *   - `target` is discriminated on `target_kind`: BOTH an `agent` and a `tool`
+ *     target carry the same five door-contract jq fields (`start_expr`,
+ *     `cancel_expr`, `resume_expr`, `extras_expr`, `reply_expr`) — either target
+ *     kind can drive a parkable run.
  *   - `delivery` is discriminated on `door`: an `api` door carries a `callback_url`
  *     (and no channel identity); a `channel` door carries `channel` + `our_identity`
  *     (and no callback).
  *
- * The two jq fields carry `x-tai42-expression`, the SDK's opt-in expression seam:
- * with the host's ambient `ExpressionFieldContext` wired (it is, app-wide), the
- * field renders the visual jq editor; with none it degrades to a plain text box.
- * The feature builds NO seam of its own.
+ * The jq fields carry `x-tai42-expression`, the SDK's opt-in expression seam: with
+ * the host's ambient `ExpressionFieldContext` wired (it is, app-wide), the field
+ * renders the visual jq editor with its input-shape descriptor and variable legend;
+ * with none it degrades to a plain text box. The feature builds NO seam of its own.
  */
 import type {
   ConversationMode,
@@ -29,6 +31,14 @@ import type {
   ConversationRouteCreate,
 } from '@tai42/api-client';
 import type { JsonSchema, SchemaFormErrors } from '@tai42/studio-sdk';
+
+import {
+  CANCEL_EXPR_ANNOTATION,
+  EXTRAS_EXPR_ANNOTATION,
+  REPLY_EXPR_ANNOTATION,
+  RESUME_EXPR_ANNOTATION,
+  START_EXPR_ANNOTATION,
+} from './route-jq-annotations';
 
 /** The route-name slug the server enforces (`:`-free, so thread namespaces cannot collide). */
 const ROUTE_NAME_RE = /^[a-z0-9-]+$/;
@@ -47,49 +57,6 @@ function blank(candidate: string | undefined): boolean {
   return (candidate ?? '').trim() === '';
 }
 
-/**
- * What `.` is for `payload_expr`: the inbound conversation turn. The program maps
- * it to the JSON object of keyword arguments the tool is dispatched with.
- */
-const PAYLOAD_EXPR_ANNOTATION = {
-  language: 'jq',
-  label: 'inbound turn',
-  blurb:
-    'The inbound conversation turn. Map it to the JSON object of keyword arguments the tool is dispatched with.',
-  keys: [
-    { name: 'message', gloss: 'the inbound message text' },
-    { name: 'sender', gloss: 'the caller / end-user address the turn came from' },
-    { name: 'our_identity', gloss: 'the identity the medium reached us at (null on the api door)' },
-    { name: 'channel', gloss: 'the channel name (null on the api door)' },
-    { name: 'person_id', gloss: 'the linked person id, when the sender is a paired person' },
-    { name: 'person_addresses', gloss: "the linked person's known addresses, when paired" },
-    { name: 'params', gloss: 'opaque caller-supplied entry params, when present' },
-    {
-      name: 'messages',
-      gloss:
-        'under deliver: all, every message this turn carries, oldest first — each {id, text, accepted_at} plus form, attachments and location when present',
-    },
-    {
-      name: 'superseded',
-      gloss:
-        "under deliver: all, the earlier messages this turn's lead superseded or carried, oldest first — each in the same shape as messages, present only when non-empty",
-    },
-  ],
-  returns: 'a JSON object of the tool-call keyword arguments',
-} as const;
-
-/**
- * What `.` is for `reply_expr`: the tool's raw result. The program maps it to the
- * participant-facing reply.
- */
-const REPLY_EXPR_ANNOTATION = {
-  language: 'jq',
-  label: 'tool result',
-  blurb: "The tool's raw result. Map it to the participant-facing reply.",
-  keys: [],
-  returns: 'null (no reply), a string, or an array of reply parts',
-} as const;
-
 /** The `route_name` property — a free slug on create, fixed (read-only) on edit. */
 function routeNameProperty(fixed: string | undefined): JsonSchema {
   if (fixed !== undefined) {
@@ -100,6 +67,52 @@ function routeNameProperty(fixed: string | undefined): JsonSchema {
     title: 'Route name',
     description:
       'A ":"-free slug (lowercase letters, digits, hyphens) — the route\'s stable identity. It cannot be changed later.',
+  };
+}
+
+/**
+ * The five door-contract jq fields BOTH target variants carry (either kind can
+ * drive a parkable run). `startDescription` is the one field whose helper text
+ * differs per kind — a tool dispatch's kwargs vs an agent run's kwargs. Each field
+ * carries `x-tai42-expression`, so the schema-driven form renders the jq editor
+ * with the `$parked` (and, for the reply, `$turn`/`$asks`) variable legend.
+ */
+function doorContractJqProperties(startDescription: string): Record<string, JsonSchema> {
+  return {
+    start_expr: {
+      type: 'string',
+      title: 'Start expression',
+      description: startDescription,
+      'x-tai42-expression': START_EXPR_ANNOTATION,
+    },
+    reply_expr: {
+      type: 'string',
+      title: 'Reply expression',
+      description:
+        'Optional jq mapping the run result to the reply; blank passes a null / string / parts result straight through. Reads $turn, $asks and $parked.',
+      'x-tai42-expression': REPLY_EXPR_ANNOTATION,
+    },
+    cancel_expr: {
+      type: 'string',
+      title: 'Cancel expression',
+      description:
+        'Optional jq over the inbound turn naming the parked interactions to cancel; reads $parked.',
+      'x-tai42-expression': CANCEL_EXPR_ANNOTATION,
+    },
+    resume_expr: {
+      type: 'string',
+      title: 'Resume expression',
+      description:
+        'Optional jq over the inbound turn naming the parked interactions to resume with an answer or to take; reads $parked.',
+      'x-tai42-expression': RESUME_EXPR_ANNOTATION,
+    },
+    extras_expr: {
+      type: 'string',
+      title: 'Extras expression',
+      description:
+        'Optional jq over the inbound turn building the extras mapping handed to the started run; reads $parked.',
+      'x-tai42-expression': EXTRAS_EXPR_ANNOTATION,
+    },
   };
 }
 
@@ -116,11 +129,14 @@ function targetAgentVariant(): JsonSchema {
         title: 'Agent name',
         description: 'A registered agent the turn runs as a threaded conversation.',
       },
+      ...doorContractJqProperties(
+        "Optional jq mapping the inbound turn to the agent run's kwargs — the route owns the thread. Blank runs the agent on the raw turn.",
+      ),
     },
   };
 }
 
-/** The `tool`-kind branch of the discriminated `target` union (the only branch with jq). */
+/** The `tool`-kind branch of the discriminated `target` union. */
 function targetToolVariant(): JsonSchema {
   return {
     title: 'Tool',
@@ -133,20 +149,9 @@ function targetToolVariant(): JsonSchema {
         title: 'Tool name',
         description: 'A registered tool dispatched statelessly per message.',
       },
-      payload_expr: {
-        type: 'string',
-        title: 'Payload expression',
-        description:
-          "Optional jq mapping the inbound turn to the tool's keyword arguments; blank uses { message, sender }.",
-        'x-tai42-expression': PAYLOAD_EXPR_ANNOTATION,
-      },
-      reply_expr: {
-        type: 'string',
-        title: 'Reply expression',
-        description:
-          'Optional jq mapping the tool result to the reply; blank passes a null / string / parts result straight through.',
-        'x-tai42-expression': REPLY_EXPR_ANNOTATION,
-      },
+      ...doorContractJqProperties(
+        "Optional jq mapping the inbound turn to the tool's keyword arguments; blank uses { message, sender }.",
+      ),
     },
   };
 }
@@ -335,8 +340,12 @@ export interface RouteFormValue {
   target?: {
     target_kind?: 'agent' | 'tool';
     target_name?: string;
-    payload_expr?: string;
+    // The five door-contract jq fields, authored inline; both target kinds carry them.
+    start_expr?: string;
     reply_expr?: string;
+    cancel_expr?: string;
+    resume_expr?: string;
+    extras_expr?: string;
   };
   delivery?: {
     door?: 'api' | 'channel';
@@ -350,6 +359,22 @@ export interface RouteFormValue {
  * and door variant pickers start unselected so the operator makes an explicit choice. */
 export function blankRouteValue(): RouteFormValue {
   return { initial_mode: 'agent' };
+}
+
+/** The target sub-value prefilled from a stored route: its kind/name plus each door
+ * jq's inline `content` (a stored-id expr has none, so it is dropped). */
+function routeTargetValue(route: ConversationRoute): NonNullable<RouteFormValue['target']> {
+  type JqKey = 'start_expr' | 'reply_expr' | 'cancel_expr' | 'resume_expr' | 'extras_expr';
+  const target: NonNullable<RouteFormValue['target']> = {
+    target_kind: route.target_kind,
+    target_name: route.target_name,
+  };
+  const keys: JqKey[] = ['start_expr', 'reply_expr', 'cancel_expr', 'resume_expr', 'extras_expr'];
+  for (const key of keys) {
+    const content = route[key]?.content;
+    if (content) target[key] = content;
+  }
+  return target;
 }
 
 /** Prefill the form from a stored route (the edit path). */
@@ -370,17 +395,8 @@ export function routeToFormValue(route: ConversationRoute): RouteFormValue {
       ? { turns_per_hour_override: route.turns_per_hour_override }
       : {}),
     ...(route.error_reply_text !== null ? { error_reply_text: route.error_reply_text } : {}),
-    target:
-      route.target_kind === 'tool'
-        ? {
-            target_kind: 'tool',
-            target_name: route.target_name,
-            // The jq fields are templated text on the wire; the form authors their
-            // inline `content`, so prefill from it (a stored-id expr has none).
-            ...(route.payload_expr?.content ? { payload_expr: route.payload_expr.content } : {}),
-            ...(route.reply_expr?.content ? { reply_expr: route.reply_expr.content } : {}),
-          }
-        : { target_kind: 'agent', target_name: route.target_name },
+    // Both target kinds carry the five door jqs (prefilled from their inline content).
+    target: routeTargetValue(route),
     delivery:
       route.door === 'api'
         ? { door: 'api', callback_url: route.callback_url ?? '' }
@@ -490,18 +506,30 @@ export function requiredFieldErrors(value: RouteFormValue, editing: boolean): Sc
  * belongs to the other variant is sent as `null` (never a stale value), mirroring
  * the contract's per-door / per-target-kind exclusivity.
  */
-/** The target-kind/name fields plus the tool-only inline jq expressions. */
+/** The target-kind/name fields plus the five door-contract inline jq expressions,
+ * carried on BOTH target kinds. A blank field rides the wire as `null`. */
 function targetBodyFields(
   target: NonNullable<RouteFormValue['target']>,
-  isTool: boolean,
-): Pick<ConversationRouteCreate, 'target_kind' | 'target_name' | 'payload_expr' | 'reply_expr'> {
+): Pick<
+  ConversationRouteCreate,
+  | 'target_kind'
+  | 'target_name'
+  | 'start_expr'
+  | 'reply_expr'
+  | 'cancel_expr'
+  | 'resume_expr'
+  | 'extras_expr'
+> {
+  // Each jq is authored as inline text and rides the wire as a templated text
+  // (inline `content`); a blank field is `null`.
   return {
     target_kind: target.target_kind ?? 'agent',
     target_name: target.target_name ?? '',
-    // A tool's jq is authored as inline text and rides the wire as a templated text
-    // (inline `content`); a blank or agent-target field is `null`.
-    payload_expr: isTool && target.payload_expr ? { content: target.payload_expr } : null,
-    reply_expr: isTool && target.reply_expr ? { content: target.reply_expr } : null,
+    start_expr: target.start_expr ? { content: target.start_expr } : null,
+    reply_expr: target.reply_expr ? { content: target.reply_expr } : null,
+    cancel_expr: target.cancel_expr ? { content: target.cancel_expr } : null,
+    resume_expr: target.resume_expr ? { content: target.resume_expr } : null,
+    extras_expr: target.extras_expr ? { content: target.extras_expr } : null,
   };
 }
 
@@ -561,11 +589,10 @@ function overlapBodyFields(
 export function formValueToBody(value: RouteFormValue): ConversationRouteCreate {
   const target = value.target ?? {};
   const delivery = value.delivery ?? {};
-  const isTool = target.target_kind === 'tool';
   const isApi = delivery.door === 'api';
   return {
     ...scalarBodyFields(value),
-    ...targetBodyFields(target, isTool),
+    ...targetBodyFields(target),
     ...deliveryBodyFields(delivery, isApi),
     ...overlapBodyFields(value),
   };

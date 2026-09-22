@@ -94,7 +94,7 @@ const API_CLIENT_EXTERNAL = ['zod'];
 // Worker and a wasm engine, so the grant is scoped to the features that actually
 // author expressions — every other feature reaching for it is a boundary error, not
 // a silently-allowed import.
-const JQ_EDITOR_FEATURES = ['hooks', 'settings'];
+const JQ_EDITOR_FEATURES = ['hooks', 'scheduling', 'settings'];
 
 // Third-party packages allowed ONLY in test and test-support code (TEST_GLOBS),
 // so production code cannot pull in a test runner or a mock server.

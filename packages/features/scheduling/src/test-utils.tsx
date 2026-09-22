@@ -57,6 +57,10 @@ export function makeClient(overrides: Partial<ApiClient>): ApiClient {
   return {
     listToolTags: vi.fn(() => Promise.resolve([])),
     listToolMeta: vi.fn(() => Promise.resolve({ folders: [], meta: [] })),
+    // The add-schedule dialog always mounts the shared execution-key picker; default it
+    // to an empty key list (a plain "no keys" note, no combobox or error control) so a
+    // test that does not exercise the picker is not slowed by its retrying read.
+    listTokensPayload: vi.fn(() => Promise.resolve([])),
     ...overrides,
   } as ApiClient;
 }

@@ -28,23 +28,46 @@ describe('routeFormSchema', () => {
     expect(props?.route_name).toMatchObject({ const: 'chat', title: 'Route name' });
   });
 
-  it('carries the two jq expression annotations only on the tool variant', () => {
+  it('carries the five door-contract jq annotations on BOTH target variants', () => {
     const target = routeFormSchema().properties?.target;
     const variants = target?.oneOf ?? [];
     const tool = variants.find((v) => v.properties?.target_kind?.const === 'tool');
     const agent = variants.find((v) => v.properties?.target_kind?.const === 'agent');
-    expect(tool?.properties?.payload_expr?.['x-tai42-expression']).toMatchObject({
-      language: 'jq',
-    });
-    expect(tool?.properties?.reply_expr?.['x-tai42-expression']).toMatchObject({ language: 'jq' });
-    expect(agent?.properties?.payload_expr).toBeUndefined();
+    for (const variant of [tool, agent]) {
+      for (const field of [
+        'start_expr',
+        'reply_expr',
+        'cancel_expr',
+        'resume_expr',
+        'extras_expr',
+      ]) {
+        expect(variant?.properties?.[field]?.['x-tai42-expression']).toMatchObject({
+          language: 'jq',
+        });
+      }
+    }
+  });
+
+  it('declares $parked on the four door jqs and $turn/$asks/$parked on reply', () => {
+    const tool = (routeFormSchema().properties?.target?.oneOf ?? []).find(
+      (v) => v.properties?.target_kind?.const === 'tool',
+    );
+    const variableNames = (field: string): string[] => {
+      const annotation = tool?.properties?.[field]?.['x-tai42-expression'] as
+        { readonly variables?: readonly { readonly name: string }[] } | undefined;
+      return (annotation?.variables ?? []).map((variable) => variable.name);
+    };
+    for (const field of ['start_expr', 'cancel_expr', 'resume_expr', 'extras_expr']) {
+      expect(variableNames(field)).toEqual(['parked']);
+    }
+    expect(variableNames('reply_expr')).toEqual(['turn', 'asks', 'parked']);
   });
 
   it('documents the carry keys the deliver: all payload adds', () => {
     const tool = (routeFormSchema().properties?.target?.oneOf ?? []).find(
       (v) => v.properties?.target_kind?.const === 'tool',
     );
-    const annotation = tool?.properties?.payload_expr?.['x-tai42-expression'] as
+    const annotation = tool?.properties?.start_expr?.['x-tai42-expression'] as
       { readonly keys?: readonly { readonly name: string; readonly gloss: string }[] } | undefined;
     const keys = annotation?.keys ?? [];
     const byName = new Map(keys.map((key) => [key.name, key.gloss]));
@@ -59,8 +82,8 @@ describe('routeFormSchema', () => {
 
   it('accepts a fully-populated tool + channel value under its own schema', () => {
     const value: RouteFormValue = {
-      route_name: 'support',
-      target: { target_kind: 'tool', target_name: 'lookup', payload_expr: '.', reply_expr: '.' },
+      route_name: 'events',
+      target: { target_kind: 'tool', target_name: 'lookup', start_expr: '.', reply_expr: '.' },
       delivery: { door: 'channel', channel: 'whatsapp', our_identity: '+1' },
       execution_key: 'svc',
       initial_mode: 'agent',
@@ -86,7 +109,7 @@ describe('routeToFormValue', () => {
         callback_url: 'https://x/y',
         target_kind: 'tool',
         target_name: 'lookup',
-        payload_expr: { content: '.message' },
+        start_expr: { content: '.message' },
         reply_expr: { content: '.result' },
         initial_mode: 'manual',
         turns_per_hour_override: 30,
@@ -103,7 +126,7 @@ describe('routeToFormValue', () => {
       target: {
         target_kind: 'tool',
         target_name: 'lookup',
-        payload_expr: '.message',
+        start_expr: '.message',
         reply_expr: '.result',
       },
       delivery: { door: 'api', callback_url: 'https://x/y' },
@@ -115,7 +138,7 @@ describe('routeToFormValue', () => {
       makeRoute({
         target_kind: 'agent',
         target_name: 'assistant',
-        payload_expr: null,
+        start_expr: null,
         reply_expr: null,
         door: 'channel',
         channel: 'sms',
@@ -139,10 +162,16 @@ describe('routeToFormValue', () => {
 });
 
 describe('formValueToBody', () => {
-  it('flattens a tool + channel value and nulls the api-only field', () => {
+  it('flattens a tool + channel value, carrying the door jqs and nulling the api-only field', () => {
     const body = formValueToBody({
-      route_name: 'support',
-      target: { target_kind: 'tool', target_name: 'lookup', payload_expr: '.a', reply_expr: '.b' },
+      route_name: 'events',
+      target: {
+        target_kind: 'tool',
+        target_name: 'lookup',
+        start_expr: '.a',
+        reply_expr: '.b',
+        cancel_expr: '$parked[].id',
+      },
       delivery: { door: 'channel', channel: 'whatsapp', our_identity: '+1' },
       execution_key: 'svc',
       initial_mode: 'agent',
@@ -150,12 +179,15 @@ describe('formValueToBody', () => {
       error_reply_text: 'oops',
     });
     expect(body).toEqual({
-      route_name: 'support',
+      route_name: 'events',
       door: 'channel',
       target_kind: 'tool',
       target_name: 'lookup',
-      payload_expr: { content: '.a' },
+      start_expr: { content: '.a' },
       reply_expr: { content: '.b' },
+      cancel_expr: { content: '$parked[].id' },
+      resume_expr: null,
+      extras_expr: null,
       initial_mode: 'agent',
       execution_key: 'svc',
       channel: 'whatsapp',
@@ -167,18 +199,21 @@ describe('formValueToBody', () => {
     });
   });
 
-  it('nulls the tool-only and channel-only fields for an agent + api value', () => {
+  it('carries the door jqs on an agent target too, nulling the blank ones', () => {
     const body = formValueToBody({
       route_name: 'acct',
-      target: { target_kind: 'agent', target_name: 'assistant' },
+      target: { target_kind: 'agent', target_name: 'assistant', start_expr: '{ q: .message }' },
       delivery: { door: 'api', callback_url: 'https://x/y' },
       execution_key: 'svc',
       initial_mode: 'manual',
     });
     expect(body).toMatchObject({
       target_kind: 'agent',
-      payload_expr: null,
+      start_expr: { content: '{ q: .message }' },
       reply_expr: null,
+      cancel_expr: null,
+      resume_expr: null,
+      extras_expr: null,
       door: 'api',
       callback_url: 'https://x/y',
       channel: null,
@@ -195,8 +230,11 @@ describe('formValueToBody', () => {
       door: 'api',
       target_kind: 'agent',
       target_name: '',
-      payload_expr: null,
+      start_expr: null,
       reply_expr: null,
+      cancel_expr: null,
+      resume_expr: null,
+      extras_expr: null,
       initial_mode: 'agent',
       execution_key: '',
       channel: null,
@@ -245,7 +283,7 @@ describe('overlap policy', () => {
 
   it('validates a partially-filled overlap group with no spurious required errors', () => {
     const value: RouteFormValue = {
-      route_name: 'support',
+      route_name: 'events',
       target: { target_kind: 'agent', target_name: 'assistant' },
       delivery: { door: 'channel', channel: 'whatsapp', our_identity: '+1' },
       execution_key: 'svc',

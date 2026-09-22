@@ -94,7 +94,11 @@ describe('PolicySection — jq condition field', () => {
     // A sample object rides as sample_context; result:true → "allows the sample".
     validateCondition.mockResolvedValueOnce({ ok: true, result: true });
     await expect(
-      serverValidate({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
+      serverValidate({
+        expression: '.policy.limit > 0',
+        sampleInput: { sub: 'x' },
+        sampleVariables: {},
+      }),
     ).resolves.toEqual({ ok: true, compiles: true, message: 'allows the sample' });
     expect(validateCondition).toHaveBeenLastCalledWith({
       condition: '.policy.limit > 0',
@@ -104,19 +108,25 @@ describe('PolicySection — jq condition field', () => {
     // result:false → "denies the sample".
     validateCondition.mockResolvedValueOnce({ ok: true, result: false });
     await expect(
-      serverValidate({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
+      serverValidate({
+        expression: '.policy.limit > 0',
+        sampleInput: { sub: 'x' },
+        sampleVariables: {},
+      }),
     ).resolves.toEqual({ ok: true, compiles: true, message: 'denies the sample' });
 
     // A non-object sample compiles-only — the guard is called WITHOUT a sample.
     validateCondition.mockResolvedValueOnce({ ok: true, result: null });
     await expect(
-      serverValidate({ expression: '.x', sampleInput: 'not-an-object' }),
+      serverValidate({ expression: '.x', sampleInput: 'not-an-object', sampleVariables: {} }),
     ).resolves.toEqual({ ok: true, compiles: true, message: undefined });
     expect(validateCondition).toHaveBeenLastCalledWith({ condition: '.x' });
 
     // A 400 from the guard maps to a not-ok result carrying its verbatim message.
     validateCondition.mockRejectedValueOnce(new ApiError('bad jq', 400));
-    await expect(serverValidate({ expression: '.(', sampleInput: { sub: 'x' } })).resolves.toEqual({
+    await expect(
+      serverValidate({ expression: '.(', sampleInput: { sub: 'x' }, sampleVariables: {} }),
+    ).resolves.toEqual({
       ok: false,
       compiles: false,
       message: 'bad jq',

@@ -31,7 +31,7 @@ export function flushResizeObserversFor(target: Element): void;
 export function installJsdomStubs(): void;
 
 // @public
-export function setElementOverflow(element: HTMLElement, overflowing: boolean): void;
+export function setElementOverflow(element: HTMLElement, overflowing: boolean, axis?: 'horizontal' | 'vertical'): void;
 
 // @public
 export function StaticToolDisplayNamesProvider(input: {

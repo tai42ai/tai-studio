@@ -89,6 +89,12 @@ routers_modules:
   # and the panel shows a spurious error. Needs a reachable Redis — boot.sh points
   # `TAI_TOOL_RUNS_REDIS_URL` at the compose Redis (db 3).
   - tai42_skeleton.routers.tool_runs
+  # Scheduling (`/api/schedules*`). The Schedules screen's add-schedule dialog reads
+  # this door on mount; the capability projection gates the page off without it. With
+  # the RQ backend below installed and `RQ_REDIS_URL` set (boot.sh), the list door
+  # answers 200 (empty) so the page offers the create dialog rather than the
+  # "needs a backend plugin" 501 empty state.
+  - tai42_skeleton.routers.schedules
   # The public sign-in aggregator (`GET /api/login/methods`). The login page GETs
   # this on mount; without the router that fetch 404s and the dev/Playwright login
   # screen renders a spurious "Could not load sign-in methods" notice next to a
@@ -133,6 +139,14 @@ routers_modules:
   - tai42_skeleton.routers.observability
   - tai42_skeleton.routers.plugins
 
+# --- Task backend -----------------------------------------------------------
+# The RQ execution backend, so the Schedules screen's list/create doors are available
+# (its `backend_list_schedules` / `backend_delete_schedule` marker tools register on
+# import). boot.sh installs the plugin, points `RQ_REDIS_URL` at the boot Redis, and
+# sets the worker bus (`TAI_BUS_REDIS_URL`) a registered backend requires; the suites
+# never run a schedule, so no RQ worker is started.
+backend_module: tai42_backend_rq
+
 # --- Tool extensions --------------------------------------------------------
 # `ask_external` wraps a callback_url-taking tool into an external human-in-the-
 # loop question; the interactions inbox surfaces the external-link card for it.
@@ -142,7 +156,7 @@ extensions_modules:
 # --- Tools ------------------------------------------------------------------
 # The reference plugin's demo tools (studio_demo_echo has a custom panel;
 # studio_demo_form / studio_demo_fail have none, so they exercise the auto-form
-# fallback + the loud-error result surface) and the ask_user built-in (the
+# fallback + the loud-error result surface) and the ask built-in (the
 # blocking human-in-the-loop question the run-tool suite drives).
 #
 # Only runtime-native builtins are named here. The management capabilities
@@ -153,8 +167,23 @@ extensions_modules:
 tools:
   - title: reference-plugin-tools
     module: reference_plugin.tools
+    # Attach the RQ backend's `schedule_task` extension to studio_demo_echo so its
+    # `studio_demo_echo_schedule_task` vehicle is registered. That branch is what the
+    # create door dispatches to register a recurring schedule, so the Schedules
+    # screen's add-schedule dialog can create a real, persisted schedule for the tool.
+    extensions:
+      studio_demo_echo:
+        - [schedule_task]
   - title: ask-user
     module: tai42_skeleton.tools.builtin.interactions
+
+# --- Curated built-in tools -------------------------------------------------
+# The tools the authoring surfaces offer; it rides the `{mcp, user_tools}` preserved
+# manifest view the Manifest screen renders as a JSON tree, so a populated list is
+# what gives that screen a non-empty tree to exercise.
+user_tools:
+  - parking_ask
+  - parking_ask_resume
 
 # --- Studio plugins ---------------------------------------------------------
 # Names the installed Python package whose `studio/` dist the skeleton serves and

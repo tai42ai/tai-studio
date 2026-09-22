@@ -38,6 +38,11 @@ import { ALL_TAGS, SelectedToolBadges, TagFilterField, ToolSelect } from './tool
 
 export { BADGES_NOTE } from './tool-picker-parts';
 
+/** The trigger copy when the picker has no option to offer at all (after exclusions).
+ *  Shown only once the list has settled — a still-loading picker keeps its own
+ *  placeholder — so it never misreads a pending fetch as "nothing to pick". */
+const NO_TOOLS_AVAILABLE = 'No tools available';
+
 export interface ToolPickerProps {
   readonly toolNames: readonly string[];
   readonly value: string | null;
@@ -94,6 +99,13 @@ export function ToolPicker({
   const excluded = new Set(excludeNames ?? []);
   const available = toolNames.filter((name) => !excluded.has(name));
 
+  // A settled, empty option set (not a load in progress) is a "nothing to pick"
+  // state: the trigger reads the empty copy and cannot open onto an empty popup. The
+  // caller's `disabled` still marks a loading picker, which keeps its own placeholder.
+  const noneAvailable = available.length === 0;
+  const pickerDisabled = disabled === true || noneAvailable;
+  const pickerPlaceholder = noneAvailable && disabled !== true ? NO_TOOLS_AVAILABLE : placeholder;
+
   // Distinct tags across the available tools, sorted, feeding the filter control.
   const allTags =
     tagsByTool === undefined
@@ -113,9 +125,9 @@ export function ToolPicker({
       filtered={filtered}
       value={value}
       onChange={onChange}
-      placeholder={placeholder}
+      placeholder={pickerPlaceholder}
       ariaLabel={ariaLabel}
-      disabled={disabled}
+      disabled={pickerDisabled}
       displayNames={displayNames}
       agentToolNames={agentToolNames}
     />

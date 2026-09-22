@@ -616,3 +616,67 @@ describe('requiredTemplatedText schema — a non-empty source is mandatory', () 
     expect(() => schemas.requiredTemplatedText.parse({ content: '.x', extra: true })).toThrow();
   });
 });
+
+describe('run-tool result schemas — caller asks, park receipt, visit outcome', () => {
+  it('accepts a caller-ask envelope with the entry display fields', () => {
+    const parsed = schemas.callerAsksEnvelope.parse({
+      asks: [
+        {
+          id: 'i1',
+          status: 'asking',
+          question: 'Approve?',
+          payload: { amount: 3 },
+          asked_by: ['run-a'],
+        },
+      ],
+    });
+    expect(parsed.asks[0]?.id).toBe('i1');
+    expect(parsed.asks[0]?.payload).toEqual({ amount: 3 });
+  });
+
+  it('accepts an empty caller-ask envelope', () => {
+    expect(schemas.callerAsksEnvelope.parse({ asks: [] }).asks).toEqual([]);
+  });
+
+  it('rejects an ask entry with an unknown status', () => {
+    expect(
+      schemas.callerAsksEnvelope.safeParse({ asks: [{ id: 'i1', status: 'bogus' }] }).success,
+    ).toBe(false);
+  });
+
+  it('accepts a user-only suspension receipt', () => {
+    const parsed = schemas.suspendedRunReceipt.parse({
+      interaction_id: 'u1',
+      interaction_ids: ['u1'],
+    });
+    // caller_interaction_ids defaults to an empty list when the receipt omits it.
+    expect(parsed.caller_interaction_ids).toEqual([]);
+  });
+
+  it('accepts a visit outcome, defaulting cancelled/asks and tolerating an absent result', () => {
+    const parsed = schemas.visitOutcome.parse({ action: 'resumed', kind: 'parked' });
+    expect(parsed.cancelled).toEqual([]);
+    expect(parsed.asks).toEqual([]);
+    expect(parsed.result).toBeUndefined();
+  });
+
+  it('carries a final result and the resumed run new asks', () => {
+    expect(
+      schemas.visitOutcome.parse({ action: 'resumed', kind: 'result', result: { ok: 1 } }).result,
+    ).toEqual({
+      ok: 1,
+    });
+    const asks = schemas.visitOutcome.parse({
+      action: 'resumed',
+      kind: 'asks',
+      asks: [{ id: 'i2', status: 'asking', question: 'Next?' }],
+    }).asks;
+    expect(asks[0]?.id).toBe('i2');
+  });
+
+  it('rejects a visit outcome with an unknown kind', () => {
+    expect(schemas.visitOutcome.safeParse({ action: 'resumed', kind: 'bogus' }).success).toBe(
+      false,
+    );
+  });
+});

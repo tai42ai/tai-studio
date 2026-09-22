@@ -65,6 +65,11 @@ routers_modules:
   - tai42_skeleton.routers.connectors
   - tai42_skeleton.routers.hooks
   - tai42_skeleton.routers.tool_runs
+  # Scheduling (`/api/schedules*`). The Schedules screen's add-schedule dialog reads this
+  # door on mount; with the RQ backend below installed and `RQ_REDIS_URL` set (docs-
+  # screenshots.sh), the list door answers 200 (empty) so the page offers the create dialog
+  # instead of the "needs a backend plugin" 501 empty state.
+  - tai42_skeleton.routers.schedules
   - tai42_skeleton.routers.agents # /api/agents*           (Agents screen)
   - tai42_skeleton.routers.observability # /api/observability/*   (Dashboard screen)
   - tai42_skeleton.routers.marketplace # /api/marketplace/*     (Marketplace screen + install dialog)
@@ -97,7 +102,7 @@ extensions_modules:
   - tai42_skeleton.extensions.builtin.ask_external
 
 # --- Tools ------------------------------------------------------------------
-# The reference plugin's demo tools, plus the ask_user builtin.
+# The reference plugin's demo tools, plus the ask builtin.
 #
 # The management capabilities (config/manifest/templates/hooks/notify) are served
 # by the routers loaded above and project onto the MCP tool surface from the
@@ -120,6 +125,14 @@ agents:
     module: tai42_agents.tools_agent
     include:
       - tools_agent
+
+# --- Task backend -----------------------------------------------------------
+# The RQ execution backend, so the Schedules screen's list/create doors are available
+# (its `backend_list_schedules` / `backend_delete_schedule` marker tools register on
+# import). docs-screenshots.sh installs the plugin, points `RQ_REDIS_URL` at the boot
+# Redis, and sets the worker bus (`TAI_BUS_REDIS_URL`) a registered backend requires; the
+# capture never runs a schedule, so no RQ worker is started.
+backend_module: tai42_backend_rq
 
 # --- Storage ----------------------------------------------------------------
 # Local-filesystem storage backend so GET /api/templates lists the seeded
@@ -148,4 +161,8 @@ studio_plugins:
 user_tools:
   - studio_demo_echo
   - studio_demo_form
-  - ask_user
+  - ask
+  # The parking demo tool (its bound resume continuation alongside it): a run that
+  # asks and parks, so the run panel renders the caller-asks list its result carries.
+  - parking_ask
+  - parking_ask_resume

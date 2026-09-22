@@ -35,6 +35,23 @@ export interface ExpressionAnnotationKey {
 }
 
 /**
+ * One named jq variable the expression may read as `$name` beside its `.` input:
+ * its blurb and a representative sample the editor's Test panel binds it to. The
+ * `x-tai42-expression` annotation carries these under `variables`; a field whose
+ * `.` is its only input carries none.
+ */
+export interface ExpressionAnnotationVariable {
+  readonly name: string;
+  readonly blurb: string;
+  /** True when the annotation carries a `sample` for this variable — tracked
+   *  separately because a legitimate sample may be JSON `null`. */
+  readonly hasSample: boolean;
+  /** The sample value the Test panel binds `$name` to. Meaningful only when
+   *  {@link hasSample} is true. */
+  readonly sample: unknown;
+}
+
+/**
  * The `x-tai42-expression` annotation on a string schema: the server declares
  * that the field's value is authored in a pipeline expression language (only jq
  * today) and optionally describes what `.` is for that expression. The renderer
@@ -53,6 +70,9 @@ export interface ExpressionAnnotation {
   readonly blurb: string | undefined;
   /** The top-level keys of `.`, each with a one-liner. */
   readonly keys: readonly ExpressionAnnotationKey[] | undefined;
+  /** The named variables the expression reads as `$name` beside `.`. Absent when
+   *  the annotation declares none (the field's `.` is its only input). */
+  readonly variables: readonly ExpressionAnnotationVariable[] | undefined;
   /** What the expression must return (e.g. "true or false"). */
   readonly returns: string | undefined;
   /** Per-field caveats. */

@@ -56,6 +56,31 @@ describe('submitToolRun', () => {
     expect(JSON.parse(init?.body as string)).toEqual({ tool_name: 'alpha', arguments: { x: 2 } });
   });
 
+  it('carries the subject in the wire body when given, and omits it otherwise', async () => {
+    let init: RequestInit | undefined;
+    const api = createApiClient(
+      config(
+        mockFetch((_u, i) => {
+          init = i;
+          return jsonResponse({ data: { run_id: 'abc123' } }, 202);
+        }),
+      ),
+    );
+
+    await api.submitToolRun({
+      tool_name: 'alpha',
+      subject: { target_kind: 'tool', target_name: 'alpha', kind: 'thread', key: 't-1' },
+    });
+    expect(JSON.parse(init?.body as string)).toEqual({
+      tool_name: 'alpha',
+      arguments: {},
+      subject: { target_kind: 'tool', target_name: 'alpha', kind: 'thread', key: 't-1' },
+    });
+
+    await api.submitToolRun({ tool_name: 'alpha' });
+    expect(JSON.parse(init?.body as string)).not.toHaveProperty('subject');
+  });
+
   it('defaults arguments to {} when omitted', async () => {
     let init: RequestInit | undefined;
     const api = createApiClient(

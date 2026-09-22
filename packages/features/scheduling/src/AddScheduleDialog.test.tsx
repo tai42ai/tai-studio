@@ -28,7 +28,7 @@ import { makeClient, renderWithProviders } from './test-utils';
  * click lands on the still-disabled trigger and nothing opens.
  */
 async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<void> {
-  const combobox = within(dialog).getByRole('combobox');
+  const combobox = within(dialog).getByRole('combobox', { name: 'Tool' });
   await waitFor(() => {
     expect(combobox).toBeEnabled();
   });
@@ -70,14 +70,21 @@ describe(
       const onClose = vi.fn();
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
-        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task', 'sync_schedule_task']),
+        listTools: vi
+          .fn()
+          .mockResolvedValue([
+            'run_report',
+            'run_report_schedule_task',
+            'sync',
+            'sync_schedule_task',
+          ]),
         addSchedule,
       });
       renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
       const dialog = await screen.findByRole('dialog');
       await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-      await pickTool(user, dialog, 'run_report_schedule_task');
+      await pickTool(user, dialog, 'run_report');
 
       const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
       await user.clear(kwargs);
@@ -106,7 +113,7 @@ describe(
       const user = userEvent.setup({ delay: null });
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
-        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+        listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
         listConversationRoutes: vi.fn().mockResolvedValue({
           items: [{ target_kind: 'agent', target_name: 'assistant' }],
           total: 1,
@@ -117,7 +124,7 @@ describe(
 
       const dialog = await screen.findByRole('dialog');
       await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-      await pickTool(user, dialog, 'run_report_schedule_task');
+      await pickTool(user, dialog, 'run_report');
       await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
 
       await user.click(within(dialog).getByRole('button', { name: 'Subject (optional)' }));
@@ -151,14 +158,14 @@ describe(
         const onClose = vi.fn();
         const addSchedule = vi.fn().mockResolvedValue({});
         const client = makeClient({
-          listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+          listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
           addSchedule,
         });
         renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
         const dialog = await screen.findByRole('dialog');
         await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
-        await pickTool(user, dialog, 'sync_schedule_task');
+        await pickTool(user, dialog, 'sync');
 
         // Switch to the interval spec; the untouched default kwargs `{}` maps to `{}`.
         await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));
@@ -191,14 +198,14 @@ describe('AddScheduleDialog — kwargs validation', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-    await pickTool(user, dialog, 'run_report_schedule_task');
+    await pickTool(user, dialog, 'run_report');
     await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
 
     const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
@@ -215,14 +222,14 @@ describe('AddScheduleDialog — kwargs validation', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-    await pickTool(user, dialog, 'run_report_schedule_task');
+    await pickTool(user, dialog, 'run_report');
     await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
 
     const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
@@ -242,7 +249,7 @@ describe('AddScheduleDialog — required-field guards', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
@@ -260,14 +267,14 @@ describe('AddScheduleDialog — required-field guards', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
-    await pickTool(user, dialog, 'sync_schedule_task');
+    await pickTool(user, dialog, 'sync');
     await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));
     await user.type(within(dialog).getByRole('spinbutton'), '0');
 
@@ -284,14 +291,14 @@ describe('AddScheduleDialog — mutation states', () => {
     const onClose = vi.fn();
     const pending = deferred<unknown>();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
       addSchedule: vi.fn().mockReturnValue(pending.promise),
     });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-    await pickTool(user, dialog, 'run_report_schedule_task');
+    await pickTool(user, dialog, 'run_report');
     await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
 
     const submit = within(dialog).getByRole('button', { name: 'Create schedule' });
@@ -314,14 +321,14 @@ describe('AddScheduleDialog — mutation states', () => {
     const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
       addSchedule: vi.fn().mockRejectedValue(new ApiError('schedule name already exists', 409)),
     });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
-    await pickTool(user, dialog, 'run_report_schedule_task');
+    await pickTool(user, dialog, 'run_report');
     await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * * *');
 
     await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
@@ -353,13 +360,22 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
   it('excludes an EFFECTIVE-hidden tool, keeping an overlay-`false` unhidden one', async () => {
     // `secret_task` is plugin-hidden with no overlay opinion → excluded. `open_task`
     // is plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
+    // Each base tool is schedulable (its `_schedule_task` vehicle is registered), so the
+    // exclusion is tested on the base tools the picker offers.
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
       listTools: vi
         .fn()
-        .mockResolvedValue(['run_report_schedule_task', 'secret_task', 'open_task']),
+        .mockResolvedValue([
+          'run_report',
+          'run_report_schedule_task',
+          'secret_task',
+          'secret_task_schedule_task',
+          'open_task',
+          'open_task_schedule_task',
+        ]),
       listToolTags: vi.fn().mockResolvedValue([
-        { name: 'run_report_schedule_task', tags: [], hidden: false },
+        { name: 'run_report', tags: [], hidden: false },
         { name: 'secret_task', tags: [], hidden: true },
         { name: 'open_task', tags: [], hidden: true },
       ]),
@@ -376,9 +392,7 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
     const dialog = await screen.findByRole('dialog');
     await openToolPicker(user, dialog);
 
-    expect(
-      await screen.findByRole('option', { name: 'run_report_schedule_task' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'run_report' })).toBeInTheDocument();
     // The overlay UNHIDES the plugin-hidden `open_task`, so it IS offered.
     expect(screen.getByRole('option', { name: 'open_task' })).toBeInTheDocument();
     // The effective-hidden `secret_task` is absent from the picker.
@@ -389,9 +403,11 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
 describe('AddScheduleDialog — display names', () => {
   it('labels a picker option "Display (raw)" from the tool-meta overlay', async () => {
     const user = userEvent.setup({ delay: null });
-    const client = makeClient({ listTools: vi.fn().mockResolvedValue(['sync_schedule_task']) });
+    const client = makeClient({
+      listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
+    });
     renderWithProviders(
-      <StaticToolDisplayNamesProvider names={{ sync_schedule_task: 'Nightly Sync' }}>
+      <StaticToolDisplayNamesProvider names={{ sync: 'Nightly Sync' }}>
         <AddScheduleDialog onClose={vi.fn()} />
       </StaticToolDisplayNamesProvider>,
       { client },
@@ -399,9 +415,7 @@ describe('AddScheduleDialog — display names', () => {
 
     const dialog = await screen.findByRole('dialog');
     await openToolPicker(user, dialog);
-    expect(
-      await screen.findByRole('option', { name: 'Nightly Sync (sync_schedule_task)' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'Nightly Sync (sync)' })).toBeInTheDocument();
   });
 });
 
@@ -411,17 +425,15 @@ describe('AddScheduleDialog — declared badges', () => {
     // shows their merged, deduped, sorted union beneath the chosen tool.
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
       listToolTags: vi
         .fn()
-        .mockResolvedValue([
-          { name: 'sync_schedule_task', tags: [], badges: ['network'], hidden: false },
-        ]),
+        .mockResolvedValue([{ name: 'sync', tags: [], badges: ['network'], hidden: false }]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [
           {
-            tool_name: 'sync_schedule_task',
+            tool_name: 'sync',
             display_name: null,
             folder_id: null,
             tags: [],
@@ -437,7 +449,7 @@ describe('AddScheduleDialog — declared badges', () => {
     // No selection yet → no chips.
     expect(within(dialog).queryByTestId('tool-picker-badges')).toBeNull();
 
-    await pickTool(user, dialog, 'sync_schedule_task');
+    await pickTool(user, dialog, 'sync');
 
     const badges = await within(dialog).findByTestId('tool-picker-badges');
     expect(badges).toHaveTextContent('network');

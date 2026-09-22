@@ -73,14 +73,18 @@ describe('buildScheduleBody', () => {
     subjectKind: '',
     subjectKey: '',
     stateBinding: null,
+    executionKey: '',
+    contract: { startExpr: null, cancelExpr: null, resumeExpr: null, extrasExpr: null },
   };
 
-  it('assembles a crontab body with no subject and no state binding', () => {
+  it('assembles a crontab body targeting the tool schedule vehicle', () => {
     const result = buildScheduleBody(base, { a: 1 });
     expect(result).toEqual({
       ok: true,
       body: {
-        tool_name: 'run_report',
+        // The create door dispatches the `<tool>_schedule_task` vehicle, so the request
+        // names it rather than the base tool the operator picked.
+        tool_name: 'run_report_schedule_task',
         tool_kwargs: { a: 1 },
         schedule_kwargs: { backend_schedule: '0 2 * * *', backend_schedule_name: 'nightly' },
       },
@@ -91,6 +95,12 @@ describe('buildScheduleBody', () => {
     const result = buildScheduleBody({ ...base, mode: 'interval', intervalValue: 60 }, {});
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.body.schedule_kwargs.backend_schedule).toBe(60);
+  });
+
+  it('does not double-suffix a tool already named as a schedule vehicle', () => {
+    const result = buildScheduleBody({ ...base, tool: 'run_report_schedule_task' }, {});
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.body.tool_name).toBe('run_report_schedule_task');
   });
 
   it('folds a fully-specified subject into tool_kwargs', () => {
@@ -112,7 +122,8 @@ describe('buildScheduleBody', () => {
     const result = buildScheduleBody({ ...base, subjectKind: 'person' }, {});
     expect(result).toEqual({
       ok: false,
-      subjectError: 'A subject needs a target, a kind, and a key.',
+      field: 'subject',
+      message: 'A subject needs a target, a kind, and a key.',
     });
   });
 
@@ -121,5 +132,49 @@ describe('buildScheduleBody', () => {
     const result = buildScheduleBody({ ...base, stateBinding: binding }, {});
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.body.state_binding).toBe(binding);
+  });
+
+  it('carries the execution key and door jqs, sending each only when set', () => {
+    const result = buildScheduleBody(
+      {
+        ...base,
+        executionKey: 'svc-events',
+        contract: {
+          startExpr: { content: '.args' },
+          cancelExpr: null,
+          resumeExpr: null,
+          extrasExpr: { content: '{ trace: true }' },
+        },
+      },
+      {},
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.body.execution_key).toBe('svc-events');
+      expect(result.body.start_expr).toEqual({ content: '.args' });
+      expect(result.body.extras_expr).toEqual({ content: '{ trace: true }' });
+      expect('cancel_expr' in result.body).toBe(false);
+      expect('resume_expr' in result.body).toBe(false);
+    }
+  });
+
+  it('refuses a door-contract jq with no execution key', () => {
+    const result = buildScheduleBody(
+      {
+        ...base,
+        contract: {
+          startExpr: { content: '.args' },
+          cancelExpr: null,
+          resumeExpr: null,
+          extrasExpr: null,
+        },
+      },
+      {},
+    );
+    expect(result).toEqual({
+      ok: false,
+      field: 'executionKey',
+      message: 'A door-contract jq (start / cancel / resume / extras) needs an execution key.',
+    });
   });
 });

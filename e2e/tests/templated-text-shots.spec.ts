@@ -336,7 +336,7 @@ const FRAMES: readonly Frame[] = [
     action: async (page) => {
       await page.getByRole('form', { name: 'Register hook' }).waitFor({ state: 'visible' });
     },
-    ready: (page) => page.getByRole('radiogroup', { name: 'Expr source' }),
+    ready: (page) => page.getByRole('radiogroup', { name: 'Start source' }),
     target: (page) => page.getByRole('form', { name: 'Register hook' }),
     clean: (page) => page.getByRole('form', { name: 'Register hook' }),
   },

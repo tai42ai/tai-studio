@@ -59,6 +59,25 @@ describe('JsonTree', () => {
     expect(screen.getByText(/Array\(2\)/)).toBeInTheDocument();
   });
 
+  it('never nests an interactive control inside a disclosure summary (no nested-interactive)', () => {
+    // A populated, expanded tree renders a per-node copy button beside every nested
+    // disclosure. Each must sit OUTSIDE the `<summary>` — an interactive control
+    // inside another has no reliable accessible role (WCAG 4.1.2), which axe flags
+    // `nested-interactive` (serious).
+    const { container } = render(
+      <JsonTree data={{ outer: { inner: ['a', 'b'] }, list: [1, 2, 3] }} defaultExpanded />,
+    );
+    const summaries = container.querySelectorAll('summary');
+    expect(summaries.length).toBeGreaterThan(0);
+    // No summary anywhere carries a nested interactive control.
+    for (const nested of ['button', 'a', 'input', 'select', 'textarea', '[tabindex]']) {
+      expect(container.querySelectorAll(`summary ${nested}`)).toHaveLength(0);
+    }
+    // The per-node copy controls are still rendered (as siblings of the disclosures).
+    expect(screen.getByRole('button', { name: 'Copy outer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy inner' })).toBeInTheDocument();
+  });
+
   it('collapses and expands a node when its summary is toggled', async () => {
     const user = userEvent.setup();
     const { container } = render(<JsonTree data={{ a: 1, b: 2 }} defaultExpanded />);

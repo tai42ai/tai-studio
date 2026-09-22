@@ -4,10 +4,15 @@
  * optional `tool_kwargs` JSON textarea. Required-field errors show only after a
  * submit attempt.
  */
-import { Field, Textarea, TextInput } from '@tai42/studio-sdk';
+import {
+  ExecutionKeyPicker,
+  type ExecutionKeyQuery,
+  Field,
+  Textarea,
+  TextInput,
+} from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
-import { ExecutionKeyPicker } from './ExecutionKeyPicker';
 import type { HookFormFields } from './useHookFormFields';
 
 export interface HookIdentityFieldsProps {
@@ -20,6 +25,8 @@ export interface HookIdentityFieldsProps {
   };
   readonly replacesExisting: boolean;
   readonly trimmedName: string;
+  /** The api-key list read the execution-key picker renders. */
+  readonly keysQuery: ExecutionKeyQuery;
 }
 
 export function HookIdentityFields({
@@ -27,6 +34,7 @@ export function HookIdentityFields({
   missing,
   replacesExisting,
   trimmedName,
+  keysQuery,
 }: HookIdentityFieldsProps): ReactNode {
   const { submitted } = fields;
   return (
@@ -65,6 +73,7 @@ export function HookIdentityFields({
         />
       </Field>
       <ExecutionKeyPicker
+        query={keysQuery}
         value={fields.executionKey}
         onValueChange={fields.setExecutionKey}
         error={submitted && missing.executionKey ? 'An execution key is required.' : undefined}

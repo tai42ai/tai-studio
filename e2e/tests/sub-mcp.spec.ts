@@ -27,7 +27,7 @@ async function stubSubMcp(page: Page): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/tools',
     async (route) => {
-      await route.fulfill({ json: { data: ['echo', 'ask_user'] } });
+      await route.fulfill({ json: { data: ['echo', 'ask'] } });
     },
   );
 }

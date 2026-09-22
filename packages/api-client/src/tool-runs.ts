@@ -16,6 +16,7 @@ import { z } from 'zod';
 
 import type { ApiConfig } from './http';
 import { apiRequest, encodeSegment } from './http';
+import type { StateSubject } from './schemas/states';
 
 /** A run's lifecycle state. `lost` = the server restarted mid-run; the result is
  * unrecoverable. `running` is the only non-terminal state. */
@@ -59,6 +60,9 @@ export type ToolRunListItem = z.infer<typeof toolRunListItem>;
 export interface SubmitToolRunArgs {
   readonly tool_name: string;
   readonly arguments?: Record<string, unknown>;
+  /** The addressed subject an async park of the detached run indexes under. Omitted
+   * from the request body when unset. */
+  readonly subject?: StateSubject;
 }
 
 /** Submit a tool for detached background execution; resolves with its `run_id`. */
@@ -69,7 +73,11 @@ export function submitToolRun(
 ): Promise<ToolRunSubmitResult> {
   return apiRequest(config, '/api/tool-runs', toolRunSubmitResult, {
     method: 'POST',
-    body: { tool_name: args.tool_name, arguments: args.arguments ?? {} },
+    body: {
+      tool_name: args.tool_name,
+      arguments: args.arguments ?? {},
+      ...(args.subject !== undefined ? { subject: args.subject } : {}),
+    },
     signal,
   });
 }

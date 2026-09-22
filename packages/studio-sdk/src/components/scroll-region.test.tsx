@@ -393,6 +393,55 @@ describe('ScrollRegion', () => {
   });
 });
 
+describe('ScrollRegion (vertical axis)', () => {
+  it('is not a tab stop while a capped-height box fits its content', () => {
+    const { container } = render(
+      <ScrollRegion label="Caller asks" axis="vertical">
+        <p>body</p>
+      </ScrollRegion>,
+    );
+    const region = scrollRegion(container);
+    setElementOverflow(region, false, 'vertical');
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(region).not.toHaveAttribute('tabindex');
+    expect(region).not.toHaveAttribute('role');
+    expect(region).not.toHaveAttribute('aria-label');
+  });
+
+  it('becomes a named, focusable region once its content overflows downward', () => {
+    const { container } = render(
+      <ScrollRegion label="Caller asks" axis="vertical">
+        <p>body</p>
+      </ScrollRegion>,
+    );
+    const region = scrollRegion(container);
+    setElementOverflow(region, true, 'vertical');
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(screen.getByRole('region', { name: 'Caller asks' })).toBe(region);
+    expect(region).toHaveAttribute('tabindex', '0');
+  });
+
+  it('measures HEIGHT, not width: horizontal overflow alone is not a vertical tab stop', () => {
+    const { container } = render(
+      <ScrollRegion label="Caller asks" axis="vertical">
+        <p>body</p>
+      </ScrollRegion>,
+    );
+    const region = scrollRegion(container);
+    // Wide content, but the box's height fits — a vertical region ignores it.
+    setElementOverflow(region, true, 'horizontal');
+    setElementOverflow(region, false, 'vertical');
+    act(() => {
+      flushResizeObservers();
+    });
+    expect(region).not.toHaveAttribute('tabindex');
+  });
+});
+
 function ProseHost({ html, labels }: { html: string; labels?: ProseScrollLabels }) {
   const ref = useProseScrollRegions(labels);
   return <div ref={ref} data-testid="prose" dangerouslySetInnerHTML={{ __html: html }} />;

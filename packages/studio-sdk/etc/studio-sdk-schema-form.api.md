@@ -62,6 +62,15 @@ export interface ExpressionInputShape {
     readonly label: string;
     readonly returns: string;
     readonly sample?: unknown;
+    readonly variables?: readonly ExpressionInputVariable[];
+}
+
+// @public
+interface ExpressionInputVariable {
+    readonly blurb: string;
+    readonly keys: readonly ExpressionInputKey[];
+    readonly name: string;
+    readonly sample?: unknown;
 }
 
 // @public

@@ -1,16 +1,17 @@
 /**
- * The tool RUN contract (decided v1): run-tool is a SYNCHRONOUS POST
- * that holds one HTTP request open until the run completes. The client sets a
+ * The tool RUN contract: run-tool is a SYNCHRONOUS POST that holds one HTTP
+ * request open until the run completes. The client sets a
  * configurable timeout, driven by an `AbortController`, so a run that never
  * returns cannot pin the panel open forever.
  *
- * Honest limit: v1 has NO run-result retrieval endpoint. If the client timeout
+ * Honest limit: there is NO run-result retrieval endpoint. If the client timeout
  * fires the request is aborted, but the run may STILL be executing server-side
  * with live side effects — that outcome is a DISTINCT, loud state (see
  * `RunTimeoutError`), never conflated with a generic failure. The distinction
  * lets the operator tell "do not retry — side effects may be live" from
  * "failed — safe to retry".
  */
+import type { StateSubject } from '@tai42/api-client';
 import type { ApiClient } from '@tai42/studio-sdk';
 
 /** The configurable client-side run timeout. Deployments proxying the skeleton
@@ -33,11 +34,17 @@ export class RunTimeoutError extends Error {
  * Run a tool with the client timeout applied. Resolves with the completed run's
  * result, or throws: a `RunTimeoutError` when the timeout fired, otherwise the
  * underlying transport error (both surface loudly — never swallowed).
+ *
+ * `subject` addresses the conversation subject an async park of this run indexes
+ * under; it rides the run-tool body when given (a plain run passes none). The same
+ * subject is threaded through a caller-ask resume/take/cancel so the parked run is
+ * found on its own subject.
  */
 export async function runToolWithTimeout(
   api: ApiClient,
   tool: string,
   kwargs: Record<string, unknown>,
+  subject?: StateSubject,
 ): Promise<unknown> {
   const controller = new AbortController();
   const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
@@ -45,7 +52,7 @@ export async function runToolWithTimeout(
   }, RUN_TIMEOUT_MS);
 
   try {
-    return await api.runTool({ tool, kwargs }, controller.signal);
+    return await api.runTool({ tool, kwargs, subject }, controller.signal);
   } catch (error) {
     // We own this controller — it is aborted ONLY by the timeout above, so an
     // aborted signal is the unambiguous signal of a client-timeout expiry.

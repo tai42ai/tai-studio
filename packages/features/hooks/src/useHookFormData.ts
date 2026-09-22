@@ -20,8 +20,8 @@ import {
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { useExecutionKeys } from './ExecutionKeyPicker';
 import { hooksListKey } from './keys';
+import { useExecutionKeys } from './use-execution-keys';
 
 type TemplatedTextTemplates = ReturnType<typeof templatedTextCatalog>;
 type StateBindingProps = Omit<StateBindingEditorProps, 'value' | 'onChange'>;

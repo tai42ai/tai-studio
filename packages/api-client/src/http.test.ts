@@ -205,6 +205,28 @@ describe('createApiClient', () => {
     expect(capturedBody).toEqual({ tool_name: 'echo', arguments: {} });
   });
 
+  it('carries the subject in the wire body when given, and omits it otherwise', async () => {
+    let capturedBody: Record<string, unknown> = {};
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      capturedBody = JSON.parse(init?.body as string) as Record<string, unknown>;
+      return jsonResponse({ data: { ok: 1 } });
+    });
+    const client = createApiClient(config(fetchImpl as unknown as typeof fetch));
+
+    await client.runTool({
+      tool: 'echo',
+      subject: { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'a-42' },
+    });
+    expect(capturedBody).toEqual({
+      tool_name: 'echo',
+      arguments: {},
+      subject: { target_kind: 'agent', target_name: 'assistant', kind: 'person', key: 'a-42' },
+    });
+
+    await client.runTool({ tool: 'echo' });
+    expect(capturedBody).not.toHaveProperty('subject');
+  });
+
   it('validates the oauth/complete discriminated union', async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({
@@ -245,7 +267,7 @@ describe('createApiClient', () => {
       name: 'h',
       tool_kwargs: {},
       condition: null,
-      expr: null,
+      start_expr: null,
       execution_key: 'svc-notify',
     });
     expect(out.trigger_auth).toEqual({ t: 'public' });
@@ -278,7 +300,7 @@ describe('createApiClient', () => {
       tool_kwargs: { to: '#ops' },
       subject: null,
       condition: null,
-      expr: null,
+      start_expr: null,
       state_binding: null,
     });
     expect(out).toEqual({ registered: true, name: 'h' });

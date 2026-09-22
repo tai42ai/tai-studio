@@ -49,7 +49,7 @@ describe('HooksPage — list', () => {
             topic: 'events.created',
             tool: 'slack.post_message',
             condition: { content: 'amount > 100' },
-            expr: { id: 'shape.summary' },
+            start_expr: { id: 'shape.summary' },
           }),
         ],
         total: 1,
@@ -69,7 +69,7 @@ describe('HooksPage — list', () => {
     expect(cells.getByText('events.created')).toBeInTheDocument();
     expect(cells.getByText('slack.post_message')).toBeInTheDocument();
     expect(cells.getByText('condition')).toBeInTheDocument();
-    expect(cells.getByText('expr')).toBeInTheDocument();
+    expect(cells.getByText('start')).toBeInTheDocument();
     expect(cells.getByText('svc-events')).toBeInTheDocument();
     expect(cells.getByText('Public')).toBeInTheDocument();
   });
@@ -117,7 +117,7 @@ describe('HooksPage — list', () => {
     ]);
   });
 
-  it('omits the gate badges when neither condition nor expr is set', async () => {
+  it('omits the gate badges when no condition or door jq is set', async () => {
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHookVerifiers: vi.fn().mockResolvedValue([]),
@@ -127,7 +127,7 @@ describe('HooksPage — list', () => {
 
     await screen.findByText('plain-hook');
     expect(screen.queryByText('condition')).not.toBeInTheDocument();
-    expect(screen.queryByText('expr')).not.toBeInTheDocument();
+    expect(screen.queryByText('start')).not.toBeInTheDocument();
   });
 
   it('shows the empty state when there are no hooks', async () => {
@@ -208,7 +208,10 @@ describe('HooksPage — register', () => {
         tool_kwargs: { channel: 'ops' },
         subject: null,
         condition: null,
-        expr: null,
+        start_expr: null,
+        cancel_expr: null,
+        resume_expr: null,
+        extras_expr: null,
         state_binding: null,
       });
     });

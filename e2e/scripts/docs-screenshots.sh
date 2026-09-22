@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # docs-screenshots.sh — the ONE-COMMAND, permanent Studio docs-screenshot
-# pipeline. Regenerates ALL 28 Studio screens (light + dark = 56 PNGs) into
+# pipeline. Regenerates EVERY Studio screen (light + dark, two PNGs each) into
 # tai-docs/images/studio/, each populated and showing the current Studio build
 # (branding included) — the full-admin screens plus the capability-scoped screens
 # (the owned-key views + the mint→claim-link QR). Rerun it after any UI or branding
@@ -110,6 +110,8 @@ export MONOREPO_DIR
 # accounts-postgres plugin's lifecycle module + login/users routers power the login
 # screen's password form and the users-admin page (its shipped studio/ dist mounts
 # that Studio page); the rest back the toolbox/agents/storage/monitoring surfaces.
+# The RQ backend + its RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring live in boot.sh (both
+# manifests declare `backend_module: tai42_backend_rq`), so they are not repeated here.
 export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the setup-door token to a known value so the runner can
@@ -410,7 +412,7 @@ case "${notify_resp}" in
   *) die "seeding the audience-addressed notification failed: ${notify_resp}" ;;
 esac
 
-# A PENDING audience-addressed question. `ask_user` BLOCKS until answered/timeout, so
+# A PENDING audience-addressed question. `ask` BLOCKS until answered/timeout, so
 # fire it in the background (its own process group) with a long timeout:
 # the question persists to the interactions store immediately, then the call parks
 # there and the EXIT teardown reaps it. The scoped-interactions shot waits on this text.
@@ -425,7 +427,7 @@ DEMO_MEDIA_LINK="https://tai42.ai/concepts/interactions"
 ask_body="$(QUESTION="${DEMO_QUESTION}" AUDIENCE="${OWNED_KEY_ID}" \
   MEDIA_IMAGE="${DEMO_MEDIA_IMAGE}" MEDIA_LINK="${DEMO_MEDIA_LINK}" python3 -c '
 import json, os
-print(json.dumps({"tool_name": "ask_user", "arguments": {
+print(json.dumps({"tool_name": "ask", "arguments": {
     "question": os.environ["QUESTION"], "answer_format": "text",
     "audience": os.environ["AUDIENCE"], "timeout": 3600,
     "media": [
@@ -513,7 +515,7 @@ done
 #
 # The target is a TOOL (`studio_demo_echo`) rather than an agent: a tool turn needs no LLM
 # credentials and answers identically every run, so the transcript is reproducible. The jq
-# `payload_expr` maps the inbound message onto the tool's `message` kwarg (the default
+# `start_expr` maps the inbound message onto the tool's `message` kwarg (the default
 # mapping also passes `sender`, which that tool does not take) and `reply_expr` maps the
 # echoed text onto the reply the visitor gets.
 log "seeding the conversation route + its threads"
@@ -553,7 +555,7 @@ print(json.dumps({
     "door": "api",
     "target_kind": "tool",
     "target_name": "studio_demo_echo",
-    "payload_expr": {"content": "{message: .message}"},
+    "start_expr": {"content": "{message: .message}"},
     "reply_expr": {"content": os.environ["REPLY_EXPR"]},
     "execution_key": os.environ["EXECUTION_KEY"],
     "callback_url": "https://docs-demo.invalid/conversations/answers",

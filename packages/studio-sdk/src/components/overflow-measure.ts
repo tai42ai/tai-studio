@@ -7,12 +7,23 @@
 
 export const SCROLL_REGION_CLASS = 'tai-scroll-region';
 
-export function overflows(element: HTMLElement): boolean {
-  return element.scrollWidth > element.clientWidth;
+/**
+ * The axis a scroll region is measured on. A prose table or a code line scrolls
+ * SIDEWAYS (`horizontal`, the default); a bounded, capped-height list scrolls
+ * DOWN (`vertical`). Both wear the same conditional region attributes — only the
+ * dimension read to decide whether they overflow differs.
+ */
+export type OverflowAxis = 'horizontal' | 'vertical';
+
+export function overflows(element: HTMLElement, axis: OverflowAxis = 'horizontal'): boolean {
+  return axis === 'vertical'
+    ? element.scrollHeight > element.clientHeight
+    : element.scrollWidth > element.clientWidth;
 }
 
 /**
- * Whether the element should carry the region attributes right now.
+ * Whether the element should carry the region attributes right now, measured on
+ * `axis`.
  *
  * A region that stops overflowing keeps its tab stop for as long as it holds
  * focus: taking `tabindex` off the focused element drops the reader onto the
@@ -20,8 +31,8 @@ export function overflows(element: HTMLElement): boolean {
  * already has the stop can be the active element, so this can hold a stop open
  * but never invent one.
  */
-export function needsRegion(element: HTMLElement): boolean {
-  return overflows(element) || element.ownerDocument.activeElement === element;
+export function needsRegion(element: HTMLElement, axis: OverflowAxis = 'horizontal'): boolean {
+  return overflows(element, axis) || element.ownerDocument.activeElement === element;
 }
 
 /** A tracked scrollable surface, with the name it wears while it scrolls. */

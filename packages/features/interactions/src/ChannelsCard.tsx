@@ -1,6 +1,6 @@
 /**
  * Read-only catalog card: the channel plugins installed on this deployment —
- * the media an `ask_user` question can be delivered on (Telegram, Slack, SMS…)
+ * the media an `ask` question can be delivered on (Telegram, Slack, SMS…)
  * besides this inbox. Purely informational; binding a channel to a question is
  * the tool author's call (the `channel` argument), not a Studio action.
  */
