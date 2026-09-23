@@ -111,6 +111,13 @@ extensions_modules:
 tools:
   - title: reference-plugin-tools
     module: reference_plugin.tools
+    # Attach the RQ backend's `schedule_task` extension to studio_demo_echo so its
+    # `studio_demo_echo_schedule_task` vehicle is registered. That branch is what the
+    # create door dispatches to register a recurring schedule, so the add-schedule
+    # dialog's tool picker offers studio_demo_echo as a schedulable tool.
+    extensions:
+      studio_demo_echo:
+        - [schedule_task]
   - title: ask-user
     module: tai42_skeleton.tools.builtin.interactions
 
