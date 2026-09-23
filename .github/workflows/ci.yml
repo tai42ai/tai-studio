@@ -302,6 +302,30 @@ jobs:
           print(f"OK: latest tai42-contract {latest} is within the vendored major {major}.")
           PY
 
+  # Parity guard between the two skeleton boot manifests. The lean e2e boot
+  # (e2e/boot/manifest.yml) and the docs-demo boot (e2e/docs-demo/manifest.yml)
+  # drive two boots of the same SPA; the docs-demo boot is a deliberate superset,
+  # so every registered capability a validated e2e screen depends on — a
+  # tool-extension attachment, a router, an extension surface, the task backend, a
+  # tool module — must also be present there, or a screen proven against the e2e
+  # boot cannot render in the docs boot. The test compares through the real
+  # tai42_contract manifest model (semantic, not textual). Runs on every PR
+  # (forks and Dependabot included), unlike the fork/Dependabot-gated e2e job, so
+  # a divergence is caught pre-merge rather than only as a screenshot-lane red.
+  # Self-contained (no siblings): no backend, no Docker, no cross-repo checkout,
+  # and declares no dependency in any package manifest (``--with`` is ephemeral).
+  manifest-parity:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: '0.11.26'
+      - name: Compare the e2e and docs-demo boot manifests through the contract model
+        run: uv run --with pytest --with tai42-contract --with pyyaml pytest e2e/test_manifest_parity.py
+
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
   # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
