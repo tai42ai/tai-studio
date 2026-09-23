@@ -324,7 +324,7 @@ jobs:
         with:
           version: '0.11.26'
       - name: Compare the e2e and docs-demo boot manifests through the contract model
-        run: uv run --with pytest --with tai42-contract --with pyyaml pytest e2e/test_manifest_parity.py
+        run: uv run --python 3.13 --with pytest --with tai42-contract --with pyyaml pytest e2e/test_manifest_parity.py
 
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
