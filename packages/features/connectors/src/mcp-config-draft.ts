@@ -51,12 +51,12 @@ export function useSecretPasteMutation(
       // CONFIRM the paste against an AUTHORITATIVE re-read before anything else. The op's
       // response carries a COUNT, not the generated name, so the only way to learn the key
       // is the preserved manifest's leaf at the paste pointer — and it is the sole key the
-      // save-time orphan sweep may ever delete. `fetchQuery` raises when that read fails
+      // save-time orphan sweep may ever delete. `query` raises when that read fails
       // (an invalidation would swallow the failure and leave the stale, pre-paste manifest
       // in the cache), retrying the gate's retriable 503 on the delay it names. Raising
       // here fails the mutation, which keeps the Save and paste doors shut over a draft
       // that still carries the pre-paste leaf and tells the operator so.
-      const preserved = await queryClient.fetchQuery({
+      const preserved = await queryClient.query({
         queryKey: preservedManifestKey,
         queryFn: ({ signal }) => api.getManifestPreserved(signal),
         staleTime: 0,
