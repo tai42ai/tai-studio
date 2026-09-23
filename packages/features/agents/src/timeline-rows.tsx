@@ -120,6 +120,48 @@ function StructuredRow({
   );
 }
 
+function StructuredUnresolvedRow({
+  item,
+}: {
+  readonly item: Extract<TimelineItem, { kind: 'structuredUnresolved' }>;
+}): ReactNode {
+  return (
+    <Card>
+      <div className="tai-stack-2" data-testid="timeline-structured-unresolved">
+        <div className="tai-row">
+          <Badge variant="warning">Structured output unresolved</Badge>
+          <span className="tai-mono">{item.schemaName}</span>
+        </div>
+        <span className="tai-muted">
+          The model never produced output matching this schema within {String(item.attempts)}{' '}
+          attempts.
+        </span>
+        <CodeBlock code={item.error} language="error" />
+      </div>
+    </Card>
+  );
+}
+
+function RecursionLimitRow({
+  item,
+}: {
+  readonly item: Extract<TimelineItem, { kind: 'recursionLimit' }>;
+}): ReactNode {
+  return (
+    <Card>
+      <div className="tai-stack-2" data-testid="timeline-recursion-limit">
+        <div className="tai-row">
+          <Badge variant="warning">Step limit reached</Badge>
+        </div>
+        <span className="tai-muted">
+          The run hit its graph step ceiling of {String(item.limit)}
+          {item.steps !== null ? ` after ${String(item.steps)} steps` : ''} before finishing.
+        </span>
+      </div>
+    </Card>
+  );
+}
+
 function InterruptRow({
   item,
 }: {
@@ -190,6 +232,10 @@ export function TimelineRow({ item }: { readonly item: TimelineItem }): ReactNod
       return <UsageRow item={item} />;
     case 'structured':
       return <StructuredRow item={item} />;
+    case 'structuredUnresolved':
+      return <StructuredUnresolvedRow item={item} />;
+    case 'recursionLimit':
+      return <RecursionLimitRow item={item} />;
     case 'interrupt':
       return <InterruptRow item={item} />;
     case 'error':

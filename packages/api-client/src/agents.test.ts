@@ -117,6 +117,33 @@ describe('parseAgentFrame', () => {
       expect(parsed.event.message).toBe('boom');
     }
   });
+
+  it('parses a structured_output_unresolved_final as a known terminal (never an unknown)', () => {
+    const parsed = parseAgentFrame({
+      event: 'message',
+      data: '{"type":"structured_output_unresolved_final","schema_name":"Answer","attempts":4,"error":"nope"}',
+    });
+    expect(parsed.known).toBe(true);
+    if (parsed.known && parsed.event.type === 'structured_output_unresolved_final') {
+      expect(parsed.event.schema_name).toBe('Answer');
+      expect(parsed.event.attempts).toBe(4);
+      expect(parsed.event.error).toBe('nope');
+      expect(parsed.event.final).toBe(true);
+    }
+  });
+
+  it('parses a recursion_limit_final as a known terminal, steps defaulting to null', () => {
+    const parsed = parseAgentFrame({
+      event: 'message',
+      data: '{"type":"recursion_limit_final","limit":25}',
+    });
+    expect(parsed.known).toBe(true);
+    if (parsed.known && parsed.event.type === 'recursion_limit_final') {
+      expect(parsed.event.limit).toBe(25);
+      expect(parsed.event.steps).toBeNull();
+      expect(parsed.event.final).toBe(true);
+    }
+  });
 });
 
 describe('streamAgentRun', () => {

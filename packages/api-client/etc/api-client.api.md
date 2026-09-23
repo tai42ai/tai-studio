@@ -69,6 +69,17 @@ export const agentEventSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
     payload: z.ZodOptional<z.ZodUnknown>;
     reason: z.ZodDefault<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"structured_output_unresolved_final">;
+    final: z.ZodDefault<z.ZodBoolean>;
+    schema_name: z.ZodString;
+    attempts: z.ZodNumber;
+    error: z.ZodString;
+}, z.core.$strip>, z.ZodObject<{
+    type: z.ZodLiteral<"recursion_limit_final">;
+    final: z.ZodDefault<z.ZodBoolean>;
+    limit: z.ZodNumber;
+    steps: z.ZodDefault<z.ZodNullable<z.ZodNumber>>;
+}, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"stream.end">;
 }, z.core.$strip>, z.ZodObject<{
     type: z.ZodLiteral<"stream.error">;

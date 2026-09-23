@@ -32,6 +32,19 @@ export type TimelineItem =
     }
   | { readonly kind: 'structured'; readonly id: string; readonly data: unknown }
   | {
+      readonly kind: 'structuredUnresolved';
+      readonly id: string;
+      readonly schemaName: string;
+      readonly attempts: number;
+      readonly error: string;
+    }
+  | {
+      readonly kind: 'recursionLimit';
+      readonly id: string;
+      readonly limit: number;
+      readonly steps: number | null;
+    }
+  | {
       readonly kind: 'interrupt';
       readonly id: string;
       readonly interruptId: string;
@@ -78,5 +91,15 @@ export type MutableItem =
   | MutableTool
   | Extract<
       TimelineItem,
-      { kind: 'reasoning' | 'usage' | 'structured' | 'interrupt' | 'error' | 'unknown' }
+      {
+        kind:
+          | 'reasoning'
+          | 'usage'
+          | 'structured'
+          | 'structuredUnresolved'
+          | 'recursionLimit'
+          | 'interrupt'
+          | 'error'
+          | 'unknown';
+      }
     >;

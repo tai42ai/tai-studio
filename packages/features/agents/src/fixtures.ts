@@ -22,6 +22,18 @@ export const INTERRUPT_TRANSCRIPT =
   'data: {"type":"interrupt_final","interrupt_id":"i1","reason":"needs input","payload":{"q":"?"}}\n\n' +
   'data: {"type":"stream.end"}\n\n';
 
+// A non-fatal typed terminal: the model never conformed to the requested schema
+// within the re-prompt cap. The run settles as finished (a clean stream.end), NOT
+// as an error.
+export const STRUCTURED_UNRESOLVED_TRANSCRIPT =
+  'data: {"type":"structured_output_unresolved_final","schema_name":"Answer","attempts":4,"error":"not valid"}\n\n' +
+  'data: {"type":"stream.end"}\n\n';
+
+// A non-fatal typed terminal: the run hit the graph step ceiling. Finished, not errored.
+export const RECURSION_LIMIT_TRANSCRIPT =
+  'data: {"type":"recursion_limit_final","limit":25,"steps":25}\n\n' +
+  'data: {"type":"stream.end"}\n\n';
+
 export const ERROR_TRANSCRIPT =
   'data: {"type":"reasoning_step","text":"oops"}\n\n' +
   'data: {"type":"stream.error","message":"boom"}\n\n';
