@@ -30,7 +30,7 @@ import { getContributions } from '@tai42/studio-sdk/host';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-import { AsksList } from './AsksList';
+import { AsksList, ParkedNote } from './AsksList';
 import { BackgroundRuns } from './BackgroundRuns';
 import { toolSchemaKey } from './keys';
 import { ResultViewer } from './ResultViewer';
@@ -128,11 +128,7 @@ function RunOutcome({ run }: { readonly run: AutoFormRun }): ReactNode {
 
       {run.runView?.kind === 'asks' ? <AsksList asks={run.runView.asks} /> : null}
 
-      {run.runView?.kind === 'parked' ? (
-        <p role="status" className="tai-muted" style={{ margin: 0 }} data-testid="run-parked-note">
-          This run parked with no open asks.
-        </p>
-      ) : null}
+      {run.runView?.kind === 'parked' ? <ParkedNote testId="run-parked-note" /> : null}
     </>
   );
 }

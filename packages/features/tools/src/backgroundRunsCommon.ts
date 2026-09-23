@@ -28,13 +28,17 @@ export function toolRunKey(runId: string): readonly ['tool-run', string] {
  * and never a status, and a live run reads as pending — its label plus the live
  * spinner beside it carry the "running" meaning, never colour alone. The terminal
  * states keep their semantic tints (ok / err / warn), each always paired with a
- * word label.
+ * word label. `parked` is a terminal state that neither succeeded nor failed — the
+ * run paused awaiting a resume — so it reads as pending too and takes the same
+ * NEUTRAL chip, never a success/warn/err tint that would claim an outcome it has not
+ * reached.
  */
 export const STATUS_VARIANT: Record<ToolRunStatus, string> = {
   running: 'neutral',
   succeeded: 'success',
   failed: 'danger',
   lost: 'warning',
+  parked: 'neutral',
 };
 
 /** The human label for each status chip. */
@@ -43,4 +47,5 @@ export const STATUS_LABEL: Record<ToolRunStatus, string> = {
   succeeded: 'Succeeded',
   failed: 'Failed',
   lost: 'Lost',
+  parked: 'Parked',
 };

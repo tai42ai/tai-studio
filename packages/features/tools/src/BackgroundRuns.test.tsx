@@ -5,6 +5,7 @@
  *  - an active run is polled to success and renders the typed result;
  *  - polling STOPS the moment the run is terminal (no further GETs);
  *  - the failed and lost states render their distinct surfaces;
+ *  - a parked run renders its park answer (the caller-ask list, or the user-only note);
  *  - selecting a recent run shows that run's detail.
  */
 import type { ToolRunListItem, ToolRunRecord } from '@tai42/api-client';
@@ -125,6 +126,49 @@ describe('BackgroundRuns — active run detail', () => {
     // (jsdom evaluates no CSS — what is pinned is which surface owns the styling.)
     expect(lost).toHaveClass('tai-warn-state');
     expect(lost.getAttribute('style')).toBeNull();
+  });
+
+  it('renders a caller-ask park as the read-only asks list', async () => {
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'parked' })]),
+      getToolRun: vi.fn().mockResolvedValue(
+        record({
+          status: 'parked',
+          finished_at: 't1b',
+          result: {
+            asks: [{ id: 'ask-1', status: 'asking', to: 'caller', question: 'Approve the run?' }],
+          },
+        }),
+      ),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const detail = await screen.findByTestId('tool-run-detail');
+    expect(within(detail).getByText('Parked')).toBeInTheDocument();
+    const list = within(detail).getByTestId('asks-list');
+    expect(within(list).getByText('Approve the run?')).toBeInTheDocument();
+    expect(within(list).getByLabelText('Ask id ask-1')).toBeInTheDocument();
+  });
+
+  it('renders a user-only park as the "no open asks" note', async () => {
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'parked' })]),
+      getToolRun: vi.fn().mockResolvedValue(
+        record({
+          status: 'parked',
+          finished_at: 't1b',
+          result: { interaction_id: 'u1', interaction_ids: ['u1'], caller_interaction_ids: [] },
+        }),
+      ),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const detail = await screen.findByTestId('tool-run-detail');
+    expect(within(detail).getByText('Parked')).toBeInTheDocument();
+    expect(within(detail).getByTestId('tool-run-parked-note')).toHaveTextContent(
+      'This run parked with no open asks.',
+    );
+    expect(within(detail).queryByTestId('asks-list')).not.toBeInTheDocument();
   });
 
   it('selects a recent run and shows its detail on click', async () => {

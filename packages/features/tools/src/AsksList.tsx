@@ -51,16 +51,22 @@ function AskRow({ ask }: { readonly ask: ParkedCallerAsk }): ReactNode {
   );
 }
 
+/** The note every park surface shows when the run parked with no caller ask left to act on:
+ * a status line in the panel's muted tone. `testId` names the surface for its tests. */
+export function ParkedNote({ testId }: { readonly testId: string }): ReactNode {
+  return (
+    <p role="status" className="tai-muted" style={{ margin: 0 }} data-testid={testId}>
+      This run parked with no open asks.
+    </p>
+  );
+}
+
 export function AsksList({ asks }: { readonly asks: readonly ParkedCallerAsk[] }): ReactNode {
   // The list IS its own scrolling box (a capped height with its own `overflow-y`),
   // so it wears the region attributes itself rather than nesting a second scroller.
   const region = useOverflowRegion(undefined, 'Caller asks', 'vertical');
   if (asks.length === 0) {
-    return (
-      <p role="status" className="tai-muted" style={{ margin: 0 }} data-testid="asks-empty">
-        This run parked with no open asks.
-      </p>
-    );
+    return <ParkedNote testId="asks-empty" />;
   }
   return (
     <section className="tai-stack">
