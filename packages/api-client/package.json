@@ -22,7 +22,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@microsoft/api-extractor": "7.58.12",
+    "@microsoft/api-extractor": "7.59.1",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "json-schema-to-zod": "2.8.1",
