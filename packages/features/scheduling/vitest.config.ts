@@ -19,6 +19,10 @@ export default defineConfig({
     globals: true,
     css: false,
     setupFiles: ['./src/test-setup.ts'],
+    // The add and edit dialogs mount the subject sub-form and the door-contract jq
+    // editors; user-event drives them without its per-key delay, and the headroom above
+    // the 5s default covers their render chain while coverage instrumentation is active.
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
