@@ -307,6 +307,33 @@ describe('CreatePresetForm', () => {
     expect(screen.getByText('Fixed kwargs must be a JSON object.')).toBeInTheDocument();
   });
 
+  it('carries a !ENV secret reference in fixed_kwargs to the create body verbatim', async () => {
+    const user = userEvent.setup({ delay: null });
+    const createPreset = vi.fn().mockResolvedValue(record);
+    const client = baseClient({ createPreset });
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
+
+    await fillCreatable(user);
+    // A marker is an ordinary string to the client: it must reach the create body
+    // unchanged — the server resolves it at bind; the client never resolves it.
+    const body = { api_token: '!ENV ${API_TOKEN}' };
+    fireEvent.change(screen.getByLabelText('Fixed kwargs JSON'), {
+      target: { value: JSON.stringify(body) },
+    });
+    await user.click(screen.getByRole('button', { name: 'Create preset' }));
+
+    expect(createPreset).toHaveBeenCalledWith(
+      expect.objectContaining({ fixed_kwargs: { api_token: '!ENV ${API_TOKEN}' } }),
+    );
+  });
+
+  it('states in the Fixed kwargs help that a !ENV ${VAR} value is a secret reference', () => {
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client: baseClient() });
+    const help = screen.getByText(/is a secret reference/i);
+    expect(help).toHaveTextContent('!ENV ${VAR}');
+    expect(help).toHaveTextContent('stores only the reference, never the resolved value');
+  });
+
   it('renders a 409 duplicate message verbatim', async () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi

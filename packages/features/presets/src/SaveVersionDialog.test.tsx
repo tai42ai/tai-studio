@@ -70,6 +70,39 @@ describe('SaveVersionDialog', () => {
     expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
   });
 
+  it('states in the Fixed kwargs help that a !ENV ${VAR} value is a secret reference', () => {
+    renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+      client: client(),
+    });
+    const help = screen.getByText(/is a secret reference/i);
+    expect(help).toHaveTextContent('!ENV ${VAR}');
+    expect(help).toHaveTextContent('stores only the reference, never the resolved value');
+  });
+
+  it('carries a !ENV secret reference in an edited fixed_kwargs to the save body verbatim', async () => {
+    const user = userEvent.setup({ delay: null });
+    const savePresetVersion = vi.fn().mockResolvedValue({
+      version: 3,
+      body: { ...detail, output_schema: null },
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    });
+    renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
+      client: client({ savePresetVersion }),
+    });
+
+    // Editing the kwargs to a marker sends it verbatim: the client never resolves it.
+    fireEvent.change(screen.getByLabelText('Fixed kwargs JSON'), {
+      target: { value: JSON.stringify({ api_token: '!ENV ${API_TOKEN}' }) },
+    });
+    await user.click(screen.getByRole('button', { name: 'Save as new version' }));
+
+    expect(savePresetVersion).toHaveBeenCalledWith('paris_weather', {
+      fixed_kwargs: { api_token: '!ENV ${API_TOKEN}' },
+    });
+  });
+
   it('sends ONLY the changed description field (untouched fields carry forward)', async () => {
     const user = userEvent.setup({ delay: null });
     const savePresetVersion = vi.fn().mockResolvedValue({

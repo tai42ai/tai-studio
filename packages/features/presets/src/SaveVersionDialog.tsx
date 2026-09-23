@@ -27,6 +27,7 @@ import {
 import type { ReactNode, SyntheticEvent } from 'react';
 
 import { ExtensionsField } from './ExtensionsField';
+import { KWARGS_SECRET_REFERENCE_HELP } from './PresetKwargsField';
 import { useSaveVersionDraft } from './useSaveVersionDraft';
 import { useStateBindingSources } from './useStateBindingSources';
 import { ValidateVerdict } from './verdict';
@@ -63,7 +64,7 @@ export function SaveVersionDialog({
       >
         <Field
           label="Fixed kwargs"
-          description="A JSON object baked into the preset as fixed constants."
+          description={`A JSON object baked into the preset as fixed constants. ${KWARGS_SECRET_REFERENCE_HELP}`}
           error={draft.kwargsError}
         >
           <Textarea
