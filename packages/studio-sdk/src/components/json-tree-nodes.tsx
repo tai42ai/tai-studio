@@ -40,8 +40,19 @@ const summaryStyle: CSSProperties = {
   cursor: 'pointer',
 };
 
-/** The copy control sits at the far end of a disclosure's row. */
-const nodeCopyStyle: CSSProperties = { marginLeft: 'auto' };
+/**
+ * A disclosure and its copy control share one row: the disclosure fills it and the
+ * copy control sits at the far end, top-aligned with the summary so it stays on the
+ * summary's line even when the open node's children run tall below it.
+ */
+const nodeRowStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 'var(--tai-space-2)',
+};
+
+/** The disclosure takes the row's width, leaving the copy control at its end. */
+const nodeDetailsStyle: CSSProperties = { flex: 1, minWidth: 0 };
 
 /**
  * The per-node copy button's geometry: borrows `tai-icon-btn` for the focus ring,
@@ -89,11 +100,7 @@ export function CopyButton({ value, label, variant }: CopyButtonProps): ReactEle
     };
   }, []);
 
-  const handleClick = (event: ReactMouseEvent<HTMLButtonElement>): void => {
-    // Inside a `<summary>` a click both toggles the disclosure natively and reaches
-    // the summary's own toggle handler; neither should fire for a copy.
-    event.preventDefault();
-    event.stopPropagation();
+  const handleClick = (): void => {
     void copy(value).then((ok) => {
       if (!ok || !mounted.current) return;
       setCopied(true);
@@ -117,7 +124,7 @@ export function CopyButton({ value, label, variant }: CopyButtonProps): ReactEle
     <button
       type="button"
       className="tai-icon-btn"
-      style={{ ...nodeCopyStyle, ...nodeCopyButtonStyle }}
+      style={nodeCopyButtonStyle}
       aria-label={copied ? COPIED_LABEL : label}
       onClick={handleClick}
     >
@@ -196,22 +203,33 @@ export function JsonNode({ name, value, depth, path }: NodeProps): ReactElement 
       setOpen(path, !open);
     };
 
-    return (
-      <details open={open}>
+    const disclosure = (
+      <details open={open} style={depth > 0 ? nodeDetailsStyle : undefined}>
         <summary style={summaryStyle} onClick={handleToggle}>
           {name !== undefined ? <span className="tai-syntax-key">{name}: </span> : null}
           <span className="tai-muted">{summary}</span>
-          {/* The root's copy-node control would duplicate the toolbar's copy-whole. */}
-          {depth > 0 ? (
-            <CopyButton
-              value={value}
-              variant="icon"
-              label={name !== undefined ? `Copy ${name}` : COPY_LABEL}
-            />
-          ) : null}
         </summary>
         {open ? <NodeChildren value={value} count={count} depth={depth} path={path} /> : null}
       </details>
+    );
+
+    // The root's copy-node control would duplicate the toolbar's copy-whole.
+    if (depth === 0) return disclosure;
+
+    // The copy control is a SIBLING of the disclosure, never a child of its
+    // interactive `<summary>`, so no interactive control nests inside another
+    // (WCAG 4.1.2 name/role/value — a nested-interactive control has no reliable
+    // accessible role). Both the disclosure toggle and the copy button stay
+    // independently keyboard operable.
+    return (
+      <div style={nodeRowStyle}>
+        {disclosure}
+        <CopyButton
+          value={value}
+          variant="icon"
+          label={name !== undefined ? `Copy ${name}` : COPY_LABEL}
+        />
+      </div>
     );
   }
 

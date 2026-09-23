@@ -6,18 +6,23 @@
  * params values are validated locally, so a bad value blocks submit before any
  * request fires.
  */
-import type { TriggerLinkCreateBody, TriggerLinkCreated } from '@tai42/api-client';
+import type { TokensPayload, TriggerLinkCreateBody, TriggerLinkCreated } from '@tai42/api-client';
 import { errorMessage, useApi } from '@tai42/studio-sdk';
-import { useMutation, type UseMutationResult, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  type UseMutationResult,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { type SyntheticEvent, useMemo, useState } from 'react';
 import { renderSVG } from 'uqr';
 
 import { composeTriggerUrl } from './compose-trigger-url';
-import { useExecutionKeys } from './ExecutionKeyPicker';
 import { type ExpiryChoice, resolveTtlSeconds } from './expiry';
 import { fireGateUnsatisfiable } from './fire-path-gate';
 import { parseJsonObject } from './jsonObjectField';
 import { TRIGGER_LINKS_KEY_ROOT } from './keys';
+import { useExecutionKeys } from './use-execution-keys';
 
 interface CreateBodyValues {
   readonly topic: string;
@@ -83,6 +88,7 @@ export interface CreateTriggerLinkForm {
   readonly expiryError: string | null;
   readonly kwargsError: string | null;
   readonly mutation: UseMutationResult<TriggerLinkCreated, Error, TriggerLinkCreateBody>;
+  readonly keysQuery: UseQueryResult<TokensPayload>;
   readonly unsatisfiable: boolean;
   readonly link: TriggerLinkCreated | null;
   readonly url: string | null;
@@ -170,6 +176,7 @@ export function useCreateTriggerLink(): CreateTriggerLinkForm {
     expiryError,
     kwargsError,
     mutation,
+    keysQuery,
     unsatisfiable,
     link,
     url,

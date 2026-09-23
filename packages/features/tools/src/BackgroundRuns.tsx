@@ -9,7 +9,9 @@
  * selecting one, reads its full record and renders the result through the SAME
  * `ResultViewer` the sync path uses (oversized handling included). A `lost` run
  * (the server restarted mid-run) renders its own explanation — the result is
- * unrecoverable.
+ * unrecoverable. A `parked` run (its tool async-parked) carries the park answer as
+ * its `result`, read through the SAME `readRunResult` the sync path uses: a caller-ask
+ * park shows the `AsksList`, a user-only park the "no open asks" note.
  *
  * The recent-runs list is a quiet, borderless `.tai-nav-item` list: a status chip
  * (label + colour, plus a live spinner while running), the run id in mono, and the
@@ -29,6 +31,7 @@ import {
 import { type Query, useQuery } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useState } from 'react';
 
+import { AsksList, ParkedNote } from './AsksList';
 import {
   POLL_INTERVAL_MS,
   STATUS_LABEL,
@@ -37,6 +40,7 @@ import {
   toolRunsListKey,
 } from './backgroundRunsCommon';
 import { ResultViewer } from './ResultViewer';
+import { readRunResult } from './run-asks';
 
 /** One status chip; the running state pairs the chip with a live spinner. */
 function StatusChip({ status }: { readonly status: ToolRunRecord['status'] }): ReactNode {
@@ -61,6 +65,17 @@ function LostNotice(): ReactNode {
       </p>
     </div>
   );
+}
+
+/** A `parked` run's park answer: the caller-ask list, or the user-only "no open asks"
+ * note. Reads the record's `result` through the SAME reader the sync run panel uses, so
+ * the two doors show a park identically; `AsksList` renders the note for an empty ask set. */
+function ParkedRun({ result }: { readonly result: unknown }): ReactNode {
+  const view = readRunResult(result);
+  if (view.kind === 'asks') {
+    return <AsksList asks={view.asks} />;
+  }
+  return <ParkedNote testId="tool-run-parked-note" />;
 }
 
 /** Poll and render one run's live record (status + terminal result/error). */
@@ -104,6 +119,7 @@ function RunDetail({ runId }: { readonly runId: string }): ReactNode {
         <ErrorState message={record.error ?? 'The tool run failed.'} />
       ) : null}
       {record.status === 'lost' ? <LostNotice /> : null}
+      {record.status === 'parked' ? <ParkedRun result={record.result} /> : null}
     </section>
   );
 }

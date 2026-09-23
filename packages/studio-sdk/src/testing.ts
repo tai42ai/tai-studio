@@ -109,25 +109,33 @@ export function flushResizeObserversFor(target: Element): void {
   }
 }
 
-/** The faked widths: equal reads as "fits", unequal as "scrolls". */
-const FITTING_WIDTH = 100;
-const OVERFLOWING_SCROLL_WIDTH = 400;
+/** The faked extents: equal reads as "fits", unequal as "scrolls". */
+const FITTING_EXTENT = 100;
+const OVERFLOWING_SCROLL_EXTENT = 400;
 
 /**
- * Makes `element` report itself as horizontally overflowing (or not). jsdom runs
- * no layout, so `scrollWidth` and `clientWidth` are both 0 and every
- * overflow test reads as "fits"; this shadows the prototype getters with own,
- * configurable values so a test can drive either state. Call it again with the
- * opposite flag to flip the element back.
+ * Makes `element` report itself as overflowing (or not) on `axis`. jsdom runs no
+ * layout, so `scroll*` and `client*` are both 0 and every overflow test reads as
+ * "fits"; this shadows the prototype getters with own, configurable values so a
+ * test can drive either state. Call it again with the opposite flag to flip the
+ * element back.
  *
  * @param element - the element whose scroll metrics to fake.
- * @param overflowing - true to report content wider than the box.
+ * @param overflowing - true to report content larger than the box on `axis`.
+ * @param axis - the dimension to fake: `horizontal` (width, the default) or
+ *   `vertical` (height).
  */
-export function setElementOverflow(element: HTMLElement, overflowing: boolean): void {
-  Object.defineProperty(element, 'clientWidth', { configurable: true, value: FITTING_WIDTH });
-  Object.defineProperty(element, 'scrollWidth', {
+export function setElementOverflow(
+  element: HTMLElement,
+  overflowing: boolean,
+  axis: 'horizontal' | 'vertical' = 'horizontal',
+): void {
+  const [client, scroll] =
+    axis === 'vertical' ? ['clientHeight', 'scrollHeight'] : ['clientWidth', 'scrollWidth'];
+  Object.defineProperty(element, client, { configurable: true, value: FITTING_EXTENT });
+  Object.defineProperty(element, scroll, {
     configurable: true,
-    value: overflowing ? OVERFLOWING_SCROLL_WIDTH : FITTING_WIDTH,
+    value: overflowing ? OVERFLOWING_SCROLL_EXTENT : FITTING_EXTENT,
   });
 }
 

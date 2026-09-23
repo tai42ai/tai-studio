@@ -1,8 +1,9 @@
 /**
  * Register / edit form: builds a {@link HookParams} and posts it to
  * `api.registerHook` (the documented upsert edit path). `name`, `topic`, `tool`
- * and the execution key are required; optional `condition`/`expr`/subject default
- * to unset. The `tool_kwargs` textarea is parsed with `JSON.parse` — a parse
+ * and the execution key are required; the optional `condition`, the four
+ * door-contract jqs (`start_expr`/`cancel_expr`/`resume_expr`/`extras_expr`) and the
+ * subject default to unset. The `tool_kwargs` textarea is parsed with `JSON.parse` — a parse
  * failure (or a non-object result) is a LOUD inline field error that blocks submit,
  * so no API call fires on bad input.
  *
@@ -84,7 +85,10 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
       subjectKind: fields.subjectKind,
       subjectKeyExpr: fields.subjectKeyExpr,
       condition: fields.condition,
-      expr: fields.expr,
+      startExpr: fields.startExpr,
+      cancelExpr: fields.cancelExpr,
+      resumeExpr: fields.resumeExpr,
+      extrasExpr: fields.extrasExpr,
       stateBinding: fields.stateBinding,
     });
     if (!result.ok) {
@@ -112,6 +116,7 @@ export function RegisterHookForm({ initial, onClose }: RegisterHookFormProps = {
         missing={missing}
         replacesExisting={replacesExisting}
         trimmedName={trimmedName}
+        keysQuery={data.keysQuery}
       />
       <HookSubjectSection fields={fields} targetOptions={data.targetOptions} />
       <HookConditionExprFields

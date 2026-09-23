@@ -9,25 +9,30 @@
  *
  * The background surface detaches a run from its HTTP request: submit returns a
  * `run_id` immediately (202), then the caller POLLS the single-run GET until the
- * status is terminal (`succeeded | failed | lost`). The list GET returns the
- * recent runs for one tool — id/status/timestamps only, never `result`/`error`.
+ * status is terminal (`succeeded | failed | lost | parked`). The list GET returns
+ * the recent runs for one tool — id/status/timestamps only, never `result`/`error`.
  */
 import { z } from 'zod';
 
 import type { ApiConfig } from './http';
 import { apiRequest, encodeSegment } from './http';
+import type { StateSubject } from './schemas/states';
+import { callerAsksEnvelope, suspendedRunReceipt } from './schemas/tools';
 
 /** A run's lifecycle state. `lost` = the server restarted mid-run; the result is
- * unrecoverable. `running` is the only non-terminal state. */
-export const toolRunStatus = z.enum(['running', 'succeeded', 'failed', 'lost']);
+ * unrecoverable. `parked` = the run's tool async-parked; its `result` is the park
+ * answer (see {@link toolRunParkAnswer}). `running` is the only non-terminal state. */
+export const toolRunStatus = z.enum(['running', 'succeeded', 'failed', 'lost', 'parked']);
 
 /** `POST /api/tool-runs` → the handle for the detached run. */
 export const toolRunSubmitResult = z.object({
   run_id: z.string(),
 });
 
-/** `GET /api/tool-runs/{run_id}` → the full record. `result` is arbitrary JSON
- * (present only on `succeeded`); `error` is present only on `failed`. */
+/** `GET /api/tool-runs/{run_id}` → the full record. `result` is arbitrary JSON: the
+ * tool's own value on `succeeded`, the park answer ({@link toolRunParkAnswer}) on
+ * `parked`. `error` is present only on `failed`. `resumed_interactions` is the parked
+ * interaction ids the run resumed or took while it executed (`[]` when it resumed none). */
 export const toolRunRecord = z.object({
   run_id: z.string(),
   tool_name: z.string(),
@@ -36,6 +41,7 @@ export const toolRunRecord = z.object({
   finished_at: z.string().optional(),
   result: z.unknown().optional(),
   error: z.string().optional(),
+  resumed_interactions: z.array(z.string()).optional(),
 });
 
 /** One entry of `GET /api/tool-runs?tool_name=...` — id/status/timestamps only,
@@ -50,7 +56,16 @@ export const toolRunListItem = z.object({
 
 export const toolRunList = z.array(toolRunListItem);
 
+/**
+ * The `result` a `parked` record carries — the SAME park answer the synchronous run-tool
+ * door returns: either the caller-ask envelope `{asks: [...]}` (the tool asked its CALLER
+ * and parked) or the suspension receipt (the run parked only USER asks, ids only). A poller
+ * reads it to tell a caller-ask park from a user-only one, exactly as the sync door's caller does.
+ */
+export const toolRunParkAnswer = z.union([callerAsksEnvelope, suspendedRunReceipt]);
+
 export type ToolRunStatus = z.infer<typeof toolRunStatus>;
+export type ToolRunParkAnswer = z.infer<typeof toolRunParkAnswer>;
 export type ToolRunSubmitResult = z.infer<typeof toolRunSubmitResult>;
 export type ToolRunRecord = z.infer<typeof toolRunRecord>;
 export type ToolRunListItem = z.infer<typeof toolRunListItem>;
@@ -59,6 +74,9 @@ export type ToolRunListItem = z.infer<typeof toolRunListItem>;
 export interface SubmitToolRunArgs {
   readonly tool_name: string;
   readonly arguments?: Record<string, unknown>;
+  /** The addressed subject an async park of the detached run indexes under. Omitted
+   * from the request body when unset. */
+  readonly subject?: StateSubject;
 }
 
 /** Submit a tool for detached background execution; resolves with its `run_id`. */
@@ -69,7 +87,11 @@ export function submitToolRun(
 ): Promise<ToolRunSubmitResult> {
   return apiRequest(config, '/api/tool-runs', toolRunSubmitResult, {
     method: 'POST',
-    body: { tool_name: args.tool_name, arguments: args.arguments ?? {} },
+    body: {
+      tool_name: args.tool_name,
+      arguments: args.arguments ?? {},
+      ...(args.subject !== undefined ? { subject: args.subject } : {}),
+    },
     signal,
   });
 }

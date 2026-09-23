@@ -12,9 +12,9 @@ import {
 } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
-/** The minimal tools-list query shape this surface reads. */
+/** The tools-list query status this surface reads. The pickable tool names ride in
+ *  their own `toolNames` prop; this shape carries only the read's loading/error legs. */
 interface ToolsQueryLike {
-  readonly data: readonly string[] | undefined;
   readonly isError: boolean;
   readonly isPending: boolean;
   readonly error: unknown;
@@ -33,6 +33,7 @@ export function ScheduleFields({
   toolMissing,
   kwargsError,
   toolsQuery,
+  toolNames,
   excludeToolNames,
   displayNames,
   badgesByTool,
@@ -48,6 +49,7 @@ export function ScheduleFields({
   readonly toolMissing: boolean;
   readonly kwargsError: string | null;
   readonly toolsQuery: ToolsQueryLike;
+  readonly toolNames: readonly string[];
   readonly excludeToolNames: readonly string[];
   readonly displayNames: Readonly<Record<string, string>>;
   readonly badgesByTool: Readonly<Record<string, readonly string[]>>;
@@ -72,7 +74,7 @@ export function ScheduleFields({
       ) : (
         <Field label="Tool" error={submitted && toolMissing ? 'A tool is required.' : undefined}>
           <ToolPicker
-            toolNames={toolsQuery.data ?? []}
+            toolNames={toolNames}
             value={tool}
             onChange={setTool}
             disabled={toolsQuery.isPending}

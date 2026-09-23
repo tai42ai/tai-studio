@@ -88,6 +88,13 @@ INTERACTIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/2"
 TOOL_RUNS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/3"
 HOOKS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/4"
 CONVERSATIONS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/5"
+# The RQ task backend both manifests declare (`backend_module: tai42_backend_rq`): its
+# schedule store (db 6) and the worker bus a registered backend requires (db 7,
+# `TAI_BUS_REDIS_URL`), isolated from the stores on db 0-5. The suites never run a
+# schedule, so no RQ worker is started — these satisfy the Schedules list door and the
+# backend-needs-bus boot invariant.
+RQ_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/6"
+BUS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT}/7"
 export PG_HOST_PORT="${PG_HOST_PORT:-55432}"
 
 # The one named "default" database every store binds to (TAI_DB_BINDING_* unset, so
@@ -150,6 +157,18 @@ if [[ -d "${WEBHOOK_VERIFIER_DIR}" ]]; then
   uv pip install --python "${VENV_PY}" --quiet "${WEBHOOK_VERIFIER_DIR}"
 else
   log "ERROR: webhook-verifier-github not found at ${WEBHOOK_VERIFIER_DIR}"
+  exit 1
+fi
+
+# The RQ task backend both manifests declare (`backend_module: tai42_backend_rq`); its
+# import registers the scheduling marker tools, so the Schedules screen's list/create
+# doors are available. RQ_REDIS_URL + TAI_BUS_REDIS_URL below point it at the boot Redis.
+BACKEND_RQ_DIR="${MONOREPO_DIR}/plugins/backend-rq"
+if [[ -d "${BACKEND_RQ_DIR}" ]]; then
+  log "installing backend-rq into the skeleton env"
+  uv pip install --python "${VENV_PY}" --quiet "${BACKEND_RQ_DIR}"
+else
+  log "ERROR: backend-rq not found at ${BACKEND_RQ_DIR}"
   exit 1
 fi
 
@@ -282,7 +301,7 @@ export ACCESS_CONTROL_REDIS_URL="${REDIS_URL}"
 # here. Their tables ship in the skeleton migration chain applied above.
 export STUDIO_DIST_PATH="${STUDIO_DIST}"
 
-# Interactions (ask_user): its Redis defaults to loopback :6379 and always
+# Interactions (ask): its Redis defaults to loopback :6379 and always
 # connects (never in-memory), so it must be pointed at the compose Redis. The
 # public base URL is the skeleton's own origin — the external-question callback
 # URL is minted from it, so an ask_external question fails without it (http://
@@ -295,6 +314,13 @@ export INTERACTIONS_PUBLIC_BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
 # (db 3, isolated from access-control/connector/interactions). Every RunPanel GETs
 # `/api/tool-runs?tool_name=...` on mount, so this must resolve.
 export TAI_TOOL_RUNS_REDIS_URL="${TOOL_RUNS_REDIS_URL}"
+
+# The RQ task backend (`backend_module` in the manifest): point its schedule store
+# (db 6) and the worker bus a registered backend requires (db 7) at the compose Redis.
+# Without the bus the boot refuses a registered backend; without the store the Schedules
+# list door cannot answer. Only the doors are exercised, so no RQ worker is started.
+export RQ_REDIS_URL="${RQ_REDIS_URL}"
+export TAI_BUS_REDIS_URL="${BUS_REDIS_URL}"
 
 # Hooks registry: with no HOOKS_REDIS_URL the hooks manager runs in-memory
 # per-process, and trigger links (a durable public URL must be shared across

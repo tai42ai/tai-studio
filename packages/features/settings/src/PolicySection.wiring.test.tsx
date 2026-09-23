@@ -96,7 +96,11 @@ describe('PolicySection — JqField wiring (render-level)', () => {
     expect(serverValidate).toBeInstanceOf(Function);
 
     await expect(
-      serverValidate?.({ expression: '.policy.limit > 0', sampleInput: { sub: 'x' } }),
+      serverValidate?.({
+        expression: '.policy.limit > 0',
+        sampleInput: { sub: 'x' },
+        sampleVariables: {},
+      }),
     ).resolves.toEqual({ ok: true, compiles: true, message: 'allows the sample' });
     // Drove the field's validator → it reached the stubbed client's guard.
     expect(validateCondition).toHaveBeenCalledWith({

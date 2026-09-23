@@ -61,6 +61,11 @@
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
+ *   - conversation-route-agent-contract — the route CREATE dialog for an agent target,
+ *                  framing the five door-contract jq fields and the execution key.
+ *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
+ *                  execution-key picker + the four jq fields), backed by the RQ scheduling
+ *                  backend the docs-demo boot installs.
  *   - hooks-trigger-link / -execution-key — the mint→QR dialog, and the register
  *                  form's execution-key picker.
  *   - login      — the credential screen, captured signed out.
@@ -184,6 +189,130 @@ const AUTHED_PAGES = [
       await page.getByLabel('name', { exact: true }).fill('Ada');
       await page.getByRole('button', { name: 'Run', exact: true }).click();
       await page.locator('text=Result').first().waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The run panel's optional Subject section, expanded: the target select, the kind
+    // and key fields, and the caption. Collapsed by default, so the action opens it and
+    // waits on the Subject kind field as the populated signal. Nothing is run, so no
+    // backend state is touched and the frame is deterministic.
+    name: 'run-subject',
+    path: '/tools?tool=studio_demo_form',
+    wait: 'button:has-text("Run in background")',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Subject (optional)' }).click();
+      await page.getByLabel('Subject kind').waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The run panel's caller-asks result: `parking_ask` asks the caller and parks, so the
+    // synchronous run returns the caller-asks envelope the panel lists (one read-only row
+    // per ask — its prompt and copyable id). A caller ask is subject-indexed, so the
+    // Subject section is filled against the seeded `tool · studio_demo_echo` route first.
+    name: 'run-caller-asks',
+    path: '/tools?tool=parking_ask',
+    wait: 'button:has-text("Run in background")',
+    action: async (page) => {
+      await page.getByLabel(/^prompt$/i).fill('Approve this step before it continues?');
+      await page.getByRole('button', { name: 'Subject (optional)' }).click();
+      await page.getByRole('combobox', { name: 'Target' }).click();
+      await page.getByRole('option', { name: 'tool · studio_demo_echo' }).first().click();
+      await page.getByLabel('Subject kind').fill('thread');
+      await page.getByLabel('Subject key').fill('a-42');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      const list = page.getByTestId('asks-list');
+      await list.waitFor({ state: 'visible', timeout: 8000 });
+      await list.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // Many long caller asks in one run: `parking_ask` parks `count` asks, so the panel's
+    // asks list truncates each prompt to one line and scrolls within its bounded height
+    // rather than growing the panel unbounded.
+    name: 'run-caller-asks-many',
+    path: '/tools?tool=parking_ask',
+    wait: 'button:has-text("Run in background")',
+    action: async (page) => {
+      await page
+        .getByLabel(/^prompt$/i)
+        .fill(
+          'Please review and confirm this step of the long-running multi-stage run before it proceeds onward to the next stage and continues',
+        );
+      await page.getByLabel(/^count$/i).fill('10');
+      await page.getByRole('button', { name: 'Subject (optional)' }).click();
+      await page.getByRole('combobox', { name: 'Target' }).click();
+      await page.getByRole('option', { name: 'tool · studio_demo_echo' }).first().click();
+      await page.getByLabel('Subject kind').fill('thread');
+      await page.getByLabel('Subject key').fill('a-43');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      const list = page.getByTestId('asks-list');
+      await list.waitFor({ state: 'visible', timeout: 8000 });
+      await list.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // The conversation-route CREATE dialog for an AGENT target, framing the door-contract
+    // section: the five inline jq fields (Start / Reply / Cancel / Resume / Extras) an
+    // asking route carries, plus the execution key. The action opens the dialog, picks an
+    // agent target and a channel door, fills the required delivery fields, then scrolls the
+    // door-contract section into view. Nothing is submitted, so no backend state is touched
+    // and the frame is deterministic (the seeded route makes the page's Create button show,
+    // but the dialog's own fields are all blank/typed here).
+    name: 'conversation-route-agent-contract',
+    path: '/conversations',
+    wait: 'button:has-text("Create route")',
+    // The dialog is modal (the background nav goes inert), so the plugin-nav wait is
+    // meaningless — the dialog's own waits are the stable signal.
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Create route' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByRole('textbox', { name: 'Route name' }).fill('events');
+      const pickVariant = async (groupName, optionName) => {
+        await dialog.getByRole('group', { name: groupName }).getByRole('combobox').click();
+        await page.getByRole('option', { name: optionName }).click();
+      };
+      await pickVariant('Target', 'agent');
+      await dialog.getByRole('textbox', { name: /^Agent name\b/ }).fill('assistant');
+      await pickVariant('Door', 'channel');
+      await dialog.getByRole('textbox', { name: /^Channel\b/ }).fill('whatsapp');
+      await dialog.getByRole('textbox', { name: /^Our identity\b/ }).fill('+15550000000');
+      await dialog.getByRole('textbox', { name: 'Execution key' }).fill('svc-events');
+      // The door-contract jq fields are the shot's subject: wait on the Reply-expression
+      // field and scroll it into view so the section is framed.
+      const contractField = dialog.getByText('Reply expression', { exact: true });
+      await contractField.waitFor({ state: 'visible', timeout: 8000 });
+      await contractField.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // The add-schedule dialog framing its door-contract section: the execution-key picker
+    // (the identity a recurring fire runs as) and the four door-contract jq fields (Start /
+    // Cancel / Resume / Extras) a parkable-driving schedule carries. Needs the scheduling
+    // backend the docs-demo boot installs so `GET /api/schedules` answers 200 and the page
+    // offers the create dialog. The action opens the dialog, fills a name / tool / cron,
+    // picks the first execution key, then waits on the contract section. Nothing is
+    // submitted, so no schedule is created and the frame is deterministic.
+    name: 'schedule-contract',
+    path: '/scheduling',
+    wait: 'button:has-text("Add schedule")',
+    // The dialog is modal (background nav inert), so the plugin-nav wait is meaningless.
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Add schedule' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Add schedule' });
+      await dialog.getByLabel('Name').fill('nightly-refresh');
+      await dialog.getByRole('combobox', { name: 'Tool' }).click();
+      await page.getByRole('option', { name: 'studio_demo_echo' }).click();
+      await dialog.getByLabel('Cron expression').fill('0 2 * * *');
+      // The door-contract section is the shot's subject: its execution-key picker is the
+      // section's stable, unique signal (the jq field labels appear twice — a Field label
+      // and the visual jq editor's own label). Pick the first key so the shot shows a bound
+      // execution identity beside the four jq fields.
+      const executionKey = dialog.getByRole('combobox', { name: 'Execution key' });
+      await executionKey.waitFor({ state: 'visible', timeout: 8000 });
+      await executionKey.click();
+      await page.getByRole('option').first().click();
     },
   },
   { name: 'extensions', path: '/extensions', wait: 'text=ask_external' },

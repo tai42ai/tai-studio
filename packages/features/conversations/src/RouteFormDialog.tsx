@@ -7,12 +7,14 @@
  *
  * The body is authored through the SDK's `SchemaForm` over a client-authored schema
  * (see `route-schema`): two discriminated unions mirror the contract's cross-field
- * rules, so an `agent` target never shows the tool-only jq fields and each door only
- * shows its own delivery fields — the platform's structural 400s are unreachable by
- * construction. Value-content 400s stay server-enforced and surface via `ErrorState`.
- * The `payload_expr`/`reply_expr` fields carry `x-tai42-expression`; the host's
- * ambient `ExpressionFieldContext` renders the visual jq editor in their place. The
- * form authors their inline jq; `route-schema` wraps it into the templated-text body.
+ * rules, so each door only shows its own delivery fields — the platform's structural
+ * 400s are unreachable by construction. Value-content 400s (and the attach-check
+ * refusals a target's bind validator raises) stay server-enforced and surface via
+ * `ErrorState`. Both target kinds carry the five door-contract jq fields
+ * (`start_expr`/`cancel_expr`/`resume_expr`/`extras_expr`/`reply_expr`), each with
+ * `x-tai42-expression`; the host's ambient `ExpressionFieldContext` renders the
+ * visual jq editor in their place. The form authors their inline jq; `route-schema`
+ * wraps it into the templated-text body.
  *
  * SHOWN ONCE: an `api`-door write mints a fresh `callback_secret` (every save
  * rotates it — the door is an upsert), returned in the reply exactly once and never

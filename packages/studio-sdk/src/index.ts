@@ -221,6 +221,7 @@ export { Button, Card, EmptyState, ErrorState, Skeleton, Spinner } from './compo
 export type { RadioGroupProps, RadioOption } from './components/radio-group';
 export { RadioGroup } from './components/radio-group';
 export type {
+  OverflowAxis,
   OverflowRegionAttributes,
   ProseScrollLabels,
   ScrollRegionProps,
@@ -295,6 +296,8 @@ export { openTargetProps } from './components/open-target';
 // hands back the parsed URL, so a caller that needs the URL does not re-parse it.
 export type { CopyFieldProps } from './components/copy-field';
 export { CopyField } from './components/copy-field';
+export type { ExecutionKeyPickerProps, ExecutionKeyQuery } from './components/execution-key-picker';
+export { ExecutionKeyPicker, isExecutionKeyListEmpty } from './components/execution-key-picker';
 export type { ExtensionComboBuilderProps } from './components/extension-combo-builder';
 export { ExtensionComboBuilder } from './components/extension-combo-builder';
 export type { ExtensionFamily, ExtensionKindGroup } from './components/extension-grouping';
@@ -311,6 +314,14 @@ export type { ExternalLinkButtonProps } from './components/external-link';
 export { safeHttpUrl } from './components/primitives';
 export type { RevealInputProps } from './components/reveal-input';
 export { RevealInput } from './components/reveal-input';
+export type { SubjectSectionProps, SubjectTargetOption } from './components/subject-section';
+export {
+  buildSubject,
+  SUBJECT_INCOMPLETE_MESSAGE,
+  SubjectSection,
+  toSubjectTargetOptions,
+  useSubjectFields,
+} from './components/subject-section';
 export type { TokenName } from './components/tokens';
 export { TOKEN_NAMES } from './components/tokens';
 export type { ToolPickerProps } from './components/tool-picker';

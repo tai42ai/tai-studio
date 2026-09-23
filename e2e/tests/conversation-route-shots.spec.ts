@@ -45,7 +45,7 @@ const ROUTE_BASE = {
   door: 'channel',
   target_kind: 'agent',
   target_name: 'assistant',
-  payload_expr: null,
+  start_expr: null,
   reply_expr: null,
   execution_key: 'studio-e2e',
   execution_key_fingerprint: 'fp-demo',
@@ -70,7 +70,7 @@ const EDIT_ROUTE = {
   channel: 'whatsapp',
   target_kind: 'tool',
   target_name: 'studio_demo_echo',
-  payload_expr: { content: '{ text: .message.text }' },
+  start_expr: { content: '{ text: .message.text }' },
   reply_expr: { content: '{ text: .result.text }' },
   overlap: OVERLAP_CUSTOM,
 };

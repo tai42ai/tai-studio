@@ -1,5 +1,5 @@
 [
-  "ask_user",
+  "ask",
   "reload_config",
   "reload_tool",
   "remove_tool",

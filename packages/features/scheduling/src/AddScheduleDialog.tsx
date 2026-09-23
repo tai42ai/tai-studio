@@ -8,7 +8,10 @@
  * valid submit the dialog posts through `addSchedule`, mapping the picked tool and
  * parsed kwargs into the skeleton's `{tool_name, tool_kwargs, schedule_kwargs}`
  * body; the schedule spec rides in `schedule_kwargs.backend_schedule` (the interval
- * number or the cron string) alongside `backend_schedule_name` (the name).
+ * number or the cron string) alongside `backend_schedule_name` (the name). The
+ * request names the tool's `<tool>_schedule_task` vehicle — the branch the backend's
+ * `schedule_task` extension registers and the create door dispatches to register the
+ * recurring schedule.
  *
  * The crontab spec is entered as a single validated cron STRING field rather than a
  * visual cron builder: the string is the exact value the skeleton expects, so it is
@@ -22,6 +25,7 @@ import {
   ErrorState,
   Spinner,
   StateBindingSection,
+  SubjectSection,
   useApi,
 } from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -35,10 +39,12 @@ import {
   type ScheduleMode,
   validateScheduleForm,
 } from './schedule-form';
+import { ScheduleContractSection } from './ScheduleContractSection';
 import { ScheduleFields } from './ScheduleFields';
 import { ScheduleSpecFields } from './ScheduleSpecFields';
-import { SubjectSection } from './SubjectSection';
 import { useScheduleBinding } from './use-schedule-binding';
+import { useScheduleContract } from './use-schedule-contract';
+import { useScheduleExecutionKeys } from './use-schedule-execution-key';
 import { useScheduleSubject } from './use-schedule-subject';
 import { useScheduleTools } from './use-schedule-tools';
 
@@ -56,9 +62,13 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   const [kwargsError, setKwargsError] = useState<string | null>(null);
   // The optional door-layer state binding applied around every fire of this schedule.
   const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
+  // The execution key + the four door-contract jqs a parkable-driving schedule carries.
+  const contract = useScheduleContract();
 
-  const { toolsQuery, excludeToolNames, badgesByTool, displayNames } = useScheduleTools();
-  const { bindingProps } = useScheduleBinding(tool);
+  const { toolsQuery, toolNames, excludeToolNames, badgesByTool, displayNames } =
+    useScheduleTools();
+  const { bindingProps, templatedTextTemplates } = useScheduleBinding(tool);
+  const keysQuery = useScheduleExecutionKeys();
   const subject = useScheduleSubject();
 
   const add = useMutation({
@@ -75,6 +85,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
   const handleSubmit = useCallback(() => {
     setSubmitted(true);
     setKwargsError(null);
+    contract.setExecutionKeyError(null);
     subject.setError(null);
 
     const kwargsResult = parseKwargs(kwargs);
@@ -95,16 +106,20 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
         subjectKind: subject.kind,
         subjectKey: subject.key,
         stateBinding,
+        executionKey: contract.executionKey,
+        contract: contract.contract,
       },
       kwargsResult.value,
     );
     if (!built.ok) {
-      subject.setError(built.subjectError);
+      if (built.field === 'subject') subject.setError(built.message);
+      else contract.setExecutionKeyError(built.message);
       return;
     }
     add.mutate(built.body);
   }, [
     add,
+    contract,
     cron,
     cronMissing,
     intervalInvalid,
@@ -141,6 +156,7 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           toolMissing={toolMissing}
           kwargsError={kwargsError}
           toolsQuery={toolsQuery}
+          toolNames={toolNames}
           excludeToolNames={excludeToolNames}
           displayNames={displayNames}
           badgesByTool={badgesByTool}
@@ -171,6 +187,15 @@ export function AddScheduleDialog({ onClose }: { onClose: () => void }): ReactNo
           onKeyChange={subject.setKey}
           error={subject.error}
           targetOptions={subject.targetOptions}
+          caption="Key this schedule’s state writes to a subject; leave blank for none."
+          targetPlaceholder="Choose a conversation target"
+          subjectKeyDescription="A literal key; a schedule fires with no payload to derive one."
+        />
+
+        <ScheduleContractSection
+          contract={contract}
+          keysQuery={keysQuery}
+          templatedTextTemplates={templatedTextTemplates}
         />
 
         <StateBindingSection value={stateBinding} onChange={setStateBinding} {...bindingProps} />

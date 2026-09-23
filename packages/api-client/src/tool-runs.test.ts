@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApiClient } from './client';
 import { ApiError, ApiSchemaError } from './errors';
 import type { ApiConfig } from './http';
-import { isTerminalRunStatus, toolRunList, toolRunRecord } from './tool-runs';
+import { isTerminalRunStatus, toolRunList, toolRunParkAnswer, toolRunRecord } from './tool-runs';
 
 /** A fetch mock whose first arg is always the (string) request URL our transport
  * builds; the cast bridges the narrowed signature to `typeof fetch`. */
@@ -54,6 +54,31 @@ describe('submitToolRun', () => {
     expect(url).toContain('/api/tool-runs');
     expect(init?.method).toBe('POST');
     expect(JSON.parse(init?.body as string)).toEqual({ tool_name: 'alpha', arguments: { x: 2 } });
+  });
+
+  it('carries the subject in the wire body when given, and omits it otherwise', async () => {
+    let init: RequestInit | undefined;
+    const api = createApiClient(
+      config(
+        mockFetch((_u, i) => {
+          init = i;
+          return jsonResponse({ data: { run_id: 'abc123' } }, 202);
+        }),
+      ),
+    );
+
+    await api.submitToolRun({
+      tool_name: 'alpha',
+      subject: { target_kind: 'tool', target_name: 'alpha', kind: 'thread', key: 't-1' },
+    });
+    expect(JSON.parse(init?.body as string)).toEqual({
+      tool_name: 'alpha',
+      arguments: {},
+      subject: { target_kind: 'tool', target_name: 'alpha', kind: 'thread', key: 't-1' },
+    });
+
+    await api.submitToolRun({ tool_name: 'alpha' });
+    expect(JSON.parse(init?.body as string)).not.toHaveProperty('subject');
   });
 
   it('defaults arguments to {} when omitted', async () => {
@@ -167,7 +192,7 @@ describe('listToolRuns', () => {
 
 describe('zod boundaries', () => {
   it('accepts every valid status and rejects an unknown one', () => {
-    for (const status of ['running', 'succeeded', 'failed', 'lost']) {
+    for (const status of ['running', 'succeeded', 'failed', 'lost', 'parked']) {
       expect(
         toolRunRecord.safeParse({ run_id: 'r', tool_name: 't', status, started_at: 's' }).success,
       ).toBe(true);
@@ -178,11 +203,61 @@ describe('zod boundaries', () => {
     ).toBe(false);
   });
 
+  it('parses a parked record whose result is the caller-ask park answer', () => {
+    const parsed = toolRunRecord.safeParse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'parked',
+      started_at: 's',
+      finished_at: 's2',
+      result: { asks: [{ id: 'i1', status: 'asking', to: 'caller', question: 'Approve?' }] },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('carries the optional resumed_interactions ids', () => {
+    const parsed = toolRunRecord.safeParse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'succeeded',
+      started_at: 's',
+      resumed_interactions: ['i1', 'i2'],
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data.resumed_interactions).toEqual(['i1', 'i2']);
+    // Omitted entirely on a record that resumed nothing.
+    const bare = toolRunRecord.parse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'running',
+      started_at: 's',
+    });
+    expect(bare.resumed_interactions).toBeUndefined();
+  });
+
+  it('reads both park-answer shapes through toolRunParkAnswer', () => {
+    // The caller-ask envelope: the tool asked its CALLER and parked.
+    expect(
+      toolRunParkAnswer.safeParse({
+        asks: [{ id: 'i1', status: 'asking', to: 'caller', question: 'Approve?' }],
+      }).success,
+    ).toBe(true);
+    // The suspension receipt: the run parked only USER asks.
+    expect(
+      toolRunParkAnswer.safeParse({
+        interaction_id: 'u1',
+        interaction_ids: ['u1'],
+        caller_interaction_ids: [],
+      }).success,
+    ).toBe(true);
+  });
+
   it('isTerminalRunStatus is false only for running', () => {
     expect(isTerminalRunStatus('running')).toBe(false);
     expect(isTerminalRunStatus('succeeded')).toBe(true);
     expect(isTerminalRunStatus('failed')).toBe(true);
     expect(isTerminalRunStatus('lost')).toBe(true);
+    expect(isTerminalRunStatus('parked')).toBe(true);
   });
 });
 

@@ -20,7 +20,10 @@ export interface HookFormValues {
   readonly subjectKind: string;
   readonly subjectKeyExpr: string;
   readonly condition: TemplatedText | null;
-  readonly expr: TemplatedText | null;
+  readonly startExpr: TemplatedText | null;
+  readonly cancelExpr: TemplatedText | null;
+  readonly resumeExpr: TemplatedText | null;
+  readonly extrasExpr: TemplatedText | null;
   readonly stateBinding: StateBinding | null;
 }
 
@@ -75,7 +78,10 @@ export function buildHookParams(values: HookFormValues): HookParamsResult {
       tool_kwargs: toolKwargs,
       subject,
       condition: values.condition,
-      expr: values.expr,
+      start_expr: values.startExpr,
+      cancel_expr: values.cancelExpr,
+      resume_expr: values.resumeExpr,
+      extras_expr: values.extrasExpr,
       state_binding: values.stateBinding,
     },
   };

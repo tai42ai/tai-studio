@@ -292,7 +292,7 @@ function fieldOpens(source: string): FieldOpen[] {
 const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
   'packages/features/agents/src/ComposeSpecFields.tsx':
     'ErrorState on a failed read, MultiToolPicker / PresetSpecEditor / SubAgentComposer otherwise — all three are marked group, so neither branch claims the control id.',
-  'packages/features/hooks/src/ExecutionKeyPicker.tsx':
+  'packages/studio-sdk/src/components/execution-key-picker.tsx':
     'Select on the ready branch, ErrorState / <p role="status"> otherwise — group is branch-conditional.',
   'packages/features/hooks/src/VerifierSelectField.tsx':
     'Select on the ready branch, ErrorState / <p role="status"> otherwise — group is branch-conditional.',

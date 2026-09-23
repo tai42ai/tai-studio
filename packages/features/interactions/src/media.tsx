@@ -1,5 +1,5 @@
 /**
- * `MediaGallery` — the display-only media shown WITH an `ask_user` question:
+ * `MediaGallery` — the display-only media shown WITH an `ask` question:
  * images and/or links carried on the `interaction.add` frame's optional `media`
  * field. It is question CONTEXT, never an answer control — it touches no answer,
  * callback, or lifecycle behavior.

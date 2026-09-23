@@ -2,7 +2,7 @@
  * The register form's local field state, in two modes: a blank create form, or a
  * form prefilled from an existing hook (the per-row Edit door). `reset` clears the
  * fields after a successful create and bumps `formResetToken` so the seeded-once
- * condition/expr controls remount blank.
+ * condition and door-contract jq controls remount blank.
  */
 import type { HookParams, StateBinding, TemplatedText } from '@tai42/api-client';
 import { useState } from 'react';
@@ -18,7 +18,10 @@ interface IdentitySeed {
   readonly tool: string;
   readonly toolKwargs: string;
   readonly condition: TemplatedText | null;
-  readonly expr: TemplatedText | null;
+  readonly startExpr: TemplatedText | null;
+  readonly cancelExpr: TemplatedText | null;
+  readonly resumeExpr: TemplatedText | null;
+  readonly extrasExpr: TemplatedText | null;
   readonly executionKey: string;
   readonly stateBinding: StateBinding | null;
 }
@@ -39,7 +42,10 @@ function identitySeed(initial?: HookParams): IdentitySeed {
       tool: '',
       toolKwargs: '',
       condition: null,
-      expr: null,
+      startExpr: null,
+      cancelExpr: null,
+      resumeExpr: null,
+      extrasExpr: null,
       executionKey: '',
       stateBinding: null,
     };
@@ -50,7 +56,10 @@ function identitySeed(initial?: HookParams): IdentitySeed {
     tool: initial.tool,
     toolKwargs: serializeToolKwargs(initial.tool_kwargs),
     condition: initial.condition,
-    expr: initial.expr,
+    startExpr: initial.start_expr,
+    cancelExpr: initial.cancel_expr,
+    resumeExpr: initial.resume_expr,
+    extrasExpr: initial.extras_expr,
     executionKey: initial.execution_key,
     stateBinding: initial.state_binding,
   };
@@ -81,8 +90,14 @@ export interface HookFormFields {
   readonly setToolKwargs: (value: string) => void;
   readonly condition: TemplatedText | null;
   readonly setCondition: (value: TemplatedText | null) => void;
-  readonly expr: TemplatedText | null;
-  readonly setExpr: (value: TemplatedText | null) => void;
+  readonly startExpr: TemplatedText | null;
+  readonly setStartExpr: (value: TemplatedText | null) => void;
+  readonly cancelExpr: TemplatedText | null;
+  readonly setCancelExpr: (value: TemplatedText | null) => void;
+  readonly resumeExpr: TemplatedText | null;
+  readonly setResumeExpr: (value: TemplatedText | null) => void;
+  readonly extrasExpr: TemplatedText | null;
+  readonly setExtrasExpr: (value: TemplatedText | null) => void;
   readonly executionKey: string;
   readonly setExecutionKey: (value: string) => void;
   readonly subjectTarget: string;
@@ -105,6 +120,31 @@ export interface HookFormFields {
   readonly reset: () => void;
 }
 
+/** The four door-contract jq fields' state, plus a reset to clear them all. */
+function useHookDoorContract(seed: IdentitySeed) {
+  const [startExpr, setStartExpr] = useState<TemplatedText | null>(seed.startExpr);
+  const [cancelExpr, setCancelExpr] = useState<TemplatedText | null>(seed.cancelExpr);
+  const [resumeExpr, setResumeExpr] = useState<TemplatedText | null>(seed.resumeExpr);
+  const [extrasExpr, setExtrasExpr] = useState<TemplatedText | null>(seed.extrasExpr);
+  const reset = (): void => {
+    setStartExpr(null);
+    setCancelExpr(null);
+    setResumeExpr(null);
+    setExtrasExpr(null);
+  };
+  return {
+    startExpr,
+    setStartExpr,
+    cancelExpr,
+    setCancelExpr,
+    resumeExpr,
+    setResumeExpr,
+    extrasExpr,
+    setExtrasExpr,
+    reset,
+  };
+}
+
 export function useHookFormFields(initial?: HookParams): HookFormFields {
   const [identity] = useState(() => identitySeed(initial));
   const [subject] = useState(() => subjectSeed(initial));
@@ -114,7 +154,7 @@ export function useHookFormFields(initial?: HookParams): HookFormFields {
   const [tool, setTool] = useState(identity.tool);
   const [toolKwargs, setToolKwargs] = useState(identity.toolKwargs);
   const [condition, setCondition] = useState<TemplatedText | null>(identity.condition);
-  const [expr, setExpr] = useState<TemplatedText | null>(identity.expr);
+  const door = useHookDoorContract(identity);
   const [executionKey, setExecutionKey] = useState(identity.executionKey);
   const [subjectTarget, setSubjectTarget] = useState(subject.subjectTarget);
   const [subjectKind, setSubjectKind] = useState(subject.subjectKind);
@@ -132,7 +172,7 @@ export function useHookFormFields(initial?: HookParams): HookFormFields {
     setTool('');
     setToolKwargs('');
     setCondition(null);
-    setExpr(null);
+    door.reset();
     setExecutionKey('');
     setSubjectTarget('');
     setSubjectKind('');
@@ -154,8 +194,14 @@ export function useHookFormFields(initial?: HookParams): HookFormFields {
     setToolKwargs,
     condition,
     setCondition,
-    expr,
-    setExpr,
+    startExpr: door.startExpr,
+    setStartExpr: door.setStartExpr,
+    cancelExpr: door.cancelExpr,
+    setCancelExpr: door.setCancelExpr,
+    resumeExpr: door.resumeExpr,
+    setResumeExpr: door.setResumeExpr,
+    extrasExpr: door.extrasExpr,
+    setExtrasExpr: door.setExtrasExpr,
     executionKey,
     setExecutionKey,
     subjectTarget,

@@ -71,7 +71,7 @@
     "output": null,
     "description": "Always raise, so the Studio's error handling can be exercised.\n\nArgs:\n    reason: Message carried by the raised error."
   },
-  "ask_user": {
+  "ask": {
     "input": {
       "additionalProperties": false,
       "properties": {
@@ -147,6 +147,31 @@
           ],
           "default": null,
           "description": "Required for \"external\", forbidden otherwise. A URL template\ncontaining the literal placeholder ``{callback_url}``, which is\nsubstituted with the public callback URL before the human visits it."
+        },
+        "to": {
+          "default": "user",
+          "enum": ["user", "caller"],
+          "type": "string",
+          "description": "Who the question is addressed to. \"user\" (the default) is a human answered through the inbox/callback/channel surfaces. \"caller\" addresses another RUN: the ask parks this run and its answer is handed back by the run that resolves it. A \"caller\" ask is always mode=\"async\"."
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "A structured value a \"caller\" ask hands the resolving run in place of (or beside) ``question``; when given, ``question`` may be empty. Forbidden for \"user\"."
+        },
+        "on_expiry": {
+          "default": "kill",
+          "enum": ["kill", "resume"],
+          "type": "string",
+          "description": "What happens when a parked ask’s deadline lapses unanswered. \"kill\" (the default) tears the whole run chain down; \"resume\" resumes with the expiry marker. Applies only to an async park."
         }
       },
       "required": ["question"],

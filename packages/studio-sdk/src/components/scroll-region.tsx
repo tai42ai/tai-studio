@@ -34,6 +34,7 @@ import {
 import {
   clearScrollRegionAttributes,
   needsRegion,
+  type OverflowAxis,
   refreshRegions,
   SCROLL_REGION_CLASS,
   type TrackedSurface,
@@ -46,12 +47,20 @@ import {
   uniquelyNamed,
 } from './prose-regions';
 
+export type { OverflowAxis } from './overflow-measure';
+
 export interface ScrollRegionProps {
   /** The region's accessible name, applied only while it actually scrolls. */
   readonly label: string;
   readonly children: ReactNode;
   readonly className?: string;
   readonly style?: CSSProperties;
+  /**
+   * The dimension overflow is measured on. `horizontal` (the default) fits a pane
+   * that scrolls sideways; `vertical` fits a bounded, capped-height box that scrolls
+   * down. The caller styles the box's own overflow to match.
+   */
+  readonly axis?: OverflowAxis;
   /**
    * The one arbitrary attribute this component forwards. The measured attributes
    * — `tabindex`, `role` and `aria-label` — are the component's own and appear
@@ -118,10 +127,13 @@ export interface OverflowRegionAttributes {
  *
  * @param ref - a consumer ref that wants the same element, or `undefined`.
  * @param label - its accessible name, applied only while it actually scrolls.
+ * @param axis - the dimension to measure overflow on (`horizontal` by default;
+ *   `vertical` for a bounded, capped-height box that scrolls down).
  */
 export function useOverflowRegion(
   ref: Ref<HTMLElement> | undefined,
   label: string,
+  axis: OverflowAxis = 'horizontal',
 ): OverflowRegionAttributes {
   const [scrollable, setScrollable] = useState(false);
 
@@ -132,7 +144,7 @@ export function useOverflowRegion(
       const detachConsumer = attachRef(ref, box);
 
       const measure = (): void => {
-        setScrollable(needsRegion(box));
+        setScrollable(needsRegion(box, axis));
       };
 
       // The box gives resize; its children give the overflowing width. The
@@ -177,7 +189,7 @@ export function useOverflowRegion(
         detachConsumer();
       };
     },
-    [ref],
+    [ref, axis],
   );
 
   if (!scrollable) return { ref: measuredRef };
@@ -189,10 +201,11 @@ export function ScrollRegion({
   children,
   className,
   style,
+  axis,
   'data-testid': testId,
   ref,
 }: ScrollRegionProps) {
-  const region = useOverflowRegion(ref, label);
+  const region = useOverflowRegion(ref, label, axis);
 
   return (
     <div

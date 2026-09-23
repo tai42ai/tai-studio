@@ -1,22 +1,38 @@
 /**
- * Picks the api key a fire RUNS AS, on both fire-path forms. Lists only — the
- * server decides, and the host form renders its refusal verbatim.
+ * Picks the api key a fire / recurring run RUNS AS. Shared by every fire-path form
+ * (hooks, trigger links, schedules). Presentational and prop-driven — the host
+ * feature owns the api-key list query and hands it in, so this component (and the
+ * SDK) stay free of a data-fetching library, exactly as {@link ToolPicker} does.
+ *
+ * The server decides authorization; this only lists the pickable keys and renders
+ * the read's loading / empty / error states. The host form renders the server's
+ * refusal verbatim elsewhere.
  */
 import type { TokensPayload } from '@tai42/api-client';
-import { errorMessage, ErrorState, Field, Select, useApi } from '@tai42/studio-sdk';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
-import { isExecutionKeyListEmpty } from './fire-path-gate';
-import { tokensPayloadKey } from './keys';
+import { errorMessage } from '../errors';
+import { Field } from './field';
+import { ErrorState } from './primitives';
+import { Select } from './select';
 
-/** The api-key list; the picker and its host form share one request. */
-export function useExecutionKeys(): UseQueryResult<TokensPayload> {
-  const api = useApi();
-  return useQuery({
-    queryKey: tokensPayloadKey,
-    queryFn: ({ signal }) => api.listTokensPayload(signal),
-  });
+/**
+ * The subset of the api-key list query this picker reads. A caller's TanStack
+ * `UseQueryResult<TokensPayload>` satisfies it structurally, so the SDK names no
+ * query library.
+ */
+export interface ExecutionKeyQuery {
+  readonly data: TokensPayload | undefined;
+  readonly isPending: boolean;
+  readonly isError: boolean;
+  readonly isSuccess: boolean;
+  readonly error: unknown;
+  readonly refetch: () => void;
+}
+
+/** Resolved, and holding no key at all. */
+export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean {
+  return query.isSuccess && (query.data?.length ?? 0) === 0;
 }
 
 /** The mint's stable fingerprint (never key material), nested under `policy_data`. */
@@ -45,33 +61,39 @@ function pickableKeys(keys: TokensPayload): TokensPayload {
   });
 }
 
-export function ExecutionKeyPicker({
-  value,
-  onValueChange,
-  error,
-}: {
+export interface ExecutionKeyPickerProps {
+  /** The api-key list read the host feature owns and hands in. */
+  readonly query: ExecutionKeyQuery;
   readonly value: string;
   readonly onValueChange: (value: string) => void;
   /** The host form's required-field error, shown under the control. */
   readonly error?: string | undefined;
-}): ReactNode {
-  const keysQuery = useExecutionKeys();
-  const listEmpty = isExecutionKeyListEmpty(keysQuery);
+}
+
+export function ExecutionKeyPicker({
+  query,
+  value,
+  onValueChange,
+  error,
+}: ExecutionKeyPickerProps): ReactNode {
+  const listEmpty = isExecutionKeyListEmpty(query);
 
   return (
     <Field
       label="Execution key"
       description="The api key this fire runs AS. Every tool call it makes is authorized against that key's live grants — prefer a least-privilege service key over a human's broad one."
       // Suppressed: the empty note / the ErrorState already say it.
-      error={listEmpty || keysQuery.isError ? undefined : error}
+      error={listEmpty || query.isError ? undefined : error}
       // Only the Select branch claims the field's control id; the error and
       // empty branches render no labelable element, so `for` would dangle.
-      group={keysQuery.isError || listEmpty}
+      group={query.isError || listEmpty}
     >
-      {keysQuery.isError ? (
+      {query.isError ? (
         <ErrorState
-          message={errorMessage(keysQuery.error)}
-          onRetry={() => void keysQuery.refetch()}
+          message={errorMessage(query.error)}
+          onRetry={() => {
+            query.refetch();
+          }}
         />
       ) : listEmpty ? (
         <p role="status" style={{ margin: 0, color: 'var(--tai-color-text-muted)' }}>
@@ -79,13 +101,13 @@ export function ExecutionKeyPicker({
         </p>
       ) : (
         <Select
-          options={pickableKeys(keysQuery.data ?? []).map((key) => ({
+          options={pickableKeys(query.data ?? []).map((key) => ({
             value: key.user_id,
             label: keyLabel(key),
           }))}
           value={value}
-          placeholder={keysQuery.isPending ? 'Loading keys…' : 'Select an execution key'}
-          disabled={keysQuery.isPending}
+          placeholder={query.isPending ? 'Loading keys…' : 'Select an execution key'}
+          disabled={query.isPending}
           onValueChange={onValueChange}
         />
       )}

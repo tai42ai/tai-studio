@@ -17,7 +17,7 @@ import { makeClient, renderWithProviders } from './test-utils';
  * click lands on the still-disabled trigger and nothing opens.
  */
 async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<void> {
-  const combobox = within(dialog).getByRole('combobox');
+  const combobox = within(dialog).getByRole('combobox', { name: 'Tool' });
   await waitFor(() => {
     expect(combobox).toBeEnabled();
   });
@@ -44,18 +44,16 @@ describe('AddScheduleDialog — state binding source resolution', () => {
       description: null,
     });
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
       listStates: vi.fn().mockResolvedValue([]),
       listStateTemplates: vi.fn().mockResolvedValue([]),
       getToolSchema,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
     const dialog = await screen.findByRole('dialog');
-    await pickTool(user, dialog, 'run_report_schedule_task');
+    await pickTool(user, dialog, 'run_report');
     await waitFor(() => {
-      expect(getToolSchema.mock.calls.some((call) => call[0] === 'run_report_schedule_task')).toBe(
-        true,
-      );
+      expect(getToolSchema.mock.calls.some((call) => call[0] === 'run_report')).toBe(true);
     });
   });
 });
@@ -96,7 +94,7 @@ describe('AddScheduleDialog — state binding advisory + serialization', () => {
       const user = userEvent.setup({ delay: null });
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
-        listTools: vi.fn().mockResolvedValue(['tally-preset']),
+        listTools: vi.fn().mockResolvedValue(['tally-preset', 'tally-preset_schedule_task']),
         listStates: vi.fn().mockResolvedValue([{ name: 'counters' }]),
         listStateTemplates: vi.fn().mockResolvedValue([]),
         listPresets: vi.fn().mockResolvedValue([{ name: 'tally-preset' }]),

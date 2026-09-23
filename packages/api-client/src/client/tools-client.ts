@@ -1,12 +1,16 @@
 /** Tool catalog, run, live-registry admin and tag sub-client. */
 import { encodeSegment } from '../http';
 import * as s from '../schemas';
+import type { StateSubject } from '../schemas/states';
 import { getToolRun, listToolRuns, submitToolRun, type SubmitToolRunArgs } from '../tool-runs';
 import type { Transport } from './transport';
 
 export interface RunToolArgs {
   readonly tool: string;
   readonly kwargs?: Record<string, unknown>;
+  /** The addressed subject an async park of this run indexes under. Omitted from
+   * the request body when unset, so a plain run (no subject) parks un-indexed. */
+  readonly subject?: StateSubject;
 }
 
 /**
@@ -32,11 +36,16 @@ export function toolsClient(t: Transport) {
     runTool: (args: RunToolArgs, signal?: AbortSignal) =>
       req('/api/run-tool', s.runToolResult, {
         method: 'POST',
-        // The backend's `/api/run-tool` door reads `{tool_name, arguments}` (the
-        // shape `read_tool_call` enforces and the background `/api/tool-runs`
+        // The backend's `/api/run-tool` door reads `{tool_name, arguments, subject}`
+        // (the shape `read_tool_call` enforces and the background `/api/tool-runs`
         // submit already sends). The SPA keeps `tool`/`kwargs` as its ergonomic
-        // arg names; map them onto the wire fields here.
-        body: { tool_name: args.tool, arguments: args.kwargs ?? {} },
+        // arg names; map them onto the wire fields here. `subject` rides only when
+        // set, so a plain run sends no subject.
+        body: {
+          tool_name: args.tool,
+          arguments: args.kwargs ?? {},
+          ...(args.subject !== undefined ? { subject: args.subject } : {}),
+        },
         signal,
       }),
 

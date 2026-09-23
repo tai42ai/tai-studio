@@ -16,6 +16,57 @@ export const allToolSchemas = z.record(z.string(), toolSchema);
 
 export const runToolResult = jsonValue;
 
+/** The lifecycle status a parked interaction on a run's subject carries: a pending ask, an
+ * ask whose continuation is resuming, or a resolved run's waiting outcome (clean/failed). */
+export const parkedStatus = z.enum(['asking', 'running', 'finished', 'failed']);
+export type ParkedStatus = z.infer<typeof parkedStatus>;
+
+/**
+ * One parked caller-ask entry a synchronous run-tool call returns when the tool asked its
+ * CALLER (`to="caller"`) and parked. The full contract entry carries more fields; the panel
+ * reads the display subset here and tolerates the rest. `question` is the prompt, `payload`
+ * the structured value the ask handed the caller, `asked_by` the run chain that raised it.
+ */
+export const parkedCallerAsk = z.object({
+  id: z.string(),
+  status: parkedStatus,
+  to: z.enum(['user', 'caller']).nullish(),
+  question: z.string().nullish(),
+  payload: z.record(z.string(), z.unknown()).nullish(),
+  asked_by: z.array(z.string()).nullish(),
+});
+export type ParkedCallerAsk = z.infer<typeof parkedCallerAsk>;
+
+/** A synchronous run whose tool parked CALLER asks returns this envelope in place of a result:
+ * the full caller-ask entries under `asks`. An empty `asks` means the run parked with no open
+ * caller ask (only user asks remain). */
+export const callerAsksEnvelope = z.object({
+  asks: z.array(parkedCallerAsk),
+});
+export type CallerAsksEnvelope = z.infer<typeof callerAsksEnvelope>;
+
+/** The park receipt a synchronous run returns when its tool parked only USER asks: the
+ * suspension sentinel's ids, with no caller ask for the panel to act on. */
+export const suspendedRunReceipt = z.object({
+  interaction_id: z.string(),
+  interaction_ids: z.array(z.string()),
+  caller_interaction_ids: z.array(z.string()).default([]),
+});
+export type SuspendedRunReceipt = z.infer<typeof suspendedRunReceipt>;
+
+/** What one resume / take / cancel of a parked interaction did, as `resume_parked` /
+ * `cancel_parked` return it through run-tool. `kind` picks the payload: `result` (a final
+ * value in `result`), `asks` (new caller asks in `asks`), `parked` (only user asks remain),
+ * or `none` (nothing ran). `action` names the single non-cancel action taken. */
+export const visitOutcome = z.object({
+  action: z.enum(['resumed', 'taken', 'started', 'none']),
+  cancelled: z.array(z.string()).default([]),
+  kind: z.enum(['result', 'asks', 'parked', 'none']),
+  result: z.unknown().optional(),
+  asks: z.array(parkedCallerAsk).default([]),
+});
+export type VisitOutcome = z.infer<typeof visitOutcome>;
+
 /**
  * The MEDIA content shape a direct tool run may return — fastmcp's serialized
  * `Image`/`Audio` MediaBlock (`{ type, data: <base64>, mimeType }`). One recognised

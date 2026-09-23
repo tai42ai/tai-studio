@@ -118,5 +118,7 @@ export function useScheduleBinding(tool: string | null) {
     inherited: inheritedBinding,
   });
 
-  return { bindingProps };
+  // The door-contract jq fields author templated text too, so they reuse the same
+  // stored-template catalog the binding editor already resolved.
+  return { bindingProps, templatedTextTemplates: bindingProps.templatedTextTemplates };
 }

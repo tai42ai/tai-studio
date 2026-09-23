@@ -1,7 +1,7 @@
 /**
  * The route create/edit dialog: the blank render, the target/door conditional
- * fields (an agent target hides the tool-only jq fields; each door shows only its
- * own delivery fields), the jq expression door rendering through an injected
+ * fields (both target kinds carry the five door-contract jq fields; each door shows
+ * only its own delivery fields), the jq expression door rendering through an injected
  * `ExpressionFieldContext`, the flat wire body a submit sends, the inline
  * required-field guard, edit prefill with a read-only name, and the shown-once
  * `callback_secret` reveal for an api-door write.
@@ -70,19 +70,28 @@ describe('RouteFormDialog — create', () => {
     expect(screen.getByRole('button', { name: 'Create route' })).toBeInTheDocument();
   });
 
-  it('shows the tool-only jq fields for a tool target and hides them for an agent', async () => {
+  it('shows the five door-contract jq fields on both the agent and the tool target', async () => {
     const user = userEvent.setup({ delay: null });
     renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, { client: {} });
+    const jqFieldNames = [
+      'Start expression',
+      'Reply expression',
+      'Cancel expression',
+      'Resume expression',
+      'Extras expression',
+    ];
 
     await pickVariant(user, 'Target', 'agent');
     expect(screen.getByRole('textbox', { name: /^Agent name\b/ })).toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Payload expression' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('textbox', { name: 'Reply expression' })).not.toBeInTheDocument();
+    for (const name of jqFieldNames) {
+      expect(screen.getByRole('textbox', { name })).toBeInTheDocument();
+    }
 
     await pickVariant(user, 'Target', 'tool');
     expect(screen.getByRole('textbox', { name: /^Tool name\b/ })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Payload expression' })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: 'Reply expression' })).toBeInTheDocument();
+    for (const name of jqFieldNames) {
+      expect(screen.getByRole('textbox', { name })).toBeInTheDocument();
+    }
   });
 
   it('shows only the api door field for the api door and the channel fields for channel', async () => {
@@ -108,13 +117,14 @@ describe('RouteFormDialog — create', () => {
       { client: {} },
     );
 
-    // No expression fields exist until a tool target is chosen.
+    // No expression fields exist until a target variant is chosen; then all five
+    // door-contract jqs render through the injected door.
     expect(screen.queryAllByTestId('jq-stub')).toHaveLength(0);
     await pickVariant(user, 'Target', 'tool');
 
     const doors = screen.getAllByTestId('jq-stub');
-    expect(doors).toHaveLength(2);
-    expect(screen.getByRole('textbox', { name: 'Payload expression' })).toBe(doors[0]);
+    expect(doors).toHaveLength(5);
+    expect(screen.getByRole('textbox', { name: 'Start expression' })).toBe(doors[0]);
     expect(screen.getByRole('textbox', { name: 'Reply expression' })).toBe(doors[1]);
   });
 
@@ -122,7 +132,7 @@ describe('RouteFormDialog — create', () => {
     const user = userEvent.setup({ delay: null });
     const createOrReplaceConversationRoute = vi.fn().mockResolvedValue({
       created: true,
-      route_name: 'support',
+      route_name: 'events',
       route: makeRoute(),
       callback_secret: null,
     });
@@ -130,25 +140,28 @@ describe('RouteFormDialog — create', () => {
       client: { createOrReplaceConversationRoute },
     });
 
-    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'support');
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
     await pickVariant(user, 'Target', 'tool');
-    await user.type(screen.getByRole('textbox', { name: /^Tool name\b/ }), 'lookup_order');
+    await user.type(screen.getByRole('textbox', { name: /^Tool name\b/ }), 'lookup_record');
     await pickVariant(user, 'Door', 'channel');
     await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'whatsapp');
     await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
-    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-support');
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-events');
     await user.click(screen.getByRole('button', { name: 'Create route' }));
 
     await waitFor(() => {
       expect(createOrReplaceConversationRoute).toHaveBeenCalledWith({
-        route_name: 'support',
+        route_name: 'events',
         door: 'channel',
         target_kind: 'tool',
-        target_name: 'lookup_order',
-        payload_expr: null,
+        target_name: 'lookup_record',
+        start_expr: null,
         reply_expr: null,
+        cancel_expr: null,
+        resume_expr: null,
+        extras_expr: null,
         initial_mode: 'agent',
-        execution_key: 'svc-support',
+        execution_key: 'svc-events',
         channel: 'whatsapp',
         our_identity: '+15550000000',
         callback_url: null,
@@ -157,6 +170,29 @@ describe('RouteFormDialog — create', () => {
         locale: null,
       });
     });
+  });
+
+  it("surfaces a server attach-check refusal through the dialog's error state", async () => {
+    const user = userEvent.setup({ delay: null });
+    // The bind-time attach check refuses a target that cannot honour the route's
+    // own door fields, returning its blocking lines as a 422; they ride the existing
+    // mutation-error path into `ErrorState`, never a swallowed failure.
+    const refusal = 'cannot bind agent to route: an asking agent needs a reply or resume path';
+    const createOrReplaceConversationRoute = vi.fn().mockRejectedValue(new Error(refusal));
+    renderWithProviders(<RouteFormDialog onClose={vi.fn()} />, {
+      client: { createOrReplaceConversationRoute },
+    });
+
+    await user.type(screen.getByRole('textbox', { name: 'Route name' }), 'events');
+    await pickVariant(user, 'Target', 'agent');
+    await user.type(screen.getByRole('textbox', { name: /^Agent name\b/ }), 'assistant');
+    await pickVariant(user, 'Door', 'channel');
+    await user.type(screen.getByRole('textbox', { name: /^Channel\b/ }), 'whatsapp');
+    await user.type(screen.getByRole('textbox', { name: /^Our identity\b/ }), '+15550000000');
+    await user.type(screen.getByRole('textbox', { name: 'Execution key' }), 'svc-events');
+    await user.click(screen.getByRole('button', { name: 'Create route' }));
+
+    expect(await screen.findByText(refusal, undefined, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('blocks submit with inline errors and never calls the API when required fields are blank', async () => {
@@ -381,7 +417,7 @@ describe('RouteFormDialog — edit', () => {
     callback_url: 'https://sink.example/answers',
     target_kind: 'tool',
     target_name: 'lookup_account',
-    payload_expr: { content: '.message' },
+    start_expr: { content: '.message' },
     reply_expr: null,
     initial_mode: 'manual',
     execution_key: 'svc-chat',
@@ -393,7 +429,7 @@ describe('RouteFormDialog — edit', () => {
     const name = screen.getByDisplayValue('chat');
     expect(name).toBeDisabled();
     expect(screen.getByRole('textbox', { name: /^Tool name\b/ })).toHaveValue('lookup_account');
-    expect(screen.getByRole('textbox', { name: 'Payload expression' })).toHaveValue('.message');
+    expect(screen.getByRole('textbox', { name: 'Start expression' })).toHaveValue('.message');
     expect(screen.getByRole('textbox', { name: /^Callback URL\b/ })).toHaveValue(
       'https://sink.example/answers',
     );
@@ -421,7 +457,7 @@ describe('RouteFormDialog — edit', () => {
           door: 'api',
           target_kind: 'tool',
           target_name: 'lookup_account',
-          payload_expr: { content: '.message' },
+          start_expr: { content: '.message' },
           initial_mode: 'manual',
           callback_url: 'https://sink.example/answers',
         }),

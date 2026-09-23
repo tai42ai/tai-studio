@@ -34,7 +34,7 @@ describe('generated served-document schemas parse served payloads', () => {
     expect(parsed.key_expr).toEqual({ content: '.thread_id' });
   });
 
-  it('parses a tool ConversationRoute whose payload_expr is a templated text', () => {
+  it('parses a tool ConversationRoute whose start_expr is a templated text', () => {
     const parsed = schemas.conversationRoute.parse({
       route_name: 'r',
       door: 'api',
@@ -42,9 +42,9 @@ describe('generated served-document schemas parse served payloads', () => {
       target_name: 't',
       execution_key: 'k',
       execution_key_fingerprint: 'fp',
-      payload_expr: { content: '{ message }' },
+      start_expr: { content: '{ message }' },
     });
-    expect(parsed.payload_expr).toEqual({ content: '{ message }' });
+    expect(parsed.start_expr).toEqual({ content: '{ message }' });
     // A nullable templated-text field the platform defaults to null is present, not undefined.
     expect(parsed.reply_expr).toBeNull();
   });
@@ -107,7 +107,7 @@ describe('a served body is a templated text, never a bare string (the marker gua
     ).toThrow();
   });
 
-  it('rejects a ConversationRoute whose payload_expr regressed to a bare string', () => {
+  it('rejects a ConversationRoute whose start_expr regressed to a bare string', () => {
     expect(() =>
       schemas.conversationRoute.parse({
         route_name: 'r',
@@ -116,7 +116,7 @@ describe('a served body is a templated text, never a bare string (the marker gua
         target_name: 't',
         execution_key: 'k',
         execution_key_fingerprint: 'fp',
-        payload_expr: '{ message }',
+        start_expr: '{ message }',
       }),
     ).toThrow();
   });
@@ -141,11 +141,11 @@ describe('the freshness gate reds on a drifted bundle', () => {
     const baseline = generate(bundle).source;
     const drifted = structuredClone(bundle);
     const doc = drifted.documents.ConversationRoute as { properties: Record<string, unknown> };
-    // The platform marker gone: payload_expr as a plain string instead of a $ref to
+    // The platform marker gone: start_expr as a plain string instead of a $ref to
     // TemplatedText — the exact regression the marker override prevents.
-    doc.properties.payload_expr = { type: 'string' };
+    doc.properties.start_expr = { type: 'string' };
     const drifted_source = generate(drifted).source;
     expect(drifted_source).not.toBe(baseline);
-    expect(drifted_source).toContain('"payload_expr": z.string()');
+    expect(drifted_source).toContain('"start_expr": z.string()');
   });
 });

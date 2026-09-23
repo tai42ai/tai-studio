@@ -75,6 +75,35 @@ describe('ToolPicker', () => {
     expect(container.querySelector('script')).toBeNull();
   });
 
+  it('shows the empty copy and disables the trigger when no tool is available', () => {
+    render(<ToolPicker toolNames={[]} value={null} onChange={vi.fn()} placeholder="Pick a tool" />);
+    const trigger = screen.getByRole('combobox');
+    expect(trigger).toHaveTextContent('No tools available');
+    expect(trigger).toBeDisabled();
+  });
+
+  it('shows the empty copy when every tool name is excluded', () => {
+    render(<ToolPicker toolNames={TOOLS} value={null} onChange={vi.fn()} excludeNames={TOOLS} />);
+    const trigger = screen.getByRole('combobox');
+    expect(trigger).toHaveTextContent('No tools available');
+    expect(trigger).toBeDisabled();
+  });
+
+  it('keeps the caller placeholder while loading, never the empty copy', () => {
+    render(
+      <ToolPicker
+        toolNames={[]}
+        value={null}
+        onChange={vi.fn()}
+        disabled
+        placeholder="Loading tools…"
+      />,
+    );
+    const trigger = screen.getByRole('combobox');
+    expect(trigger).toHaveTextContent('Loading tools…');
+    expect(trigger).not.toHaveTextContent('No tools available');
+  });
+
   it('excludes names in excludeNames from the options', async () => {
     const user = userEvent.setup();
     render(

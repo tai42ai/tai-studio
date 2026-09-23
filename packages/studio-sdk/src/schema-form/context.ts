@@ -53,6 +53,23 @@ export interface ExpressionInputKey {
 }
 
 /**
+ * One named jq variable the form hands the door beside `.`, mirroring jq-studio's
+ * variable descriptor without importing it. The door lists it in the legend, offers
+ * `$name` as a path root, and seeds the Test panel with its `sample`.
+ */
+export interface ExpressionInputVariable {
+  /** The variable name WITHOUT the leading `$` (referenced as `$name`). */
+  readonly name: string;
+  /** One sentence: what this variable holds. */
+  readonly blurb: string;
+  /** The top-level keys of the variable's value; empty when it is a scalar or
+   *  the annotation glosses none. */
+  readonly keys: readonly ExpressionInputKey[];
+  /** A static skeleton of the variable's value for the door's Test panel. */
+  readonly sample?: unknown;
+}
+
+/**
  * What `.` IS for an expression-annotated field, as the form hands it to the
  * injected door. Built by the renderer from the schema's `x-tai42-expression`
  * annotation.
@@ -77,6 +94,9 @@ export interface ExpressionInputShape {
   readonly caveats?: readonly string[];
   /** A static skeleton of `.` for the door's test surface. */
   readonly sample?: unknown;
+  /** The named variables the expression reads as `$name` beside `.`; omitted when
+   *  the field declares none. */
+  readonly variables?: readonly ExpressionInputVariable[];
 }
 
 /**

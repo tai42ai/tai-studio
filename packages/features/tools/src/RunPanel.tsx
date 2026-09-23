@@ -22,6 +22,7 @@ import {
   SchemaForm,
   Skeleton,
   Spinner,
+  SubjectSection,
   type ToolPanelProps,
   useApi,
 } from '@tai42/studio-sdk';
@@ -29,6 +30,7 @@ import { getContributions } from '@tai42/studio-sdk/host';
 import { useQuery } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+import { AsksList, ParkedNote } from './AsksList';
 import { BackgroundRuns } from './BackgroundRuns';
 import { toolSchemaKey } from './keys';
 import { ResultViewer } from './ResultViewer';
@@ -117,12 +119,16 @@ function RunOutcome({ run }: { readonly run: AutoFormRun }): ReactNode {
         <ErrorState message={errorMessage(run.run.error)} />
       ) : null}
 
-      {run.run.isSuccess ? (
+      {run.runView?.kind === 'result' ? (
         <section className="tai-stack">
           <h3 className="tai-card-title">Result</h3>
-          <ResultViewer result={run.run.data} />
+          <ResultViewer result={run.runView.result} />
         </section>
       ) : null}
+
+      {run.runView?.kind === 'asks' ? <AsksList asks={run.runView.asks} /> : null}
+
+      {run.runView?.kind === 'parked' ? <ParkedNote testId="run-parked-note" /> : null}
     </>
   );
 }
@@ -149,6 +155,23 @@ export function AutoFormRunPanel({
 
       <form onSubmit={run.onSubmit} className="tai-stack">
         <SchemaForm schema={schema} value={run.value} onChange={run.setValue} errors={run.errors} />
+        <SubjectSection
+          open={run.subject.open}
+          onToggle={() => {
+            run.subject.setOpen((open) => !open);
+          }}
+          target={run.subject.target}
+          onTargetChange={run.subject.setTarget}
+          kind={run.subject.kind}
+          onKindChange={run.subject.setKind}
+          subjectKey={run.subject.key}
+          onKeyChange={run.subject.setKey}
+          error={run.subject.error}
+          targetOptions={run.subject.targetOptions}
+          caption="Track this run’s result on a conversation subject so a later run can pick it up."
+          targetPlaceholder="No subject"
+          subjectKeyDescription="A literal key within the subject family."
+        />
         <RunActions run={run} />
       </form>
 

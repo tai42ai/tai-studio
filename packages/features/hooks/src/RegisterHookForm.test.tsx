@@ -202,59 +202,70 @@ describe('RegisterHookForm — edit mode', () => {
   });
 });
 
-describe('RegisterHookForm — jq condition/expr expression fields', () => {
-  it('round-trips the inline condition and expr through the jq expression fields', async () => {
-    const user = userEvent.setup({ delay: null });
-    const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
-    const client: StubApiClient = {
-      listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
-      listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-      registerHook,
-    };
-    renderWithProviders(<RegisterHookForm />, { client });
+describe('RegisterHookForm — jq condition and door-contract expression fields', () => {
+  // Three code editors typed keystroke by keystroke: each key re-renders the editor, so the
+  // round-trip legitimately outlasts the suite's default budget on a loaded runner.
+  const ROUND_TRIP_TIMEOUT_MS = 60_000;
 
-    await user.type(screen.getByLabelText('Name'), 'greet');
-    await user.type(screen.getByLabelText('Topic'), 'events.created');
-    await user.type(screen.getByLabelText('Tool'), 'notify');
-    await openSelect(user, 'Execution key');
-    await user.click(await screen.findByRole('option', { name: /svc-events/ }));
-    await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.amount > 100');
-    await user.type(screen.getByRole('textbox', { name: 'Expr' }), '.message.text');
-    await user.click(screen.getByRole('button', { name: 'Register' }));
+  it(
+    'round-trips the inline condition and the door jqs through the jq expression fields',
+    async () => {
+      const user = userEvent.setup({ delay: null });
+      const registerHook = vi.fn().mockResolvedValue({ registered: true, name: 'greet' });
+      const client: StubApiClient = {
+        listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
+        listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        registerHook,
+      };
+      renderWithProviders(<RegisterHookForm />, { client });
 
-    await waitFor(() => {
-      expect(registerHook).toHaveBeenCalledOnce();
-    });
-    expect(registerHook).toHaveBeenCalledWith(
-      expect.objectContaining({
-        condition: { content: '.amount > 100' },
-        expr: { content: '.message.text' },
-      }),
-    );
-  });
+      await user.type(screen.getByLabelText('Name'), 'greet');
+      await user.type(screen.getByLabelText('Topic'), 'events.created');
+      await user.type(screen.getByLabelText('Tool'), 'notify');
+      await openSelect(user, 'Execution key');
+      await user.click(await screen.findByRole('option', { name: /svc-events/ }));
+      await user.type(screen.getByRole('textbox', { name: 'Condition' }), '.amount > 100');
+      await user.type(screen.getByRole('textbox', { name: 'Start' }), '.message.text');
+      await user.type(screen.getByRole('textbox', { name: 'Cancel' }), '$parked | first | .id');
+      await user.click(screen.getByRole('button', { name: 'Register' }));
 
-  it('offers an always-present visual-editor door on EACH jq field (condition and expr)', async () => {
+      await waitFor(() => {
+        expect(registerHook).toHaveBeenCalledOnce();
+      });
+      expect(registerHook).toHaveBeenCalledWith(
+        expect.objectContaining({
+          condition: { content: '.amount > 100' },
+          start_expr: { content: '.message.text' },
+          cancel_expr: { content: '$parked | first | .id' },
+          resume_expr: null,
+          extras_expr: null,
+        }),
+      );
+    },
+    ROUND_TRIP_TIMEOUT_MS,
+  );
+
+  it('offers an always-present visual-editor door on EACH jq field (condition + the four door jqs)', async () => {
     const client: StubApiClient = {
       listTokensPayload: vi.fn().mockResolvedValue([apiKey()]),
       listHooks: vi.fn().mockResolvedValue({ items: [], total: 0 }),
     };
 
     // JqField is a direct dependency now (no editor-registry door): the visual
-    // editor is always available, so both jq fields render their door unconditionally.
-    // The door now folds its field label into its accessible name
+    // editor is always available, so every jq field renders its door unconditionally.
+    // The door folds its field label into its accessible name
     // ("Open the visual editor for <label>"), so each door is pinned to its own field
     // by name — a bare count could not tell WHICH fields got one.
     renderWithProviders(<RegisterHookForm />, { client });
 
-    expect(
-      await screen.findByRole('button', { name: 'Open the visual editor for Condition' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Open the visual editor for Expr' }),
-    ).toBeInTheDocument();
+    for (const label of ['Condition', 'Start', 'Cancel', 'Resume', 'Extras']) {
+      expect(
+        await screen.findByRole('button', { name: `Open the visual editor for ${label}` }),
+      ).toBeInTheDocument();
+    }
 
-    // And exactly two doors total across the form — no third field grew one.
-    expect(screen.getAllByRole('button', { name: /Open the visual editor for/i })).toHaveLength(2);
+    // And exactly five doors total across the form — no other field grew one.
+    expect(screen.getAllByRole('button', { name: /Open the visual editor for/i })).toHaveLength(5);
   });
 });
 

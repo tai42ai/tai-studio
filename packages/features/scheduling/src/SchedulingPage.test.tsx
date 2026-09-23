@@ -27,7 +27,7 @@ function serverTime501(): () => Promise<never> {
  * signal — rather than on incidental timer slack.
  */
 async function openToolPicker(user: UserEvent, dialog: HTMLElement): Promise<void> {
-  const combobox = within(dialog).getByRole('combobox');
+  const combobox = within(dialog).getByRole('combobox', { name: 'Tool' });
   await waitFor(() => {
     expect(combobox).toBeEnabled();
   });
@@ -157,7 +157,7 @@ describe(
       const client = makeClient({
         listSchedules: vi.fn().mockResolvedValue([]),
         getServerDateTime: serverTime501(),
-        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task']),
+        listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
         addSchedule,
       });
       renderWithProviders(<SchedulingPage search={{}} />, { client });
@@ -181,7 +181,14 @@ describe(
       const client = makeClient({
         listSchedules: vi.fn().mockResolvedValue([]),
         getServerDateTime: serverTime501(),
-        listTools: vi.fn().mockResolvedValue(['run_report_schedule_task', 'sync_schedule_task']),
+        listTools: vi
+          .fn()
+          .mockResolvedValue([
+            'run_report',
+            'run_report_schedule_task',
+            'sync',
+            'sync_schedule_task',
+          ]),
         addSchedule,
       });
       renderWithProviders(<SchedulingPage search={{}} />, { client });
@@ -193,7 +200,7 @@ describe(
 
       // Pick a tool via the shared ToolPicker (Radix combobox).
       await openToolPicker(user, dialog);
-      await user.click(await screen.findByRole('option', { name: 'run_report_schedule_task' }));
+      await user.click(await screen.findByRole('option', { name: 'run_report' }));
 
       const kwargs = within(dialog).getByLabelText(/Tool kwargs/);
       await user.clear(kwargs);
@@ -221,7 +228,7 @@ describe(
       const client = makeClient({
         listSchedules: vi.fn().mockResolvedValue([]),
         getServerDateTime: serverTime501(),
-        listTools: vi.fn().mockResolvedValue(['sync_schedule_task']),
+        listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
         addSchedule,
       });
       renderWithProviders(<SchedulingPage search={{}} />, { client });
@@ -231,7 +238,7 @@ describe(
 
       await user.type(within(dialog).getByLabelText('Name'), 'hourly-sync');
       await openToolPicker(user, dialog);
-      await user.click(await screen.findByRole('option', { name: 'sync_schedule_task' }));
+      await user.click(await screen.findByRole('option', { name: 'sync' }));
 
       // Switch to the interval spec.
       await user.click(within(dialog).getByRole('radio', { name: 'Interval' }));

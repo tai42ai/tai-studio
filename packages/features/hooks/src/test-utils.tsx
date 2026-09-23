@@ -107,7 +107,10 @@ export function hook(overrides: Partial<HookParams> = {}): HookParams {
     tool_kwargs: {},
     subject: null,
     condition: null,
-    expr: null,
+    start_expr: null,
+    cancel_expr: null,
+    resume_expr: null,
+    extras_expr: null,
     state_binding: null,
     ...overrides,
   };
