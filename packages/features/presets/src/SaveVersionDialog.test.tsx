@@ -70,13 +70,12 @@ describe('SaveVersionDialog', () => {
     expect(screen.getByRole('button', { name: 'Save as new version' })).toBeDisabled();
   });
 
-  it('states in the Fixed kwargs help that a !ENV ${VAR} value is a secret reference', () => {
+  it('states in the Fixed kwargs help that a secret reference stores only the variable name', () => {
     renderWithProviders(<SaveVersionDialog detail={detail} onClose={vi.fn()} />, {
       client: client(),
     });
-    const help = screen.getByText(/is a secret reference/i);
-    expect(help).toHaveTextContent('!ENV ${VAR}');
-    expect(help).toHaveTextContent('stores only the reference, never the resolved value');
+    const help = screen.getByText(/stores only the environment variable's name/i);
+    expect(help).toHaveTextContent('stored in the clear');
   });
 
   it('carries a !ENV secret reference in an edited fixed_kwargs to the save body verbatim', async () => {
@@ -93,6 +92,8 @@ describe('SaveVersionDialog', () => {
     });
 
     // Editing the kwargs to a marker sends it verbatim: the client never resolves it.
+    // The raw-JSON view is where a full object is pasted; switch to it, then edit.
+    await user.click(screen.getByRole('button', { name: 'JSON' }));
     fireEvent.change(screen.getByLabelText('Fixed kwargs JSON'), {
       target: { value: JSON.stringify({ api_token: '!ENV ${API_TOKEN}' }) },
     });
@@ -298,6 +299,7 @@ describe('SaveVersionDialog', () => {
       client: client({ savePresetVersion }),
     });
 
+    await user.click(screen.getByRole('button', { name: 'JSON' }));
     const textarea = screen.getByLabelText('Fixed kwargs JSON');
     await user.clear(textarea);
     // Not valid JSON (no braces — `{` is a userEvent key descriptor).

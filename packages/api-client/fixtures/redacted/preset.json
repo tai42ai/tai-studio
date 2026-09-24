@@ -15,5 +15,5 @@
   "conflicted_reason": null,
   "uses": [],
   "used_by": [],
-  "fixed_kwargs": { "units": "metric", "api_key": "***" }
+  "fixed_kwargs": { "units": "metric", "api_key": "***", "api_token": "!ENV ${SERVICE_API_TOKEN}" }
 }

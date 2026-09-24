@@ -21,13 +21,13 @@ import {
   SchemaEditor,
   Spinner,
   StateBindingSection,
-  Textarea,
   TextInput,
 } from '@tai42/studio-sdk';
 import type { ReactNode, SyntheticEvent } from 'react';
 
 import { ExtensionsField } from './ExtensionsField';
-import { KWARGS_SECRET_REFERENCE_HELP } from './PresetKwargsField';
+import { PresetKwargsEditor } from './PresetKwargsEditor';
+import { usePresetEnvKeys } from './usePresetEnvKeys';
 import { useSaveVersionDraft } from './useSaveVersionDraft';
 import { useStateBindingSources } from './useStateBindingSources';
 import { ValidateVerdict } from './verdict';
@@ -41,6 +41,9 @@ export function SaveVersionDialog({
 }): ReactNode {
   const draft = useSaveVersionDraft(detail, onClose);
   const binding = useStateBindingSources(detail.base_tool, draft.outputSchema.schema);
+  // The dialog only opens for an existing preset (a base is always in play), so the
+  // env-key read runs immediately; it fails closed to a bare variable input.
+  const envKeys = usePresetEnvKeys(true);
   const { save, validate, versionsQuery, bindingSeeded, dirty, descriptionInvalid, canValidate } =
     draft;
 
@@ -62,21 +65,16 @@ export function SaveVersionDialog({
         onSubmit={onSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}
       >
-        <Field
-          label="Fixed kwargs"
-          description={`A JSON object baked into the preset as fixed constants. ${KWARGS_SECRET_REFERENCE_HELP}`}
+        <PresetKwargsEditor
+          hints={[]}
+          value={draft.kwargsText}
+          onChange={draft.setKwargsText}
+          onValidityChange={draft.setKwargsRowsValid}
           error={draft.kwargsError}
-        >
-          <Textarea
-            value={draft.kwargsText}
-            onChange={(event) => {
-              draft.setKwargsText(event.target.value);
-            }}
-            rows={6}
-            aria-label="Fixed kwargs JSON"
-            style={{ fontFamily: 'var(--tai-font-mono)' }}
-          />
-        </Field>
+          availableKeys={envKeys.availableKeys}
+          keyPickingAvailable={envKeys.keyPickingAvailable}
+          idPrefix="save-version-kwargs"
+        />
 
         <Field
           label="Description"
@@ -156,6 +154,7 @@ export function SaveVersionDialog({
               !dirty ||
               !draft.outputSchema.valid ||
               !draft.extensionsValid ||
+              !draft.kwargsRowsValid ||
               descriptionInvalid
             }
           >

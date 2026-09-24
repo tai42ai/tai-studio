@@ -304,6 +304,8 @@ describe('CreatePresetForm', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
+    // The raw-JSON view is where a malformed body can be authored; switch to it first.
+    await user.click(screen.getByRole('button', { name: 'JSON' }));
     const kwargs = screen.getByLabelText('Fixed kwargs JSON');
     await user.clear(kwargs);
     await user.type(kwargs, '123');
@@ -314,31 +316,38 @@ describe('CreatePresetForm', () => {
     expect(screen.getByText('Fixed kwargs must be a JSON object.')).toBeInTheDocument();
   });
 
-  it('carries a !ENV secret reference in fixed_kwargs to the create body verbatim', async () => {
+  it('carries a !ENV secret reference built on the fields editor to the create body verbatim', async () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
-    // A marker is an ordinary string to the client: it must reach the create body
-    // unchanged — the server resolves it at bind; the client never resolves it.
-    const body = { api_token: '!ENV ${API_TOKEN}' };
-    fireEvent.change(screen.getByLabelText('Fixed kwargs JSON'), {
-      target: { value: JSON.stringify(body) },
-    });
+    // Build a reference row: a key, the "Secret reference" type, and an existing env key
+    // picked from the list. The editor emits the exact marker the server resolves at bind.
+    await user.click(screen.getByRole('button', { name: 'Add kwarg' }));
+    await user.type(screen.getByLabelText('Key'), 'api_token');
+    await user.click(screen.getByRole('combobox', { name: 'Type' }));
+    await user.click(await screen.findByRole('option', { name: 'Secret reference' }));
+    // The env read resolves for the picked base, so the key list lights up; the reference
+    // row opens straight on the key picker (initialMode="key").
+    await user.click(await screen.findByRole('combobox', { name: 'Secret reference' }));
+    await user.click(await screen.findByRole('option', { name: 'SERVICE_API_TOKEN' }));
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
-    expect(createPreset).toHaveBeenCalledWith(
-      expect.objectContaining({ fixed_kwargs: { api_token: '!ENV ${API_TOKEN}' } }),
-    );
+    // A marker is an ordinary string to the client: it reaches the create body unchanged —
+    // the server resolves it at bind; the client never resolves it.
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledWith(
+        expect.objectContaining({ fixed_kwargs: { api_token: '!ENV ${SERVICE_API_TOKEN}' } }),
+      );
+    });
   });
 
-  it('states in the Fixed kwargs help that a !ENV ${VAR} value is a secret reference', () => {
+  it('states in the Fixed kwargs help that a secret reference stores only the variable name', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client: baseClient() });
-    const help = screen.getByText(/is a secret reference/i);
-    expect(help).toHaveTextContent('!ENV ${VAR}');
-    expect(help).toHaveTextContent('stores only the reference, never the resolved value');
+    const help = screen.getByText(/stores only the environment variable's name/i);
+    expect(help).toHaveTextContent('stored in the clear');
   });
 
   it('renders a 409 duplicate message verbatim', async () => {

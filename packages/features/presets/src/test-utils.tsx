@@ -118,6 +118,10 @@ export function baseClient(overrides: StubApiClient = {}): StubApiClient {
     }),
     listExtensions: vi.fn().mockResolvedValue([]),
     listAgents: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    getEnvConfig: vi.fn().mockResolvedValue({
+      env: { SERVICE_API_TOKEN: 's3cr3t' },
+      secret_keys: ['SERVICE_API_TOKEN'],
+    }),
     getToolSchema: vi.fn().mockResolvedValue({
       input: { type: 'object', properties: {}, required: [] },
       output: null,

@@ -197,7 +197,8 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Base tool input names are unavailable: schema down',
     );
-    expect(screen.getByLabelText('Fixed kwargs JSON')).toBeEnabled();
+    // The kwargs editor stays usable — its "Add kwarg" affordance is live, not walled.
+    expect(screen.getByRole('button', { name: 'Add kwarg' })).toBeEnabled();
   });
 
   it('gives each failed enrichment read its OWN line, never one run-together sentence', async () => {
@@ -237,8 +238,8 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
 
     // The picker settles from the tools/preset reads alone; the enrichment reads
     // (tags, overlay, agents, base schema) never fire before a base is chosen, so the
-    // empty form carries no enrichment error and no Retry even though every one of
-    // them would reject.
+    // empty form carries no enrichment error and no Retry even though every one of them
+    // would reject.
     await waitFor(() => {
       expect(screen.getByRole('combobox')).toBeEnabled();
     });

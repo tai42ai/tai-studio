@@ -92,6 +92,21 @@ describe('preset client transport', () => {
     });
   });
 
+  it('createPreset carries an !ENV secret-reference kwarg to the body verbatim', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: record }));
+    // A marker is an ordinary string on the wire: the client never resolves it — the
+    // server reads the environment variable at bind time and stores the marker verbatim.
+    await client.createPreset({
+      name: 'paris_weather',
+      base_tool: 'weather',
+      description: 'Paris weather',
+      fixed_kwargs: { units: 'metric', api_token: '!ENV ${SERVICE_API_TOKEN}' },
+    });
+    expect(captured[0]?.body).toMatchObject({
+      fixed_kwargs: { units: 'metric', api_token: '!ENV ${SERVICE_API_TOKEN}' },
+    });
+  });
+
   it('createPreset sends input_schema verbatim when provided', async () => {
     const { client, captured } = harness(() => jsonResponse({ data: record }));
     await client.createPreset({
@@ -135,6 +150,30 @@ describe('preset client transport', () => {
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/presets/paris_weather/versions');
     expect(captured[0]?.body).toEqual({ description: 'refreshed' });
+  });
+
+  it('savePresetVersion carries an !ENV secret-reference kwarg to the body verbatim', async () => {
+    const version = {
+      version: 8,
+      body: {
+        base_tool: 'weather',
+        description: '',
+        fixed_kwargs: { api_token: '!ENV ${SERVICE_API_TOKEN}' },
+        extensions: [],
+        output_schema: null,
+        input_schema: null,
+      },
+      tags: [],
+      created_at: 'now',
+      is_current: true,
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: version }));
+    await client.savePresetVersion('paris_weather', {
+      fixed_kwargs: { api_token: '!ENV ${SERVICE_API_TOKEN}' },
+    });
+    expect(captured[0]?.body).toEqual({
+      fixed_kwargs: { api_token: '!ENV ${SERVICE_API_TOKEN}' },
+    });
   });
 
   it('savePresetVersion sends input_schema verbatim when provided', async () => {

@@ -17,11 +17,13 @@ function Harness({
   availableKeys,
   keyPickingAvailable,
   initial,
+  initialMode,
   onChange,
 }: {
   availableKeys: readonly string[];
   keyPickingAvailable?: boolean;
   initial?: SecretRef;
+  initialMode?: 'paste' | 'key';
   onChange?: (value: SecretRef) => void;
 }) {
   const [value, setValue] = useState<SecretRef | undefined>(initial);
@@ -31,6 +33,7 @@ function Harness({
       value={value}
       availableKeys={availableKeys}
       keyPickingAvailable={keyPickingAvailable}
+      initialMode={initialMode}
       onChange={(next) => {
         setValue(next);
         onChange?.(next);
@@ -55,6 +58,19 @@ describe('SecretRefField', () => {
     expect(screen.getByText('New secret')).toBeInTheDocument();
     expect(container.innerHTML).not.toContain(PLAINTEXT);
     expect(screen.queryByDisplayValue(PLAINTEXT)).toBeNull();
+  });
+
+  it('opens a value-less field on the key picker when initialMode="key"', () => {
+    render(<Harness availableKeys={['API_TOKEN']} keyPickingAvailable initialMode="key" />);
+    // The key picker (a listbox trigger) is shown straight away, not the paste input.
+    expect(screen.getByRole('combobox', { name: 'API key' })).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Paste a secret value')).toBeNull();
+  });
+
+  it('opens a value-less field on the paste input by default (initialMode unset)', () => {
+    render(<Harness availableKeys={['API_TOKEN']} keyPickingAvailable />);
+    // The default write-first behaviour is unchanged: the paste input is shown.
+    expect(screen.getByPlaceholderText('Paste a secret value')).toBeInTheDocument();
   });
 
   it('offers no reveal for a committed pasted secret', () => {

@@ -50,6 +50,7 @@ function useVersionDraftState(detail: PresetDetail) {
   const [bindingSeeded, setBindingSeeded] = useState(false);
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
   const [extensionsValid, setExtensionsValid] = useState(true);
+  const [kwargsRowsValid, setKwargsRowsValid] = useState(true);
   useEffect(() => {
     if (versionsQuery.isSuccess && !bindingSeeded) {
       setStateBinding(seedBinding);
@@ -94,6 +95,8 @@ function useVersionDraftState(detail: PresetDetail) {
     setKwargsError,
     extensionsValid,
     setExtensionsValid,
+    kwargsRowsValid,
+    setKwargsRowsValid,
     parsed,
     kwargsChanged,
     descriptionChanged,
@@ -146,6 +149,9 @@ export function useSaveVersionDraft(detail: PresetDetail, onClose: () => void) {
   const submit = (): void => {
     if (!draft.dirty) return;
     if (!draft.outputSchema.valid || !draft.extensionsValid || draft.descriptionInvalid) return;
+    // A half-edited kwarg row holds the text at its last VALID serialisation, which would
+    // parse and carry the stale value forward; refuse so it can never be saved silently.
+    if (!draft.kwargsRowsValid) return;
     if ('error' in parsed) {
       draft.setKwargsError(parsed.error);
       return;
@@ -155,6 +161,7 @@ export function useSaveVersionDraft(detail: PresetDetail, onClose: () => void) {
   };
 
   const runValidate = (): void => {
+    if (!draft.kwargsRowsValid) return;
     if ('error' in parsed) {
       draft.setKwargsError(parsed.error);
       return;
@@ -173,7 +180,15 @@ export function useSaveVersionDraft(detail: PresetDetail, onClose: () => void) {
     });
   };
 
-  return { ...draft, save, validate, submit, runValidate };
+  // A half-edited kwarg row blocks the dry-run Validate too, beside the schema/parse gates.
+  return {
+    ...draft,
+    canValidate: draft.canValidate && draft.kwargsRowsValid,
+    save,
+    validate,
+    submit,
+    runValidate,
+  };
 }
 
 /** The save body carrying ONLY the fields the user changed (kwargs already parsed OK). */
