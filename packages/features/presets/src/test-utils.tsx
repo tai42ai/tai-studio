@@ -185,11 +185,12 @@ export async function clickWhenInteractable(
 }
 
 /**
- * Selects a base tool from the picker. The base-picker's enrichment reads (tag
- * grouping, the " (agent)" labels, the effective-hidden exclusion, badges, the
- * kwargs hint) run only once a base is chosen, so a test that asserts any of them
- * picks a base with this helper first and reopens the picker to read the enriched
- * options.
+ * Selects a base tool from the picker. The " (agent)" labels and the kwargs hint
+ * come from reads that run only once a base is chosen (the agents read and the
+ * base-schema read), so a test that asserts either picks a base with this helper
+ * first and reopens the picker to read the labelled options. Tag grouping, the
+ * effective-hidden exclusion and badges come from the tag + overlay reads, which run
+ * on the empty form, so they need no pick.
  */
 export async function pickBase(
   user: ReturnType<typeof userEvent.setup>,

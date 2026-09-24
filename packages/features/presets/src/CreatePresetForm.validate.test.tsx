@@ -169,8 +169,9 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     async (_label, override, expected) => {
       // These two only ENRICH the picker (grouping, the " (agent)" suffix), so they
       // must not wall the form — but a silent degradation reads as the truth about
-      // the deployment: an unlabelled agent base looks like a plain tool. The reads
-      // run only for a selected base, so pick one to fire the failing read.
+      // the deployment: an unlabelled agent base looks like a plain tool. The tag read
+      // fires on the empty form and the agent read on a pick, so picking a base has
+      // both fired regardless of which one this case fails.
       const user = userEvent.setup({ delay: null });
       renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
         client: baseClient(override),
@@ -210,7 +211,8 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
       }),
     });
 
-    // The enrichment reads run only for a selected base: pick one to fire both.
+    // The tag read fires on the empty form and the agent read on a pick: picking a
+    // base has fired both, so both failure lines are present.
     await pickBase(user, 'weather');
     const alert = await screen.findByRole('alert');
     const lines = [...alert.querySelectorAll('p')];
@@ -227,26 +229,29 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     }
   });
 
-  it('runs NO enrichment read before a base is picked, so the empty form never errors on it', async () => {
-    const listToolTags = vi.fn().mockRejectedValue(new Error('tags down'));
-    const listToolMeta = vi.fn().mockRejectedValue(new Error('meta down'));
+  it('issues the tag + overlay reads on the empty form but NOT the agent/base-schema reads, so the empty form never shows the agent-labelling note', async () => {
+    const listToolTags = vi.fn().mockResolvedValue([]);
+    const listToolMeta = vi.fn().mockResolvedValue({ folders: [], meta: [] });
     const listAgents = vi.fn().mockRejectedValue(new Error('agents down'));
     const getToolSchema = vi.fn().mockRejectedValue(new Error('schema down'));
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({ listToolTags, listToolMeta, listAgents, getToolSchema }),
     });
 
-    // The picker settles from the tools/preset reads alone; the enrichment reads
-    // (tags, overlay, agents, base schema) never fire before a base is chosen, so the
-    // empty form carries no enrichment error and no Retry even though every one of them
-    // would reject.
+    // The tag + overlay reads run on the empty form — they group, label and hide-filter
+    // the picker before any pick. The agent-labelling and base-schema reads wait for a
+    // pick, so neither fires here even though both would reject: the empty form carries
+    // no enrichment error and never the "Agent labelling is unavailable" note.
     await waitFor(() => {
       expect(screen.getByRole('combobox')).toBeEnabled();
     });
-    expect(listToolTags).not.toHaveBeenCalled();
-    expect(listToolMeta).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(listToolTags).toHaveBeenCalled();
+    });
+    expect(listToolMeta).toHaveBeenCalled();
     expect(listAgents).not.toHaveBeenCalled();
     expect(getToolSchema).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Agent labelling is unavailable/)).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

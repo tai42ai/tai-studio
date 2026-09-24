@@ -17,7 +17,6 @@ import {
   fillCreatable,
   fillNameAndBase,
   openBasePicker,
-  pickBase,
   record,
   renderWithProviders,
 } from './test-utils';
@@ -173,7 +172,7 @@ describe('CreatePresetForm', () => {
     expect(createPreset).not.toHaveBeenCalled();
   });
 
-  it('groups the base picker on the MERGED native + overlay tag map once a base is selected', async () => {
+  it('groups the base picker on the MERGED native + overlay tag map on the empty form, before any base is picked', async () => {
     const user = userEvent.setup({ delay: null });
     // `weather` carries a NATIVE tag; `radar` carries only an OVERLAY tag. The tag
     // filter lists the UNION, so a tag from either read proves the map is merged.
@@ -198,16 +197,15 @@ describe('CreatePresetForm', () => {
       }),
     });
 
-    // The enrichment reads run only for a selected base, so grouping lights up once a
-    // base is picked: the tag filter appears and its options are the merged tag set.
-    await pickBase(user, 'weather');
+    // The tag + overlay reads run on the empty form, so grouping is live before a pick:
+    // the tag filter appears and its options are the merged tag set.
     const filter = await screen.findByRole('combobox', { name: 'Filter by tag' });
     await user.click(filter);
     expect(await screen.findByRole('option', { name: 'native-geo' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'overlay-geo' })).toBeInTheDocument();
   });
 
-  it('excludes an EFFECTIVE-hidden base tool once a base is selected, keeping an overlay-`false` unhidden one', async () => {
+  it('excludes an EFFECTIVE-hidden base tool on the empty form, keeping an overlay-`false` unhidden one', async () => {
     // `secret` is plugin-hidden with no overlay opinion → excluded. `radar` is
     // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
     // `weather` is a plain visible tool → offered.
@@ -229,9 +227,9 @@ describe('CreatePresetForm', () => {
       }),
     });
 
-    // The effective-hidden exclusion reads the tags/overlay, which run only for a
-    // selected base: pick a base, then reopen the picker to read the enriched options.
-    await pickBase(user, 'weather');
+    // The effective-hidden exclusion reads the tags/overlay, which run on the empty
+    // form, so it applies before any pick (these tools carry no tags, so no tag filter
+    // renders and the base picker is the sole combobox).
     await openBasePicker(user);
     expect(screen.getByRole('option', { name: 'weather' })).toBeInTheDocument();
     // Once the tool-meta read applies, the effective-hidden `secret` leaves the picker
