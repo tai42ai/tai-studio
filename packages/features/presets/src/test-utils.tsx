@@ -180,11 +180,25 @@ export async function clickWhenInteractable(
   await user.click(element);
 }
 
+/**
+ * Selects a base tool from the picker. The base-picker's enrichment reads (tag
+ * grouping, the " (agent)" labels, the effective-hidden exclusion, badges, the
+ * kwargs hint) run only once a base is chosen, so a test that asserts any of them
+ * picks a base with this helper first and reopens the picker to read the enriched
+ * options.
+ */
+export async function pickBase(
+  user: ReturnType<typeof userEvent.setup>,
+  optionName = 'weather',
+): Promise<void> {
+  await openBasePicker(user);
+  await user.click(await screen.findByRole('option', { name: optionName }));
+}
+
 /** Name + base only — used by the validate tests (an empty description is valid to validate). */
 export async function fillNameAndBase(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.type(screen.getByPlaceholderText('paris_weather'), 'paris_weather');
-  await openBasePicker(user);
-  await user.click(await screen.findByRole('option', { name: 'weather' }));
+  await pickBase(user);
 }
 
 /** Name + base + description — the full gate a create must clear before submit. */

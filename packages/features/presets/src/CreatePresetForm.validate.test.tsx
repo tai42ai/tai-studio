@@ -15,6 +15,7 @@ import {
   fillCreatable,
   fillNameAndBase,
   openBasePicker,
+  pickBase,
   record,
   renderWithProviders,
 } from './test-utils';
@@ -103,7 +104,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     expect(screen.queryByText('Draft binds cleanly')).toBeNull();
   });
 
-  it('labels an agent run tool in the base picker with a " (agent)" suffix', async () => {
+  it('labels an agent run tool in the base picker with a " (agent)" suffix once a base is selected', async () => {
     const user = userEvent.setup({ delay: null });
     const client = baseClient({
       listTools: vi.fn().mockResolvedValue(['weather', 'writer_agent']),
@@ -113,6 +114,9 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
+    // The agents read that supplies the " (agent)" suffix runs only for a selected
+    // base: pick a base, then reopen the picker to read the labelled options.
+    await pickBase(user, 'weather');
     await openBasePicker(user);
     expect(await screen.findByRole('option', { name: 'writer_agent (agent)' })).toBeInTheDocument();
     // A non-agent tool keeps its bare label.
@@ -165,11 +169,14 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     async (_label, override, expected) => {
       // These two only ENRICH the picker (grouping, the " (agent)" suffix), so they
       // must not wall the form — but a silent degradation reads as the truth about
-      // the deployment: an unlabelled agent base looks like a plain tool.
+      // the deployment: an unlabelled agent base looks like a plain tool. The reads
+      // run only for a selected base, so pick one to fire the failing read.
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
         client: baseClient(override),
       });
 
+      await pickBase(user, 'weather');
       expect(await screen.findByRole('alert')).toHaveTextContent(expected);
       // The picker is still there and still usable.
       expect(await screen.findByRole('combobox')).toBeEnabled();
@@ -194,6 +201,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
   });
 
   it('gives each failed enrichment read its OWN line, never one run-together sentence', async () => {
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({
         listToolTags: vi.fn().mockRejectedValue(new Error('tags down')),
@@ -201,6 +209,8 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
       }),
     });
 
+    // The enrichment reads run only for a selected base: pick one to fire both.
+    await pickBase(user, 'weather');
     const alert = await screen.findByRole('alert');
     const lines = [...alert.querySelectorAll('p')];
     expect(lines.map((line) => line.textContent)).toEqual([
@@ -214,6 +224,29 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
       expect(line).toHaveClass('tai-field-error');
       expect(line.querySelector('svg')).toHaveClass('tai-icon');
     }
+  });
+
+  it('runs NO enrichment read before a base is picked, so the empty form never errors on it', async () => {
+    const listToolTags = vi.fn().mockRejectedValue(new Error('tags down'));
+    const listToolMeta = vi.fn().mockRejectedValue(new Error('meta down'));
+    const listAgents = vi.fn().mockRejectedValue(new Error('agents down'));
+    const getToolSchema = vi.fn().mockRejectedValue(new Error('schema down'));
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ listToolTags, listToolMeta, listAgents, getToolSchema }),
+    });
+
+    // The picker settles from the tools/preset reads alone; the enrichment reads
+    // (tags, overlay, agents, base schema) never fire before a base is chosen, so the
+    // empty form carries no enrichment error and no Retry even though every one of
+    // them would reject.
+    await waitFor(() => {
+      expect(screen.getByRole('combobox')).toBeEnabled();
+    });
+    expect(listToolTags).not.toHaveBeenCalled();
+    expect(listToolMeta).not.toHaveBeenCalled();
+    expect(listAgents).not.toHaveBeenCalled();
+    expect(getToolSchema).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

@@ -4,6 +4,10 @@
  * "(agent)" label set, declared badges, the base-exclusion list, the kwargs hint).
  * None is load-bearing, so a failure surfaces loudly (`enrichmentFailed`) but keeps
  * the form usable — never a silently ungrouped, unlabelled picker.
+ *
+ * The tag / overlay / agent / base-schema enrichment reads run only for a selected
+ * base (`hasBase`); the empty form issues just the tool / preset reads that build the
+ * base picker itself, so it never queries — nor errors on — enrichment before a pick.
  */
 import { hiddenToolNames, toolBadgesByName, useApi, useToolDisplayNames } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
@@ -26,20 +30,33 @@ export function usePresetToolCatalog(base: string | null) {
   const api = useApi();
   const displayNames = useToolDisplayNames();
 
+  // Enrichment reads run only once a base is picked; the empty form issues just the
+  // tool / preset reads that build the base picker itself.
+  const hasBase = base !== null && base !== '';
+
   const toolsQuery = useQuery({ queryKey: presetToolsKey, queryFn: () => api.listTools() });
   const presetsQuery = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
-  const tagsQuery = useQuery({ queryKey: presetToolTagsKey, queryFn: () => api.listToolTags() });
+  const tagsQuery = useQuery({
+    queryKey: presetToolTagsKey,
+    queryFn: () => api.listToolTags(),
+    enabled: hasBase,
+  });
   const toolMetaQuery = useQuery({
     queryKey: presetToolMetaKey,
     queryFn: () => api.listToolMeta(),
+    enabled: hasBase,
   });
   // ALL agents (not just spec-runnable) — the picker labels any agent run tool so an
   // author knows a base is an agent. An agent run tool is still a legal base.
-  const agentsQuery = useQuery({ queryKey: presetAgentsKey, queryFn: () => api.listAgents() });
+  const agentsQuery = useQuery({
+    queryKey: presetAgentsKey,
+    queryFn: () => api.listAgents(),
+    enabled: hasBase,
+  });
   const schemaQuery = useQuery({
     queryKey: presetSchemaKey(base ?? ''),
     queryFn: () => api.getToolSchema(base ?? ''),
-    enabled: base !== null && base !== '',
+    enabled: hasBase,
   });
 
   // Agent run tools among the base options — their picker labels get a " (agent)"
