@@ -9,6 +9,8 @@ import {
   NO_DATA_TRANSCRIPT,
   OPEN_TRANSCRIPT,
   parse,
+  RECURSION_LIMIT_TRANSCRIPT,
+  STRUCTURED_UNRESOLVED_TRANSCRIPT,
   UNKNOWN_TRANSCRIPT,
   XSS_TRANSCRIPT,
 } from './fixtures';
@@ -76,6 +78,24 @@ describe('Timeline rendering', () => {
   it('renders a stream.error as a loud inline error', () => {
     renderTimeline(ERROR_TRANSCRIPT);
     expect(screen.getByTestId('timeline-error')).toHaveTextContent('boom');
+  });
+
+  it('renders a structured-output-unresolved terminal as an outcome, not an error', () => {
+    renderTimeline(STRUCTURED_UNRESOLVED_TRANSCRIPT);
+    const card = screen.getByTestId('timeline-structured-unresolved');
+    expect(card).toHaveTextContent('Answer');
+    expect(card).toHaveTextContent('4 attempts');
+    expect(card).toHaveTextContent('not valid');
+    // A non-fatal typed terminal is never surfaced as a stream error.
+    expect(screen.queryByTestId('timeline-error')).toBeNull();
+  });
+
+  it('renders a recursion-limit terminal as an outcome, not an error', () => {
+    renderTimeline(RECURSION_LIMIT_TRANSCRIPT);
+    const card = screen.getByTestId('timeline-recursion-limit');
+    expect(card).toHaveTextContent('Step limit reached');
+    expect(card).toHaveTextContent('25');
+    expect(screen.queryByTestId('timeline-error')).toBeNull();
   });
 
   it('renders a printable token when structured data / tool result is absent', () => {

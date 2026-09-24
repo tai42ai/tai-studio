@@ -95,6 +95,22 @@ const interruptFinal = z.object({
   payload: z.unknown().optional(),
   reason: z.string().nullable().default(null),
 });
+// A structured-output run that never produced schema-conforming output within the
+// server's re-prompt cap. Terminal and NON-FATAL — a typed outcome, not an error.
+const structuredOutputUnresolvedFinal = z.object({
+  type: z.literal('structured_output_unresolved_final'),
+  final: z.boolean().default(true),
+  schema_name: z.string(),
+  attempts: z.number(),
+  error: z.string(),
+});
+// A run that hit the graph's step ceiling before finishing. Terminal and NON-FATAL.
+const recursionLimitFinal = z.object({
+  type: z.literal('recursion_limit_final'),
+  final: z.boolean().default(true),
+  limit: z.number(),
+  steps: z.number().nullable().default(null),
+});
 // The two SSE-layer terminal frames the run route emits (not contract events).
 const streamEnd = z.object({ type: z.literal('stream.end') });
 const streamError = z.object({ type: z.literal('stream.error'), message: z.string() });
@@ -109,6 +125,8 @@ export const agentEventSchema = z.discriminatedUnion('type', [
   runUsage,
   structuredFinal,
   interruptFinal,
+  structuredOutputUnresolvedFinal,
+  recursionLimitFinal,
   streamEnd,
   streamError,
 ]);

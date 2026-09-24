@@ -18,7 +18,15 @@ type AgentEvent = Extract<ParsedAgentEvent, { known: true }>['event'];
 /** The one-to-one events that each map to a single pushed item. */
 type SimpleEvent = Extract<
   AgentEvent,
-  { type: 'reasoning_step' | 'run_usage' | 'structured_final' | 'interrupt_final' }
+  {
+    type:
+      | 'reasoning_step'
+      | 'run_usage'
+      | 'structured_final'
+      | 'structured_output_unresolved_final'
+      | 'recursion_limit_final'
+      | 'interrupt_final';
+  }
 >;
 
 // The mutable accumulator threaded through the fold steps. `message` is the open
@@ -138,6 +146,18 @@ function appendSimpleItem(state: FoldState, event: SimpleEvent, id: string): voi
       break;
     case 'structured_final':
       state.items.push({ kind: 'structured', id, data: event.data });
+      break;
+    case 'structured_output_unresolved_final':
+      state.items.push({
+        kind: 'structuredUnresolved',
+        id,
+        schemaName: event.schema_name,
+        attempts: event.attempts,
+        error: event.error,
+      });
+      break;
+    case 'recursion_limit_final':
+      state.items.push({ kind: 'recursionLimit', id, limit: event.limit, steps: event.steps });
       break;
     case 'interrupt_final':
       state.items.push({

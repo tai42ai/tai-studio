@@ -6,6 +6,15 @@
 import { Field, Textarea } from '@tai42/studio-sdk';
 import type { ReactNode } from 'react';
 
+// The secret-reference help shared by every fixed-kwargs authoring surface (the
+// create form and the save-version dialog). Single-quoted so the `${VAR}` markers
+// stay literal text, never string interpolation.
+export const KWARGS_SECRET_REFERENCE_HELP =
+  'A string value written !ENV ${VAR} is a secret reference: the server resolves it ' +
+  'from that environment variable when the preset binds and stores only the reference, ' +
+  'never the resolved value. A !ENV ${VAR:default} default is stored in the clear, so ' +
+  'never write a credential as a default.';
+
 export function PresetKwargsField({
   hints,
   value,
@@ -18,10 +27,11 @@ export function PresetKwargsField({
   readonly error: string | undefined;
 }): ReactNode {
   const base = 'A JSON object of values baked into the preset as fixed constants.';
+  const withHints = hints.length > 0 ? `${base} Base tool inputs: ${hints.join(', ')}` : base;
   return (
     <Field
       label="Fixed kwargs"
-      description={hints.length > 0 ? `${base} Base tool inputs: ${hints.join(', ')}` : base}
+      description={`${withHints} ${KWARGS_SECRET_REFERENCE_HELP}`}
       error={error}
     >
       <Textarea

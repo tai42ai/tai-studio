@@ -6,6 +6,8 @@ import {
   FULL_TRANSCRIPT,
   INTERLEAVED_DELTA_TRANSCRIPT,
   parse,
+  RECURSION_LIMIT_TRANSCRIPT,
+  STRUCTURED_UNRESOLVED_TRANSCRIPT,
   UNKNOWN_TRANSCRIPT,
   UNMATCHED_RESULT_TRANSCRIPT,
 } from './fixtures';
@@ -41,6 +43,26 @@ describe('buildTimeline', () => {
     const { items } = buildTimeline(parse(UNKNOWN_TRANSCRIPT));
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ kind: 'unknown', type: 'future_thing' });
+  });
+
+  it('folds a structured_output_unresolved_final into a typed outcome, not an error', () => {
+    const fold = buildTimeline(parse(STRUCTURED_UNRESOLVED_TRANSCRIPT));
+    // Non-fatal: the run finishes cleanly (stream.end), never errors.
+    expect(fold).toMatchObject({ finished: true, errored: false });
+    expect(fold.items.some((item) => item.kind === 'error')).toBe(false);
+    expect(fold.items[0]).toMatchObject({
+      kind: 'structuredUnresolved',
+      schemaName: 'Answer',
+      attempts: 4,
+      error: 'not valid',
+    });
+  });
+
+  it('folds a recursion_limit_final into a typed outcome, not an error', () => {
+    const fold = buildTimeline(parse(RECURSION_LIMIT_TRANSCRIPT));
+    expect(fold).toMatchObject({ finished: true, errored: false });
+    expect(fold.items.some((item) => item.kind === 'error')).toBe(false);
+    expect(fold.items[0]).toMatchObject({ kind: 'recursionLimit', limit: 25, steps: 25 });
   });
 
   it('settles the open bubble when an event interleaves between deltas of a turn', () => {
