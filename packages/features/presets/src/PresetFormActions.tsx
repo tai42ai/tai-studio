@@ -14,6 +14,7 @@ export function PresetFormActions({
   createPending,
   outputValid,
   extensionsValid,
+  kwargsRowsValid,
   versioningDisabled,
 }: {
   readonly onCancel: () => void;
@@ -23,6 +24,7 @@ export function PresetFormActions({
   readonly createPending: boolean;
   readonly outputValid: boolean;
   readonly extensionsValid: boolean;
+  readonly kwargsRowsValid: boolean;
   readonly versioningDisabled: boolean;
 }): ReactNode {
   return (
@@ -41,7 +43,13 @@ export function PresetFormActions({
       <Button
         type="submit"
         variant="primary"
-        disabled={createPending || !outputValid || !extensionsValid || versioningDisabled}
+        disabled={
+          createPending ||
+          !outputValid ||
+          !extensionsValid ||
+          !kwargsRowsValid ||
+          versioningDisabled
+        }
       >
         {createPending ? <Spinner label="Creating preset" /> : null}
         Create preset

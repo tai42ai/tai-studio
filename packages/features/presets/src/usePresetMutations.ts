@@ -30,6 +30,8 @@ export interface CreateDraft {
   readonly outputSchema: SchemaEditorChange;
   readonly stateBinding: StateBinding | null;
   readonly extensionsValid: boolean;
+  /** Whether the fixed-kwargs editor's rows are all valid; a half-edited row blocks submit. */
+  readonly kwargsRowsValid: boolean;
 }
 
 /** The create/validate mutations plus the submit handlers and versioning-off state. */
@@ -71,6 +73,7 @@ function draftGates(draft: CreateDraft, parsed: ReturnType<typeof parseJsonObjec
     !baseMissing &&
     draft.outputSchema.valid &&
     draft.extensionsValid &&
+    draft.kwargsRowsValid &&
     !('error' in parsed);
   return { nameMissing, baseMissing, descriptionMissing, canValidate };
 }
@@ -145,11 +148,15 @@ export function usePresetMutations({
     // Name, base, AND description each gate the create (an empty description 422s).
     if (nameMissing || baseMissing || descriptionMissing) return;
     if (!draft.outputSchema.valid || !draft.extensionsValid) return;
+    // A half-edited kwarg row holds the text at its last VALID serialisation, which would
+    // parse and bake the stale value; refuse so it can never be saved silently.
+    if (!draft.kwargsRowsValid) return;
     const body = buildDraftBody(draft, parsed, setKwargsError);
     if (body !== null) create.mutate(body);
   };
 
   const runValidate = (): void => {
+    if (!draft.kwargsRowsValid) return;
     const body = buildDraftBody(draft, parsed, setKwargsError);
     if (body !== null) validate.mutate(body);
   };

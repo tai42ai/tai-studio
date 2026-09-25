@@ -15,6 +15,7 @@ import {
   fillCreatable,
   fillNameAndBase,
   openBasePicker,
+  pickBase,
   record,
   renderWithProviders,
 } from './test-utils';
@@ -103,7 +104,7 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     expect(screen.queryByText('Draft binds cleanly')).toBeNull();
   });
 
-  it('labels an agent run tool in the base picker with a " (agent)" suffix', async () => {
+  it('labels an agent run tool in the base picker with a " (agent)" suffix once a base is selected', async () => {
     const user = userEvent.setup({ delay: null });
     const client = baseClient({
       listTools: vi.fn().mockResolvedValue(['weather', 'writer_agent']),
@@ -113,6 +114,9 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
+    // The agents read that supplies the " (agent)" suffix runs only for a selected
+    // base: pick a base, then reopen the picker to read the labelled options.
+    await pickBase(user, 'weather');
     await openBasePicker(user);
     expect(await screen.findByRole('option', { name: 'writer_agent (agent)' })).toBeInTheDocument();
     // A non-agent tool keeps its bare label.
@@ -165,11 +169,15 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     async (_label, override, expected) => {
       // These two only ENRICH the picker (grouping, the " (agent)" suffix), so they
       // must not wall the form — but a silent degradation reads as the truth about
-      // the deployment: an unlabelled agent base looks like a plain tool.
+      // the deployment: an unlabelled agent base looks like a plain tool. The tag read
+      // fires on the empty form and the agent read on a pick, so picking a base has
+      // both fired regardless of which one this case fails.
+      const user = userEvent.setup({ delay: null });
       renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
         client: baseClient(override),
       });
 
+      await pickBase(user, 'weather');
       expect(await screen.findByRole('alert')).toHaveTextContent(expected);
       // The picker is still there and still usable.
       expect(await screen.findByRole('combobox')).toBeEnabled();
@@ -190,10 +198,12 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Base tool input names are unavailable: schema down',
     );
-    expect(screen.getByLabelText('Fixed kwargs JSON')).toBeEnabled();
+    // The kwargs editor stays usable — its "Add kwarg" affordance is live, not walled.
+    expect(screen.getByRole('button', { name: 'Add kwarg' })).toBeEnabled();
   });
 
   it('gives each failed enrichment read its OWN line, never one run-together sentence', async () => {
+    const user = userEvent.setup({ delay: null });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
       client: baseClient({
         listToolTags: vi.fn().mockRejectedValue(new Error('tags down')),
@@ -201,6 +211,9 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
       }),
     });
 
+    // The tag read fires on the empty form and the agent read on a pick: picking a
+    // base has fired both, so both failure lines are present.
+    await pickBase(user, 'weather');
     const alert = await screen.findByRole('alert');
     const lines = [...alert.querySelectorAll('p')];
     expect(lines.map((line) => line.textContent)).toEqual([
@@ -214,6 +227,32 @@ describe('CreatePresetForm — validate + base labelling + enrichment', () => {
       expect(line).toHaveClass('tai-field-error');
       expect(line.querySelector('svg')).toHaveClass('tai-icon');
     }
+  });
+
+  it('issues the tag + overlay reads on the empty form but NOT the agent/base-schema reads, so the empty form never shows the agent-labelling note', async () => {
+    const listToolTags = vi.fn().mockResolvedValue([]);
+    const listToolMeta = vi.fn().mockResolvedValue({ folders: [], meta: [] });
+    const listAgents = vi.fn().mockRejectedValue(new Error('agents down'));
+    const getToolSchema = vi.fn().mockRejectedValue(new Error('schema down'));
+    renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, {
+      client: baseClient({ listToolTags, listToolMeta, listAgents, getToolSchema }),
+    });
+
+    // The tag + overlay reads run on the empty form — they group, label and hide-filter
+    // the picker before any pick. The agent-labelling and base-schema reads wait for a
+    // pick, so neither fires here even though both would reject: the empty form carries
+    // no enrichment error and never the "Agent labelling is unavailable" note.
+    await waitFor(() => {
+      expect(screen.getByRole('combobox')).toBeEnabled();
+    });
+    await waitFor(() => {
+      expect(listToolTags).toHaveBeenCalled();
+    });
+    expect(listToolMeta).toHaveBeenCalled();
+    expect(listAgents).not.toHaveBeenCalled();
+    expect(getToolSchema).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Agent labelling is unavailable/)).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 

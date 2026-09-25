@@ -118,6 +118,10 @@ export function baseClient(overrides: StubApiClient = {}): StubApiClient {
     }),
     listExtensions: vi.fn().mockResolvedValue([]),
     listAgents: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    getEnvConfig: vi.fn().mockResolvedValue({
+      env: { SERVICE_API_TOKEN: 's3cr3t' },
+      secret_keys: ['SERVICE_API_TOKEN'],
+    }),
     getToolSchema: vi.fn().mockResolvedValue({
       input: { type: 'object', properties: {}, required: [] },
       output: null,
@@ -180,11 +184,26 @@ export async function clickWhenInteractable(
   await user.click(element);
 }
 
+/**
+ * Selects a base tool from the picker. The " (agent)" labels and the kwargs hint
+ * come from reads that run only once a base is chosen (the agents read and the
+ * base-schema read), so a test that asserts either picks a base with this helper
+ * first and reopens the picker to read the labelled options. Tag grouping, the
+ * effective-hidden exclusion and badges come from the tag + overlay reads, which run
+ * on the empty form, so they need no pick.
+ */
+export async function pickBase(
+  user: ReturnType<typeof userEvent.setup>,
+  optionName = 'weather',
+): Promise<void> {
+  await openBasePicker(user);
+  await user.click(await screen.findByRole('option', { name: optionName }));
+}
+
 /** Name + base only — used by the validate tests (an empty description is valid to validate). */
 export async function fillNameAndBase(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.type(screen.getByPlaceholderText('paris_weather'), 'paris_weather');
-  await openBasePicker(user);
-  await user.click(await screen.findByRole('option', { name: 'weather' }));
+  await pickBase(user);
 }
 
 /** Name + base + description — the full gate a create must clear before submit. */

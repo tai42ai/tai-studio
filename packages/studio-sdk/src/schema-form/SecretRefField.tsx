@@ -54,6 +54,15 @@ export interface SecretRefFieldProps {
    * the target pointer, or the entry has no key yet to hint the generated name.
    */
   readonly pasteDisabledReason?: string;
+  /**
+   * Which editor a value-less field opens on when key picking is available. Defaults to
+   * `'paste'` (the write-first behaviour): a host adding a brand-new secret lands on the
+   * paste input. A host that only ever REFERENCES existing keys passes `'key'` so a fresh
+   * field opens straight on the key picker rather than a paste input it would block. Has
+   * no effect once a value is committed (the chip is shown) or when key picking is off
+   * (paste-only, fail closed).
+   */
+  readonly initialMode?: 'paste' | 'key';
   /** Visible field label; the accessible name of the inner control. */
   readonly label?: string;
   readonly idPrefix?: string;
@@ -68,18 +77,25 @@ export function SecretRefField({
   availableKeys,
   keyPickingAvailable,
   pasteDisabledReason,
+  initialMode,
   label = 'Secret',
   idPrefix = 'secret-ref',
 }: SecretRefFieldProps): ReactNode {
   const canPick = keyPickingAvailable === true;
   const pasteBlocked = pasteDisabledReason !== undefined;
 
+  // A committed key reference opens on the key editor; otherwise a value-less field opens
+  // on the host's `initialMode` (default `paste`). Key picking off is always paste-only.
+  const startMode = (): 'key' | 'paste' => {
+    if (!canPick) return 'paste';
+    if (value?.source === 'key') return 'key';
+    return initialMode ?? 'paste';
+  };
+
   // Editing is forced while there is no value to show as a chip; otherwise the
   // chip is shown until the user asks to replace it.
   const [editing, setEditing] = useState(value === undefined);
-  const [mode, setMode] = useState<'key' | 'paste'>(
-    value?.source === 'key' && canPick ? 'key' : 'paste',
-  );
+  const [mode, setMode] = useState<'key' | 'paste'>(startMode);
   const [draftSecret, setDraftSecret] = useState('');
   const [pickedKey, setPickedKey] = useState('');
   const [revealed, setRevealed] = useState(false);
@@ -113,7 +129,7 @@ export function SecretRefField({
     setDraftSecret('');
     setPickedKey('');
     setRevealed(false);
-    setMode(value?.source === 'key' && canPick ? 'key' : 'paste');
+    setMode(startMode());
     setEditing(true);
   };
 

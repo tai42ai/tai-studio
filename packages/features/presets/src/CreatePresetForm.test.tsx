@@ -172,7 +172,7 @@ describe('CreatePresetForm', () => {
     expect(createPreset).not.toHaveBeenCalled();
   });
 
-  it('groups the base picker on the MERGED native + overlay tag map (union of both reads)', async () => {
+  it('groups the base picker on the MERGED native + overlay tag map on the empty form, before any base is picked', async () => {
     const user = userEvent.setup({ delay: null });
     // `weather` carries a NATIVE tag; `radar` carries only an OVERLAY tag. The tag
     // filter lists the UNION, so a tag from either read proves the map is merged.
@@ -197,14 +197,15 @@ describe('CreatePresetForm', () => {
       }),
     });
 
-    // Grouping is on, so the tag filter appears; its options are the merged tag set.
+    // The tag + overlay reads run on the empty form, so grouping is live before a pick:
+    // the tag filter appears and its options are the merged tag set.
     const filter = await screen.findByRole('combobox', { name: 'Filter by tag' });
     await user.click(filter);
     expect(await screen.findByRole('option', { name: 'native-geo' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'overlay-geo' })).toBeInTheDocument();
   });
 
-  it('excludes an EFFECTIVE-hidden base tool, keeping an overlay-`false` unhidden one', async () => {
+  it('excludes an EFFECTIVE-hidden base tool on the empty form, keeping an overlay-`false` unhidden one', async () => {
     // `secret` is plugin-hidden with no overlay opinion → excluded. `radar` is
     // plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
     // `weather` is a plain visible tool → offered.
@@ -226,13 +227,17 @@ describe('CreatePresetForm', () => {
       }),
     });
 
+    // The effective-hidden exclusion reads the tags/overlay, which run on the empty
+    // form, so it applies before any pick (these tools carry no tags, so no tag filter
+    // renders and the base picker is the sole combobox).
     await openBasePicker(user);
-    // `radar` is offered only once the overlay unhides it, so its option settles
-    // last: awaiting it proves the tool-meta read applied and the exclusion is final.
-    expect(await screen.findByRole('option', { name: 'radar' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'weather' })).toBeInTheDocument();
-    // The effective-hidden `secret` is absent from the picker.
-    expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
+    // Once the tool-meta read applies, the effective-hidden `secret` leaves the picker
+    // while the overlay-unhidden `radar` stays.
+    await waitFor(() => {
+      expect(screen.queryByRole('option', { name: 'secret' })).toBeNull();
+    });
+    expect(screen.getByRole('option', { name: 'radar' })).toBeInTheDocument();
   });
 
   it('includes output_schema in the body when the author sets one', async () => {
@@ -297,6 +302,8 @@ describe('CreatePresetForm', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
+    // The raw-JSON view is where a malformed body can be authored; switch to it first.
+    await user.click(screen.getByRole('button', { name: 'JSON' }));
     const kwargs = screen.getByLabelText('Fixed kwargs JSON');
     await user.clear(kwargs);
     await user.type(kwargs, '123');
@@ -307,31 +314,38 @@ describe('CreatePresetForm', () => {
     expect(screen.getByText('Fixed kwargs must be a JSON object.')).toBeInTheDocument();
   });
 
-  it('carries a !ENV secret reference in fixed_kwargs to the create body verbatim', async () => {
+  it('carries a !ENV secret reference built on the fields editor to the create body verbatim', async () => {
     const user = userEvent.setup({ delay: null });
     const createPreset = vi.fn().mockResolvedValue(record);
     const client = baseClient({ createPreset });
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client });
 
     await fillCreatable(user);
-    // A marker is an ordinary string to the client: it must reach the create body
-    // unchanged — the server resolves it at bind; the client never resolves it.
-    const body = { api_token: '!ENV ${API_TOKEN}' };
-    fireEvent.change(screen.getByLabelText('Fixed kwargs JSON'), {
-      target: { value: JSON.stringify(body) },
-    });
+    // Build a reference row: a key, the "Secret reference" type, and an existing env key
+    // picked from the list. The editor emits the exact marker the server resolves at bind.
+    await user.click(screen.getByRole('button', { name: 'Add kwarg' }));
+    await user.type(screen.getByLabelText('Key'), 'api_token');
+    await user.click(screen.getByRole('combobox', { name: 'Type' }));
+    await user.click(await screen.findByRole('option', { name: 'Secret reference' }));
+    // The env read resolves for the picked base, so the key list lights up; the reference
+    // row opens straight on the key picker (initialMode="key").
+    await user.click(await screen.findByRole('combobox', { name: 'Secret reference' }));
+    await user.click(await screen.findByRole('option', { name: 'SERVICE_API_TOKEN' }));
     await user.click(screen.getByRole('button', { name: 'Create preset' }));
 
-    expect(createPreset).toHaveBeenCalledWith(
-      expect.objectContaining({ fixed_kwargs: { api_token: '!ENV ${API_TOKEN}' } }),
-    );
+    // A marker is an ordinary string to the client: it reaches the create body unchanged —
+    // the server resolves it at bind; the client never resolves it.
+    await waitFor(() => {
+      expect(createPreset).toHaveBeenCalledWith(
+        expect.objectContaining({ fixed_kwargs: { api_token: '!ENV ${SERVICE_API_TOKEN}' } }),
+      );
+    });
   });
 
-  it('states in the Fixed kwargs help that a !ENV ${VAR} value is a secret reference', () => {
+  it('states in the Fixed kwargs help that a secret reference stores only the variable name', () => {
     renderWithProviders(<CreatePresetForm onClose={vi.fn()} />, { client: baseClient() });
-    const help = screen.getByText(/is a secret reference/i);
-    expect(help).toHaveTextContent('!ENV ${VAR}');
-    expect(help).toHaveTextContent('stores only the reference, never the resolved value');
+    const help = screen.getByText(/stores only the environment variable's name/i);
+    expect(help).toHaveTextContent('stored in the clear');
   });
 
   it('renders a 409 duplicate message verbatim', async () => {

@@ -12864,6 +12864,7 @@ export interface SecretRefFieldProps {
     readonly availableKeys: readonly string[];
     // (undocumented)
     readonly idPrefix?: string;
+    readonly initialMode?: 'paste' | 'key';
     readonly keyPickingAvailable?: boolean;
     readonly label?: string;
     readonly onChange: (value: SecretRef) => void;

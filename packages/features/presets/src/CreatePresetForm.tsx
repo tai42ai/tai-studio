@@ -31,9 +31,10 @@ import { PresetBaseToolField } from './PresetBaseToolField';
 import { PresetEnrichmentErrors } from './PresetEnrichmentErrors';
 import { PresetFormActions } from './PresetFormActions';
 import { PresetIdentityFields } from './PresetIdentityFields';
-import { PresetKwargsField } from './PresetKwargsField';
+import { PresetKwargsEditor } from './PresetKwargsEditor';
 import { PresetSubmitFeedback } from './PresetSubmitFeedback';
 import { TagsInput } from './tags';
+import { usePresetEnvKeys } from './usePresetEnvKeys';
 import { usePresetMutations } from './usePresetMutations';
 import { usePresetToolCatalog } from './usePresetToolCatalog';
 import { useStateBindingSources } from './useStateBindingSources';
@@ -56,11 +57,16 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
   const [stateBinding, setStateBinding] = useState<StateBinding | null>(null);
   const [kwargsText, setKwargsText] = useState('{}');
   const [kwargsError, setKwargsError] = useState<string | undefined>(undefined);
+  // Whether the fixed-kwargs editor's rows are all valid; a half-edited row blocks submit.
+  const [kwargsRowsValid, setKwargsRowsValid] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   // Whether the extension combos carry only known names; an unknown name blocks submit.
   const [extensionsValid, setExtensionsValid] = useState(true);
 
   const catalog = usePresetToolCatalog(base);
+  // The secret-reference key list: an enrichment read gated on a picked base (like the
+  // catalog's reads), fed to the kwargs editor; it fails closed to a bare variable input.
+  const envKeys = usePresetEnvKeys(base !== null && base !== '');
   const binding = useStateBindingSources(base, outputSchema.schema);
   const {
     create,
@@ -80,6 +86,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
       outputSchema,
       stateBinding,
       extensionsValid,
+      kwargsRowsValid,
     },
     tags,
     onClose,
@@ -122,11 +129,15 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
 
         <PresetEnrichmentErrors catalog={catalog} />
 
-        <PresetKwargsField
+        <PresetKwargsEditor
           hints={catalog.hints}
           value={kwargsText}
           onChange={setKwargsText}
+          onValidityChange={setKwargsRowsValid}
           error={kwargsError}
+          availableKeys={envKeys.availableKeys}
+          keyPickingAvailable={envKeys.keyPickingAvailable}
+          idPrefix="create-preset-kwargs"
         />
 
         {toolMetaOff ? null : (
@@ -167,6 +178,7 @@ export function CreatePresetForm({ onClose }: { readonly onClose: () => void }):
           createPending={create.isPending}
           outputValid={outputSchema.valid}
           extensionsValid={extensionsValid}
+          kwargsRowsValid={kwargsRowsValid}
           versioningDisabled={versioningDisabled}
         />
       </form>

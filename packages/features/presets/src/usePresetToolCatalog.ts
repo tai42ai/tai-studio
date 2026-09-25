@@ -4,6 +4,12 @@
  * "(agent)" label set, declared badges, the base-exclusion list, the kwargs hint).
  * None is load-bearing, so a failure surfaces loudly (`enrichmentFailed`) but keeps
  * the form usable — never a silently ungrouped, unlabelled picker.
+ *
+ * The tag / overlay reads run unconditionally: the picker's grouping, labels and
+ * operator-hidden filter come from them on the empty form, before any base is picked.
+ * The agent / base-schema reads wait for a selected base (`hasBase`) — the agent
+ * labelling read decorates the chosen base, and the base-schema read needs a base by
+ * construction — so the empty form never queries, nor errors on, either of them.
  */
 import { hiddenToolNames, toolBadgesByName, useApi, useToolDisplayNames } from '@tai42/studio-sdk';
 import { useQuery } from '@tanstack/react-query';
@@ -26,6 +32,11 @@ export function usePresetToolCatalog(base: string | null) {
   const api = useApi();
   const displayNames = useToolDisplayNames();
 
+  // The agent / base-schema reads wait for a pick; the tool / preset / tag / overlay
+  // reads run on the empty form so the base picker is grouped, labelled and filtered
+  // before the first pick.
+  const hasBase = base !== null && base !== '';
+
   const toolsQuery = useQuery({ queryKey: presetToolsKey, queryFn: () => api.listTools() });
   const presetsQuery = useQuery({ queryKey: presetsListKey, queryFn: () => api.listPresets() });
   const tagsQuery = useQuery({ queryKey: presetToolTagsKey, queryFn: () => api.listToolTags() });
@@ -34,12 +45,18 @@ export function usePresetToolCatalog(base: string | null) {
     queryFn: () => api.listToolMeta(),
   });
   // ALL agents (not just spec-runnable) — the picker labels any agent run tool so an
-  // author knows a base is an agent. An agent run tool is still a legal base.
-  const agentsQuery = useQuery({ queryKey: presetAgentsKey, queryFn: () => api.listAgents() });
+  // author knows a base is an agent. An agent run tool is still a legal base. The read
+  // waits for a pick: labelling decorates the chosen base, so the empty form never
+  // errors on it (the "Agent labelling is unavailable" note stays off before a pick).
+  const agentsQuery = useQuery({
+    queryKey: presetAgentsKey,
+    queryFn: () => api.listAgents(),
+    enabled: hasBase,
+  });
   const schemaQuery = useQuery({
     queryKey: presetSchemaKey(base ?? ''),
     queryFn: () => api.getToolSchema(base ?? ''),
-    enabled: base !== null && base !== '',
+    enabled: hasBase,
   });
 
   // Agent run tools among the base options — their picker labels get a " (agent)"

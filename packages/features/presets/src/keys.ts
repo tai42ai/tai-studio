@@ -57,6 +57,13 @@ export const presetExtensionsKey = [PRESETS_KEY_ROOT, 'extensions'] as const;
 /** Key for the agent-summary list feeding the create form's agent-tool labels. */
 export const presetAgentsKey = [PRESETS_KEY_ROOT, 'agents'] as const;
 
+/**
+ * Key for the environment config read (`GET /api/config/env`) feeding the fixed-kwargs
+ * editor's secret-reference key picker. Shared by both authoring doors so a single read
+ * populates the picker on create and save-version alike.
+ */
+export const presetEnvConfigKey = [PRESETS_KEY_ROOT, 'env-config'] as const;
+
 /** Key for a base tool's params JSON schema (the create form's field hints). */
 export function presetSchemaKey(
   baseTool: string,

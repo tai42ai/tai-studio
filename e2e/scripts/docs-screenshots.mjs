@@ -162,6 +162,67 @@ async function pickFirstExecutionKey(page, scope) {
 }
 
 /**
+ * Open the create-preset dialog and author three fixed kwargs on the fields editor: a
+ * text row, a number row, and a secret-reference row picking a seeded env key. Returns
+ * the dialog locator. Shared by both preset-kwargs frames (fields + JSON view).
+ *
+ * The base tool is `studio_demo_form`, whose params (name/count/mood) are the row keys —
+ * a preset's kwargs must name real base-tool params. The demo backend seeds no env key,
+ * so an existing one is written through the real config door first; the create form's env
+ * read then lists it in the picker.
+ */
+async function authorPresetKwargs(page) {
+  await page.request.post(`${STUDIO_URL}/api/config/env`, {
+    headers: { 'x-api-key': DEMO_KEY, 'content-type': 'application/json' },
+    data: { SERVICE_API_TOKEN: 's3cr3t' },
+  });
+  await page.getByRole('button', { name: 'Create preset' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('textbox', { name: 'Name' }).fill('daily_digest');
+  await dialog.getByRole('textbox', { name: /Description/ }).fill('Posts the daily digest.');
+  await dialog.getByRole('combobox', { name: /Base tool/ }).click();
+  await page.getByRole('option', { name: 'studio_demo_form' }).first().click();
+
+  // A text row.
+  await dialog.getByRole('button', { name: 'Add kwarg' }).click();
+  await dialog.getByLabel('Key', { exact: true }).last().fill('name');
+  await dialog.getByLabel('Value', { exact: true }).last().fill('Ada');
+
+  // A number row.
+  await dialog.getByRole('button', { name: 'Add kwarg' }).click();
+  await dialog.getByLabel('Key', { exact: true }).last().fill('count');
+  await dialog.getByRole('combobox', { name: 'Type' }).last().click();
+  await page.getByRole('option', { name: 'Number' }).click();
+  await dialog.getByLabel('Value', { exact: true }).last().fill('3');
+
+  // A secret-reference row picking the seeded env key.
+  await dialog.getByRole('button', { name: 'Add kwarg' }).click();
+  await dialog.getByLabel('Key', { exact: true }).last().fill('mood');
+  await dialog.getByRole('combobox', { name: 'Type' }).last().click();
+  await page.getByRole('option', { name: 'Secret reference' }).click();
+  await dialog.getByRole('combobox', { name: 'Secret reference' }).click();
+  await page.getByRole('option', { name: 'SERVICE_API_TOKEN' }).click();
+  // The committed key renders as a chip ("Change reference" replaces the picker).
+  await dialog.getByRole('button', { name: 'Change reference' }).waitFor({ state: 'visible' });
+  return dialog;
+}
+
+/**
+ * Scroll the fixed-kwargs field to the top of the dialog so the shot frames the whole
+ * editor — the "Fixed kwargs" label first, then the description, the Fields/JSON switch
+ * and the rows — rather than the base-picker above it, regardless of the boot.
+ */
+async function frameKwargsEditor(page) {
+  await page
+    .getByRole('dialog')
+    .getByText('Fixed kwargs', { exact: true })
+    .first()
+    .evaluate((el) => {
+      el.scrollIntoView({ block: 'start' });
+    });
+}
+
+/**
  * Pages captured while SIGNED IN. `wait` is a selector proving the screen rendered
  * its POPULATED content (a real row/card, not a spinner or empty state) before the
  * shot. `action`, when present, drives the page into its captured state. `canvas`,
@@ -353,6 +414,33 @@ const AUTHED_PAGES = [
       await page
         .locator('[data-testid="preset-row-shift_handover"]')
         .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // The create-preset dialog's fixed-kwargs editor in its FIELDS view: a text row, a
+    // number row, and a secret-reference row showing the committed env-key chip. The
+    // dialog is modal (background nav inert), so the plugin-nav wait is skipped.
+    name: 'preset-kwargs-fields',
+    path: '/presets',
+    wait: 'button:has-text("Create preset")',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await authorPresetKwargs(page);
+      await frameKwargsEditor(page);
+    },
+  },
+  {
+    // The same authored kwargs, shown in the raw JSON view — the escape hatch for the
+    // non-scalar values the rows do not edit inline.
+    name: 'preset-kwargs-json',
+    path: '/presets',
+    wait: 'button:has-text("Create preset")',
+    awaitPluginNav: false,
+    action: async (page) => {
+      const dialog = await authorPresetKwargs(page);
+      await dialog.getByRole('button', { name: 'JSON' }).click();
+      await dialog.getByLabel('Fixed kwargs JSON').waitFor({ state: 'visible', timeout: 8000 });
+      await frameKwargsEditor(page);
     },
   },
   // --- States screens (the platform state store) -------------------------------
