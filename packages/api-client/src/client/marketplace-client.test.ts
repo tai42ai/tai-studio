@@ -231,14 +231,11 @@ describe('marketplace client transport', () => {
     expect(out).toEqual(['tool', 'agent']);
   });
 
-  it('listInstalledMarketplacePlugins GETs /api/marketplace/installed and parses installed + quarantined', async () => {
+  it('listInstalledMarketplacePlugins GETs /api/marketplace/installed and parses the installed rows', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
           installed: [INSTALLED_ROW],
-          quarantined: [
-            { name: 'tai42-broken', reason: 'requires tai42-contract<0.2; running 0.2.0' },
-          ],
         },
       }),
     );
@@ -256,7 +253,6 @@ describe('marketplace client transport', () => {
       reason: 'declared contract range >=0.1,<0.2 excludes the running 0.2.0',
     });
     expect(out.installed[0]?.route_mounts).toEqual({ relay: 'channels/relay-2' });
-    expect(out.quarantined[0]?.name).toBe('tai42-broken');
   });
 
   it('throws ApiSchemaError LOUDLY on an unknown key in the CLOSED installed shapes', async () => {
@@ -264,7 +260,7 @@ describe('marketplace client transport', () => {
     // exactly these shapes, so an extra key is drift, never silently stripped.
     const { client } = harness(() =>
       jsonResponse({
-        data: { installed: [{ ...INSTALLED_ROW, surprise: 1 }], quarantined: [] },
+        data: { installed: [{ ...INSTALLED_ROW, surprise: 1 }] },
       }),
     );
     await expect(client.listInstalledMarketplacePlugins()).rejects.toBeInstanceOf(ApiSchemaError);
@@ -570,7 +566,6 @@ describe('marketplace client — real skeleton response shapes', () => {
         route_mounts: {},
       },
     ],
-    quarantined: [],
   };
 
   // GET /api/marketplace/plugins/tai42/e2e-beta — a registry passthrough. Its
@@ -654,7 +649,6 @@ describe('marketplace client — real skeleton response shapes', () => {
       { kind: 'tool', name: 'e2e_market_beta_probe' },
       { kind: 'extension', name: 'beta_marker' },
     ]);
-    expect(out.quarantined).toEqual([]);
   });
 
   it('parses the real /api/marketplace/plugins detail body (no latest.delivery, items without required_env)', async () => {

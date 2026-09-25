@@ -1,9 +1,8 @@
 /**
  * The installed-plugins view: a table of what the running app has installed from
  * the marketplace, each row linking to its detail, with an update / up-to-date /
- * not-in-registry status badge. Every boot-quarantined plugin renders as its own
- * loud error card (name + reason + remedy) above the table, and the "Upgrade
- * all" action moves every installed plugin to its newest compatible version,
+ * not-in-registry status badge, and the "Upgrade all" action moves every
+ * installed plugin to its newest compatible version,
  * rendering the per-plugin outcome readout. A loud advisories banner sits above
  * the table when any non-withdrawn advisory matches an installed plugin.
  * Per-plugin install / update / uninstall actions live on the detail view.
@@ -11,7 +10,6 @@
 import type {
   MarketplaceAdvisory,
   MarketplaceInstalledPlugin,
-  MarketplaceQuarantinedPlugin,
   MarketplaceUpgradeAllRow,
 } from '@tai42/api-client';
 import {
@@ -50,20 +48,6 @@ function StatusBadge({ row }: { readonly row: MarketplaceInstalledPlugin }): Rea
     return <Badge variant="warning">Update available: v{row.latest}</Badge>;
   }
   return <Badge variant="success">Up to date</Badge>;
-}
-
-/** One loud error card per boot-quarantined plugin: name, reason, remedy. */
-function QuarantinedCard({ plugin }: { readonly plugin: MarketplaceQuarantinedPlugin }): ReactNode {
-  return (
-    <Card>
-      <ErrorState
-        message={`Plugin ${plugin.name} is quarantined and not loaded: ${plugin.reason}`}
-      />
-      <p style={{ margin: 'var(--tai-space-2) 0 0' }}>
-        Run “Upgrade all” below to move to the newest compatible version, or uninstall the plugin.
-      </p>
-    </Card>
-  );
 }
 
 /** Badge tint per upgrade-all outcome. */
@@ -170,8 +154,8 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
   // instead of a red error. The installed/advisories reads stay 200-empty untouched.
   const storeDisabled = isFeatureDisabled(upgradeAllMutation.error);
 
-  const { installed, quarantined } = installedQuery.data;
-  if (installed.length === 0 && quarantined.length === 0) {
+  const { installed } = installedQuery.data;
+  if (installed.length === 0) {
     return (
       <EmptyState
         title="No marketplace plugins installed"
@@ -190,10 +174,6 @@ export function InstalledTab({ search }: { readonly search: MarketplaceSearch })
 
   return (
     <div className="tai-stack">
-      {quarantined.map((plugin) => (
-        <QuarantinedCard key={plugin.name} plugin={plugin} />
-      ))}
-
       {advisoriesQuery.isError ? (
         <ErrorState
           message={errorMessage(advisoriesQuery.error)}

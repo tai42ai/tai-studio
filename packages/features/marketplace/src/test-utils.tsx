@@ -188,9 +188,9 @@ export function installedRow(
   };
 }
 
-/** The installed-listing envelope: rows plus the boot-quarantine list. */
+/** The installed-listing envelope: the attributed rows. */
 export function installedList(plugins: MarketplaceInstalledPlugin[]): MarketplaceInstalled {
-  return { installed: plugins, quarantined: [] };
+  return { installed: plugins };
 }
 
 export function advisory(overrides: Partial<MarketplaceAdvisory> = {}): MarketplaceAdvisory {

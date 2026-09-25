@@ -435,14 +435,35 @@ jobs:
           SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           REF_NAME: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref_name }}
           LEGS: ''
+          # A pull request that pairs this change with one in the tai42 monorepo names
+          # the tai42 ref to test against with a `tai42-ref: <branch-or-sha>` line in
+          # its body; the receiver defaults to tai42 `main` when the payload omits it,
+          # as on a push (which has no pull-request body).
+          PR_BODY: ${{ github.event_name == 'pull_request' && github.event.pull_request.body || '' }}
         run: |
           set -euo pipefail
+          tai42_ref="$(printf '%s\n' "$PR_BODY" | sed -n 's/^tai42-ref://p' | head -n1 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+          # A declared ref must be a branch name or a 40-hex sha — never a
+          # fully-qualified `refs/...` ref, which could aim this secret-bearing
+          # dispatch at an unreviewed fork pull-request tree. Fail loudly here,
+          # before dispatch; the receiver's checkout is the second net.
+          if [ -n "$tai42_ref" ] \
+            && ! printf '%s' "$tai42_ref" | grep -Eq '^[0-9a-fA-F]{40}$' \
+            && ! { printf '%s' "$tai42_ref" | grep -Eq '^[0-9A-Za-z_][0-9A-Za-z_.-]*(/[0-9A-Za-z_][0-9A-Za-z_.-]*)*$' \
+                   && ! printf '%s' "$tai42_ref" | grep -q '\.\.' \
+                   && [ "${tai42_ref#refs/}" = "$tai42_ref" ]; }; then
+            echo "::error::tai42-ref declares a value that is not a branch name or 40-hex sha: $tai42_ref"
+            exit 1
+          fi
           payload="$(jq -nc \
             --arg repo "$SRC_REPO" \
             --arg ref "$SHA" \
             --arg ref_name "$REF_NAME" \
             --arg legs "$LEGS" \
-            '{repo: $repo, ref: $ref, ref_name: $ref_name} + (if $legs == "" then {} else {legs: $legs} end)')"
+            --arg tai42_ref "$tai42_ref" \
+            '{repo: $repo, ref: $ref, ref_name: $ref_name}
+              + (if $legs == "" then {} else {legs: $legs} end)
+              + (if $tai42_ref == "" then {} else {tai42_ref: $tai42_ref} end)')"
           echo "json=$payload" >> "$GITHUB_OUTPUT"
       - name: Dispatch fleet-e2e
         if: needs.changes.outputs.version_only != 'true' && env.E2E_DISPATCH_TOKEN != ''

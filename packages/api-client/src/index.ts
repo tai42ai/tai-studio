@@ -157,7 +157,6 @@ export type {
   MarketplacePreviewItem,
   MarketplacePreviewPublicRoute,
   MarketplacePreviewRoute,
-  MarketplaceQuarantinedPlugin,
   MarketplaceRequiredEnvVar,
   MarketplaceRouteDecl,
   MarketplaceRoutesDecl,

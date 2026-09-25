@@ -29,7 +29,6 @@ describe('McpServersSection — installed mcp-server entry + env-refs checklist'
         items: [{ kind: 'mcp-server', name: 'postgres' }],
       },
     ],
-    quarantined: [],
   };
   // Refs come ONLY from get_mcp_env_refs — names + set/unset booleans, never values.
   const ENV_REFS = [

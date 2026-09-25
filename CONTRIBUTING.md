@@ -67,7 +67,13 @@ skeleton (`core/skeleton`) from the monorepo's uv workspace venv (`tai42/.venv`)
 which `uv sync --package tai42-skeleton` builds with every first-party dependency
 resolved from the workspace; boot.sh installs the reference plugin and
 `plugins/webhook-verifier-github` into that venv. CI runs it for you on every
-pull request from this repo.
+pull request from this repo. To pair a change here with one in the tai42
+monorepo, add a `tai42-ref: <branch-or-sha>` line to the pull request body and
+the cross-repo e2e gate runs the monorepo's harness at that ref instead of
+`main`; the line is a plain body field, not a Conventional-Commits header, so it
+never affects the release the pull request projects. The value must be a branch
+name or a 40-character commit sha — never a fully-qualified `refs/…` ref, which
+is refused.
 
 Before any commit, run a secret scan over the tree (e.g. `detect-secrets scan`) —
 never commit a real `.env` or an API key.
