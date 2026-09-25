@@ -279,23 +279,13 @@ export const marketplaceInstalledPlugin = z
   .strict();
 export type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
 
-/** One plugin the boot pass quarantined instead of loading, with why. CLOSED. */
-export const marketplaceQuarantinedPlugin = z
-  .object({
-    name: z.string(),
-    reason: z.string(),
-  })
-  .strict();
-export type MarketplaceQuarantinedPlugin = z.infer<typeof marketplaceQuarantinedPlugin>;
-
 /**
  * The installed inventory (`GET /api/marketplace/installed`): the attributed
- * rows plus every plugin the boot pass quarantined instead of loading. CLOSED.
+ * rows, each with its per-row compat verdict and update picture. CLOSED.
  */
 export const marketplaceInstalled = z
   .object({
     installed: z.array(marketplaceInstalledPlugin),
-    quarantined: z.array(marketplaceQuarantinedPlugin),
   })
   .strict();
 export type MarketplaceInstalled = z.infer<typeof marketplaceInstalled>;

@@ -1527,10 +1527,6 @@ export function createApiClient(config: ApiConfig): {
             }[];
             route_mounts: Record<string, string>;
         }[];
-        quarantined: {
-            name: string;
-            reason: string;
-        }[];
     }>;
     readonly previewMarketplaceInstall: (body: MarketplaceInstallPreviewBody, signal?: AbortSignal) => Promise<{
         ref: string;
@@ -5486,10 +5482,6 @@ const marketplaceInstalled: z.ZodObject<{
         }, z.core.$strip>>;
         route_mounts: z.ZodRecord<z.ZodString, z.ZodString>;
     }, z.core.$strict>>;
-    quarantined: z.ZodArray<z.ZodObject<{
-        name: z.ZodString;
-        reason: z.ZodString;
-    }, z.core.$strict>>;
 }, z.core.$strict>;
 
 // @public (undocumented)
@@ -5875,15 +5867,6 @@ const marketplacePreviewRoute: z.ZodObject<{
     }>>;
     public: z.ZodBoolean;
 }, z.core.$strip>;
-
-// @public (undocumented)
-export type MarketplaceQuarantinedPlugin = z.infer<typeof marketplaceQuarantinedPlugin>;
-
-// @public
-const marketplaceQuarantinedPlugin: z.ZodObject<{
-    name: z.ZodString;
-    reason: z.ZodString;
-}, z.core.$strict>;
 
 // @public (undocumented)
 export type MarketplaceRequiredEnvVar = z.infer<typeof marketplaceRequiredEnvVar>;
@@ -7756,8 +7739,6 @@ declare namespace s {
         MarketplaceInstalledCompat,
         marketplaceInstalledPlugin,
         MarketplaceInstalledPlugin,
-        marketplaceQuarantinedPlugin,
-        MarketplaceQuarantinedPlugin,
         marketplaceInstalled,
         MarketplaceInstalled,
         marketplaceUpgradeAllRow,
@@ -8309,8 +8290,6 @@ declare namespace schemas {
         MarketplaceInstalledCompat,
         marketplaceInstalledPlugin,
         MarketplaceInstalledPlugin,
-        marketplaceQuarantinedPlugin,
-        MarketplaceQuarantinedPlugin,
         marketplaceInstalled,
         MarketplaceInstalled,
         marketplaceUpgradeAllRow,

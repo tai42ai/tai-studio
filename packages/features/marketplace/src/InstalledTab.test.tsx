@@ -1,7 +1,7 @@
 /**
  * Behavioural tests for the installed tab: the tri-state installed list, the
- * per-row update / up-to-date / not-in-registry status badges, the loud
- * quarantined-plugin error cards, the "Upgrade all" action and its per-plugin
+ * per-row update / up-to-date / not-in-registry status badges, the "Upgrade
+ * all" action and its per-plugin
  * outcome readout, the advisories banner that appears only when an advisory
  * matches an installed plugin (and links to the detail), the advisory-failure
  * fallback that keeps the table, and the table pane's keyboard reachability
@@ -12,7 +12,6 @@ import {
   type MarketplaceAdvisory,
   type MarketplaceInstalled,
   type MarketplaceInstalledPlugin,
-  type MarketplaceQuarantinedPlugin,
 } from '@tai42/api-client';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { act, screen, waitFor, within } from '@testing-library/react';
@@ -40,12 +39,9 @@ function installedRow(overrides: Partial<MarketplaceInstalledPlugin>): Marketpla
   };
 }
 
-/** The installed-listing envelope: rows plus the boot-quarantine list. */
-function installedList(
-  plugins: MarketplaceInstalledPlugin[],
-  quarantined: MarketplaceQuarantinedPlugin[] = [],
-): MarketplaceInstalled {
-  return { installed: plugins, quarantined };
+/** The installed-listing envelope: the attributed rows. */
+function installedList(plugins: MarketplaceInstalledPlugin[]): MarketplaceInstalled {
+  return { installed: plugins };
 }
 
 function advisory(overrides: Partial<MarketplaceAdvisory>): MarketplaceAdvisory {
@@ -228,53 +224,6 @@ describe('InstalledTab — advisories banner', () => {
     expect(await screen.findByRole('table')).toBeInTheDocument();
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('boom: advisories');
-  });
-});
-
-describe('InstalledTab — quarantined plugins', () => {
-  it('renders one loud error card per quarantined plugin, with reason and remedy', async () => {
-    const client: StubApiClient = {
-      listInstalledMarketplacePlugins: vi.fn().mockResolvedValue(
-        installedList(
-          [installedRow({})],
-          [
-            { name: 'tai42-broken', reason: 'requires tai42-contract<0.2; running 0.2.0' },
-            { name: 'tai42-shattered', reason: 'import raised ModuleNotFoundError' },
-          ],
-        ),
-      ),
-      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
-    };
-    renderWithProviders(<InstalledTab search={{}} />, { client });
-
-    const alerts = await screen.findAllByRole('alert');
-    expect(alerts).toHaveLength(2);
-    expect(alerts[0]).toHaveTextContent('tai42-broken');
-    expect(alerts[0]).toHaveTextContent('requires tai42-contract<0.2; running 0.2.0');
-    expect(alerts[1]).toHaveTextContent('tai42-shattered');
-    // The remedy stands beside each card, naming the action that fixes it.
-    expect(screen.getAllByText(/newest compatible version/)).toHaveLength(2);
-    // The table of healthy rows survives alongside the cards.
-    expect(screen.getByRole('table')).toBeInTheDocument();
-  });
-
-  it('shows the cards instead of the empty state when everything is quarantined', async () => {
-    const client: StubApiClient = {
-      listInstalledMarketplacePlugins: vi
-        .fn()
-        .mockResolvedValue(
-          installedList([], [{ name: 'tai42-broken', reason: 'incompatible with 0.2.0' }]),
-        ),
-      getMarketplaceAdvisories: vi.fn().mockResolvedValue(noAdvisories),
-    };
-    renderWithProviders(<InstalledTab search={{}} />, { client });
-
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('tai42-broken');
-    expect(screen.queryByText('No marketplace plugins installed')).toBeNull();
-    // The remedy action is present even with no healthy rows to table.
-    expect(screen.getByRole('button', { name: 'Upgrade all' })).toBeInTheDocument();
-    expect(screen.queryByRole('table')).toBeNull();
   });
 });
 
