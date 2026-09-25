@@ -1,0 +1,50 @@
+name: release-label
+
+# A pull request's Conventional-Commits title and body decide the version
+# release-please will publish. This gate projects that version and runs the release
+# API-diff gate against the committed api-extractor reports on the pull request head —
+# the same gate release-npm.yml runs on the tag — so a breaking public-API change under
+# a bump its label could not honestly carry is refused here, before the merge, never
+# after the tag. The `edited` type is included so re-labelling the release by editing
+# the pull request body (a `!`, a `BREAKING CHANGE:` footer, a `Release-As:` line)
+# re-runs the check.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  release-label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        # Full history + tags: the gate diffs the projected version against the
+        # previous released tag's committed report, the way release-npm.yml does.
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+      # The gate imports typescript to parse the reports; it reads the committed
+      # reports as checked out (the `check` job's api:check keeps them matching the
+      # built surface on every pull request), so no workspace build is needed here.
+      - run: pnpm install --frozen-lockfile
+      - name: Refuse a mislabelled release
+        # The title and body reach the script through the environment, never
+        # interpolated into the shell, so a backtick or $(...) in a pull request
+        # body cannot run on the runner. The npm baseline reads are public (no
+        # token) and the package list and versions come from the repo's own
+        # release-please config and manifest, so this runs unchanged on a fork.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/release-label-check.mjs

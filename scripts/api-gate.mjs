@@ -987,19 +987,33 @@ function classify(reportName, oldEntries, newEntries) {
   return classifyEntries(`${reportName} :: `, oldEntries, newEntries);
 }
 
-function main() {
-  const versionArg = process.argv.indexOf('--version');
-  if (versionArg === -1 || !process.argv[versionArg + 1]) fail('missing --version <X.Y.Z>');
-  const version = process.argv[versionArg + 1];
-  const mode = readMode();
-  const tags = gitTags();
+// The core gate over one release version: classify every committed report against its
+// own published baseline and collect the reasons a report's surface change exceeds the
+// bump. Factored out of the CLI so the two entry points that need it — the post-tag gate
+// (`main` below, called from release-npm.yml) and the pre-merge label check
+// (release-label-check.mjs, which runs it against the version release-please would
+// publish) — share one classification/baseline implementation rather than duplicating
+// it. The I/O seams are injectable through `deps` (mode, tag list, npm lookup, the two
+// report readers, and the log sink), defaulting to the production seams, so the whole
+// gate is unit-testable without git or the network. Returns the list of failing reasons,
+// empty when the release is honest; a tooling error (bad config, a missing report, an
+// unclassifiable export) throws GateError as before.
+function runGate(version, deps = {}) {
+  const {
+    mode = readMode(),
+    tags = gitTags(),
+    publishedVersionsFor = npmPublishedVersions,
+    readReportAtRef = reportAtRef,
+    readReportAtWorktree = reportAtWorktree,
+    log = console.log,
+  } = deps;
 
   // Baselines are per package, so each report is classified and judged against its
   // own baseline; the gate fails if ANY report fails. npm is queried once per package.
   const publishedCache = new Map();
   const publishedFor = (packageName) => {
     if (!publishedCache.has(packageName))
-      publishedCache.set(packageName, npmPublishedVersions(packageName));
+      publishedCache.set(packageName, publishedVersionsFor(packageName));
     return publishedCache.get(packageName);
   };
 
@@ -1009,12 +1023,12 @@ function main() {
     const publishedVersions = publishedFor(packageName);
     const baselineTag = previousPublishedTag(version, tags, publishedVersions);
     if (baselineTag === null) {
-      console.log(`api-gate: ${name}: first publish, no published prior version to diff — passes`);
+      log(`api-gate: ${name}: first publish, no published prior version to diff — passes`);
       continue;
     }
     const skipped = skippedUnpublishedTags(baselineTag, version, tags, publishedVersions);
     if (skipped.length)
-      console.log(
+      log(
         `api-gate: ${name}: skipping unpublished tag(s) ${skipped.join(', ')} — not on npm for ${packageName}`,
       );
 
@@ -1022,8 +1036,8 @@ function main() {
     const bump = bumpClass(oldVersion, version);
     const header = `api-gate: ${name}: ${oldVersion} -> ${version} (${bump} bump, mode=${mode})`;
 
-    const oldSource = reportAtRef(baselineTag, dir, name);
-    const newSource = reportAtWorktree(dir, name);
+    const oldSource = readReportAtRef(baselineTag, dir, name);
+    const newSource = readReportAtWorktree(dir, name);
     if (newSource === null) fail(`committed report ${dir}/${name} is missing at the release`);
     // report absent at the baseline tag — additive, nothing to diff.
     const reportFindings =
@@ -1033,19 +1047,26 @@ function main() {
 
     const { passes, reason } = gatePasses(mode, oldVersion, version, reportFindings.length > 0);
     if (reportFindings.length === 0) {
-      console.log(`${header}: ${reason} — gate passes.`);
+      log(`${header}: ${reason} — gate passes.`);
       continue;
     }
-    console.log(`${header}: ${reportFindings.length} breaking surface item(s):`);
-    for (const line of reportFindings) console.log(`  - ${line}`);
+    log(`${header}: ${reportFindings.length} breaking surface item(s):`);
+    for (const line of reportFindings) log(`  - ${line}`);
     if (passes) {
-      console.log(`${header}: ${reason} — gate passes.`);
+      log(`${header}: ${reason} — gate passes.`);
     } else {
-      console.log(`${header}: ${reason} — gate FAILS.`);
+      log(`${header}: ${reason} — gate FAILS.`);
       failReasons.push(`${name} ${reason} (${reportFindings.join('; ')})`);
     }
   }
+  return failReasons;
+}
 
+function main() {
+  const versionArg = process.argv.indexOf('--version');
+  if (versionArg === -1 || !process.argv[versionArg + 1]) fail('missing --version <X.Y.Z>');
+  const version = process.argv[versionArg + 1];
+  const failReasons = runGate(version);
   if (failReasons.length) fail(`api-gate ${version}: ${failReasons.join(' | ')}`);
 }
 
@@ -1056,6 +1077,7 @@ export {
   allowedBumps,
   gatePasses,
   previousPublishedTag,
+  runGate,
   GateError,
 };
 

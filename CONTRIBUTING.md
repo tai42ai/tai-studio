@@ -95,7 +95,11 @@ Before it publishes, the release diffs the committed API reports
 (`packages/*/etc/*.api.md` — `@tai42/studio-sdk`'s three entry points and
 `@tai42/api-client`) against the previous release tag and fails when the surface
 change outruns the version bump it rides; a breaking surface change must ride a
-breaking-marked commit, so a major at `>=1.0`. CI verifies the committed reports
+breaking-marked commit, so a major at `>=1.0`. The `release-label` check runs the
+same gate before the merge: it projects the version release-please would publish
+from the pull request's title and body and diffs the reports against that version,
+so a mislabelled release is refused on the pull request rather than after the tag.
+CI verifies the committed reports
 match the built surface on every pull request and push to `main`, and a change
 that moves a published
 surface regenerates its report with the package's `api:update` script. The gate's
