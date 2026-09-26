@@ -93,10 +93,18 @@ export function summarizeFleetFanout(
   return summarizeFleetResult(fanout);
 }
 
-/** One MCP server skipped by the viability check — its title and a coarse status. */
+/** One MCP server skipped by the viability check — its title, a coarse status, and the
+ *  credential-free failure detail the platform records when present: `category` (`auth`
+ *  for a 401/403, `unreachable` for a transport error or timeout, `error` otherwise),
+ *  the redacted `message`, and the `http_status` the failure carried (`null` for a pure
+ *  transport failure). The three detail fields are absent when the reporting server
+ *  omitted them. */
 export interface FailedMcpEntry {
   readonly title: string;
   readonly status: string;
+  readonly category?: string;
+  readonly message?: string;
+  readonly http_status?: number | null;
 }
 
 /**
@@ -108,20 +116,28 @@ export interface FailedMcpEntry {
  * (skipped, never a throw: a partial fleet report still yields the roster it can).
  */
 export function failedMcpsFromReport(result: FleetResult): FailedMcpEntry[] {
-  const byTitle = new Map<string, string>();
+  const byTitle = new Map<string, FailedMcpEntry>();
   for (const worker of result.results) {
     const payload: unknown = worker.payload;
     if (!Array.isArray(payload)) continue;
     for (const entry of payload) {
       if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) continue;
       const record = entry as Record<string, unknown>;
-      const { title, status } = record;
+      const { title, status, category, message } = record;
       if (typeof title !== 'string' || title === '') continue;
-      if (!byTitle.has(title))
-        byTitle.set(title, typeof status === 'string' ? status : 'unavailable');
+      // First-seen wins: a server's earliest failure record carries the whole row,
+      // detail fields included, and a later worker's echo of the same title is ignored.
+      if (byTitle.has(title)) continue;
+      byTitle.set(title, {
+        title,
+        status: typeof status === 'string' ? status : 'unavailable',
+        ...(typeof category === 'string' ? { category } : {}),
+        ...(typeof message === 'string' ? { message } : {}),
+        ...(typeof record.http_status === 'number' || record.http_status === null
+          ? { http_status: record.http_status }
+          : {}),
+      });
     }
   }
-  return [...byTitle]
-    .map(([title, status]) => ({ title, status }))
-    .sort((a, b) => a.title.localeCompare(b.title));
+  return [...byTitle.values()].sort((a, b) => a.title.localeCompare(b.title));
 }

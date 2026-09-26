@@ -1985,6 +1985,9 @@ bound: Record<string, string[]>;
 failed: {
 title: string;
 status: string;
+category?: string | undefined;
+message?: string | undefined;
+http_status?: number | null | undefined;
 }[];
 }>;
 readonly reloadMcp: (title: string) => Promise<{
@@ -6532,6 +6535,9 @@ function createApiClient(config: ApiConfig): {
         failed: {
             title: string;
             status: string;
+            category?: string | undefined;
+            message?: string | undefined;
+            http_status?: number | null | undefined;
         }[];
     }>;
     readonly reloadMcp: (title: string) => Promise<{
@@ -10317,6 +10323,9 @@ const mcpStatus: z.ZodObject<{
     failed: z.ZodArray<z.ZodObject<{
         title: z.ZodString;
         status: z.ZodString;
+        category: z.ZodOptional<z.ZodString>;
+        message: z.ZodOptional<z.ZodString>;
+        http_status: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 

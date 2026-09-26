@@ -219,6 +219,63 @@ describe('failedMcpsFromReport', () => {
     expect(out).toEqual([{ title: 'ok', status: 'unavailable' }]);
   });
 
+  it('carries the credential-free failure detail through to the row when present', () => {
+    const out = failedMcpsFromReport(
+      result({
+        op: 'list_failed_mcps',
+        results: [
+          {
+            name: 'serve-a',
+            outcome: 'applied',
+            payload: [
+              {
+                title: 'weather',
+                status: 'unavailable',
+                category: 'auth',
+                message: 'invalid token',
+                http_status: 401,
+              },
+              // A pure transport failure carries a null http_status.
+              {
+                title: 'db',
+                status: 'unavailable',
+                category: 'unreachable',
+                message: 'connection refused',
+                http_status: null,
+              },
+            ],
+            error: null,
+            detail: null,
+          },
+        ],
+      }),
+    );
+    const weather = out.find((entry) => entry.title === 'weather');
+    expect(weather?.category).toBe('auth');
+    expect(weather?.message).toBe('invalid token');
+    expect(weather?.http_status).toBe(401);
+    expect(out.find((entry) => entry.title === 'db')?.http_status).toBeNull();
+  });
+
+  it('omits the detail fields (never coerces them) when a payload entry lacks them', () => {
+    const out = failedMcpsFromReport(
+      result({
+        op: 'list_failed_mcps',
+        results: [
+          {
+            name: 'serve-a',
+            outcome: 'applied',
+            // A non-string category and a non-numeric http_status are dropped, not coerced.
+            payload: [{ title: 'weather', status: 'unavailable', category: 9, http_status: 'x' }],
+            error: null,
+            detail: null,
+          },
+        ],
+      }),
+    );
+    expect(out).toEqual([{ title: 'weather', status: 'unavailable' }]);
+  });
+
   it('defaults a missing status to "unavailable" rather than dropping the row', () => {
     const out = failedMcpsFromReport(
       result({

@@ -186,7 +186,15 @@ export function status() {
 /** A `list_failed_mcps` fleet report whose sole worker carries `entries` as its
  *  failed-server payload — the shape the dedicated `/api/mcp-status/failed` door
  *  returns and `failedMcpsFromReport` unwinds. */
-export function failedReport(entries: { title: string; status: string }[]) {
+export function failedReport(
+  entries: {
+    title: string;
+    status: string;
+    category?: string;
+    message?: string;
+    http_status?: number | null;
+  }[],
+) {
   return {
     op: 'list_failed_mcps',
     reachable: true,

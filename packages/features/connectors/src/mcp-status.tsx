@@ -149,6 +149,25 @@ export function McpStatusSection(): ReactNode {
   return <ServerStatusTable rows={rows} />;
 }
 
+/** The failed-mount row's secondary message line: the existing muted style (via
+ *  `tai-muted`), held to a single ellipsised line — the full redacted message rides the
+ *  element's `title` tooltip. */
+const failedMessageStyle = {
+  marginTop: 'var(--tai-space-1)',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  fontSize: 'var(--tai-text-sm)',
+} as const;
+
+/** The Server column fills the row's free width up to the Status column: `width: 100%`
+ *  makes it greedy so Status and the actions stay snug at the right, and `maxWidth: 0`
+ *  stops the single-line message from widening the column past that fill — it ellipsises
+ *  at the Status edge instead of at a fraction of the row. Applied to the header cell
+ *  and the body cell together so the `Server | Status` column boundary stays aligned. */
+const failedServerHeaderStyle = { width: '100%' } as const;
+const failedServerCellStyle = { width: '100%', maxWidth: 0 } as const;
+
 /** One failed-server row: its title, coarse status, and the per-server remediation
  *  (Reload re-probes it; Deregister — a destructive detach — asks the house confirm).
  *  Each affordance is gated on its OWN door: a caller whose projection cannot reach
@@ -172,7 +191,22 @@ function FailedServerRow({
   const canDeregister = useCanWrite(`/api/mcp-status/${entry.title}/deregister`, 'POST');
   return (
     <TR>
-      <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{entry.title}</TD>
+      <TD style={failedServerCellStyle}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-2)' }}>
+          <span style={{ fontFamily: 'var(--tai-font-mono)' }}>{entry.title}</span>
+          {/* The coarse, credential-free failure category (`auth` / `unreachable` /
+              `error`), in the failed-status badge style; absent on a server that omits
+              it, which leaves the row unchanged. */}
+          {entry.category !== undefined ? <Badge variant="danger">{entry.category}</Badge> : null}
+        </div>
+        {/* The redacted failure message as a single muted, ellipsised secondary line
+            (full text in the `title` tooltip); no line when the server omits it. */}
+        {entry.message !== undefined ? (
+          <div className="tai-muted" style={failedMessageStyle} title={entry.message}>
+            {entry.message}
+          </div>
+        ) : null}
+      </TD>
       <TD>
         <Badge variant="danger">{entry.status}</Badge>
       </TD>
@@ -226,7 +260,7 @@ function FailedServersTable({
       <Table>
         <THead>
           <TR>
-            <TH>Server</TH>
+            <TH style={failedServerHeaderStyle}>Server</TH>
             <TH>Status</TH>
             <TH>
               <span className="tai-visually-hidden">Actions</span>

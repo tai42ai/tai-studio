@@ -341,3 +341,93 @@ describe('McpServersSection — mounted + failed status', () => {
     expect(await screen.findByText('schema boom')).toBeInTheDocument();
   });
 });
+
+describe('McpServersSection — failed-mount detail', () => {
+  it.each(['auth', 'unreachable', 'error'])(
+    'shows the %s category as a badge beside the failed title',
+    async (category) => {
+      const client = {
+        getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+        getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+        getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+        listExtensions: vi.fn().mockResolvedValue([]),
+        listFailedMcps: vi
+          .fn()
+          .mockResolvedValue(failedReport([{ title: 'bad', status: 'unavailable', category }])),
+      };
+      renderWithProviders(<McpServersSection />, { client });
+
+      await screen.findByText('Failed servers');
+      const row = screen.getByText('bad').closest('tr') as HTMLElement;
+      expect(within(row).getByText(category)).toBeInTheDocument();
+    },
+  );
+
+  it('renders the redacted message as a muted secondary line carrying the full text in its title', async () => {
+    const message = 'auth failed for the upstream host: the token the server returned was rejected';
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(
+          failedReport([{ title: 'bad', status: 'unavailable', category: 'auth', message }]),
+        ),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    const line = screen.getByText(message);
+    expect(line).toHaveClass('tai-muted');
+    expect(line).toHaveAttribute('title', message);
+    // The message has no fixed width cap; its Server cell is greedy (width:100%,
+    // maxWidth:0) so the single line ellipsises at the Status edge, not a fraction of
+    // the row.
+    expect(line.style.maxWidth).toBe('');
+    const cell = line.closest('td') as HTMLElement;
+    expect(cell.style.width).toBe('100%');
+    expect(cell.style.maxWidth).toBe('0px');
+  });
+
+  it('leaves the row unchanged when the server omits the category (no badge)', async () => {
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(failedReport([{ title: 'bad', status: 'unavailable' }])),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    const row = screen.getByText('bad').closest('tr') as HTMLElement;
+    for (const word of ['auth', 'unreachable', 'error']) {
+      expect(within(row).queryByText(word)).not.toBeInTheDocument();
+    }
+    expect(row.querySelector('.tai-muted')).toBeNull();
+  });
+
+  it('renders no secondary line when the failure carries no message', async () => {
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue({ bound: {}, failed: [] }),
+      getManifestPreserved: vi.fn().mockResolvedValue(MANIFEST),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      listFailedMcps: vi
+        .fn()
+        .mockResolvedValue(
+          failedReport([{ title: 'bad', status: 'unavailable', category: 'error' }]),
+        ),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByText('Failed servers');
+    const row = screen.getByText('bad').closest('tr') as HTMLElement;
+    expect(within(row).getByText('error')).toBeInTheDocument();
+    expect(row.querySelector('.tai-muted')).toBeNull();
+  });
+});

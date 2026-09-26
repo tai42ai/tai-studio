@@ -32,9 +32,24 @@ export type KindStatus = z.infer<typeof kindStatus>;
  */
 export const toolExtensionsApplyResult = reloadConfigResult;
 export type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult>;
+// `GET /api/mcp-status` — the bound-server map plus the servers the viability check
+// skipped. Each failed entry adds the coarse, credential-free failure detail the
+// platform records: `category` (`auth` for a 401/403, `unreachable` for a transport
+// error or timeout, `error` otherwise), the redacted `message`, and the `http_status`
+// the failure carried (`null` for a pure transport failure). The three detail fields
+// are optional so a server that omits them still parses; plain (non-strict) objects so
+// an added field never fails the read.
 export const mcpStatus = z.object({
   bound: z.record(z.string(), z.array(z.string())),
-  failed: z.array(z.object({ title: z.string(), status: z.string() })),
+  failed: z.array(
+    z.object({
+      title: z.string(),
+      status: z.string(),
+      category: z.string().optional(),
+      message: z.string().optional(),
+      http_status: z.number().nullable().optional(),
+    }),
+  ),
 });
 
 /**
