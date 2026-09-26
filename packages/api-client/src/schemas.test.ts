@@ -418,6 +418,48 @@ describe('route catalog + public-pin schemas', () => {
   });
 });
 
+describe('mcpStatus schema — failed-mount detail fields', () => {
+  const base = { title: 'srv', status: 'unavailable' };
+
+  it('parses a failed entry carrying the category, message and http_status detail', () => {
+    const parsed = schemas.mcpStatus.parse({
+      bound: { ok: ['a', 'b'] },
+      failed: [{ ...base, category: 'auth', message: 'invalid token', http_status: 401 }],
+    });
+    expect(parsed.failed[0]?.category).toBe('auth');
+    expect(parsed.failed[0]?.message).toBe('invalid token');
+    expect(parsed.failed[0]?.http_status).toBe(401);
+  });
+
+  it.each(['auth', 'unreachable', 'error'])('accepts the %s category word', (category) => {
+    const parsed = schemas.mcpStatus.parse({ bound: {}, failed: [{ ...base, category }] });
+    expect(parsed.failed[0]?.category).toBe(category);
+  });
+
+  it('accepts a null http_status for a pure transport failure', () => {
+    const parsed = schemas.mcpStatus.parse({
+      bound: {},
+      failed: [
+        { ...base, category: 'unreachable', message: 'connection refused', http_status: null },
+      ],
+    });
+    expect(parsed.failed[0]?.http_status).toBeNull();
+  });
+
+  it('leaves the detail fields undefined when a failed entry omits them', () => {
+    const parsed = schemas.mcpStatus.parse({ bound: {}, failed: [base] });
+    expect(parsed.failed[0]?.category).toBeUndefined();
+    expect(parsed.failed[0]?.message).toBeUndefined();
+    expect(parsed.failed[0]?.http_status).toBeUndefined();
+  });
+
+  it('rejects (loudly) a non-string category', () => {
+    expect(() =>
+      schemas.mcpStatus.parse({ bound: {}, failed: [{ ...base, category: 7 }] }),
+    ).toThrow();
+  });
+});
+
 describe('configMode schema — read_only default', () => {
   it('parses the REAL skeleton response (config_mode only) and defaults read_only to false', () => {
     // This is EXACTLY what `GET /api/config/mode` (routers/config.py:read_mode)
