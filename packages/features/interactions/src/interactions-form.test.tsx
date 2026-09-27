@@ -48,6 +48,45 @@ describe('InteractionsPage — form preview: per-send values, options and pages'
     });
   });
 
+  it('renders the native date/time controls per `format` and round-trips the ISO value on submit', async () => {
+    const user = userEvent.setup();
+    const answer = vi.fn().mockResolvedValue(undefined);
+    const { channel } = renderInbox(answer);
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-form-formats',
+        format: 'form',
+        prompt: 'Pick the moment',
+        format_payload: {
+          schema: {
+            type: 'object',
+            properties: {
+              day: { type: 'string', format: 'date' },
+              at: { type: 'string', format: 'time' },
+              // `date-time` posts through a text box: the browser's native
+              // datetime-local control cannot emit an RFC 3339 offset.
+              ts: { type: 'string', format: 'date-time' },
+            },
+          },
+          data: { values: { day: '2024-05-01' } },
+        },
+      }),
+    );
+
+    const day = await screen.findByLabelText('day');
+    expect(day).toHaveAttribute('type', 'date');
+    expect(day).toHaveValue('2024-05-01');
+    expect(screen.getByLabelText('at')).toHaveAttribute('type', 'time');
+    expect(screen.getByLabelText('ts')).toHaveAttribute('type', 'text');
+
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => {
+      expect(answer).toHaveBeenCalledWith('q-form-formats', { day: '2024-05-01' });
+    });
+  });
+
   it('shows the per-send value→label mapping as read-only context (label with its value; value alone when unlabelled)', async () => {
     const { channel } = renderInbox();
     await emitFrame(

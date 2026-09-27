@@ -120,6 +120,66 @@ describe('SchemaForm — primitives', () => {
   });
 });
 
+describe('SchemaForm — string formats', () => {
+  it('renders a `format: date` string as a native date input and emits the ISO value', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { when: { type: 'string', format: 'date', title: 'When' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('When');
+    expect(input).toHaveAttribute('type', 'date');
+    fireEvent.change(input, { target: { value: '2024-05-01' } });
+    expect(emitted()).toBe('{"when":"2024-05-01"}');
+  });
+
+  it('renders a `format: time` string as a native time input and emits HH:mm', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { at: { type: 'string', format: 'time', title: 'At' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('At');
+    expect(input).toHaveAttribute('type', 'time');
+    fireEvent.change(input, { target: { value: '09:30' } });
+    expect(emitted()).toBe('{"at":"09:30"}');
+  });
+
+  it('renders a `format: date-time` string as a text box (datetime-local cannot post an RFC 3339 offset)', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { ts: { type: 'string', format: 'date-time', title: 'Timestamp' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByRole('textbox', { name: 'Timestamp' });
+    expect(input).toHaveAttribute('type', 'text');
+    fireEvent.change(input, { target: { value: '2024-05-01T09:30:00Z' } });
+    expect(emitted()).toBe('{"ts":"2024-05-01T09:30:00Z"}');
+  });
+
+  it('keeps the native email and url controls for their formats', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        mail: { type: 'string', format: 'email', title: 'Mail' },
+        link: { type: 'string', format: 'uri', title: 'Link' },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Mail')).toHaveAttribute('type', 'email');
+    expect(screen.getByLabelText('Link')).toHaveAttribute('type', 'url');
+  });
+
+  it('renders an unrecognised `format` as a plain text box', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { id: { type: 'string', format: 'uuid', title: 'Id' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByRole('textbox', { name: 'Id' })).toHaveAttribute('type', 'text');
+  });
+});
+
 describe('SchemaForm — enum', () => {
   it('renders a small enum as selectable radios and emits the real value', async () => {
     const user = userEvent.setup();
