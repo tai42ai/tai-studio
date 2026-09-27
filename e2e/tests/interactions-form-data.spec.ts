@@ -6,10 +6,11 @@
  *
  * A pending `form` question carrying `format_payload.schema` + `data` (prefilled values
  * and a per-send option list) + `pages` renders: the schema controls prefilled from
- * `data.values`; a re-optioned field (`date`) as a CHOICE of the send's values rather
- * than a free control; the "Options for this send" value→label mapping; and the
- * "Pages" outline. Abstract fixtures only. The shot pair is captured in both themes,
- * by tokens, for visual review.
+ * `data.values`; a `format: date` field as the browser's native date control
+ * (`<input type="date">`, prefilled with the `YYYY-MM-DD` value); a re-optioned field
+ * (`choice`) as a CHOICE of the send's values rather than a free control; the "Options
+ * for this send" value→label mapping; and the "Pages" outline. Abstract fixtures only.
+ * The shot pair is captured in both themes, by tokens, for visual review.
  */
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -25,8 +26,9 @@ const OUT_DIR =
   fileURLToPath(new URL('../test-results/form-shots', import.meta.url));
 const VIEWPORT = { width: 1440, height: 900 } as const;
 
-/** One pending form ask: an abstract three-field schema, `count`/`notes` prefilled, a
- * per-send option list on `date`, and two ordered pages. */
+/** One pending form ask: an abstract four-field schema, `starts_on` (a `format: date`
+ * string) plus `count`/`notes` prefilled, a per-send option list on `choice`, and two
+ * ordered pages. */
 const FORM_INTERACTION = {
   interaction_id: 'form-preview-1',
   group_id: 'form-preview-1',
@@ -38,22 +40,23 @@ const FORM_INTERACTION = {
     schema: {
       type: 'object',
       properties: {
-        date: { type: 'string' },
+        starts_on: { type: 'string', format: 'date' },
+        choice: { type: 'string' },
         count: { type: 'integer' },
         notes: { type: 'string' },
       },
     },
     data: {
-      values: { count: 3, notes: 'a note' },
+      values: { starts_on: '2026-08-05', count: 3, notes: 'a note' },
       options: {
-        date: [
+        choice: [
           { value: 'a', label: 'Option A' },
           { value: 'b', label: 'Option B' },
         ],
       },
     },
     pages: [
-      { title: 'Basics', fields: ['date', 'count'] },
+      { title: 'Basics', fields: ['starts_on', 'choice', 'count'] },
       { title: 'Extras', fields: ['notes'] },
     ],
   },
@@ -125,29 +128,34 @@ test('the form preview shows prefilled values, the per-send options, and the pag
   const card = page.getByTestId('interaction-card').filter({ hasText: 'Fill in the details' });
   await expect(card).toBeVisible();
 
-  // Block 1 — prefilled values: the schema controls are filled from `data.values`.
+  // Block 1 — prefilled values: the schema controls are filled from `data.values`. The
+  // `format: date` field renders the browser's native date control, prefilled with the
+  // ISO `YYYY-MM-DD` value it posts unchanged.
+  const startsOn = card.getByLabel('starts_on');
+  await expect(startsOn).toHaveAttribute('type', 'date');
+  await expect(startsOn).toHaveValue('2026-08-05');
   await expect(card.getByLabel('count')).toHaveValue('3');
   await expect(card.getByLabel('notes')).toHaveValue('a note');
 
-  // Block 2 — the re-optioned `date`: a choice of the send's values (two options render
+  // Block 2 — the re-optioned `choice`: a choice of the send's values (two options render
   // as radios; SchemaForm falls back to a select above three), never a free text input
   // an operator could type an out-of-list value into.
   await expect(card.getByRole('radio', { name: 'a' })).toBeVisible();
   await expect(card.getByRole('radio', { name: 'b' })).toBeVisible();
-  await expect(card.getByRole('textbox', { name: 'date' })).toHaveCount(0);
+  await expect(card.getByRole('textbox', { name: 'choice' })).toHaveCount(0);
 
   // Block 3 — "Options for this send": the per-send value→label mapping, read-only, so
   // the control's raw values are legible.
   const options = card.getByTestId('form-send-options');
   await expect(options).toContainText('Options for this send');
-  await expect(options).toContainText('date');
+  await expect(options).toContainText('choice');
   await expect(options).toContainText('Option A (a), Option B (b)');
 
   // Block 4 — "Pages": the step outline, each title over the fields it groups.
   const pages = card.getByTestId('form-pages');
   await expect(pages).toContainText('Pages');
   await expect(pages).toContainText('Basics');
-  await expect(pages).toContainText('— date, count');
+  await expect(pages).toContainText('— starts_on, choice, count');
   await expect(pages).toContainText('Extras');
   await expect(pages).toContainText('— notes');
 

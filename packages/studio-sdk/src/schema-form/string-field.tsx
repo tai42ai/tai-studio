@@ -71,7 +71,7 @@ export function StringField({
   // upload. Not reachable together with the completion provider path: an
   // expression is authored, not completed from server suggestions.
   //
-  // With no door injected the annotation is INERT: the field falls through to the
+  // With no door injected the annotation has no effect: the field falls through to the
   // ordinary paths below, exactly as a malformed annotation does, so a form
   // renders the same bytes either way.
   if (expression !== undefined && expressionField !== undefined) {
@@ -262,8 +262,8 @@ function ExpressionField({
 /**
  * The resting shell shown while a lazily-injected door resolves. It mirrors the
  * live door's footprint — the same label/description/error chrome wrapping a
- * multiline control seeded with the current value — but the control is inert
- * (read-only, `aria-busy`) because there is nothing to edit yet. Matching the
+ * multiline control seeded with the current value — but the control is
+ * non-interactive (read-only, `aria-busy`) because there is nothing to edit yet. Matching the
  * footprint is what keeps the Suspense swap from shifting layout or flashing.
  */
 function ExpressionFieldSkeleton({
@@ -334,12 +334,18 @@ function expressionVariable(
   };
 }
 
+// The native control per JSON-Schema `format`. `date` and `time` post the exact
+// wire shapes their formats expect (`YYYY-MM-DD`; `HH:mm` or `HH:mm:ss`), so they
+// render natively. `date-time` is deliberately absent: the browser's
+// `datetime-local` control posts `YYYY-MM-DDTHH:mm` with NO zone offset, which is
+// not an RFC 3339 timestamp, so a `date-time` field falls through to a text box
+// where the full offset-bearing value can be typed. Any format not listed here is
+// a plain text box.
 const FORMAT_INPUT_TYPES: Record<string, string> = {
   email: 'email',
   uri: 'url',
   'uri-reference': 'url',
   date: 'date',
-  'date-time': 'datetime-local',
   time: 'time',
 };
 
