@@ -148,7 +148,11 @@ function Populated({ metrics }: { readonly metrics: DashboardMetrics }): ReactNo
       <Card>
         <div className="tai-stack">
           <h2 className="tai-card-title">By model</h2>
-          {bars.length === 0 ? (
+          {!metrics.byModelAvailable ? (
+            <div role="status" className="tai-warn-state tai-stack tai-stack-2">
+              <p style={{ margin: 0 }}>Per-model breakdown is unavailable for this range.</p>
+            </div>
+          ) : bars.length === 0 ? (
             <EmptyState title="No per-model breakdown" />
           ) : (
             <BarList items={bars} ariaLabel="Cost by model" />

@@ -132,6 +132,7 @@ const METRICS = {
     },
   ],
   byModel: [{ model: 'gpt-x', calls: 2, cost: 0.0123, totalTokens: 512, avgLatencyMs: 240 }],
+  byModelAvailable: true,
   granularity: 'day',
 };
 
@@ -252,4 +253,23 @@ test('opening a run drills into the two-pane trace with the first ERROR span aut
   await page.getByRole('textbox', { name: 'Filter spans' }).fill('generation');
   await expect(page.locator('[data-testid="waterfall-row"][data-span-id="gen"]')).toBeVisible();
   await expect(page.locator('[data-testid="waterfall-row"][data-span-id="err"]')).toHaveCount(0);
+});
+
+test('the by-model card shows the unavailable notice, not empty bars, when byModelAvailable is false', async ({
+  page,
+}) => {
+  await seedCredential(page);
+  await page.route(
+    (url) => url.pathname === METRICS_PATH,
+    async (route) => {
+      await route.fulfill({
+        json: { data: { ...METRICS, byModel: [], byModelAvailable: false } },
+      });
+    },
+  );
+  await page.goto('/observability');
+
+  await expect(page.getByText('Per-model breakdown is unavailable for this range.')).toBeVisible();
+  // The unavailable notice replaces the bar list — no by-model bars are rendered.
+  await expect(page.getByLabel('Cost by model')).toHaveCount(0);
 });

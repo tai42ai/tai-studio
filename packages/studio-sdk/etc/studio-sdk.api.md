@@ -429,6 +429,7 @@ cost: number;
 totalTokens: number;
 avgLatencyMs: number;
 }[];
+byModelAvailable: boolean;
 granularity: "hour" | "day" | "week";
 }>;
 readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
@@ -1205,6 +1206,7 @@ thread_id: string;
 client_address: string;
 caller_principal: string | null;
 inbound_text: string;
+inbound_attachments: unknown[] | null;
 answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
@@ -1235,6 +1237,7 @@ thread_id: string;
 client_address: string;
 caller_principal: string | null;
 inbound_text: string;
+inbound_attachments: unknown[] | null;
 answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
@@ -1432,6 +1435,7 @@ thread_id: string;
 client_address: string;
 caller_principal: string | null;
 inbound_text: string;
+inbound_attachments: unknown[] | null;
 answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
@@ -3199,6 +3203,33 @@ export const ArrowLeftIcon: IconComponent;
 export const ArrowUpIcon: IconComponent;
 
 // @public (undocumented)
+type AttachmentMediaItem = z.infer<typeof attachmentMediaItem>;
+
+// @public
+const attachmentMediaItem: z.ZodObject<{
+    kind: z.ZodEnum<{
+        image: "image";
+        document: "document";
+        video: "video";
+        audio: "audio";
+    }>;
+    url: z.ZodString;
+    caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    filename: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
+
+// @public
+const attachmentMediaKind: z.ZodEnum<{
+    image: "image";
+    document: "document";
+    video: "video";
+    audio: "audio";
+}>;
+
+// @public (undocumented)
 type AuthCapabilities = z.infer<typeof authCapabilities>;
 
 // @public
@@ -4044,6 +4075,7 @@ const conversationFailedMessages: z.ZodObject<{
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
+        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
@@ -4096,6 +4128,7 @@ const conversationMessage: z.ZodObject<{
     client_address: z.ZodString;
     caller_principal: z.ZodNullable<z.ZodString>;
     inbound_text: z.ZodString;
+    inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
     answer_status: z.ZodNullable<z.ZodEnum<{
         error: "error";
         silent: "silent";
@@ -4152,6 +4185,7 @@ const conversationMessageSearchPage: z.ZodObject<{
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
+        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
@@ -4656,6 +4690,7 @@ const conversationTranscriptPage: z.ZodObject<{
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
+        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
@@ -4979,6 +5014,7 @@ function createApiClient(config: ApiConfig): {
             totalTokens: number;
             avgLatencyMs: number;
         }[];
+        byModelAvailable: boolean;
         granularity: "hour" | "day" | "week";
     }>;
     readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
@@ -5755,6 +5791,7 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
+            inbound_attachments: unknown[] | null;
             answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
             successor_id: string | null;
@@ -5785,6 +5822,7 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
+            inbound_attachments: unknown[] | null;
             answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
             successor_id: string | null;
@@ -5982,6 +6020,7 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
+            inbound_attachments: unknown[] | null;
             answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
             successor_id: string | null;
@@ -7752,6 +7791,7 @@ const dashboardMetrics: z.ZodObject<{
         totalTokens: z.ZodNumber;
         avgLatencyMs: z.ZodNumber;
     }, z.core.$strip>>;
+    byModelAvailable: z.ZodBoolean;
     granularity: z.ZodEnum<{
         hour: "hour";
         day: "day";
@@ -9235,7 +9275,13 @@ export function isFeatureDisabled(error: unknown): boolean;
 export function isFullProjection(projection: MeProjection): boolean;
 
 // @public
+export function isRenderableMediaSrc(url: string, allowDataImage?: boolean): boolean;
+
+// @public
 export function isSafeHttpUrl(url: string): boolean;
+
+// @public
+export function isServedMediaUrl(url: string): boolean;
 
 // @public
 export function jqKey(key: string): string;
@@ -10328,6 +10374,21 @@ const mcpStatus: z.ZodObject<{
         http_status: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
+
+// @public
+function MediaImage_2(input: MediaImageProps): ReactNode;
+export { MediaImage_2 as MediaImage }
+
+// @public (undocumented)
+export interface MediaImageProps {
+    readonly allowDataImage?: boolean;
+    readonly altFallback?: string;
+    // (undocumented)
+    readonly caption?: string;
+    readonly renderNotice?: (state: 'blocked' | 'failed', url: string) => ReactNode;
+    // (undocumented)
+    readonly url: string;
+}
 
 // @public (undocumented)
 type MediaKind = z.infer<typeof mediaKind>;
@@ -11707,6 +11768,9 @@ export interface ResolvedTemplateJq extends BindingTemplateJqOption {
 }
 
 // @public
+export function resolveMediaSrc(url: string, baseUrl: string): string;
+
+// @public
 export function resolveRef(schema: JsonSchema, root: JsonSchema): JsonSchema;
 
 // @public
@@ -12331,6 +12395,10 @@ declare namespace s {
         MediaKind,
         interactionMediaItem,
         InteractionMediaItem,
+        attachmentMediaKind,
+        AttachmentMediaKind,
+        attachmentMediaItem,
+        AttachmentMediaItem,
         formOption,
         FormOption,
         formData,

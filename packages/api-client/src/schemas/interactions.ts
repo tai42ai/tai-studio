@@ -36,6 +36,37 @@ export const interactionMediaItem = z.object({
 export type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 
 /**
+ * The kind of a byte-backed inbound attachment carried on a transcript record. A
+ * fetchable file — `image`/`document`/`audio`/`video` — never a `link`: a labelled
+ * anchor is question CONTEXT (see {@link mediaKind}), not a participant's sent file.
+ */
+export const attachmentMediaKind = z.enum(['image', 'document', 'audio', 'video']);
+export type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
+
+/**
+ * One inbound attachment a participant sent, projected onto a transcript record's
+ * `inbound_attachments`. Applied PER ITEM by the renderer (the record's array is a
+ * loose `z.array(z.unknown())`, `safeParse`d per member) so one malformed/hostile
+ * item is a loud per-item notice, never a whole-record parse failure that would
+ * vanish the transcript.
+ *
+ * `url` is the served-media reference the renderer resolves to the API origin (the
+ * same served-url discipline the ask-media renderer uses); the image src scheme gate
+ * and the per-item load-failure notice are enforced there. `caption` and `filename`
+ * are `.nullish()` (absent OR explicit `null` both parse to absent): the projection
+ * may omit the key OR emit `null`, so `.optional()` alone would false-fail an explicit
+ * `null`. `filename` is meaningful only for a `document`; the renderer shows it as the
+ * download label.
+ */
+export const attachmentMediaItem = z.object({
+  kind: attachmentMediaKind,
+  url: z.string(),
+  caption: z.string().nullish(),
+  filename: z.string().nullish(),
+});
+export type AttachmentMediaItem = z.infer<typeof attachmentMediaItem>;
+
+/**
  * One per-send choice for a `form` property whose schema is a string (or array of
  * strings). `value` is what the answer carries; `label` (absent OR null both parse
  * to no label) is the human text shown in its place. A send may replace a property's

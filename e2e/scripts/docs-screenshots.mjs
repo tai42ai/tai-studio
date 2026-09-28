@@ -44,6 +44,9 @@
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
+ *   - dashboard-by-model-unavailable — the same Dashboard with the by-model card in
+ *                  its degraded state, via a forced `byModelAvailable:false` payload
+ *                  the live backend never returns.
  *   - manifest   — the manifest JSON tree (non-empty `user_tools`).
  *   - templates  — the seeded templates list + the rendered detail (deep-linked).
  *   - system     — the health badge (the health router is loaded before the SPA
@@ -61,6 +64,10 @@
  *   - conversations — the conversation monitor at its deepest level: a seeded route's
  *                  thread list beside one thread's transcript, both populated by the
  *                  real turns the runner drives through the authed api door.
+ *   - conversation-inbound-attachments — a transcript whose visitor turn carries typed
+ *                  inbound attachments (a served image inline, a document download chip),
+ *                  via a forced transcript + served-media override the live backend never
+ *                  produces.
  *   - conversation-route-agent-contract — the route CREATE dialog for an agent target,
  *                  framing the five door-contract jq fields and the execution key.
  *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
@@ -89,6 +96,7 @@
  */
 import { chromium } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { crc32, deflateSync } from 'node:zlib';
 
 const STUDIO_URL = process.env.STUDIO_URL ?? 'http://127.0.0.1:8765';
 const OUT_DIR = process.env.OUT_DIR;
@@ -225,11 +233,122 @@ async function frameKwargsEditor(page) {
 /**
  * Pages captured while SIGNED IN. `wait` is a selector proving the screen rendered
  * its POPULATED content (a real row/card, not a spinner or empty state) before the
- * shot. `action`, when present, drives the page into its captured state. `canvas`,
+ * shot. `action`, when present, drives the page into its captured state. `setup`,
+ * when present, runs before navigation (e.g. to register a route override that
+ * forces a payload the live backend does not produce). `canvas`,
  * when true, marks a route whose main surface is a React Flow pane: the shot frames
  * the whole graph first (see `frameCanvasContent`) so a tall canvas is captured
  * complete rather than clipped at the pane's fitView min-zoom.
  */
+// A forced dashboard-metrics payload for the by-model UNAVAILABLE state: the live
+// demo backend returns real model activity, so `byModelAvailable` is never `false`
+// there. Full shape (decoded by the hand-written `dashboardMetrics` schema) with an
+// empty breakdown flagged unavailable; the summary and trend series stay truthful.
+const BY_MODEL_UNAVAILABLE_METRICS = {
+  summary: {
+    totalRuns: 2,
+    totalCost: 0.0123,
+    totalTokens: 512,
+    averageLatencyMs: 240,
+    avgCostPerRun: 0.006,
+    avgTokensPerRun: 256,
+    timeToFirstTokenMs: null,
+  },
+  timeSeries: [
+    {
+      bucket: '2026-08-01T00:00:00.000Z',
+      runs: 2,
+      cost: 0.0123,
+      avgLatencyMs: 240,
+      totalTokens: 512,
+    },
+  ],
+  byModel: [],
+  byModelAvailable: false,
+  granularity: 'day',
+};
+
+// The inbound-attachments transcript is FORCED through a route override: the live demo
+// backend mints no byte-backed inbound attachments, so the transcript record, its thread
+// and its served-media bitmap are all stubbed to render the attachment states
+// deterministically (the relative timestamps still drift, so the frame is nondeterministic).
+const ATTACHMENT_TRANSCRIPT_ROUTE = 'assistant-line';
+const ATTACHMENT_TRANSCRIPT_THREAD = 'assistant-line-demo';
+const ATTACHMENT_TRANSCRIPT_ADDRESS = '+10000000000';
+const ATTACHMENT_IMAGE_URL = `/api/interactions/media/${'b'.repeat(43)}`;
+const ATTACHMENT_DOCUMENT_URL = `/api/interactions/media/${'c'.repeat(43)}`;
+// The stubbed served image: a small two-tone PNG encoded here (RGB, no filter) so the
+// thumbnail shows a visible picture rather than a black block or a broken-load notice.
+// Built from arithmetic only, so the bytes are identical on every run.
+function placeholderPng(width, height) {
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body));
+    return Buffer.concat([len, body, crc]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 2; // colour type: RGB
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y += 1) {
+    const row = y * (width * 3 + 1);
+    raw[row] = 0; // filter: none
+    for (let x = 0; x < width; x += 1) {
+      const band = Math.floor(((x + y) / (width + height)) * 4) % 2 === 0;
+      const [r, g, b] = band ? [203, 213, 225] : [148, 163, 184];
+      const px = row + 1 + x * 3;
+      raw[px] = r;
+      raw[px + 1] = g;
+      raw[px + 2] = b;
+    }
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw)),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+const ATTACHMENT_PNG = placeholderPng(240, 150);
+const ATTACHMENT_TRANSCRIPT_RECORD = {
+  message_id: 'm-201',
+  route_name: ATTACHMENT_TRANSCRIPT_ROUTE,
+  door: 'channel',
+  thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
+  client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
+  caller_principal: null,
+  origin: 'client',
+  inbound_text: 'here are the files you asked for',
+  inbound_attachments: [
+    { kind: 'image', url: ATTACHMENT_IMAGE_URL, caption: 'the layout' },
+    { kind: 'document', url: ATTACHMENT_DOCUMENT_URL, filename: 'report.pdf' },
+  ],
+  answer_status: 'answered',
+  answer: 'Thanks — received.',
+  successor_id: null,
+  delivery_status: 'delivered',
+  created_at: 1_800_000_010,
+  updated_at: 1_800_000_011,
+};
+
+/** One paged read-door envelope shaped as the doors return it. */
+function attachmentPageOf(items, extra = {}) {
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    page_size: 100,
+    next_page: null,
+    truncated: false,
+    ...extra,
+  };
+}
+
 const AUTHED_PAGES = [
   // The ExplorerView count summary ("N tools") proves the catalog rendered populated.
   // A specific tool NAME is not used as the marker: the explorer paginates at 24/page
@@ -516,6 +635,28 @@ const AUTHED_PAGES = [
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
+  {
+    name: 'dashboard-by-model-unavailable',
+    path: '/observability',
+    // The by-model card's degraded state: the notice text is the populated signal,
+    // proving the card resolved to the unavailable branch rather than empty bars.
+    wait: 'text=Per-model breakdown is unavailable for this range.',
+    // Force the metrics fetch to a payload the live backend never returns, so the
+    // unavailable branch renders deterministically (same override the e2e spec uses).
+    // Matched on the pathname: the request carries a range query string.
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/observability/metrics',
+        (route) => route.fulfill({ json: { data: BY_MODEL_UNAVAILABLE_METRICS } }),
+      );
+    },
+    // The card sits below the fold; centre the notice so the shot shows it.
+    action: async (page) => {
+      await page
+        .getByText('Per-model breakdown is unavailable for this range.')
+        .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    },
+  },
   // A non-empty `user_tools` renders the manifest JSON tree with that key.
   { name: 'manifest', path: '/manifest', wait: 'text=user_tools' },
   {
@@ -633,6 +774,88 @@ const AUTHED_PAGES = [
         .locator('[data-testid="conversation-exchange"]')
         .first()
         .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // A transcript whose visitor turn carries typed inbound attachments — a served image
+    // inline and a document download chip — forced through a route override (the live demo
+    // backend mints none). Nondeterministic: the transcript's timestamps render RELATIVELY
+    // against the moment of capture (like the `conversations` frame), so the automated
+    // pipeline skips it (SKIP_NONDETERMINISTIC_SHOTS) and a manual full run recaptures it
+    // when the attachment UI changes.
+    name: 'conversation-inbound-attachments',
+    nondeterministic: true,
+    path: `/conversations?route=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(ATTACHMENT_TRANSCRIPT_THREAD)}`,
+    wait: '[data-testid="attachment-document"]',
+    setup: async (page) => {
+      const stubGet = async (pathname, data) => {
+        await page.route(
+          (url) => url.pathname === pathname,
+          async (route) => {
+            if (route.request().method() !== 'GET') {
+              await route.fallback();
+              return;
+            }
+            await route.fulfill({ json: { data } });
+          },
+        );
+      };
+      await stubGet(
+        '/api/conversations',
+        attachmentPageOf([
+          {
+            route_name: ATTACHMENT_TRANSCRIPT_ROUTE,
+            door: 'channel',
+            target_kind: 'agent',
+            target_name: 'assistant',
+            start_expr: null,
+            reply_expr: null,
+            execution_key: 'studio-docs',
+            execution_key_fingerprint: 'fp-docs',
+            initial_mode: 'agent',
+            channel: 'whatsapp',
+            our_identity: '+10000000000',
+            callback_url: null,
+            turns_per_hour_override: null,
+            error_reply_text: null,
+            callback_secret: null,
+            locale: null,
+            overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
+          },
+        ]),
+      );
+      await stubGet(
+        `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/threads`,
+        attachmentPageOf([
+          {
+            thread_id: ATTACHMENT_TRANSCRIPT_THREAD,
+            client_address: ATTACHMENT_TRANSCRIPT_ADDRESS,
+            last_activity_at: 1_800_000_010,
+            message_count: 1,
+            last_delivery_status: 'delivered',
+          },
+        ]),
+      );
+      await stubGet(`/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/thread/mode`, {
+        mode: 'agent',
+        source: 'route',
+      });
+      await stubGet(
+        `/api/conversations/${ATTACHMENT_TRANSCRIPT_ROUTE}/transcript`,
+        attachmentPageOf([ATTACHMENT_TRANSCRIPT_RECORD], { order: 'desc' }),
+      );
+      await page.route(
+        (url) => url.pathname.startsWith('/api/interactions/media/'),
+        async (route) => {
+          await route.fulfill({ contentType: 'image/png', body: ATTACHMENT_PNG });
+        },
+      );
+    },
+    // Centre the document chip so the image, its caption and the chip are all in frame.
+    action: async (page) => {
+      await page
+        .getByRole('link', { name: 'report.pdf' })
+        .evaluate((el) => el.scrollIntoView({ block: 'center' }));
     },
   },
   // --- Capability-scoped screens (authenticated as the seeded OWNED key) -------
@@ -910,6 +1133,10 @@ async function frameCanvasContent(page) {
 
 async function shoot(page, entry, theme, { awaitPluginNav }) {
   const url = `${STUDIO_URL}${entry.path}`;
+  // `setup`, when present, runs BEFORE navigation so a route override is registered
+  // in time to intercept the data fetch the page fires on mount (a forced payload
+  // for a state the live demo backend does not produce naturally).
+  if (entry.setup) await entry.setup(page);
   // `domcontentloaded`, not `networkidle`: the shell's InteractionsBadge holds a
   // persistent SSE stream open, so the network never goes idle.
   await page.goto(url, { waitUntil: 'domcontentloaded' });

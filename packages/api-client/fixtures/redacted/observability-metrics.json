@@ -40,5 +40,6 @@
       "avgLatencyMs": 678
     }
   ],
+  "byModelAvailable": true,
   "granularity": "day"
 }

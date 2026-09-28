@@ -31,6 +31,9 @@ export const dashboardMetrics = z.object({
       avgLatencyMs: z.number(),
     }),
   ),
+  // `false` when the by-model sub-query faulted, so an empty breakdown is
+  // distinguishable from an unavailable one.
+  byModelAvailable: z.boolean(),
   granularity: z.enum(['hour', 'day', 'week']),
 });
 export type DashboardMetrics = z.infer<typeof dashboardMetrics>;

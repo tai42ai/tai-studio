@@ -292,6 +292,13 @@ export type { HeadingLevel, MarkdownBlock, MarkdownProps } from './components/ma
 export { Markdown, parseMarkdown } from './components/markdown';
 export type { OpenTargetOptions, OpenTargetProps } from './components/open-target';
 export { openTargetProps } from './components/open-target';
+export type { MediaImageProps } from './components/served-media';
+export {
+  isRenderableMediaSrc,
+  isServedMediaUrl,
+  MediaImage,
+  resolveMediaSrc,
+} from './components/served-media';
 // The URL half of the link-safety pair: `isSafeHttpUrl` answers yes/no, this one
 // hands back the parsed URL, so a caller that needs the URL does not re-parse it.
 export type { CopyFieldProps } from './components/copy-field';

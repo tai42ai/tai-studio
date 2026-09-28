@@ -4,7 +4,7 @@
  * message and an agent's answer both reach the screen as escaped text, never as
  * live markup.
  */
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { Exchange } from './Exchange';
@@ -207,5 +207,211 @@ describe('Exchange', () => {
 
     expect(screen.queryByText('Merged into')).toBeNull();
     expect(screen.queryByText('Superseded by')).toBeNull();
+  });
+});
+
+describe('Exchange — inbound attachments', () => {
+  // The platform's own served-media reference: 43 urlsafe-base64 id chars after the
+  // route prefix. Same-origin (baseUrl '') leaves it relative, unjoined.
+  const SERVED = `/api/interactions/media/${'a'.repeat(43)}`;
+  // A second, distinct served-media reference: a fresh url at the same position.
+  const SERVED2 = `/api/interactions/media/${'b'.repeat(43)}`;
+
+  it('renders an inbound image attachment in the visitor bubble', () => {
+    renderWithProviders(
+      <Exchange record={makeMessage({ inbound_attachments: [{ kind: 'image', url: SERVED }] })} />,
+      { client: { baseUrl: '' } },
+    );
+
+    const visitor = document.querySelector<HTMLElement>('[data-speaker="visitor"]');
+    if (visitor === null) throw new Error('no visitor bubble');
+    const img = visitor.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe(SERVED);
+    expect(img?.getAttribute('alt')).toBe('Attached image');
+    expect(img?.getAttribute('referrerpolicy')).toBe('no-referrer');
+  });
+
+  it('renders a document attachment as a labelled download chip with its filename', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_attachments: [{ kind: 'document', url: SERVED, filename: 'report.pdf' }],
+        })}
+      />,
+      { client: { baseUrl: '' } },
+    );
+
+    const chip = screen.getByTestId('attachment-document');
+    const link = within(chip).getByRole('link', { name: 'report.pdf' });
+    expect(link).toHaveAttribute('href', SERVED);
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('download');
+  });
+
+  it('renders audio and video attachments as native players', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_attachments: [
+            { kind: 'audio', url: SERVED },
+            { kind: 'video', url: SERVED },
+          ],
+        })}
+      />,
+      { client: { baseUrl: '' } },
+    );
+
+    const audio = screen.getByTestId('attachment-audio');
+    expect(audio.tagName).toBe('AUDIO');
+    expect(audio).toHaveAttribute('aria-label', 'Audio attachment');
+    const video = screen.getByTestId('attachment-video');
+    expect(video.tagName).toBe('VIDEO');
+    expect(video).toHaveAttribute('aria-label', 'Video attachment');
+  });
+
+  it('shows the shared attachment notice when an image errors, without echoing the url', () => {
+    renderWithProviders(
+      <Exchange record={makeMessage({ inbound_attachments: [{ kind: 'image', url: SERVED }] })} />,
+      { client: { baseUrl: '' } },
+    );
+
+    const img = document.querySelector('img');
+    if (img === null) throw new Error('no image');
+    fireEvent.error(img);
+    const notice = screen.getByTestId('attachment-error');
+    expect(within(notice).getByText('Attachment')).toBeInTheDocument();
+    expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
+    expect(document.querySelector('img')).toBeNull();
+    expect(screen.queryByText(SERVED)).toBeNull();
+  });
+
+  it('shows the shared attachment notice for a blocked image url, without echoing the url', () => {
+    const BLOCKED = 'http://insecure/a.png';
+    renderWithProviders(
+      <Exchange record={makeMessage({ inbound_attachments: [{ kind: 'image', url: BLOCKED }] })} />,
+      { client: { baseUrl: '' } },
+    );
+
+    const notice = screen.getByTestId('attachment-error');
+    expect(within(notice).getByText('Attachment')).toBeInTheDocument();
+    expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
+    expect(document.querySelector('img')).toBeNull();
+    expect(screen.queryByText(BLOCKED)).toBeNull();
+    expect(screen.queryByTestId('media-item-blocked')).toBeNull();
+  });
+
+  it('shows a malformed-attachment notice for an unparseable item', () => {
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_attachments: [{ kind: 'image', url: SERVED }, { junk: true }],
+        })}
+      />,
+      { client: { baseUrl: '' } },
+    );
+
+    expect(screen.getByText('Attachment 2 is malformed and was not shown.')).toBeInTheDocument();
+    // The good item still renders — one malformed item never vanishes the rest.
+    expect(document.querySelector('img')).not.toBeNull();
+  });
+
+  it('shows the shared attachment notice for a blocked document url, with no live anchor', () => {
+    const BLOCKED = 'http://insecure/report.pdf';
+    renderWithProviders(
+      <Exchange
+        record={makeMessage({
+          inbound_attachments: [{ kind: 'document', url: BLOCKED, filename: 'report.pdf' }],
+        })}
+      />,
+      { client: { baseUrl: '' } },
+    );
+
+    const notice = screen.getByTestId('attachment-error');
+    expect(notice).toHaveAttribute('role', 'alert');
+    expect(within(notice).getByText('Attachment')).toBeInTheDocument();
+    expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
+    expect(screen.queryByTestId('attachment-document')).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByText(BLOCKED)).toBeNull();
+  });
+
+  it.each([
+    ['audio', 'attachment-audio'],
+    ['video', 'attachment-video'],
+  ] as const)(
+    'shows the shared attachment notice for a blocked %s url, with no player element',
+    (kind, testId) => {
+      const BLOCKED = 'http://insecure/clip';
+      renderWithProviders(
+        <Exchange record={makeMessage({ inbound_attachments: [{ kind, url: BLOCKED }] })} />,
+        { client: { baseUrl: '' } },
+      );
+
+      const notice = screen.getByTestId('attachment-error');
+      expect(within(notice).getByText('Attachment')).toBeInTheDocument();
+      expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
+      expect(screen.queryByTestId(testId)).toBeNull();
+      expect(screen.queryByText(BLOCKED)).toBeNull();
+    },
+  );
+
+  it.each([
+    ['audio', 'attachment-audio'],
+    ['video', 'attachment-video'],
+  ] as const)(
+    'shows the shared attachment notice for a bare https %s url, with no player element',
+    (kind, testId) => {
+      // `<audio>`/`<video>` have no per-element referrer control, so a remote https url
+      // is not admitted: only the platform's own served-media reference plays.
+      const REMOTE = 'https://attacker.example/x';
+      renderWithProviders(
+        <Exchange record={makeMessage({ inbound_attachments: [{ kind, url: REMOTE }] })} />,
+        { client: { baseUrl: '' } },
+      );
+
+      const notice = screen.getByTestId('attachment-error');
+      expect(within(notice).getByText('Attachment')).toBeInTheDocument();
+      expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
+      expect(screen.queryByTestId(testId)).toBeNull();
+      expect(screen.queryByText(REMOTE)).toBeNull();
+    },
+  );
+
+  it.each([
+    ['audio', 'attachment-audio'],
+    ['video', 'attachment-video'],
+  ] as const)(
+    'replaces the %s player with the notice on a load error, then retries a fresh url at the same position',
+    (kind, testId) => {
+      const { rerender } = renderWithProviders(
+        <Exchange record={makeMessage({ inbound_attachments: [{ kind, url: SERVED }] })} />,
+        { client: { baseUrl: '' } },
+      );
+
+      fireEvent.error(screen.getByTestId(testId));
+      const notice = screen.getByTestId('attachment-error');
+      expect(within(notice).getByText('Attachment')).toBeInTheDocument();
+      expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
+      expect(screen.queryByTestId(testId)).toBeNull();
+
+      // A NEW url at the same position keys off the url that failed, so the player
+      // gets a fresh load attempt rather than inheriting the stale failure notice.
+      rerender(
+        <Exchange record={makeMessage({ inbound_attachments: [{ kind, url: SERVED2 }] })} />,
+      );
+
+      expect(screen.getByTestId(testId)).toBeInTheDocument();
+      expect(screen.queryByTestId('attachment-error')).toBeNull();
+    },
+  );
+
+  it('renders only inbound_text when inbound_attachments is null (no attachments)', () => {
+    renderWithProviders(<Exchange record={makeMessage({ inbound_attachments: null })} />, {
+      client: {},
+    });
+
+    expect(screen.queryByTestId('attachment-gallery')).toBeNull();
+    expect(within(bubble('visitor')).getByText('where is my request')).toBeInTheDocument();
   });
 });

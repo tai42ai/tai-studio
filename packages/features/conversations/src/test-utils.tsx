@@ -296,6 +296,7 @@ export function makeMessage(overrides: Partial<ConversationMessage> = {}): Conve
     client_address: '+15551234567',
     caller_principal: null,
     inbound_text: 'where is my request',
+    inbound_attachments: null,
     answer_status: 'answered',
     answer: 'It completes tomorrow.',
     successor_id: null,

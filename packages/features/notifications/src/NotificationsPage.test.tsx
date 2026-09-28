@@ -205,7 +205,7 @@ describe('NotificationsPage', () => {
 
     const image = await screen.findByRole('img', { name: 'inline' });
     expect(image).toHaveAttribute('src', dataUri);
-    expect(screen.queryByTestId('notification-media-blocked')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('media-item-blocked')).not.toBeInTheDocument();
   });
 
   it('blocks a disallowed image scheme loudly, never as a live src', async () => {
@@ -222,7 +222,7 @@ describe('NotificationsPage', () => {
     );
     renderWithProviders(<NotificationsPage search={{}} />, { client });
 
-    const blocked = await screen.findByTestId('notification-media-blocked');
+    const blocked = await screen.findByTestId('media-item-blocked');
     expect(within(blocked).getByText('http://insecure.example/x.png')).toBeInTheDocument();
     // The blocked url is escaped text, never an image element.
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
@@ -239,7 +239,7 @@ describe('NotificationsPage', () => {
     );
     renderWithProviders(<NotificationsPage search={{}} />, { client });
 
-    const blocked = await screen.findByTestId('notification-media-blocked');
+    const blocked = await screen.findByTestId('media-item-blocked');
     expect(within(blocked).getByText(url)).toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
@@ -282,7 +282,7 @@ describe('NotificationsPage', () => {
     const image = await screen.findByRole('img', { name: 'gone' });
     fireEvent.error(image);
 
-    const failed = await screen.findByTestId('notification-media-error');
+    const failed = await screen.findByTestId('media-image-error');
     expect(within(failed).getByText('Image failed to load')).toBeInTheDocument();
     expect(within(failed).getByText('https://cdn.example/gone.png')).toBeInTheDocument();
     // The broken element is gone — the notice replaces it, loudly.
