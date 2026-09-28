@@ -19,7 +19,7 @@ catalog:
   eslint: ^9.17.0
   eslint-plugin-boundaries: ^6.0.2
   jsdom: ^30.0.1
-  prettier: ^3.4.2
+  prettier: ^3.9.9
   react: ^19.3.0
   react-dom: ^19.3.0
   typescript: ^6.0.3
