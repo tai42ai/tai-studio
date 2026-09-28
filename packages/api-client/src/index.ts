@@ -71,6 +71,8 @@ export { apiDownload, apiRequest, apiText } from './http';
 export type {
   AnswerFormat,
   ApplyResult,
+  AttachmentMediaItem,
+  AttachmentMediaKind,
   AuthCapabilities,
   AuthRoute,
   BackendInfo,

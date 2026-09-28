@@ -93,6 +93,7 @@ const RECORD_BASE = {
   client_address: TRANSCRIPT_ADDRESS,
   caller_principal: null,
   origin: 'client',
+  inbound_attachments: null,
   updated_at: 1_800_000_100,
 } as const;
 
@@ -128,6 +129,34 @@ const TRANSCRIPT_RECORDS = [
     created_at: 1_800_000_003,
   },
 ];
+
+/** The served-media references the inbound-attachments frame carries: 43 urlsafe-base64
+ * id chars after the route prefix, the platform's own capability url shape. */
+const ATTACHMENT_IMAGE_URL = `/api/interactions/media/${'b'.repeat(43)}`;
+const ATTACHMENT_DOCUMENT_URL = `/api/interactions/media/${'c'.repeat(43)}`;
+
+/** A 1×1 PNG, so the stubbed served-image loads to a real (if tiny) bitmap. */
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+/** The transcript record the inbound-attachments frame captures: a visitor turn carrying
+ * a byte-backed image and a document beside its text. */
+const ATTACHMENT_RECORD = {
+  ...RECORD_BASE,
+  message_id: 'm-201',
+  inbound_text: 'here are the files you asked for',
+  inbound_attachments: [
+    { kind: 'image', url: ATTACHMENT_IMAGE_URL, caption: 'the layout' },
+    { kind: 'document', url: ATTACHMENT_DOCUMENT_URL, filename: 'report.pdf' },
+  ],
+  answer_status: 'answered',
+  answer: 'Thanks — received.',
+  successor_id: null,
+  delivery_status: 'delivered',
+  created_at: 1_800_000_010,
+};
 
 /** Fulfil a `GET` on `pathname` with the skeleton's `{ data }` envelope; other routes and
  * non-GET methods fall through to the live skeleton. */
@@ -247,6 +276,49 @@ const FRAMES: readonly Frame[] = [
       await page.getByText(/Superseded by/).scrollIntoViewIfNeeded();
     },
     ready: (page) => page.getByText(/Merged into/),
+  },
+  {
+    // One thread's transcript whose visitor turn carries typed inbound attachments — a
+    // served image inline and a document download chip — rendered beside the text.
+    name: 'conversation-inbound-attachments',
+    url: `/conversations?route=${encodeURIComponent(TRANSCRIPT_ROUTE)}&thread=${encodeURIComponent(TRANSCRIPT_THREAD)}`,
+    setup: async (page) => {
+      await stubGet(page, '/api/conversations', pageOf(TABLE_ROUTES));
+      await stubGet(
+        page,
+        `/api/conversations/${TRANSCRIPT_ROUTE}/threads`,
+        pageOf([
+          {
+            thread_id: TRANSCRIPT_THREAD,
+            client_address: TRANSCRIPT_ADDRESS,
+            last_activity_at: 1_800_000_010,
+            message_count: 1,
+            last_delivery_status: 'delivered',
+          },
+        ]),
+      );
+      await stubGet(page, `/api/conversations/${TRANSCRIPT_ROUTE}/thread/mode`, {
+        mode: 'agent',
+        source: 'route',
+      });
+      await stubGet(
+        page,
+        `/api/conversations/${TRANSCRIPT_ROUTE}/transcript`,
+        pageOf([ATTACHMENT_RECORD], { order: 'desc' }),
+      );
+      // The served-media capability url the image loads from: fulfil it so the inline
+      // image resolves to a real bitmap rather than a broken-load notice.
+      await page.route(
+        (url) => url.pathname.startsWith('/api/interactions/media/'),
+        async (route) => {
+          await route.fulfill({ contentType: 'image/png', body: PNG_1X1 });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('link', { name: 'report.pdf' }).scrollIntoViewIfNeeded();
+    },
+    ready: (page) => page.getByRole('link', { name: 'report.pdf' }),
   },
 ];
 

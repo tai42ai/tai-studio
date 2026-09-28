@@ -33,6 +33,7 @@ export const EMPTY_METRICS = {
   },
   timeSeries: [],
   byModel: [],
+  byModelAvailable: true,
   granularity: 'day',
 };
 

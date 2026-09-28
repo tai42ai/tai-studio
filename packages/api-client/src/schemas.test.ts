@@ -161,6 +161,96 @@ describe('interactionMediaItem schema — applied per item by the renderer', () 
   });
 });
 
+describe('attachmentMediaItem schema — applied per item by the transcript renderer', () => {
+  it('parses image/document/audio/video items with an optional filename', () => {
+    const url = `/api/interactions/media/${'a'.repeat(43)}`;
+    for (const kind of ['image', 'document', 'audio', 'video'] as const) {
+      const parsed = schemas.attachmentMediaItem.parse({ kind, url });
+      expect(parsed.kind).toBe(kind);
+      expect(parsed.filename).toBeUndefined();
+    }
+    const doc = schemas.attachmentMediaItem.parse({
+      kind: 'document',
+      url,
+      filename: 'report.pdf',
+    });
+    expect(doc.filename).toBe('report.pdf');
+    // `.nullish()`: an explicit null caption/filename parses to null, not a failure.
+    const nulls = schemas.attachmentMediaItem.parse({
+      kind: 'image',
+      url,
+      caption: null,
+      filename: null,
+    });
+    expect(nulls.caption).toBeNull();
+    expect(nulls.filename).toBeNull();
+  });
+
+  it('rejects a link kind and a missing url', () => {
+    const url = `/api/interactions/media/${'a'.repeat(43)}`;
+    // `link` is the ask-media surface (`interactionMediaItem`), never a byte-backed attachment.
+    expect(() => schemas.attachmentMediaItem.parse({ kind: 'link', url })).toThrow();
+    expect(() => schemas.attachmentMediaItem.parse({ kind: 'document' })).toThrow();
+    expect(() => schemas.attachmentMediaItem.parse({ kind: 'image', url: 42 })).toThrow();
+  });
+});
+
+describe('conversationMessage schema — inbound_attachments is a loose per-item array', () => {
+  const base = {
+    message_id: 'm1',
+    route_name: 'chat',
+    door: 'channel',
+    thread_id: 'chat/+1',
+    client_address: '+1',
+    caller_principal: null,
+    inbound_text: 'here',
+    inbound_attachments: null,
+    answer_status: 'answered',
+    answer: 'ok',
+    successor_id: null,
+    origin: 'client',
+    delivery_status: 'delivered',
+    created_at: 1,
+    updated_at: 2,
+  };
+
+  it('decodes inbound_attachments as null (the no-attachments wire shape)', () => {
+    const parsed = schemas.conversationMessage.parse(base);
+    expect(parsed.inbound_attachments).toBeNull();
+  });
+
+  it('decodes an inbound_attachments array', () => {
+    const url = `/api/interactions/media/${'a'.repeat(43)}`;
+    const parsed = schemas.conversationMessage.parse({
+      ...base,
+      inbound_attachments: [{ kind: 'image', url }],
+    });
+    expect(parsed.inbound_attachments).toHaveLength(1);
+  });
+
+  it('rejects a record missing inbound_attachments (the key is always on the wire)', () => {
+    const { inbound_attachments: _omitted, ...withoutKey } = base;
+    expect(() => schemas.conversationMessage.parse(withoutKey)).toThrow();
+  });
+
+  it('keeps a malformed member rather than failing the whole-record decode', () => {
+    // The renderer safeParses each item; a malformed one must reach it as a per-item
+    // notice, never vanish the transcript by throwing here.
+    const url = `/api/interactions/media/${'a'.repeat(43)}`;
+    const parsed = schemas.conversationMessage.parse({
+      ...base,
+      inbound_attachments: [{ kind: 'image', url }, { junk: true }, 42],
+    });
+    expect(parsed.inbound_attachments).toHaveLength(3);
+  });
+
+  it('rejects a present non-array inbound_attachments (a gross record malformation)', () => {
+    expect(() =>
+      schemas.conversationMessage.parse({ ...base, inbound_attachments: 'nope' }),
+    ).toThrow();
+  });
+});
+
 describe('form per-send data schemas — applied by the form preview', () => {
   it('formOption accepts a value with a label, with a null label, and with none', () => {
     expect(schemas.formOption.parse({ value: 'a', label: 'Option A' })).toEqual({
@@ -517,6 +607,7 @@ describe('conversation record schema — origin', () => {
     client_address: 'u1',
     caller_principal: null,
     inbound_text: 'where is my request',
+    inbound_attachments: null,
     answer_status: 'answered',
     answer: 'It completes tomorrow.',
     successor_id: null,

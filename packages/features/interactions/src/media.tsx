@@ -6,9 +6,9 @@
  *
  * UNTRUSTED PAYLOADS: every item's `url` and `caption` arrive from the question
  * source and are UNTRUSTED. Captions and urls render ONLY as React-escaped text.
- * The ONLY attribute sinks are the gated image `src` (an image src is admitted
- * exclusively when it is an `https:` URL or the platform's own served-media url —
- * the same rule the server contract and the SPA CSP enforce) and
+ * The ONLY attribute sinks are the gated image `src` (via the SDK's `MediaImage`,
+ * which admits an src exclusively when it is an `https:` URL or the platform's own
+ * served-media url — the same rule the server contract and the SPA CSP enforce) and
  * `ExternalLinkButton`'s scheme-gated `href` (its own http(s) allow-list
  * neutralizes every other scheme). There is NO `dangerouslySetInnerHTML` here.
  *
@@ -19,54 +19,10 @@
  */
 import type { InteractionMediaItem } from '@tai42/api-client';
 import { schemas } from '@tai42/api-client';
-import { Badge, ExternalLinkButton, isSafeHttpUrl, useApi } from '@tai42/studio-sdk';
+import { ExternalLinkButton, MediaImage } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
 
 import { MalformedPayload } from './renderers/malformed-payload';
-
-/**
- * The served-media route: media is stored by reference and served from the API
- * origin at `MEDIA_ROUTE_PREFIX + <id>`, where the id is 43 urlsafe-base64 chars
- * (32 random bytes). The record carries it as a RELATIVE url of exactly that
- * shape — the platform's own media reference, resolved to the API base at render
- * time (`resolveImageSrc`), not assumed same-origin as the SPA page.
- */
-const MEDIA_ROUTE_PREFIX = '/api/interactions/media/';
-const MEDIA_ID = /^[A-Za-z0-9_-]{43}$/;
-
-function isServedMediaUrl(url: string): boolean {
-  return url.startsWith(MEDIA_ROUTE_PREFIX) && MEDIA_ID.test(url.slice(MEDIA_ROUTE_PREFIX.length));
-}
-
-/**
- * The image src gate: an image renders ONLY for an `https:` URL or the platform's
- * own served-media reference (a relative `MEDIA_ROUTE_PREFIX + <id>`).
- * `isSafeHttpUrl` is TIGHTENED to https-only here (it alone also admits `http:`,
- * which the SPA CSP `img-src` blocks and the contract never emits); the served-media
- * branch pins a well-formed platform media id (a relative url `isSafeHttpUrl` cannot
- * parse). The two branches are NOT interchangeable: `http:`, `javascript:`, every
- * `data:` scheme, and any other-shaped relative url fail BOTH → a loud blocked item.
- * The gate keys on the reference form; `resolveImageSrc` joins an admitted
- * reference to the API base for the actual load.
- */
-function isRenderableImageSrc(url: string): boolean {
-  const isHttpsUrl = isSafeHttpUrl(url) && new URL(url).protocol === 'https:';
-  return isHttpsUrl || isServedMediaUrl(url);
-}
-
-/**
- * The URL an admitted image actually loads. An `https:` url is already absolute and
- * is returned unchanged. A served-media reference is RELATIVE and is joined to the
- * API origin (`baseUrl`) — NOT the SPA page origin: in a cross-origin deployment
- * the two differ, and a page-relative src would resolve against Studio and 404. An
- * empty `baseUrl` (same-origin deployment) leaves the reference relative, which is
- * correct; a configured base's trailing slash is stripped so the join never
- * double-slashes.
- */
-function resolveImageSrc(url: string, baseUrl: string): string {
-  return isServedMediaUrl(url) ? `${baseUrl.replace(/\/+$/, '')}${url}` : url;
-}
 
 // -- styles ------------------------------------------------------------------
 
@@ -81,89 +37,6 @@ const itemStyle: CSSProperties = {
   flexDirection: 'column',
   gap: 'var(--tai-space-2)',
 };
-
-const imageStyle: CSSProperties = {
-  maxWidth: '100%',
-  maxHeight: '320px',
-  width: 'auto',
-  height: 'auto',
-  objectFit: 'contain',
-  borderRadius: 'var(--tai-radius-md)',
-  border: '1px solid var(--tai-color-border)',
-};
-
-const captionStyle: CSSProperties = {
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-};
-
-const blockedStyle: CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 'var(--tai-space-1)',
-};
-
-const blockedUrlStyle: CSSProperties = {
-  color: 'var(--tai-color-text-muted)',
-  fontSize: 'var(--tai-text-sm)',
-  wordBreak: 'break-all',
-};
-
-// -- image item --------------------------------------------------------------
-
-/**
- * One image item. Its own component (not an inline `.map` body) because the
- * load-failure flag is per-image `useState`, which the rules of hooks forbid inside
- * a `.map` callback. `referrerPolicy="no-referrer"` is REQUIRED: it stops the
- * Studio URL (which can encode the interaction/operator context) from leaking to
- * the image host on a remote-image load.
- */
-function MediaImage({
-  url,
-  caption,
-}: {
-  readonly url: string;
-  readonly caption?: string;
-}): ReactNode {
-  // The load-failure state keys on the url that failed, not a bare boolean, so a
-  // new url rendered at this same position gets a fresh load attempt instead of
-  // inheriting a stale failure notice.
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const { baseUrl } = useApi();
-
-  if (!isRenderableImageSrc(url)) {
-    return (
-      <div role="alert" data-testid="media-item-blocked" style={blockedStyle}>
-        <Badge variant="danger">Blocked image</Badge>
-        <span style={blockedUrlStyle}>{url}</span>
-      </div>
-    );
-  }
-
-  if (failedUrl === url) {
-    return (
-      <div role="alert" data-testid="media-image-error" style={blockedStyle}>
-        <Badge variant="danger">Image failed to load</Badge>
-        <span style={blockedUrlStyle}>{url}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div style={itemStyle}>
-      <img
-        src={resolveImageSrc(url, baseUrl)}
-        alt={caption ?? 'Attached image'}
-        referrerPolicy="no-referrer"
-        style={imageStyle}
-        onError={() => {
-          setFailedUrl(url);
-        }}
-      />
-      {caption !== undefined ? <span style={captionStyle}>{caption}</span> : null}
-    </div>
-  );
-}
 
 // -- one item ----------------------------------------------------------------
 

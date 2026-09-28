@@ -136,6 +136,11 @@ export const conversationMessage = z.object({
   client_address: z.string(),
   caller_principal: z.string().nullable(),
   inbound_text: z.string(),
+  // A LOOSE array (`null` = no attachments): the key is always present on the wire,
+  // carrying the array or `null`. The renderer `safeParse`s each item against
+  // `attachmentMediaItem`, so one malformed/hostile attachment is a loud per-item
+  // notice, never a whole-record parse failure that vanishes the transcript.
+  inbound_attachments: z.array(z.unknown()).nullable(),
   answer_status: conversationAnswerStatus.nullable(),
   answer: z.string().nullable(),
   successor_id: z.string().nullable(),

@@ -59,6 +59,7 @@ const metrics = {
     { bucket: '2026-07-11T00:00:00Z', runs: 3, cost: 0.12, avgLatencyMs: 42, totalTokens: 900 },
   ],
   byModel: [{ model: 'gpt', calls: 3, cost: 0.12, totalTokens: 900, avgLatencyMs: 42 }],
+  byModelAvailable: true,
   granularity: 'day',
 };
 

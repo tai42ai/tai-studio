@@ -28,6 +28,7 @@ function metricsFixture(): DashboardMetrics {
       { bucket: '2026-01-02T00:00:00Z', runs: 3, cost: 0.73, avgLatencyMs: 900, totalTokens: 2500 },
     ],
     byModel: [{ model: 'gpt-4o', calls: 4, cost: 1.0, totalTokens: 3000, avgLatencyMs: 850 }],
+    byModelAvailable: true,
     granularity: 'day',
   };
 }
@@ -123,6 +124,38 @@ describe('ObservabilityPage — dashboard tab', () => {
 
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('renders the by-model UNAVAILABLE notice when byModelAvailable is false', async () => {
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi
+        .fn()
+        .mockResolvedValue({ ...metricsFixture(), byModel: [], byModelAvailable: false }),
+    };
+    renderWithProviders(<ObservabilityPage search={{}} />, { client });
+
+    // A truthful tile still renders (the whole dashboard did not blank out).
+    expect(await screen.findByText('Total runs')).toBeInTheDocument();
+    expect(
+      screen.getByText('Per-model breakdown is unavailable for this range.'),
+    ).toBeInTheDocument();
+    // Neither the bar list nor the empty state stands in for the unavailable notice.
+    expect(screen.queryByLabelText('Cost by model')).not.toBeInTheDocument();
+    expect(screen.queryByText('No per-model breakdown')).not.toBeInTheDocument();
+  });
+
+  it('renders the empty by-model state when available with no rows', async () => {
+    const client: StubApiClient = {
+      getObservabilityMetrics: vi
+        .fn()
+        .mockResolvedValue({ ...metricsFixture(), byModel: [], byModelAvailable: true }),
+    };
+    renderWithProviders(<ObservabilityPage search={{}} />, { client });
+
+    expect(await screen.findByText('No per-model breakdown')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Per-model breakdown is unavailable for this range.'),
+    ).not.toBeInTheDocument();
   });
 });
 

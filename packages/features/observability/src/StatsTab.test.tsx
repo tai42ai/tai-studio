@@ -28,6 +28,7 @@ function metricsFixture(overrides: Partial<DashboardMetrics> = {}): DashboardMet
       { bucket: '2026-01-02T00:00:00Z', runs: 5, cost: 1.2, avgLatencyMs: 800, totalTokens: 2000 },
     ],
     byModel: [{ model: 'gpt-4o', calls: 3, cost: 1.2, totalTokens: 2000, avgLatencyMs: 800 }],
+    byModelAvailable: true,
     granularity: 'day',
     ...overrides,
   };

@@ -151,7 +151,7 @@ export MARKETPLACE_ADVISORIES_POLL="false"
 STATES_DB_NAME="docs_demo_states"
 export TAI_DB_BINDING_STATES="${STATES_DB_NAME}"
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_HOST="${TAI_DATABASE_DEFAULT_PG_HOST:-127.0.0.1}"
-export TAI_DATABASE_DOCS_DEMO_STATES_PG_PORT="${TAI_DATABASE_DEFAULT_PG_PORT:-55432}"
+export TAI_DATABASE_DOCS_DEMO_STATES_PG_PORT="${PG_HOST_PORT:-55432}"
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_USER="${TAI_DATABASE_DEFAULT_PG_USER:-postgres}"
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_PASSWORD="${TAI_DATABASE_DEFAULT_PG_PASSWORD:-postgres}"
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_DB="${STATES_DB_NAME}"
@@ -746,15 +746,22 @@ STUDIO_URL="${BASE_URL}" OUT_DIR="${OUT_DIR}" node "${E2E_DIR}/scripts/docs-scre
 
 # --- 9. Refresh the tai-studio README shell shots ---------------------------
 # The README embeds five shell screens; refresh them from the SAME capture so
-# there is a single source of truth and no stale branding lingers.
+# there is a single source of truth and no stale branding lingers. A run narrowed
+# with ONLY captures a subset, so it leaves the README set alone: refreshing part of
+# it from one build and the rest from an older one is exactly the mix this step exists
+# to prevent.
 README_SHOTS_DIR="${STUDIO_REPO}/docs/screenshots"
-mkdir -p "${README_SHOTS_DIR}"
-for screen in extensions login settings tool-run tools; do
-  for theme in light dark; do
-    cp "${OUT_DIR}/${screen}-${theme}.png" "${README_SHOTS_DIR}/${screen}-${theme}.png"
+if [[ -n "${ONLY:-}" ]]; then
+  log "ONLY is set — README shell shots in ${README_SHOTS_DIR} left untouched"
+else
+  mkdir -p "${README_SHOTS_DIR}"
+  for screen in extensions login settings tool-run tools; do
+    for theme in light dark; do
+      cp "${OUT_DIR}/${screen}-${theme}.png" "${README_SHOTS_DIR}/${screen}-${theme}.png"
+    done
   done
-done
-log "refreshed ${README_SHOTS_DIR} (5 shell screens × 2 themes)"
+  log "refreshed ${README_SHOTS_DIR} (5 shell screens × 2 themes)"
+fi
 
 # Success: drop the boot log. On any failure path execution exits before this line
 # (via die, or set -e on the capture/refresh steps), so the log survives on disk

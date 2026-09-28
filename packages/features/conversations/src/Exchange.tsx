@@ -19,6 +19,7 @@ import { Badge, CodeBlock, Markdown } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { formatAbsoluteEpoch, formatRelativeEpoch } from './format';
+import { MediaAttachments } from './MediaAttachments';
 import {
   ANSWER_LABEL,
   ANSWER_VARIANT,
@@ -156,6 +157,9 @@ export function Exchange({
       {operator ? null : (
         <Bubble speaker="visitor" label="Visitor">
           <p style={verbatimStyle}>{record.inbound_text}</p>
+          {record.inbound_attachments && record.inbound_attachments.length > 0 ? (
+            <MediaAttachments items={record.inbound_attachments} />
+          ) : null}
         </Bubble>
       )}
       {record.answer === null ? null : (

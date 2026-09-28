@@ -219,6 +219,33 @@ const applyResult: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type AttachmentMediaItem = z.infer<typeof attachmentMediaItem>;
+
+// @public
+const attachmentMediaItem: z.ZodObject<{
+    kind: z.ZodEnum<{
+        image: "image";
+        document: "document";
+        video: "video";
+        audio: "audio";
+    }>;
+    url: z.ZodString;
+    caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    filename: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
+
+// @public
+const attachmentMediaKind: z.ZodEnum<{
+    image: "image";
+    document: "document";
+    video: "video";
+    audio: "audio";
+}>;
+
+// @public (undocumented)
 export type AuthCapabilities = z.infer<typeof authCapabilities>;
 
 // @public
@@ -751,6 +778,7 @@ const conversationFailedMessages: z.ZodObject<{
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
+        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
@@ -803,6 +831,7 @@ const conversationMessage: z.ZodObject<{
     client_address: z.ZodString;
     caller_principal: z.ZodNullable<z.ZodString>;
     inbound_text: z.ZodString;
+    inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
     answer_status: z.ZodNullable<z.ZodEnum<{
         error: "error";
         silent: "silent";
@@ -859,6 +888,7 @@ const conversationMessageSearchPage: z.ZodObject<{
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
+        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
@@ -1360,6 +1390,7 @@ const conversationTranscriptPage: z.ZodObject<{
         client_address: z.ZodString;
         caller_principal: z.ZodNullable<z.ZodString>;
         inbound_text: z.ZodString;
+        inbound_attachments: z.ZodNullable<z.ZodArray<z.ZodUnknown>>;
         answer_status: z.ZodNullable<z.ZodEnum<{
             error: "error";
             silent: "silent";
@@ -1656,6 +1687,7 @@ export function createApiClient(config: ApiConfig): {
             totalTokens: number;
             avgLatencyMs: number;
         }[];
+        byModelAvailable: boolean;
         granularity: "hour" | "day" | "week";
     }>;
     readonly listRuns: (params?: RunsQuery, signal?: AbortSignal) => Promise<{
@@ -2432,6 +2464,7 @@ export function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
+            inbound_attachments: unknown[] | null;
             answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
             successor_id: string | null;
@@ -2462,6 +2495,7 @@ export function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
+            inbound_attachments: unknown[] | null;
             answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
             successor_id: string | null;
@@ -2659,6 +2693,7 @@ export function createApiClient(config: ApiConfig): {
             client_address: string;
             caller_principal: string | null;
             inbound_text: string;
+            inbound_attachments: unknown[] | null;
             answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
             answer: string | null;
             successor_id: string | null;
@@ -4426,6 +4461,7 @@ const dashboardMetrics: z.ZodObject<{
         totalTokens: z.ZodNumber;
         avgLatencyMs: z.ZodNumber;
     }, z.core.$strip>>;
+    byModelAvailable: z.ZodBoolean;
     granularity: z.ZodEnum<{
         hour: "hour";
         day: "day";
@@ -7682,6 +7718,10 @@ declare namespace s {
         MediaKind,
         interactionMediaItem,
         InteractionMediaItem,
+        attachmentMediaKind,
+        AttachmentMediaKind,
+        attachmentMediaItem,
+        AttachmentMediaItem,
         formOption,
         FormOption,
         formData,
@@ -8233,6 +8273,10 @@ declare namespace schemas {
         MediaKind,
         interactionMediaItem,
         InteractionMediaItem,
+        attachmentMediaKind,
+        AttachmentMediaKind,
+        attachmentMediaItem,
+        AttachmentMediaItem,
         formOption,
         FormOption,
         formData,
