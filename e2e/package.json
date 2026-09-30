@@ -28,7 +28,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "yaml": "^2.9.1"
   },
   "scripts": {
     "e2e": "playwright test",

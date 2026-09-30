@@ -12,13 +12,13 @@
  * failing leg skips the rest (the composed scenario's own semantics). `beforeAll` clears a
  * prior run's artifacts so a re-run against a persisted backend starts clean.
  */
-import { expect, type Page, request as apiRequest, test } from '@playwright/test';
+import { expect, type Page, request as apiRequest } from '@playwright/test';
 
+import { needs, test } from '../needs';
+import { BASE_URL } from '../playwright.config';
 import { API_KEY, EXECUTION_KEY_ID, seedCredential } from './helpers';
 
-/** The skeleton origin, mirroring playwright.config.ts's `baseURL`. */
-const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
-const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
+needs('kind:states', 'mutable', 'setting:hooks');
 
 /** The state, template, subject and consumer this scenario authors. Distinct from the
  * docs-shot fixtures (`states-shots.spec.ts` seeds `notes`/`preferences`), so the two

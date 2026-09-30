@@ -43,6 +43,16 @@
 #   TAI_DOCS_DIR     the tai-docs checkout (where the PNGs land)
 #   OUT_DIR          where the PNGs are written (default: <tai-docs>/images/studio)
 #   STUDIO_PORT      skeleton port (default 8765)
+#   TAI_E2E_TARGET   origin of an already-running stack to capture against — a BARE
+#                    origin only (scheme + host + optional port, e.g.
+#                    http://127.0.0.1:8765; a trailing slash is stripped), never a
+#                    target-file name. When set, the runner builds and boots NOTHING — no
+#                    SPA build, no compose, no marketplace registry, no skeleton — and
+#                    points BASE_URL at that origin. The capture still initializes and
+#                    seeds the demo through the API, so the target has to be a docs-demo
+#                    stack that was never initialized and carries this script's setup
+#                    token; any other stack stops the run at setup. Unset, it builds and
+#                    boots the docs-demo stack as described above.
 #   SKIP_SPA_BUILD   set to 1 to reuse an existing apps/studio/dist (fast reruns)
 #   KEEP_UP          set to 1 to leave the skeleton running after capture (debug)
 #   ONLY             comma-separated frame names to capture just those screens (e.g.
@@ -77,13 +87,30 @@ require_dir() {
   ( cd "$path" && pwd )
 }
 # The tai42 monorepo: skeleton at core/skeleton, plugins under plugins/, and the
-# uv workspace venv at its root .venv (boot.sh derives all three from this).
-MONOREPO_DIR="$(require_dir MONOREPO_DIR "${MONOREPO_DIR:-${STUDIO_REPO}/../tai42}")"
+# uv workspace venv at its root .venv (boot.sh derives all three from this). Only the
+# stack this runner boots needs it, so a TAI_E2E_TARGET run does not require the checkout.
+if [[ -z "${TAI_E2E_TARGET:-}" ]]; then
+  MONOREPO_DIR="$(require_dir MONOREPO_DIR "${MONOREPO_DIR:-${STUDIO_REPO}/../tai42}")"
+else
+  MONOREPO_DIR="${MONOREPO_DIR:-}"
+fi
 TAI_DOCS_DIR="$(require_dir TAI_DOCS_DIR "${TAI_DOCS_DIR:-${STUDIO_REPO}/../tai-docs}")"
 PLUGINS_DIR="${MONOREPO_DIR}/plugins"
 
 STUDIO_PORT="${STUDIO_PORT:-8765}"
-BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
+# TAI_E2E_TARGET, when set, names an already-running stack to capture against: the runner
+# builds and boots nothing and points BASE_URL at that origin (a trailing slash is
+# stripped). This capture takes a BARE ORIGIN only — not a target-file name, unlike the
+# Playwright suites. Unset, BASE_URL is the loopback stack this run boots on STUDIO_PORT.
+if [[ -n "${TAI_E2E_TARGET:-}" ]]; then
+  case "${TAI_E2E_TARGET}" in
+    http://?* | https://?*) ;;
+    *) die "TAI_E2E_TARGET must be a bare http(s) origin here (e.g. http://127.0.0.1:8765) — the capture takes an origin, not a target name; got '${TAI_E2E_TARGET}'" ;;
+  esac
+  BASE_URL="$(printf '%s' "${TAI_E2E_TARGET}" | sed 's:/*$::')"
+else
+  BASE_URL="http://127.0.0.1:${STUDIO_PORT}"
+fi
 OUT_DIR="${OUT_DIR:-${TAI_DOCS_DIR}/images/studio}"
 # The full-admin key the runner mints through POST /api/setup after boot (§6). It is
 # unknown until then — assigned there and exported as STUDIO_API_KEY for the capture
@@ -156,82 +183,87 @@ export TAI_DATABASE_DOCS_DEMO_STATES_PG_USER="${TAI_DATABASE_DEFAULT_PG_USER:-po
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_PASSWORD="${TAI_DATABASE_DEFAULT_PG_PASSWORD:-postgres}"
 export TAI_DATABASE_DOCS_DEMO_STATES_PG_DB="${STATES_DB_NAME}"
 
-# --- 3. Pre-flight: STUDIO_PORT must be free --------------------------------
-# A server already answering on STUDIO_PORT — a leftover KEEP_UP session, or a
-# prior run whose EXIT teardown never fired (e.g. kill -9) — would make the
-# readiness poll below pass against the WRONG backend on its first iteration,
-# long before the freshly-launched skeleton binds. The result: you rerun to
-# regenerate shots after a UI/branding change but silently capture the STALE
-# server. Fail fast instead of capturing the wrong target.
-if curl -s -m 2 "${BASE_URL}/health" >/dev/null 2>&1; then
-  die "a server is already listening on ${BASE_URL} — it would be captured instead of a fresh skeleton. Stop it first (e.g. 'pkill -f \"tai serve\"') and rerun."
-fi
-# The registry port must be free too — a leftover fixture would serve a stale seed.
-if curl -s -m 2 "${REGISTRY_URL}/healthz" >/dev/null 2>&1; then
-  die "a server is already listening on ${REGISTRY_URL} — stop it first and rerun."
-fi
-
-# --- 3b. Provision the states store database --------------------------------
-# The states component is bound to a dedicated database on boot.sh's compose Postgres
-# (§2), and boot.sh applies the states chain — with every other chain — before it
-# launches the skeleton, so the database must exist before boot.sh runs. Bring that
-# Postgres up with boot.sh's own idempotent compose command (boot.sh repeats it for the
-# whole stack), then create the database when it is absent; guarded on pg_database, so a
-# rerun against the persisted compose Postgres is a no-op. Nothing is spawned yet, so a
-# failure here exits with no process to reap.
-log "provisioning the states store database '${STATES_DB_NAME}'"
-docker compose -f "${E2E_DIR}/boot/compose.yaml" up -d --wait postgres \
-  || die "the compose Postgres that holds the states database did not come up"
-pg_admin() { docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T postgres psql -q -U "${TAI_DATABASE_DOCS_DEMO_STATES_PG_USER}" -d postgres "$@"; }
-if ! pg_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '${STATES_DB_NAME}'" | grep -q 1; then
-  pg_admin -c "CREATE DATABASE \"${STATES_DB_NAME}\"" >/dev/null \
-    || die "could not create the states database '${STATES_DB_NAME}'"
-fi
-
-# --- 3c. Boot the minimal marketplace registry ------------------------------
-# A stdlib-only fixture serving the registry public read API with ONE generic
-# route-carrying plugin (acme/alerts-relay), so the Marketplace detail page and its
-# install dialog render real routes + preview. Booted BEFORE the skeleton so
-# MARKETPLACE_URL (exported above) is live in the skeleton's environment; reaped by
-# teardown alongside the skeleton.
-log "booting the minimal marketplace registry (${REGISTRY_URL})"
-REGISTRY_LOG="$(mktemp "${TMPDIR:-/tmp}/docs-shots-registry.XXXXXX")"
-MARKETPLACE_REGISTRY_PORT="${REGISTRY_PORT}" spawn_group \
-  python3 "${E2E_DIR}/docs-demo/marketplace-registry.py" >"${REGISTRY_LOG}" 2>&1 </dev/null
-REGISTRY_PID="${SPAWNED_PID}"
-
-# --- 4. Boot the docs-demo skeleton -----------------------------------------
-log "booting docs-demo skeleton (manifest: ${MANIFEST_PATH})"
-BOOT_LOG="$(mktemp "${TMPDIR:-/tmp}/docs-shots-boot.XXXXXX")"
-# Boot in its own process group so teardown reaps the whole group in one kill.
-spawn_group bash "${E2E_DIR}/boot/boot.sh" >"${BOOT_LOG}" 2>&1 </dev/null
-BOOT_PID="${SPAWNED_PID}"
-
-teardown() {
-  # The registry fixture is reaped even under KEEP_UP — it is capture-only scaffolding,
-  # not part of the skeleton a debugger keeps up.
-  kill -- -"${REGISTRY_PID}" 2>/dev/null || true
-  if [[ "${KEEP_UP:-0}" == "1" ]]; then
-    log "KEEP_UP=1 — leaving the skeleton running on ${BASE_URL} (pid ${BOOT_PID})"
-    return
+# The stack this runner builds and boots itself. A TAI_E2E_TARGET run targets an
+# already-running stack, so none of this — the port pre-flight, the states database,
+# the marketplace registry, the skeleton boot and its teardown — runs.
+if [[ -z "${TAI_E2E_TARGET:-}" ]]; then
+  # --- 3. Pre-flight: STUDIO_PORT must be free --------------------------------
+  # A server already answering on STUDIO_PORT — a leftover KEEP_UP session, or a
+  # prior run whose EXIT teardown never fired (e.g. kill -9) — would make the
+  # readiness poll below pass against the WRONG backend on its first iteration,
+  # long before the freshly-launched skeleton binds. The result: you rerun to
+  # regenerate shots after a UI/branding change but silently capture the STALE
+  # server. Fail fast instead of capturing the wrong target.
+  if curl -s -m 2 "${BASE_URL}/health" >/dev/null 2>&1; then
+    die "a server is already listening on ${BASE_URL} — it would be captured instead of a fresh skeleton. Stop it first (e.g. 'pkill -f \"tai serve\"') and rerun."
   fi
-  # Job control made BOOT_PID a process-group leader; kill the whole group.
-  kill -- -"${BOOT_PID}" 2>/dev/null || true
-  pkill -f "tai serve .*--port ${STUDIO_PORT}" 2>/dev/null || true
-}
-trap teardown EXIT
-
-# Registry readiness: fail loudly if the fixture never bound, rather than capturing
-# an install dialog that meets a dead upstream.
-registry_ready=0
-for _ in $(seq 1 30); do
-  if [[ "$(curl -s -m 2 "${REGISTRY_URL}/healthz" 2>/dev/null || true)" == *'"OK"'* ]]; then
-    registry_ready=1; break
+  # The registry port must be free too — a leftover fixture would serve a stale seed.
+  if curl -s -m 2 "${REGISTRY_URL}/healthz" >/dev/null 2>&1; then
+    die "a server is already listening on ${REGISTRY_URL} — stop it first and rerun."
   fi
-  sleep 1
-done
-[[ "${registry_ready}" == 1 ]] || { tail -40 "${REGISTRY_LOG}" >&2; die "the marketplace registry never answered ${REGISTRY_URL}/healthz"; }
-log "marketplace registry is up"
+
+  # --- 3b. Provision the states store database --------------------------------
+  # The states component is bound to a dedicated database on boot.sh's compose Postgres
+  # (§2), and boot.sh applies the states chain — with every other chain — before it
+  # launches the skeleton, so the database must exist before boot.sh runs. Bring that
+  # Postgres up with boot.sh's own idempotent compose command (boot.sh repeats it for the
+  # whole stack), then create the database when it is absent; guarded on pg_database, so a
+  # rerun against the persisted compose Postgres is a no-op. Nothing is spawned yet, so a
+  # failure here exits with no process to reap.
+  log "provisioning the states store database '${STATES_DB_NAME}'"
+  docker compose -f "${E2E_DIR}/boot/compose.yaml" up -d --wait postgres \
+    || die "the compose Postgres that holds the states database did not come up"
+  pg_admin() { docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T postgres psql -q -U "${TAI_DATABASE_DOCS_DEMO_STATES_PG_USER}" -d postgres "$@"; }
+  if ! pg_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '${STATES_DB_NAME}'" | grep -q 1; then
+    pg_admin -c "CREATE DATABASE \"${STATES_DB_NAME}\"" >/dev/null \
+      || die "could not create the states database '${STATES_DB_NAME}'"
+  fi
+
+  # --- 3c. Boot the minimal marketplace registry ------------------------------
+  # A stdlib-only fixture serving the registry public read API with ONE generic
+  # route-carrying plugin (acme/alerts-relay), so the Marketplace detail page and its
+  # install dialog render real routes + preview. Booted BEFORE the skeleton so
+  # MARKETPLACE_URL (exported above) is live in the skeleton's environment; reaped by
+  # teardown alongside the skeleton.
+  log "booting the minimal marketplace registry (${REGISTRY_URL})"
+  REGISTRY_LOG="$(mktemp "${TMPDIR:-/tmp}/docs-shots-registry.XXXXXX")"
+  MARKETPLACE_REGISTRY_PORT="${REGISTRY_PORT}" spawn_group \
+    python3 "${E2E_DIR}/docs-demo/marketplace-registry.py" >"${REGISTRY_LOG}" 2>&1 </dev/null
+  REGISTRY_PID="${SPAWNED_PID}"
+
+  # --- 4. Boot the docs-demo skeleton -----------------------------------------
+  log "booting docs-demo skeleton (manifest: ${MANIFEST_PATH})"
+  BOOT_LOG="$(mktemp "${TMPDIR:-/tmp}/docs-shots-boot.XXXXXX")"
+  # Boot in its own process group so teardown reaps the whole group in one kill.
+  spawn_group bash "${E2E_DIR}/boot/boot.sh" >"${BOOT_LOG}" 2>&1 </dev/null
+  BOOT_PID="${SPAWNED_PID}"
+
+  teardown() {
+    # The registry fixture is reaped even under KEEP_UP — it is capture-only scaffolding,
+    # not part of the skeleton a debugger keeps up.
+    kill -- -"${REGISTRY_PID}" 2>/dev/null || true
+    if [[ "${KEEP_UP:-0}" == "1" ]]; then
+      log "KEEP_UP=1 — leaving the skeleton running on ${BASE_URL} (pid ${BOOT_PID})"
+      return
+    fi
+    # Job control made BOOT_PID a process-group leader; kill the whole group.
+    kill -- -"${BOOT_PID}" 2>/dev/null || true
+    pkill -f "tai serve .*--port ${STUDIO_PORT}" 2>/dev/null || true
+  }
+  trap teardown EXIT
+
+  # Registry readiness: fail loudly if the fixture never bound, rather than capturing
+  # an install dialog that meets a dead upstream.
+  registry_ready=0
+  for _ in $(seq 1 30); do
+    if [[ "$(curl -s -m 2 "${REGISTRY_URL}/healthz" 2>/dev/null || true)" == *'"OK"'* ]]; then
+      registry_ready=1; break
+    fi
+    sleep 1
+  done
+  [[ "${registry_ready}" == 1 ]] || { tail -40 "${REGISTRY_LOG}" >&2; die "the marketplace registry never answered ${REGISTRY_URL}/healthz"; }
+  log "marketplace registry is up"
+fi
 
 # --- 5. Wait for readiness --------------------------------------------------
 # /health returning the literal OK proves BOTH the server is up AND the health
@@ -240,7 +272,9 @@ log "marketplace registry is up"
 log "waiting for ${BASE_URL}/health (up to 600s)"
 ready=0
 for _ in $(seq 1 600); do
-  if ! kill -0 "${BOOT_PID}" 2>/dev/null; then
+  # A self-booted skeleton that exits early is a hard failure — its log is the
+  # diagnosis. A TAI_E2E_TARGET run booted nothing, so it only polls the target.
+  if [[ -z "${TAI_E2E_TARGET:-}" ]] && ! kill -0 "${BOOT_PID}" 2>/dev/null; then
     log "boot process exited early — last 60 log lines:"; tail -60 "${BOOT_LOG}" >&2
     die "docs-demo skeleton failed to boot"
   fi
@@ -249,8 +283,11 @@ for _ in $(seq 1 600); do
   fi
   sleep 1
 done
-[[ "${ready}" == 1 ]] || { tail -60 "${BOOT_LOG}" >&2; die "/health never returned OK"; }
-log "skeleton is up"
+if [[ "${ready}" != 1 ]]; then
+  [[ -n "${TAI_E2E_TARGET:-}" ]] || tail -60 "${BOOT_LOG}" >&2
+  die "/health never returned OK at ${BASE_URL}"
+fi
+log "target is up"
 
 api() { curl -s -m 8 -H "x-api-key: ${DEMO_KEY}" -H "accept: application/json" "$@"; }
 
@@ -396,8 +433,14 @@ export STUDIO_OWNED_KEY="${OWNED_KEY}"
 # backend stacks another copy of the same question/notification and the scoped inboxes
 # read as duplicated. db 2 holds ONLY interactions/notifications state, so the flush
 # never touches the seeded api keys (db 0).
-docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T redis redis-cli -n 2 FLUSHDB >/dev/null \
-  || die "could not flush the interactions Redis (db 2) — the scoped inboxes would not be deterministic"
+# The flush resets this runner's own compose Redis. A TAI_E2E_TARGET run has no such
+# stack, so the target's interactions state is captured as it stands.
+if [[ -z "${TAI_E2E_TARGET:-}" ]]; then
+  docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T redis redis-cli -n 2 FLUSHDB >/dev/null \
+    || die "could not flush the interactions Redis (db 2) — the scoped inboxes would not be deterministic"
+else
+  log "TAI_E2E_TARGET is set — the target's interactions state (db 2) is not flushed"
+fi
 
 # An audience-addressed notification to the owned key's OWN identity (admin caller may
 # address any audience; the owned key's inbox is filtered to its own id). The
@@ -526,8 +569,14 @@ CONVERSATION_ROUTE="docs-demo-chat"
 # stack another pair of exchanges onto the same threads and the shot would read as a
 # duplicated conversation. Flush db 5 first — it holds ONLY conversation state — then seed
 # the route into it.
-docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T redis redis-cli -n 5 FLUSHDB >/dev/null \
-  || die "could not flush the conversations Redis (db 5) — the Conversations screen would not be deterministic"
+# The flush resets this runner's own compose Redis; a TAI_E2E_TARGET run captures the
+# target's conversation state as it stands.
+if [[ -z "${TAI_E2E_TARGET:-}" ]]; then
+  docker compose -f "${E2E_DIR}/boot/compose.yaml" exec -T redis redis-cli -n 5 FLUSHDB >/dev/null \
+    || die "could not flush the conversations Redis (db 5) — the Conversations screen would not be deterministic"
+else
+  log "TAI_E2E_TARGET is set — the target's conversation state (db 5) is not flushed"
+fi
 
 # The identity the demo key resolves to, read back from its own projection rather than
 # assumed: it is the route's `execution_key`, the identity every turn runs AS.
@@ -766,5 +815,5 @@ fi
 # Success: drop the boot log. On any failure path execution exits before this line
 # (via die, or set -e on the capture/refresh steps), so the log survives on disk
 # for post-mortem (the readiness dies also tail it first).
-rm -f "${BOOT_LOG}" "${REGISTRY_LOG}"
+[[ -n "${TAI_E2E_TARGET:-}" ]] || rm -f "${BOOT_LOG}" "${REGISTRY_LOG}"
 log "done — $(count_pngs "${OUT_DIR}") PNGs in ${OUT_DIR}, $(count_pngs "${README_SHOTS_DIR}") in ${README_SHOTS_DIR}"

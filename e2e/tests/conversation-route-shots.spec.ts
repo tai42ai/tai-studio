@@ -25,9 +25,12 @@
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 /** The captures are 1440-wide frames of the monitor and its modal. */
 const VIEWPORT = { width: 1440, height: 900 } as const;

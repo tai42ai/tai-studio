@@ -16,9 +16,12 @@
  * so each measurement is of a page laid out at that width rather than of a page
  * restyled into it.
  */
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { API_KEY, EXECUTION_KEY_ID, seedCredential } from './helpers';
+
+needs();
 
 /** The viewport widths the layout contract is stated at. */
 const WIDTHS = [320, 640, 768, 1280] as const;
@@ -83,6 +86,8 @@ async function seedFilteredHookRow(page: Page): Promise<Locator> {
 
 for (const width of WIDTHS) {
   test.describe(`at ${String(width)} px`, () => {
+    // Each leg registers a real hook to measure a table row, and leaves it behind.
+    needs('mutable', 'setting:hooks');
     test.use({ viewport: { width, height: 900 } });
 
     test('a button in a table cell renders on one line', async ({ page }) => {

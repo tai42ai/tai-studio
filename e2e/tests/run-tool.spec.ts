@@ -17,7 +17,16 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+import { needs, test } from '../needs';
+
+needs(
+  'kind:interactions',
+  'kind:studio_plugins:reference_plugin',
+  'mutable',
+  'setting:conversations',
+);
 
 import {
   answerInteraction,
@@ -42,12 +51,16 @@ const RUN_PANEL = fileURLToPath(
  * run serially against one skeleton. So the control joins the name instead:
  * the id the spec names must be the id the panel paints.
  */
-test('the timeout testid the absence check names is the one the panel renders', () => {
-  const source = readFileSync(RUN_PANEL, 'utf8');
-  expect([...source.matchAll(/data-testid="tool-run-timeout"/g)]).toHaveLength(1);
-  // Negative control: the reader answers on the file's real contents, not on any
-  // string it is handed.
-  expect([...source.matchAll(/data-testid="tool-run-never-rendered"/g)]).toHaveLength(0);
+test.describe(() => {
+  needs('no-stack');
+
+  test('the timeout testid the absence check names is the one the panel renders', () => {
+    const source = readFileSync(RUN_PANEL, 'utf8');
+    expect([...source.matchAll(/data-testid="tool-run-timeout"/g)]).toHaveLength(1);
+    // Negative control: the reader answers on the file's real contents, not on any
+    // string it is handed.
+    expect([...source.matchAll(/data-testid="tool-run-never-rendered"/g)]).toHaveLength(0);
+  });
 });
 
 test('an interactive tool blocks; answering completes the run and the result lands on the panel', async ({

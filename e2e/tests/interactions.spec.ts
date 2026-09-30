@@ -8,9 +8,12 @@
  * questions sharing a `group_id` fold into one grouped section; a free-text answer
  * cannot be submitted empty (a one-shot answer, so an empty submit is blocked).
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { API_KEY, seedCredential } from './helpers';
+
+needs();
 
 /** Two pending text questions in one group — the paged base the inbox seeds from. */
 const PENDING_PAGE = {
@@ -105,34 +108,38 @@ test('questions sharing a group fold into one grouped section; an empty free-tex
   await expect(submit).toBeEnabled();
 });
 
-test('a parked caller ask is filtered from the human inbox and never bumps the badge', async ({
-  page,
-}) => {
-  await seedCredential(page);
+test.describe(() => {
+  needs('kind:studio_plugins:reference_plugin', 'mutable', 'setting:empty-inbox');
 
-  // Park a CALLER ask through the run-tool door. A `to="caller"` async ask needs a
-  // resuming driver bound, so it is driven through the `parking_ask` fixture — which
-  // binds its resume continuation and asks the caller, indexed under the run's subject.
-  // The server files it as a caller interaction, which the inbox pending door filters
-  // out and the badge never counts — an inbox holds human questions only.
-  const question = `Caller-only ask ${String(Date.now())}`;
-  const key = `t-${String(Date.now())}`;
-  const parked = await page.request.post('/api/run-tool', {
-    headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
-    data: {
-      tool_name: 'parking_ask',
-      arguments: { prompt: question },
-      subject: { target_kind: 'tool', target_name: 'parking_ask', kind: 'thread', key },
-    },
+  test('a parked caller ask is filtered from the human inbox and never bumps the badge', async ({
+    page,
+  }) => {
+    await seedCredential(page);
+
+    // Park a CALLER ask through the run-tool door. A `to="caller"` async ask needs a
+    // resuming driver bound, so it is driven through the `parking_ask` fixture — which
+    // binds its resume continuation and asks the caller, indexed under the run's subject.
+    // The server files it as a caller interaction, which the inbox pending door filters
+    // out and the badge never counts — an inbox holds human questions only.
+    const question = `Caller-only ask ${String(Date.now())}`;
+    const key = `t-${String(Date.now())}`;
+    const parked = await page.request.post('/api/run-tool', {
+      headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+      data: {
+        tool_name: 'parking_ask',
+        arguments: { prompt: question },
+        subject: { target_kind: 'tool', target_name: 'parking_ask', kind: 'thread', key },
+      },
+    });
+    expect(parked.status()).toBe(200);
+
+    await page.goto('/interactions');
+    await expect(page.getByRole('heading', { name: 'Interactions' })).toBeVisible();
+
+    // The caller ask never surfaces in the human inbox...
+    await expect(page.getByText(question)).toHaveCount(0);
+    // ...and the pending-questions badge is not raised for it (the boot skeleton seeds no
+    // human questions, so a healthy badge with nothing human-pending renders nothing).
+    await expect(page.getByTestId('interactions-badge')).toHaveCount(0);
   });
-  expect(parked.status()).toBe(200);
-
-  await page.goto('/interactions');
-  await expect(page.getByRole('heading', { name: 'Interactions' })).toBeVisible();
-
-  // The caller ask never surfaces in the human inbox...
-  await expect(page.getByText(question)).toHaveCount(0);
-  // ...and the pending-questions badge is not raised for it (the boot skeleton seeds no
-  // human questions, so a healthy badge with nothing human-pending renders nothing).
-  await expect(page.getByTestId('interactions-badge')).toHaveCount(0);
 });

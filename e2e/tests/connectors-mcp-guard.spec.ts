@@ -11,9 +11,12 @@
  * shell's navigation guard — so leaving via a nav link prompts. Declining (Cancel)
  * keeps the edit; confirming (Discard changes) navigates away.
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 /** The dirty-guard discard prompt (the shared ConfirmDialog's body copy). */
 const DISCARD_PROMPT = 'This editor has unsaved changes. Leaving now discards them.';

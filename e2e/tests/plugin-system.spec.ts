@@ -11,153 +11,171 @@
  * The API-version gate is `version-gate.spec.ts`, which pins EQUALITY in all
  * three directions (lower, higher, equal) against this same live boot.
  */
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { expectPluginErrorCard, loginViaUi, openToolRow, seedCredential } from './helpers';
+
+needs('kind:identity', 'kind:studio_plugins:reference_plugin');
 
 const REGISTRY_PATH = '/api/plugins';
 const BUNDLE_GLOB = '**/api/plugins/reference_plugin/studio/*.js';
 
-test('post-login the reference plugin is discovered, its page and tool panel render', async ({
-  page,
-}) => {
-  await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
+// These sign in through the login screen's API-key form, which a stack with an accounts
+// provider replaces with its own sign-in.
+test.describe(() => {
+  needs('kind:identity', 'kind:studio_plugins:reference_plugin', 'setting:key-login');
 
-  // Wait for the plugin BUNDLE to finish importing — it sets `window.__pluginReact`
-  // at module-eval, which is the same point it registers its page + tool panel. Core
-  // routes never block on the load pass, so we synchronise on it explicitly
-  // before driving a contributed panel.
-  await page.waitForFunction(() => '__pluginReact' in window);
+  test('post-login the reference plugin is discovered, its page and tool panel render', async ({
+    page,
+  }) => {
+    await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
 
-  // The tool list lives on the Tools page; the landing route lands on the Dashboard,
-  // so reach Tools by a CLIENT-SIDE nav (an AppLink click, no reload) to keep the
-  // just-registered panel in module state.
-  await page
-    .getByRole('navigation', { name: 'Primary' })
-    .getByRole('link', { name: 'Tools' })
-    .click();
-  await page.waitForURL('**/tools');
+    // Wait for the plugin BUNDLE to finish importing — it sets `window.__pluginReact`
+    // at module-eval, which is the same point it registers its page + tool panel. Core
+    // routes never block on the load pass, so we synchronise on it explicitly
+    // before driving a contributed panel.
+    await page.waitForFunction(() => '__pluginReact' in window);
 
-  // Select the tool by CLIENT-SIDE navigation (an AppLink search-param change, no
-  // reload) so the just-registered panel is in module state. The registered TOOL
-  // PANEL replaces the auto-form for studio_demo_echo, driving it through the host's
-  // ApiProvider singleton (useApi().runTool).
-  await openToolRow(page, 'studio_demo_echo');
-  const panel = page.getByTestId('reference-echo-panel');
-  await expect(panel).toBeVisible();
-  await page.getByTestId('echo-message').fill('live e2e');
-  await page.getByTestId('echo-run').click();
-  const result = page.getByTestId('echo-result');
-  await expect(result).toBeVisible();
-  await expect(result).toContainText('live e2e');
+    // The tool list lives on the Tools page; the landing route lands on the Dashboard,
+    // so reach Tools by a CLIENT-SIDE nav (an AppLink click, no reload) to keep the
+    // just-registered panel in module state.
+    await page
+      .getByRole('navigation', { name: 'Primary' })
+      .getByRole('link', { name: 'Tools' })
+      .click();
+    await page.waitForURL('**/tools');
 
-  // The registered PAGE renders on a cold navigation to the plugin route (its route
-  // loader awaits the load pass, so this resolves even as a full reload).
-  await page.goto('/plugins/reference_plugin/demo');
-  await expect(page.getByTestId('reference-demo-page')).toBeVisible();
-});
+    // Select the tool by CLIENT-SIDE navigation (an AppLink search-param change, no
+    // reload) so the just-registered panel is in module state. The registered TOOL
+    // PANEL replaces the auto-form for studio_demo_echo, driving it through the host's
+    // ApiProvider singleton (useApi().runTool).
+    await openToolRow(page, 'studio_demo_echo');
+    const panel = page.getByTestId('reference-echo-panel');
+    await expect(panel).toBeVisible();
+    await page.getByTestId('echo-message').fill('live e2e');
+    await page.getByTestId('echo-run').click();
+    const result = page.getByTestId('echo-result');
+    await expect(result).toBeVisible();
+    await expect(result).toContainText('live e2e');
 
-test('the reference plugin names its result pane after the tool, never the SDK default', async ({
-  page,
-}) => {
-  // This plugin is what an author copies. `JsonTree` without a `label` takes the
-  // SDK's "JSON" fallback, so a copied panel puts a region called "JSON" on a
-  // screen that may already have one — two landmarks a keyboard user cannot tell
-  // apart. The name exists ONLY while the pane overflows, so this drives it into
-  // that state rather than asserting an attribute that is absent by design.
-  await loginViaUi(page);
-  await page.waitForFunction(() => '__pluginReact' in window);
-  // The tool list is on the Tools page; the landing route lands on the Dashboard,
-  // so reach Tools by a CLIENT-SIDE nav (no reload) before selecting the tool.
-  await page
-    .getByRole('navigation', { name: 'Primary' })
-    .getByRole('link', { name: 'Tools' })
-    .click();
-  await page.waitForURL('**/tools');
-  await openToolRow(page, 'studio_demo_echo');
-  await expect(page.getByTestId('reference-echo-panel')).toBeVisible();
-
-  await page.getByTestId('echo-message').fill('x'.repeat(400));
-  await page.getByTestId('echo-run').click();
-  await expect(page.getByTestId('echo-result')).toBeVisible();
-
-  // Cap the pane, then let the SDK's ResizeObserver re-measure it. A narrow
-  // VIEWPORT does not reach this state: the ancestor chain above the panel takes
-  // its width from content, so the 400-character value widens the document to
-  // ~3000 px instead of scrolling the pane. Capping the pane is what puts
-  // `scrollWidth > clientWidth` on the element `useOverflowRegion` watches, which
-  // is the condition the whole naming contract hangs off.
-  await page.getByTestId('echo-result').evaluate((node: HTMLElement) => {
-    node.style.maxWidth = '240px';
+    // The registered PAGE renders on a cold navigation to the plugin route (its route
+    // loader awaits the load pass, so this resolves even as a full reload).
+    await page.goto('/plugins/reference_plugin/demo');
+    await expect(page.getByTestId('reference-demo-page')).toBeVisible();
   });
 
-  await expect(page.getByRole('region', { name: 'studio_demo_echo result' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'JSON', exact: true })).toHaveCount(0);
+  test('the reference plugin names its result pane after the tool, never the SDK default', async ({
+    page,
+  }) => {
+    // This plugin is what an author copies. `JsonTree` without a `label` takes the
+    // SDK's "JSON" fallback, so a copied panel puts a region called "JSON" on a
+    // screen that may already have one — two landmarks a keyboard user cannot tell
+    // apart. The name exists ONLY while the pane overflows, so this drives it into
+    // that state rather than asserting an attribute that is absent by design.
+    await loginViaUi(page);
+    await page.waitForFunction(() => '__pluginReact' in window);
+    // The tool list is on the Tools page; the landing route lands on the Dashboard,
+    // so reach Tools by a CLIENT-SIDE nav (no reload) before selecting the tool.
+    await page
+      .getByRole('navigation', { name: 'Primary' })
+      .getByRole('link', { name: 'Tools' })
+      .click();
+    await page.waitForURL('**/tools');
+    await openToolRow(page, 'studio_demo_echo');
+    await expect(page.getByTestId('reference-echo-panel')).toBeVisible();
+
+    await page.getByTestId('echo-message').fill('x'.repeat(400));
+    await page.getByTestId('echo-run').click();
+    await expect(page.getByTestId('echo-result')).toBeVisible();
+
+    // Cap the pane, then let the SDK's ResizeObserver re-measure it. A narrow
+    // VIEWPORT does not reach this state: the ancestor chain above the panel takes
+    // its width from content, so the 400-character value widens the document to
+    // ~3000 px instead of scrolling the pane. Capping the pane is what puts
+    // `scrollWidth > clientWidth` on the element `useOverflowRegion` watches, which
+    // is the condition the whole naming contract hangs off.
+    await page.getByTestId('echo-result').evaluate((node: HTMLElement) => {
+      node.style.maxWidth = '240px';
+    });
+
+    await expect(page.getByRole('region', { name: 'studio_demo_echo result' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'JSON', exact: true })).toHaveCount(0);
+  });
+
+  test('the reference plugin contributes a sidebar nav entry and a host-injected scoped stylesheet', async ({
+    page,
+  }) => {
+    await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
+    // The nav entry is committed at the same module-eval point that sets __pluginReact.
+    await page.waitForFunction(() => '__pluginReact' in window);
+
+    // The registered nav entry appears under the single generic "Plugins" section
+    // (its list is named by the "Plugins" header) in the Primary navigation, and
+    // navigates (client-side) to the plugin's page. `exact` on "Reference" avoids the
+    // per-entry provenance badge link ("Plugin: reference_plugin …") in the same list.
+    const pluginsList = page
+      .getByRole('navigation', { name: 'Primary' })
+      .getByRole('list', { name: 'Plugins' });
+    const navLink = pluginsList.getByRole('link', { name: 'Reference', exact: true });
+    await expect(navLink).toBeVisible();
+    await navLink.click();
+    await expect(page).toHaveURL(/\/plugins\/reference_plugin\/demo$/);
+    await expect(page.getByTestId('reference-demo-page')).toBeVisible();
+
+    // The plugin's scoped stylesheet is injected as an SRI'd <link> for its served
+    // CSS URL — proof the host, not the JS bundle, applied the styles.
+    const cssLink = page.locator(
+      'link[rel="stylesheet"][href*="/api/plugins/reference_plugin/studio/"][href$=".css"]',
+    );
+    await expect(cssLink).toHaveCount(1);
+    await expect(cssLink).toHaveAttribute('integrity', /^sha384-/);
+
+    // A computed, TOKEN-DERIVED property on the scoped element proves the stylesheet
+    // applied. Radius tokens do not vary by theme, so the assertion is theme-stable.
+    const radius = await page
+      .getByTestId('reference-demo-scoped')
+      .evaluate((el) => getComputedStyle(el).borderRadius);
+    expect(radius).toBe('12px');
+  });
 });
 
-test('the reference plugin contributes a sidebar nav entry and a host-injected scoped stylesheet', async ({
-  page,
-}) => {
-  await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
-  // The nav entry is committed at the same module-eval point that sets __pluginReact.
-  await page.waitForFunction(() => '__pluginReact' in window);
-
-  // The registered nav entry appears under the single generic "Plugins" section
-  // (its list is named by the "Plugins" header) in the Primary navigation, and
-  // navigates (client-side) to the plugin's page. `exact` on "Reference" avoids the
-  // per-entry provenance badge link ("Plugin: reference_plugin …") in the same list.
-  const pluginsList = page
-    .getByRole('navigation', { name: 'Primary' })
-    .getByRole('list', { name: 'Plugins' });
-  const navLink = pluginsList.getByRole('link', { name: 'Reference', exact: true });
-  await expect(navLink).toBeVisible();
-  await navLink.click();
-  await expect(page).toHaveURL(/\/plugins\/reference_plugin\/demo$/);
-  await expect(page.getByTestId('reference-demo-page')).toBeVisible();
-
-  // The plugin's scoped stylesheet is injected as an SRI'd <link> for its served
-  // CSS URL — proof the host, not the JS bundle, applied the styles.
-  const cssLink = page.locator(
-    'link[rel="stylesheet"][href*="/api/plugins/reference_plugin/studio/"][href$=".css"]',
+test.describe(() => {
+  needs(
+    'kind:identity',
+    'kind:studio_plugins:reference_plugin',
+    'setting:key-login',
+    'setting:lean-plugin-set',
   );
-  await expect(cssLink).toHaveCount(1);
-  await expect(cssLink).toHaveAttribute('integrity', /^sha384-/);
 
-  // A computed, TOKEN-DERIVED property on the scoped element proves the stylesheet
-  // applied. Radius tokens do not vary by theme, so the assertion is theme-stable.
-  const radius = await page
-    .getByTestId('reference-demo-scoped')
-    .evaluate((el) => getComputedStyle(el).borderRadius);
-  expect(radius).toBe('12px');
-});
+  test('the reference plugin contributes a Settings tab that mounts after the core tabs', async ({
+    page,
+  }) => {
+    await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
+    // The settings tab is committed at the same module-eval point that sets __pluginReact.
+    await page.waitForFunction(() => '__pluginReact' in window);
 
-test('the reference plugin contributes a Settings tab that mounts after the core tabs', async ({
-  page,
-}) => {
-  await loginViaUi(page); // lands on the Dashboard; the shell starts the plugin load pass
-  // The settings tab is committed at the same module-eval point that sets __pluginReact.
-  await page.waitForFunction(() => '__pluginReact' in window);
+    await page.goto('/settings');
+    // The core tabs render immediately; the plugin tab appears once the load pass
+    // is ready and sorts AFTER them.
+    const tablist = page.getByRole('tablist');
+    const pluginTab = tablist.getByRole('tab', { name: 'Reference' });
+    await expect(pluginTab).toBeVisible();
+    const tabNames = await tablist.getByRole('tab').allInnerTexts();
+    expect(tabNames).toEqual([
+      'Settings',
+      'Environment',
+      'Profiles',
+      'API keys',
+      'Backup',
+      'Roles',
+      'Reference',
+    ]);
 
-  await page.goto('/settings');
-  // The core tabs render immediately; the plugin tab appears once the load pass
-  // is ready and sorts AFTER them.
-  const tablist = page.getByRole('tablist');
-  const pluginTab = tablist.getByRole('tab', { name: 'Reference' });
-  await expect(pluginTab).toBeVisible();
-  const tabNames = await tablist.getByRole('tab').allInnerTexts();
-  expect(tabNames).toEqual([
-    'Settings',
-    'Environment',
-    'Profiles',
-    'API keys',
-    'Backup',
-    'Roles',
-    'Reference',
-  ]);
-
-  // Selecting it mounts the plugin's tab content through the host's SDK singletons.
-  await pluginTab.click();
-  await expect(page.getByTestId('reference-settings-tab')).toBeVisible();
+    // Selecting it mounts the plugin's tab content through the host's SDK singletons.
+    await pluginTab.click();
+    await expect(page.getByTestId('reference-settings-tab')).toBeVisible();
+  });
 });
 
 test('a tool WITHOUT a panel falls back to the auto-form', async ({ page }) => {

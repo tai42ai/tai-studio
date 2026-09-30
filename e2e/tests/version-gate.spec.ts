@@ -6,9 +6,12 @@
  * higher-version fixture would wrongly pass), and a `>=` bug would reject valid
  * plugins.
  */
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { expectPluginErrorCard, seedCredential } from './helpers';
+
+needs('kind:studio_plugins:reference_plugin');
 
 const REGISTRY_PATH = '/api/plugins';
 

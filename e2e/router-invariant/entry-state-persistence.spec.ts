@@ -1,4 +1,8 @@
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+
+import { needs, test } from '../needs';
+
+needs('fixture-page');
 
 /**
  * ROUTER ENTRY-STATE PERSISTENCE — the external assumption this test pins.

@@ -15,7 +15,11 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+
+import { needs, test } from '../needs';
+
+needs();
 
 const here = dirname(fileURLToPath(import.meta.url));
 const distBridgeDir = resolve(here, '../../apps/studio/dist/bridge');
@@ -137,16 +141,20 @@ test('the standalone bridge anchored allow-list refuses eviltai42.ai and tai42.a
   }
 });
 
-test('the standalone bridge artifact is directory-self-contained (CI check)', () => {
-  const html = readFileSync(resolve(distBridgeDir, 'oauth-bridge.html'), 'utf8');
-  // Every referenced asset is relative to the bridge dir (base './') — no absolute
-  // path, no external host, so the directory can be deployed on its own.
-  const srcs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? '');
-  expect(srcs.length).toBeGreaterThan(0);
-  for (const src of srcs) {
-    expect(src.startsWith('http://')).toBe(false);
-    expect(src.startsWith('https://')).toBe(false);
-    expect(src.startsWith('//')).toBe(false);
-    expect(src.startsWith('/')).toBe(false);
-  }
+test.describe(() => {
+  needs('no-stack');
+
+  test('the standalone bridge artifact is directory-self-contained (CI check)', () => {
+    const html = readFileSync(resolve(distBridgeDir, 'oauth-bridge.html'), 'utf8');
+    // Every referenced asset is relative to the bridge dir (base './') — no absolute
+    // path, no external host, so the directory can be deployed on its own.
+    const srcs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1] ?? '');
+    expect(srcs.length).toBeGreaterThan(0);
+    for (const src of srcs) {
+      expect(src.startsWith('http://')).toBe(false);
+      expect(src.startsWith('https://')).toBe(false);
+      expect(src.startsWith('//')).toBe(false);
+      expect(src.startsWith('/')).toBe(false);
+    }
+  });
 });

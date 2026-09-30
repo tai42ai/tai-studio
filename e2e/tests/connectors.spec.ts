@@ -8,9 +8,12 @@
  * Reconnect; a disconnect whose upstream revoke FAILED surfaces the warning and
  * stays on the page; and a connector-MANAGED MCP entry renders read-only.
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 const PROVIDERS_PATH = '/api/connectors/providers';
 const CONNECTIONS_PATH = '/api/connectors/connections';

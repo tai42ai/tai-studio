@@ -10,18 +10,13 @@
  * base-tool params, so the row keys are those. The secret-reference row references an
  * EXISTING env key seeded through the real config door; the editor never writes a secret.
  */
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  request as apiRequest,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page, request as apiRequest } from '@playwright/test';
 
+import { needs, test } from '../needs';
+import { BASE_URL } from '../playwright.config';
 import { API_KEY, seedCredential } from './helpers';
 
-const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
-const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
+needs('kind:studio_plugins:reference_plugin', 'mutable', 'setting:presets');
 
 const BASE_TOOL = 'studio_demo_form';
 const ENV_KEY = 'SERVICE_API_TOKEN';

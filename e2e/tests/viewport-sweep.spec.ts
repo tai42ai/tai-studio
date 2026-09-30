@@ -20,9 +20,12 @@
  * the redesign fully owns — carries no critical or serious automated violation.
  */
 import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 /** The document's horizontal overflow in CSS px (<= 0 means it does not scroll
  * sideways). `clientWidth` already excludes the vertical scrollbar, so a page

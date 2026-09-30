@@ -17,9 +17,12 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { BOOT_DEFAULTS, reuseServer, spaBuildFlag } from '../playwright.config';
+
+needs('no-stack');
 
 const BOOT_SH = readFileSync(fileURLToPath(new URL('../boot/boot.sh', import.meta.url)), 'utf8');
 

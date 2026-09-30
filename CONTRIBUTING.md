@@ -75,6 +75,26 @@ never affects the release the pull request projects. The value must be a branch
 name or a 40-character commit sha — never a fully-qualified `refs/…` ref, which
 is refused.
 
+By default `pnpm e2e` builds and boots its own stack. Set `TAI_E2E_TARGET` to a
+running stack — a bare origin (for example `http://127.0.0.1:8765`) or the name of a
+file in `e2e/targets/` — to point the suites at it and boot nothing; leave it unset to
+boot the stack as above. A target file (see `e2e/targets/example.yml`) gives the
+stack's `url`, the name of the environment variable holding its login key (`key_env`,
+default `TAI_E2E_KEY`), and any facts it cannot report about itself under `provides`.
+
+Each spec declares what it needs from the stack with `needs(...)` at the top of the
+file. A need is reported by the stack (`kind:<kind>`, read from
+`GET /api/system/kinds`), declared by the target file (`probe-tools`, `mutable`), or
+met only by a stack the run builds itself (`no-stack`, `setting:…`, and the rest); for
+example `needs('kind:states', 'mutable')` runs only against a stack that reports the
+states kind and permits stack-wide writes. On a target, a spec whose needs are not met
+is skipped with the missing need as its reason.
+
+Either way each run writes a JUnit report (`junit.xml` beside the Playwright config),
+which CI uploads as an artifact and shows in the job summary — the skip reasons among
+them. To point one CI run at a stack, use the workflow's `workflow_dispatch`
+`e2e_target` input.
+
 Before any commit, run a secret scan over the tree (e.g. `detect-secrets scan`) —
 never commit a real `.env` or an API key.
 

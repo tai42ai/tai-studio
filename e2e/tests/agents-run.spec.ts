@@ -6,9 +6,12 @@
  * green Finished); a user Stop settles as Stopped; the timeline autoscrolls while
  * pinned, detaches on a scroll-up, and offers Jump to latest to re-pin.
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 const AGENT = {
   name: 'echo-agent',
