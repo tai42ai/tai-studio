@@ -38,12 +38,12 @@ onlyBuiltDependencies:
   - msw
 
 overrides:
-  # Pin the 5.x brace-expansion line to the DoS-patched >=5.0.8 (minimatch@10, via
-  # typescript-eslint, pulls it). The older 1.x/2.x lines reached through
-  # eslint-plugin-jsx-a11y's minimatch@3 and the coverage tooling's minimatch@9 have
-  # no patched release and cannot move to 5.x without breaking jsx-a11y's
-  # default-export minimatch import — a dev-only, non-exploitable residual.
+  # Pin both brace-expansion lines to their DoS-patched releases: 5.x (minimatch@10,
+  # via typescript-eslint) at >=5.0.8, and 1.x (minimatch@3, via
+  # eslint-plugin-jsx-a11y, which cannot move to 5.x without breaking its
+  # default-export minimatch import) at >=1.1.21. Dev-only.
   'brace-expansion@5': '>=5.0.8'
+  'brace-expansion@1': '>=1.1.21 <2'
   # postcss source-map path traversal, patched at 8.5.18.
   postcss: '>=8.5.18'
   # js-yaml prototype-pollution / special-key handling in the 4.x line, patched
