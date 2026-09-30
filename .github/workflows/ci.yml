@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      e2e_target:
+        description: Run the e2e against this running stack (an origin, or the name of a file in e2e/targets) instead of building one
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -179,6 +185,12 @@ jobs:
     needs: reuse
     if: ${{ needs.reuse.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
+    env:
+      # Point the suite at a running stack — a bare origin, or the name of a file in
+      # e2e/targets — through the workflow_dispatch input, or the TAI_E2E_TARGET
+      # repository variable, instead of the bare vite fixture this job boots.
+      TAI_E2E_TARGET: ${{ inputs.e2e_target || vars.TAI_E2E_TARGET }}
+      TAI_E2E_KEY: ${{ secrets.TAI_E2E_KEY }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -193,6 +205,18 @@ jobs:
         run: pnpm --filter @tai42/e2e exec playwright install --with-deps chromium
       - name: Router entry-state invariant
         run: pnpm --filter @tai42/e2e test:router-invariant
+      - name: Upload the JUnit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: router-invariant-junit
+          path: e2e/router-invariant/junit*.xml
+          if-no-files-found: error
+      - name: Summarize the JUnit report
+        if: ${{ !cancelled() }}
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        with:
+          paths: e2e/router-invariant/junit*.xml
 
   # Freshness gate for the docs-demo marketplace fixture's contract pin. The
   # fixture (e2e/docs-demo/marketplace-registry.py) hard-codes a `contract` range
@@ -339,16 +363,25 @@ jobs:
   # Dependabot fall back to the ``check`` job only.
   e2e:
     needs: [reuse, changes]
-    if: needs.reuse.outputs.should_skip != 'true' && needs.changes.outputs.version_only != 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
+    if: needs.reuse.outputs.should_skip != 'true' && needs.changes.outputs.version_only != 'true' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: tai-studio
+    env:
+      # Point the suite at a running stack — a bare origin, or the name of a file in
+      # e2e/targets — through the workflow_dispatch input, or the TAI_E2E_TARGET
+      # repository variable, instead of building and booting one here.
+      TAI_E2E_TARGET: ${{ inputs.e2e_target || vars.TAI_E2E_TARGET }}
+      TAI_E2E_KEY: ${{ secrets.TAI_E2E_KEY }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           path: tai-studio
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      # The tai42 monorepo is only cloned to build the backend the boot recipe runs;
+      # a TAI_E2E_TARGET run targets an already-running stack, so it is not needed.
+      - if: env.TAI_E2E_TARGET == ''
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: ${{ github.repository_owner }}/tai42
           path: tai42
@@ -362,29 +395,50 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: tai-studio/pnpm-lock.yaml
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      # uv builds the backend venv the boot recipe runs; a TAI_E2E_TARGET run targets an
+      # already-running stack, so the venv steps are skipped there.
+      - if: env.TAI_E2E_TARGET == ''
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: '0.11.26'
           enable-cache: true
-      - run: uv python install 3.13
+      - if: env.TAI_E2E_TARGET == ''
+        run: uv python install 3.13
       # Build the workspace venv (tai42/.venv) the boot recipe runs the backend
       # from. The monorepo's uv.lock resolves tai42-skeleton and every first-party
       # dependency from the workspace itself. The reference plugin and
       # tai42/plugins/webhook-verifier-github are pip-installed into this venv by
       # the boot recipe.
       - name: Sync skeleton env
+        if: env.TAI_E2E_TARGET == ''
         working-directory: tai42
         run: uv sync --locked --package tai42-skeleton --extra dev
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
       # Build the workspace so the boot recipe's SPA + reference-plugin builds
-      # resolve every cross-package @tai42/* import from built declarations.
+      # resolve every cross-package @tai42/* import from built declarations. A
+      # TAI_E2E_TARGET run boots no stack and drives the target over HTTP — the specs
+      # that read a built dist are `no-stack`, skipped on a target — so nothing here
+      # is built then.
       - name: Build workspace
+        if: env.TAI_E2E_TARGET == ''
         run: pnpm -r build
       - name: Install Playwright browsers
         run: pnpm --filter @tai42/e2e exec playwright install --with-deps
       - name: Playwright e2e
         run: pnpm e2e
+      - name: Upload the JUnit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-junit
+          path: tai-studio/e2e/junit*.xml
+          if-no-files-found: error
+      - name: Summarize the JUnit report
+        if: ${{ !cancelled() }}
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
+        with:
+          paths: tai-studio/e2e/junit*.xml
 
   # Fleet e2e gate. On push:main and on pull_request, after this repo's own
   # checks pass, dispatch the tai42 monorepo's fleet-e2e receiver for the tested
@@ -398,8 +452,9 @@ jobs:
     needs: [reuse, changes, check]
     # Dependabot cannot access the fleet-e2e dispatch secret (GitHub scopes
     # secrets away from dependabot), so this job would always red on a
-    # Bad-credentials dispatch. Dependabot dep bumps don't need fleet-e2e.
-    if: needs.reuse.outputs.should_skip != 'true' && github.actor != 'dependabot[bot]'
+    # Bad-credentials dispatch. Dependabot dep bumps don't need fleet-e2e. A manual
+    # run exercises this repo's own suites and dispatches nothing.
+    if: needs.reuse.outputs.should_skip != 'true' && github.actor != 'dependabot[bot]' && github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       statuses: write # post the vacuous fleet-e2e status for a version-only change

@@ -15,9 +15,12 @@
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 /** Where the preview shots land: `FORM_SHOTS_DIR` when set, else the gitignored
  * `test-results/` beside the suite. */

@@ -9,9 +9,12 @@
  * populating the topic → door map, so they run against the booted skeleton this
  * config starts, not against a stub.
  */
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { API_KEY, EXECUTION_KEY_ID, loginViaUi, pickExecutionKey } from './helpers';
+
+needs('kind:identity', 'kind:webhook_verifiers:github', 'mutable', 'setting:hooks');
 
 /** The register form — the page also carries a topic filter and the bind form. */
 function registerForm(page: Page): Locator {

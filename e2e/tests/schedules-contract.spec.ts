@@ -25,9 +25,17 @@
  * with them, which a vehicle whose base tool declares no `**kwargs` rejects — so a
  * key-bound create cannot persist for such a tool on the installed backend.
  */
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { API_KEY, seedCredential } from './helpers';
+
+needs(
+  'kind:backend:rq',
+  'kind:studio_plugins:reference_plugin',
+  'mutable',
+  'setting:schedule-task-extension',
+);
 
 const SCHEDULE_TOOL = 'studio_demo_echo';
 /** The vehicle the create door dispatches: the tool's backend `schedule_task` branch. */

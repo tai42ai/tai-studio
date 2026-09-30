@@ -42,14 +42,15 @@ import {
   type Locator,
   type Page,
   request as apiRequest,
-  test,
 } from '@playwright/test';
 
+import { needs, test } from '../needs';
+import { BASE_URL } from '../playwright.config';
 import { API_KEY, seedCredential } from './helpers';
 
+needs('kind:states', 'mutable', 'setting:no-storage');
+
 const VIEWPORT = { width: 1440, height: 900 } as const;
-const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
-const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
 
 const OUT_DIR =
   process.env.TEMPLATED_TEXT_SHOTS_DIR ??

@@ -11,12 +11,13 @@
  * No `/api/storage` stub here: these cases prove the LIVE boot behaviour, unlike the
  * design-frame specs that stub the signal to drive each state deterministically.
  */
-import { expect, request as apiRequest, test } from '@playwright/test';
+import { expect, request as apiRequest } from '@playwright/test';
 
+import { needs, test } from '../needs';
+import { BASE_URL } from '../playwright.config';
 import { API_KEY, seedCredential } from './helpers';
 
-const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
-const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
+needs('setting:no-storage');
 
 const ERROR_CARD = '[role="alert"]:has-text("Something went wrong")';
 

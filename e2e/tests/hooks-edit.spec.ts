@@ -6,9 +6,12 @@
  * typing an already-registered name into the create form warns BEFORE the overwrite
  * (a register POST is a silent upsert, so the replace must be announced first).
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 const HOOK = {
   name: 'notify-events',

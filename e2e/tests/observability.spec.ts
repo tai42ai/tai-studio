@@ -8,9 +8,12 @@
  * a run row opens the two-pane trace with the first ERROR span auto-selected;
  * the waterfall renders bars + a span filter; and the summary bar totals.
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 const RUNS_PATH = '/api/observability/runs';
 const METRICS_PATH = '/api/observability/metrics';

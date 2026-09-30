@@ -10,18 +10,13 @@
  * business scenario. It exercises the tai42 state-template + door `state_binding`
  * surfaces: born-red until the composed backend serves them, green once it does.
  */
-import {
-  type APIRequestContext,
-  expect,
-  type Page,
-  request as apiRequest,
-  test,
-} from '@playwright/test';
+import { type APIRequestContext, expect, type Page, request as apiRequest } from '@playwright/test';
 
+import { needs, test } from '../needs';
+import { BASE_URL } from '../playwright.config';
 import { API_KEY, seedCredential } from './helpers';
 
-const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
-const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
+needs('kind:states', 'kind:studio_plugins:reference_plugin', 'mutable', 'setting:presets');
 
 const STATE = 'counters';
 const TEMPLATE = 'tally';

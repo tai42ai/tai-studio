@@ -5,8 +5,11 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** The seeded, obviously test-only key (matches boot.sh's default). */
-export const API_KEY = process.env.STUDIO_API_KEY ?? 'sk-e2e-DO-NOT-USE-IN-PRODUCTION-000';
+import { STUDIO_API_KEY } from '../playwright.config';
+
+/** The login key: the target's key on a `TAI_E2E_TARGET` run, else the seeded test-only
+ * key (matches boot.sh's default). Resolved once in the config so every path agrees. */
+export const API_KEY = STUDIO_API_KEY;
 
 /** The `user_id` behind {@link API_KEY}. */
 export const EXECUTION_KEY_ID = process.env.STUDIO_USER_ID ?? 'studio-e2e';

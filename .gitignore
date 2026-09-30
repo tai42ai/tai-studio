@@ -4,6 +4,9 @@ dist/
 coverage/
 playwright-report/
 test-results/
+# playwright junit reports, written next to each e2e config
+e2e/junit.xml
+e2e/router-invariant/junit.xml
 *.tsbuildinfo
 .turbo/
 .pnpm-store/

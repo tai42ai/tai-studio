@@ -23,7 +23,10 @@ Assumes sibling checkouts of the `tai42` monorepo (skeleton at `core/skeleton`,
 the agents / storage-local / toolbox / accounts-postgres / webhook-verifier-github plugins under `plugins/`) and `tai-docs`;
 override with `MONOREPO_DIR` and `TAI_DOCS_DIR`. See
 the runner's header (`e2e/scripts/docs-screenshots.sh`) for every env knob
-(`SKIP_SPA_BUILD`, `KEEP_UP`, `OUT_DIR`, …) and prerequisites.
+(`SKIP_SPA_BUILD`, `KEEP_UP`, `OUT_DIR`, …) and prerequisites. Set `TAI_E2E_TARGET` to
+a bare origin to capture against an already-running docs-demo stack instead of building
+and booting one (this capture takes an origin, not a target-file name, and still
+initializes and seeds the demo, so the stack must not have been initialized before).
 
 ## How it works
 

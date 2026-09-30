@@ -21,19 +21,16 @@ import {
   type Locator,
   type Page,
   request as apiRequest,
-  test,
 } from '@playwright/test';
 
+import { needs, test } from '../needs';
+import { BASE_URL } from '../playwright.config';
 import { API_KEY, seedCredential } from './helpers';
+
+needs('kind:states', 'mutable', 'setting:hooks');
 
 /** The docs frames pin this viewport; the states surface is a 1440-wide master/detail. */
 const VIEWPORT = { width: 1440, height: 900 } as const;
-
-/** The skeleton origin. Mirrors playwright.config.ts's `baseURL`, so the seeding request
- * context reaches the same skeleton the pages drive (a reused server on a non-default
- * port is honoured through `STUDIO_PORT`). */
-const STUDIO_PORT = process.env.STUDIO_PORT ?? '8765';
-const BASE_URL = `http://127.0.0.1:${STUDIO_PORT}`;
 
 /** Where the PNGs are written. An absolute out-of-tree path is passed through the
  * env; the default keeps CI artifacts inside the gitignored `test-results/` tree. */

@@ -6,9 +6,12 @@
  * inward; a multi-file upload loops the single-item door and reports a per-file
  * outcome — one simulated failure stays marked Failed while its sibling uploads.
  */
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
+import { needs, test } from '../needs';
 import { seedCredential } from './helpers';
+
+needs();
 
 const TEMPLATE_KEYS = ['prompts/welcome.md', 'prompts/emails/greeting.md', 'root.md'];
 
