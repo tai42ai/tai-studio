@@ -7,11 +7,12 @@
  */
 import { isRecord } from '../guards';
 import { classifySchema } from './classify';
-import type { FieldModel } from './field-model';
+import type { DateConstraints, FieldModel } from './field-model';
 import { decodedByteSize, effectiveMaxBytes, overCapMessage } from './media';
-import { scalarLabel } from './resolve';
+import { resolveRef, scalarLabel } from './resolve';
 import type { JsonSchema, SchemaFormErrors } from './types';
 import { activeVariantIndex } from './union';
+import { isFieldVisible } from './visibility';
 
 /** Options for {@link validateAgainstSchema}. */
 export interface ValidateOptions {
@@ -126,8 +127,29 @@ function validateString(
   }
   if (value.length > 0 && model.format !== undefined) {
     const message = formatError(model.format, value);
+    if (message !== undefined) {
+      ctx.errors[path] = message;
+      return;
+    }
+  }
+  // Date bounds and unavailable days (scope C). Range span/ordering needs the sibling
+  // start field, so it is enforced at the object level (see validateDateRanges).
+  if (model.date !== undefined && value.length > 0) {
+    const message = dateConstraintError(model.date, value);
     if (message !== undefined) ctx.errors[path] = message;
   }
+}
+
+/** The inclusive bound/unavailable-day violation on a date value, or `undefined`. */
+function dateConstraintError(date: DateConstraints, value: string): string | undefined {
+  // `YYYY-MM-DD` strings compare lexicographically in chronological order, so the bounds
+  // are plain string comparisons. A value that is not a well-formed date is left to the
+  // `format` check above; this runs only for a syntactically valid date.
+  if (!DATE_RE.test(value)) return undefined;
+  if (date.min !== undefined && value < date.min) return `must be on or after ${date.min}`;
+  if (date.max !== undefined && value > date.max) return `must be on or before ${date.max}`;
+  if (date.unavailable.includes(value)) return 'is not an available date';
+  return undefined;
 }
 
 function validateNumber(
@@ -174,6 +196,11 @@ function validateObject(
   }
   const propMap = new Map(model.properties);
   for (const [name, propSchema] of model.properties) {
+    // A field hidden by its `visibleWhen` predicate (scope B) is not part of the answer:
+    // it is not required and not validated, and a value left on it is dropped by the
+    // server, not an error here. Evaluated on the current values, so a field that was
+    // hidden by the predicate is skipped even if it still carries a stale value.
+    if (!isFieldVisible(propSchema, value)) continue;
     const childPath = joinPath(path, name);
     const childValue = value[name];
     if (childValue === undefined) {
@@ -187,6 +214,143 @@ function validateObject(
     if (!propMap.has(name) && value[name] === undefined) {
       ctx.errors[joinPath(path, name)] = `"${name}" is required`;
     }
+  }
+  validateDateRanges(model, value, path, ctx);
+}
+
+/** Days from `start` to `end` inclusive (both `YYYY-MM-DD`); 1 when they are equal. */
+function inclusiveDayCount(start: string, end: string): number {
+  return Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
+}
+
+/**
+ * Enforce a date RANGE declared on an END field (scope C): the end is on or after its
+ * named `rangeStart` field, and the inclusive day span is within `minDays`/`maxDays`.
+ * Read from the two plain date values — nothing recombined. A missing or not-yet-valid
+ * endpoint is left to that field's own validation; a hidden end field is skipped.
+ */
+function validateDateRanges(
+  model: ModelOf<'object'>,
+  value: Record<string, unknown>,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  for (const [name, propSchema] of model.properties) {
+    if (!isFieldVisible(propSchema, value)) continue;
+    const resolved = resolveRef(propSchema, ctx.root);
+    if (typeof resolved.rangeStart !== 'string') continue;
+    const endValue = value[name];
+    const startValue = value[resolved.rangeStart];
+    if (typeof endValue !== 'string' || typeof startValue !== 'string') continue;
+    if (!DATE_RE.test(endValue) || !DATE_RE.test(startValue)) continue;
+    const childPath = joinPath(path, name);
+    if (ctx.errors[childPath] !== undefined) continue;
+    const message = dateRangeMessage(resolved, startValue, endValue);
+    if (message !== undefined) ctx.errors[childPath] = message;
+  }
+}
+
+/** The ordering/span violation on a range END field, or `undefined` when it holds. */
+function dateRangeMessage(
+  resolved: JsonSchema,
+  startValue: string,
+  endValue: string,
+): string | undefined {
+  if (endValue < startValue) return 'must be on or after the start date';
+  const days = inclusiveDayCount(startValue, endValue);
+  const minDays = typeof resolved.minDays === 'number' ? resolved.minDays : undefined;
+  const maxDays = typeof resolved.maxDays === 'number' ? resolved.maxDays : undefined;
+  if (minDays !== undefined && days < minDays)
+    return `must span at least ${String(minDays)} day(s)`;
+  if (maxDays !== undefined && days > maxDays) return `must span at most ${String(maxDays)} day(s)`;
+  return undefined;
+}
+
+function validateMultiselect(
+  model: ModelOf<'multiselect'>,
+  value: unknown,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (!Array.isArray(value)) {
+    ctx.errors[path] = 'must be an array';
+    return;
+  }
+  const allowed = new Set(model.options.map((option) => option.value));
+  for (const item of value) {
+    if (!allowed.has(item)) {
+      ctx.errors[path] = 'must be one of the allowed values';
+      return;
+    }
+  }
+}
+
+/**
+ * The JSON-Schema value/length/items bounds the client mirrors from the server (bug 4):
+ * `minLength`/`maxLength`/`pattern` on a string, `minimum`/`maximum` on a number,
+ * `minItems`/`maxItems` on an array. Applied only when the kind check found no type
+ * error. A `pattern` that cannot compile surfaces as a loud field error, never a silent
+ * skip — the server validates every send's schema, so a well-formed form never hits it.
+ */
+function applyBounds(schema: JsonSchema, value: unknown, path: string, ctx: ValidateCtx): void {
+  if (typeof value === 'string') applyStringBounds(schema, value, path, ctx);
+  else if (typeof value === 'number') applyNumberBounds(schema, value, path, ctx);
+  else if (Array.isArray(value)) applyArrayBounds(schema, value, path, ctx);
+}
+
+function applyStringBounds(
+  schema: JsonSchema,
+  value: string,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  const length = Array.from(value).length;
+  if (typeof schema.minLength === 'number' && length < schema.minLength) {
+    ctx.errors[path] = `must be at least ${String(schema.minLength)} character(s)`;
+    return;
+  }
+  if (typeof schema.maxLength === 'number' && length > schema.maxLength) {
+    ctx.errors[path] = `must be at most ${String(schema.maxLength)} character(s)`;
+    return;
+  }
+  if (typeof schema.pattern !== 'string' || schema.pattern === '') return;
+  let pattern: RegExp;
+  try {
+    pattern = new RegExp(schema.pattern);
+  } catch {
+    ctx.errors[path] = 'has an invalid pattern constraint';
+    return;
+  }
+  if (!pattern.test(value)) ctx.errors[path] = 'must match the required pattern';
+}
+
+function applyNumberBounds(
+  schema: JsonSchema,
+  value: number,
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (typeof schema.minimum === 'number' && value < schema.minimum) {
+    ctx.errors[path] = `must be at least ${String(schema.minimum)}`;
+    return;
+  }
+  if (typeof schema.maximum === 'number' && value > schema.maximum) {
+    ctx.errors[path] = `must be at most ${String(schema.maximum)}`;
+  }
+}
+
+function applyArrayBounds(
+  schema: JsonSchema,
+  value: readonly unknown[],
+  path: string,
+  ctx: ValidateCtx,
+): void {
+  if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
+    ctx.errors[path] = `must have at least ${String(schema.minItems)} item(s)`;
+    return;
+  }
+  if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
+    ctx.errors[path] = `must have at most ${String(schema.maxItems)} item(s)`;
   }
 }
 
@@ -228,7 +392,13 @@ function walk(schema: JsonSchema, value: unknown, path: string, ctx: ValidateCtx
     return;
   }
 
-  const { model } = classified;
+  dispatchKind(classified.model, value, path, ctx);
+  // The value/length/items bounds (bug 4) mirror the server and apply only when the kind
+  // check found no type error for this field — a bound on a wrong-typed value is noise.
+  if (ctx.errors[path] === undefined) applyBounds(classified.schema, value, path, ctx);
+}
+
+function dispatchKind(model: FieldModel, value: unknown, path: string, ctx: ValidateCtx): void {
   switch (model.kind) {
     case 'json':
       validateJson(model, value, path, ctx);
@@ -250,6 +420,9 @@ function walk(schema: JsonSchema, value: unknown, path: string, ctx: ValidateCtx
       return;
     case 'array':
       validateArray(model, value, path, ctx);
+      return;
+    case 'multiselect':
+      validateMultiselect(model, value, path, ctx);
       return;
     case 'object':
       validateObject(model, value, path, ctx);

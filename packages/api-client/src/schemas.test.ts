@@ -290,12 +290,66 @@ describe('form per-send data schemas — applied by the form preview', () => {
       { title: 'Extras', fields: ['notes'] },
     ]);
     expect(pages).toHaveLength(2);
-    expect(pages[0]).toEqual({ title: 'Basics', fields: ['date', 'count'] });
+    // `display` and `kind` are additive: an older {title, fields} page parses with the
+    // empty-display, input-kind defaults.
+    expect(pages[0]).toEqual({
+      title: 'Basics',
+      fields: ['date', 'count'],
+      display: [],
+      kind: 'input',
+    });
+  });
+
+  it('formPage carries ordered display blocks and a review kind', () => {
+    const page = schemas.formPage.parse({
+      title: 'Review',
+      fields: [],
+      kind: 'review',
+      display: [
+        { kind: 'heading', text: 'Summary' },
+        { kind: 'image', src: 'https://example.test/a.png', alt: 'A' },
+        { kind: 'body', slot: 'total' },
+      ],
+    });
+    expect(page.kind).toBe('review');
+    expect(page.display).toHaveLength(3);
+    expect(page.display[0]).toMatchObject({ kind: 'heading', text: 'Summary' });
   });
 
   it('formPage rejects a missing title or non-string fields', () => {
     expect(() => schemas.formPage.parse({ fields: ['date'] })).toThrow();
     expect(() => schemas.formPage.parse({ title: 'Basics', fields: [7] })).toThrow();
+  });
+
+  it('formReactions defaults every member so a partial declaration parses', () => {
+    expect(schemas.formReactions.parse({})).toEqual({
+      field_changed: [],
+      page_advanced: [],
+      submitted: false,
+      choices: [],
+    });
+    const parsed = schemas.formReactions.parse({ field_changed: ['plan'], submitted: true });
+    expect(parsed.field_changed).toEqual(['plan']);
+    expect(parsed.submitted).toBe(true);
+  });
+
+  it('formUpdate defaults each part so a reaction may return only one of them', () => {
+    expect(schemas.formUpdate.parse({})).toEqual({
+      values: {},
+      options: {},
+      errors: {},
+      display: {},
+    });
+    const parsed = schemas.formUpdate.parse({
+      values: { seats: 3 },
+      options: { plan: [{ value: 'pro' }] },
+      errors: { note: 'nope' },
+      display: { total: '$30' },
+    });
+    expect(parsed.values).toEqual({ seats: 3 });
+    expect(parsed.options.plan?.[0]).toMatchObject({ value: 'pro' });
+    expect(parsed.errors.note).toBe('nope');
+    expect(parsed.display.total).toBe('$30');
   });
 });
 

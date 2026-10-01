@@ -2751,6 +2751,15 @@ export function createApiClient(config: ApiConfig): {
         interaction_id: string;
         status: string;
     }>;
+    readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
+        values: Record<string, unknown>;
+        options: Record<string, {
+            value: string;
+            label?: string | null | undefined;
+        }[]>;
+        errors: Record<string, string>;
+        display: Record<string, unknown>;
+    }>;
     readonly cancelInteraction: (interactionId: string) => Promise<{
         interaction_id: string;
         status: string;
@@ -4530,6 +4539,32 @@ const disconnectResult: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type DisplayBlock = z.infer<typeof displayBlock>;
+
+// @public
+const displayBlock: z.ZodObject<{
+    kind: z.ZodEnum<{
+        image: "image";
+        heading: "heading";
+        body: "body";
+    }>;
+    text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type DisplayBlockKind = z.infer<typeof displayBlockKind>;
+
+// @public
+const displayBlockKind: z.ZodEnum<{
+    image: "image";
+    heading: "heading";
+    body: "body";
+}>;
+
+// @public (undocumented)
 const editApiKeyResult: z.ZodObject<{
     user_id: z.ZodString;
     updated: z.ZodBoolean;
@@ -4841,7 +4876,31 @@ export type FormPage = z.infer<typeof formPage>;
 const formPage: z.ZodObject<{
     title: z.ZodString;
     fields: z.ZodArray<z.ZodString>;
+    display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        kind: z.ZodEnum<{
+            image: "image";
+            heading: "heading";
+            body: "body";
+        }>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    kind: z.ZodDefault<z.ZodEnum<{
+        input: "input";
+        review: "review";
+    }>>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+export type FormPageKind = z.infer<typeof formPageKind>;
+
+// @public
+const formPageKind: z.ZodEnum<{
+    input: "input";
+    review: "review";
+}>;
 
 // @public (undocumented)
 export type FormPages = z.infer<typeof formPages>;
@@ -4850,7 +4909,47 @@ export type FormPages = z.infer<typeof formPages>;
 const formPages: z.ZodArray<z.ZodObject<{
     title: z.ZodString;
     fields: z.ZodArray<z.ZodString>;
+    display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        kind: z.ZodEnum<{
+            image: "image";
+            heading: "heading";
+            body: "body";
+        }>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    kind: z.ZodDefault<z.ZodEnum<{
+        input: "input";
+        review: "review";
+    }>>;
 }, z.core.$strip>>;
+
+// @public (undocumented)
+export type FormReactions = z.infer<typeof formReactions>;
+
+// @public
+const formReactions: z.ZodObject<{
+    field_changed: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    page_advanced: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    submitted: z.ZodDefault<z.ZodBoolean>;
+    choices: z.ZodDefault<z.ZodArray<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type FormUpdate = z.infer<typeof formUpdate>;
+
+// @public
+const formUpdate: z.ZodObject<{
+    values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        value: z.ZodString;
+        label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>>;
+    errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+    display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type GrantLevel = z.infer<typeof grantLevel>;
@@ -7101,6 +7200,30 @@ const providerView: z.ZodObject<{
 // @public
 const publicRoutes: z.ZodArray<z.ZodString>;
 
+// @public (undocumented)
+export type ReactionEvent = z.infer<typeof reactionEvent>;
+
+// @public (undocumented)
+const reactionEvent: z.ZodObject<{
+    kind: z.ZodEnum<{
+        field_changed: "field_changed";
+        page_advanced: "page_advanced";
+        submitted: "submitted";
+    }>;
+    field: z.ZodOptional<z.ZodString>;
+    page: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type ReactionEventKind = z.infer<typeof reactionEventKind>;
+
+// @public
+const reactionEventKind: z.ZodEnum<{
+    field_changed: "field_changed";
+    page_advanced: "page_advanced";
+    submitted: "submitted";
+}>;
+
 // @public
 export function readSseFrames(response: Response, signal?: AbortSignal): AsyncGenerator<SseFrame>;
 
@@ -7726,10 +7849,24 @@ declare namespace s {
         FormOption,
         formData,
         FormData_2 as FormData,
+        displayBlockKind,
+        DisplayBlockKind,
+        displayBlock,
+        DisplayBlock,
+        formPageKind,
+        FormPageKind,
         formPage,
         FormPage,
         formPages,
         FormPages,
+        formReactions,
+        FormReactions,
+        formUpdate,
+        FormUpdate,
+        reactionEventKind,
+        ReactionEventKind,
+        reactionEvent,
+        ReactionEvent,
         interaction,
         Interaction,
         interactionAnswered,
@@ -8281,10 +8418,24 @@ declare namespace schemas {
         FormOption,
         formData,
         FormData_2 as FormData,
+        displayBlockKind,
+        DisplayBlockKind,
+        displayBlock,
+        DisplayBlock,
+        formPageKind,
+        FormPageKind,
         formPage,
         FormPage,
         formPages,
         FormPages,
+        formReactions,
+        FormReactions,
+        formUpdate,
+        FormUpdate,
+        reactionEventKind,
+        ReactionEventKind,
+        reactionEvent,
+        ReactionEvent,
         interaction,
         Interaction,
         interactionAnswered,

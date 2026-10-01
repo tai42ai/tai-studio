@@ -421,6 +421,7 @@ export {
   // as plain string inputs and stays free of the jq subgraph — the editor, its
   // worker, and its wasm — entirely.
   ExpressionFieldContext,
+  isFieldVisible,
   RecordEntryRendererContext,
   resolveRef,
   SchemaForm,

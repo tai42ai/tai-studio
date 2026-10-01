@@ -7,7 +7,7 @@
  * kind (a free-form JSON textarea) — a field is never silently dropped, and a
  * shapeless one is edited as the JSON it is rather than dead-ending on a badge.
  */
-import type { ClassifiedField, UnionVariant } from './field-model';
+import type { ClassifiedField, DateConstraints, UnionVariant } from './field-model';
 import {
   type EnumOption,
   isNullSchema,
@@ -185,6 +185,35 @@ function classifyAllOf(
   );
 }
 
+/**
+ * The platform date constraints on a `date`/`date-time` string property (scope C), or
+ * `undefined` for a plain or non-date string. Each key is read defensively (the schema is
+ * permissive); a date property with no constraint key classifies with `date: undefined`
+ * so it renders exactly as before.
+ */
+function dateConstraints(resolved: JsonSchema): DateConstraints | undefined {
+  if (resolved.format !== 'date' && resolved.format !== 'date-time') return undefined;
+  const min = typeof resolved.minDate === 'string' ? resolved.minDate : undefined;
+  const max = typeof resolved.maxDate === 'string' ? resolved.maxDate : undefined;
+  const unavailable = Array.isArray(resolved.unavailableDates)
+    ? resolved.unavailableDates.filter((day): day is string => typeof day === 'string')
+    : [];
+  const rangeStart = typeof resolved.rangeStart === 'string' ? resolved.rangeStart : undefined;
+  const minDays = typeof resolved.minDays === 'number' ? resolved.minDays : undefined;
+  const maxDays = typeof resolved.maxDays === 'number' ? resolved.maxDays : undefined;
+  if (
+    min === undefined &&
+    max === undefined &&
+    unavailable.length === 0 &&
+    rangeStart === undefined &&
+    minDays === undefined &&
+    maxDays === undefined
+  ) {
+    return undefined;
+  }
+  return { min, max, unavailable, rangeStart, minDays, maxDays };
+}
+
 function classifyString(
   resolved: JsonSchema,
   title: string | undefined,
@@ -197,6 +226,7 @@ function classifyString(
       format: resolved.format,
       media: mediaUpload(resolved),
       expression: expressionAnnotation(resolved),
+      date: dateConstraints(resolved),
     },
     nullable,
     schema: resolved,
@@ -207,6 +237,7 @@ function classifyString(
 
 function classifyArray(
   resolved: JsonSchema,
+  root: JsonSchema,
   title: string | undefined,
   description: string | undefined,
   nullable: boolean,
@@ -222,6 +253,23 @@ function classifyArray(
       description,
       nullable,
     );
+  }
+  // An array whose items are a FIXED set of strings (an `enum` on the items, or a
+  // per-send option list that set one) is a multi-select: a checkbox group over a known
+  // option set (scope E). An array of free strings keeps the add/remove `array` field.
+  const items = resolveRef(resolved.items, root);
+  const itemTypes = typeList(items);
+  const isStringItems = itemTypes.length === 1 && itemTypes[0] === 'string';
+  const enumValues = items.enum;
+  if (isStringItems && enumValues !== undefined && enumValues.length > 0) {
+    const options = enumValues.map((value) => ({ value, label: scalarLabel(value) }));
+    return {
+      model: { kind: 'multiselect', options },
+      nullable,
+      schema: resolved,
+      title,
+      description,
+    };
   }
   return {
     model: { kind: 'array', items: resolved.items },
@@ -281,6 +329,7 @@ function classifyObject(
 // editor; no type, several types, or an unrecognized one lands on the JSON fallback.
 function classifyByType(
   resolved: JsonSchema,
+  root: JsonSchema,
   title: string | undefined,
   description: string | undefined,
 ): ClassifiedField {
@@ -342,7 +391,7 @@ function classifyByType(
         description,
       };
     case 'array':
-      return classifyArray(resolved, title, description, nullableByType);
+      return classifyArray(resolved, root, title, description, nullableByType);
     case 'object':
       return classifyObject(resolved, title, description, nullableByType);
     default:
@@ -372,5 +421,5 @@ export function classifySchema(raw: JsonSchema, root: JsonSchema): ClassifiedFie
   const members = unionMembers(resolved);
   if (members !== undefined) return classifyUnion(resolved, members, root, title, description);
   if (resolved.allOf !== undefined) return classifyAllOf(resolved, root, title, description);
-  return classifyByType(resolved, title, description);
+  return classifyByType(resolved, root, title, description);
 }

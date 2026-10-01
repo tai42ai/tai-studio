@@ -13,7 +13,9 @@ import { ArrayField } from './array-field';
 import { classifySchema } from './classify';
 import { EnumField } from './enum-field';
 import { FieldGroup } from './field-group';
+import type { FieldModel } from './field-model';
 import { JsonField } from './json-field';
+import { MultiSelectField } from './multiselect-field';
 import { ObjectFields } from './object-fields';
 import { RecordField } from './record-field';
 import { scalarLabel } from './resolve';
@@ -58,8 +60,41 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
   const base = labelText(classified.title, props.label);
   const heading = props.markRequired === true && required ? `${base} *` : base;
   const { model, description } = classified;
-  const error = errors?.[path];
+  return renderField({
+    model,
+    nullable: classified.nullable,
+    heading,
+    description,
+    error: errors?.[path],
+    root,
+    value,
+    onChange,
+    path,
+    required,
+    errors,
+    idPrefix,
+  });
+}
 
+/** The props the per-kind renderer needs, computed once by {@link FieldNodeImpl}. */
+interface RenderFieldArgs {
+  readonly model: FieldModel;
+  readonly nullable: boolean;
+  readonly heading: string;
+  readonly description: string | undefined;
+  readonly error: string | undefined;
+  readonly root: JsonSchema;
+  readonly value: unknown;
+  readonly onChange: (value: unknown) => void;
+  readonly path: string;
+  readonly required: boolean;
+  readonly errors: SchemaFormErrors | undefined;
+  readonly idPrefix: string;
+}
+
+/** Render the field component matching the classified model kind. */
+function renderField(args: RenderFieldArgs): ReactNode {
+  const { model, nullable, heading, description, error, value, onChange, path, required } = args;
   switch (model.kind) {
     case 'json':
       return (
@@ -68,7 +103,7 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
           description={description}
           error={error}
           jsonType={model.jsonType}
-          nullable={classified.nullable}
+          nullable={nullable}
           value={value}
           onChange={onChange}
         />
@@ -102,6 +137,7 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
           format={model.format}
           media={model.media}
           expression={model.expression}
+          date={model.date}
           argName={path}
           value={value}
           required={required}
@@ -129,6 +165,29 @@ function FieldNodeImpl(props: FieldNodeProps): ReactNode {
           onChange={onChange}
         />
       );
+    case 'multiselect':
+      return (
+        <MultiSelectField
+          heading={heading}
+          description={description}
+          error={error}
+          model={model}
+          value={value}
+          onChange={onChange}
+        />
+      );
+    default:
+      return renderCompositeField(args, model);
+  }
+}
+
+/** The composite (recursing) field kinds: array, object, record, and union. */
+function renderCompositeField(
+  args: RenderFieldArgs,
+  model: Extract<FieldModel, { kind: 'array' | 'object' | 'record' | 'union' }>,
+): ReactNode {
+  const { heading, description, error, root, value, onChange, path, errors, idPrefix } = args;
+  switch (model.kind) {
     case 'array':
       return (
         <ArrayField

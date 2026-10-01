@@ -180,3 +180,153 @@ describe('validateAgainstSchema — media byte cap', () => {
     ).toEqual({});
   });
 });
+
+describe('validateAgainstSchema — value/length/items bounds (parity with the server)', () => {
+  it('enforces minLength and maxLength on a string', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { name: { type: 'string', minLength: 2, maxLength: 4 } },
+    };
+    expect(validateAgainstSchema(schema, { name: 'a' }).name).toMatch(/at least 2/);
+    expect(validateAgainstSchema(schema, { name: 'abcde' }).name).toMatch(/at most 4/);
+    expect(validateAgainstSchema(schema, { name: 'abc' })).toEqual({});
+  });
+
+  it('enforces a string pattern, and surfaces an uncompilable pattern loudly', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', pattern: '^[A-Z]{3}$' } },
+    };
+    expect(validateAgainstSchema(schema, { code: 'abc' }).code).toMatch(/pattern/);
+    expect(validateAgainstSchema(schema, { code: 'ABC' })).toEqual({});
+
+    const broken: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', pattern: '(' } },
+    };
+    expect(validateAgainstSchema(broken, { code: 'x' }).code).toMatch(/invalid pattern/);
+  });
+
+  it('enforces minimum and maximum on a number', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { count: { type: 'integer', minimum: 1, maximum: 3 } },
+    };
+    expect(validateAgainstSchema(schema, { count: 0 }).count).toMatch(/at least 1/);
+    expect(validateAgainstSchema(schema, { count: 4 }).count).toMatch(/at most 3/);
+    expect(validateAgainstSchema(schema, { count: 2 })).toEqual({});
+  });
+
+  it('enforces minItems and maxItems on an array', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { tags: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 2 } },
+    };
+    expect(validateAgainstSchema(schema, { tags: [] }).tags).toMatch(/at least 1/);
+    expect(validateAgainstSchema(schema, { tags: ['a', 'b', 'c'] }).tags).toMatch(/at most 2/);
+    expect(validateAgainstSchema(schema, { tags: ['a'] })).toEqual({});
+  });
+
+  it('does not stack a bound error on a wrong-typed value', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { count: { type: 'integer', minimum: 1 } },
+      required: ['count'],
+    };
+    expect(validateAgainstSchema(schema, { count: 'nope' }).count).toMatch(/integer/);
+  });
+});
+
+describe('validateAgainstSchema — date constraints (scope C)', () => {
+  const dateSchema = (extra: Partial<JsonSchema>): JsonSchema => ({
+    type: 'object',
+    properties: { day: { type: 'string', format: 'date', ...extra } },
+  });
+
+  it('enforces inclusive minDate and maxDate bounds', () => {
+    const schema = dateSchema({ minDate: '2026-01-10', maxDate: '2026-01-20' });
+    expect(validateAgainstSchema(schema, { day: '2026-01-09' }).day).toMatch(/on or after/);
+    expect(validateAgainstSchema(schema, { day: '2026-01-21' }).day).toMatch(/on or before/);
+    expect(validateAgainstSchema(schema, { day: '2026-01-10' })).toEqual({});
+    expect(validateAgainstSchema(schema, { day: '2026-01-20' })).toEqual({});
+  });
+
+  it('rejects an unavailable day', () => {
+    const schema = dateSchema({ unavailableDates: ['2026-01-15'] });
+    expect(validateAgainstSchema(schema, { day: '2026-01-15' }).day).toMatch(/not an available/);
+    expect(validateAgainstSchema(schema, { day: '2026-01-16' })).toEqual({});
+  });
+
+  it('enforces a range as two date fields: ordering and inclusive span on the end field', () => {
+    // The range is two ordinary date strings; the end field names its start field and
+    // carries the span. Nothing is recombined — the facet reads the two plain values.
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        start: { type: 'string', format: 'date' },
+        end: { type: 'string', format: 'date', rangeStart: 'start', minDays: 2, maxDays: 5 },
+      },
+    };
+    // end before start
+    expect(validateAgainstSchema(schema, { start: '2026-01-10', end: '2026-01-09' }).end).toMatch(
+      /on or after the start/,
+    );
+    // span too short (same day = 1 day, below minDays 2)
+    expect(validateAgainstSchema(schema, { start: '2026-01-10', end: '2026-01-10' }).end).toMatch(
+      /at least 2 day/,
+    );
+    // span too long (10..16 inclusive = 7 days, above maxDays 5)
+    expect(validateAgainstSchema(schema, { start: '2026-01-10', end: '2026-01-16' }).end).toMatch(
+      /at most 5 day/,
+    );
+    // in-range (10..13 inclusive = 4 days)
+    expect(validateAgainstSchema(schema, { start: '2026-01-10', end: '2026-01-13' })).toEqual({});
+  });
+});
+
+describe('validateAgainstSchema — multi-select (scope E)', () => {
+  const multi: JsonSchema = {
+    type: 'object',
+    properties: {
+      tags: { type: 'array', items: { type: 'string', enum: ['a', 'b', 'c'] }, minItems: 1 },
+    },
+  };
+
+  it('accepts a selection drawn from the option set', () => {
+    expect(validateAgainstSchema(multi, { tags: ['a', 'c'] })).toEqual({});
+  });
+
+  it('rejects a value outside the option set', () => {
+    expect(validateAgainstSchema(multi, { tags: ['a', 'z'] }).tags).toMatch(/allowed values/);
+  });
+
+  it('applies minItems to the selection', () => {
+    expect(validateAgainstSchema(multi, { tags: [] }).tags).toMatch(/at least 1/);
+  });
+});
+
+describe('validateAgainstSchema — conditional fields (scope B)', () => {
+  const schema: JsonSchema = {
+    type: 'object',
+    properties: {
+      hasPet: { type: 'boolean' },
+      // Required, but only when hasPet is true; hidden otherwise.
+      petName: { type: 'string', minLength: 2, visibleWhen: { field: 'hasPet', equals: true } },
+    },
+    required: ['petName'],
+  };
+
+  it('does not require or validate a field hidden by its predicate', () => {
+    // hasPet false → petName hidden → not required, and a stale value is not validated.
+    expect(validateAgainstSchema(schema, { hasPet: false })).toEqual({});
+    expect(validateAgainstSchema(schema, { hasPet: false, petName: 'x' })).toEqual({});
+  });
+
+  it('requires and validates the field when its predicate holds', () => {
+    expect(validateAgainstSchema(schema, { hasPet: true }).petName).toMatch(/required/);
+    expect(validateAgainstSchema(schema, { hasPet: true, petName: 'x' }).petName).toMatch(
+      /at least 2/,
+    );
+    expect(validateAgainstSchema(schema, { hasPet: true, petName: 'Rex' })).toEqual({});
+  });
+});

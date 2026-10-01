@@ -11,7 +11,9 @@ import { RadioGroup } from '../components/radio-group';
 import { Select } from '../components/select';
 import type { FieldModel } from './field-model';
 
-const RADIO_MAX_OPTIONS = 3;
+// The documented radio-vs-select threshold, shared across channels: a choice of this many
+// options or fewer draws as a radio group, a longer one as a select.
+const RADIO_MAX_OPTIONS = 5;
 
 export function EnumField({
   heading,

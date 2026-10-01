@@ -77,6 +77,36 @@ describe('interactions client transport', () => {
     expect(out).toEqual({ interaction_id: 'q 1', status: 'answered' });
   });
 
+  it('reactInteraction POSTs { event, values } to the id-encoded react route and parses the update', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { values: { seats: 3 }, display: { total: '$30' } } }),
+    );
+    const out = await client.reactInteraction(
+      'q 1',
+      { kind: 'field_changed', field: 'plan' },
+      { plan: 'pro' },
+    );
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/interactions/q%201/react');
+    expect(captured[0]?.body).toEqual({
+      event: { kind: 'field_changed', field: 'plan' },
+      values: { plan: 'pro' },
+    });
+    // The update parses with the empty defaults for the parts the reaction did not return.
+    expect(out).toEqual({
+      values: { seats: 3 },
+      options: {},
+      errors: {},
+      display: { total: '$30' },
+    });
+  });
+
+  it('reactInteraction rejects an unsafe interaction id before any request', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: {} }));
+    expect(() => client.reactInteraction('..', { kind: 'submitted' }, {})).toThrow();
+    expect(captured).toHaveLength(0);
+  });
+
   it('maps a 409 (already answered elsewhere) to ApiConflictError with the server message', async () => {
     const { client } = harness(() => jsonResponse({ error: 'interaction already answered' }, 409));
     const err = await client.answerInteraction('q1', 'yes').catch((e: unknown) => e);

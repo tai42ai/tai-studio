@@ -9,8 +9,9 @@
  * `data.values`; a `format: date` field as the browser's native date control
  * (`<input type="date">`, prefilled with the `YYYY-MM-DD` value); a re-optioned field
  * (`choice`) as a CHOICE of the send's values rather than a free control; the "Options
- * for this send" value→label mapping; and the "Pages" outline. Abstract fixtures only.
- * The shot pair is captured in both themes, by tokens, for visual review.
+ * for this send" value→label mapping; and the two pages as REAL navigable steps (a
+ * "Step N of M" status with Back/Next, only the current step's fields shown). Abstract
+ * fixtures only. The shot pair is captured in both themes, by tokens, for visual review.
  */
 import { mkdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -118,7 +119,7 @@ async function stubInbox(page: Page): Promise<void> {
 
 test.use({ viewport: VIEWPORT });
 
-test('the form preview shows prefilled values, the per-send options, and the pages outline', async ({
+test('the form preview shows prefilled values, the per-send options, and navigable stepped pages', async ({
   page,
 }) => {
   await stubInbox(page);
@@ -131,14 +132,20 @@ test('the form preview shows prefilled values, the per-send options, and the pag
   const card = page.getByTestId('interaction-card').filter({ hasText: 'Fill in the details' });
   await expect(card).toBeVisible();
 
-  // Block 1 — prefilled values: the schema controls are filled from `data.values`. The
-  // `format: date` field renders the browser's native date control, prefilled with the
-  // ISO `YYYY-MM-DD` value it posts unchanged.
+  // The form renders as a REAL stepper: a "Step N of M — Title" status and Back/Next
+  // navigation, showing only the current page's fields. The first step is "Basics".
+  const stepStatus = card.getByTestId('form-step-status');
+  await expect(stepStatus).toContainText('Step 1 of 2 — Basics');
+
+  // Block 1 — prefilled values on the Basics step: the schema controls are filled from
+  // `data.values`. The `format: date` field renders the browser's native date control,
+  // prefilled with the ISO `YYYY-MM-DD` value it posts unchanged.
   const startsOn = card.getByLabel('starts_on');
   await expect(startsOn).toHaveAttribute('type', 'date');
   await expect(startsOn).toHaveValue('2026-08-05');
   await expect(card.getByLabel('count')).toHaveValue('3');
-  await expect(card.getByLabel('notes')).toHaveValue('a note');
+  // `notes` belongs to the second page, so the stepper does not show it on step one.
+  await expect(card.getByLabel('notes')).toHaveCount(0);
 
   // Block 2 — the re-optioned `choice`: a choice of the send's values (two options render
   // as radios; SchemaForm falls back to a select above three), never a free text input
@@ -154,13 +161,13 @@ test('the form preview shows prefilled values, the per-send options, and the pag
   await expect(options).toContainText('choice');
   await expect(options).toContainText('Option A (a), Option B (b)');
 
-  // Block 4 — "Pages": the step outline, each title over the fields it groups.
-  const pages = card.getByTestId('form-pages');
-  await expect(pages).toContainText('Pages');
-  await expect(pages).toContainText('Basics');
-  await expect(pages).toContainText('— starts_on, choice, count');
-  await expect(pages).toContainText('Extras');
-  await expect(pages).toContainText('— notes');
+  // Block 4 — the pages are REAL navigable steps: advancing to "Extras" reveals its only
+  // field, `notes`, prefilled from `data.values`; stepping Back returns to "Basics".
+  await card.getByRole('button', { name: 'Next' }).click();
+  await expect(stepStatus).toContainText('Step 2 of 2 — Extras');
+  await expect(card.getByLabel('notes')).toHaveValue('a note');
+  await card.getByRole('button', { name: 'Back' }).click();
+  await expect(stepStatus).toContainText('Step 1 of 2 — Basics');
 
   // The shot pair, in both themes (the SPA resolves `data-theme` from the OS
   // preference). Each frame is a GENUINE themed first paint: the light one from the

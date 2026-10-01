@@ -114,6 +114,7 @@ function seedValue(schema: JsonSchema, root: JsonSchema, mintScalars: boolean): 
     case 'object':
       return seedObject(model, root, mintScalars);
     case 'array':
+    case 'multiselect':
       return [];
     case 'record':
       return {};

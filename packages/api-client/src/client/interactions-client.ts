@@ -19,6 +19,18 @@ export function interactionsClient(t: Transport) {
         method: 'POST',
         body: { answer },
       }),
+    // React to a still-open form while it is being filled: the in-app, authenticated
+    // sibling of the answer door (`POST /api/interactions/{id}/react`). It carries the
+    // event that fired (a field changed / a page advanced / the form submitted) and the
+    // partial `values` filled so far, and returns a form update to apply. It is STATELESS
+    // on the server — it records no answer and resolves no interaction — so it never
+    // substitutes for the answer door. A handler error/timeout surfaces as the shared
+    // `apiRequest` status handling (loud), never a stale value.
+    reactInteraction: (interactionId: string, event: s.ReactionEvent, values: unknown) =>
+      req(`/api/interactions/${encodeSegment(interactionId)}/react`, s.formUpdate, {
+        method: 'POST',
+        body: { event, values },
+      }),
     // Withdraw a pending ask WITHOUT answering it (a bodyless POST): the question is
     // resolved as cancelled and the flow that asked never resumes. Terminal like an
     // answer, so the loud failure mappings mirror it — a 409 (already answered, so no

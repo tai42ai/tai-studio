@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { FieldNode } from './field-node';
 import { useKeyedCallbacks } from './keyed-callbacks';
 import type { JsonSchema, SchemaFormErrors } from './types';
+import { isFieldVisible } from './visibility';
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -49,6 +50,9 @@ export function ObjectFields({
     <>
       {properties.map(([name, propSchema]) => {
         if (skip !== undefined && name === skip) return null;
+        // A field hidden by its `visibleWhen` predicate (scope B) is not rendered; the
+        // validator skips it in step, so a hidden field is neither shown nor required.
+        if (!isFieldVisible(propSchema, obj)) return null;
         const childPath = path === '' ? name : `${path}.${name}`;
         return (
           <FieldNode

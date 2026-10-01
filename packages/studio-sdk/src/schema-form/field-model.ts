@@ -28,6 +28,24 @@ export interface MediaUpload {
   readonly maxBytes: number | undefined;
 }
 
+/**
+ * The platform date constraints classified off a `date`/`date-time` string property
+ * (scope C). `min`/`max` are inclusive `YYYY-MM-DD` bounds (passed to the native date
+ * control and enforced by the validator); `unavailable` is the set of excluded days
+ * (the native control cannot disable arbitrary days, so this is validator-enforced).
+ * A date RANGE is two ordinary date fields: on the END field, `rangeStart` names its
+ * start field and `minDays`/`maxDays` bound the inclusive span. Absent members leave
+ * that aspect unconstrained.
+ */
+export interface DateConstraints {
+  readonly min: string | undefined;
+  readonly max: string | undefined;
+  readonly unavailable: readonly string[];
+  readonly rangeStart: string | undefined;
+  readonly minDays: number | undefined;
+  readonly maxDays: number | undefined;
+}
+
 /** One top-level key of the expression's input document, with a one-line gloss. */
 export interface ExpressionAnnotationKey {
   readonly name: string;
@@ -106,10 +124,21 @@ export type FieldModel =
       /** Present when a well-formed `x-tai42-expression` annotation opts the
        *  field into the jq expression editor (see {@link ExpressionAnnotation}). */
       readonly expression: ExpressionAnnotation | undefined;
+      /** Present on a `date`/`date-time` string carrying any platform date
+       *  constraint (bounds, unavailable days, or range pairing — scope C). */
+      readonly date: DateConstraints | undefined;
     }
   | { readonly kind: 'number'; readonly integer: boolean }
   | { readonly kind: 'boolean' }
   | { readonly kind: 'array'; readonly items: JsonSchema }
+  | {
+      // An array of a FIXED set of strings (its `items` carry an `enum`, or a per-send
+      // option list set one): a multi-select control (a checkbox group), one checkbox per
+      // option, value a `string[]`. An array of free strings stays the add/remove
+      // `array` field — a multi-select needs a known option set to draw.
+      readonly kind: 'multiselect';
+      readonly options: readonly EnumOption[];
+    }
   | {
       readonly kind: 'object';
       readonly properties: readonly (readonly [string, JsonSchema])[];

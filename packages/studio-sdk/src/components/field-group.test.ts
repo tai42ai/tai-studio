@@ -306,6 +306,8 @@ const EXPRESSION_CHILD_SITES: Readonly<Record<string, string>> = {
     'The Field wraps the tool ToolSelect (a grouped or flat Select) only when the caller passes a visible label; that inner Select claims the control id, so no marker is needed.',
   'packages/studio-sdk/src/schema-form/string-field.tsx':
     'CompletionInput or TextInput, both of which claim the control id — no marker needed.',
+  'packages/studio-sdk/src/schema-form/multiselect-field.tsx':
+    'A Checkbox per option (a checkbox group); the Field is marked group, so it claims no control id and each Checkbox names itself from its own label.',
 };
 
 /**

@@ -74,6 +74,9 @@ interface ExpressionInputVariable {
 }
 
 // @public
+export function isFieldVisible(schema: JsonSchema, values: Record<string, unknown>): boolean;
+
+// @public
 export interface JsonSchema {
     // (undocumented)
     readonly $defs?: Readonly<Record<string, JsonSchema>>;
@@ -109,11 +112,18 @@ export interface JsonSchema {
     // (undocumented)
     readonly items?: JsonSchema;
     // (undocumented)
+    readonly maxDate?: string;
+    // (undocumented)
+    readonly maxDays?: number;
+    // (undocumented)
     readonly maximum?: number;
     // (undocumented)
     readonly maxItems?: number;
     // (undocumented)
     readonly maxLength?: number;
+    readonly minDate?: string;
+    // (undocumented)
+    readonly minDays?: number;
     // (undocumented)
     readonly minimum?: number;
     // (undocumented)
@@ -123,13 +133,20 @@ export interface JsonSchema {
     // (undocumented)
     readonly oneOf?: readonly JsonSchema[];
     // (undocumented)
+    readonly pattern?: string;
+    // (undocumented)
     readonly properties?: Readonly<Record<string, JsonSchema>>;
+    // (undocumented)
+    readonly rangeStart?: string;
     // (undocumented)
     readonly required?: readonly string[];
     // (undocumented)
     readonly title?: string;
     // (undocumented)
     readonly type?: JsonSchemaType | readonly JsonSchemaType[];
+    // (undocumented)
+    readonly unavailableDates?: readonly string[];
+    readonly visibleWhen?: VisibleWhen;
 }
 
 // @public
@@ -210,6 +227,18 @@ export function validateAgainstSchema(schema: JsonSchema, value: unknown, option
 // @public
 interface ValidateOptions {
     readonly maxUploadBytes?: number;
+}
+
+// @public
+interface VisibleWhen {
+    // (undocumented)
+    readonly equals?: unknown;
+    // (undocumented)
+    readonly field: string;
+    // (undocumented)
+    readonly in?: readonly unknown[];
+    // (undocumented)
+    readonly notEmpty?: boolean;
 }
 
 // (No @packageDocumentation comment for this package)

@@ -46,3 +46,4 @@ export type { SecretRef, SecretRefFieldProps } from './SecretRefField';
 export { SecretRefField } from './SecretRefField';
 export type { Discriminator, JsonSchema, JsonSchemaType, SchemaFormErrors } from './types';
 export { validateAgainstSchema } from './validate';
+export { isFieldVisible } from './visibility';
