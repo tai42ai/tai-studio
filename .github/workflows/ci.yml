@@ -350,6 +350,19 @@ jobs:
       - name: Compare the e2e and docs-demo boot manifests through the contract model
         run: uv run --python 3.13 --with pytest --with tai42-contract --with pyyaml pytest e2e/test_manifest_parity.py
 
+  # Fail when a first-party scoped npm dependency is a full major behind its latest
+  # published release (smaller steps stay quiet — the update bot owns them). The check
+  # is one shared composite action; a fork points the ref at its own copy.
+  first-party-npm-majors:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Gate first-party scoped npm majors
+        uses: tai42ai/tai42/.github/actions/first-party-npm-majors@195aa0c35bddf6ee5729e541e9e13e0ec61f2fb1
+
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
   # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
