@@ -1493,6 +1493,15 @@ readonly answerInteraction: (interactionId: string, answer: unknown) => Promise<
 interaction_id: string;
 status: string;
 }>;
+readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
+values: Record<string, unknown>;
+options: Record<string, {
+value: string;
+label?: string | null | undefined;
+}[]>;
+errors: Record<string, string>;
+display: Record<string, unknown>;
+}>;
 readonly cancelInteraction: (interactionId: string) => Promise<{
 interaction_id: string;
 status: string;
@@ -6078,6 +6087,15 @@ function createApiClient(config: ApiConfig): {
         interaction_id: string;
         status: string;
     }>;
+    readonly reactInteraction: (interactionId: string, event: ReactionEvent, values: unknown) => Promise<{
+        values: Record<string, unknown>;
+        options: Record<string, {
+            value: string;
+            label?: string | null | undefined;
+        }[]>;
+        errors: Record<string, string>;
+        display: Record<string, unknown>;
+    }>;
     readonly cancelInteraction: (interactionId: string) => Promise<{
         interaction_id: string;
         status: string;
@@ -7945,6 +7963,32 @@ export interface Discriminator {
     readonly propertyName: string;
 }
 
+// @public (undocumented)
+type DisplayBlock = z.infer<typeof displayBlock>;
+
+// @public
+const displayBlock: z.ZodObject<{
+    kind: z.ZodEnum<{
+        image: "image";
+        heading: "heading";
+        body: "body";
+    }>;
+    text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type DisplayBlockKind = z.infer<typeof displayBlockKind>;
+
+// @public
+const displayBlockKind: z.ZodEnum<{
+    image: "image";
+    heading: "heading";
+    body: "body";
+}>;
+
 // @public
 export function downloadBlob(blob: Blob, filename: string): void;
 
@@ -8744,7 +8788,31 @@ type FormPage = z.infer<typeof formPage>;
 const formPage: z.ZodObject<{
     title: z.ZodString;
     fields: z.ZodArray<z.ZodString>;
+    display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        kind: z.ZodEnum<{
+            image: "image";
+            heading: "heading";
+            body: "body";
+        }>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    kind: z.ZodDefault<z.ZodEnum<{
+        input: "input";
+        review: "review";
+    }>>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+type FormPageKind = z.infer<typeof formPageKind>;
+
+// @public
+const formPageKind: z.ZodEnum<{
+    input: "input";
+    review: "review";
+}>;
 
 // @public (undocumented)
 type FormPages = z.infer<typeof formPages>;
@@ -8753,7 +8821,47 @@ type FormPages = z.infer<typeof formPages>;
 const formPages: z.ZodArray<z.ZodObject<{
     title: z.ZodString;
     fields: z.ZodArray<z.ZodString>;
+    display: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        kind: z.ZodEnum<{
+            image: "image";
+            heading: "heading";
+            body: "body";
+        }>;
+        text: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        src: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        alt: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        slot: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>;
+    kind: z.ZodDefault<z.ZodEnum<{
+        input: "input";
+        review: "review";
+    }>>;
 }, z.core.$strip>>;
+
+// @public (undocumented)
+type FormReactions = z.infer<typeof formReactions>;
+
+// @public
+const formReactions: z.ZodObject<{
+    field_changed: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    page_advanced: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    submitted: z.ZodDefault<z.ZodBoolean>;
+    choices: z.ZodDefault<z.ZodArray<z.ZodString>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type FormUpdate = z.infer<typeof formUpdate>;
+
+// @public
+const formUpdate: z.ZodObject<{
+    values: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
+        value: z.ZodString;
+        label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>>>>;
+    errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+    display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strip>;
 
 // @public
 export function generateTemplateCall(ref: string, rows: readonly MappingRow[]): string;
@@ -9272,6 +9380,9 @@ export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
 export function isFeatureDisabled(error: unknown): boolean;
 
 // @public
+export function isFieldVisible(schema: JsonSchema, values: Record<string, unknown>): boolean;
+
+// @public
 export function isFullProjection(projection: MeProjection): boolean;
 
 // @public
@@ -9350,11 +9461,18 @@ export interface JsonSchema {
     // (undocumented)
     readonly items?: JsonSchema;
     // (undocumented)
+    readonly maxDate?: string;
+    // (undocumented)
+    readonly maxDays?: number;
+    // (undocumented)
     readonly maximum?: number;
     // (undocumented)
     readonly maxItems?: number;
     // (undocumented)
     readonly maxLength?: number;
+    readonly minDate?: string;
+    // (undocumented)
+    readonly minDays?: number;
     // (undocumented)
     readonly minimum?: number;
     // (undocumented)
@@ -9364,13 +9482,20 @@ export interface JsonSchema {
     // (undocumented)
     readonly oneOf?: readonly JsonSchema[];
     // (undocumented)
+    readonly pattern?: string;
+    // (undocumented)
     readonly properties?: Readonly<Record<string, JsonSchema>>;
+    // (undocumented)
+    readonly rangeStart?: string;
     // (undocumented)
     readonly required?: readonly string[];
     // (undocumented)
     readonly title?: string;
     // (undocumented)
     readonly type?: JsonSchemaType | readonly JsonSchemaType[];
+    // (undocumented)
+    readonly unavailableDates?: readonly string[];
+    readonly visibleWhen?: VisibleWhen;
 }
 
 // @public
@@ -11611,6 +11736,30 @@ export interface RadioOption {
 }
 
 // @public (undocumented)
+type ReactionEvent = z.infer<typeof reactionEvent>;
+
+// @public (undocumented)
+const reactionEvent: z.ZodObject<{
+    kind: z.ZodEnum<{
+        field_changed: "field_changed";
+        page_advanced: "page_advanced";
+        submitted: "submitted";
+    }>;
+    field: z.ZodOptional<z.ZodString>;
+    page: z.ZodOptional<z.ZodString>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type ReactionEventKind = z.infer<typeof reactionEventKind>;
+
+// @public
+const reactionEventKind: z.ZodEnum<{
+    field_changed: "field_changed";
+    page_advanced: "page_advanced";
+    submitted: "submitted";
+}>;
+
+// @public (undocumented)
 const reconnectResult: z.ZodObject<{
     flow_id: z.ZodString;
     authorize_url: z.ZodString;
@@ -12403,10 +12552,24 @@ declare namespace s {
         FormOption,
         formData,
         FormData_2 as FormData,
+        displayBlockKind,
+        DisplayBlockKind,
+        displayBlock,
+        DisplayBlock,
+        formPageKind,
+        FormPageKind,
         formPage,
         FormPage,
         formPages,
         FormPages,
+        formReactions,
+        FormReactions,
+        formUpdate,
+        FormUpdate,
+        reactionEventKind,
+        ReactionEventKind,
+        reactionEvent,
+        ReactionEvent,
         interaction,
         Interaction,
         interactionAnswered,
@@ -15434,6 +15597,18 @@ export interface ViewToggleProps {
     readonly onValueChange: (mode: ViewMode) => void;
     // (undocumented)
     readonly value: ViewMode;
+}
+
+// @public
+interface VisibleWhen {
+    // (undocumented)
+    readonly equals?: unknown;
+    // (undocumented)
+    readonly field: string;
+    // (undocumented)
+    readonly in?: readonly unknown[];
+    // (undocumented)
+    readonly notEmpty?: boolean;
 }
 
 // @public (undocumented)

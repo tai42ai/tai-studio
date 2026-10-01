@@ -110,7 +110,8 @@ describe('SchemaForm — primitives', () => {
       properties: {
         notes: { type: 'string', title: 'Notes' },
         count: { type: 'integer', title: 'Count' },
-        size: { enum: ['xs', 's', 'm', 'l'], title: 'Size' },
+        // More than the radio threshold, so it draws as a Select (the control under test).
+        size: { enum: ['xs', 's', 'm', 'l', 'xl', 'xxl'], title: 'Size' },
       },
     };
     render(<Harness schema={schema} initial={{}} />);
@@ -196,14 +197,35 @@ describe('SchemaForm — enum', () => {
   it('renders a large enum as a Select', async () => {
     const user = userEvent.setup();
     const schema: JsonSchema = {
+      // More than the radio threshold (5) of options, so the enum draws as a Select.
       type: 'object',
-      properties: { size: { enum: ['xs', 's', 'm', 'l'], title: 'Size' } },
+      properties: { size: { enum: ['xs', 's', 'm', 'l', 'xl', 'xxl'], title: 'Size' } },
       required: ['size'],
     };
     render(<Harness schema={schema} initial={{}} />);
     await user.click(screen.getByRole('combobox', { name: 'Size' }));
     await user.click(await screen.findByRole('option', { name: 'l' }));
     expect(emitted()).toBe('{"size":"l"}');
+  });
+
+  it('renders an enum at the radio threshold as radios, and above it as a Select', async () => {
+    // The documented boundary (5): five options still draw as radios, six as a Select.
+    const five: JsonSchema = {
+      type: 'object',
+      properties: { pick: { enum: ['a', 'b', 'c', 'd', 'e'], title: 'Pick' } },
+    };
+    const { unmount } = render(<Harness schema={five} initial={{}} />);
+    expect(screen.getAllByRole('radio')).toHaveLength(5);
+    expect(screen.queryByRole('combobox', { name: 'Pick' })).not.toBeInTheDocument();
+    unmount();
+
+    const six: JsonSchema = {
+      type: 'object',
+      properties: { pick: { enum: ['a', 'b', 'c', 'd', 'e', 'f'], title: 'Pick' } },
+    };
+    render(<Harness schema={six} initial={{}} />);
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Pick' })).toBeInTheDocument();
   });
 });
 
@@ -1554,5 +1576,89 @@ describe('SchemaForm — design system', () => {
     const described = ids.map((id) => document.getElementById(id)?.textContent);
     expect(described).toEqual(['Who is asking', 'User is incomplete']);
     expect(group).toHaveAccessibleDescription('Who is asking User is incomplete');
+  });
+});
+
+describe('SchemaForm — date constraints (scope C)', () => {
+  it('passes minDate/maxDate to the native date control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        day: {
+          type: 'string',
+          format: 'date',
+          title: 'Day',
+          minDate: '2026-01-10',
+          maxDate: '2026-01-20',
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Day');
+    expect(input).toHaveAttribute('type', 'date');
+    expect(input).toHaveAttribute('min', '2026-01-10');
+    expect(input).toHaveAttribute('max', '2026-01-20');
+  });
+});
+
+describe('SchemaForm — multi-select (scope E)', () => {
+  it('renders an array of a fixed string set as a checkbox group and emits the selection', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        tags: {
+          type: 'array',
+          items: { type: 'string', enum: ['red', 'green', 'blue'] },
+          title: 'Tags',
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{ tags: [] }} />);
+    // A checkbox per option — not the add/remove array control.
+    expect(screen.getByRole('checkbox', { name: 'red' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add item' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'green' }));
+    await user.click(screen.getByRole('checkbox', { name: 'red' }));
+    // The selection reads in the options' declared order, not click order.
+    expect(emitted()).toBe('{"tags":["red","green"]}');
+
+    await user.click(screen.getByRole('checkbox', { name: 'red' }));
+    expect(emitted()).toBe('{"tags":["green"]}');
+  });
+
+  it('keeps an array of free strings as the add/remove control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { notes: { type: 'array', items: { type: 'string' }, title: 'Notes' } },
+    };
+    render(<Harness schema={schema} initial={{ notes: [] }} />);
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeInTheDocument();
+  });
+});
+
+describe('SchemaForm — conditional fields (scope B)', () => {
+  it('shows and hides a field as its predicate flips on the current values', async () => {
+    const user = userEvent.setup();
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        hasPet: { type: 'boolean', title: 'Has pet' },
+        petName: {
+          type: 'string',
+          title: 'Pet name',
+          visibleWhen: { field: 'hasPet', equals: true },
+        },
+      },
+    };
+    render(<Harness schema={schema} initial={{ hasPet: false }} />);
+    expect(screen.queryByRole('textbox', { name: 'Pet name' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Has pet' }));
+    expect(screen.getByRole('textbox', { name: 'Pet name' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Has pet' }));
+    expect(screen.queryByRole('textbox', { name: 'Pet name' })).not.toBeInTheDocument();
   });
 });

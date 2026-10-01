@@ -60,7 +60,46 @@ export interface JsonSchema {
   readonly maxLength?: number;
   readonly minItems?: number;
   readonly maxItems?: number;
+  readonly pattern?: string;
+  /**
+   * Platform date-constraint keys on a `string`/`date` (or `date-time`) property. They
+   * are NOT the JSON-Schema numeric keywords (which are inert on a string): `minDate`/
+   * `maxDate` are inclusive `YYYY-MM-DD` bounds, `unavailableDates` is a list of
+   * `YYYY-MM-DD` days to exclude. A date RANGE is TWO ordinary date fields: the END field
+   * names its start field with `rangeStart` and carries the inclusive span in
+   * `minDays`/`maxDays`; nothing is recombined. All optional; absent = an unconstrained
+   * date. The native control enforces what it can (min/max) and the validator enforces the
+   * rest, mirroring the server.
+   */
+  readonly minDate?: string;
+  readonly maxDate?: string;
+  readonly unavailableDates?: readonly string[];
+  readonly rangeStart?: string;
+  readonly minDays?: number;
+  readonly maxDays?: number;
+  /**
+   * A declarative visibility predicate on a property: the field shows only when the
+   * predicate holds against the current form values. Static form description evaluated by
+   * the renderer (never a consumer reaction); a hidden field is not rendered and not
+   * validated. Absent = always visible. See {@link VisibleWhen}.
+   */
+  readonly visibleWhen?: VisibleWhen;
   readonly [key: string]: unknown;
+}
+
+/**
+ * A field-visibility predicate ({@link JsonSchema.visibleWhen}): the field is visible
+ * only when the referenced sibling `field` satisfies exactly one operator — `equals` a
+ * value, `in` a list of values, or `notEmpty` (a non-blank scalar / a non-empty array).
+ * A malformed predicate (none or several operators) degrades to VISIBLE: the send-time
+ * server validation rejects a malformed predicate loudly, so one never reaches a well-
+ * formed render, and showing a field is the safe non-hiding default.
+ */
+export interface VisibleWhen {
+  readonly field: string;
+  readonly equals?: unknown;
+  readonly in?: readonly unknown[];
+  readonly notEmpty?: boolean;
 }
 
 /**

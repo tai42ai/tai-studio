@@ -28,7 +28,7 @@ import { Textarea, TextInput } from '../components/inputs';
 import { errorMessage } from '../errors';
 import type { ExpressionFieldComponent, ExpressionInputShape } from './context';
 import { CompletionProviderContext, ExpressionFieldContext } from './context';
-import type { ExpressionAnnotation, MediaUpload } from './field-model';
+import type { DateConstraints, ExpressionAnnotation, MediaUpload } from './field-model';
 import { MediaField } from './media-field';
 import type { CompletionProvider } from './SchemaForm';
 
@@ -39,6 +39,7 @@ export function StringField({
   format,
   media,
   expression,
+  date,
   argName,
   value,
   required,
@@ -50,6 +51,7 @@ export function StringField({
   format: string | undefined;
   media: MediaUpload | undefined;
   expression: ExpressionAnnotation | undefined;
+  date: DateConstraints | undefined;
   argName: string;
   value: unknown;
   required: boolean;
@@ -115,6 +117,11 @@ export function StringField({
       ) : (
         <TextInput
           type={stringInputType(format)}
+          // A native date control enforces its inclusive bounds (scope C); on a
+          // non-date input the browser ignores these, and the validator enforces the
+          // rest (unavailable days, range span) that the control cannot draw.
+          min={date?.min}
+          max={date?.max}
           value={current}
           onChange={(event) => {
             emit(event.target.value);

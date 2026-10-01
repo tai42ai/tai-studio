@@ -91,20 +91,110 @@ export const formData = z.object({
 });
 export type FormData = z.infer<typeof formData>;
 
+/** The kind of an ordered display block a page may carry alongside its input fields. */
+export const displayBlockKind = z.enum(['heading', 'body', 'image']);
+export type DisplayBlockKind = z.infer<typeof displayBlockKind>;
+
+/**
+ * One ordered, display-only block on a form page (never an input): a `heading` or
+ * `body` text block, or an `image`. `text` carries a heading/body's words; `src`/`alt`
+ * carry an image's source and alt text. An optional `slot` names a data key whose value
+ * the block shows in place of static `text` — filled from `format_payload.data` at send
+ * and/or by a reaction's `display` update (so a computed total is a display slot, not a
+ * special case). Every text field is `.nullish()` (absent OR explicit `null` both parse
+ * to absent) so a block that omits a key — or sends an explicit `null` — is not a
+ * whole-page parse failure. Applied per block by the preview (safeParsed via its page),
+ * so a malformed block is a loud notice, never silent.
+ */
+export const displayBlock = z.object({
+  kind: displayBlockKind,
+  text: z.string().nullish(),
+  src: z.string().nullish(),
+  alt: z.string().nullish(),
+  slot: z.string().nullish(),
+});
+export type DisplayBlock = z.infer<typeof displayBlock>;
+
+/** A page's role: an ordinary `input` page (default) or a terminal `review` summary. */
+export const formPageKind = z.enum(['input', 'review']);
+export type FormPageKind = z.infer<typeof formPageKind>;
+
 /**
  * One page of a stepped `form`: a `title` and the ordered top-level property names it
  * groups. `format_payload.pages` is the ordered list of these; absent = one page. The
  * form preview safeParses the list, so a malformed page is a loud notice, never silent.
+ *
+ * `display` is the ordered list of display-only blocks the page shows alongside (or
+ * instead of, for a review page) its input fields; it defaults to empty, so a page that
+ * carries none renders exactly as before. `kind` marks a `review` page — a terminal
+ * summary step that shows the readback of entered values and the confirm/submit footer
+ * and carries no new input fields; it defaults to `input`. Both are additive: an older
+ * payload ({title, fields}) parses unchanged.
  */
 export const formPage = z.object({
   title: z.string(),
   fields: z.array(z.string()),
+  display: z.array(displayBlock).default([]),
+  kind: formPageKind.default('input'),
 });
 export type FormPage = z.infer<typeof formPage>;
 
 /** The `form` pages list (`format_payload.pages`), safeParsed as a whole by the preview. */
 export const formPages = z.array(formPage);
 export type FormPages = z.infer<typeof formPages>;
+
+/**
+ * When a `form` reacts while it is open (`format_payload.reactions`): the plain,
+ * renderer-readable description of WHEN the form calls its reaction handler. Absent ⇒ a
+ * static (non-reacting) form, exactly as before. `field_changed` names the fields whose
+ * change triggers a reaction; `page_advanced` names the pages (by title) whose advance
+ * triggers one; `submitted` is true when the submission is checked by a reaction before
+ * acceptance; `choices` names the fields whose CHOICE LISTS a reaction may replace while
+ * the form is open (for such a field the send-time option list is advisory — the consumer
+ * owns membership at the `submitted` event). Every member defaults to empty/false so a
+ * partial declaration parses; a malformed block is a loud notice via the preview.
+ */
+export const formReactions = z.object({
+  field_changed: z.array(z.string()).default([]),
+  page_advanced: z.array(z.string()).default([]),
+  submitted: z.boolean().default(false),
+  choices: z.array(z.string()).default([]),
+});
+export type FormReactions = z.infer<typeof formReactions>;
+
+/**
+ * The form update a reaction door returns (`POST /api/interactions/{id}/react`): the
+ * same kind of data a form is sent with, applied to the open form. `values` sets field
+ * values; `options` replaces the per-send choice list of option-bearing fields; `errors`
+ * shows per-field messages (keyed by field name); `display` fills display slots (keyed by
+ * slot name) — a computed total among them. Every member defaults to empty, so a reaction
+ * that touches only one of them returns only that one. The door response is safeParsed, so
+ * a malformed update surfaces loudly rather than applying a half-understood change.
+ */
+export const formUpdate = z.object({
+  values: z.record(z.string(), z.unknown()).default({}),
+  options: z.record(z.string(), z.array(formOption)).default({}),
+  errors: z.record(z.string(), z.string()).default({}),
+  display: z.record(z.string(), z.unknown()).default({}),
+});
+export type FormUpdate = z.infer<typeof formUpdate>;
+
+/**
+ * The event a reaction round-trip reports to the door: `kind` is which of the three
+ * declared events fired, `field` names the changed field for a `field_changed` event, and
+ * `page` names the advanced-from page (by title) for a `page_advanced` event. A
+ * `submitted` event carries neither. The body also carries the partial `values` filled so
+ * far (see {@link interactionsClient}'s `reactInteraction`).
+ */
+export const reactionEventKind = z.enum(['field_changed', 'page_advanced', 'submitted']);
+export type ReactionEventKind = z.infer<typeof reactionEventKind>;
+
+export const reactionEvent = z.object({
+  kind: reactionEventKind,
+  field: z.string().optional(),
+  page: z.string().optional(),
+});
+export type ReactionEvent = z.infer<typeof reactionEvent>;
 
 export const interaction = z.object({
   interaction_id: z.string(),

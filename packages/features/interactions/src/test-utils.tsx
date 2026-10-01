@@ -28,6 +28,7 @@ import { vi } from 'vitest';
 // Aliased so the `InteractionsPage` response TYPE (above) is not shadowed by the page
 // component the inbox render helper mounts.
 import { InteractionsPage as InteractionsPageComponent } from './interactions';
+import { InteractionReactionConfigProvider } from './reaction-config';
 
 // -- provider stack ----------------------------------------------------------
 
@@ -208,6 +209,7 @@ export function stubClient(parts: {
   channel: StreamChannel;
   listInteractions?: ApiClient['listInteractions'];
   answerInteraction?: ApiClient['answerInteraction'];
+  reactInteraction?: ApiClient['reactInteraction'];
   cancelInteraction?: ApiClient['cancelInteraction'];
   listChannels?: ApiClient['listChannels'];
   baseUrl?: string;
@@ -219,6 +221,11 @@ export function stubClient(parts: {
     streamInteractions: (_signal?: AbortSignal) => Promise.resolve(parts.channel.iterator),
     listInteractions: parts.listInteractions ?? vi.fn().mockResolvedValue(interactionsPage()),
     answerInteraction: parts.answerInteraction ?? vi.fn().mockResolvedValue(undefined),
+    // The reaction door (a reacting form's on-change round-trip): defaults to an empty,
+    // no-op update so a non-reacting form never needs to script it.
+    reactInteraction:
+      parts.reactInteraction ??
+      vi.fn().mockResolvedValue({ values: {}, options: {}, errors: {}, display: {} }),
     cancelInteraction:
       parts.cancelInteraction ??
       vi.fn().mockResolvedValue({ interaction_id: 'stub', status: 'cancelled' }),
@@ -323,27 +330,41 @@ export function renderInbox(
   answerInteraction?: ApiClient['answerInteraction'],
   projection: MeProjection = fullProjection(),
   baseUrl = '',
+  reactInteraction?: ApiClient['reactInteraction'],
+  reactionEndpoint?: string,
 ): {
   channel: StreamChannel;
   answer: ApiClient['answerInteraction'];
+  react: ApiClient['reactInteraction'];
   container: HTMLElement;
 } {
   const channel = makeChannel();
   const answer = answerInteraction ?? vi.fn().mockResolvedValue(undefined);
+  const react =
+    reactInteraction ??
+    vi.fn().mockResolvedValue({ values: {}, options: {}, errors: {}, display: {} });
   // A populated channel catalog so the delivery-channels chrome renders badges, not
   // its empty-state marketplace anchor — these tests scan the page for the interaction
   // card's own anchor (the empty-state link is covered in ChannelsCard.test.tsx).
   const client = stubClient({
     channel,
     answerInteraction: answer,
+    reactInteraction: react,
     listChannels: vi.fn().mockResolvedValue({ channels: ['telegram'] }),
     baseUrl,
   });
-  const { container } = renderWithProviders(<InteractionsPageComponent search={{}} />, {
-    client,
-    projection,
-  });
-  return { channel, answer, container };
+  // When a host reaction endpoint is given, mount the page beneath the config provider the
+  // serving page would set (the web channel surface); otherwise the inbox default holds.
+  const page =
+    reactionEndpoint === undefined ? (
+      <InteractionsPageComponent search={{}} />
+    ) : (
+      <InteractionReactionConfigProvider value={{ reactionEndpoint }}>
+        <InteractionsPageComponent search={{}} />
+      </InteractionReactionConfigProvider>
+    );
+  const { container } = renderWithProviders(page, { client, projection });
+  return { channel, answer, react, container };
 }
 
 /** An inert markup payload the XSS pins assert is never mounted as a live sink. */

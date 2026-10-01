@@ -8,6 +8,8 @@
 export { ChannelsCard } from './ChannelsCard';
 export { InteractionsPage } from './interactions';
 export { InteractionsBadge } from './InteractionsBadge';
+export type { InteractionReactionConfig } from './reaction-config';
+export { InteractionReactionConfigProvider } from './reaction-config';
 export type { AnswerRendererProps } from './renderers';
 export {
   ConfirmAnswer,
