@@ -52,8 +52,8 @@ export const malformedStyle: CSSProperties = {
   gap: 'var(--tai-space-2)',
 };
 
-// A read-only context block beside the form (the per-send options and the pages
-// outline): a small heading over a muted list, distinct from the answer controls.
+// A read-only context block beside the form (the per-send options): a small
+// heading over a muted list, distinct from the answer controls.
 export const formContextStyle: CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
@@ -74,11 +74,6 @@ export const contextListStyle: CSSProperties = {
   gap: 'var(--tai-space-1)',
   fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text-muted)',
-};
-
-export const pagesListStyle: CSSProperties = {
-  ...contextListStyle,
-  paddingLeft: 'var(--tai-space-5)',
 };
 
 export const optionRowStyle: CSSProperties = {
