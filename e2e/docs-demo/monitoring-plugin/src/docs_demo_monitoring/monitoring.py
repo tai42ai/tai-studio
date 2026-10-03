@@ -12,7 +12,6 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from tai42_contract.app import tai42_app
-from tai42_contract.monitoring import ProjectConfig
 
 from docs_demo_monitoring.reader import DemoReader
 from docs_demo_monitoring.seed import build_seed_traces
@@ -35,10 +34,6 @@ class DemoMonitoring:
     @property
     def reader(self) -> DemoReader:
         return self._reader
-
-    def add_project(self, project: ProjectConfig) -> None:
-        # Single-project backend: no multi-project routing to register.
-        pass
 
 
 @tai42_app.monitoring.register_monitoring

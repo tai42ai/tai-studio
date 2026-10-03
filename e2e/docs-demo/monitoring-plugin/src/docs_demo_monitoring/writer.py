@@ -132,7 +132,7 @@ class DemoWriter:
         name: str,
         kind: SpanKind,
         trace_context: TraceContext | None = None,
-        input: Any = None,
+        input_: Any = None,
         model: str | None = None,
         model_parameters: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
@@ -161,7 +161,7 @@ class DemoWriter:
                 type=_KIND_TO_TYPE.get(kind, "SPAN"),
                 name=name,
                 level=DEFAULT_LEVEL.value,
-                input=input,
+                input=input_,
                 model=model,
                 metadata=metadata,
                 start=now,
@@ -190,7 +190,7 @@ class DemoWriter:
         start: datetime,
         end: datetime,
         trace_context: TraceContext,
-        input: Any = None,
+        input_: Any = None,
         output: Any = None,
         level: MonitoringLevel | None = None,
         status_message: str | None = None,
@@ -221,7 +221,7 @@ class DemoWriter:
                     name=name,
                     level=(level or DEFAULT_LEVEL).value,
                     status_message=status_message,
-                    input=input,
+                    input=input_,
                     output=output,
                     model=model,
                     usage=usage_details,
@@ -239,7 +239,7 @@ class DemoWriter:
         name: str,
         level: MonitoringLevel = DEFAULT_LEVEL,
         trace_context: TraceContext | None = None,
-        input: Any = None,
+        input_: Any = None,
         output: Any = None,
         status_message: str | None = None,
         metadata: dict[str, Any] | None = None,
@@ -260,7 +260,7 @@ class DemoWriter:
                     name=name,
                     level=level.value,
                     status_message=status_message,
-                    input=input,
+                    input=input_,
                     output=output,
                     metadata=metadata,
                     start=now,
@@ -353,12 +353,7 @@ class DemoWriter:
         # callbacks, so it contributes no handlers (documented, not a failure).
         return []
 
-    # --- scoping / suppression --------------------------------------------
-
-    @contextmanager
-    def scope(self, public_key: str) -> Iterator[None]:
-        # Single-project backend: nothing to switch. A no-op success is allowed.
-        yield
+    # --- suppression ------------------------------------------------------
 
     @contextmanager
     def disable(self) -> Iterator[None]:

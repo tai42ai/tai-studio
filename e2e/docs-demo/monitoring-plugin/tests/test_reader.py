@@ -1,9 +1,10 @@
 """Pins the reader aggregation the Studio dashboard depends on.
 
-Seeds the store with a fixed ``now`` and asserts the exact metric-row shape the
-observability support layer reads: summary keys, a per-day trend series with
-``extract_bucket``-compatible dimensions, and a by-model breakdown keyed by
-``providedModelName`` — plus that unsupported dimensions raise loudly.
+Seeds the store with a fixed ``now`` and asserts the exact typed metric-row shape
+the observability support layer reads: the neutral measures off an ungrouped
+summary row, a per-day trend series carrying a ``bucket`` label, and a by-model
+breakdown keyed on the ``MODEL`` dimension — plus the declared capability and that
+an unserved measure or dimension raises loudly.
 """
 
 from __future__ import annotations
@@ -14,8 +15,9 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from tai42_contract.monitoring import (
-    MetricsFilter,
-    MetricsView,
+    Dimension,
+    Measure,
+    MetricsQuery,
     MonitoringLevel,
     MonitoringObservation,
     MonitoringReadNotSupportedError,
@@ -31,7 +33,7 @@ from docs_demo_monitoring.store import TraceStore
 NOW = datetime(2026, 7, 13, 12, 0, 0, tzinfo=UTC)
 FROM = NOW - timedelta(days=30)
 TO = NOW + timedelta(days=1)
-METRICS = ["count", "totalCost", "totalTokens", "latency"]
+MEASURES = [Measure.COUNT, Measure.COST, Measure.TOKENS, Measure.LATENCY]
 
 
 def _reader() -> DemoReader:
@@ -41,93 +43,79 @@ def _reader() -> DemoReader:
     return DemoReader(store)
 
 
+def test_capability_declares_served_measures_and_dimensions() -> None:
+    cap = _reader().metrics_capability()
+    assert cap.measures == {Measure.COUNT, Measure.COST, Measure.TOKENS, Measure.LATENCY}
+    assert cap.dimensions == {Dimension.MODEL}
+
+
 def test_summary_row_shape_and_values() -> None:
     reader = _reader()
     res = asyncio.run(
-        reader.query_metrics(
-            MetricsFilter(view=MetricsView.TRACES, metrics=METRICS, from_timestamp=FROM, to_timestamp=TO)
-        )
+        reader.query_metrics(MetricsQuery(measures=MEASURES, from_timestamp=FROM, to_timestamp=TO))
     )
     assert len(res.rows) == 1
-    m = res.rows[0].metrics
-    assert set(m) == {"count", "totalCost", "totalTokens", "latency"}
-    assert m["count"] == 24
-    assert 0.70 < m["totalCost"] < 0.85
-    assert m["totalTokens"] > 100_000
-    assert m["latency"] > 2000  # ms — mean per-trace wall-clock span
+    row = res.rows[0]
+    assert row.dimensions == {}
+    assert row.bucket is None
+    m = row.measures
+    assert set(m) == {Measure.COUNT, Measure.COST, Measure.TOKENS, Measure.LATENCY}
+    assert m[Measure.COUNT] == 24
+    assert 0.70 < m[Measure.COST] < 0.85
+    assert m[Measure.TOKENS] > 100_000
+    assert m[Measure.LATENCY] > 2000  # ms — mean per-trace wall-clock span
 
 
 def test_day_series_buckets() -> None:
     reader = _reader()
     res = asyncio.run(
         reader.query_metrics(
-            MetricsFilter(
-                view=MetricsView.TRACES,
-                metrics=METRICS,
-                from_timestamp=FROM,
-                to_timestamp=TO,
-                granularity="day",
-            )
+            MetricsQuery(measures=MEASURES, from_timestamp=FROM, to_timestamp=TO, granularity="day")
         )
     )
     # 13 distinct days_ago values in the seed → 13 buckets.
     assert len(res.rows) == 13
     for row in res.rows:
-        bucket = row.dimensions.get("date")
-        # extract_bucket matches the leading \d{4}-\d{2}-\d{2} (observability_support.py).
-        assert isinstance(bucket, str)
-        assert re.match(r"\d{4}-\d{2}-\d{2}", bucket)
+        # The bucket label the observability support layer reads straight off the row.
+        assert isinstance(row.bucket, str)
+        assert re.match(r"\d{4}-\d{2}-\d{2}", row.bucket)
     # Sorted ascending by bucket date.
-    dates = [r.dimensions["date"] for r in res.rows]
-    assert dates == sorted(dates)
+    buckets = [r.bucket for r in res.rows]
+    assert buckets == sorted(buckets)
 
 
 def test_by_model_breakdown() -> None:
     reader = _reader()
     res = asyncio.run(
         reader.query_metrics(
-            MetricsFilter(
-                view=MetricsView.OBSERVATIONS,
-                metrics=METRICS,
+            MetricsQuery(
+                measures=MEASURES,
                 from_timestamp=FROM,
                 to_timestamp=TO,
-                dimensions=["providedModelName"],
+                dimensions=[Dimension.MODEL],
             )
         )
     )
-    by_model = {r.dimensions["providedModelName"]: r.metrics for r in res.rows}
+    by_model = {r.dimensions[Dimension.MODEL]: r.measures for r in res.rows}
     assert set(by_model) == {"claude-sonnet-4-5", "gpt-4o-mini", "llama-3.3-70b"}
-    assert by_model["claude-sonnet-4-5"]["count"] == 12
-    assert by_model["gpt-4o-mini"]["count"] == 7
-    assert by_model["llama-3.3-70b"]["count"] == 5
+    assert by_model["claude-sonnet-4-5"][Measure.COUNT] == 12
+    assert by_model["gpt-4o-mini"][Measure.COUNT] == 7
+    assert by_model["llama-3.3-70b"][Measure.COUNT] == 5
     # claude dominates cost, so it ranks first in the "Cost by model" bars.
-    assert by_model["claude-sonnet-4-5"]["totalCost"] > by_model["gpt-4o-mini"]["totalCost"]
-    assert by_model["claude-sonnet-4-5"]["totalCost"] > by_model["llama-3.3-70b"]["totalCost"]
+    assert by_model["claude-sonnet-4-5"][Measure.COST] > by_model["gpt-4o-mini"][Measure.COST]
+    assert by_model["claude-sonnet-4-5"][Measure.COST] > by_model["llama-3.3-70b"][Measure.COST]
 
 
-def test_unsupported_dimensions_raise() -> None:
+def test_unsupported_granularity_raises() -> None:
+    # A granularity outside the served set is loud, never silently bucketed wrong.
+    # (A measure/dimension outside the capability is unconstructable — the contract's
+    # typed ``MetricsQuery`` rejects a non-enum member before the reader is reached —
+    # so the reader's served-check guards the case where the contract enums grow.)
     reader = _reader()
     with pytest.raises(MonitoringReadNotSupportedError):
         asyncio.run(
             reader.query_metrics(
-                MetricsFilter(
-                    view=MetricsView.OBSERVATIONS,
-                    metrics=METRICS,
-                    from_timestamp=FROM,
-                    to_timestamp=TO,
-                    dimensions=["userId"],
-                )
-            )
-        )
-    with pytest.raises(MonitoringReadNotSupportedError):
-        asyncio.run(
-            reader.query_metrics(
-                MetricsFilter(
-                    view=MetricsView.TRACES,
-                    metrics=["bogus"],
-                    from_timestamp=FROM,
-                    to_timestamp=TO,
-                )
+                MetricsQuery(measures=MEASURES, from_timestamp=FROM, to_timestamp=TO, granularity="month")
             )
         )
 

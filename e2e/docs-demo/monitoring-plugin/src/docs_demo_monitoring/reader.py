@@ -17,10 +17,12 @@ from datetime import datetime
 from typing import Any, Literal
 
 from tai42_contract.monitoring import (
-    MetricsFilter,
+    Dimension,
+    Measure,
+    MetricsCapability,
+    MetricsQuery,
     MetricsResult,
     MetricsRow,
-    MetricsView,
     MonitoringFilter,
     MonitoringLevel,
     MonitoringObservation,
@@ -36,9 +38,10 @@ from tai42_contract.monitoring import (
 
 from docs_demo_monitoring.store import TraceStore
 
-# Measures this reader can compute. A request for anything else is loud, never
-# silently zeroed.
-_SUPPORTED_METRICS = frozenset({"count", "totalCost", "totalTokens", "latency"})
+# The neutral measures this reader can aggregate and the dimensions it can group
+# by. A query for anything outside these raises loudly, never silently zeroed.
+_SUPPORTED_MEASURES = frozenset({Measure.COUNT, Measure.COST, Measure.TOKENS, Measure.LATENCY})
+_SUPPORTED_DIMENSIONS = frozenset({Dimension.MODEL})
 _SUPPORTED_GRANULARITY = frozenset({"hour", "day", "week"})
 
 
@@ -120,27 +123,54 @@ def _obs_duration_ms(obs: MonitoringObservation) -> float:
     return (obs.end - obs.start).total_seconds() * 1000.0
 
 
-def _metrics_row(traces: list[MonitoringTrace], *, bucket: str | None = None) -> MetricsRow:
-    """One aggregated metrics row over a set of traces.
+def _trace_measures(traces: list[MonitoringTrace], measures: list[Measure]) -> dict[Measure, float | None]:
+    """The requested neutral measures aggregated over a set of whole traces (runs).
 
-    Metric keys are the exact names the observability support layer reads on its
-    fast path (``count`` / ``totalCost`` / ``totalTokens`` / ``latency``);
-    ``latency`` is the mean per-trace wall-clock span in MILLISECONDS.
+    ``COUNT`` is the number of runs, ``COST`` / ``TOKENS`` their summed totals, and
+    ``LATENCY`` the mean per-trace wall-clock span in MILLISECONDS.
     """
     count = len(traces)
-    total_cost = sum(t.total_cost or 0.0 for t in traces)
-    total_tokens = sum(_trace_tokens(t) for t in traces)
-    mean_latency_ms = (sum(_trace_latency_ms(t) for t in traces) / count) if count else 0.0
-    dimensions: dict[str, object] = {"date": bucket} if bucket is not None else {}
-    return MetricsRow(
-        dimensions=dimensions,
-        metrics={
-            "count": count,
-            "totalCost": round(total_cost, 6),
-            "totalTokens": total_tokens,
-            "latency": round(mean_latency_ms, 3),
-        },
-    )
+    out: dict[Measure, float | None] = {}
+    for measure in measures:
+        if measure is Measure.COUNT:
+            out[measure] = float(count)
+        elif measure is Measure.COST:
+            out[measure] = round(sum(t.total_cost or 0.0 for t in traces), 6)
+        elif measure is Measure.TOKENS:
+            out[measure] = float(sum(_trace_tokens(t) for t in traces))
+        elif measure is Measure.LATENCY:
+            out[measure] = round(sum(_trace_latency_ms(t) for t in traces) / count, 3) if count else 0.0
+    return out
+
+
+def _obs_measures(
+    observations: list[MonitoringObservation], measures: list[Measure]
+) -> dict[Measure, float | None]:
+    """The requested neutral measures aggregated over a set of generation observations.
+
+    ``COUNT`` is the number of per-model calls, ``COST`` / ``TOKENS`` their summed
+    usage totals, and ``LATENCY`` the mean per-observation duration in MILLISECONDS.
+    """
+    out: dict[Measure, float | None] = {}
+    for measure in measures:
+        if measure is Measure.COUNT:
+            out[measure] = float(len(observations))
+        elif measure is Measure.COST:
+            out[measure] = round(
+                sum(float(o.usage.get("cost") or 0.0) for o in observations if isinstance(o.usage, dict)), 6
+            )
+        elif measure is Measure.TOKENS:
+            out[measure] = float(
+                sum(
+                    int(o.usage.get("input") or 0) + int(o.usage.get("output") or 0)
+                    for o in observations
+                    if isinstance(o.usage, dict)
+                )
+            )
+        elif measure is Measure.LATENCY:
+            durations = [_obs_duration_ms(o) for o in observations]
+            out[measure] = round(sum(durations) / len(durations), 3) if durations else 0.0
+    return out
 
 
 def _bucket_key(ts: datetime, granularity: str) -> str:
@@ -166,73 +196,96 @@ class DemoReader:
 
     # --- metrics -----------------------------------------------------------
 
-    async def query_metrics(self, filter: MetricsFilter) -> MetricsResult:
-        unknown = [m for m in filter.metrics if m not in _SUPPORTED_METRICS]
-        if unknown:
-            raise MonitoringReadNotSupportedError(f"unsupported metrics: {unknown}")
-        # Honor every clause loudly: a metrics-level filters or order_by the reader
-        # cannot apply raises rather than being silently dropped.
-        if filter.filters:
-            raise MonitoringReadNotSupportedError(f"metrics filters are not supported: {filter.filters}")
-        if filter.order_by is not None:
-            raise MonitoringReadNotSupportedError(f"metrics order_by is not supported: {filter.order_by}")
+    def metrics_capability(self) -> MetricsCapability:
+        """Declare the neutral measures and dimensions this backend aggregates / groups by.
 
-        traces = self._traces_in_window(filter.from_timestamp, filter.to_timestamp)
+        The dashboard reads this before any query so a panel the backend cannot serve
+        is reported declared-absent, not swallowed; ``query_metrics`` raises for anything
+        outside this set.
+        """
+        return MetricsCapability(
+            measures=frozenset(_SUPPORTED_MEASURES),
+            dimensions=frozenset(_SUPPORTED_DIMENSIONS),
+        )
 
-        if filter.view == MetricsView.TRACES:
-            if filter.dimensions:
-                raise MonitoringReadNotSupportedError(
-                    f"unsupported trace dimensions: {filter.dimensions}"
-                )
-            if filter.granularity is None:
-                if not traces:
-                    return MetricsResult(rows=[])
-                return MetricsResult(rows=[_metrics_row(traces)])
-            if filter.granularity not in _SUPPORTED_GRANULARITY:
-                raise MonitoringReadNotSupportedError(f"unsupported granularity: {filter.granularity}")
-            buckets: dict[str, list[MonitoringTrace]] = {}
+    async def query_metrics(self, query: MetricsQuery) -> MetricsResult:
+        """Aggregate the requested measures over the query window.
+
+        A measure or dimension outside :meth:`metrics_capability`, or an unsupported
+        granularity, raises ``MonitoringReadNotSupportedError`` rather than returning a
+        silent zero. The model dimension aggregates over generation observations; an
+        ungrouped query aggregates over whole traces (runs).
+        """
+        self._check_served(query)
+        traces = self._traces_in_window(query.from_timestamp, query.to_timestamp)
+        if Dimension.MODEL in query.dimensions:
+            return self._by_model(traces, query)
+        return self._by_time(traces, query)
+
+    @staticmethod
+    def _check_served(query: MetricsQuery) -> None:
+        unknown_measures = [m for m in query.measures if m not in _SUPPORTED_MEASURES]
+        unknown_dimensions = [d for d in query.dimensions if d not in _SUPPORTED_DIMENSIONS]
+        if unknown_measures or unknown_dimensions:
+            raise MonitoringReadNotSupportedError(
+                "docs-demo metrics query cannot serve "
+                f"measures={[m.value for m in unknown_measures]} "
+                f"dimensions={[d.value for d in unknown_dimensions]}"
+            )
+        if query.granularity is not None and query.granularity not in _SUPPORTED_GRANULARITY:
+            raise MonitoringReadNotSupportedError(f"unsupported granularity: {query.granularity}")
+
+    def _by_time(self, traces: list[MonitoringTrace], query: MetricsQuery) -> MetricsResult:
+        """Trace-level aggregation: one ungrouped row, or one row per time bucket."""
+        if query.granularity is None:
+            if not traces:
+                return MetricsResult(rows=[])
+            return MetricsResult(rows=[MetricsRow(measures=_trace_measures(traces, query.measures))])
+        buckets: dict[str, list[MonitoringTrace]] = {}
+        for trace in traces:
+            assert trace.timestamp is not None  # the window filter guarantees it
+            buckets.setdefault(_bucket_key(trace.timestamp, query.granularity), []).append(trace)
+        rows = [
+            MetricsRow(measures=_trace_measures(group, query.measures), bucket=key)
+            for key, group in sorted(buckets.items())
+        ]
+        return MetricsResult(rows=rows)
+
+    def _by_model(self, traces: list[MonitoringTrace], query: MetricsQuery) -> MetricsResult:
+        """Observation-level aggregation grouped by model, optionally time-bucketed.
+
+        Without a granularity each model is one row; with one the rows are per
+        (bucket, model), the bucket taken from each generation's start — an untimed
+        observation cannot be placed in a time bucket and is left out of the bucketed
+        grouping, matching the window's exclusion of untimed records.
+        """
+        if query.granularity is None:
+            groups: dict[str, list[MonitoringObservation]] = {}
             for trace in traces:
-                assert trace.timestamp is not None  # window filter guarantees it
-                buckets.setdefault(_bucket_key(trace.timestamp, filter.granularity), []).append(trace)
-            rows = [_metrics_row(group, bucket=key) for key, group in sorted(buckets.items())]
-            return MetricsResult(rows=rows)
-
-        if filter.view == MetricsView.OBSERVATIONS:
-            if filter.dimensions != ["providedModelName"]:
-                raise MonitoringReadNotSupportedError(
-                    f"unsupported observation dimensions: {filter.dimensions}"
+                for obs in trace.observations:
+                    if obs.model:
+                        groups.setdefault(obs.model, []).append(obs)
+            rows = [
+                MetricsRow(
+                    dimensions={Dimension.MODEL: model},
+                    measures=_obs_measures(observations, query.measures),
                 )
-            return self._by_model(traces)
-
-        raise MonitoringReadNotSupportedError(f"unsupported view: {filter.view}")
-
-    def _by_model(self, traces: list[MonitoringTrace]) -> MetricsResult:
-        groups: dict[str, list[MonitoringObservation]] = {}
+                for model, observations in groups.items()
+            ]
+            return MetricsResult(rows=rows)
+        bucketed: dict[tuple[str, str], list[MonitoringObservation]] = {}
         for trace in traces:
             for obs in trace.observations:
-                if obs.model:
-                    groups.setdefault(obs.model, []).append(obs)
-        rows: list[MetricsRow] = []
-        for model, observations in groups.items():
-            cost = sum(float(o.usage.get("cost") or 0.0) for o in observations if isinstance(o.usage, dict))
-            tokens = sum(
-                int(o.usage.get("input") or 0) + int(o.usage.get("output") or 0)
-                for o in observations
-                if isinstance(o.usage, dict)
+                if obs.model and obs.start is not None:
+                    bucketed.setdefault((_bucket_key(obs.start, query.granularity), obs.model), []).append(obs)
+        rows = [
+            MetricsRow(
+                dimensions={Dimension.MODEL: model},
+                measures=_obs_measures(observations, query.measures),
+                bucket=bucket,
             )
-            durations = [_obs_duration_ms(o) for o in observations]
-            mean_latency = (sum(durations) / len(durations)) if durations else 0.0
-            rows.append(
-                MetricsRow(
-                    dimensions={"providedModelName": model},
-                    metrics={
-                        "count": len(observations),
-                        "totalCost": round(cost, 6),
-                        "totalTokens": tokens,
-                        "latency": round(mean_latency, 3),
-                    },
-                )
-            )
+            for (bucket, model), observations in sorted(bucketed.items())
+        ]
         return MetricsResult(rows=rows)
 
     # --- run list / trace detail ------------------------------------------
@@ -244,7 +297,7 @@ class DemoReader:
         to_timestamp: datetime | None = None,
         limit: int | None = None,
         page: int | None = None,
-        filter: MonitoringFilter | None = None,
+        filter_: MonitoringFilter | None = None,
         order_by: OrderBy | None = None,
     ) -> list[MonitoringTraceSummary]:
         traces = [
@@ -252,8 +305,8 @@ class DemoReader:
             for t in self._store.all_traces()
             if _in_window(t.timestamp, from_timestamp, to_timestamp)
         ]
-        if filter is not None:
-            traces = [t for t in traces if self._trace_matches(t, filter)]
+        if filter_ is not None:
+            traces = [t for t in traces if self._trace_matches(t, filter_)]
         traces = self._sort_traces(traces, order_by)
         if limit is not None:
             start = ((page or 1) - 1) * limit
@@ -273,7 +326,7 @@ class DemoReader:
         *,
         run: str | None = None,
         kind: SpanKind | None = None,
-        filter: MonitoringFilter | None = None,
+        filter_: MonitoringFilter | None = None,
         order_by: OrderBy | None = None,
     ) -> list[SpanWindowItem]:
         # The tool/node-granularity unit for this backend is the generation
@@ -286,7 +339,7 @@ class DemoReader:
         for trace in self._store.all_traces():
             if run is not None and trace.id != run:
                 continue
-            if filter is not None and not self._trace_matches(trace, filter):
+            if filter_ is not None and not self._trace_matches(trace, filter_):
                 continue
             for obs in trace.observations:
                 if obs.type != "GENERATION" or obs.start is None:

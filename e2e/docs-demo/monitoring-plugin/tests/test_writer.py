@@ -139,8 +139,6 @@ def test_lifecycle_and_propagation_shims_are_inert_not_broken() -> None:
     assert writer.inject_context(TraceContext()) == {}
     writer.flush()
     writer.shutdown()
-    with writer.scope("some-key"):
-        pass
 
 
 def test_trace_attributes_accepts_platform_run_attribution_call_shape() -> None:
