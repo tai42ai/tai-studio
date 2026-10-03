@@ -153,10 +153,10 @@ type AnswerFormat = z.infer<typeof answerFormat>;
 // @public (undocumented)
 const answerFormat: z.ZodEnum<{
     text: "text";
-    external: "external";
     confirm: "confirm";
     select: "select";
     form: "form";
+    external: "external";
 }>;
 
 // @public (undocumented)
@@ -257,7 +257,7 @@ routes?: {
 base: string;
 paths: {
 path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 public: boolean;
 }[];
 } | null | undefined;
@@ -295,8 +295,8 @@ status: "unknown" | "compatible" | "incompatible";
 reason: string | null;
 };
 items: {
-name: string;
 kind: string;
+name: string;
 }[];
 route_mounts: Record<string, string>;
 }[];
@@ -312,26 +312,26 @@ default_base: string;
 routes: {
 path: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 public: boolean;
 }[];
 }[];
 collisions: {
 item: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 conflict_owner: string;
 conflict_path: string;
 }[];
 public_routes: {
 item: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 }[];
 new_public_routes: {
 item: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 }[];
 requires_public_acceptance: boolean;
 required_env: {
@@ -357,7 +357,7 @@ withdrawn_at: string | null;
 routes: {
 item: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 public: boolean;
 }[];
 }>;
@@ -382,7 +382,7 @@ withdrawn_at: string | null;
 routes: {
 item: string;
 full_path: string;
-methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
 public: boolean;
 }[];
 }>;
@@ -438,7 +438,7 @@ id: string;
 traceId: string;
 createdAt: string | null;
 tags: string[];
-status: "error" | "success";
+status: "success" | "error";
 cost: number | null;
 latencyMs: number | null;
 totalTokens: number | null;
@@ -534,7 +534,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -547,7 +547,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -821,8 +821,14 @@ members: {
 id: string;
 email: string;
 role: string;
-disabled: boolean;
 created_at: string;
+principals: {
+user_id: string;
+disabled: boolean;
+}[];
+disabled: boolean;
+handle: string;
+action_keys: string[];
 }[];
 invites: {
 id: string;
@@ -830,7 +836,22 @@ email: string;
 role: string;
 created_at: string;
 expires_at: string;
+handle: string;
+action_keys: string[];
 }[];
+}>;
+readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+actions: {
+key: string;
+label: string;
+scope: "page" | "member_row" | "invite_row";
+destructive: boolean;
+input_schema: Record<string, unknown>;
+result_schema: Record<string, unknown>;
+}[];
+}>;
+readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+result: Record<string, unknown>;
 }>;
 readonly listPrincipals: (signal?: AbortSignal) => Promise<{
 user_id: string;
@@ -993,7 +1014,7 @@ id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 };
 kind: string;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 } | null;
 tool: string;
@@ -1055,16 +1076,9 @@ created_at: string;
 audience?: string | null | undefined;
 media?: unknown[] | null | undefined;
 template?: {
-body_parameters: string[];
-buttons: unknown[];
-header_media: {
-caption: string | null;
-filename: string | null;
-kind: "image" | "link" | "document" | "video" | "audio";
-url: string;
-} | null;
 language: string;
 name: string;
+parameters: Record<string, unknown> | null;
 } | null | undefined;
 options?: string[] | null | undefined;
 }[];
@@ -1132,7 +1146,7 @@ content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 turns_per_hour_override: number | null;
 }[];
@@ -1183,7 +1197,7 @@ content?: string | undefined;
 id?: string | undefined;
 kwargs?: Record<string, unknown> | undefined;
 } | null;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 turns_per_hour_override: number | null;
 };
@@ -1204,7 +1218,7 @@ thread_id: string;
 client_address: string;
 last_activity_at: number;
 message_count: number;
-last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+last_delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 }[];
 }>;
 readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
@@ -1227,7 +1241,7 @@ answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1258,7 +1272,7 @@ answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1329,7 +1343,7 @@ template_jq: string | null;
 }[];
 }[];
 } | null;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 }[];
 total: number;
@@ -1380,12 +1394,12 @@ template_jq: string | null;
 }[];
 }[];
 } | null;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 }>;
 readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
 created: boolean;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 config: {
 greeting_template: string | null;
@@ -1433,13 +1447,13 @@ template_jq: string | null;
 }[];
 }[];
 } | null;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 };
 }>;
 readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
 removed: boolean;
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 }>;
 readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
@@ -1456,7 +1470,7 @@ answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1492,7 +1506,7 @@ items: {
 interaction_id: string;
 group_id: string;
 question: string;
-answer_format: "text" | "external" | "confirm" | "select" | "form";
+answer_format: "external" | "text" | "confirm" | "select" | "form";
 format_payload: Record<string, unknown>;
 created_at: string;
 timeout_at: string;
@@ -1607,7 +1621,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1620,7 +1634,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1643,7 +1657,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1656,7 +1670,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1686,7 +1700,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1699,7 +1713,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1721,7 +1735,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1734,7 +1748,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1761,7 +1775,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1774,7 +1788,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1853,7 +1867,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1866,7 +1880,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1912,7 +1926,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1925,7 +1939,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1944,7 +1958,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -1987,7 +2001,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2000,7 +2014,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2025,7 +2039,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2044,7 +2058,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2057,7 +2071,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2078,7 +2092,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2091,7 +2105,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2112,7 +2126,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2125,7 +2139,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2146,7 +2160,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2159,7 +2173,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2180,7 +2194,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2193,7 +2207,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2208,7 +2222,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2221,7 +2235,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2234,7 +2248,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2290,7 +2304,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2303,7 +2317,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2325,7 +2339,7 @@ pid: number;
 generation: number;
 joined_at: string;
 beat_at: string;
-state: "ready" | "resyncing" | "recycling";
+state: "resyncing" | "recycling" | "ready";
 stale: boolean;
 last_op: {
 op: string;
@@ -2340,7 +2354,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -2517,7 +2531,7 @@ kind?: string;
 } & StatePageQuery, signal?: AbortSignal) => Promise<{
 subjects: {
 subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2531,7 +2545,7 @@ filters: Record<string, unknown>;
 } & StatePageQuery, signal?: AbortSignal) => Promise<{
 matches: {
 subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2543,7 +2557,7 @@ next_cursor: string | null;
 readonly getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) => Promise<{
 state: string;
 subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2551,13 +2565,13 @@ key: string;
 data: Record<string, unknown>;
 seq: number;
 canonical_subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
 };
 folded_from: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2566,7 +2580,7 @@ key: string;
 readonly putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
 state: string;
 subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2574,13 +2588,13 @@ key: string;
 data: Record<string, unknown>;
 seq: number;
 canonical_subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
 };
 folded_from: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2589,7 +2603,7 @@ key: string;
 readonly patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
 state: string;
 subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -2597,13 +2611,13 @@ key: string;
 data: Record<string, unknown>;
 seq: number;
 canonical_subject: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
 };
 folded_from: {
-target_kind: "tool" | "agent";
+target_kind: "agent" | "tool";
 target_name: string;
 kind: string;
 key: string;
@@ -3122,7 +3136,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -3135,7 +3149,7 @@ reachable: boolean;
 local_only: boolean;
 results: {
 name: string;
-outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
 payload: unknown;
 error: string | null;
 detail: string | null;
@@ -3148,7 +3162,7 @@ run_id: string;
 readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "running" | "failed" | "parked" | "succeeded" | "lost";
+status: "running" | "failed" | "succeeded" | "lost" | "parked";
 started_at: string;
 finished_at?: string | undefined;
 result?: unknown;
@@ -3158,7 +3172,7 @@ resumed_interactions?: string[] | undefined;
 readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
 run_id: string;
 tool_name: string;
-status: "running" | "failed" | "parked" | "succeeded" | "lost";
+status: "running" | "failed" | "succeeded" | "lost" | "parked";
 started_at: string;
 finished_at?: string | undefined;
 }[]>;
@@ -3235,8 +3249,8 @@ const attachmentMediaItem: z.ZodObject<{
     kind: z.ZodEnum<{
         image: "image";
         document: "document";
-        video: "video";
         audio: "audio";
+        video: "video";
     }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3250,8 +3264,8 @@ type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
 const attachmentMediaKind: z.ZodEnum<{
     image: "image";
     document: "document";
-    video: "video";
     audio: "audio";
+    video: "video";
 }>;
 
 // @public (undocumented)
@@ -3637,22 +3651,9 @@ type ChannelTemplate = z.infer<typeof channelTemplate>;
 
 // @public (undocumented)
 const channelTemplate: z.ZodObject<{
-    body_parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    buttons: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
-    header_media: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-        caption: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        filename: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        kind: z.ZodEnum<{
-            image: "image";
-            link: "link";
-            document: "document";
-            video: "video";
-            audio: "audio";
-        }>;
-        url: z.ZodString;
-    }, z.core.$strip>, z.ZodNull]>>;
     language: z.ZodString;
     name: z.ZodString;
+    parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -3928,8 +3929,8 @@ type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted>;
 const conversationConfigDeleted: z.ZodObject<{
     removed: z.ZodBoolean;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
 }, z.core.$strip>;
@@ -3986,8 +3987,8 @@ const conversationConfigs: z.ZodObject<{
             }, z.core.$strict>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
     }, z.core.$strip>>;
@@ -4001,8 +4002,8 @@ type ConversationConfigWritten = z.infer<typeof conversationConfigWritten>;
 const conversationConfigWritten: z.ZodObject<{
     created: z.ZodBoolean;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     config: z.ZodObject<{
@@ -4052,8 +4053,8 @@ const conversationConfigWritten: z.ZodObject<{
             }, z.core.$strict>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
     }, z.core.$strip>;
@@ -4064,11 +4065,11 @@ type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
 const conversationDeliveryStatus: z.ZodEnum<{
-    failed: "failed";
     accepted: "accepted";
     pending_delivery: "pending_delivery";
     provisional: "provisional";
     delivered: "delivered";
+    failed: "failed";
     shed: "shed";
     silent: "silent";
     merged: "merged";
@@ -4115,11 +4116,11 @@ const conversationFailedMessages: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4168,11 +4169,11 @@ const conversationMessage: z.ZodObject<{
         operator: "operator";
     }>;
     delivery_status: z.ZodEnum<{
-        failed: "failed";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
+        failed: "failed";
         shed: "shed";
         silent: "silent";
         merged: "merged";
@@ -4225,11 +4226,11 @@ const conversationMessageSearchPage: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4346,8 +4347,8 @@ const conversationRoute: z.ZodObject<{
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodNull]>>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -4410,8 +4411,8 @@ const conversationRouteCreate: z.ZodObject<{
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodNull]>>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -4486,8 +4487,8 @@ const conversationRoutes: z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -4557,8 +4558,8 @@ const conversationRouteWritten: z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -4574,8 +4575,8 @@ type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 // @public
 const conversationTargetKind: z.ZodEnum<{
-    tool: "tool";
     agent: "agent";
+    tool: "tool";
 }>;
 
 // @public (undocumented)
@@ -4588,11 +4589,11 @@ const conversationThread: z.ZodObject<{
     last_activity_at: z.ZodNumber;
     message_count: z.ZodNumber;
     last_delivery_status: z.ZodEnum<{
-        failed: "failed";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
+        failed: "failed";
         shed: "shed";
         silent: "silent";
         merged: "merged";
@@ -4677,11 +4678,11 @@ const conversationThreadsPage: z.ZodObject<{
         last_activity_at: z.ZodNumber;
         message_count: z.ZodNumber;
         last_delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4730,11 +4731,11 @@ const conversationTranscriptPage: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4867,7 +4868,7 @@ function createApiClient(config: ApiConfig): {
                     base: string;
                     paths: {
                         path: string;
-                        methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                        methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
                         public: boolean;
                     }[];
                 } | null | undefined;
@@ -4905,8 +4906,8 @@ function createApiClient(config: ApiConfig): {
                 reason: string | null;
             };
             items: {
-                name: string;
                 kind: string;
+                name: string;
             }[];
             route_mounts: Record<string, string>;
         }[];
@@ -4922,26 +4923,26 @@ function createApiClient(config: ApiConfig): {
             routes: {
                 path: string;
                 full_path: string;
-                methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+                methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
                 public: boolean;
             }[];
         }[];
         collisions: {
             item: string;
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
             conflict_owner: string;
             conflict_path: string;
         }[];
         public_routes: {
             item: string;
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
         }[];
         new_public_routes: {
             item: string;
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
         }[];
         requires_public_acceptance: boolean;
         required_env: {
@@ -4967,7 +4968,7 @@ function createApiClient(config: ApiConfig): {
         routes: {
             item: string;
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
             public: boolean;
         }[];
     }>;
@@ -4992,7 +4993,7 @@ function createApiClient(config: ApiConfig): {
         routes: {
             item: string;
             full_path: string;
-            methods: ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
             public: boolean;
         }[];
     }>;
@@ -5048,7 +5049,7 @@ function createApiClient(config: ApiConfig): {
             traceId: string;
             createdAt: string | null;
             tags: string[];
-            status: "error" | "success";
+            status: "success" | "error";
             cost: number | null;
             latencyMs: number | null;
             totalTokens: number | null;
@@ -5144,7 +5145,7 @@ function createApiClient(config: ApiConfig): {
                 local_only: boolean;
                 results: {
                     name: string;
-                    outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                    outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                     payload: unknown;
                     error: string | null;
                     detail: string | null;
@@ -5157,7 +5158,7 @@ function createApiClient(config: ApiConfig): {
                 local_only: boolean;
                 results: {
                     name: string;
-                    outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                    outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                     payload: unknown;
                     error: string | null;
                     detail: string | null;
@@ -5431,8 +5432,14 @@ function createApiClient(config: ApiConfig): {
             id: string;
             email: string;
             role: string;
-            disabled: boolean;
             created_at: string;
+            principals: {
+                user_id: string;
+                disabled: boolean;
+            }[];
+            disabled: boolean;
+            handle: string;
+            action_keys: string[];
         }[];
         invites: {
             id: string;
@@ -5440,7 +5447,22 @@ function createApiClient(config: ApiConfig): {
             role: string;
             created_at: string;
             expires_at: string;
+            handle: string;
+            action_keys: string[];
         }[];
+    }>;
+    readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+        actions: {
+            key: string;
+            label: string;
+            scope: "page" | "member_row" | "invite_row";
+            destructive: boolean;
+            input_schema: Record<string, unknown>;
+            result_schema: Record<string, unknown>;
+        }[];
+    }>;
+    readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+        result: Record<string, unknown>;
     }>;
     readonly listPrincipals: (signal?: AbortSignal) => Promise<{
         user_id: string;
@@ -5603,7 +5625,7 @@ function createApiClient(config: ApiConfig): {
                     kwargs?: Record<string, unknown> | undefined;
                 };
                 kind: string;
-                target_kind: "tool" | "agent";
+                target_kind: "agent" | "tool";
                 target_name: string;
             } | null;
             tool: string;
@@ -5665,16 +5687,9 @@ function createApiClient(config: ApiConfig): {
             audience?: string | null | undefined;
             media?: unknown[] | null | undefined;
             template?: {
-                body_parameters: string[];
-                buttons: unknown[];
-                header_media: {
-                    caption: string | null;
-                    filename: string | null;
-                    kind: "image" | "link" | "document" | "video" | "audio";
-                    url: string;
-                } | null;
                 language: string;
                 name: string;
+                parameters: Record<string, unknown> | null;
             } | null | undefined;
             options?: string[] | null | undefined;
         }[];
@@ -5742,7 +5757,7 @@ function createApiClient(config: ApiConfig): {
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
             } | null;
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             turns_per_hour_override: number | null;
         }[];
@@ -5793,7 +5808,7 @@ function createApiClient(config: ApiConfig): {
                 id?: string | undefined;
                 kwargs?: Record<string, unknown> | undefined;
             } | null;
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             turns_per_hour_override: number | null;
         };
@@ -5814,7 +5829,7 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             last_activity_at: number;
             message_count: number;
-            last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            last_delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
         }[];
     }>;
     readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
@@ -5837,7 +5852,7 @@ function createApiClient(config: ApiConfig): {
             answer: string | null;
             successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -5868,7 +5883,7 @@ function createApiClient(config: ApiConfig): {
             answer: string | null;
             successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -5939,7 +5954,7 @@ function createApiClient(config: ApiConfig): {
                     }[];
                 }[];
             } | null;
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
         }[];
         total: number;
@@ -5990,12 +6005,12 @@ function createApiClient(config: ApiConfig): {
                 }[];
             }[];
         } | null;
-        target_kind: "tool" | "agent";
+        target_kind: "agent" | "tool";
         target_name: string;
     }>;
     readonly setConversationConfig: (config: TargetConversationConfig) => Promise<{
         created: boolean;
-        target_kind: "tool" | "agent";
+        target_kind: "agent" | "tool";
         target_name: string;
         config: {
             greeting_template: string | null;
@@ -6043,13 +6058,13 @@ function createApiClient(config: ApiConfig): {
                     }[];
                 }[];
             } | null;
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
         };
     }>;
     readonly deleteConversationConfig: (targetKind: ConversationTargetKind, targetName: string) => Promise<{
         removed: boolean;
-        target_kind: "tool" | "agent";
+        target_kind: "agent" | "tool";
         target_name: string;
     }>;
     readonly listFailedConversationMessages: (signal?: AbortSignal) => Promise<{
@@ -6066,7 +6081,7 @@ function createApiClient(config: ApiConfig): {
             answer: string | null;
             successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -6102,7 +6117,7 @@ function createApiClient(config: ApiConfig): {
             interaction_id: string;
             group_id: string;
             question: string;
-            answer_format: "text" | "external" | "confirm" | "select" | "form";
+            answer_format: "external" | "text" | "confirm" | "select" | "form";
             format_payload: Record<string, unknown>;
             created_at: string;
             timeout_at: string;
@@ -6217,7 +6232,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6230,7 +6245,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6253,7 +6268,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6266,7 +6281,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6296,7 +6311,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6309,7 +6324,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6331,7 +6346,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6344,7 +6359,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6371,7 +6386,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6384,7 +6399,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6463,7 +6478,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6476,7 +6491,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6522,7 +6537,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6535,7 +6550,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6554,7 +6569,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -6597,7 +6612,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6610,7 +6625,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6635,7 +6650,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -6654,7 +6669,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6667,7 +6682,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6688,7 +6703,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6701,7 +6716,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6722,7 +6737,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6735,7 +6750,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6756,7 +6771,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6769,7 +6784,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6790,7 +6805,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6803,7 +6818,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6818,7 +6833,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -6831,7 +6846,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -6844,7 +6859,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -6900,7 +6915,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6913,7 +6928,7 @@ function createApiClient(config: ApiConfig): {
             local_only: boolean;
             results: {
                 name: string;
-                outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+                outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
                 payload: unknown;
                 error: string | null;
                 detail: string | null;
@@ -6935,7 +6950,7 @@ function createApiClient(config: ApiConfig): {
             generation: number;
             joined_at: string;
             beat_at: string;
-            state: "ready" | "resyncing" | "recycling";
+            state: "resyncing" | "recycling" | "ready";
             stale: boolean;
             last_op: {
                 op: string;
@@ -6950,7 +6965,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -7127,7 +7142,7 @@ function createApiClient(config: ApiConfig): {
     } & StatePageQuery, signal?: AbortSignal) => Promise<{
         subjects: {
             subject: {
-                target_kind: "tool" | "agent";
+                target_kind: "agent" | "tool";
                 target_name: string;
                 kind: string;
                 key: string;
@@ -7141,7 +7156,7 @@ function createApiClient(config: ApiConfig): {
     } & StatePageQuery, signal?: AbortSignal) => Promise<{
         matches: {
             subject: {
-                target_kind: "tool" | "agent";
+                target_kind: "agent" | "tool";
                 target_name: string;
                 kind: string;
                 key: string;
@@ -7153,7 +7168,7 @@ function createApiClient(config: ApiConfig): {
     readonly getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) => Promise<{
         state: string;
         subject: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
@@ -7161,13 +7176,13 @@ function createApiClient(config: ApiConfig): {
         data: Record<string, unknown>;
         seq: number;
         canonical_subject: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
         };
         folded_from: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
@@ -7176,7 +7191,7 @@ function createApiClient(config: ApiConfig): {
     readonly putStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
         state: string;
         subject: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
@@ -7184,13 +7199,13 @@ function createApiClient(config: ApiConfig): {
         data: Record<string, unknown>;
         seq: number;
         canonical_subject: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
         };
         folded_from: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
@@ -7199,7 +7214,7 @@ function createApiClient(config: ApiConfig): {
     readonly patchStateRecord: (name: string, subject: StateSubjectRef, data: Record<string, unknown>) => Promise<{
         state: string;
         subject: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
@@ -7207,13 +7222,13 @@ function createApiClient(config: ApiConfig): {
         data: Record<string, unknown>;
         seq: number;
         canonical_subject: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
         };
         folded_from: {
-            target_kind: "tool" | "agent";
+            target_kind: "agent" | "tool";
             target_name: string;
             kind: string;
             key: string;
@@ -7732,7 +7747,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -7745,7 +7760,7 @@ function createApiClient(config: ApiConfig): {
         local_only: boolean;
         results: {
             name: string;
-            outcome: "failed" | "applied" | "resyncing" | "recycling" | "stale" | "missing" | "departed" | "timed_out";
+            outcome: "failed" | "applied" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
             payload: unknown;
             error: string | null;
             detail: string | null;
@@ -7758,7 +7773,7 @@ function createApiClient(config: ApiConfig): {
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "running" | "failed" | "parked" | "succeeded" | "lost";
+        status: "running" | "failed" | "succeeded" | "lost" | "parked";
         started_at: string;
         finished_at?: string | undefined;
         result?: unknown;
@@ -7768,7 +7783,7 @@ function createApiClient(config: ApiConfig): {
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
         run_id: string;
         tool_name: string;
-        status: "running" | "failed" | "parked" | "succeeded" | "lost";
+        status: "running" | "failed" | "succeeded" | "lost" | "parked";
         started_at: string;
         finished_at?: string | undefined;
     }[]>;
@@ -9014,8 +9029,8 @@ const hookList: z.ZodObject<{
             }, z.core.$strict>;
             kind: z.ZodString;
             target_kind: z.ZodEnum<{
-                tool: "tool";
                 agent: "agent";
+                tool: "tool";
             }>;
             target_name: z.ZodString;
         }, z.core.$strict>, z.ZodNull]>>;
@@ -9121,8 +9136,8 @@ const hookParams: z.ZodObject<{
         }, z.core.$strict>;
         kind: z.ZodString;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
     }, z.core.$strict>, z.ZodNull]>>;
@@ -9214,8 +9229,8 @@ const hookRegister: z.ZodObject<{
         }, z.core.$strict>;
         kind: z.ZodString;
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
     }, z.core.$strict>, z.ZodNull]>>;
@@ -9251,8 +9266,8 @@ const hookSubject: z.ZodObject<{
     }, z.core.$strict>;
     kind: z.ZodString;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
 }, z.core.$strict>;
@@ -9301,10 +9316,10 @@ const interaction: z.ZodObject<{
     question: z.ZodDefault<z.ZodString>;
     answer_format: z.ZodEnum<{
         text: "text";
-        external: "external";
         confirm: "confirm";
         select: "select";
         form: "form";
+        external: "external";
     }>;
     format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
     created_at: z.ZodString;
@@ -9368,10 +9383,10 @@ const interactionsPage: z.ZodObject<{
         question: z.ZodDefault<z.ZodString>;
         answer_format: z.ZodEnum<{
             text: "text";
-            external: "external";
             confirm: "confirm";
             select: "select";
             form: "form";
+            external: "external";
         }>;
         format_payload: z.ZodPipe<z.ZodOptional<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>, z.ZodTransform<Record<string, unknown>, Record<string, unknown> | null | undefined>>;
         created_at: z.ZodString;
@@ -9406,15 +9421,35 @@ export interface InteractionsStreamState {
 }
 
 // @public (undocumented)
-type InviteEntry = z.infer<typeof inviteEntry>;
+type InviteRow = z.infer<typeof inviteRow>;
 
 // @public
-const inviteEntry: z.ZodObject<{
+const inviteRow: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
     role: z.ZodString;
     created_at: z.ZodString;
     expires_at: z.ZodString;
+    handle: z.ZodString;
+    action_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+interface InvokeMemberActionBody {
+    // (undocumented)
+    readonly action_key: string;
+    // (undocumented)
+    readonly input: Record<string, unknown>;
+    // (undocumented)
+    readonly target_handle: string | null;
+}
+
+// @public (undocumented)
+type InvokeMemberActionResult = z.infer<typeof invokeMemberActionResult>;
+
+// @public
+const invokeMemberActionResult: z.ZodObject<{
+    result: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 }, z.core.$strip>;
 
 // @public
@@ -10569,28 +10604,68 @@ const mediaKind: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
-type MemberEntry = z.infer<typeof memberEntry>;
+type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
 
 // @public
-const memberEntry: z.ZodObject<{
-    id: z.ZodString;
-    email: z.ZodString;
-    role: z.ZodString;
-    disabled: z.ZodBoolean;
-    created_at: z.ZodString;
+const memberActionCatalog: z.ZodObject<{
+    actions: z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        label: z.ZodString;
+        scope: z.ZodEnum<{
+            page: "page";
+            member_row: "member_row";
+            invite_row: "invite_row";
+        }>;
+        destructive: z.ZodBoolean;
+        input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+        result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
-type MemberListing = z.infer<typeof memberListing>;
+type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
 
 // @public
-const memberListing: z.ZodObject<{
+const memberActionDescriptor: z.ZodObject<{
+    key: z.ZodString;
+    label: z.ZodString;
+    scope: z.ZodEnum<{
+        page: "page";
+        member_row: "member_row";
+        invite_row: "invite_row";
+    }>;
+    destructive: z.ZodBoolean;
+    input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberActionScope = z.infer<typeof memberActionScope>;
+
+// @public
+const memberActionScope: z.ZodEnum<{
+    page: "page";
+    member_row: "member_row";
+    invite_row: "invite_row";
+}>;
+
+// @public (undocumented)
+type MemberDirectory = z.infer<typeof memberDirectory>;
+
+// @public
+const memberDirectory: z.ZodObject<{
     members: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         email: z.ZodString;
         role: z.ZodString;
-        disabled: z.ZodBoolean;
         created_at: z.ZodString;
+        principals: z.ZodArray<z.ZodObject<{
+            user_id: z.ZodString;
+            disabled: z.ZodBoolean;
+        }, z.core.$strip>>;
+        disabled: z.ZodBoolean;
+        handle: z.ZodString;
+        action_keys: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>;
     invites: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
@@ -10598,7 +10673,36 @@ const memberListing: z.ZodObject<{
         role: z.ZodString;
         created_at: z.ZodString;
         expires_at: z.ZodString;
+        handle: z.ZodString;
+        action_keys: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
+
+// @public
+const memberPrincipalState: z.ZodObject<{
+    user_id: z.ZodString;
+    disabled: z.ZodBoolean;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberRow = z.infer<typeof memberRow>;
+
+// @public
+const memberRow: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    created_at: z.ZodString;
+    principals: z.ZodArray<z.ZodObject<{
+        user_id: z.ZodString;
+        disabled: z.ZodBoolean;
+    }, z.core.$strip>>;
+    disabled: z.ZodBoolean;
+    handle: z.ZodString;
+    action_keys: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public
@@ -10726,22 +10830,9 @@ const notification: z.ZodObject<{
     audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
     template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        body_parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
-        buttons: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
-        header_media: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-            caption: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-            filename: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-            kind: z.ZodEnum<{
-                image: "image";
-                link: "link";
-                document: "document";
-                video: "video";
-                audio: "audio";
-            }>;
-            url: z.ZodString;
-        }, z.core.$strip>, z.ZodNull]>>;
         language: z.ZodString;
         name: z.ZodString;
+        parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
     }, z.core.$strip>>>;
     options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
     created_at: z.ZodString;
@@ -10762,22 +10853,9 @@ const notifications: z.ZodObject<{
         audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
         template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            body_parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
-            buttons: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
-            header_media: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-                caption: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-                filename: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-                kind: z.ZodEnum<{
-                    image: "image";
-                    link: "link";
-                    document: "document";
-                    video: "video";
-                    audio: "audio";
-                }>;
-                url: z.ZodString;
-            }, z.core.$strip>, z.ZodNull]>>;
             language: z.ZodString;
             name: z.ZodString;
+            parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
         }, z.core.$strip>>>;
         options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         created_at: z.ZodString;
@@ -11876,8 +11954,8 @@ const recordSearchPage: z.ZodObject<{
     matches: z.ZodArray<z.ZodObject<{
         subject: z.ZodObject<{
             target_kind: z.ZodEnum<{
-                tool: "tool";
                 agent: "agent";
+                tool: "tool";
             }>;
             target_name: z.ZodString;
             kind: z.ZodString;
@@ -12738,12 +12816,22 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
-        memberEntry,
-        MemberEntry,
-        inviteEntry,
-        InviteEntry,
-        memberListing,
-        MemberListing,
+        memberActionScope,
+        MemberActionScope,
+        memberPrincipalState,
+        MemberPrincipalState,
+        memberRow,
+        MemberRow,
+        inviteRow,
+        InviteRow,
+        memberDirectory,
+        MemberDirectory,
+        memberActionDescriptor,
+        MemberActionDescriptor,
+        memberActionCatalog,
+        MemberActionCatalog,
+        invokeMemberActionResult,
+        InvokeMemberActionResult,
         notification,
         Notification_2 as Notification,
         notifications,
@@ -13927,8 +14015,8 @@ const stateRecord: z.ZodObject<{
     state: z.ZodString;
     subject: z.ZodObject<{
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         kind: z.ZodString;
@@ -13938,8 +14026,8 @@ const stateRecord: z.ZodObject<{
     seq: z.ZodNumber;
     canonical_subject: z.ZodObject<{
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         kind: z.ZodString;
@@ -13947,8 +14035,8 @@ const stateRecord: z.ZodObject<{
     }, z.core.$strip>;
     folded_from: z.ZodDefault<z.ZodArray<z.ZodObject<{
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         kind: z.ZodString;
@@ -13990,8 +14078,8 @@ type StateSubject = z.infer<typeof stateSubject>;
 // @public
 const stateSubject: z.ZodObject<{
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
     kind: z.ZodString;
@@ -14367,8 +14455,8 @@ const subjectPage: z.ZodObject<{
     subjects: z.ZodArray<z.ZodObject<{
         subject: z.ZodObject<{
             target_kind: z.ZodEnum<{
-                tool: "tool";
                 agent: "agent";
+                tool: "tool";
             }>;
             target_name: z.ZodString;
             kind: z.ZodString;
@@ -14386,8 +14474,8 @@ type SubjectRow = z.infer<typeof subjectRow>;
 const subjectRow: z.ZodObject<{
     subject: z.ZodObject<{
         target_kind: z.ZodEnum<{
-            tool: "tool";
             agent: "agent";
+            tool: "tool";
         }>;
         target_name: z.ZodString;
         kind: z.ZodString;
@@ -14690,8 +14778,8 @@ const targetConversationConfig: z.ZodObject<{
         }, z.core.$strict>>;
     }, z.core.$strict>, z.ZodNull]>>;
     target_kind: z.ZodEnum<{
-        tool: "tool";
         agent: "agent";
+        tool: "tool";
     }>;
     target_name: z.ZodString;
 }, z.core.$strip>;
@@ -15237,9 +15325,9 @@ const toolRunList: z.ZodArray<z.ZodObject<{
     status: z.ZodEnum<{
         running: "running";
         failed: "failed";
-        parked: "parked";
         succeeded: "succeeded";
         lost: "lost";
+        parked: "parked";
     }>;
     started_at: z.ZodString;
     finished_at: z.ZodOptional<z.ZodString>;
@@ -15252,9 +15340,9 @@ const toolRunRecord: z.ZodObject<{
     status: z.ZodEnum<{
         running: "running";
         failed: "failed";
-        parked: "parked";
         succeeded: "succeeded";
         lost: "lost";
+        parked: "parked";
     }>;
     started_at: z.ZodString;
     finished_at: z.ZodOptional<z.ZodString>;

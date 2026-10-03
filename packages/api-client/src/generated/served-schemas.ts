@@ -12,12 +12,6 @@ import { templatedText } from '../templated-text';
 export const hookSubject = z.object({ "key_expr": templatedText, "kind": z.string(), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1) }).strict();
 export type HookSubject = z.infer<typeof hookSubject>;
 
-export const mediaKind = z.enum(["image","link","document","video","audio"]);
-export type MediaKind = z.infer<typeof mediaKind>;
-
-export const mediaItem = z.object({ "caption": z.union([z.string(), z.null()]).default(null), "filename": z.union([z.string(), z.null()]).default(null), "kind": mediaKind, "url": z.string() });
-export type MediaItem = z.infer<typeof mediaItem>;
-
 export const overlapPolicy = z.object({ "deliver": z.enum(["one","all"]).default("one"), "running": z.enum(["continue","cancel"]).default("continue"), "settle_seconds": z.number().int().gte(0).lte(30).default(0) });
 export type OverlapPolicy = z.infer<typeof overlapPolicy>;
 
@@ -26,9 +20,6 @@ export type PresetSeedToolMeta = z.infer<typeof presetSeedToolMeta>;
 
 export const presetSpec = z.object({ "base_tool": z.string(), "description": z.string().default(""), "fixed_kwargs": z.record(z.string(), z.unknown()).default({}), "name": z.string() });
 export type PresetSpec = z.infer<typeof presetSpec>;
-
-export const quickReplyButtonParam = z.object({ "kind": z.literal("quick_reply").default("quick_reply"), "payload": z.string() });
-export type QuickReplyButtonParam = z.infer<typeof quickReplyButtonParam>;
 
 export const stateInjection = z.object({ "into": z.string().min(1), "jq": z.union([templatedText, z.null()]).default(null), "template_jq": z.union([z.string(), z.null()]).default(null) }).strict();
 export type StateInjection = z.infer<typeof stateInjection>;
@@ -54,48 +45,13 @@ export type StateTemplateReconcile = z.infer<typeof stateTemplateReconcile>;
 export const subAgentSpec: z.ZodType = z.lazy(() => z.object({ "description": z.string().default(""), "inline_skills": z.array(z.record(z.string(), z.unknown())).default([]), "name": z.string(), "presets": z.array(presetSpec).default([]), "response_format": z.union([z.unknown(), templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "skills": z.array(z.string()).default([]), "strategy": z.union([z.string(), z.null()]).default(null), "subagents": z.array(subAgentSpec).default([]), "system_prompt": z.union([templatedText, z.null()]).default(null), "tool_names": z.array(z.string()).default([]), "tools": z.array(z.unknown()).default([]) }));
 export type SubAgentSpec = z.infer<typeof subAgentSpec>;
 
-export const urlButtonParam = z.object({ "kind": z.literal("url").default("url"), "url_parameter": z.string() });
-export type UrlButtonParam = z.infer<typeof urlButtonParam>;
-
 export const accessPolicy = z.object({ "condition": z.union([templatedText, z.null()]).default(null), "policy_data": z.record(z.string(), z.unknown()).default({}), "scopes": z.array(z.string()).default([]) });
 export type AccessPolicy = z.infer<typeof accessPolicy>;
 
 export const callbackSchema = z.object({ "carried_kwargs": z.record(z.string(), z.unknown()).default({}), "condition": z.union([templatedText, z.null()]).default(null), "expr": z.union([templatedText, z.null()]).default(null), "tool": z.string().default("") });
 export type CallbackSchema = z.infer<typeof callbackSchema>;
 
-export const channelTemplate = z.object({ "body_parameters": z.array(z.string()).default([]), "buttons": z.array(z.unknown().superRefine((x, ctx) => {
-    const schemas = [quickReplyButtonParam, urlButtonParam];
-    const { errors, failed } = schemas.reduce<{
-      errors: z.core.$ZodIssue[];
-      failed: number;
-    }>(
-      ({ errors, failed }, schema) =>
-        ((result) =>
-          result.error
-            ? {
-                errors: [...errors, ...result.error.issues],
-                failed: failed + 1,
-              }
-            : { errors, failed })(
-          schema.safeParse(x),
-        ),
-      { errors: [], failed: 0 },
-    );
-    const passed = schemas.length - failed;
-    if (passed !== 1) {
-      ctx.addIssue(errors.length ? {
-        path: [],
-        code: "invalid_union",
-        errors: [errors],
-        message: "Invalid input: Should pass single schema. Passed " + passed,
-      } : {
-        path: [],
-        code: "custom",
-        errors: [errors],
-        message: "Invalid input: Should pass single schema. Passed " + passed,
-      });
-    }
-  })).default([]), "header_media": z.union([mediaItem, z.null()]).default(null), "language": z.string(), "name": z.string() });
+export const channelTemplate = z.object({ "language": z.string(), "name": z.string(), "parameters": z.union([z.record(z.string(), z.unknown()), z.null()]).default(null) });
 export type ChannelTemplate = z.infer<typeof channelTemplate>;
 
 export const conversationRoute = z.object({ "callback_secret": z.union([z.string(), z.null()]).default(null), "callback_url": z.union([z.string(), z.null()]).default(null), "cancel_expr": z.union([templatedText, z.null()]).default(null), "channel": z.union([z.string(), z.null()]).default(null), "door": z.enum(["api","channel"]), "error_reply_text": z.union([z.string().min(1).max(2000), z.null()]).default(null), "execution_key": z.string().min(1), "execution_key_fingerprint": z.string().min(1), "extras_expr": z.union([templatedText, z.null()]).default(null), "initial_mode": z.enum(["agent","manual"]).default("agent"), "locale": z.union([z.string(), z.null()]).default(null), "our_identity": z.union([z.string(), z.null()]).default(null), "overlap": overlapPolicy.default({"deliver":"one","running":"continue","settle_seconds":0}), "reply_expr": z.union([templatedText, z.null()]).default(null), "resume_expr": z.union([templatedText, z.null()]).default(null), "route_name": z.string(), "start_expr": z.union([templatedText, z.null()]).default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1), "turns_per_hour_override": z.union([z.number().int().gt(0), z.null()]).default(null) });

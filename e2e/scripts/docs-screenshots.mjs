@@ -751,9 +751,7 @@ const AUTHED_PAGES = [
       const dialog = page.getByRole('dialog');
       await dialog.getByLabel('Email', { exact: true }).fill('newcomer@demo.tai');
       await dialog.getByLabel('Role', { exact: true }).fill('editor');
-      await dialog
-        .getByLabel('Role', { exact: true })
-        .waitFor({ state: 'visible', timeout: 8000 });
+      await dialog.getByLabel('Role', { exact: true }).waitFor({ state: 'visible', timeout: 8000 });
     },
   },
   {
