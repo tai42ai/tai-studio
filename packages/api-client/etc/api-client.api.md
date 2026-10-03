@@ -2079,8 +2079,14 @@ export function createApiClient(config: ApiConfig): {
             id: string;
             email: string;
             role: string;
-            disabled: boolean;
             created_at: string;
+            principals: {
+                user_id: string;
+                disabled: boolean;
+            }[];
+            disabled: boolean;
+            handle: string;
+            action_keys: string[];
         }[];
         invites: {
             id: string;
@@ -2088,7 +2094,22 @@ export function createApiClient(config: ApiConfig): {
             role: string;
             created_at: string;
             expires_at: string;
+            handle: string;
+            action_keys: string[];
         }[];
+    }>;
+    readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+        actions: {
+            key: string;
+            label: string;
+            scope: "page" | "member_row" | "invite_row";
+            destructive: boolean;
+            input_schema: Record<string, unknown>;
+            result_schema: Record<string, unknown>;
+        }[];
+    }>;
+    readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+        result: Record<string, unknown>;
     }>;
     readonly listPrincipals: (signal?: AbortSignal) => Promise<{
         user_id: string;
@@ -5398,15 +5419,35 @@ const interactionsPage: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
-export type InviteEntry = z.infer<typeof inviteEntry>;
+export type InviteRow = z.infer<typeof inviteRow>;
 
 // @public
-const inviteEntry: z.ZodObject<{
+const inviteRow: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
     role: z.ZodString;
     created_at: z.ZodString;
     expires_at: z.ZodString;
+    handle: z.ZodString;
+    action_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+interface InvokeMemberActionBody {
+    // (undocumented)
+    readonly action_key: string;
+    // (undocumented)
+    readonly input: Record<string, unknown>;
+    // (undocumented)
+    readonly target_handle: string | null;
+}
+
+// @public (undocumented)
+export type InvokeMemberActionResult = z.infer<typeof invokeMemberActionResult>;
+
+// @public
+const invokeMemberActionResult: z.ZodObject<{
+    result: z.ZodRecord<z.ZodString, z.ZodUnknown>;
 }, z.core.$strip>;
 
 // @public
@@ -6334,28 +6375,68 @@ const mediaKind: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
-export type MemberEntry = z.infer<typeof memberEntry>;
+export type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
 
 // @public
-const memberEntry: z.ZodObject<{
-    id: z.ZodString;
-    email: z.ZodString;
-    role: z.ZodString;
-    disabled: z.ZodBoolean;
-    created_at: z.ZodString;
+const memberActionCatalog: z.ZodObject<{
+    actions: z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        label: z.ZodString;
+        scope: z.ZodEnum<{
+            page: "page";
+            member_row: "member_row";
+            invite_row: "invite_row";
+        }>;
+        destructive: z.ZodBoolean;
+        input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+        result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
-export type MemberListing = z.infer<typeof memberListing>;
+export type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
 
 // @public
-const memberListing: z.ZodObject<{
+const memberActionDescriptor: z.ZodObject<{
+    key: z.ZodString;
+    label: z.ZodString;
+    scope: z.ZodEnum<{
+        page: "page";
+        member_row: "member_row";
+        invite_row: "invite_row";
+    }>;
+    destructive: z.ZodBoolean;
+    input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type MemberActionScope = z.infer<typeof memberActionScope>;
+
+// @public
+const memberActionScope: z.ZodEnum<{
+    page: "page";
+    member_row: "member_row";
+    invite_row: "invite_row";
+}>;
+
+// @public (undocumented)
+export type MemberDirectory = z.infer<typeof memberDirectory>;
+
+// @public
+const memberDirectory: z.ZodObject<{
     members: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         email: z.ZodString;
         role: z.ZodString;
-        disabled: z.ZodBoolean;
         created_at: z.ZodString;
+        principals: z.ZodArray<z.ZodObject<{
+            user_id: z.ZodString;
+            disabled: z.ZodBoolean;
+        }, z.core.$strip>>;
+        disabled: z.ZodBoolean;
+        handle: z.ZodString;
+        action_keys: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>;
     invites: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
@@ -6363,7 +6444,36 @@ const memberListing: z.ZodObject<{
         role: z.ZodString;
         created_at: z.ZodString;
         expires_at: z.ZodString;
+        handle: z.ZodString;
+        action_keys: z.ZodArray<z.ZodString>;
     }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
+
+// @public
+const memberPrincipalState: z.ZodObject<{
+    user_id: z.ZodString;
+    disabled: z.ZodBoolean;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type MemberRow = z.infer<typeof memberRow>;
+
+// @public
+const memberRow: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    created_at: z.ZodString;
+    principals: z.ZodArray<z.ZodObject<{
+        user_id: z.ZodString;
+        disabled: z.ZodBoolean;
+    }, z.core.$strip>>;
+    disabled: z.ZodBoolean;
+    handle: z.ZodString;
+    action_keys: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -8014,12 +8124,22 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
-        memberEntry,
-        MemberEntry,
-        inviteEntry,
-        InviteEntry,
-        memberListing,
-        MemberListing,
+        memberActionScope,
+        MemberActionScope,
+        memberPrincipalState,
+        MemberPrincipalState,
+        memberRow,
+        MemberRow,
+        inviteRow,
+        InviteRow,
+        memberDirectory,
+        MemberDirectory,
+        memberActionDescriptor,
+        MemberActionDescriptor,
+        memberActionCatalog,
+        MemberActionCatalog,
+        invokeMemberActionResult,
+        InvokeMemberActionResult,
         notification,
         Notification_2 as Notification,
         notifications,
@@ -8589,12 +8709,22 @@ declare namespace schemas {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
-        memberEntry,
-        MemberEntry,
-        inviteEntry,
-        InviteEntry,
-        memberListing,
-        MemberListing,
+        memberActionScope,
+        MemberActionScope,
+        memberPrincipalState,
+        MemberPrincipalState,
+        memberRow,
+        MemberRow,
+        inviteRow,
+        InviteRow,
+        memberDirectory,
+        MemberDirectory,
+        memberActionDescriptor,
+        MemberActionDescriptor,
+        memberActionCatalog,
+        MemberActionCatalog,
+        invokeMemberActionResult,
+        InvokeMemberActionResult,
         notification,
         Notification_2 as Notification,
         notifications,

@@ -72,6 +72,21 @@ export interface PinRoutePublicBody {
   readonly pattern?: string;
 }
 
+/**
+ * Body for invoking a declared member action (POST
+ * `/api/auth/member-actions/invoke`). `action_key` is the opaque catalog key;
+ * `target_handle` is the row handle the action acts on, `null` for a page-scoped
+ * action; `input` is the per-action input the backend validates against the action's
+ * declared input model. All three are opaque to Studio — the keys are joined and
+ * echoed, the input is built from the action's `input_schema`, and no provider field
+ * is named here.
+ */
+export interface InvokeMemberActionBody {
+  readonly action_key: string;
+  readonly target_handle: string | null;
+  readonly input: Record<string, unknown>;
+}
+
 export function authClient(t: Transport) {
   const { req } = t;
   return {
@@ -145,9 +160,24 @@ export function authClient(t: Transport) {
       req('/api/auth/claim-links', s.claimLinkCreated, { method: 'POST', body }),
 
     // The deployment-wide membership: every accounts provider's people and
-    // outstanding invitations, aggregated server-side into one view. ADMIN-ONLY
-    // (`secret`) — a non-admin projection never reaches the route.
-    listMembers: (signal?: AbortSignal) => req('/api/auth/members', s.memberListing, { signal }),
+    // outstanding invitations, aggregated and platform-joined server-side into one
+    // directory (each row carrying its principal state + opaque routing tokens).
+    // ADMIN-ONLY (`secret`) — a non-admin projection never reaches the route.
+    listMembers: (signal?: AbortSignal) => req('/api/auth/members', s.memberDirectory, { signal }),
+
+    // The catalog of member-admin actions every accounts provider declares, each
+    // with its opaque key, rendered label, placement, and input/result JSON Schema.
+    // ADMIN-ONLY (`secret`) — the same fence the members listing carries.
+    listMemberActions: (signal?: AbortSignal) =>
+      req('/api/auth/member-actions', s.memberActionCatalog, { signal }),
+    // Invoke one declared action by its opaque key, echoing the target row's handle
+    // and the per-action input. The result is carried opaquely for a read-only,
+    // schema-driven render. ADMIN-ONLY (`fenced`).
+    invokeMemberAction: (body: InvokeMemberActionBody) =>
+      req('/api/auth/member-actions/invoke', s.invokeMemberActionResult, {
+        method: 'POST',
+        body,
+      }),
 
     // The deployment's principals (identities). ADMIN-ONLY (`secret`) — a
     // non-admin projection never reaches the route.

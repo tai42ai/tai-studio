@@ -15,9 +15,9 @@ import { MembersPage } from './MembersPage';
  * context the design system reads, and a stub NavigationProvider. The page does no
  * capability filtering of its own, so no projection is needed.
  */
-function renderWithProviders(ui: ReactElement, client: ApiClient): void {
+function wrapper(client: ApiClient): (props: { children: ReactNode }) => ReactElement {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
+  return ({ children }: { children: ReactNode }): ReactElement => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ApiProvider value={client}>
@@ -37,20 +37,31 @@ function renderWithProviders(ui: ReactElement, client: ApiClient): void {
       </AuthProvider>
     </QueryClientProvider>
   );
-  render(ui, { wrapper });
 }
 
-/** A stub client exposing only what the page consumes: the members listing endpoint. */
-function stubClient(listMembers: ApiClient['listMembers']): ApiClient {
-  return { listMembers } as unknown as ApiClient;
+function renderPage(client: ApiClient): ReturnType<typeof render> {
+  return render(<MembersPage search={{}} />, { wrapper: wrapper(client) });
+}
+
+/** A stub client exposing only what the page consumes: the two reads and the invoke. */
+function stubClient(overrides: Partial<ApiClient>): ApiClient {
+  return {
+    listMembers: vi.fn().mockResolvedValue({ members: [], invites: [] }),
+    listMemberActions: vi.fn().mockResolvedValue({ actions: [] }),
+    invokeMemberAction: vi.fn().mockResolvedValue({ result: {} }),
+    ...overrides,
+  } as unknown as ApiClient;
 }
 
 const member = {
   id: 'm-1',
   email: 'alice@example.com',
   role: 'editor',
-  disabled: false,
   created_at: '2026-07-11T00:00:00Z',
+  principals: [{ user_id: 'p-1', disabled: false }],
+  disabled: false,
+  handle: 'handle-m-1',
+  action_keys: [] as string[],
 };
 
 const invite = {
@@ -59,27 +70,40 @@ const invite = {
   role: 'viewer',
   created_at: '2026-07-12T00:00:00Z',
   expires_at: '2026-07-19T00:00:00Z',
+  handle: 'handle-i-1',
+  action_keys: [] as string[],
 };
 
-describe('MembersPage', () => {
-  it('renders people and invitation rows from the aggregated listing', async () => {
-    const client = stubClient(
-      vi.fn().mockResolvedValue({
+const emptySchema = { type: 'object', properties: {} };
+
+describe('MembersPage listing', () => {
+  it('renders people and invitation rows from the aggregated directory', async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
         members: [
           member,
-          { ...member, id: 'm-2', email: 'carol@example.com', role: 'admin', disabled: true },
+          {
+            ...member,
+            id: 'm-2',
+            email: 'carol@example.com',
+            role: 'admin',
+            disabled: true,
+            principals: [{ user_id: 'p-2', disabled: true }],
+            handle: 'handle-m-2',
+          },
         ],
         invites: [invite],
       }),
-    );
-    renderWithProviders(<MembersPage search={{}} />, client);
+    });
+    renderPage(client);
 
     const peopleTable = await screen.findByTestId('members-table');
     const peopleRows = within(peopleTable).getAllByTestId('member-row');
     expect(peopleRows).toHaveLength(2);
     expect(within(peopleTable).getByText('alice@example.com')).toBeInTheDocument();
     expect(within(peopleTable).getByText('carol@example.com')).toBeInTheDocument();
-    // Role names render as badges; status reflects `disabled` (alice active, carol off).
+    // Role names render as badges; status reflects the joined `disabled` (alice active,
+    // carol — every principal disabled — off).
     expect(within(peopleTable).getByText('editor')).toBeInTheDocument();
     expect(within(peopleTable).getByText('admin')).toBeInTheDocument();
     expect(within(peopleTable).getByText('Active')).toBeInTheDocument();
@@ -98,9 +122,32 @@ describe('MembersPage', () => {
     expect(within(invitesTable).getByText('viewer')).toBeInTheDocument();
   });
 
+  it('reads active with a partially-disabled badge when only some principals are off', async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
+        members: [
+          {
+            ...member,
+            principals: [
+              { user_id: 'p-1', disabled: false },
+              { user_id: 'p-1b', disabled: true },
+            ],
+            disabled: false,
+          },
+        ],
+        invites: [],
+      }),
+    });
+    renderPage(client);
+
+    const peopleTable = await screen.findByTestId('members-table');
+    expect(within(peopleTable).getByText('Active')).toBeInTheDocument();
+    expect(within(peopleTable).getByText('Partially disabled')).toBeInTheDocument();
+  });
+
   it('shows a whole-page empty state when there are no members and no invites', async () => {
-    const client = stubClient(vi.fn().mockResolvedValue({ members: [], invites: [] }));
-    renderWithProviders(<MembersPage search={{}} />, client);
+    const client = stubClient({});
+    renderPage(client);
 
     expect(await screen.findByText('No members yet')).toBeInTheDocument();
     expect(screen.queryByTestId('members-table')).toBeNull();
@@ -108,8 +155,10 @@ describe('MembersPage', () => {
   });
 
   it('shows the people empty state while still listing pending invitations', async () => {
-    const client = stubClient(vi.fn().mockResolvedValue({ members: [], invites: [invite] }));
-    renderWithProviders(<MembersPage search={{}} />, client);
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({ members: [], invites: [invite] }),
+    });
+    renderPage(client);
 
     expect(await screen.findByText('No members')).toBeInTheDocument();
     expect(screen.getByTestId('invites-table')).toBeInTheDocument();
@@ -117,33 +166,36 @@ describe('MembersPage', () => {
   });
 
   it('shows the invitations empty state while still listing people', async () => {
-    const client = stubClient(vi.fn().mockResolvedValue({ members: [member], invites: [] }));
-    renderWithProviders(<MembersPage search={{}} />, client);
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({ members: [member], invites: [] }),
+    });
+    renderPage(client);
 
     expect(await screen.findByText('No pending invitations')).toBeInTheDocument();
     expect(screen.getByTestId('members-table')).toBeInTheDocument();
     expect(screen.getByText('alice@example.com')).toBeInTheDocument();
   });
 
-  it('shows a loading skeleton before the listing resolves', () => {
-    const client = stubClient(vi.fn().mockReturnValue(new Promise(() => undefined)));
-    const { container } = renderContainer(<MembersPage search={{}} />, client);
+  it('shows a loading skeleton before the reads resolve', () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockReturnValue(new Promise(() => undefined)),
+    });
+    const { container } = renderPage(client);
 
     expect(container.querySelector('.tai-skeleton')).not.toBeNull();
     expect(screen.queryByTestId('members-table')).toBeNull();
   });
 
-  it('renders a loud, retryable error when the listing fails', async () => {
+  it('renders a loud, retryable error when the directory read fails', async () => {
     const listMembers = vi
       .fn()
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce({ members: [member], invites: [] });
-    const client = stubClient(listMembers as ApiClient['listMembers']);
-    renderWithProviders(<MembersPage search={{}} />, client);
+    const client = stubClient({ listMembers: listMembers as ApiClient['listMembers'] });
+    renderPage(client);
 
     expect(await screen.findByText('boom')).toBeInTheDocument();
-    const retry = screen.getByRole('button', { name: 'Retry' });
-    await userEvent.click(retry);
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('members-table')).toBeInTheDocument();
@@ -151,41 +203,152 @@ describe('MembersPage', () => {
     expect(listMembers).toHaveBeenCalledTimes(2);
   });
 
+  it('renders a loud error when the action catalog read fails', async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({ members: [member], invites: [] }),
+      listMemberActions: vi.fn().mockRejectedValue(new Error('catalog down')),
+    });
+    renderPage(client);
+
+    expect(await screen.findByText('catalog down')).toBeInTheDocument();
+    expect(screen.queryByTestId('members-table')).toBeNull();
+  });
+
   it('renders an unparseable timestamp verbatim rather than swallowing it', async () => {
-    const client = stubClient(
-      vi.fn().mockResolvedValue({
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
         members: [{ ...member, created_at: 'not-a-date' }],
         invites: [],
       }),
-    );
-    renderWithProviders(<MembersPage search={{}} />, client);
+    });
+    renderPage(client);
 
     expect(await screen.findByText('not-a-date')).toBeInTheDocument();
   });
 });
 
-/** A `render` variant that returns the container, for a DOM-node assertion. */
-function renderContainer(ui: ReactElement, client: ApiClient): ReturnType<typeof render> {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const wrapper = ({ children }: { children: ReactNode }): ReactElement => (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ApiProvider value={client}>
-          <ThemeProvider>
-            <NavigationProvider
-              value={{
-                navigate: vi.fn(),
-                resolvePath: () => '/x',
-                navigatePlugin: vi.fn(),
-                resolvePluginPath: () => '/x',
-              }}
-            >
-              {children}
-            </NavigationProvider>
-          </ThemeProvider>
-        </ApiProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-  return render(ui, { wrapper });
-}
+describe('MembersPage actions', () => {
+  it('invokes a page-scoped action and shows its one-time result', async () => {
+    const invokeMemberAction = vi
+      .fn()
+      .mockResolvedValue({ result: { link: 'https://host/invite#t=abc' } });
+    const client = stubClient({
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-invite',
+            label: 'Invite a person',
+            scope: 'page',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: {
+              type: 'object',
+              properties: { link: { type: 'string', title: 'Link' } },
+            },
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite a person' }));
+    // No input declared → a run prompt, then the invoke.
+    expect(await screen.findByText('Run this action now?')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Invite a person' }));
+
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenCalledWith({
+        action_key: 'act-invite',
+        target_handle: null,
+        input: {},
+      });
+    });
+    // The one-time link renders through a CopyField (shown once).
+    expect(await screen.findByTestId('member-action-result-link')).toBeInTheDocument();
+    expect(screen.getByText('https://host/invite#t=abc')).toBeInTheDocument();
+  });
+
+  it('renders a member-row action joined by key and invokes it with the row handle', async () => {
+    const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
+    const client = stubClient({
+      listMembers: vi
+        .fn()
+        .mockResolvedValue({ members: [{ ...member, action_keys: ['act-remove'] }], invites: [] }),
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-remove',
+            label: 'Remove person',
+            scope: 'member_row',
+            destructive: true,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+          {
+            // A page action should NOT appear in the row's menu.
+            key: 'act-invite',
+            label: 'Invite a person',
+            scope: 'page',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    const peopleTable = await screen.findByTestId('members-table');
+    const rowGroup = within(peopleTable).getByRole('group', {
+      name: 'Actions for alice@example.com',
+    });
+    expect(within(rowGroup).getByRole('button', { name: 'Remove person' })).toBeInTheDocument();
+    expect(within(rowGroup).queryByRole('button', { name: 'Invite a person' })).toBeNull();
+
+    await userEvent.click(within(rowGroup).getByRole('button', { name: 'Remove person' }));
+    // The dialog opens; the row button behind the modal is inert, so the only
+    // reachable "Remove person" is the dialog's submit. Destructive → submitting it
+    // reveals a confirm step that gates the invoke.
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove person' }));
+    expect(await screen.findByTestId('member-action-confirm')).toBeInTheDocument();
+    expect(invokeMemberAction).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenCalledWith({
+        action_key: 'act-remove',
+        target_handle: 'handle-m-1',
+        input: {},
+      });
+    });
+  });
+
+  it('renders the input form for an action that declares input', async () => {
+    const client = stubClient({
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-role',
+            label: 'Change role',
+            scope: 'page',
+            destructive: false,
+            input_schema: {
+              type: 'object',
+              properties: { note: { type: 'string', title: 'Note' } },
+              required: ['note'],
+            },
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+    });
+    renderPage(client);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Change role' }));
+    // The action's declared input renders through the platform SchemaForm (its root
+    // carries the idPrefix as a test id).
+    expect(await screen.findByTestId('member-action-act-role')).toBeInTheDocument();
+  });
+});
