@@ -32,6 +32,7 @@ const ROUTE_TOKENS = [
   'conversations',
   'marketplace',
   'manifest',
+  'members',
   'settings',
   'system',
 ] as const;
@@ -73,6 +74,7 @@ const REQUIRED_ICONS = [
   'ConversationsIcon',
   'MarketplaceIcon',
   'ManifestIcon',
+  'MembersIcon',
   'SettingsIcon',
   'SystemIcon',
   'SearchIcon',

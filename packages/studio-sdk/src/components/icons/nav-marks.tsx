@@ -162,6 +162,16 @@ export const ManifestIcon: IconComponent = (props) => (
   </Icon>
 );
 
+/** Members: two people — a front figure with a second shouldered behind it. */
+export const MembersIcon: IconComponent = (props) => (
+  <Icon {...props}>
+    <circle cx="9" cy="8" r="3.2" />
+    <path d="M3.4 19.2a5.6 5.6 0 0 1 11.2 0" />
+    <path d="M15.2 5.1a3.2 3.2 0 0 1 0 5.8" />
+    <path d="M16.6 14.1a5.6 5.6 0 0 1 4 5.1" />
+  </Icon>
+);
+
 /** Settings: an eight-tooth cog around its bore. */
 export const SettingsIcon: IconComponent = (props) => (
   <Icon {...props}>

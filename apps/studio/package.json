@@ -34,6 +34,7 @@
     "@tai42/feature-interactions": "workspace:*",
     "@tai42/feature-manifest": "workspace:*",
     "@tai42/feature-marketplace": "workspace:*",
+    "@tai42/feature-members": "workspace:*",
     "@tai42/feature-notifications": "workspace:*",
     "@tai42/feature-observability": "workspace:*",
     "@tai42/feature-presets": "workspace:*",

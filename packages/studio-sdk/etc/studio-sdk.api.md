@@ -816,6 +816,22 @@ claim_path: string;
 token: string;
 expires_at: string;
 }>;
+readonly listMembers: (signal?: AbortSignal) => Promise<{
+members: {
+id: string;
+email: string;
+role: string;
+disabled: boolean;
+created_at: string;
+}[];
+invites: {
+id: string;
+email: string;
+role: string;
+created_at: string;
+expires_at: string;
+}[];
+}>;
 readonly listPrincipals: (signal?: AbortSignal) => Promise<{
 user_id: string;
 kind: "human" | "service";
@@ -5410,6 +5426,22 @@ function createApiClient(config: ApiConfig): {
         token: string;
         expires_at: string;
     }>;
+    readonly listMembers: (signal?: AbortSignal) => Promise<{
+        members: {
+            id: string;
+            email: string;
+            role: string;
+            disabled: boolean;
+            created_at: string;
+        }[];
+        invites: {
+            id: string;
+            email: string;
+            role: string;
+            created_at: string;
+            expires_at: string;
+        }[];
+    }>;
     readonly listPrincipals: (signal?: AbortSignal) => Promise<{
         user_id: string;
         kind: "human" | "service";
@@ -9373,6 +9405,18 @@ export interface InteractionsStreamState {
     readonly interactions: StreamInteraction[];
 }
 
+// @public (undocumented)
+type InviteEntry = z.infer<typeof inviteEntry>;
+
+// @public
+const inviteEntry: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    created_at: z.ZodString;
+    expires_at: z.ZodString;
+}, z.core.$strip>;
+
 // @public
 export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
 
@@ -10523,6 +10567,42 @@ const mediaKind: z.ZodEnum<{
     image: "image";
     link: "link";
 }>;
+
+// @public (undocumented)
+type MemberEntry = z.infer<typeof memberEntry>;
+
+// @public
+const memberEntry: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    disabled: z.ZodBoolean;
+    created_at: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberListing = z.infer<typeof memberListing>;
+
+// @public
+const memberListing: z.ZodObject<{
+    members: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        role: z.ZodString;
+        disabled: z.ZodBoolean;
+        created_at: z.ZodString;
+    }, z.core.$strip>>;
+    invites: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        role: z.ZodString;
+        created_at: z.ZodString;
+        expires_at: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public
+export const MembersIcon: IconComponent;
 
 // @public
 export const MenuIcon: IconComponent;
@@ -12189,6 +12269,8 @@ export interface RouteSearchByToken {
         plugin?: string;
     };
     // (undocumented)
+    members: Record<string, never>;
+    // (undocumented)
     notifications: Record<string, never>;
     // (undocumented)
     observability: {
@@ -12656,6 +12738,12 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
+        memberEntry,
+        MemberEntry,
+        inviteEntry,
+        InviteEntry,
+        memberListing,
+        MemberListing,
         notification,
         Notification_2 as Notification,
         notifications,

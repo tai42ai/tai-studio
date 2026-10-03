@@ -2074,6 +2074,22 @@ export function createApiClient(config: ApiConfig): {
         token: string;
         expires_at: string;
     }>;
+    readonly listMembers: (signal?: AbortSignal) => Promise<{
+        members: {
+            id: string;
+            email: string;
+            role: string;
+            disabled: boolean;
+            created_at: string;
+        }[];
+        invites: {
+            id: string;
+            email: string;
+            role: string;
+            created_at: string;
+            expires_at: string;
+        }[];
+    }>;
     readonly listPrincipals: (signal?: AbortSignal) => Promise<{
         user_id: string;
         kind: "human" | "service";
@@ -5381,6 +5397,18 @@ const interactionsPage: z.ZodObject<{
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
+// @public (undocumented)
+export type InviteEntry = z.infer<typeof inviteEntry>;
+
+// @public
+const inviteEntry: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    created_at: z.ZodString;
+    expires_at: z.ZodString;
+}, z.core.$strip>;
+
 // @public
 export function isFleetReportFailure(summary: FleetReportSummary | null): boolean;
 
@@ -6304,6 +6332,39 @@ const mediaKind: z.ZodEnum<{
     image: "image";
     link: "link";
 }>;
+
+// @public (undocumented)
+export type MemberEntry = z.infer<typeof memberEntry>;
+
+// @public
+const memberEntry: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    disabled: z.ZodBoolean;
+    created_at: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type MemberListing = z.infer<typeof memberListing>;
+
+// @public
+const memberListing: z.ZodObject<{
+    members: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        role: z.ZodString;
+        disabled: z.ZodBoolean;
+        created_at: z.ZodString;
+    }, z.core.$strip>>;
+    invites: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        role: z.ZodString;
+        created_at: z.ZodString;
+        expires_at: z.ZodString;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
 
 // @public (undocumented)
 export type MeProjection = z.infer<typeof meProjection>;
@@ -7953,6 +8014,12 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
+        memberEntry,
+        MemberEntry,
+        inviteEntry,
+        InviteEntry,
+        memberListing,
+        MemberListing,
         notification,
         Notification_2 as Notification,
         notifications,
@@ -8522,6 +8589,12 @@ declare namespace schemas {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
+        memberEntry,
+        MemberEntry,
+        inviteEntry,
+        InviteEntry,
+        memberListing,
+        MemberListing,
         notification,
         Notification_2 as Notification,
         notifications,

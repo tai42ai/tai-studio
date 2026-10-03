@@ -16,6 +16,7 @@ import {
   InteractionsIcon,
   ManifestIcon,
   MarketplaceIcon,
+  MembersIcon,
   NotificationsIcon,
   PresetsIcon,
   SchedulingIcon,
@@ -50,6 +51,7 @@ export const NAV_ICONS: Readonly<Record<Exclude<RouteToken, 'login'>, IconCompon
   conversations: ConversationsIcon,
   marketplace: MarketplaceIcon,
   manifest: ManifestIcon,
+  members: MembersIcon,
   settings: SettingsIcon,
   system: SystemIcon,
 };

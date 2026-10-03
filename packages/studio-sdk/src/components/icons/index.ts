@@ -69,6 +69,7 @@ export {
   InteractionsIcon,
   ManifestIcon,
   MarketplaceIcon,
+  MembersIcon,
   NotificationsIcon,
   PluginIcon,
   PresetsIcon,

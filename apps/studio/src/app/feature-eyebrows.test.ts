@@ -47,6 +47,7 @@ const PAGE_SOURCES: Record<FeatureToken, string> = {
   conversations: 'conversations/src/ConversationsPage.tsx',
   interactions: 'interactions/src/interactions.tsx',
   notifications: 'notifications/src/NotificationsPage.tsx',
+  members: 'members/src/MembersPage.tsx',
   settings: 'settings/src/SettingsPage.tsx',
   storage: 'storage/src/StoragePage.tsx',
   marketplace: 'marketplace/src/MarketplacePage.tsx',

@@ -25,6 +25,7 @@ export const PATH: Record<RouteToken, string> = {
   templates: '/templates',
   storage: '/storage',
   manifest: '/manifest',
+  members: '/members',
   settings: '/settings',
   system: '/system',
   scheduling: '/scheduling',
@@ -52,7 +53,10 @@ export const NAV_SECTIONS = [
   { label: 'Connections', tokens: ['connectors', 'servedEndpoints'] },
   { label: 'Triggers', tokens: ['hooks', 'scheduling'] },
   { label: 'Activity', tokens: ['conversations', 'interactions', 'notifications'] },
-  { label: 'Administration', tokens: ['settings', 'storage', 'marketplace', 'manifest', 'system'] },
+  {
+    label: 'Administration',
+    tokens: ['members', 'settings', 'storage', 'marketplace', 'manifest', 'system'],
+  },
 ] as const satisfies readonly { readonly label: string; readonly tokens: readonly RouteToken[] }[];
 
 /**

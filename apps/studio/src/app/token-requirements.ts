@@ -45,6 +45,10 @@ export const TOKEN_REQUIREMENTS = {
   // deployment (a presence-only deploy has no management page to show).
   storage: { anyOf: ['/api/storage/resources'] },
   manifest: { anyOf: ['/api/manifest'] },
+  // The generic Members listing is strictly admin-only (`secret`), so a non-admin
+  // projection never covers its route and the nav entry is hidden — not `'always'`,
+  // which is for a surface that self-limits per caller (Settings).
+  members: { anyOf: ['/api/auth/members'] },
   settings: 'always',
   system: { anyOf: ['/api/system'] },
   scheduling: { anyOf: ['/api/schedules'] },

@@ -144,6 +144,11 @@ export function authClient(t: Transport) {
     createClaimLink: (body: ClaimLinkBody) =>
       req('/api/auth/claim-links', s.claimLinkCreated, { method: 'POST', body }),
 
+    // The deployment-wide membership: every accounts provider's people and
+    // outstanding invitations, aggregated server-side into one view. ADMIN-ONLY
+    // (`secret`) — a non-admin projection never reaches the route.
+    listMembers: (signal?: AbortSignal) => req('/api/auth/members', s.memberListing, { signal }),
+
     // The deployment's principals (identities). ADMIN-ONLY (`secret`) — a
     // non-admin projection never reaches the route.
     listPrincipals: (signal?: AbortSignal) =>

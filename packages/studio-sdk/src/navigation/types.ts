@@ -62,6 +62,9 @@ export interface RouteSearchByToken {
   templates: { template?: string; q?: string };
   storage: { q?: string };
   manifest: Record<string, never>;
+  // The generic Members listing: people + outstanding invitations aggregated across
+  // every accounts provider. No search parameters — a flat read-only view.
+  members: Record<string, never>;
   settings: Record<string, never>;
   system: Record<string, never>;
   scheduling: Record<string, never>;
