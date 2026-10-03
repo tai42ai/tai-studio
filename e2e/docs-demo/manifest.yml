@@ -23,11 +23,12 @@
 # tai42_accounts_postgres: the Postgres accounts provider (password login + opaque
 # tai-sess- sessions). Importing it registers "accounts-postgres" in BOTH the
 # accounts and identity registries, so ACCESS_CONTROL_AUTH_PROVIDERS may name it
-# and its /api/login + /api/auth/users routes have a live provider. Its own
-# accounts_* tables are applied to the compose Postgres by boot.sh
-# (APPLY_ACCOUNTS_DDL=1) and its demo users are seeded by the runner after boot,
-# so the login screen renders its password form and the users-admin page renders a
-# populated table.
+# and its /api/login route has a live provider. It also declares the member-admin
+# actions (invite, resend, cancel, role/access change, remove) the generic Members
+# page renders and invokes. Its own accounts_* tables are applied to the compose
+# Postgres by boot.sh (APPLY_ACCOUNTS_DDL=1) and its demo members are seeded by the
+# runner after boot (through the member-action invoke door), so the login screen
+# renders its password form and the Members page renders a populated directory.
 lifecycle_modules:
   - tai42_identity_redis
   - tai42_accounts_postgres
@@ -75,24 +76,29 @@ routers_modules:
   - tai42_skeleton.routers.marketplace # /api/marketplace/*     (Marketplace screen + install dialog)
   - tai42_skeleton.routers.backend # /api/backend -> present:false (honest System card)
   # Accounts + kind-status surfaces (all BEFORE the SPA catch-all below):
-  #   api_keys     -> /api/auth/roles (the users-admin role picker) + /api/auth/keys
+  #   api_keys     -> /api/auth/roles (the deployment's role names) + /api/auth/keys
   #   login        -> /api/login/methods aggregator + /api/auth/logout dispatcher
   #                   (the login screen's metadata-driven password form)
   #   setup        -> POST /api/setup (the public owner-initializing door the runner
   #                   drives to create the owner + first key)
   #   principals   -> /api/auth/principals* (the admin-only principal doors)
+  #   members      -> /api/auth/members (the Members page's aggregated directory) +
+  #                   /api/auth/member-actions* (the declared member-action catalog and
+  #                   the invoke door the page's buttons and row actions drive)
   #   system_kinds -> /api/system/kinds (the System screen's Plugin-kinds table)
   #   routes_login -> the accounts plugin's own /api/login/{password,invite/accept}
   #                   routes (public via the /api/login prefix)
-  #   routes_users -> the accounts plugin's authed /api/auth/users* admin API
-  #                   (the users-admin Studio page's data source)
+  #   routes_users -> the accounts plugin's authed /api/auth/users/me/password
+  #                   self-service route
   - tai42_skeleton.routers.api_keys # /api/auth/roles + /api/auth/keys
   - tai42_skeleton.routers.login # /api/login/methods    (Login screen)
   - tai42_skeleton.routers.setup # POST /api/setup       (owner initialize door)
   - tai42_skeleton.routers.principals # /api/auth/principals* (admin principal doors)
+  - tai42_skeleton.routers.members # /api/auth/members     (Members page directory)
+  - tai42_skeleton.routers.member_actions # /api/auth/member-actions* (catalog + invoke)
   - tai42_skeleton.routers.system_kinds # /api/system/kinds     (System screen kinds table)
   - tai42_accounts_postgres.routes_login # /api/login/password + invite/accept
-  - tai42_accounts_postgres.routes_users # /api/auth/users*      (Users-admin page)
+  - tai42_accounts_postgres.routes_users # /api/auth/users/me/password (self-service)
   - tai42_skeleton.routers.plugins # LAST — SPA catch-all
 
 # --- Tool extensions --------------------------------------------------------
@@ -154,12 +160,12 @@ monitoring_module: docs_demo_monitoring
 
 # --- Studio plugins ---------------------------------------------------------
 # reference_plugin contributes the "Reference" nav entry every signed-in shot
-# waits on; tai42_accounts_postgres contributes the users-admin page (nav entry
-# "Users", route /plugins/tai42_accounts_postgres/users) — its API routers above
-# register no Studio page, so it MUST be listed here for the page to mount.
+# waits on. The accounts provider ships no Studio page — its member administration
+# is the generic core Members page over its declared actions, not a per-provider
+# Studio surface — so it is NOT listed here (a studio_plugins entry with no studio/
+# dist aborts the boot).
 studio_plugins:
   - reference_plugin
-  - tai42_accounts_postgres
 
 # --- Curated user tools -----------------------------------------------------
 # A non-empty user_tools set makes GET /api/manifest return a populated payload,

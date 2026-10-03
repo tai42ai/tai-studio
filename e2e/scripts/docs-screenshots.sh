@@ -134,11 +134,11 @@ export STUDIO_SEED_AUTH=0
 export STUDIO_PORT
 export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
-# accounts-postgres plugin's lifecycle module + login/users routers power the login
-# screen's password form and the users-admin page (its shipped studio/ dist mounts
-# that Studio page); the rest back the toolbox/agents/storage/monitoring surfaces.
-# The RQ backend + its RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring live in boot.sh (both
-# manifests declare `backend_module: tai42_backend_rq`), so they are not repeated here.
+# accounts-postgres plugin's lifecycle module + login router power the login screen's
+# password form, and its declared member-admin actions back the generic Members page;
+# the rest back the toolbox/agents/storage/monitoring surfaces. The RQ backend + its
+# RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring live in boot.sh (both manifests declare
+# `backend_module: tai42_backend_rq`), so they are not repeated here.
 export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the setup-door token to a known value so the runner can
@@ -147,7 +147,7 @@ export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agen
 # boot.sh configures via TAI_DATABASE_DEFAULT_PG_*, see boot.sh). Setup mints the owner's
 # first key through the redis provider (an sk- key that authenticates every signed-in
 # shot) and attaches the owner's password login through the accounts provider, which also
-# powers the password-login + users-admin surfaces.
+# powers the password-login + Members surfaces.
 export ACCESS_CONTROL_AUTH_PROVIDERS='["accounts-postgres", "redis"]'
 export TAI_SETUP_TOKEN="docs-demo-setup-token"
 export APPLY_ACCOUNTS_DDL=1
@@ -291,13 +291,13 @@ log "target is up"
 
 api() { curl -s -m 8 -H "x-api-key: ${DEMO_KEY}" -H "accept: application/json" "$@"; }
 
-# --- 6. Initialize the owner + seed realistic demo accounts (login + users-admin) ---
-# Through the REAL public setup door and the REAL accounts HTTP API (never poking
-# Postgres): initialize the deployment (the owner principal + its admin key + the owner's
-# password login), then invite an editor + a viewer and accept their invites (Active
-# rows), and leave one editor invite pending (an "Invite pending" badge) — a realistic
-# human-accounts table. The owner's minted key is admin, so it authorizes every
-# create-user call below; no separate session is needed to populate the table.
+# --- 6. Initialize the owner + seed a realistic membership (login + Members) ---
+# Through the REAL public setup door and the REAL generic member-action invoke door
+# (never poking Postgres): initialize the deployment (the owner principal + its admin key
+# + the owner's password login), then invite an editor + a viewer and accept their invites
+# (Active members), and leave one editor invite pending (a Pending invitation row) — a
+# realistic membership directory. The owner's minted key is admin, so it authorizes every
+# invoke below; no separate session is needed to populate the directory.
 log "initializing the deployment via POST /api/setup (owner + first key + password login)"
 DEMO_PASSWORD="demo-password-4242"
 OWNER_EMAIL="ada.lovelace@demo.tai"
@@ -329,36 +329,56 @@ fi
 # owner key so it authenticates every full-admin shot.
 export STUDIO_API_KEY="${DEMO_KEY}"
 
-# Create a user (returns a one-time invite) and, when mode=accept, consume the
-# invite to set a password so the row reads Active rather than Invite-pending. An
-# email-taken 409 (rerun) has no invite_token and is treated as already-seeded.
-seed_user() {
+# The page-scoped member action that creates a new member (invite a user). Its opaque
+# catalog key is read from the LIVE catalog (GET /api/auth/member-actions) rather than
+# encoded here — the runner never mints the key itself. Exactly one page-scoped action is
+# expected (the invite); none or several is a seed fault, caught loudly.
+INVITE_ACTION_KEY="$(api "${BASE_URL}/api/auth/member-actions" \
+  | python3 -c 'import json,sys
+data = json.load(sys.stdin).get("data", {})
+page = [a for a in data.get("actions", []) if a.get("scope") == "page"]
+print(page[0]["key"] if len(page) == 1 else "")' || true)"
+[[ -n "${INVITE_ACTION_KEY}" ]] \
+  || die "could not resolve a single page-scoped invite member-action from the catalog — the Members seed cannot create members"
+
+# Invite a member through the generic member-action invoke door (the admin DEMO_KEY
+# authorizes it, target_handle is null for a page action), then — when mode=accept —
+# consume the one-time invite to set a password so the person reads as an Active member
+# rather than a Pending invitation. A rerun whose email already exists carries no invite
+# token and is treated as already-seeded.
+seed_member() {
   local email="$1" role="$2" mode="${3:-invite}" resp token
-  resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/auth/users" \
-    -d "{\"email\":\"${email}\",\"role\":\"${role}\"}")"
-  # invite_token lives under data; a 409 rerun carries no data, so empty falls through.
-  token="$(printf '%s' "${resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("data", {}).get("invite_token", ""))' || true)"
+  resp="$(api -H "content-type: application/json" -X POST "${BASE_URL}/api/auth/member-actions/invoke" \
+    -d "$(ACTION_KEY="${INVITE_ACTION_KEY}" EMAIL="${email}" ROLE="${role}" python3 -c '
+import json, os
+print(json.dumps({
+    "action_key": os.environ["ACTION_KEY"],
+    "target_handle": None,
+    "input": {"email": os.environ["EMAIL"], "role": os.environ["ROLE"]},
+}))')")"
+  # The minted invite token rides on the opaque result; a conflict rerun carries none.
+  token="$(printf '%s' "${resp}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("data", {}).get("result", {}).get("invite_token", ""))' || true)"
   if [[ -z "${token}" ]]; then
     case "${resp}" in
       *'already registered'*) log "  ${email}: already seeded"; return 0 ;;
-      *) die "seed_user ${email}: unexpected response: ${resp}" ;;
+      *) die "seed_member ${email}: unexpected response: ${resp}" ;;
     esac
   fi
   if [[ "${mode}" == "accept" ]]; then
     api -H "content-type: application/json" -X POST "${BASE_URL}/api/login/invite/accept" \
       -d "{\"invite_token\":\"${token}\",\"password\":\"${DEMO_PASSWORD}\",\"password_confirm\":\"${DEMO_PASSWORD}\"}" >/dev/null \
-      || die "seed_user ${email}: invite accept failed"
+      || die "seed_member ${email}: invite accept failed"
   fi
 }
 
-seed_user "grace.hopper@demo.tai"      editor accept
-seed_user "alan.turing@demo.tai"       viewer accept
-seed_user "katherine.johnson@demo.tai" editor  # left pending → "Invite pending" badge
+seed_member "grace.hopper@demo.tai"      editor accept
+seed_member "alan.turing@demo.tai"       viewer accept
+seed_member "katherine.johnson@demo.tai" editor  # left pending → a Pending invitation row
 
-# Fail loudly before capture if the users table is empty (a broken shot the .mjs
+# Fail loudly before capture if the members directory is empty (a broken shot the .mjs
 # would refuse anyway — but a clearer message here).
-if ! api "${BASE_URL}/api/auth/users" | grep -q "${OWNER_EMAIL}"; then
-  die "users list is missing the seeded owner — the users-admin screen would be empty"
+if ! api "${BASE_URL}/api/auth/members" | grep -q "${OWNER_EMAIL}"; then
+  die "members list is missing the seeded owner — the Members screen would be empty"
 fi
 
 # --- 7c. Seed the capability-scoped surfaces (owned key + addressed inbox rows) ---
@@ -378,11 +398,12 @@ log "seeding the scoped owned key + audience-addressed inbox rows"
 # resolved below) marks it owned but is never the inbox audience.
 OWNED_KEY_ID="svc-demo-owned"
 
-# The owner identity: the seeded editor (grace). Read her user_id back from the
-# accounts API — robust across reruns (the row persists in the compose Postgres) by
-# matching her email in the data.users listing. Empty on no match → the die below fires.
-OWNER_USER_ID="$(api "${BASE_URL}/api/auth/users" \
-  | python3 -c 'import json,sys; users=json.load(sys.stdin)["data"]["users"]; print(next((u["user_id"] for u in users if u["email"]=="grace.hopper@demo.tai"), ""))' || true)"
+# The owner identity: the seeded editor (grace). Read her platform principal user_id back
+# from the Members directory — robust across reruns (the row persists in the compose
+# Postgres) by matching her email among the members and taking her principal's user_id.
+# Empty on no match → the die below fires.
+OWNER_USER_ID="$(api "${BASE_URL}/api/auth/members" \
+  | python3 -c 'import json,sys; members=json.load(sys.stdin)["data"]["members"]; print(next((m["principals"][0]["user_id"] for m in members if m["email"]=="grace.hopper@demo.tai" and m["principals"]), ""))' || true)"
 [[ -n "${OWNER_USER_ID}" ]] || die "could not resolve the seeded editor's user_id — the scoped owner is unknown"
 
 # The jq fence: the owned key reaches only these route prefixes, so its projection

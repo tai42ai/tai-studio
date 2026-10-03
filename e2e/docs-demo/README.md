@@ -45,7 +45,7 @@ router plus the real plugins so no screen is empty:
 | templates                                     | `tai42-storage-local` + the seeded templates in `templates/`                |
 | system                                        | the `health` + `metrics` routers (loaded before the SPA catch-all)          |
 | system-kinds                                  | the `system_kinds` router's `/api/system/kinds` (Plugin-kinds table)        |
-| users-admin                                   | the accounts plugin's users-admin page (seeded human accounts)              |
+| members / member-action-\*                     | the generic Members directory + the accounts provider's declared member actions (seeded membership) |
 | login                                         | the signed-out credential screen                                            |
 | hooks-trigger-link / -execution-key           | the hooks page's mint→QR flow and its execution-key + trigger-auth controls |
 | scoped-tools / -interactions / -notifications | the runner-minted **owned key** + its audience-addressed inbox rows         |

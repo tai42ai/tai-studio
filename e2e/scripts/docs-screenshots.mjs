@@ -54,8 +54,17 @@
  *                  populated Plugin kinds table.
  *   - system-kinds — the same /system route scrolled to the "Plugin kinds" table,
  *                  populated from `GET /api/system/kinds`.
- *   - users-admin — the accounts plugin's users-admin page (usr-* human accounts),
- *                  mounted via `studio_plugins`, populated by the runner's seed.
+ *   - members    — the generic Members directory (`GET /api/auth/members` +
+ *                  `GET /api/auth/member-actions`): the People table beside the Pending
+ *                  invitations table, each row's actions joined from the declared
+ *                  catalog, populated by the runner's member-action seed.
+ *   - member-action-input — the page-scoped "Invite a user" action's SchemaForm over its
+ *                  declared input schema (filled, not submitted — no account is created).
+ *   - member-action-confirm — a destructive row action ("Remove user") stopped at its
+ *                  confirm step (never confirmed, so no account is removed).
+ *   - member-action-result — a row action ("Send a new login link") run live against the
+ *                  seeded pending invite, framing the one-time-secret result (the minted
+ *                  invite link through CopyField).
  *   - marketplace-install — the Marketplace detail page's route-mounting install
  *                  dialog for the seeded generic plugin (acme/alerts-relay): the
  *                  resolved routes, the per-item base-prefix remap input, and the
@@ -708,15 +717,89 @@ const AUTHED_PAGES = [
     },
   },
   {
-    // The accounts plugin's users-admin page mounted in the Studio shell (route
-    // `/plugins/tai42_accounts_postgres/users`). The runner seeds a realistic set of
-    // human accounts (an admin owner + editor/viewer + a pending invite) before
-    // capture, so the users table is non-empty. The wait selector is the seeded
-    // owner's email cell — proof of a real populated row, never the "No users yet"
-    // empty state.
-    name: 'users-admin',
-    path: '/plugins/tai42_accounts_postgres/users',
+    // The generic Members directory (`/members`): the People table — the deployment's
+    // people aggregated across every accounts provider by `GET /api/auth/members` — beside
+    // the Pending invitations table, each row's actions joined from the declared
+    // `GET /api/auth/member-actions` catalog. The runner seeds a realistic membership (an
+    // admin owner + an active editor and viewer + a pending invite) before capture, so both
+    // tables are populated. Waits on the seeded owner's People row, and the action requires
+    // the seeded pending invite row so both sections are framed populated.
+    name: 'members',
+    path: '/members',
     wait: 'text=ada.lovelace@demo.tai',
+    action: async (page) => {
+      await page
+        .locator('[data-testid="invite-row"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // A member action's INPUT dialog: the page-scoped "Invite a user" action opens the
+    // platform `SchemaForm` over the action's declared input schema (Email + Role). Filled,
+    // never submitted, so no account is created and the frame is deterministic. The dialog is
+    // modal (background nav inert), so the plugin-nav wait is skipped.
+    name: 'member-action-input',
+    path: '/members',
+    wait: 'text=ada.lovelace@demo.tai',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page
+        .getByRole('group', { name: 'Member actions' })
+        .getByRole('button', { name: 'Invite a user' })
+        .click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByLabel('Email', { exact: true }).fill('newcomer@demo.tai');
+      await dialog.getByLabel('Role', { exact: true }).fill('editor');
+      await dialog
+        .getByLabel('Role', { exact: true })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // A destructive member action's CONFIRM step: "Remove user" on a member row asks the
+    // operator to confirm before it runs (the loud destructive guard). Opened to the confirm
+    // step, never confirmed, so no account is removed and the frame is deterministic. Modal —
+    // background nav inert.
+    name: 'member-action-confirm',
+    path: '/members',
+    wait: 'text=alan.turing@demo.tai',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page
+        .getByRole('group', { name: 'Actions for alan.turing@demo.tai' })
+        .getByRole('button', { name: 'Remove user' })
+        .click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Remove user' }).click();
+      await page
+        .locator('[data-testid="member-action-confirm"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+  },
+  {
+    // A member action's RESULT view carrying a one-time secret: "Send a new login link" on a
+    // pending invite row mints a fresh invite and shows the raw token + login path through
+    // `CopyField` (undismissable, shown-once). Driven live against the seeded pending invite;
+    // the mint replaces that invite's token, so it is re-runnable across the two theme passes.
+    //
+    // Nondeterministic: the minted invite token differs every run, so the automated pipeline
+    // skips it (SKIP_NONDETERMINISTIC_SHOTS); recaptured on a manual full run when the result
+    // view changes. Modal — background nav inert.
+    name: 'member-action-result',
+    nondeterministic: true,
+    path: '/members',
+    wait: 'text=katherine.johnson@demo.tai',
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page
+        .getByRole('group', { name: 'Actions for katherine.johnson@demo.tai' })
+        .getByRole('button', { name: 'Send a new login link' })
+        .click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Send a new login link' }).click();
+      await page
+        .locator('[data-testid="member-action-result"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
   },
   {
     // The Marketplace detail page's route-mounting install dialog for the seeded
