@@ -325,6 +325,112 @@ describe('MembersPage actions', () => {
     });
   });
 
+  it('renders a destructive page action as a danger button and confirms before invoking', async () => {
+    const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({ members: [member], invites: [] }),
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-purge',
+            label: 'Purge directory',
+            scope: 'page',
+            destructive: true,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Purge directory' }));
+    // Destructive → the first submit reveals the confirm step, no invoke yet.
+    await userEvent.click(await screen.findByRole('button', { name: 'Purge directory' }));
+    expect(await screen.findByTestId('member-action-confirm')).toBeInTheDocument();
+    expect(invokeMemberAction).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('renders a non-destructive member-row action and invokes it with the row handle', async () => {
+    const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
+    const client = stubClient({
+      listMembers: vi
+        .fn()
+        .mockResolvedValue({ members: [{ ...member, action_keys: ['act-resend'] }], invites: [] }),
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-resend',
+            label: 'Resend link',
+            scope: 'member_row',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    const peopleTable = await screen.findByTestId('members-table');
+    const rowGroup = within(peopleTable).getByRole('group', {
+      name: 'Actions for alice@example.com',
+    });
+    await userEvent.click(within(rowGroup).getByRole('button', { name: 'Resend link' }));
+    // Non-destructive → the dialog runs the invoke directly on submit, no confirm step.
+    await userEvent.click(await screen.findByRole('button', { name: 'Resend link' }));
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenCalledWith({
+        action_key: 'act-resend',
+        target_handle: 'handle-m-1',
+        input: {},
+      });
+    });
+  });
+
+  it('renders an invite-row action joined to the invitation and invokes it with the invite handle', async () => {
+    const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
+    const client = stubClient({
+      listMembers: vi
+        .fn()
+        .mockResolvedValue({ members: [], invites: [{ ...invite, action_keys: ['act-revoke'] }] }),
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-revoke',
+            label: 'Revoke invitation',
+            scope: 'invite_row',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    const invitesTable = await screen.findByTestId('invites-table');
+    const rowGroup = within(invitesTable).getByRole('group', {
+      name: 'Actions for bob@example.com',
+    });
+    await userEvent.click(within(rowGroup).getByRole('button', { name: 'Revoke invitation' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Revoke invitation' }));
+    await waitFor(() => {
+      expect(invokeMemberAction).toHaveBeenCalledWith({
+        action_key: 'act-revoke',
+        target_handle: 'handle-i-1',
+        input: {},
+      });
+    });
+  });
+
   it('renders the input form for an action that declares input', async () => {
     const client = stubClient({
       listMemberActions: vi.fn().mockResolvedValue({
@@ -350,5 +456,36 @@ describe('MembersPage actions', () => {
     // The action's declared input renders through the platform SchemaForm (its root
     // carries the idPrefix as a test id).
     expect(await screen.findByTestId('member-action-act-role')).toBeInTheDocument();
+  });
+
+  it('clears the active action so cancelling the dialog returns to the directory', async () => {
+    const invokeMemberAction = vi.fn().mockResolvedValue({ result: {} });
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({ members: [member], invites: [] }),
+      listMemberActions: vi.fn().mockResolvedValue({
+        actions: [
+          {
+            key: 'act-invite',
+            label: 'Invite a person',
+            scope: 'page',
+            destructive: false,
+            input_schema: emptySchema,
+            result_schema: emptySchema,
+          },
+        ],
+      }),
+      invokeMemberAction,
+    });
+    renderPage(client);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Invite a person' }));
+    expect(await screen.findByText('Run this action now?')).toBeInTheDocument();
+    // Cancelling drops the active action: the dialog unmounts and nothing is invoked.
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Run this action now?')).toBeNull();
+    });
+    expect(invokeMemberAction).not.toHaveBeenCalled();
+    expect(screen.getByTestId('members-table')).toBeInTheDocument();
   });
 });
