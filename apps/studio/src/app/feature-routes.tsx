@@ -14,6 +14,7 @@ import { HooksPage } from '@tai42/feature-hooks';
 import { InteractionsPage } from '@tai42/feature-interactions';
 import { ManifestPage, ServedEndpointsPage } from '@tai42/feature-manifest';
 import { MarketplacePage } from '@tai42/feature-marketplace';
+import { MembersPage } from '@tai42/feature-members';
 import { NotificationsPage } from '@tai42/feature-notifications';
 import { ObservabilityPage } from '@tai42/feature-observability';
 import { PresetsPage } from '@tai42/feature-presets';
@@ -204,6 +205,12 @@ function buildIntegrationRoutes(authedLayout: AuthedLayoutRoute) {
 
 /** The administration surfaces + the runtime plugin-page catch-all. */
 function buildAdminRoutes(authedLayout: AuthedLayoutRoute, plugins: PluginLoader) {
+  const membersRoute = createRoute({
+    getParentRoute: () => authedLayout,
+    path: '/members',
+    component: (): ReactNode => <MembersPage search={{}} />,
+  });
+
   const settingsRoute = createRoute({
     getParentRoute: () => authedLayout,
     path: '/settings',
@@ -242,7 +249,7 @@ function buildAdminRoutes(authedLayout: AuthedLayoutRoute, plugins: PluginLoader
     },
   });
 
-  return [settingsRoute, systemRoute, schedulingRoute, marketplaceRoute, pluginRoute];
+  return [membersRoute, settingsRoute, systemRoute, schedulingRoute, marketplaceRoute, pluginRoute];
 }
 
 export function buildFeatureRoutes(authedLayout: AuthedLayoutRoute, plugins: PluginLoader) {

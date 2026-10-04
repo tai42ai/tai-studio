@@ -816,6 +816,43 @@ claim_path: string;
 token: string;
 expires_at: string;
 }>;
+readonly listMembers: (signal?: AbortSignal) => Promise<{
+members: {
+id: string;
+email: string;
+role: string;
+created_at: string;
+principals: {
+user_id: string;
+disabled: boolean;
+}[];
+disabled: boolean;
+handle: string;
+action_keys: string[];
+}[];
+invites: {
+id: string;
+email: string;
+role: string;
+created_at: string;
+expires_at: string;
+handle: string;
+action_keys: string[];
+}[];
+}>;
+readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+actions: {
+key: string;
+label: string;
+scope: "page" | "member_row" | "invite_row";
+destructive: boolean;
+input_schema: Record<string, unknown>;
+result_schema: Record<string, unknown>;
+}[];
+}>;
+readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+result: Record<string, unknown>;
+}>;
 readonly listPrincipals: (signal?: AbortSignal) => Promise<{
 user_id: string;
 kind: "human" | "service";
@@ -1039,16 +1076,9 @@ created_at: string;
 audience?: string | null | undefined;
 media?: unknown[] | null | undefined;
 template?: {
-body_parameters: string[];
-buttons: unknown[];
-header_media: {
-caption: string | null;
-filename: string | null;
-kind: "image" | "link" | "document" | "video" | "audio";
-url: string;
-} | null;
 language: string;
 name: string;
+parameters: Record<string, unknown> | null;
 } | null | undefined;
 options?: string[] | null | undefined;
 }[];
@@ -1188,7 +1218,7 @@ thread_id: string;
 client_address: string;
 last_activity_at: number;
 message_count: number;
-last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+last_delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 }[];
 }>;
 readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
@@ -1211,7 +1241,7 @@ answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1242,7 +1272,7 @@ answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -1440,7 +1470,7 @@ answer_status: "error" | "silent" | "merged" | "superseded" | "answered" | null;
 answer: string | null;
 successor_id: string | null;
 origin: "client" | "operator";
-delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
 created_at: number;
 updated_at: number;
 channel?: string | null | undefined;
@@ -3218,9 +3248,9 @@ type AttachmentMediaItem = z.infer<typeof attachmentMediaItem>;
 const attachmentMediaItem: z.ZodObject<{
     kind: z.ZodEnum<{
         image: "image";
+        audio: "audio";
         document: "document";
         video: "video";
-        audio: "audio";
     }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -3233,9 +3263,9 @@ type AttachmentMediaKind = z.infer<typeof attachmentMediaKind>;
 // @public
 const attachmentMediaKind: z.ZodEnum<{
     image: "image";
+    audio: "audio";
     document: "document";
     video: "video";
-    audio: "audio";
 }>;
 
 // @public (undocumented)
@@ -3621,22 +3651,9 @@ type ChannelTemplate = z.infer<typeof channelTemplate>;
 
 // @public (undocumented)
 const channelTemplate: z.ZodObject<{
-    body_parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    buttons: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
-    header_media: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-        caption: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        filename: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-        kind: z.ZodEnum<{
-            image: "image";
-            link: "link";
-            document: "document";
-            video: "video";
-            audio: "audio";
-        }>;
-        url: z.ZodString;
-    }, z.core.$strip>, z.ZodNull]>>;
     language: z.ZodString;
     name: z.ZodString;
+    parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4048,11 +4065,11 @@ type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStatus>;
 
 // @public
 const conversationDeliveryStatus: z.ZodEnum<{
-    failed: "failed";
     accepted: "accepted";
     pending_delivery: "pending_delivery";
     provisional: "provisional";
     delivered: "delivered";
+    failed: "failed";
     shed: "shed";
     silent: "silent";
     merged: "merged";
@@ -4099,11 +4116,11 @@ const conversationFailedMessages: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4152,11 +4169,11 @@ const conversationMessage: z.ZodObject<{
         operator: "operator";
     }>;
     delivery_status: z.ZodEnum<{
-        failed: "failed";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
+        failed: "failed";
         shed: "shed";
         silent: "silent";
         merged: "merged";
@@ -4209,11 +4226,11 @@ const conversationMessageSearchPage: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4572,11 +4589,11 @@ const conversationThread: z.ZodObject<{
     last_activity_at: z.ZodNumber;
     message_count: z.ZodNumber;
     last_delivery_status: z.ZodEnum<{
-        failed: "failed";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
+        failed: "failed";
         shed: "shed";
         silent: "silent";
         merged: "merged";
@@ -4661,11 +4678,11 @@ const conversationThreadsPage: z.ZodObject<{
         last_activity_at: z.ZodNumber;
         message_count: z.ZodNumber;
         last_delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -4714,11 +4731,11 @@ const conversationTranscriptPage: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -5410,6 +5427,43 @@ function createApiClient(config: ApiConfig): {
         token: string;
         expires_at: string;
     }>;
+    readonly listMembers: (signal?: AbortSignal) => Promise<{
+        members: {
+            id: string;
+            email: string;
+            role: string;
+            created_at: string;
+            principals: {
+                user_id: string;
+                disabled: boolean;
+            }[];
+            disabled: boolean;
+            handle: string;
+            action_keys: string[];
+        }[];
+        invites: {
+            id: string;
+            email: string;
+            role: string;
+            created_at: string;
+            expires_at: string;
+            handle: string;
+            action_keys: string[];
+        }[];
+    }>;
+    readonly listMemberActions: (signal?: AbortSignal) => Promise<{
+        actions: {
+            key: string;
+            label: string;
+            scope: "page" | "member_row" | "invite_row";
+            destructive: boolean;
+            input_schema: Record<string, unknown>;
+            result_schema: Record<string, unknown>;
+        }[];
+    }>;
+    readonly invokeMemberAction: (body: InvokeMemberActionBody) => Promise<{
+        result: Record<string, unknown>;
+    }>;
     readonly listPrincipals: (signal?: AbortSignal) => Promise<{
         user_id: string;
         kind: "human" | "service";
@@ -5633,16 +5687,9 @@ function createApiClient(config: ApiConfig): {
             audience?: string | null | undefined;
             media?: unknown[] | null | undefined;
             template?: {
-                body_parameters: string[];
-                buttons: unknown[];
-                header_media: {
-                    caption: string | null;
-                    filename: string | null;
-                    kind: "image" | "link" | "document" | "video" | "audio";
-                    url: string;
-                } | null;
                 language: string;
                 name: string;
+                parameters: Record<string, unknown> | null;
             } | null | undefined;
             options?: string[] | null | undefined;
         }[];
@@ -5782,7 +5829,7 @@ function createApiClient(config: ApiConfig): {
             client_address: string;
             last_activity_at: number;
             message_count: number;
-            last_delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            last_delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
         }[];
     }>;
     readonly readConversationTranscript: (query: ConversationTranscriptQuery, signal?: AbortSignal) => Promise<{
@@ -5805,7 +5852,7 @@ function createApiClient(config: ApiConfig): {
             answer: string | null;
             successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -5836,7 +5883,7 @@ function createApiClient(config: ApiConfig): {
             answer: string | null;
             successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -6034,7 +6081,7 @@ function createApiClient(config: ApiConfig): {
             answer: string | null;
             successor_id: string | null;
             origin: "client" | "operator";
-            delivery_status: "failed" | "accepted" | "pending_delivery" | "provisional" | "delivered" | "shed" | "silent" | "merged" | "superseded";
+            delivery_status: "accepted" | "pending_delivery" | "provisional" | "delivered" | "failed" | "shed" | "silent" | "merged" | "superseded";
             created_at: number;
             updated_at: number;
             channel?: string | null | undefined;
@@ -9310,8 +9357,8 @@ type InteractionMediaItem = z.infer<typeof interactionMediaItem>;
 // @public
 const interactionMediaItem: z.ZodObject<{
     kind: z.ZodEnum<{
-        image: "image";
         link: "link";
+        image: "image";
     }>;
     url: z.ZodString;
     caption: z.ZodOptional<z.ZodNullable<z.ZodString>>;
@@ -9372,6 +9419,38 @@ export interface InteractionsStreamState {
     // (undocumented)
     readonly interactions: StreamInteraction[];
 }
+
+// @public (undocumented)
+type InviteRow = z.infer<typeof inviteRow>;
+
+// @public
+const inviteRow: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    created_at: z.ZodString;
+    expires_at: z.ZodString;
+    handle: z.ZodString;
+    action_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+interface InvokeMemberActionBody {
+    // (undocumented)
+    readonly action_key: string;
+    // (undocumented)
+    readonly input: Record<string, unknown>;
+    // (undocumented)
+    readonly target_handle: string | null;
+}
+
+// @public (undocumented)
+type InvokeMemberActionResult = z.infer<typeof invokeMemberActionResult>;
+
+// @public
+const invokeMemberActionResult: z.ZodObject<{
+    result: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, z.core.$strip>;
 
 // @public
 export function isExecutionKeyListEmpty(query: ExecutionKeyQuery): boolean;
@@ -10520,9 +10599,114 @@ type MediaKind = z.infer<typeof mediaKind>;
 
 // @public
 const mediaKind: z.ZodEnum<{
-    image: "image";
     link: "link";
+    image: "image";
 }>;
+
+// @public (undocumented)
+type MemberActionCatalog = z.infer<typeof memberActionCatalog>;
+
+// @public
+const memberActionCatalog: z.ZodObject<{
+    actions: z.ZodArray<z.ZodObject<{
+        key: z.ZodString;
+        label: z.ZodString;
+        scope: z.ZodEnum<{
+            page: "page";
+            member_row: "member_row";
+            invite_row: "invite_row";
+        }>;
+        destructive: z.ZodBoolean;
+        input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+        result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberActionDescriptor = z.infer<typeof memberActionDescriptor>;
+
+// @public
+const memberActionDescriptor: z.ZodObject<{
+    key: z.ZodString;
+    label: z.ZodString;
+    scope: z.ZodEnum<{
+        page: "page";
+        member_row: "member_row";
+        invite_row: "invite_row";
+    }>;
+    destructive: z.ZodBoolean;
+    input_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    result_schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberActionScope = z.infer<typeof memberActionScope>;
+
+// @public
+const memberActionScope: z.ZodEnum<{
+    page: "page";
+    member_row: "member_row";
+    invite_row: "invite_row";
+}>;
+
+// @public (undocumented)
+type MemberDirectory = z.infer<typeof memberDirectory>;
+
+// @public
+const memberDirectory: z.ZodObject<{
+    members: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        role: z.ZodString;
+        created_at: z.ZodString;
+        principals: z.ZodArray<z.ZodObject<{
+            user_id: z.ZodString;
+            disabled: z.ZodBoolean;
+        }, z.core.$strip>>;
+        disabled: z.ZodBoolean;
+        handle: z.ZodString;
+        action_keys: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>;
+    invites: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        email: z.ZodString;
+        role: z.ZodString;
+        created_at: z.ZodString;
+        expires_at: z.ZodString;
+        handle: z.ZodString;
+        action_keys: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
+
+// @public
+const memberPrincipalState: z.ZodObject<{
+    user_id: z.ZodString;
+    disabled: z.ZodBoolean;
+}, z.core.$strip>;
+
+// @public (undocumented)
+type MemberRow = z.infer<typeof memberRow>;
+
+// @public
+const memberRow: z.ZodObject<{
+    id: z.ZodString;
+    email: z.ZodString;
+    role: z.ZodString;
+    created_at: z.ZodString;
+    principals: z.ZodArray<z.ZodObject<{
+        user_id: z.ZodString;
+        disabled: z.ZodBoolean;
+    }, z.core.$strip>>;
+    disabled: z.ZodBoolean;
+    handle: z.ZodString;
+    action_keys: z.ZodArray<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+export const MembersIcon: IconComponent;
 
 // @public
 export const MenuIcon: IconComponent;
@@ -10646,22 +10830,9 @@ const notification: z.ZodObject<{
     audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
     template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-        body_parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
-        buttons: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
-        header_media: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-            caption: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-            filename: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-            kind: z.ZodEnum<{
-                image: "image";
-                link: "link";
-                document: "document";
-                video: "video";
-                audio: "audio";
-            }>;
-            url: z.ZodString;
-        }, z.core.$strip>, z.ZodNull]>>;
         language: z.ZodString;
         name: z.ZodString;
+        parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
     }, z.core.$strip>>>;
     options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
     created_at: z.ZodString;
@@ -10682,22 +10853,9 @@ const notifications: z.ZodObject<{
         audience: z.ZodOptional<z.ZodNullable<z.ZodString>>;
         media: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodUnknown>>>;
         template: z.ZodOptional<z.ZodNullable<z.ZodObject<{
-            body_parameters: z.ZodDefault<z.ZodArray<z.ZodString>>;
-            buttons: z.ZodDefault<z.ZodArray<z.ZodUnknown>>;
-            header_media: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
-                caption: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-                filename: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
-                kind: z.ZodEnum<{
-                    image: "image";
-                    link: "link";
-                    document: "document";
-                    video: "video";
-                    audio: "audio";
-                }>;
-                url: z.ZodString;
-            }, z.core.$strip>, z.ZodNull]>>;
             language: z.ZodString;
             name: z.ZodString;
+            parameters: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
         }, z.core.$strip>>>;
         options: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString>>>;
         created_at: z.ZodString;
@@ -12189,6 +12347,8 @@ export interface RouteSearchByToken {
         plugin?: string;
     };
     // (undocumented)
+    members: Record<string, never>;
+    // (undocumented)
     notifications: Record<string, never>;
     // (undocumented)
     observability: {
@@ -12656,6 +12816,22 @@ declare namespace s {
         MarketplaceInstallPreview,
         marketplaceUninstallResult,
         MarketplaceUninstallResult,
+        memberActionScope,
+        MemberActionScope,
+        memberPrincipalState,
+        MemberPrincipalState,
+        memberRow,
+        MemberRow,
+        inviteRow,
+        InviteRow,
+        memberDirectory,
+        MemberDirectory,
+        memberActionDescriptor,
+        MemberActionDescriptor,
+        memberActionCatalog,
+        MemberActionCatalog,
+        invokeMemberActionResult,
+        InvokeMemberActionResult,
         notification,
         Notification_2 as Notification,
         notifications,

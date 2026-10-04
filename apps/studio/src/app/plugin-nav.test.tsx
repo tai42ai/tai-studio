@@ -279,6 +279,7 @@ describe('plugin nav sections', () => {
     const admin = await screen.findByRole('list', { name: 'Administration' });
     // The plugin row lands in Administration, ordered after every core row.
     expect(rowTexts(admin)).toEqual([
+      'Members',
       'Settings',
       'Storage',
       'Marketplace',

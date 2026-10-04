@@ -118,8 +118,9 @@ function OptionChips({ options }: { readonly options: readonly string[] }): Reac
   );
 }
 
-/** A pre-approved channel template the send carried: its name + language, and the
- *  positional body parameters it would substitute. Every value escaped text. */
+/** A pre-approved channel template the send carried: its name + language. The
+ *  template's runtime arguments ride in an opaque, per-channel `parameters` object
+ *  the Studio threads unopened, so they are not rendered here. */
 function TemplateBlock({ template }: { readonly template: ChannelTemplate }): ReactNode {
   return (
     <div style={templateStyle} data-testid="notification-template">
@@ -128,9 +129,6 @@ function TemplateBlock({ template }: { readonly template: ChannelTemplate }): Re
         <Badge variant="neutral">{template.name}</Badge>
         <Badge variant="neutral">{template.language}</Badge>
       </div>
-      {template.body_parameters.length > 0 ? (
-        <span style={labelStyle}>Parameters: {template.body_parameters.join(', ')}</span>
-      ) : null}
     </div>
   );
 }

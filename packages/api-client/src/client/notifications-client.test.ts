@@ -71,7 +71,7 @@ describe('notifications client transport', () => {
       recipient: null,
       audience: 'u-42',
       media: [{ kind: 'image', url: 'https://cdn.example.com/x.png', caption: 'x' }],
-      template: { name: 'order_update', language: 'en', parameters: ['#1'] },
+      template: { name: 'status_update', language: 'en', parameters: { body: ['#1'] } },
       options: ['Acknowledge', 'Snooze'],
     };
     const { client } = harness(() => jsonResponse({ data: { notifications: [rich] } }));
@@ -79,7 +79,7 @@ describe('notifications client transport', () => {
     const parsed = out.notifications[0];
     expect(parsed?.audience).toBe('u-42');
     expect(parsed?.media).toHaveLength(1);
-    expect(parsed?.template?.name).toBe('order_update');
+    expect(parsed?.template?.name).toBe('status_update');
     expect(parsed?.options).toEqual(['Acknowledge', 'Snooze']);
   });
 

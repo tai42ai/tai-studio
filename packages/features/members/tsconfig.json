@@ -1,0 +1,11 @@
+{
+  // Tooling config: the NON-emitting program used by ESLint's typed rules and
+  // the IDE. Includes tests (which live under src) so test files get full type
+  // information when linting. The emitting composite build is tsconfig.build.json.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true
+  },
+  "include": ["src"]
+}

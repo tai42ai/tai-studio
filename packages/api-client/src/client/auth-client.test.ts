@@ -463,3 +463,134 @@ describe('auth roles client transport', () => {
     expect(captured).toHaveLength(0);
   });
 });
+
+describe('auth members client transport', () => {
+  it('listMembers GETs the directory and parses members + invites with their platform joins', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          members: [
+            {
+              id: 'p-1',
+              email: 'alice@example.test',
+              role: 'editor',
+              created_at: '2026-07-21T00:00:00Z',
+              principals: [{ user_id: 'u-alice', disabled: false }],
+              disabled: false,
+              handle: 'prov:alice',
+              action_keys: ['act-1'],
+            },
+          ],
+          invites: [
+            {
+              id: 'i-1',
+              email: 'bob@example.test',
+              role: 'viewer',
+              created_at: '2026-07-21T00:00:00Z',
+              expires_at: '2026-07-28T00:00:00Z',
+              handle: 'prov:bob',
+              action_keys: ['act-2'],
+            },
+          ],
+        },
+      }),
+    );
+    const out = await client.listMembers();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/auth/members');
+    // The per-principal state and the opaque routing tokens ride through the join.
+    expect(out.members[0]?.principals[0]?.disabled).toBe(false);
+    expect(out.members[0]?.action_keys).toEqual(['act-1']);
+    expect(out.invites[0]?.handle).toBe('prov:bob');
+  });
+
+  it('throws ApiSchemaError LOUDLY on a member row missing its handle join', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          members: [
+            {
+              id: 'p-1',
+              email: 'alice@example.test',
+              role: 'editor',
+              created_at: '2026-07-21T00:00:00Z',
+              principals: [],
+              disabled: true,
+              action_keys: [],
+            },
+          ],
+          invites: [],
+        },
+      }),
+    );
+    await expect(client.listMembers()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('listMemberActions GETs the catalog and parses each descriptor + its JSON schemas', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({
+        data: {
+          actions: [
+            {
+              key: 'act-1',
+              label: 'Disable',
+              scope: 'member_row',
+              destructive: true,
+              input_schema: { type: 'object', properties: {} },
+              result_schema: { type: 'object' },
+            },
+          ],
+        },
+      }),
+    );
+    const out = await client.listMemberActions();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/auth/member-actions');
+    expect(out.actions[0]?.scope).toBe('member_row');
+    // The input/result JSON Schemas ride through opaque — Studio renders from them.
+    expect(out.actions[0]?.input_schema).toEqual({ type: 'object', properties: {} });
+  });
+
+  it('rejects (loudly) a descriptor whose scope is outside the declared placements', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          actions: [
+            {
+              key: 'act-1',
+              label: 'x',
+              scope: 'sidebar',
+              destructive: false,
+              input_schema: {},
+              result_schema: {},
+            },
+          ],
+        },
+      }),
+    );
+    await expect(client.listMemberActions()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('invokeMemberAction POSTs the opaque { action_key, target_handle, input } body and parses the carried result', async () => {
+    const body = { action_key: 'act-1', target_handle: 'prov:alice', input: { note: 'n' } };
+    const { client, captured } = harness(() =>
+      jsonResponse({ data: { result: { status: 'ok' } } }),
+    );
+    const out = await client.invokeMemberAction(body);
+    expect(captured[0]?.method).toBe('POST');
+    expect(captured[0]?.url).toBe('/api/auth/member-actions/invoke');
+    expect(captured[0]?.body).toEqual(body);
+    // The result rides through opaque — rendered through the action's result_schema.
+    expect(out.result).toEqual({ status: 'ok' });
+  });
+
+  it('invokeMemberAction carries a page-scoped action (null target) and surfaces a 400 LOUDLY', async () => {
+    const { client, captured } = harness(() =>
+      jsonResponse({ error: 'input failed validation' }, 400),
+    );
+    await expect(
+      client.invokeMemberAction({ action_key: 'act-1', target_handle: null, input: {} }),
+    ).rejects.toBeInstanceOf(ApiError);
+    expect(captured[0]?.body).toEqual({ action_key: 'act-1', target_handle: null, input: {} });
+  });
+});

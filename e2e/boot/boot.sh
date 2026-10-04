@@ -294,6 +294,14 @@ export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/).*":"studio
 # --- 5. Skeleton env + launch -----------------------------------------------
 export ACCESS_CONTROL_ENABLE=true
 export ACCESS_CONTROL_REDIS_URL="${REDIS_URL}"
+# The redis-backed identity provider owns its own Redis connection (TAI_IDENTITY_*,
+# falling back to TAI_DEFAULT_REDIS_URL). Point it at the SAME Redis db the identity
+# records are seeded into above — the `ac:key:{sha256(raw)}` hashes and the
+# `ac:management:key:{user_id}` reverse index live on db 0 (REDIS_URL), the same db
+# access control reads — so `probe_identity_provider` reaches a live store at boot and
+# token validation finds the seeded key. Without this the provider's redis_url is unset
+# and the probe aborts the boot.
+export TAI_IDENTITY_REDIS_URL="${REDIS_URL}"
 # The file config backend anchors its `.env` (and its lock) at TAI_CONFIG_DIR_PATH,
 # which defaults to `/app` — a path that exists only inside the deployment image, not
 # on a bare runner. Point it at a writable directory so the config doors work (e.g.

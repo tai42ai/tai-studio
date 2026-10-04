@@ -328,7 +328,7 @@ describe('NotificationsPage', () => {
           {
             ...record,
             id: 't',
-            template: { name: 'status_update', language: 'en', body_parameters: ['A-42', 'sent'] },
+            template: { name: 'status_update', language: 'en', parameters: null },
           },
         ],
       }),
@@ -338,17 +338,16 @@ describe('NotificationsPage', () => {
     const template = await screen.findByTestId('notification-template');
     expect(within(template).getByText('status_update')).toBeInTheDocument();
     expect(within(template).getByText('en')).toBeInTheDocument();
-    expect(within(template).getByText('Parameters: A-42, sent')).toBeInTheDocument();
   });
 
-  it('renders a parameter-less template without a Parameters line', async () => {
+  it('renders a template with opaque parameters without exposing their values', async () => {
     const client = stubClient(
       vi.fn().mockResolvedValue({
         notifications: [
           {
             ...record,
             id: 'tp',
-            template: { name: 'welcome', language: 'he', body_parameters: [] },
+            template: { name: 'welcome', language: 'he', parameters: { body: ['A-42', 'sent'] } },
           },
         ],
       }),
@@ -357,7 +356,7 @@ describe('NotificationsPage', () => {
 
     const template = await screen.findByTestId('notification-template');
     expect(within(template).getByText('welcome')).toBeInTheDocument();
-    expect(within(template).queryByText(/^Parameters:/)).not.toBeInTheDocument();
+    expect(within(template).queryByText(/A-42/)).not.toBeInTheDocument();
   });
 
   it('reveals more with the "Show more" control when the feed exceeds one page', async () => {

@@ -369,6 +369,7 @@ export {
   InteractionsIcon,
   ManifestIcon,
   MarketplaceIcon,
+  MembersIcon,
   MenuIcon,
   MinusIcon,
   MonitorIcon,

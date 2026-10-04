@@ -19,6 +19,7 @@
     { "path": "packages/features/templates/tsconfig.build.json" },
     { "path": "packages/features/storage/tsconfig.build.json" },
     { "path": "packages/features/manifest/tsconfig.build.json" },
+    { "path": "packages/features/members/tsconfig.build.json" },
     { "path": "packages/features/settings/tsconfig.build.json" },
     { "path": "packages/features/scheduling/tsconfig.build.json" },
     { "path": "packages/features/observability/tsconfig.build.json" },

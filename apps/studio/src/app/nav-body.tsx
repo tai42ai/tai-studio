@@ -46,6 +46,7 @@ const NAV_LABELS: Record<FeatureToken, string> = {
   templates: 'Templates',
   storage: 'Storage',
   manifest: 'Manifest',
+  members: 'Members',
   settings: 'Settings',
   system: 'System',
   scheduling: 'Scheduling',

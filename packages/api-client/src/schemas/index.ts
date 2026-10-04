@@ -15,6 +15,7 @@ export * from './interactions';
 export * from './login';
 export * from './manifest-mcp';
 export * from './marketplace';
+export * from './members';
 export * from './notifications';
 export * from './observability';
 export * from './policy';
