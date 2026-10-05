@@ -17,7 +17,7 @@ catalog:
   '@vitejs/plugin-react': ^4.7.0
   '@vitest/coverage-v8': ^5.0.0
   eslint: ^9.17.0
-  eslint-plugin-boundaries: ^6.0.2
+  eslint-plugin-boundaries: ^7.2.0
   jsdom: ^30.0.1
   prettier: ^3.9.9
   react: ^19.3.0
