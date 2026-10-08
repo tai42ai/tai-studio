@@ -6,9 +6,12 @@
 import type { MeProjection, PrincipalRef } from '@tai42/api-client';
 import { type CapabilityState, coversAnyRoute, isFullProjection } from '@tai42/studio-sdk';
 
-/** Unique scope ids across the scope map, excluding the implicit `public` scope. */
-export function scopeIdsOf(scopes: Record<string, string>): string[] {
-  return [...new Set(Object.values(scopes))].filter((id) => id !== 'public').sort();
+/**
+ * Unique scope ids across the scope map, excluding the deployment's served public
+ * marker (`publicId`, the projection's `public_resource_id`), which is never a scope.
+ */
+export function scopeIdsOf(scopes: Record<string, string>, publicId: string): string[] {
+  return [...new Set(Object.values(scopes))].filter((id) => id !== publicId).sort();
 }
 
 /** The mint route the caller's projection must be able to reach to create a key. */

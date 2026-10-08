@@ -7,6 +7,16 @@ import { renderWithProviders } from './test-utils';
 
 const TOOLS = ['echo', 'sum'];
 
+/** The `alpha` mount as `listSubMcp` serves it: the row shows the served URL verbatim. */
+function served(transport: string) {
+  return {
+    tools: ['echo'],
+    transport,
+    mount_url: '/mounted/alpha',
+    access_pattern: '^/mounted/alpha/.*$',
+  };
+}
+
 describe('ServedEndpointsPage', () => {
   it('renders the Connections page header', async () => {
     const client = {
@@ -22,7 +32,7 @@ describe('ServedEndpointsPage', () => {
 
   it('lists sub-MCP servers with their transport, endpoint, and tools', async () => {
     const client = {
-      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'sse' } }),
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: served('sse') }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
     };
     renderWithProviders(<ServedEndpointsPage search={{}} />, { client });
@@ -36,9 +46,9 @@ describe('ServedEndpointsPage', () => {
     // The hidden Actions header wears the published clip class, not a partial
     // hand-rolled copy of it that stays selectable and readable to a magnifier.
     expect(screen.getByText('Actions')).toHaveClass('tai-visually-hidden');
-    // Transport and the concrete endpoint URL are surfaced per row.
+    // Transport and the served endpoint URL are surfaced per row.
     expect(screen.getByText('sse')).toBeInTheDocument();
-    expect(screen.getByText('/app/alpha')).toBeInTheDocument();
+    expect(screen.getByText('/mounted/alpha')).toBeInTheDocument();
     // The tool badge in the list row.
     expect(screen.getAllByText('echo').length).toBeGreaterThan(0);
   });
@@ -114,7 +124,7 @@ describe('ServedEndpointsPage', () => {
       .fn()
       .mockResolvedValue({ slug: 'alpha', tools: ['sum'], transport: 'http' });
     const client = {
-      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'http' } }),
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: served('http') }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
       createSubMcp,
     };
@@ -160,7 +170,7 @@ describe('ServedEndpointsPage', () => {
     const user = userEvent.setup();
     const deleteSubMcp = vi.fn().mockResolvedValue({ slug: 'alpha', removed: true });
     const client = {
-      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'http' } }),
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: served('http') }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
       deleteSubMcp,
     };
@@ -188,7 +198,7 @@ describe('ServedEndpointsPage', () => {
 
   it('wears the ghost style on the per-row sub-MCP Delete, not filled danger', async () => {
     const client = {
-      listSubMcp: vi.fn().mockResolvedValue({ alpha: { tools: ['echo'], transport: 'sse' } }),
+      listSubMcp: vi.fn().mockResolvedValue({ alpha: served('sse') }),
       listTools: vi.fn().mockResolvedValue(TOOLS),
     };
     renderWithProviders(<ServedEndpointsPage search={{}} />, { client });

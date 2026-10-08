@@ -1,4 +1,14 @@
 {
-  "demo_forms": { "tools": ["studio_demo_form", "studio_demo_echo"], "transport": "http" },
-  "demo_echo": { "tools": ["studio_demo_echo"], "transport": "stdio" }
+  "demo_forms": {
+    "tools": ["studio_demo_form", "studio_demo_echo"],
+    "transport": "http",
+    "mount_url": "/app/demo_forms",
+    "access_pattern": "^/app/demo_forms/.*$"
+  },
+  "demo_echo": {
+    "tools": ["studio_demo_echo"],
+    "transport": "stdio",
+    "mount_url": "/app/demo_echo",
+    "access_pattern": "^/app/demo_echo/.*$"
+  }
 }

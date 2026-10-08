@@ -4,8 +4,6 @@
 import { Button, Field, TextInput } from '@tai42/studio-sdk';
 import { type CSSProperties, type ReactNode, useState } from 'react';
 
-import { PUBLIC_MARKER } from './scope-mapping';
-
 const inlineFormStyle: CSSProperties = {
   display: 'flex',
   flexWrap: 'wrap',
@@ -18,9 +16,12 @@ const SCOPE_ID_RE = /^[a-zA-Z0-9_\- ]+$/;
 
 export function CreateScopeRow({
   existingIds,
+  publicId,
   onCreate,
 }: {
   readonly existingIds: ReadonlySet<string>;
+  /** The deployment's served public marker — never a scope name. */
+  readonly publicId: string;
   readonly onCreate: (scopeId: string) => void;
 }): ReactNode {
   const [value, setValue] = useState('');
@@ -36,8 +37,8 @@ export function CreateScopeRow({
       setError('Scope names may contain only letters, numbers, spaces, hyphens and underscores.');
       return;
     }
-    if (trimmed === PUBLIC_MARKER) {
-      setError('“public” is the reserved public marker, not a scope. Use the Public zone.');
+    if (trimmed === publicId) {
+      setError(`“${publicId}” is the reserved public marker, not a scope. Use the Public zone.`);
       return;
     }
     if (existingIds.has(trimmed)) {

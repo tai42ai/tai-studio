@@ -14,6 +14,7 @@ export function scoped(paths: readonly string[]): MeProjection {
     user_id: 'u-scoped',
     owner_user_id: null,
     admin: false,
+    public_resource_id: 'public',
     scopes: [],
     routes: paths.map((path) => ({ path, methods: ['GET'] })),
     route_patterns: [],

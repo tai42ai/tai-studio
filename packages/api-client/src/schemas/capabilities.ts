@@ -22,8 +22,9 @@ export const patternEntry = z.object({
 export type PatternEntry = z.infer<typeof patternEntry>;
 
 /**
- * A sub-MCP mount the caller can reach, with the tools it exposes and its
- * transport. Shares the {@link subMcpMount} shape with the registry list, adding
+ * A sub-MCP mount the caller can reach, with the tools it exposes, its transport and
+ * its served mount URL and access pattern. Shares the {@link subMcpMount} shape with
+ * the registry list, adding
  * the `slug` the projection carries inline (the list keys mounts by slug instead).
  */
 export const subMcpEntry = subMcpMount.extend({ slug: z.string() });
@@ -37,7 +38,8 @@ export type SubMcpEntry = z.infer<typeof subMcpEntry>;
  * session carries `admin: false` and a jq-exact `routes` list. `owner_user_id` is
  * the key's owner claim, `null` for a key with no owner claim. `principal` is the
  * caller's principal (kind + display name), `null` when no principal row backs the
- * credential. The invariant is projection ⊆ gate: every projected surface is one
+ * credential. `public_resource_id` is the deployment's reserved public marker (the
+ * route-table id a public route maps to — never a scope). The invariant is projection ⊆ gate: every projected surface is one
  * the server would admit, so the UI can filter on it without ever advertising a
  * door the gate denies.
  */
@@ -46,6 +48,7 @@ export const meProjection = z.object({
   owner_user_id: z.string().nullable(),
   principal: principalRef.nullable().optional(),
   admin: z.boolean(),
+  public_resource_id: z.string(),
   scopes: z.array(z.string()),
   routes: z.array(routeEntry),
   route_patterns: z.array(patternEntry),

@@ -9,7 +9,6 @@ import {
   RemoveLastUrlDialog,
   UnpinPublicDialog,
 } from './scope-confirm-dialogs';
-import { subMcpPattern } from './scope-mapping';
 import { renderWithProviders } from './test-utils';
 
 type Stub = Partial<Record<keyof ApiClient, unknown>>;
@@ -40,10 +39,9 @@ describe('PinPublicDialog', () => {
   it('carries the sub-MCP pattern into the pin', async () => {
     const user = userEvent.setup();
     const pinRoutePublic = vi.fn().mockResolvedValue({ url: '/app/y' });
-    renderWithProviders(
-      <PinPublicDialog url="/app/y" pattern={subMcpPattern('y')} onClose={vi.fn()} />,
-      { client: stubClient({ pinRoutePublic }) },
-    );
+    renderWithProviders(<PinPublicDialog url="/app/y" pattern="^/app/y/.*$" onClose={vi.fn()} />, {
+      client: stubClient({ pinRoutePublic }),
+    });
 
     await user.click(screen.getByRole('button', { name: 'Pin public' }));
     await waitFor(() => {
