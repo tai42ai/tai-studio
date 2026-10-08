@@ -2,9 +2,10 @@
  * The per-run trace explorer rendered directly: the query states
  * (loading, 404 → not-available, 501, no-spans placeholder), the
  * two-pane layout (waterfall left, span detail right), auto-selection of the first
- * error span, proportional waterfall bars, structural LLM messages, the usage /
- * metadata panes, escaped payloads, jump-to-error / jump-to-slowest, and the
- * export → download flow.
+ * error span, proportional waterfall bars, the body and bar chosen by the span's
+ * neutral kind, structural LLM messages, the token cell, the metadata pane, escaped
+ * payloads, jump-to-error / jump-to-slowest, and the export / resolved-export
+ * downloads.
  */
 import { ApiError, type RunSpan, type RunTrace } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
@@ -23,22 +24,23 @@ function span(overrides: Partial<RunSpan> & { id: string }): RunSpan {
     parentId: null,
     traceId: 't1',
     name: overrides.id,
-    type: null,
+    kind: null,
     level: null,
     statusMessage: null,
     start: null,
     end: null,
     model: null,
-    usage: null,
+    inputTokens: null,
+    outputTokens: null,
+    totalTokens: null,
     metadata: null,
     input: null,
     output: null,
-    nodeId: null,
     ...overrides,
   };
 }
 
-/** root(0–3s) → { llm-call GENERATION(0.5–2s), tool-call TOOL/ERROR(2.1–2.9s) } */
+/** root(0–3s) → { llm-call LLM(0.5–2s), tool-call TOOL/ERROR(2.1–2.9s) } */
 function traceFixture(overrides: Partial<RunTrace> = {}): RunTrace {
   return {
     traceId: 't1',
@@ -52,7 +54,7 @@ function traceFixture(overrides: Partial<RunTrace> = {}): RunTrace {
       span({
         id: 'root',
         name: 'root-chain',
-        type: 'chain',
+        kind: 'CHAIN',
         start: '2026-01-01T00:00:00.000Z',
         end: '2026-01-01T00:00:03.000Z',
         input: '<script>alert(1)</script>',
@@ -61,20 +63,27 @@ function traceFixture(overrides: Partial<RunTrace> = {}): RunTrace {
         id: 'gen',
         parentId: 'root',
         name: 'llm-call',
-        type: 'GENERATION',
+        kind: 'LLM',
         model: 'gpt-4o',
         start: '2026-01-01T00:00:00.500Z',
         end: '2026-01-01T00:00:02.000Z',
-        usage: { input_tokens: 10, output_tokens: 5 },
+        inputTokens: 1204,
+        outputTokens: 96,
         metadata: { temperature: 0.7 },
-        input: [{ role: 'user', content: 'ping' }],
-        output: 'pong',
+        input: [{ role: 'user', parts: [{ type: 'text', content: 'ping' }] }],
+        output: [
+          {
+            role: 'assistant',
+            parts: [{ type: 'text', content: 'pong' }],
+            finish_reason: 'stop',
+          },
+        ],
       }),
       span({
         id: 'tool',
         parentId: 'root',
         name: 'tool-call',
-        type: 'TOOL',
+        kind: 'TOOL',
         level: 'ERROR',
         statusMessage: 'boom',
         start: '2026-01-01T00:00:02.100Z',
@@ -120,8 +129,8 @@ describe('TraceView', () => {
     expect(within(summary).getByText('error')).toBeInTheDocument();
     expect(within(summary).getByText('3.0s')).toBeInTheDocument();
     expect(within(summary).getByText('$0.100')).toBeInTheDocument();
-    // Leaf-only tokens: only the generation leaf's 10+5; the wrapper is not counted.
-    expect(within(summary).getByText('15')).toBeInTheDocument();
+    // Leaf-only tokens: only the LLM leaf's 1,204 + 96; the wrapper is not counted.
+    expect(within(summary).getByText('1,300')).toBeInTheDocument();
     // Span count.
     expect(within(summary).getByText('3')).toBeInTheDocument();
     // Trace tags ride along in the summary.
@@ -159,7 +168,7 @@ describe('TraceView', () => {
     expect(within(detail).getByText('Result')).toBeInTheDocument();
   });
 
-  it('renders a generation span structurally, and its usage + metadata, escaping payloads', async () => {
+  it('renders an LLM span structurally, with its token cell and metadata', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
     renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
@@ -171,9 +180,80 @@ describe('TraceView', () => {
     // The message array renders as role-tagged bubbles, not a raw JSON blob.
     expect(within(detail).getByText('user')).toBeInTheDocument();
     expect(within(detail).getByText('ping')).toBeInTheDocument();
-    // usage and metadata each get their own pane.
-    expect(within(detail).getByText('Usage')).toBeInTheDocument();
+    expect(within(detail).getByText('finish: stop')).toBeInTheDocument();
+    // Both counts reported: the header shows them side by side.
+    expect(within(detail).getByText('1,204 in · 96 out')).toBeInTheDocument();
     expect(within(detail).getByText('Metadata')).toBeInTheDocument();
+  });
+
+  it('chooses the body by the span kind and shows a dash for absent tokens', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(traceFixture()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    // A CHAIN span shows Input / Output and a dash for its absent tokens.
+    await user.click(await screen.findByText('root-chain'));
+    const detail = screen.getByTestId('span-detail');
+    expect(within(detail).getByText('CHAIN')).toBeInTheDocument();
+    expect(within(detail).getByText('Input')).toBeInTheDocument();
+    expect(within(detail).getByText('—')).toBeInTheDocument();
+  });
+
+  it('colours each bar by the span kind, and shows a lone total as the token cell', async () => {
+    const user = userEvent.setup();
+    const at = (seconds: number): string =>
+      new Date(Date.UTC(2026, 0, 1, 0, 0, seconds)).toISOString();
+    const trace = traceFixture({
+      spans: [
+        span({ id: 'root', name: 'root-chain', kind: 'CHAIN', start: at(0), end: at(10) }),
+        span({
+          id: 'gen',
+          parentId: 'root',
+          name: 'model-step',
+          kind: 'LLM',
+          totalTokens: 42,
+          start: at(0),
+          end: at(1),
+        }),
+        span({
+          id: 'tool',
+          parentId: 'root',
+          name: 'tool-step',
+          kind: 'TOOL',
+          start: at(1),
+          end: at(2),
+        }),
+        span({
+          id: 'slow',
+          parentId: 'root',
+          name: 'slow-step',
+          kind: 'CHAIN',
+          start: at(2),
+          end: at(9),
+        }),
+        span({
+          id: 'quick',
+          parentId: 'root',
+          name: 'quick-step',
+          kind: 'EVENT',
+          start: at(9),
+          end: at(9),
+        }),
+      ],
+    });
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(trace) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await screen.findByText('model-step');
+    const bar = (id: string): string | undefined =>
+      document.querySelector<HTMLElement>(`[data-span-id="${id}"] div[style*="left:"]`)?.style
+        .background;
+    expect(bar('gen')).toBe('var(--tai-color-accent)');
+    expect(bar('tool')).toBe('var(--tai-color-primary)');
+    expect(bar('quick')).toBe('var(--tai-color-border-strong)');
+
+    await user.click(screen.getByText('model-step'));
+    expect(within(screen.getByTestId('span-detail')).getByText('42 tokens')).toBeInTheDocument();
   });
 
   it('shows a selected span payload as escaped text, never a live element', async () => {
@@ -327,6 +407,24 @@ describe('TraceView', () => {
     expect(anchor?.getAttribute('href')).toBe('blob:trace');
   });
 
+  it('downloads the trace with every reference resolved', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:trace');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    const exportTrace = vi.fn().mockResolvedValue(new Blob(['{}'], { type: 'application/json' }));
+    const client: StubApiClient = {
+      getRunTrace: vi.fn().mockResolvedValue(traceFixture()),
+      exportTrace,
+    };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Download resolved' }));
+    await waitFor(() => {
+      expect(exportTrace).toHaveBeenCalledWith('t1', { resolve: true });
+    });
+  });
+
   it('surfaces an export failure loudly and re-enables the button', async () => {
     const user = userEvent.setup();
     const exportTrace = vi.fn().mockRejectedValue(new ApiError('export unavailable', 500));
@@ -340,5 +438,76 @@ describe('TraceView', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('export unavailable');
     expect(screen.getByRole('button', { name: 'Export trace' })).toBeEnabled();
+  });
+});
+
+/** A plain root (auto-selected on open) over two steps whose inputs hold references. */
+function referenceTrace(): RunTrace {
+  const ref = (spanId: string) => ({
+    $tai42_ref: { span_id: spanId, field: 'output', pointer: '/0/parts/0/content' },
+  });
+  return traceFixture({
+    spans: [
+      span({ id: 'root', name: 'root-chain', kind: 'CHAIN', input: { question: 'q' } }),
+      span({ id: 'a', parentId: 'root', name: 'step-a', kind: 'CHAIN', input: { x: ref('g1') } }),
+      span({ id: 'b', parentId: 'root', name: 'step-b', kind: 'CHAIN', input: { y: ref('g2') } }),
+    ],
+  });
+}
+
+async function selectRow(user: ReturnType<typeof userEvent.setup>, spanId: string): Promise<void> {
+  const row = await waitFor(() => {
+    const found = document.querySelector<HTMLElement>(`[data-span-id="${spanId}"]`);
+    if (found === null) throw new Error(`the ${spanId} row was not rendered`);
+    return found;
+  });
+  await user.click(row);
+}
+
+describe('TraceView — each selected span opens in its own default view', () => {
+  it('shows the recorded reference of a span selected after a span without references', async () => {
+    const user = userEvent.setup();
+    const client: StubApiClient = { getRunTrace: vi.fn().mockResolvedValue(referenceTrace()) };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    const detail = await screen.findByTestId('span-detail');
+    expect(within(detail).getByRole('heading', { name: 'root-chain' })).toBeInTheDocument();
+
+    await selectRow(user, 'a');
+    expect(within(detail).getByRole('heading', { name: 'step-a' })).toBeInTheDocument();
+    expect(
+      within(detail).getByText('Recorded with 1 reference to other steps.'),
+    ).toBeInTheDocument();
+    // As recorded, the reference object is in the tree: its key, span id and pointer.
+    expect(within(detail).getAllByText(/\$tai42_ref/).length).toBeGreaterThan(0);
+    expect(within(detail).getAllByText(/g1/).length).toBeGreaterThan(0);
+    expect(within(detail).getAllByText(/\/0\/parts\/0\/content/).length).toBeGreaterThan(0);
+  });
+
+  it('opens the next span As recorded after Resolved was chosen on another, with no unasked read', async () => {
+    const user = userEvent.setup();
+    const getResolvedSpanValue = vi.fn().mockResolvedValue({
+      traceId: 't1',
+      spanId: 'a',
+      field: 'input',
+      pointer: '',
+      value: { x: 'assembled' },
+    });
+    const client: StubApiClient = {
+      getRunTrace: vi.fn().mockResolvedValue(referenceTrace()),
+      getResolvedSpanValue,
+    };
+    renderWithProviders(<TraceView traceId="t1" onBack={vi.fn()} />, { client });
+
+    await selectRow(user, 'a');
+    await user.click(screen.getByRole('radio', { name: 'Resolved' }));
+    await screen.findByText('Full value assembled from 1 reference.');
+
+    await selectRow(user, 'b');
+    const detail = screen.getByTestId('span-detail');
+    expect(within(detail).getByRole('heading', { name: 'step-b' })).toBeInTheDocument();
+    expect(within(detail).getByRole('radio', { name: 'As recorded' })).toBeChecked();
+    expect(within(detail).getAllByText(/\$tai42_ref/).length).toBeGreaterThan(0);
+    expect(getResolvedSpanValue).toHaveBeenCalledTimes(1);
   });
 });

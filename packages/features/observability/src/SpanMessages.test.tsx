@@ -1,15 +1,13 @@
 /**
- * SpanMessages rendered directly: the per-role bubble tint (including the
- * neutral default for an unknown role), and MessageContent's three content
- * shapes — prose string, a multimodal parts array (text parts as prose, every
- * other part as escaped JSON), and a bare structured object — plus the
- * tool_calls code block. Covers the role/content rendering variants the shell
- * shows for an LLM span payload.
+ * SpanMessages rendered directly over GenAI-convention messages (`{ role, parts }`):
+ * the per-role bubble tint (including the neutral default for an unknown role), each
+ * part type — text, tool_call, tool_call_response and any other part — and the output
+ * message's finish reason; plus `asMessages`, which accepts only that shape.
  */
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { SpanMessages } from './SpanMessages';
+import { asMessages, SpanMessages } from './SpanMessages';
 import { renderWithProviders } from './test-utils';
 
 /** The bubble div is the role Badge's parent; it carries the tint style. */
@@ -20,15 +18,38 @@ function bubbleFor(role: string): HTMLElement {
   return bubble;
 }
 
+const text = (content: string) => ({ type: 'text', content });
+
+describe('asMessages', () => {
+  it('accepts a list whose every item has a string role and a parts array', () => {
+    const messages = [
+      { role: 'user', parts: [text('hi')] },
+      { role: 'assistant', parts: [], finish_reason: 'stop' },
+    ];
+    expect(asMessages(messages)).toBe(messages);
+  });
+
+  it('refuses anything else, so the value falls to the JSON tree', () => {
+    expect(asMessages([{ role: 'user', content: 'hi' }])).toBeNull();
+    expect(asMessages([{ role: 1, parts: [] }])).toBeNull();
+    expect(asMessages([{ role: 'user', parts: 'hi' }])).toBeNull();
+    expect(asMessages([{ role: 'user', parts: [] }, 'x'])).toBeNull();
+    expect(asMessages({ messages: [{ role: 'user', parts: [] }] })).toBeNull();
+    expect(asMessages([])).toBeNull();
+    expect(asMessages('hi')).toBeNull();
+    expect(asMessages(null)).toBeNull();
+  });
+});
+
 describe('SpanMessages', () => {
   it('tints each known role and leaves an unknown role on the neutral base', () => {
     renderWithProviders(
       <SpanMessages
         messages={[
-          { role: 'user', content: 'u' },
-          { role: 'assistant', content: 'a' },
-          { role: 'tool', content: 't' },
-          { role: 'system', content: 's' },
+          { role: 'user', parts: [text('u')] },
+          { role: 'assistant', parts: [text('a')] },
+          { role: 'tool', parts: [text('t')] },
+          { role: 'system', parts: [text('s')] },
         ]}
       />,
       { client: {} },
@@ -37,123 +58,95 @@ describe('SpanMessages', () => {
     expect(bubbleFor('user').style.background).toBe('var(--tai-color-accent-tint)');
     expect(bubbleFor('assistant').style.background).toBe('var(--tai-color-ok-tint)');
     expect(bubbleFor('tool').style.background).toBe('var(--tai-color-warn-tint)');
-    // Unknown role: roleTint returns no override, so the bubble keeps the base.
     expect(bubbleFor('system').style.background).toBe('var(--tai-color-surface-raised)');
   });
 
-  it('matches the role case-insensitively when choosing the tint', () => {
-    renderWithProviders(<SpanMessages messages={[{ role: 'USER', content: 'x' }]} />, {
-      client: {},
-    });
-
-    expect(bubbleFor('USER').style.background).toBe('var(--tai-color-accent-tint)');
-  });
-
-  it('renders a prose string through Markdown and drops an empty string', () => {
-    const { rerender } = renderWithProviders(
-      <SpanMessages messages={[{ role: 'assistant', content: '**bold** answer' }]} />,
-      { client: {} },
-    );
-
-    // Markdown resolves the inline emphasis to a real <strong>.
-    expect(screen.getByText('bold').tagName).toBe('STRONG');
-
-    // A blank string contributes no content node next to the role badge.
-    rerender(<SpanMessages messages={[{ role: 'assistant', content: '   ' }]} />);
-    const bubble = bubbleFor('assistant');
-    expect(bubble.querySelector('.tai-prose')).toBeNull();
-    expect(bubble.querySelector('pre')).toBeNull();
-  });
-
-  it('renders null and undefined content as nothing', () => {
+  it('renders a text part as its literal text, line breaks kept, never as markup', () => {
     renderWithProviders(
-      <SpanMessages
-        messages={[
-          { role: 'user', content: null },
-          { role: 'assistant', content: undefined },
-        ]}
-      />,
+      <SpanMessages messages={[{ role: 'assistant', parts: [text('**not bold**\nline 2')] }]} />,
       { client: {} },
     );
 
-    expect(bubbleFor('user').querySelector('.tai-prose')).toBeNull();
-    expect(bubbleFor('assistant').querySelector('pre')).toBeNull();
+    const node = screen.getByText(/not bold/);
+    expect(node.textContent).toBe('**not bold**\nline 2');
+    expect(node.style.whiteSpace).toBe('pre-wrap');
+    expect(document.querySelector('strong')).toBeNull();
   });
 
-  it('splits a multimodal parts array: text parts as prose, other parts as escaped JSON', () => {
-    renderWithProviders(
-      <SpanMessages
-        messages={[
-          {
-            role: 'user',
-            content: [{ text: 'describe this' }, { type: 'image_url', url: 'https://x/y.png' }],
-          },
-        ]}
-      />,
-      { client: {} },
-    );
-
-    // The text part renders as prose.
-    expect(screen.getByText('describe this')).toBeInTheDocument();
-    // The non-text part renders as a CodeBlock captioned "part", carrying its JSON.
-    expect(screen.getByText('part')).toBeInTheDocument();
-    const code = screen.getByText(/image_url/);
-    expect(code.tagName).toBe('CODE');
-    expect(code.textContent).toContain('https://x/y.png');
-  });
-
-  it('renders a bare structured object as an escaped "content" code block', () => {
-    renderWithProviders(
-      <SpanMessages messages={[{ role: 'tool', content: { status: 'ok', rows: 3 } }]} />,
-      { client: {} },
-    );
-
-    expect(screen.getByText('content')).toBeInTheDocument();
-    const code = screen.getByText(/status/);
-    expect(code.tagName).toBe('CODE');
-    expect(code.textContent).toContain('"ok"');
-  });
-
-  it('falls back to String() when the content is not JSON-representable', () => {
-    renderWithProviders(
-      // A function has no JSON representation: JSON.stringify yields undefined and
-      // toJson falls back to String().
-      <SpanMessages messages={[{ role: 'tool', content: () => undefined }]} />,
-      { client: {} },
-    );
-
-    expect(screen.getByText('content')).toBeInTheDocument();
-    expect(screen.getByText(/=>/).tagName).toBe('CODE');
-  });
-
-  it('renders a tool_calls array as its own escaped code block', () => {
+  it('renders a tool call as "Call · <name>", its id in mono, and a tree of its arguments', () => {
     renderWithProviders(
       <SpanMessages
         messages={[
           {
             role: 'assistant',
-            content: 'calling a tool',
-            tool_calls: [{ id: 'call_1', function: { name: 'search' } }],
+            parts: [{ type: 'tool_call', id: 'call_1', name: 'lookup', arguments: { q: 'x' } }],
           },
         ]}
       />,
       { client: {} },
     );
 
-    expect(screen.getByText('tool_calls')).toBeInTheDocument();
-    const code = screen.getByText(/search/);
-    expect(code.tagName).toBe('CODE');
-    expect(code.textContent).toContain('call_1');
+    const bubble = bubbleFor('assistant');
+    expect(within(bubble).getByText('Call · lookup')).toBeInTheDocument();
+    expect(within(bubble).getByText('call_1')).toHaveClass('tai-mono');
+    expect(within(bubble).getByText(/"x"/)).toBeInTheDocument();
+  });
+
+  it('renders a tool call response as "Result · <id>" and a tree of its response', () => {
+    renderWithProviders(
+      <SpanMessages
+        messages={[
+          {
+            role: 'tool',
+            parts: [{ type: 'tool_call_response', id: 'call_1', response: { rows: 3 } }],
+          },
+        ]}
+      />,
+      { client: {} },
+    );
+
+    const bubble = bubbleFor('tool');
+    expect(within(bubble).getByText('Result · call_1')).toBeInTheDocument();
+    expect(within(bubble).getByText(/rows/)).toBeInTheDocument();
+  });
+
+  it('renders any other part as a tree under a muted label of its type', () => {
+    renderWithProviders(
+      <SpanMessages
+        messages={[
+          {
+            role: 'user',
+            parts: [{ type: 'image', uri: 'https://x/y.png' }],
+          },
+        ]}
+      />,
+      { client: {} },
+    );
+
+    const bubble = bubbleFor('user');
+    expect(within(bubble).getByText('image')).toHaveClass('tai-muted');
+    expect(within(bubble).getByText(/y\.png/)).toBeInTheDocument();
+  });
+
+  it("shows an output message's finish reason as a muted footer", () => {
+    renderWithProviders(
+      <SpanMessages
+        messages={[{ role: 'assistant', parts: [text('done')], finish_reason: 'length' }]}
+      />,
+      { client: {} },
+    );
+
+    expect(screen.getByText('finish: length')).toHaveClass('tai-muted');
   });
 
   it('renders the optional section label, and omits it when absent', () => {
     const { rerender } = renderWithProviders(
-      <SpanMessages messages={[{ role: 'user', content: 'hi' }]} label="Messages" />,
+      <SpanMessages messages={[{ role: 'user', parts: [text('hi')] }]} label="Messages" />,
       { client: {} },
     );
     expect(screen.getByText('Messages')).toBeInTheDocument();
 
-    rerender(<SpanMessages messages={[{ role: 'user', content: 'hi' }]} />);
+    rerender(<SpanMessages messages={[{ role: 'user', parts: [text('hi')] }]} />);
     expect(screen.queryByText('Messages')).not.toBeInTheDocument();
   });
 });

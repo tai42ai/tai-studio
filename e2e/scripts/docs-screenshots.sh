@@ -136,10 +136,11 @@ export MONOREPO_DIR
 # Extra plugins the docs-demo manifest loads, installed into the skeleton venv. The
 # accounts-postgres plugin's lifecycle module + login router power the login screen's
 # password form, and its declared member-admin actions back the generic Members page;
-# the rest back the toolbox/agents/storage/monitoring surfaces. The RQ backend + its
-# RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring live in boot.sh (both manifests declare
-# `backend_module: tai42_backend_rq`), so they are not repeated here.
-export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
+# the rest back the toolbox/agents/storage surfaces. The RQ backend and the docs-demo
+# monitoring backend are installed by boot.sh (both manifests declare
+# `backend_module: tai42_backend_rq` and `monitoring_module: docs_demo_monitoring`), and
+# the RQ_REDIS_URL / TAI_BUS_REDIS_URL wiring lives there too, so none is repeated here.
+export EXTRA_PLUGINS="${PLUGINS_DIR}/agents ${PLUGINS_DIR}/storage-local ${PLUGINS_DIR}/toolbox[prometheus] ${PLUGINS_DIR}/accounts-postgres"
 # Accounts world: order the identity resolution (accounts claims tai-sess- sessions,
 # redis claims sk- keys), pin the setup-door token to a known value so the runner can
 # initialize the owner deterministically through POST /api/setup, and tell boot.sh to

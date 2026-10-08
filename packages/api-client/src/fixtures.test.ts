@@ -84,3 +84,28 @@ describe('captured fixtures validate against their zod schemas', () => {
     });
   }
 });
+
+describe('the skeleton span shape', () => {
+  it('a span exactly as the skeleton maps it parses with runSpan', () => {
+    const span = {
+      id: 'span_1',
+      parentId: null,
+      traceId: 'trace_1',
+      name: 'lookup',
+      kind: 'TOOL',
+      level: 'DEFAULT',
+      statusMessage: null,
+      start: '2026-07-05T11:58:03Z',
+      end: '2026-07-05T11:58:04Z',
+      model: null,
+      inputTokens: null,
+      outputTokens: null,
+      totalTokens: null,
+      metadata: { 'tai42.step_role': 'sub_step' },
+      input: { q: 1 },
+      output: { a: 2 },
+    };
+    const result = schemas.runSpan.safeParse(span);
+    expect(result.success, result.error?.message).toBe(true);
+  });
+});

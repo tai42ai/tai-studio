@@ -12,6 +12,8 @@
  *   renders no children. `defaultExpanded` overrides per call site.
  * - Expand-all opens breadth-first only until {@link AUTO_EXPAND_NODE_BUDGET} nodes
  *   render and never past {@link MAX_AUTO_DEPTH}; a node beyond either opens on click.
+ * - `openPaths` opens exactly the containers along the paths a caller names, at any
+ *   depth, beside the baseline; collapse-all and the reader's toggles close them.
  * - A container over {@link PAGE_SIZE} children renders one page plus a "show more".
  * - Copy-whole and copy-node write JSON to the clipboard; a refused write shows an alert.
  *
@@ -30,6 +32,7 @@ import {
   expandedOpenPaths,
   initialBaseline,
   isContainer,
+  namedOpenPaths,
   PAGE_SIZE,
 } from './json-tree-model';
 import { COPY_LABEL, CopyButton, JsonNode } from './json-tree-nodes';
@@ -44,6 +47,13 @@ export interface JsonTreeProps {
    * opens through {@link AUTO_EXPAND_DEPTH} and collapses everything below.
    */
   readonly defaultExpanded?: boolean;
+  /**
+   * Paths whose containers open beside the baseline, at any depth: each path lists
+   * the keys from the root (an array item by its index, as a string), and the root,
+   * every container along it and the one it ends at open. The reader's own toggle
+   * still wins, and collapse-all closes them like every other node.
+   */
+  readonly openPaths?: readonly (readonly string[])[];
   /** The region's accessible name, applied only while the pane actually scrolls. */
   readonly label?: string;
 }
@@ -51,7 +61,15 @@ export interface JsonTreeProps {
 /** The region's name when the caller supplies none. */
 const DEFAULT_LABEL = 'JSON';
 
-export function JsonTree({ data, defaultExpanded, label }: JsonTreeProps): ReactElement {
+/** The paths a tree without `openPaths` opens beside its baseline. */
+const NO_PATHS: readonly (readonly string[])[] = [];
+
+export function JsonTree({
+  data,
+  defaultExpanded,
+  openPaths = NO_PATHS,
+  label,
+}: JsonTreeProps): ReactElement {
   const [baseline, setBaseline] = useState<Baseline>(() => initialBaseline(defaultExpanded));
   const [overrides, setOverrides] = useState<ReadonlyMap<string, boolean>>(() => new Map());
 
@@ -76,10 +94,12 @@ export function JsonTree({ data, defaultExpanded, label }: JsonTreeProps): React
     [baseline, data],
   );
 
+  const namedPaths = useMemo(() => namedOpenPaths(openPaths), [openPaths]);
+
   const isOpen = useCallback(
     (path: string, depth: number): boolean =>
-      computeOpen(baseline, overrides, expandedPaths, path, depth),
-    [baseline, overrides, expandedPaths],
+      computeOpen(baseline, overrides, expandedPaths, namedPaths, path, depth),
+    [baseline, overrides, expandedPaths, namedPaths],
   );
 
   const setOpen = useCallback((path: string, open: boolean): void => {
@@ -107,7 +127,7 @@ export function JsonTree({ data, defaultExpanded, label }: JsonTreeProps): React
     setOverrides(new Map());
   };
   const collapseAll = (): void => {
-    setBaseline('collapsed');
+    setBaseline('closed');
     setOverrides(new Map());
   };
 

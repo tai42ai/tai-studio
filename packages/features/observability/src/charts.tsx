@@ -117,15 +117,25 @@ export interface BarListProps {
   readonly ariaLabel: string;
 }
 
+/**
+ * A row is a wrapping flex line rather than fixed columns, so it fits any container
+ * at any caption length: label, bar and caption share one line while their bases
+ * fit, and the bar and then the caption drop to lines of their own when they do not.
+ * Each item's basis decides where the line breaks; the bar then grows into the room
+ * left on its line.
+ */
 const rowStyle: CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'minmax(6rem, 12rem) 1fr auto',
+  display: 'flex',
+  flexWrap: 'wrap',
   alignItems: 'center',
-  gap: 'var(--tai-space-3)',
+  columnGap: 'var(--tai-space-3)',
+  rowGap: 'var(--tai-space-1)',
   padding: 'var(--tai-space-1) 0',
 };
 
 const labelStyle: CSSProperties = {
+  flex: '0 1 12rem',
+  minWidth: 0,
   fontFamily: 'var(--tai-font-sans)',
   fontSize: 'var(--tai-text-sm)',
   color: 'var(--tai-color-text)',
@@ -135,6 +145,7 @@ const labelStyle: CSSProperties = {
 };
 
 const trackStyle: CSSProperties = {
+  flex: '1 1 6rem',
   position: 'relative',
   height: 10,
   borderRadius: 'var(--tai-radius-sm)',
@@ -142,12 +153,21 @@ const trackStyle: CSSProperties = {
   overflow: 'hidden',
 };
 
+/**
+ * The caption keeps the row's end edge: on a line of its own the start margin pushes
+ * it there. A caption wider than its line wraps between words, and inside a word
+ * when one word alone is wider than the line.
+ */
 const captionStyle: CSSProperties = {
+  flex: '0 1 auto',
+  minWidth: 0,
+  marginInlineStart: 'auto',
+  textAlign: 'end',
+  overflowWrap: 'anywhere',
   fontFamily: 'var(--tai-font-mono)',
   fontSize: 'var(--tai-text-sm)',
   fontVariantNumeric: 'tabular-nums',
   color: 'var(--tai-color-text-muted)',
-  whiteSpace: 'nowrap',
 };
 
 /** A horizontal bar per item, width proportional to the item's share of the max. */

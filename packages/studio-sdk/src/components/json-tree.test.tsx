@@ -306,6 +306,70 @@ describe('JsonTree', () => {
       expect(read.has('k149')).toBe(false);
     });
 
+    describe('openPaths', () => {
+      it('opens every container along each named path, past the expand-all depth cap', () => {
+        const data = { deep: nest(0, 8), other: { inner: { leaf: 'unnamed' } } };
+        const path = ['deep', 'k0', 'k1', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7'];
+        render(<JsonTree data={data} openPaths={[path]} label="Body" />);
+        // The container the path ends at is open, so its own leaf renders.
+        expect(screen.getByText(/"deep"/)).toBeInTheDocument();
+        // A branch no path names keeps the depth-guarded default.
+        expect(screen.getByText('inner:')).toBeInTheDocument();
+        expect(screen.queryByText(/"unnamed"/)).not.toBeInTheDocument();
+      });
+
+      it('opens a named path beside a collapsed baseline', () => {
+        const data = { a: { b: { c: { d: 'x' } } }, other: { inner: 'closed' } };
+        render(
+          <JsonTree
+            data={data}
+            defaultExpanded={false}
+            openPaths={[['a', 'b', 'c']]}
+            label="Body"
+          />,
+        );
+        expect(screen.getByText(/"x"/)).toBeInTheDocument();
+        expect(screen.queryByText(/"closed"/)).not.toBeInTheDocument();
+      });
+
+      it('names array items by their index and matches keys holding the path separator', () => {
+        const data = { 'a/b': [{ x: { y: 'found' } }] };
+        render(<JsonTree data={data} openPaths={[['a/b', '0', 'x']]} label="Body" />);
+        expect(screen.getByText(/"found"/)).toBeInTheDocument();
+      });
+
+      it('lets an explicit toggle close a node on a path', async () => {
+        const user = userEvent.setup();
+        render(<JsonTree data={nest(0, 4)} openPaths={[['k0', 'k1', 'k2', 'k3']]} label="Body" />);
+        expect(screen.getByText(/"deep"/)).toBeInTheDocument();
+        await user.click(screen.getByText('k3:'));
+        expect(screen.queryByText(/"deep"/)).not.toBeInTheDocument();
+      });
+
+      it('keeps the paths open under expand-all and closes them under collapse-all', async () => {
+        const user = userEvent.setup();
+        render(
+          <JsonTree
+            data={nest(0, 8)}
+            openPaths={[['k0', 'k1', 'k2', 'k3', 'k4', 'k5', 'k6', 'k7']]}
+            label="Body"
+          />,
+        );
+        await user.click(screen.getByRole('button', { name: 'Expand all' }));
+        expect(screen.getByText(/"deep"/)).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Collapse all' }));
+        expect(screen.queryByText('k0:')).not.toBeInTheDocument();
+      });
+
+      it('opens nothing for a path that names no container in the data', () => {
+        render(
+          <JsonTree data={{ a: { b: { c: 1 } } }} openPaths={[['missing', 'x']]} label="Body" />,
+        );
+        expect(screen.getByText('b:')).toBeInTheDocument();
+        expect(screen.queryByText('c:')).not.toBeInTheDocument();
+      });
+    });
+
     it('shows no toolbar for a primitive root', () => {
       render(<JsonTree data={42} label="Body" />);
       expect(screen.queryByRole('button', { name: 'Expand all' })).not.toBeInTheDocument();

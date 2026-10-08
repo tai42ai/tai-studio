@@ -233,39 +233,11 @@ export function defaultSelectedId(tree: TraceTree): string | null {
 // -- token totals ------------------------------------------------------------
 
 /**
- * Allowlisted usage keys counting as INPUT and OUTPUT tokens, plus keys carrying a
- * pre-summed TOTAL. Explicit allowlist, not substring match; any key containing
- * `cost` is excluded so a cost field is never summed as tokens.
+ * A single span's token count: the reported total, else input + output (an absent
+ * side counts as zero). A span that reports no tokens contributes 0.
  */
-const INPUT_TOKEN_KEYS = new Set(['input_tokens', 'inputtokens', 'prompt_tokens', 'prompttokens']);
-const OUTPUT_TOKEN_KEYS = new Set([
-  'output_tokens',
-  'outputtokens',
-  'completion_tokens',
-  'completiontokens',
-]);
-const TOTAL_TOKEN_KEYS = new Set(['total_tokens', 'totaltokens', 'total']);
-
-function numericField(usage: Record<string, unknown>, keys: ReadonlySet<string>): number | null {
-  for (const [rawKey, value] of Object.entries(usage)) {
-    const key = rawKey.toLowerCase();
-    if (key.includes('cost')) continue;
-    if (keys.has(key) && typeof value === 'number' && Number.isFinite(value)) return value;
-  }
-  return null;
-}
-
-/**
- * A single span's token count from its `usage` object: input + output from their
- * allowlisted keys, else an explicit total key. No usable usage contributes 0.
- */
-export function spanTokens(usage: unknown): number {
-  if (usage === null || typeof usage !== 'object' || Array.isArray(usage)) return 0;
-  const record = usage as Record<string, unknown>;
-  const input = numericField(record, INPUT_TOKEN_KEYS);
-  const output = numericField(record, OUTPUT_TOKEN_KEYS);
-  if (input !== null || output !== null) return (input ?? 0) + (output ?? 0);
-  return numericField(record, TOTAL_TOKEN_KEYS) ?? 0;
+export function spanTokens(span: RunSpan): number {
+  return span.totalTokens ?? (span.inputTokens ?? 0) + (span.outputTokens ?? 0);
 }
 
 /** The trace's roll-up summary shown in the header bar. */
@@ -297,7 +269,7 @@ export function traceTotals(trace: RunTrace): TraceTotals {
   const tokenBasis = buildTree(trace.spans);
   let totalTokens = 0;
   for (const node of tokenBasis.byId.values()) {
-    if (node.children.length === 0) totalTokens += spanTokens(node.span.usage);
+    if (node.children.length === 0) totalTokens += spanTokens(node.span);
   }
 
   const starts: number[] = [];

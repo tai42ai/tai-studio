@@ -1693,6 +1693,15 @@ export function createApiClient(config: ApiConfig): {
         page: number;
         nextPage: number | null;
     }>;
+    readonly getObservabilityCapabilities: (signal?: AbortSignal) => Promise<{
+        pageSizeMax: number;
+        sortKeys: string[];
+        incompatibleFilters: Record<string, string[]>;
+        metrics: {
+            measures: string[];
+            dimensions: string[];
+        };
+    }>;
     readonly getRunTrace: (traceId: string, signal?: AbortSignal) => Promise<{
         traceId: string;
         timestamp: string | null;
@@ -1706,20 +1715,51 @@ export function createApiClient(config: ApiConfig): {
             parentId: string | null;
             traceId: string | null;
             name: string | null;
-            type: string | null;
+            kind: "LLM" | "TOOL" | "CHAIN" | "EVENT" | null;
             level: string | null;
             statusMessage: string | null;
             start: string | null;
             end: string | null;
             model: string | null;
-            usage: unknown;
+            inputTokens: number | null;
+            outputTokens: number | null;
+            totalTokens: number | null;
             metadata: unknown;
             input: unknown;
             output: unknown;
-            nodeId: string | null;
         }[];
     }>;
-    readonly exportTrace: (traceId: string, signal?: AbortSignal) => Promise<Blob>;
+    readonly getRunTraceOutline: (traceId: string, signal?: AbortSignal) => Promise<{
+        traceId: string;
+        spans: {
+            id: string;
+            parentId: string | null;
+            traceId: string | null;
+            name: string | null;
+            kind: "LLM" | "TOOL" | "CHAIN" | "EVENT" | null;
+            level: string | null;
+            statusMessage: string | null;
+            start: string | null;
+            end: string | null;
+            model: string | null;
+            inputTokens: number | null;
+            outputTokens: number | null;
+            totalTokens: number | null;
+            metadata: unknown;
+        }[];
+    }>;
+    readonly getResolvedSpanValue: (traceId: string, spanId: string, field: "input" | "output", options?: {
+        readonly pointer?: string;
+    }, signal?: AbortSignal) => Promise<{
+        traceId: string;
+        spanId: string;
+        field: "output" | "input";
+        pointer: string;
+        value: unknown;
+    }>;
+    readonly exportTrace: (traceId: string, options?: {
+        readonly resolve?: boolean;
+    }, signal?: AbortSignal) => Promise<Blob>;
     readonly exportRuns: (params: RunsQuery & {
         format: "csv" | "json";
     }, signal?: AbortSignal) => Promise<Blob>;
@@ -6643,6 +6683,20 @@ const oauthCompleteResult: z.ZodDiscriminatedUnion<[z.ZodObject<{
 }, z.core.$strip>], "kind">;
 
 // @public (undocumented)
+export type ObservabilityCapabilities = z.infer<typeof observabilityCapabilities>;
+
+// @public
+const observabilityCapabilities: z.ZodObject<{
+    pageSizeMax: z.ZodNumber;
+    sortKeys: z.ZodArray<z.ZodString>;
+    incompatibleFilters: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString>>;
+    metrics: z.ZodObject<{
+        measures: z.ZodArray<z.ZodString>;
+        dimensions: z.ZodArray<z.ZodString>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type ParkedCallerAsk = z.infer<typeof parkedCallerAsk>;
 
 // @public
@@ -7507,6 +7561,21 @@ const requiredTemplatedText: z.ZodObject<{
 }, z.core.$strict>;
 
 // @public (undocumented)
+export type ResolvedSpanValue = z.infer<typeof resolvedSpanValue>;
+
+// @public
+const resolvedSpanValue: z.ZodObject<{
+    traceId: z.ZodString;
+    spanId: z.ZodString;
+    field: z.ZodEnum<{
+        output: "output";
+        input: "input";
+    }>;
+    pointer: z.ZodString;
+    value: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 const revokeApiKeyResult: z.ZodObject<{
     user_id: z.ZodString;
     revoked: z.ZodBoolean;
@@ -7758,17 +7827,49 @@ const runSpan: z.ZodObject<{
     parentId: z.ZodNullable<z.ZodString>;
     traceId: z.ZodNullable<z.ZodString>;
     name: z.ZodNullable<z.ZodString>;
-    type: z.ZodNullable<z.ZodString>;
+    kind: z.ZodNullable<z.ZodEnum<{
+        LLM: "LLM";
+        TOOL: "TOOL";
+        CHAIN: "CHAIN";
+        EVENT: "EVENT";
+    }>>;
     level: z.ZodNullable<z.ZodString>;
     statusMessage: z.ZodNullable<z.ZodString>;
     start: z.ZodNullable<z.ZodString>;
     end: z.ZodNullable<z.ZodString>;
     model: z.ZodNullable<z.ZodString>;
-    usage: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+    inputTokens: z.ZodNullable<z.ZodNumber>;
+    outputTokens: z.ZodNullable<z.ZodNumber>;
+    totalTokens: z.ZodNullable<z.ZodNumber>;
     metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
     output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-    nodeId: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type RunSpanOutline = z.infer<typeof runSpanOutline>;
+
+// @public
+const runSpanOutline: z.ZodObject<{
+    id: z.ZodString;
+    parentId: z.ZodNullable<z.ZodString>;
+    traceId: z.ZodNullable<z.ZodString>;
+    name: z.ZodNullable<z.ZodString>;
+    kind: z.ZodNullable<z.ZodEnum<{
+        LLM: "LLM";
+        TOOL: "TOOL";
+        CHAIN: "CHAIN";
+        EVENT: "EVENT";
+    }>>;
+    level: z.ZodNullable<z.ZodString>;
+    statusMessage: z.ZodNullable<z.ZodString>;
+    start: z.ZodNullable<z.ZodString>;
+    end: z.ZodNullable<z.ZodString>;
+    model: z.ZodNullable<z.ZodString>;
+    inputTokens: z.ZodNullable<z.ZodNumber>;
+    outputTokens: z.ZodNullable<z.ZodNumber>;
+    totalTokens: z.ZodNullable<z.ZodNumber>;
+    metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
 }, z.core.$strip>;
 
 // @public
@@ -7832,17 +7933,52 @@ const runTrace: z.ZodObject<{
         parentId: z.ZodNullable<z.ZodString>;
         traceId: z.ZodNullable<z.ZodString>;
         name: z.ZodNullable<z.ZodString>;
-        type: z.ZodNullable<z.ZodString>;
+        kind: z.ZodNullable<z.ZodEnum<{
+            LLM: "LLM";
+            TOOL: "TOOL";
+            CHAIN: "CHAIN";
+            EVENT: "EVENT";
+        }>>;
         level: z.ZodNullable<z.ZodString>;
         statusMessage: z.ZodNullable<z.ZodString>;
         start: z.ZodNullable<z.ZodString>;
         end: z.ZodNullable<z.ZodString>;
         model: z.ZodNullable<z.ZodString>;
-        usage: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
+        inputTokens: z.ZodNullable<z.ZodNumber>;
+        outputTokens: z.ZodNullable<z.ZodNumber>;
+        totalTokens: z.ZodNullable<z.ZodNumber>;
         metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
         input: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
         output: z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>;
-        nodeId: z.ZodNullable<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type RunTraceOutline = z.infer<typeof runTraceOutline>;
+
+// @public
+const runTraceOutline: z.ZodObject<{
+    traceId: z.ZodString;
+    spans: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        parentId: z.ZodNullable<z.ZodString>;
+        traceId: z.ZodNullable<z.ZodString>;
+        name: z.ZodNullable<z.ZodString>;
+        kind: z.ZodNullable<z.ZodEnum<{
+            LLM: "LLM";
+            TOOL: "TOOL";
+            CHAIN: "CHAIN";
+            EVENT: "EVENT";
+        }>>;
+        level: z.ZodNullable<z.ZodString>;
+        statusMessage: z.ZodNullable<z.ZodString>;
+        start: z.ZodNullable<z.ZodString>;
+        end: z.ZodNullable<z.ZodString>;
+        model: z.ZodNullable<z.ZodString>;
+        inputTokens: z.ZodNullable<z.ZodNumber>;
+        outputTokens: z.ZodNullable<z.ZodNumber>;
+        totalTokens: z.ZodNullable<z.ZodNumber>;
+        metadata: z.ZodNullable<z.ZodType<unknown, unknown, z.core.$ZodTypeInternals<unknown, unknown>>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -8139,10 +8275,20 @@ declare namespace s {
         run,
         Run,
         runsPage,
+        spanKind,
+        SpanKind,
+        runSpanOutline,
+        RunSpanOutline,
         runSpan,
         RunSpan,
+        runTraceOutline,
+        RunTraceOutline,
         runTrace,
         RunTrace,
+        observabilityCapabilities,
+        ObservabilityCapabilities,
+        resolvedSpanValue,
+        ResolvedSpanValue,
         validateConditionResult,
         ValidateConditionResult,
         policyVersion,
@@ -8730,10 +8876,20 @@ declare namespace schemas {
         run,
         Run,
         runsPage,
+        spanKind,
+        SpanKind,
+        runSpanOutline,
+        RunSpanOutline,
         runSpan,
         RunSpan,
+        runTraceOutline,
+        RunTraceOutline,
         runTrace,
         RunTrace,
+        observabilityCapabilities,
+        ObservabilityCapabilities,
+        resolvedSpanValue,
+        ResolvedSpanValue,
         validateConditionResult,
         ValidateConditionResult,
         policyVersion,
@@ -9165,6 +9321,17 @@ const setupResult: z.ZodObject<{
     invite_token: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     login_path: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+export type SpanKind = z.infer<typeof spanKind>;
+
+// @public
+const spanKind: z.ZodEnum<{
+    LLM: "LLM";
+    TOOL: "TOOL";
+    CHAIN: "CHAIN";
+    EVENT: "EVENT";
+}>;
 
 // @public
 export interface SseFrame {
