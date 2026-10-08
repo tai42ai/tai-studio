@@ -151,6 +151,10 @@ export EXTRA_PLUGINS="${E2E_DIR}/docs-demo/monitoring-plugin ${PLUGINS_DIR}/agen
 export ACCESS_CONTROL_AUTH_PROVIDERS='["accounts-postgres", "redis"]'
 export TAI_SETUP_TOKEN="docs-demo-setup-token"
 export APPLY_ACCOUNTS_DDL=1
+# The accounts plugin's login throttle keeps its failure counters in Redis, and every
+# password login fails when no connection is configured. Point it at boot.sh's compose Redis
+# on its own db (8), apart from the stores boot.sh places on db 0-7.
+export TAI_ACCOUNTS_REDIS_URL="redis://127.0.0.1:${REDIS_HOST_PORT:-6380}/8"
 # Storage backend: the seeded template files. CREATE_DIRS=false so a missing dir
 # fails loudly rather than being papered over with an empty templates list.
 export STORAGE_LOCAL_ROOT_PATH="${E2E_DIR}/docs-demo/templates"

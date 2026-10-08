@@ -101,7 +101,9 @@ describe('ApiKeysTab — create key', () => {
   it('creates a key and shows the minted key once', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ createApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
@@ -130,10 +132,26 @@ describe('ApiKeysTab — create key', () => {
     });
   });
 
+  it('offers no scope named after the served public marker', async () => {
+    const user = userEvent.setup({ delay: null });
+    renderTab(<ApiKeysTab readOnly={false} publicId="open" />, {
+      client: baseStub({
+        listScopes: vi.fn(() => Promise.resolve({ ...scopes(), 'https://open': 'open' })),
+      }),
+    });
+
+    await screen.findByText('alice');
+    await user.click(screen.getByRole('button', { name: 'Create key' }));
+    expect(await screen.findByRole('checkbox', { name: 'admin' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'open' })).not.toBeInTheDocument();
+  });
+
   it('reopens a blank create form with the minted key cleared', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-generated-123');
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ createApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
@@ -160,7 +178,9 @@ describe('ApiKeysTab — create key', () => {
   it('round-trips policy_data key/value rows into the create body', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ createApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
@@ -188,7 +208,7 @@ describe('ApiKeysTab — create key', () => {
     const validateCondition = vi
       .fn()
       .mockRejectedValue(new ApiError('jq: syntax error, unexpected end of file', 400));
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ createApiKey, validateCondition }),
     });
 
@@ -220,7 +240,7 @@ describe('ApiKeysTab — create key', () => {
     const validateCondition = vi
       .fn()
       .mockRejectedValue(new ApiError('jq: syntax error, unexpected end of file', 400));
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ validateCondition }),
     });
 
@@ -238,7 +258,7 @@ describe('ApiKeysTab — create key', () => {
   it('the Test button sends {condition, sample_context} and badges an allowed sample', async () => {
     const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn().mockResolvedValue({ ok: true, result: true });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ validateCondition }),
     });
 
@@ -262,7 +282,7 @@ describe('ApiKeysTab — create key', () => {
   it('the Test button badges a denied sample when the guard returns result false', async () => {
     const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn().mockResolvedValue({ ok: true, result: false });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ validateCondition }),
     });
 
@@ -277,7 +297,7 @@ describe('ApiKeysTab — create key', () => {
   it('the Test button badges compile-only (no sample) when the sample editor is blank', async () => {
     const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn().mockResolvedValue({ ok: true, result: null });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ validateCondition }),
     });
 
@@ -299,7 +319,7 @@ describe('ApiKeysTab — create key', () => {
     const lockout =
       'condition rendered empty — this would lock the key out of every request; refusing to save';
     const validateCondition = vi.fn().mockRejectedValue(new ApiError(lockout, 400));
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ validateCondition }),
     });
 
@@ -314,7 +334,7 @@ describe('ApiKeysTab — create key', () => {
   it('blocks the Test with a loud field error on malformed sample-context JSON (no request)', async () => {
     const user = userEvent.setup({ delay: null });
     const validateCondition = vi.fn();
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ validateCondition }),
     });
 
@@ -333,7 +353,9 @@ describe('ApiKeysTab — create key', () => {
   it('stored-template mode sends a condition with an id + kwargs and no inline content', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-x');
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ createApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));
@@ -362,7 +384,7 @@ describe('ApiKeysTab — create key', () => {
 
   it('the clear affordances are absent in create mode (nothing to clear)', async () => {
     const user = userEvent.setup({ delay: null });
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ listTokensPayload: vi.fn(() => Promise.resolve(seededTokens())) }),
     });
 
@@ -377,7 +399,7 @@ describe('ApiKeysTab — create key', () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-svc');
     const listPrincipals = vi.fn(() => Promise.resolve([servicePrincipal()]));
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ createApiKey, listPrincipals }),
     });
 
@@ -406,7 +428,7 @@ describe('ApiKeysTab — create key', () => {
       .fn()
       .mockResolvedValue(servicePrincipal({ user_id: 'svc-new', display_name: 'New Bot' }));
     const listRoles = vi.fn(() => Promise.resolve([role('editor')]));
-    renderTab(<ApiKeysTab readOnly={false} />, {
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ createApiKey, createPrincipal, listRoles }),
     });
 
@@ -443,7 +465,7 @@ describe('ApiKeysTab — create key', () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockResolvedValue('sk-self');
     const listPrincipals = vi.fn();
-    renderWithProviders(<ApiKeysTab readOnly={false} />, {
+    renderWithProviders(<ApiKeysTab readOnly={false} publicId="public" />, {
       client: baseStub({ createApiKey, listPrincipals }),
       projection: scopedProjection({
         owner_user_id: null,
@@ -471,7 +493,9 @@ describe('ApiKeysTab — create key', () => {
   it('surfaces a create failure loudly', async () => {
     const user = userEvent.setup({ delay: null });
     const createApiKey = vi.fn().mockRejectedValue(new Error('user_id already exists'));
-    renderTab(<ApiKeysTab readOnly={false} />, { client: baseStub({ createApiKey }) });
+    renderTab(<ApiKeysTab readOnly={false} publicId="public" />, {
+      client: baseStub({ createApiKey }),
+    });
 
     await screen.findByText('alice');
     await user.click(screen.getByRole('button', { name: 'Create key' }));

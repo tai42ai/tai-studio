@@ -18,16 +18,19 @@ export function EditKeyDialog({
   payload,
   onClose,
   scopeIds,
+  publicId,
 }: {
   readonly payload: KeyPayload;
   readonly onClose: () => void;
   readonly scopeIds: readonly string[];
+  /** The deployment's served public marker — never one of the key's scopes. */
+  readonly publicId: string;
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
   const [description, setDescription] = useState(payload.description);
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(payload.scopes.filter((s) => s !== 'public')),
+    () => new Set(payload.scopes.filter((s) => s !== publicId)),
   );
   const [policyFields, setPolicyFields] = useState<PolicyFields>({});
   const [conditionTestFailed, setConditionTestFailed] = useState(false);

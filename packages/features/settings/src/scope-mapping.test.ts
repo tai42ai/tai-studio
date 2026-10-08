@@ -2,26 +2,37 @@ import type { DragEndEvent } from '@dnd-kit/core';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  chipFor,
+  deriveMapperChips,
   dispatchDrop,
   dropFromDragEvent,
+  mountForUrl,
   resolveDrop,
   scopeGroupsOf,
-  subMcpPattern,
+  type SubMcpMounts,
 } from './scope-mapping';
 import type { ChipData, ZoneRef } from './ScopeItemChip';
+
+// Served values the server names; deliberately NOT `/app/<slug>` so a client that rebuilt
+// the mount URL or pattern instead of reading them would fail these assertions.
+const SERVED_URL = '/served/y';
+const SERVED_PATTERN = '^/served/y/.*$';
+const MOUNTS: SubMcpMounts = {
+  y: { tools: ['t'], transport: 'http', mount_url: SERVED_URL, access_pattern: SERVED_PATTERN },
+};
 
 describe('resolveDrop', () => {
   const routeChip = (origin: ZoneRef): ChipData => ({
     url: '/c',
     itemType: 'route',
-    slug: null,
+    accessPattern: null,
     origin,
     methods: ['GET'],
   });
   const subMcpChip = (origin: ZoneRef): ChipData => ({
-    url: '/app/y',
+    url: SERVED_URL,
     itemType: 'sub-mcp',
-    slug: 'y',
+    accessPattern: SERVED_PATTERN,
     origin,
     methods: [],
   });
@@ -33,15 +44,14 @@ describe('resolveDrop', () => {
     expect(action).toEqual({ kind: 'assign', body: { scope_id: 's1', url: '/c' } });
   });
 
-  it('carries the subtree pattern for a sub-MCP chip dropped on a scope', () => {
+  it('carries the served access pattern for a sub-MCP chip dropped on a scope', () => {
     const action = resolveDrop(subMcpChip({ kind: 'unassigned' }), {
       zone: { kind: 'scope', scopeId: 's2' },
     });
     expect(action).toEqual({
       kind: 'assign',
-      body: { scope_id: 's2', url: '/app/y', pattern: subMcpPattern('y') },
+      body: { scope_id: 's2', url: SERVED_URL, pattern: SERVED_PATTERN },
     });
-    expect(subMcpPattern('y')).toBe('^/app/y/.*$');
   });
 
   it('is a no-op for a same-zone drop', () => {
@@ -69,8 +79,8 @@ describe('resolveDrop', () => {
     });
     expect(resolveDrop(subMcpChip({ kind: 'unassigned' }), { zone: { kind: 'public' } })).toEqual({
       kind: 'pin',
-      url: '/app/y',
-      pattern: subMcpPattern('y'),
+      url: SERVED_URL,
+      pattern: SERVED_PATTERN,
     });
   });
 
@@ -92,14 +102,14 @@ describe('dropFromDragEvent', () => {
   const chip: ChipData = {
     url: '/c',
     itemType: 'route',
-    slug: null,
+    accessPattern: null,
     origin: { kind: 'unassigned' },
     methods: ['GET'],
   };
   const subMcp: ChipData = {
-    url: '/app/y',
+    url: SERVED_URL,
     itemType: 'sub-mcp',
-    slug: 'y',
+    accessPattern: SERVED_PATTERN,
     origin: { kind: 'unassigned' },
     methods: [],
   };
@@ -116,10 +126,10 @@ describe('dropFromDragEvent', () => {
     });
   });
 
-  it('carries the sub-MCP subtree pattern from the event to the assign body', () => {
+  it('carries the served access pattern from the event to the assign body', () => {
     expect(dropFromDragEvent(event(subMcp, { kind: 'scope', scopeId: 's2' }))).toEqual({
       kind: 'assign',
-      body: { scope_id: 's2', url: '/app/y', pattern: subMcpPattern('y') },
+      body: { scope_id: 's2', url: SERVED_URL, pattern: SERVED_PATTERN },
     });
   });
 
@@ -150,8 +160,8 @@ describe('dispatchDrop', () => {
   it('routes a pin action to the pin handler (the confirm), never the assign mutation', () => {
     const assign = vi.fn();
     const pin = vi.fn();
-    dispatchDrop({ kind: 'pin', url: '/app/y', pattern: subMcpPattern('y') }, { assign, pin });
-    expect(pin).toHaveBeenCalledWith('/app/y', '^/app/y/.*$');
+    dispatchDrop({ kind: 'pin', url: SERVED_URL, pattern: SERVED_PATTERN }, { assign, pin });
+    expect(pin).toHaveBeenCalledWith(SERVED_URL, SERVED_PATTERN);
     expect(assign).not.toHaveBeenCalled();
   });
 
@@ -169,5 +179,32 @@ describe('scopeGroupsOf', () => {
     const groups = scopeGroupsOf({ '/b': 's1', '/a': 's1', '/app/x': 's2' });
     expect(groups.get('s1')).toEqual(['/a', '/b']);
     expect(groups.get('s2')).toEqual(['/app/x']);
+  });
+});
+
+describe('served sub-MCP mounts', () => {
+  it('names a url a sub-MCP mount only when a live mount is served at it', () => {
+    expect(mountForUrl(SERVED_URL, MOUNTS)?.access_pattern).toBe(SERVED_PATTERN);
+    expect(mountForUrl('/app/y', MOUNTS)).toBeNull();
+    expect(chipFor(SERVED_URL, { kind: 'unassigned' }, MOUNTS)).toEqual({
+      url: SERVED_URL,
+      itemType: 'sub-mcp',
+      accessPattern: SERVED_PATTERN,
+      origin: { kind: 'unassigned' },
+      methods: [],
+    });
+    expect(chipFor('/app/y', { kind: 'unassigned' }, MOUNTS).itemType).toBe('route');
+  });
+
+  it('surfaces an unmapped mount at its served url in the Unassigned bucket', () => {
+    const chips = deriveMapperChips({}, [], [], MOUNTS, 'public');
+    expect(chips.unassignedChips.map((chip) => chip.url)).toEqual([SERVED_URL]);
+    const mapped = deriveMapperChips({ [SERVED_URL]: 's1' }, [], [], MOUNTS, 'public');
+    expect(mapped.unassignedChips).toEqual([]);
+  });
+
+  it('keeps the served public marker out of the scope zones, whatever it is named', () => {
+    const chips = deriveMapperChips({ '/a': 'open', '/b': 's1' }, [], [], {}, 'open');
+    expect(chips.realScopeIds).toEqual(['s1']);
   });
 });

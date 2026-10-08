@@ -4,7 +4,7 @@
  * the create form see a known slug. The surface moved off the manifest page's
  * Sub-MCP tab onto its own `/served-endpoints` page under Connections.
  *
- * Legs: a registered sub-MCP shows its `/app/{slug}` connect URL with a copy
+ * Legs: a registered sub-MCP shows its served connect URL (`mount_url`) with a copy
  * control; typing an already-registered slug into the create form warns that
  * registering will REPLACE it (register is a silent-swap upsert server-side).
  */
@@ -24,7 +24,18 @@ async function stubSubMcp(page: Page): Promise<void> {
         await route.fallback();
         return;
       }
-      await route.fulfill({ json: { data: { existing: { tools: ['echo'], transport: 'http' } } } });
+      await route.fulfill({
+        json: {
+          data: {
+            existing: {
+              tools: ['echo'],
+              transport: 'http',
+              mount_url: '/app/existing',
+              access_pattern: '^/app/existing/.*$',
+            },
+          },
+        },
+      });
     },
   );
   await page.route(

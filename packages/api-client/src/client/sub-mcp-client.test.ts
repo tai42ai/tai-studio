@@ -44,14 +44,18 @@ function harness(responder: () => Response) {
 }
 
 describe('sub-mcp client transport', () => {
-  it('listSubMcp GETs /api/sub-mcp and parses the slug → { tools, transport } map', async () => {
-    const { client, captured } = harness(() =>
-      jsonResponse({ data: { reporting: { tools: ['a', 'b'], transport: 'http' } } }),
-    );
+  it('listSubMcp GETs /api/sub-mcp and parses the slug → served mount map', async () => {
+    const served = {
+      tools: ['a', 'b'],
+      transport: 'http',
+      mount_url: '/app/reporting',
+      access_pattern: '^/app/reporting/.*$',
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: { reporting: served } }));
     const out = await client.listSubMcp();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/sub-mcp');
-    expect(out.reporting).toEqual({ tools: ['a', 'b'], transport: 'http' });
+    expect(out.reporting).toEqual(served);
     // `transport` is now typed on the mount value, not an opaque unknown.
     expect(out.reporting?.transport).toBe('http');
   });
@@ -62,7 +66,18 @@ describe('sub-mcp client transport', () => {
   });
 
   it('throws ApiSchemaError LOUDLY on a mount missing transport (the wire always carries it)', async () => {
-    const { client } = harness(() => jsonResponse({ data: { reporting: { tools: ['a'] } } }));
+    const { client } = harness(() =>
+      jsonResponse({
+        data: { reporting: { tools: ['a'], mount_url: '/app/reporting', access_pattern: '^x$' } },
+      }),
+    );
+    await expect(client.listSubMcp()).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+
+  it('throws ApiSchemaError LOUDLY on a mount missing its served mount url or access pattern', async () => {
+    const { client } = harness(() =>
+      jsonResponse({ data: { reporting: { tools: ['a'], transport: 'http' } } }),
+    );
     await expect(client.listSubMcp()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 

@@ -4,18 +4,17 @@
  * after a mutation.
  */
 import type { DragEndEvent } from '@dnd-kit/core';
-import type { AddUrlToScopeBody, AuthRoute } from '@tai42/api-client';
+import type { AddUrlToScopeBody, AuthRoute, SubMcpMount } from '@tai42/api-client';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { authRoutesKey, publicRoutesKey, scopesKey, tokensPayloadKey } from './keys';
 import type { ChipData, ZoneRef } from './ScopeItemChip';
 
 /**
- * The reserved access-control marker. It is never a scope — public urls live in
- * the distinguished Public zone — so it is excluded from the scope zones and
- * rejected as a new scope name.
+ * The registered sub-MCP mounts keyed by slug, each with the served `mount_url` and
+ * `access_pattern` the mapper maps it by (the `listSubMcp` read).
  */
-export const PUBLIC_MARKER = 'public';
+export type SubMcpMounts = Readonly<Record<string, SubMcpMount>>;
 
 /** Group the `{ url: scope_id }` map into `scope_id → sorted url[]`. */
 export function scopeGroupsOf(scopes: Record<string, string>): Map<string, string[]> {
@@ -29,16 +28,9 @@ export function scopeGroupsOf(scopes: Record<string, string>): Map<string, strin
   return groups;
 }
 
-/** The sub-MCP slug a url names (`/app/<slug>`) when it is a live slug, else `null`. */
-export function slugForUrl(url: string, slugs: ReadonlySet<string>): string | null {
-  const match = /^\/app\/([^/]+)$/.exec(url);
-  const slug = match?.[1];
-  return slug !== undefined && slugs.has(slug) ? slug : null;
-}
-
-/** The dynamic-pattern regex that maps every sub-path of a mount to the mount's url key. */
-export function subMcpPattern(slug: string): string {
-  return `^/app/${slug}/.*$`;
+/** The live sub-MCP mount served at `url` (its served `mount_url`), else `null`. */
+export function mountForUrl(url: string, mounts: SubMcpMounts): SubMcpMount | null {
+  return Object.values(mounts).find((mount) => mount.mount_url === url) ?? null;
 }
 
 /** The action a drop resolves to. `noop` = same-zone or onto-unassigned drop. */
@@ -57,8 +49,7 @@ export function resolveDrop(active: ChipData, over: { zone: ZoneRef } | null): D
   if (over === null) return { kind: 'noop' };
   const target = over.zone;
   if (target.kind === 'unassigned') return { kind: 'noop' };
-  const pattern =
-    active.itemType === 'sub-mcp' && active.slug !== null ? subMcpPattern(active.slug) : undefined;
+  const pattern = active.accessPattern ?? undefined;
   if (target.kind === 'public') {
     if (active.origin.kind === 'public') return { kind: 'noop' };
     return pattern === undefined
@@ -105,15 +96,20 @@ export function dispatchDrop(
   else if (action.kind === 'pin') handlers.pin(action.url, action.pattern);
 }
 
-/** Build a chip payload for a url living in the given origin zone. */
+/**
+ * Build a chip payload for a url living in the given origin zone. A url a live sub-MCP
+ * is served at is a `sub-mcp` chip carrying the mount's served access pattern.
+ */
 export function chipFor(
   url: string,
   origin: ZoneRef,
-  slugs: ReadonlySet<string>,
+  mounts: SubMcpMounts,
   methods: readonly string[] = [],
 ): ChipData {
-  const slug = slugForUrl(url, slugs);
-  return { url, itemType: slug === null ? 'route' : 'sub-mcp', slug, origin, methods };
+  const mount = mountForUrl(url, mounts);
+  return mount === null
+    ? { url, itemType: 'route', accessPattern: null, origin, methods }
+    : { url, itemType: 'sub-mcp', accessPattern: mount.access_pattern, origin, methods };
 }
 
 /** The urls a real scope zone actually shows — its group urls minus any pinned public. */
@@ -140,18 +136,20 @@ export interface MapperChips {
  * read during the parallel refetch after an assign) is excluded the moment it
  * appears in `scopes`, so a url never surfaces in both a scope zone and Unassigned
  * at once (which would register two dnd-kit draggables with the same id). A url the
- * server has re-pointed public belongs to the Public zone only.
+ * server has re-pointed public belongs to the Public zone only. `publicId` is the
+ * served public marker, never a scope.
  */
 export function deriveMapperChips(
   scopes: Record<string, string>,
   routes: readonly AuthRoute[],
   publicUrls: readonly string[],
-  slugs: ReadonlySet<string>,
+  mounts: SubMcpMounts,
+  publicId: string,
 ): MapperChips {
   const groups = scopeGroupsOf(scopes);
   // The public marker is its own Public surface, never a scope zone; a well-behaved
   // backend never lists it as a scope, but exclude a stray entry here.
-  groups.delete(PUBLIC_MARKER);
+  groups.delete(publicId);
   const realScopeIds = [...groups.keys()].sort();
   const publicSet = new Set(publicUrls);
 
@@ -160,14 +158,14 @@ export function deriveMapperChips(
       .filter(
         (route) => route.mapped === null && !(route.path in scopes) && !publicSet.has(route.path),
       )
-      .map((route) => chipFor(route.path, { kind: 'unassigned' }, slugs, route.methods)),
-    ...[...slugs]
-      .filter((slug) => !(`/app/${slug}` in scopes) && !publicSet.has(`/app/${slug}`))
-      .map((slug) => chipFor(`/app/${slug}`, { kind: 'unassigned' }, slugs)),
+      .map((route) => chipFor(route.path, { kind: 'unassigned' }, mounts, route.methods)),
+    ...Object.values(mounts)
+      .filter((mount) => !(mount.mount_url in scopes) && !publicSet.has(mount.mount_url))
+      .map((mount) => chipFor(mount.mount_url, { kind: 'unassigned' }, mounts)),
   ].sort((a, b) => a.url.localeCompare(b.url));
 
   const publicChips: ChipData[] = [...publicUrls]
-    .map((url) => chipFor(url, { kind: 'public' }, slugs))
+    .map((url) => chipFor(url, { kind: 'public' }, mounts))
     .sort((a, b) => a.url.localeCompare(b.url));
 
   return { groups, publicSet, realScopeIds, unassignedChips, publicChips };

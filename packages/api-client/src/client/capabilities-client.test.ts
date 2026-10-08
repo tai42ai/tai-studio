@@ -53,10 +53,19 @@ const FULL_PROJECTION = {
   user_id: 'admin',
   owner_user_id: null,
   admin: true,
+  public_resource_id: 'public',
   scopes: ['*'],
   routes: [{ path: '/api/tools', methods: ['GET'] }],
   route_patterns: [{ pattern: '^/app/slug/.*$', scope_id: 'app' }],
-  sub_mcp: [{ slug: 'demo', tools: ['echo'], transport: 'sse' }],
+  sub_mcp: [
+    {
+      slug: 'demo',
+      tools: ['echo'],
+      transport: 'sse',
+      mount_url: '/app/demo',
+      access_pattern: '^/app/demo/.*$',
+    },
+  ],
   tools: ['echo'],
   agents: ['researcher'],
   mintable: true,
@@ -78,6 +87,7 @@ describe('getMe client transport', () => {
       user_id: 'agent-1',
       owner_user_id: 'editor',
       admin: false,
+      public_resource_id: 'public',
       scopes: ['tools:read'],
     };
     const { client } = harness(() => jsonResponse({ data: scoped }));

@@ -105,7 +105,11 @@ export function buildSettingsTabs(input: {
       content: <ProfilesTab readOnly={readOnly} />,
     });
   }
-  tabs.push({ value: 'api-keys', label: 'API keys', content: <ApiKeysTab readOnly={readOnly} /> });
+  tabs.push({
+    value: 'api-keys',
+    label: 'API keys',
+    content: <ApiKeysTab readOnly={readOnly} publicId={input.projection.public_resource_id} />,
+  });
   if (input.backupVisible) {
     tabs.push({ value: 'backup', label: 'Backup', content: <BackupTab readOnly={readOnly} /> });
   }

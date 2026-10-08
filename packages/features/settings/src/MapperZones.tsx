@@ -8,7 +8,7 @@ import { Badge, Button, EmptyState } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { AddRouteRow } from './AddRouteRow';
-import { chipFor, type MapperChips, scopeUrls } from './scope-mapping';
+import { chipFor, type MapperChips, scopeUrls, type SubMcpMounts } from './scope-mapping';
 import type { ChipData } from './ScopeItemChip';
 import { ScopeZone } from './ScopeZone';
 
@@ -20,7 +20,7 @@ const publicNoteStyle: CSSProperties = {
 
 export interface MapperZonesProps {
   readonly chips: MapperChips;
-  readonly slugs: ReadonlySet<string>;
+  readonly mounts: SubMcpMounts;
   readonly pendingScopes: readonly string[];
   readonly interactive: boolean;
   readonly readOnly: boolean;
@@ -34,7 +34,7 @@ export interface MapperZonesProps {
 function RealScopeZone({
   scopeId,
   chips,
-  slugs,
+  mounts,
   interactive,
   readOnly,
   onAssign,
@@ -45,10 +45,10 @@ function RealScopeZone({
   readonly chips: MapperChips;
 } & Pick<
   MapperZonesProps,
-  'slugs' | 'interactive' | 'readOnly' | 'onAssign' | 'onRemoveScopeChip' | 'onDeleteScope'
+  'mounts' | 'interactive' | 'readOnly' | 'onAssign' | 'onRemoveScopeChip' | 'onDeleteScope'
 >): ReactNode {
   const urls = scopeUrls(chips.groups, scopeId, chips.publicSet);
-  const zoneChips = urls.map((url) => chipFor(url, { kind: 'scope', scopeId }, slugs));
+  const zoneChips = urls.map((url) => chipFor(url, { kind: 'scope', scopeId }, mounts));
   return (
     <ScopeZone
       zone={{ kind: 'scope', scopeId }}
@@ -139,7 +139,7 @@ export function MapperZones(props: MapperZonesProps): ReactNode {
           key={scopeId}
           scopeId={scopeId}
           chips={chips}
-          slugs={props.slugs}
+          mounts={props.mounts}
           interactive={interactive}
           readOnly={readOnly}
           onAssign={props.onAssign}

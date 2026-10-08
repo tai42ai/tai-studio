@@ -113,6 +113,7 @@ function ApiKeysDialogHost({
   revokeUser,
   policyUser,
   scopeIds,
+  publicId,
   readOnly,
   onClose,
 }: {
@@ -126,6 +127,7 @@ function ApiKeysDialogHost({
   readonly revokeUser: string | null;
   readonly policyUser: string | null;
   readonly scopeIds: readonly string[];
+  readonly publicId: string;
   readonly readOnly: boolean;
   readonly onClose: () => void;
 }): ReactNode {
@@ -147,6 +149,7 @@ function ApiKeysDialogHost({
           key={editPayload.user_id}
           payload={editPayload}
           scopeIds={scopeIds}
+          publicId={publicId}
           onClose={onClose}
         />
       ) : null}
@@ -160,9 +163,11 @@ function ApiKeysDialogHost({
 
 export interface ApiKeysTabProps {
   readonly readOnly: boolean;
+  /** The deployment's public marker, served on the caller's projection — never a scope. */
+  readonly publicId: string;
 }
 
-export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
+export function ApiKeysTab({ readOnly, publicId }: ApiKeysTabProps): ReactNode {
   const api = useApi();
   const { state: capabilityState } = useCapabilities();
   const canMintRoute = useCanWrite(MINT_ROUTE, 'POST');
@@ -214,7 +219,7 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
 
   const keys = keysQuery.data;
   const scopes = scopesQuery.data;
-  const scopeIds = scopeIdsOf(scopes);
+  const scopeIds = scopeIdsOf(scopes, publicId);
   // Whether THIS deployment can mint locally (validator-only deployments cannot);
   // absent in readOnly mode, where the create control is hidden.
   const deploymentMintable = !readOnly && capabilitiesQuery.data?.mintable === true;
@@ -243,7 +248,7 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
       />
 
       {scopesMapperVisible(capabilityState) ? (
-        <ScopesMapper scopes={scopes} readOnly={readOnly} />
+        <ScopesMapper scopes={scopes} readOnly={readOnly} publicId={publicId} />
       ) : null}
 
       <ApiKeysDialogHost
@@ -259,6 +264,7 @@ export function ApiKeysTab({ readOnly }: ApiKeysTabProps): ReactNode {
         revokeUser={revokeUser}
         policyUser={policyUser}
         scopeIds={scopeIds}
+        publicId={publicId}
         readOnly={readOnly}
         onClose={() => {
           setMinted(null);

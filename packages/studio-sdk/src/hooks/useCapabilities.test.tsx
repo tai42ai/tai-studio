@@ -21,6 +21,7 @@ function projection(overrides: Partial<MeProjection> = {}): MeProjection {
     user_id: 'u',
     owner_user_id: null,
     admin: false,
+    public_resource_id: 'public',
     scopes: [],
     routes: [],
     route_patterns: [],
