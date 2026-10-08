@@ -191,7 +191,7 @@ async function pickFirstExecutionKey(page, scope) {
 async function authorPresetKwargs(page) {
   await page.request.post(`${STUDIO_URL}/api/config/env`, {
     headers: { 'x-api-key': DEMO_KEY, 'content-type': 'application/json' },
-    data: { SERVICE_API_TOKEN: 's3cr3t' },
+    data: { env: { SERVICE_API_TOKEN: 's3cr3t' } },
   });
   await page.getByRole('button', { name: 'Create preset' }).click();
   const dialog = page.getByRole('dialog');

@@ -1914,7 +1914,10 @@ readonly getEnvConfig: (signal?: AbortSignal) => Promise<{
 env: Record<string, string>;
 secret_keys: string[];
 }>;
-readonly setEnvConfig: (env: Record<string, string>) => Promise<{
+readonly setEnvConfig: (body: {
+env: Record<string, string>;
+secret_keys?: string[] | null;
+}) => Promise<{
 status: string;
 env_keys: number;
 fanout: {
@@ -3725,6 +3728,9 @@ export interface CodeBlockProps {
     readonly code: string;
     readonly language?: string;
 }
+
+// @public
+export function collectEnvRefs(value: unknown): Set<string>;
 
 // @public
 export function comboElementNames(combo: readonly PresetExtensionElement[]): string[];
@@ -6525,7 +6531,10 @@ function createApiClient(config: ApiConfig): {
         env: Record<string, string>;
         secret_keys: string[];
     }>;
-    readonly setEnvConfig: (env: Record<string, string>) => Promise<{
+    readonly setEnvConfig: (body: {
+        env: Record<string, string>;
+        secret_keys?: string[] | null;
+    }) => Promise<{
         status: string;
         env_keys: number;
         fanout: {
@@ -8109,11 +8118,21 @@ export interface EntityCardGridProps {
     readonly children: ReactNode;
 }
 
+// @public
+export const ENV_MARKER_PREFIX = "!ENV ";
+
 // @public (undocumented)
 const envConfig: z.ZodObject<{
     env: z.ZodRecord<z.ZodString, z.ZodString>;
     secret_keys: z.ZodArray<z.ZodString>;
 }, z.core.$strip>;
+
+// @public
+export interface EnvRef {
+    readonly default?: string;
+    // (undocumented)
+    readonly key: string;
+}
 
 // @public (undocumented)
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -8783,6 +8802,9 @@ export interface FolderRowProps {
     // (undocumented)
     readonly onOpen: (folderId: string) => void;
 }
+
+// @public
+export function formatEnvMarker(key: string, defaultValue?: string): string;
 
 // @public (undocumented)
 export function formatRangeLabel(value: DateRangeValue, presets?: readonly DateRangePreset[]): string;
@@ -11096,6 +11118,9 @@ type ParsedAgentEvent = {
     readonly known: false;
     readonly unknown: UnknownAgentEvent;
 };
+
+// @public
+export function parseEnvMarker(value: unknown): EnvRef | null;
 
 // @public
 export function parseFieldPath(value: string): FieldSource | null;

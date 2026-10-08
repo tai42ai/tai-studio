@@ -1,14 +1,16 @@
 /**
  * The pure row model behind the fixed-kwargs editor: it maps the `fixed_kwargs`
- * JSON text a preset door carries to and from an ordered list of typed rows, and it
- * owns the `!ENV ${VAR[:default]}` secret-reference marker grammar the platform
- * resolves at bind time.
+ * JSON text a preset door carries to and from an ordered list of typed rows; a
+ * reference row is an `!ENV ${VAR[:default]}` secret-reference marker (the
+ * studio-sdk's marker grammar) the platform resolves at bind time.
  *
  * A reference row stores ONLY the marker string — the environment variable's name,
  * never a value — so a read round-trips exactly what the server accepts and a write
  * emits exactly what it will resolve. Every other kind is the ordinary JSON scalar or
  * container it names.
  */
+import { formatEnvMarker, parseEnvMarker } from '@tai42/studio-sdk';
+
 import { parseJsonObject } from './parse';
 
 /** The kind of value a row carries. */
@@ -36,29 +38,6 @@ export interface KwargRow {
   readonly json: unknown;
 }
 
-/**
- * The marker grammar, matching the platform's `ENV_REF` behind the `!ENV ` prefix:
- * a whole leaf that is exactly `!ENV ${VAR}` or `!ENV ${VAR:default}` — a single
- * reference with no surrounding text. Group 1 is the variable name; group 2 is the
- * optional `:default` suffix (leading colon included).
- */
-const MARKER = /^!ENV \$\{([^}{:]+)(:[^}]+)?\}$/;
-
-/** The `!ENV ${VAR}` / `!ENV ${VAR:default}` marker for a reference. */
-export function formatMarker(key: string, defaultText?: string): string {
-  return defaultText !== undefined && defaultText !== ''
-    ? `!ENV \${${key}:${defaultText}}`
-    : `!ENV \${${key}}`;
-}
-
-/** The reference a marker leaf names, or `null` when the string is not a marker. */
-export function parseMarker(text: string): ReferenceValue | null {
-  const match = MARKER.exec(text);
-  if (match === null) return null;
-  const suffix = match[2];
-  return { key: match[1] ?? '', default: suffix === undefined ? undefined : suffix.slice(1) };
-}
-
 /** An empty row of a given kind — the shape the other fields default to. */
 function emptyRow(key: string, kind: RowKind): KwargRow {
   return { key, kind, text: '', bool: false, reference: { key: '' }, json: null };
@@ -72,7 +51,7 @@ export function blankRow(): KwargRow {
 /** The typed row for one `fixed_kwargs` value, classifying strings by the marker grammar. */
 function rowForValue(key: string, value: unknown): KwargRow {
   if (typeof value === 'string') {
-    const reference = parseMarker(value);
+    const reference = parseEnvMarker(value);
     if (reference !== null) return { ...emptyRow(key, 'reference'), reference };
     return { ...emptyRow(key, 'text'), text: value };
   }
@@ -103,7 +82,7 @@ function valueOfRow(row: KwargRow): unknown {
     case 'null':
       return null;
     case 'reference':
-      return formatMarker(row.reference.key, row.reference.default);
+      return formatEnvMarker(row.reference.key, row.reference.default);
     case 'json':
       return row.json;
   }
@@ -124,7 +103,8 @@ function isFiniteNumber(text: string): boolean {
 /**
  * The inline error for row `index`, or `undefined` when it is valid. A row is invalid
  * when its key is blank, its key duplicates another row's, its number does not parse,
- * or its reference names no variable — the exact states that must never reach a write.
+ * or its reference names no variable or one the marker grammar cannot carry — the exact
+ * states that must never reach a write.
  */
 export function rowError(rows: readonly KwargRow[], index: number): string | undefined {
   const row = rows[index];
@@ -137,6 +117,8 @@ export function rowError(rows: readonly KwargRow[], index: number): string | und
   if (row.kind === 'number' && !isFiniteNumber(row.text)) return 'Not a number';
   if (row.kind === 'reference') {
     if (row.reference.key.trim() === '') return 'Environment variable is required';
+    // A `{`, `}` or `:` in the name breaks the `${VAR:default}` marker grammar.
+    if (/[{}:]/.test(row.reference.key)) return 'Environment variable must not contain {, } or :';
     // A `{`/`}` in the default breaks out of the `${VAR:default}` marker, so the leaf
     // no longer round-trips as a reference (and the server rejects it) — a loud row error.
     if (row.reference.default !== undefined && /[{}]/.test(row.reference.default)) {

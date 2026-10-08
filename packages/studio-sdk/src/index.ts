@@ -133,6 +133,8 @@ export {
 
 // -- Utilities ---------------------------------------------------------------
 export { downloadBlob } from './download';
+export type { EnvRef } from './env-markers';
+export { collectEnvRefs, ENV_MARKER_PREFIX, formatEnvMarker, parseEnvMarker } from './env-markers';
 export { errorMessage } from './errors';
 
 // -- Disabled-feature idiom (one helper + component, every consumer) ----------

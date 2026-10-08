@@ -6,8 +6,10 @@ export function configClient(t: Transport) {
   const { req } = t;
   return {
     getEnvConfig: (signal?: AbortSignal) => req('/api/config/env', s.envConfig, { signal }),
-    setEnvConfig: (env: Record<string, string>) =>
-      req('/api/config/env', s.reloadConfigResult, { method: 'POST', body: env }),
+    // `env` MERGES into the stored env ('' deletes a key); `secret_keys`, when a list,
+    // REPLACES the operator's secret marks (absent or `null` leaves them untouched).
+    setEnvConfig: (body: { env: Record<string, string>; secret_keys?: string[] | null }) =>
+      req('/api/config/env', s.reloadConfigResult, { method: 'POST', body }),
     getConfigMode: (signal?: AbortSignal) => req('/api/config/mode', s.configMode, { signal }),
     // The LOCAL soft-restart door (distinct from the System page's fleet door
     // `/api/fleet/reload-config`): refresh env from the config manager, reset the

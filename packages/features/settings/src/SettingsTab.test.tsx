@@ -135,7 +135,7 @@ describe('SettingsTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith({ TAI_PORT: '123', TAI_DEBUG: 'true' });
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { TAI_PORT: '123', TAI_DEBUG: 'true' } });
     });
   });
 

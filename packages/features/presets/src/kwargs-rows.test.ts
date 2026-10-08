@@ -2,17 +2,10 @@
  * The pure fixed-kwargs row model: parse ⇄ serialise round-trips, the `!ENV` marker
  * grammar, and the per-row validity the editor's submit gate reads.
  */
+import { formatEnvMarker as formatMarker, parseEnvMarker as parseMarker } from '@tai42/studio-sdk';
 import { describe, expect, it } from 'vitest';
 
-import {
-  formatMarker,
-  type KwargRow,
-  parseMarker,
-  parseRows,
-  rowError,
-  rowsValid,
-  serializeRows,
-} from './kwargs-rows';
+import { type KwargRow, parseRows, rowError, rowsValid, serializeRows } from './kwargs-rows';
 
 /** A shorthand for building a row of a given kind for the validity tests. */
 function row(patch: Partial<KwargRow> & Pick<KwargRow, 'key' | 'kind'>): KwargRow {
@@ -111,6 +104,15 @@ describe('kwargs-rows model', () => {
     expect(rowError(rows, 0)).toBe('Default must not contain { or }');
     expect(rowsValid(rows)).toBe(false);
   });
+
+  it.each(['A:B', 'A{B', 'A}B'])(
+    'flags a reference variable %j that cannot be written as a marker',
+    (variable) => {
+      const rows = [row({ key: 'token', kind: 'reference', reference: { key: variable } })];
+      expect(rowError(rows, 0)).toBe('Environment variable must not contain {, } or :');
+      expect(rowsValid(rows)).toBe(false);
+    },
+  );
 
   it('accepts a well-formed set of rows', () => {
     const rows = [

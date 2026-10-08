@@ -2,13 +2,13 @@
  * The Environment tab (raw view — the escape hatch): editable key/value rows
  * over the deployment's environment map (`GET /api/config/env` →
  * `{ env, secret_keys }`). Rows can be added, edited, and removed (no blank or
- * duplicate keys); Save posts the assembled map through `setEnvConfig`.
+ * duplicate keys); Save posts the assembled map and marks through `setEnvConfig`.
  *
  * Secret marking: keys OWNED by a registered settings class show their
  * class-derived secret state READ-ONLY (no toggle — the owning class decides).
  * Keys owned by NO settings class get a per-row secret toggle that updates the
- * `TAI_ENV_SECRET_KEYS` marks; the marks ride out in the same Save as a
- * comma-joined value. Any row whose key is effectively secret renders MASKED
+ * operator's secret marks; the marks ride out in the same Save as its
+ * `secret_keys` list. Any row whose key is effectively secret renders MASKED
  * through `RevealInput` (reveal-on-click; display masking only, never logged).
  *
  * The `TAI_ENV_SECRET_KEYS` variable itself is managed through the toggles, not
@@ -84,21 +84,26 @@ const pendingStyle: CSSProperties = {
 };
 
 /**
- * The env map a Save posts. `POST /api/config/env` MERGES: an omitted key is
+ * The body a Save posts. `POST /api/config/env` MERGES `env`: an omitted key is
  * preserved and a key is deleted only when posted with value ''. So a key the
  * operator removed (loaded from the server env but no longer a row) is posted as
  * '' or the merge writes it straight back — a silent no-op on the Remove button. A
- * rename lands here too (old key deleted, new key a fresh row). The marks var is
- * managed via toggles, so it is excluded from the rows and set explicitly: it holds
+ * rename lands here too (old key deleted, new key a fresh row). The marks are
+ * managed via toggles and REPLACE the stored set through `secret_keys`: they hold
  * ONLY keys still present as a row and NOT owned by a settings class (an owned key's
  * secret state is class-derived, never mirrored here).
  */
+interface EnvSave {
+  readonly env: Record<string, string>;
+  readonly secret_keys: string[];
+}
+
 function assembleEnvSave(input: {
   readonly rows: readonly EnvVarRow[];
   readonly initialEnv: Record<string, string>;
   readonly secretKeys: ReadonlySet<string>;
   readonly isOwned: (key: string) => boolean;
-}): Record<string, string> {
+}): EnvSave {
   const { rows, initialEnv, secretKeys, isOwned } = input;
   const env: Record<string, string> = {};
   for (const row of rows) env[row.key] = row.value;
@@ -107,8 +112,7 @@ function assembleEnvSave(input: {
     if (key !== SECRET_MARKS_ENV_VAR && !presentKeys.has(key)) env[key] = '';
   }
   const marks = [...secretKeys].filter((key) => presentKeys.has(key) && !isOwned(key)).sort();
-  env[SECRET_MARKS_ENV_VAR] = marks.join(',');
-  return env;
+  return { env, secret_keys: marks };
 }
 
 /** The Save button and its fleet-reload pending line — hidden in read-only mode. */
@@ -172,7 +176,7 @@ function EnvironmentEditor({
   }
 
   const mutation = useMutation({
-    mutationFn: (env: Record<string, string>) => api.setEnvConfig(env),
+    mutationFn: (body: EnvSave) => api.setEnvConfig(body),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: envConfigKey });
     },
