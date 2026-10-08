@@ -134,8 +134,8 @@ routers_modules:
   # no explicit returnTo — lands on `/observability`, whose Stats tab GETs
   # `/api/observability/metrics` on mount; without this router that fetch 404s and
   # the Dashboard renders a spurious error card right after every sign-in. Reads
-  # the monitoring backend boot.sh already configures, so it needs no extra config
-  # here. Listed before `plugins` — the SPA catch-all stays LAST.
+  # the monitoring backend named under `monitoring_module` below. Listed before
+  # `plugins` — the SPA catch-all stays LAST.
   - tai42_skeleton.routers.observability
   - tai42_skeleton.routers.plugins
 
@@ -146,6 +146,14 @@ routers_modules:
 # sets the worker bus (`TAI_BUS_REDIS_URL`) a registered backend requires; the suites
 # never run a schedule, so no RQ worker is started.
 backend_module: tai42_backend_rq
+
+# --- Monitoring -------------------------------------------------------------
+# The seeded neutral monitoring backend: a real MonitoringWriter/MonitoringReader
+# over an in-memory store holding a deterministic trace dataset, so the
+# observability suite's live legs read real served capabilities, real runs, and
+# real recorded references through the production `/api/observability/*` routes.
+# boot.sh installs the package into the skeleton env.
+monitoring_module: docs_demo_monitoring
 
 # --- Tool extensions --------------------------------------------------------
 # `ask_external` wraps a callback_url-taking tool into an external human-in-the-

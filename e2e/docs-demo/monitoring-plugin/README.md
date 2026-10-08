@@ -1,9 +1,11 @@
 # docs-demo-monitoring
 
 The self-contained monitoring backend used by the tai-studio **docs-screenshot
-pipeline** (`e2e/scripts/docs-screenshots.sh`). It exists so the Studio
-observability screens — the dashboard, the run list, and the trace drill-in —
-render **populated, real data** without any external service.
+pipeline** (`e2e/scripts/docs-screenshots.sh`) and the **Playwright e2e boot**
+(`e2e/boot/manifest.yml`). It exists so the Studio observability screens — the
+dashboard, the run list, and the trace drill-in — render **populated, real data**
+without any external service, and so the observability suite's live legs read real
+served capabilities and resolve real recorded references.
 
 ## What it is
 
@@ -33,7 +35,8 @@ monitoring_module: docs_demo_monitoring
 Importing the package fires
 `@tai42_app.monitoring.register_monitoring` (an import side-effect), replacing the
 skeleton's no-op default. Install it into the skeleton venv with
-`uv pip install <this dir>`; the docs-screenshot runner does this automatically.
+`uv pip install <this dir>`; `e2e/boot/boot.sh` does this on every boot (the e2e
+suite's and the docs-screenshot runner's).
 
 ## Why not Langfuse?
 

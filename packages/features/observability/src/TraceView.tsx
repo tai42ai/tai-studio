@@ -1,7 +1,8 @@
 /**
  * Per-run trace explorer — the two-pane master/detail over one trace fetched
- * via `getRunTrace`. A summary bar (status, duration, cost, tokens, span count)
- * sits above the {@link TraceWaterfall} (span tree + timeline, left) and the
+ * via `getRunTrace`. A summary bar (status, duration, cost, tokens, span count, and
+ * the two downloads: the trace as recorded, and the trace with every record
+ * reference resolved) sits above the {@link TraceWaterfall} (span tree + timeline, left) and the
  * {@link SpanDetail} (the selected span, right); the first error span — else the
  * first root — is auto-selected on open.
  *
@@ -100,7 +101,7 @@ function Loaded({
   readonly traceId: string;
 }): ReactNode {
   const api = useApi();
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'recorded' | 'resolved' | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   // DEBUG spans (e.g. no-op fan-in stand-downs) are hidden by default so they do
   // not read as real work; the toggle reveals them without touching the raw data.
@@ -126,19 +127,18 @@ function Loaded({
 
   const selectedSpan = selectedId !== null ? (tree.byId.get(selectedId)?.span ?? null) : null;
 
-  const onExport = (): void => {
-    setExporting(true);
+  const onExport = (resolve: boolean): void => {
+    setExporting(resolve ? 'resolved' : 'recorded');
     setExportError(null);
-    api
-      .exportTrace(traceId)
+    (resolve ? api.exportTrace(traceId, { resolve: true }) : api.exportTrace(traceId))
       .then((blob) => {
-        downloadBlob(blob, `trace-${traceId}.json`);
+        downloadBlob(blob, resolve ? `trace-${traceId}-resolved.json` : `trace-${traceId}.json`);
       })
       .catch((error: unknown) => {
         setExportError(errorMessage(error));
       })
       .finally(() => {
-        setExporting(false);
+        setExporting(null);
       });
   };
 
@@ -173,8 +173,21 @@ function Loaded({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--tai-space-3)' }}>
             <Checkbox label="Show debug" checked={showDebug} onCheckedChange={setShowDebug} />
-            <Button onClick={onExport} disabled={exporting}>
-              {exporting ? 'Exporting…' : 'Export trace'}
+            <Button
+              onClick={() => {
+                onExport(false);
+              }}
+              disabled={exporting !== null}
+            >
+              {exporting === 'recorded' ? 'Exporting…' : 'Export trace'}
+            </Button>
+            <Button
+              onClick={() => {
+                onExport(true);
+              }}
+              disabled={exporting !== null}
+            >
+              {exporting === 'resolved' ? 'Exporting…' : 'Download resolved'}
             </Button>
           </div>
         </div>
@@ -195,7 +208,7 @@ function Loaded({
               <TraceWaterfall tree={tree} selectedId={selectedId} onSelect={setSelectedId} />
             </div>
             <div style={rightPaneStyle}>
-              <SpanDetail span={selectedSpan} />
+              <SpanDetail span={selectedSpan} traceId={traceId} />
             </div>
           </div>
         )}

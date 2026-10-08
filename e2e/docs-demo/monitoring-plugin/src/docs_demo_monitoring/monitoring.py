@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from tai42_contract.app import tai42_app
 
 from docs_demo_monitoring.reader import DemoReader
-from docs_demo_monitoring.seed import build_seed_traces
+from docs_demo_monitoring.seed import seed_store
 from docs_demo_monitoring.store import TraceStore
 from docs_demo_monitoring.writer import DemoWriter
 
@@ -40,6 +40,5 @@ class DemoMonitoring:
 def build_monitoring() -> DemoMonitoring:
     """Build the docs-demo backend, pre-seeded with the demo dataset."""
     store = TraceStore()
-    for trace in build_seed_traces(datetime.now(UTC)):
-        store.insert(trace)
+    seed_store(store, datetime.now(UTC))
     return DemoMonitoring(store)

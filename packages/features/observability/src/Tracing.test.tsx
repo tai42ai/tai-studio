@@ -4,7 +4,12 @@
  * escaping pinned, a surfaced 404, the two export actions, and the runs pane's
  * keyboard reachability once it outruns its column.
  */
-import { ApiError, type Run, type RunTrace } from '@tai42/api-client';
+import {
+  ApiError,
+  type ObservabilityCapabilities,
+  type Run,
+  type RunTrace,
+} from '@tai42/api-client';
 import { flushResizeObservers, setElementOverflow } from '@tai42/studio-sdk/testing';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -28,6 +33,36 @@ function stubAnchorDownload(): void {
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:export');
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+}
+
+/**
+ * The served capabilities every runs-table test renders against: every sort served,
+ * and the three metric sorts unable to carry the status / cost / token / latency
+ * filters (the declaration the sort × filter guard tests below read).
+ */
+const METRIC_FILTERS = [
+  'status',
+  'minCost',
+  'maxCost',
+  'minTokens',
+  'maxTokens',
+  'minLatencyMs',
+  'maxLatencyMs',
+];
+const CAPS: ObservabilityCapabilities = {
+  pageSizeMax: 100,
+  sortKeys: ['createdAt', 'cost', 'latencyMs', 'totalTokens'],
+  incompatibleFilters: {
+    cost: METRIC_FILTERS,
+    latencyMs: METRIC_FILTERS,
+    totalTokens: METRIC_FILTERS,
+  },
+  metrics: { measures: [], dimensions: [] },
+};
+
+/** A stub client that also serves the capabilities read the tracing tab makes. */
+function tracing(client: StubApiClient, caps: ObservabilityCapabilities = CAPS): StubApiClient {
+  return { getObservabilityCapabilities: vi.fn().mockResolvedValue(caps), ...client };
 }
 
 function run(id: string, traceId: string): Run {
@@ -60,34 +95,36 @@ function traceFixture(): RunTrace {
         parentId: null,
         traceId: 't1',
         name: 'root-span',
-        type: 'llm',
+        kind: 'LLM',
         level: 'DEFAULT',
         statusMessage: null,
         start: '2026-01-01T00:00:00.000Z',
         end: '2026-01-01T00:00:01.000Z',
         model: 'gpt-4o',
-        usage: null,
+        inputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
         metadata: null,
         input: '<script>alert(1)</script>',
         output: 'ok',
-        nodeId: null,
       },
       {
         id: 's2',
         parentId: 's1',
         traceId: 't1',
         name: 'child-span',
-        type: 'tool',
+        kind: 'TOOL',
         level: 'ERROR',
         statusMessage: 'boom',
         start: null,
         end: null,
         model: null,
-        usage: null,
+        inputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
         metadata: null,
         input: 'child-in',
         output: 'child-out',
-        nodeId: null,
       },
     ],
   };
@@ -104,7 +141,9 @@ describe('TracingTab — runs table', () => {
           : Promise.resolve({ items: [run('r1', 't1')], page: 1, nextPage: 2 }),
       );
     const client: StubApiClient = { listRuns };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: tracing(client),
+    });
 
     expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
     // The Model column is gone — it lives on the trace detail now, not the list.
@@ -137,7 +176,7 @@ describe('TracingTab — runs table', () => {
           : Promise.resolve({ items: [run('r1', 't1')], page: 1, nextPage: 2 }),
       );
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
-      client: { listRuns },
+      client: tracing({ listRuns }),
     });
 
     expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
@@ -161,7 +200,7 @@ describe('TracingTab — runs table', () => {
         : Promise.reject(new ApiError('refresh exploded', 503));
     });
     const { queryClient } = renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
-      client: { listRuns },
+      client: tracing({ listRuns }),
     });
 
     expect(await screen.findByTestId('run-row-r1')).toBeInTheDocument();
@@ -181,7 +220,9 @@ describe('TracingTab — runs table', () => {
     const client: StubApiClient = {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: tracing(client),
+    });
 
     const row = await screen.findByTestId('run-row-r1');
     // Cost / Latency / Tokens opt into the SDK numeric affordance (tabular, right-
@@ -218,7 +259,7 @@ describe('TracingTab — runs table', () => {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
     const { navigate } = renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
-      client,
+      client: tracing(client),
     });
 
     await screen.findByTestId('run-row-r1');
@@ -236,7 +277,7 @@ describe('TracingTab — runs table', () => {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
     const { navigate } = renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
-      client,
+      client: tracing(client),
     });
 
     await screen.findByTestId('run-row-r1');
@@ -253,7 +294,7 @@ describe('TracingTab — runs table', () => {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
     renderWithLiveUrl<'observability'>((search) => <ObservabilityPage search={search} />, {
-      client,
+      client: tracing(client),
       initialSearch: { tab: 'tracing' },
     });
 
@@ -289,7 +330,7 @@ describe('TracingTab — runs table', () => {
     function Rerenderable({ minCost }: { readonly minCost?: number }): ReactElement {
       return <ObservabilityPage search={{ tab: 'tracing', minCost }} />;
     }
-    const { rerender } = renderWithProviders(<Rerenderable />, { client });
+    const { rerender } = renderWithProviders(<Rerenderable />, { client: tracing(client) });
 
     await screen.findByTestId('run-row-r1');
     expect(screen.getByLabelText('Min cost')).toHaveValue(null);
@@ -307,7 +348,7 @@ describe('TracingTab — runs table', () => {
       exportRuns,
     };
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', status: 'error' }} />, {
-      client,
+      client: tracing(client),
     });
 
     await screen.findByTestId('run-row-r1');
@@ -324,7 +365,9 @@ describe('TracingTab — runs table', () => {
     const client: StubApiClient = {
       listRuns: vi.fn().mockRejectedValue(new ApiError('nope', 501)),
     };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: tracing(client),
+    });
 
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
@@ -336,7 +379,9 @@ describe('TracingTab — trace view', () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockResolvedValue(traceFixture()),
     };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', trace: 't1' }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', trace: 't1' }} />, {
+      client: tracing(client),
+    });
 
     // Both spans appear in the left-pane waterfall.
     expect(await screen.findByText('root-span')).toBeInTheDocument();
@@ -358,7 +403,9 @@ describe('TracingTab — trace view', () => {
     const client: StubApiClient = {
       getRunTrace: vi.fn().mockRejectedValue(new ApiError('nope', 501)),
     };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', trace: 't1' }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', trace: 't1' }} />, {
+      client: tracing(client),
+    });
 
     expect(await screen.findByTestId('observability-read-not-supported')).toBeInTheDocument();
   });
@@ -368,7 +415,7 @@ describe('TracingTab — trace view', () => {
       getRunTrace: vi.fn().mockRejectedValue(new ApiError('trace not found', 404)),
     };
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', trace: 'missing' }} />, {
-      client,
+      client: tracing(client),
     });
 
     expect(await screen.findByText('Trace not available')).toBeInTheDocument();
@@ -403,7 +450,9 @@ describe('TracingTab — the runs pane is reachable without a pointer', () => {
     const client: StubApiClient = {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: tracing(client),
+    });
 
     await screen.findByTestId('run-row-r1');
     // Located through the table it holds, so this fails on a pane that nothing
@@ -427,14 +476,14 @@ describe('TracingTab — the runs pane is reachable without a pointer', () => {
   });
 });
 
-describe('TracingTab — A18 manual refresh', () => {
+describe('TracingTab — manual refresh', () => {
   it('refetches the runs list when Refresh is clicked', async () => {
     const user = userEvent.setup();
     const listRuns = vi
       .fn()
       .mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null });
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
-      client: { listRuns },
+      client: tracing({ listRuns }),
     });
 
     await screen.findByTestId('run-row-r1');
@@ -447,14 +496,14 @@ describe('TracingTab — A18 manual refresh', () => {
   });
 });
 
-describe('TracingTab — A7 date-range picker', () => {
+describe('TracingTab — date-range picker', () => {
   it('commits a relative preset to the URL window, clearing any explicit `to`', async () => {
     const user = userEvent.setup();
     const client: StubApiClient = {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
     const { navigate } = renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
-      client,
+      client: tracing(client),
     });
 
     await screen.findByTestId('run-row-r1');
@@ -463,12 +512,14 @@ describe('TracingTab — A7 date-range picker', () => {
   });
 });
 
-describe('TracingTab — A9 metric-sort × filter guard', () => {
+describe('TracingTab — the served sort × filter exclusions', () => {
   it('disables a metric-sort header while an incompatible filter is set', async () => {
     const client: StubApiClient = {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
-    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', minCost: 5 }} />, { client });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', minCost: 5 }} />, {
+      client: tracing(client),
+    });
 
     await screen.findByTestId('run-row-r1');
     expect(screen.getByRole('button', { name: /Cost/ })).toBeDisabled();
@@ -481,7 +532,7 @@ describe('TracingTab — A9 metric-sort × filter guard', () => {
       listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
     };
     renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', sort: 'cost' }} />, {
-      client,
+      client: tracing(client),
     });
 
     await screen.findByTestId('run-row-r1');
@@ -497,7 +548,7 @@ describe('TracingTab — A9 metric-sort × filter guard', () => {
       .mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null });
     const { navigate } = renderWithProviders(
       <ObservabilityPage search={{ tab: 'tracing', sort: 'cost', dir: 'asc', minCost: 5 }} />,
-      { client: { listRuns } },
+      { client: tracing({ listRuns }) },
     );
 
     await screen.findByTestId('run-row-r1');
@@ -508,5 +559,110 @@ describe('TracingTab — A9 metric-sort × filter guard', () => {
       expect.objectContaining({ sort: undefined, minCost: 5 }),
       expect.anything(),
     );
+  });
+
+  it('reads the guard from the served capabilities, not a built-in rule', async () => {
+    // A backend whose TIME sort cannot carry the tags filter and whose metric sorts
+    // combine with everything: the guard follows the served map exactly.
+    const caps: ObservabilityCapabilities = {
+      pageSizeMax: 50,
+      sortKeys: ['createdAt', 'cost'],
+      incompatibleFilters: { createdAt: ['tags'] },
+      metrics: { measures: [], dimensions: [] },
+    };
+    const client = tracing(
+      {
+        listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+      },
+      caps,
+    );
+    renderWithProviders(
+      <ObservabilityPage search={{ tab: 'tracing', sort: 'createdAt', minCost: 5 }} />,
+      { client },
+    );
+
+    await screen.findByTestId('run-row-r1');
+    expect(screen.getByLabelText('Tags (comma-separated)')).toBeDisabled();
+    expect(screen.getByLabelText('Min cost')).toBeEnabled();
+    // Only the served sorts are buttons; the others are plain header text.
+    expect(screen.getByRole('button', { name: /Cost/ })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: /Latency/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Latency' })).toBeInTheDocument();
+  });
+
+  it('explains a disabled filter in a tooltip', async () => {
+    const user = userEvent.setup();
+    const client = tracing({
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', sort: 'cost' }} />, {
+      client,
+    });
+
+    await screen.findByTestId('run-row-r1');
+    const trigger = screen.getByLabelText('Min cost').parentElement;
+    if (trigger === null) throw new Error('the disabled filter has no tooltip trigger');
+    await user.hover(trigger);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Not available with this sort — the monitoring backend cannot combine them. Sort by time to use it.',
+    );
+  });
+
+  it('renders plain headers and an enabled filter bar while the capabilities load', async () => {
+    let release: (caps: ObservabilityCapabilities) => void = () => undefined;
+    const pending = new Promise<ObservabilityCapabilities>((resolve) => {
+      release = resolve;
+    });
+    const listRuns = vi
+      .fn()
+      .mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null });
+    const { navigate } = renderWithProviders(
+      <ObservabilityPage search={{ tab: 'tracing', status: 'error', sort: 'cost' }} />,
+      { client: { getObservabilityCapabilities: vi.fn().mockReturnValue(pending), listRuns } },
+    );
+
+    await screen.findByTestId('run-row-r1');
+    const headerRow = screen.getAllByRole('row')[0];
+    expect(headerRow).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByRole('button', { name: /When/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'When' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply filters' })).toBeEnabled();
+    expect(screen.getByLabelText('Min cost')).toBeEnabled();
+    // Nothing is repaired until the served map is known.
+    expect(navigate).not.toHaveBeenCalled();
+
+    await act(async () => {
+      release(CAPS);
+      await pending;
+    });
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('observability', { tab: 'tracing', status: 'error' });
+    });
+    expect((await screen.findAllByRole('row'))[0]).not.toHaveAttribute('aria-busy');
+  });
+
+  it('keeps plain headers and offers a retry when the capabilities cannot be loaded', async () => {
+    const user = userEvent.setup();
+    const getObservabilityCapabilities = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError('caps down', 500))
+      .mockResolvedValue(CAPS);
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, {
+      client: {
+        getObservabilityCapabilities,
+        listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+      },
+    });
+
+    await screen.findByTestId('run-row-r1');
+    const notice = await screen.findByTestId('capabilities-unavailable');
+    expect(notice).toHaveTextContent(
+      "Sorting unavailable — could not load the monitoring backend's capabilities.",
+    );
+    expect(screen.queryByRole('button', { name: /When/ })).not.toBeInTheDocument();
+
+    await user.click(within(notice).getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByRole('button', { name: /When/ })).toBeEnabled();
+    expect(screen.queryByTestId('capabilities-unavailable')).not.toBeInTheDocument();
   });
 });

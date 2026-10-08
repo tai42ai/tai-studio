@@ -1,5 +1,5 @@
 """docs_demo_monitoring — the self-contained monitoring backend for the Studio
-docs-screenshot pipeline.
+docs-screenshot pipeline and the Playwright e2e boot.
 
 The backend serves a seeded, deterministic observability dataset so the Studio
 dashboard, run list, and trace views render populated real data with no external

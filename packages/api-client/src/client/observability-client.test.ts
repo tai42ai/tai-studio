@@ -202,7 +202,91 @@ describe('observability metrics + runs transport', () => {
   });
 });
 
+describe('observability capabilities, outline and resolved values', () => {
+  const capabilities = {
+    pageSizeMax: 7,
+    sortKeys: ['createdAt', 'latencyMs'],
+    incompatibleFilters: { latencyMs: ['user'] },
+    metrics: { measures: ['count'], dimensions: [] },
+  };
+
+  it('getObservabilityCapabilities GETs the capabilities route and parses the declaration', async () => {
+    const { client, captured } = harness(() => jsonResponse({ data: capabilities }));
+    const out = await client.getObservabilityCapabilities();
+    expect(captured[0]?.method).toBe('GET');
+    expect(captured[0]?.url).toBe('/api/observability/capabilities');
+    expect(out.pageSizeMax).toBe(7);
+    expect(out.incompatibleFilters.latencyMs).toEqual(['user']);
+  });
+
+  it('getRunTraceOutline GETs the id-encoded outline route and parses spans without payloads', async () => {
+    const outline = {
+      traceId: 'trace_1',
+      spans: [
+        {
+          id: 's1',
+          parentId: null,
+          traceId: 'trace_1',
+          name: 'run',
+          kind: 'CHAIN',
+          level: 'DEFAULT',
+          statusMessage: null,
+          start: null,
+          end: null,
+          model: null,
+          inputTokens: null,
+          outputTokens: null,
+          totalTokens: null,
+          metadata: { 'tai42.step_role': 'grouping' },
+        },
+      ],
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: outline }));
+    const out = await client.getRunTraceOutline('trace 1');
+    expect(captured[0]?.url).toBe('/api/observability/runs/trace%201/trace/outline');
+    expect(out.spans[0]?.kind).toBe('CHAIN');
+  });
+
+  it('getResolvedSpanValue GETs the resolved route with the field and an encoded pointer', async () => {
+    const resolved = {
+      traceId: 'trace_1',
+      spanId: 'span 1',
+      field: 'output',
+      pointer: '/a b/0',
+      value: { x: 1 },
+    };
+    const { client, captured } = harness(() => jsonResponse({ data: resolved }));
+    const out = await client.getResolvedSpanValue('trace_1', 'span 1', 'output', {
+      pointer: '/a b/0',
+    });
+    const url = captured[0]?.url ?? '';
+    expect(url.split('?')[0]).toBe('/api/observability/runs/trace_1/spans/span%201/resolved');
+    const q = query(url);
+    expect([...q.keys()]).toEqual(['field', 'pointer']);
+    expect(q.get('field')).toBe('output');
+    expect(q.get('pointer')).toBe('/a b/0');
+    expect(out.value).toEqual({ x: 1 });
+  });
+
+  it('getResolvedSpanValue sends no pointer for the whole value', async () => {
+    const resolved = { traceId: 't', spanId: 's', field: 'input', pointer: '', value: null };
+    const { client, captured } = harness(() => jsonResponse({ data: resolved }));
+    await client.getResolvedSpanValue('t', 's', 'input', {});
+    expect(captured[0]?.url).toBe('/api/observability/runs/t/spans/s/resolved?field=input');
+    await client.getResolvedSpanValue('t', 's', 'input', { pointer: '' });
+    expect(captured[1]?.url).toBe('/api/observability/runs/t/spans/s/resolved?field=input');
+  });
+});
+
 describe('observability downloads', () => {
+  it('exportTrace with resolve asks the server to resolve every reference', async () => {
+    const { client, captured } = harness(
+      () => new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    await client.exportTrace('trace_1', { resolve: true });
+    expect(captured[0]?.url).toBe('/api/observability/runs/trace_1/trace/export?resolve=true');
+  });
+
   it('exportTrace GETs the trace-export route and returns the raw Blob', async () => {
     const bytes = new TextEncoder().encode('trace-doc');
     const { client, captured } = harness(

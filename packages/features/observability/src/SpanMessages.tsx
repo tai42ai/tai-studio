@@ -1,56 +1,40 @@
 /**
- * Structural rendering for an LLM/generation span's message payload. A payload is
- * "message-shaped" when it is an array of `{ role, content }` objects — directly,
- * or under a `messages` key — and {@link asMessages} returns null for anything else
- * so the caller falls back to the JSON tree.
+ * Structural rendering for an LLM span's messages, recorded in the OpenTelemetry
+ * GenAI convention: a list of `{ role, parts }` messages, an output message also
+ * carrying its `finish_reason`. {@link asMessages} returns null for any other value so
+ * the caller falls back to the JSON tree (all data stays visible).
  *
- * Each message is a role-tagged bubble. Prose `content` renders through the SDK
- * {@link Markdown} (escaped by construction — never an HTML sink); a structured
- * `content` part or a `tool_calls` array renders through {@link CodeBlock} (also
- * text-only, with copy). No payload string is ever interpreted as markup.
+ * Each message is a role-tagged bubble and each part renders by its type: a `text`
+ * part as its literal text; a `tool_call` as "Call · <name>" with its id and a tree of
+ * its arguments; a `tool_call_response` as "Result · <id>" with a tree of its response;
+ * any other part as a tree under a label of its type. No payload string is ever
+ * interpreted as markup.
  */
-import { Badge, CodeBlock, Markdown } from '@tai42/studio-sdk';
+import { Badge, JsonTree } from '@tai42/studio-sdk';
 import type { CSSProperties, ReactNode } from 'react';
 
-interface Message {
+type Part = Record<string, unknown>;
+
+export interface Message {
   readonly role: string;
-  readonly content: unknown;
-  readonly tool_calls?: unknown;
+  readonly parts: readonly unknown[];
+  readonly finish_reason?: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
- * `JSON.stringify` is typed to always return `string`, but a value it cannot
- * represent (a function, a bare `undefined`) yields `undefined` at runtime; this
- * annotation admits that absence so the fallback below is a real check.
- */
-function stringifyJson(value: unknown): string | undefined {
-  return JSON.stringify(value, null, 2);
-}
-
-/** JSON for a structured payload, shown in a `CodeBlock`; unrepresentable → String. */
-function toJson(value: unknown): string {
-  return stringifyJson(value) ?? String(value);
-}
-
-/**
- * A message array from an LLM payload, or null when the value is not message-shaped.
- * Accepts a bare array or one nested under a `messages` key; every element must be
- * an object carrying a `role`.
+ * The message list of an LLM span value, or null when the value is not that list:
+ * every item must carry a string `role` and an array `parts`.
  */
 export function asMessages(value: unknown): Message[] | null {
-  const array = Array.isArray(value)
-    ? value
-    : value !== null &&
-        typeof value === 'object' &&
-        Array.isArray((value as Record<string, unknown>).messages)
-      ? ((value as Record<string, unknown>).messages as unknown[])
-      : null;
-  if (array === null || array.length === 0) return null;
-  const everyMessage = array.every(
-    (item) =>
-      item !== null && typeof item === 'object' && 'role' in (item as Record<string, unknown>),
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const every = value.every(
+    (item) => isRecord(item) && typeof item.role === 'string' && Array.isArray(item.parts),
   );
-  return everyMessage ? (array as Message[]) : null;
+  return every ? (value as Message[]) : null;
 }
 
 const bubbleStyle: CSSProperties = {
@@ -61,6 +45,14 @@ const bubbleStyle: CSSProperties = {
   borderRadius: 'var(--tai-radius-md)',
   border: '1px solid var(--tai-color-border)',
   background: 'var(--tai-color-surface-raised)',
+};
+
+const partHeadStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'baseline',
+  gap: 'var(--tai-space-2)',
+  flexWrap: 'wrap',
+  fontSize: 'var(--tai-text-sm)',
 };
 
 /** Per-role bubble tint from design tokens; system/unknown keeps the neutral base. */
@@ -77,33 +69,58 @@ function roleTint(role: string): CSSProperties {
   }
 }
 
-function MessageContent({ content }: { readonly content: unknown }): ReactNode {
-  if (content === null || content === undefined) return null;
-  if (typeof content === 'string') {
-    return content.trim() === '' ? null : <Markdown markdown={content} />;
+/**
+ * `JSON.stringify` is typed to always return `string`, but a value it cannot
+ * represent (a function, a bare `undefined`) yields `undefined` at runtime; this
+ * annotation admits that absence so the fallback below is a real check.
+ */
+function stringifyJson(value: unknown): string | undefined {
+  return JSON.stringify(value);
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : (stringifyJson(value) ?? String(value));
+}
+
+function PartView({ part }: { readonly part: unknown }): ReactNode {
+  if (!isRecord(part)) {
+    return <JsonTree data={part} label="Message part" />;
   }
-  // Multimodal content: an array of parts. Text parts render as prose; every other
-  // part (an image ref, a structured block) renders as its escaped JSON.
-  if (Array.isArray(content)) {
-    return (
-      <div className="tai-stack tai-stack-2">
-        {content.map((part, index) => {
-          const text =
-            part !== null &&
-            typeof part === 'object' &&
-            typeof (part as Record<string, unknown>).text === 'string'
-              ? ((part as Record<string, unknown>).text as string)
-              : null;
-          return text !== null ? (
-            <Markdown key={index} markdown={text} />
-          ) : (
-            <CodeBlock key={index} code={toJson(part)} language="part" />
-          );
-        })}
-      </div>
-    );
+  const record: Part = part;
+  switch (record.type) {
+    case 'text':
+      return <div style={{ whiteSpace: 'pre-wrap' }}>{text(record.content)}</div>;
+    case 'tool_call':
+      return (
+        <div className="tai-stack tai-stack-2">
+          <div style={partHeadStyle}>
+            <strong>Call · {text(record.name)}</strong>
+            {record.id !== undefined && record.id !== null ? (
+              <span className="tai-mono tai-muted">{text(record.id)}</span>
+            ) : null}
+          </div>
+          <JsonTree data={record.arguments} label={`${text(record.name)} arguments`} />
+        </div>
+      );
+    case 'tool_call_response':
+      return (
+        <div className="tai-stack tai-stack-2">
+          <div style={partHeadStyle}>
+            <strong>Result · {text(record.id)}</strong>
+          </div>
+          <JsonTree data={record.response} label={`${text(record.id)} result`} />
+        </div>
+      );
+    default:
+      return (
+        <div className="tai-stack tai-stack-2">
+          <span className="tai-muted" style={{ fontSize: 'var(--tai-text-sm)' }}>
+            {text(record.type ?? 'part')}
+          </span>
+          <JsonTree data={record} label={`${text(record.type ?? 'part')} part`} />
+        </div>
+      );
   }
-  return <CodeBlock code={toJson(content)} language="content" />;
 }
 
 export function SpanMessages({
@@ -120,9 +137,13 @@ export function SpanMessages({
         {messages.map((message, index) => (
           <div key={index} style={{ ...bubbleStyle, ...roleTint(message.role) }}>
             <Badge>{message.role}</Badge>
-            <MessageContent content={message.content} />
-            {message.tool_calls !== undefined && message.tool_calls !== null ? (
-              <CodeBlock code={toJson(message.tool_calls)} language="tool_calls" />
+            {message.parts.map((part, partIndex) => (
+              <PartView key={partIndex} part={part} />
+            ))}
+            {message.finish_reason !== undefined && message.finish_reason !== null ? (
+              <span className="tai-muted" style={{ fontSize: 'var(--tai-text-xs)' }}>
+                finish: {text(message.finish_reason)}
+              </span>
             ) : null}
           </div>
         ))}

@@ -42,7 +42,8 @@ def test_start_span_records_into_store_and_amends_via_handle() -> None:
     obs = trace.observations[0]
     assert obs.name == "root"
     assert obs.model == "claude-sonnet-4-5"
-    assert obs.usage == {"input": 10, "output": 3}
+    assert obs.kind is SpanKind.TOOL
+    assert (obs.input_tokens, obs.output_tokens, obs.total_tokens) == (10, 3, None)
     assert obs.start is not None and obs.end is not None  # end set on block exit
 
 
@@ -80,6 +81,10 @@ def test_record_span_persists_with_explicit_times() -> None:
     obs = store.get("trace-c").observations
     assert len(obs) == 1
     assert obs[0].model == "gpt-4o-mini" and obs[0].start == T0 and obs[0].end == T1
+    assert obs[0].kind is SpanKind.LLM
+    assert (obs[0].input_tokens, obs[0].output_tokens) == (5, 2)
+    # The cost is kept by the store beside the observation, for the per-model cost measure.
+    assert store.cost_of("trace-c", obs[0].id) == 0.001
 
 
 def test_disable_suppresses_emission_that_creates_traces() -> None:
