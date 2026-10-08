@@ -11,7 +11,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from tai42_contract.monitoring import SpanKind, TraceContext
+from tai42_contract.monitoring import MonitoringExportHealth, RecordId, SpanKind, TokenUsage, TraceContext
+from tai42_contract.secrets import SecretValue
+from tai42_kit.monitoring import payload_ref
 
 from docs_demo_monitoring.store import TraceStore
 from docs_demo_monitoring.writer import DemoWriter
@@ -31,7 +33,7 @@ def test_start_span_records_into_store_and_amends_via_handle() -> None:
     assert writer.current_trace_id() is None
     with writer.start_span(name="root", kind=SpanKind.TOOL, trace_context=ctx) as span:
         assert writer.current_trace_id() == "trace-a"
-        span.update(output={"ok": True}, model="claude-sonnet-4-5", usage_details={"input": 10, "output": 3})
+        span.update(output={"ok": True}, model="claude-sonnet-4-5", usage=TokenUsage(input_tokens=10, output_tokens=3))
     # Outside the block the ambient stack is popped.
     assert writer.current_trace_id() is None
     trace = store.get("trace-a")
@@ -73,7 +75,7 @@ def test_record_span_persists_with_explicit_times() -> None:
         end=T1,
         trace_context=TraceContext(trace_id="trace-c"),
         model="gpt-4o-mini",
-        usage_details={"input": 5, "output": 2, "cost": 0.001},
+        usage=TokenUsage(input_tokens=5, output_tokens=2, cost_usd=0.001),
     )
     obs = store.get("trace-c").observations
     assert len(obs) == 1
@@ -132,13 +134,60 @@ def test_emit_is_fail_safe_when_the_store_raises() -> None:
     # Reaching here without an exception is the assertion.
 
 
-def test_lifecycle_and_propagation_shims_are_inert_not_broken() -> None:
+def test_lifecycle_calls_the_health_listener_with_zero_health() -> None:
     writer, _ = _writer()
-    # Non-langchain backend: no callbacks, empty propagation blob, no crash.
-    assert writer.get_monitoring_callbacks(TraceContext()) == []
-    assert writer.inject_context(TraceContext()) == {}
+    seen: list[MonitoringExportHealth] = []
+    writer.set_health_listener(seen.append)
     writer.flush()
     writer.shutdown()
+    assert seen == [MonitoringExportHealth(), MonitoringExportHealth()]
+    assert writer.export_health() == MonitoringExportHealth()
+    assert writer.is_recording() is True
+
+
+def test_open_span_activates_until_end() -> None:
+    writer, store = _writer()
+    span = writer.open_span(name="n", kind=SpanKind.CHAIN, trace_context=TraceContext(trace_id="o"), activate=True)
+    assert writer.current_span_id() == span.id
+    assert writer.current_trace_id() == "o"
+    writer.update_current_span(input_={"in": 1}, metadata={"a": 1})
+    writer.update_current_span(metadata={"b": 2})
+    span.end()
+    assert writer.current_span_id() is None
+    (obs,) = store.get("o").observations
+    assert obs.input == {"in": 1}
+    assert obs.metadata == {"a": 1, "b": 2}
+    assert obs.end is not None
+
+
+def test_a_secret_is_stored_as_the_placeholder() -> None:
+    writer, store = _writer()
+    with writer.start_span(
+        name="n", kind=SpanKind.TOOL, trace_context=TraceContext(trace_id="s"), input_={"k": SecretValue("hush")}
+    ) as span:
+        span.update(output=[SecretValue("hush")])
+    (obs,) = store.get("s").observations
+    assert obs.input == {"k": "[secret]"}
+    assert obs.output == ["[secret]"]
+
+
+def test_a_reference_is_stored_as_its_one_key_object() -> None:
+    writer, store = _writer()
+    writer.open_span(
+        name="n", kind=SpanKind.CHAIN, trace_context=TraceContext(trace_id="r"), input_={"x": payload_ref("a", "output")}
+    ).end()
+    (obs,) = store.get("r").observations
+    assert obs.input == {"x": {"$tai42_ref": {"span_id": "a", "field": "output", "pointer": ""}}}
+
+
+def test_create_event_returns_its_record_id() -> None:
+    writer, store = _writer()
+    rid = writer.create_event(name="ev", trace_context=TraceContext(trace_id="e"), output={"o": 1})
+    (obs,) = store.get("e").observations
+    assert rid == RecordId(trace_id="e", span_id=obs.id)
+    assert obs.output == {"o": 1}
+    with writer.disable():
+        assert writer.create_event(name="ev", trace_context=TraceContext(trace_id="e")) is None
 
 
 def test_trace_attributes_accepts_platform_run_attribution_call_shape() -> None:

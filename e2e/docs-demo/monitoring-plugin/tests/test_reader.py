@@ -206,3 +206,49 @@ def test_sorted_missing_last_places_none_last_in_both_directions() -> None:
     assert [x["id"] for x in desc] == ["a", "c", "b"]  # 3, 1, then None last
     asc = _sorted_missing_last(items, val, idf, reverse=False)
     assert [x["id"] for x in asc] == ["c", "a", "b"]  # 1, 3, then None last
+
+
+def test_get_observation_found_and_absent() -> None:
+    from datetime import UTC, datetime
+
+    import pytest
+    from tai42_contract.monitoring import ObservationNotFoundError, TraceNotFoundError
+
+    from docs_demo_monitoring.reader import DemoReader
+    from docs_demo_monitoring.seed import build_seed_traces
+    from docs_demo_monitoring.store import TraceStore
+
+    store = TraceStore()
+    for trace in build_seed_traces(datetime(2026, 7, 14, tzinfo=UTC)):
+        store.insert(trace)
+    reader = DemoReader(store)
+    obs = asyncio.run(reader.get_observation("docs-demo-001", "docs-demo-001-gen"))
+    assert obs.name == "chat"
+    with pytest.raises(ObservationNotFoundError):
+        asyncio.run(reader.get_observation("docs-demo-001", "nope"))
+    with pytest.raises(TraceNotFoundError):
+        asyncio.run(reader.get_observation("missing", "docs-demo-001-gen"))
+
+
+def test_the_seeded_references_resolve_and_one_is_unavailable() -> None:
+    from datetime import UTC, datetime
+
+    import pytest
+    from tai42_contract.monitoring import PayloadRefUnresolvedError
+    from tai42_kit.monitoring import resolve_refs
+
+    from docs_demo_monitoring.reader import DemoReader
+    from docs_demo_monitoring.seed import NEWEST_ANSWER, build_seed_traces
+    from docs_demo_monitoring.store import TraceStore
+
+    store = TraceStore()
+    traces = build_seed_traces(datetime(2026, 7, 14, tzinfo=UTC))
+    for trace in traces:
+        store.insert(trace)
+    newest = max(traces, key=lambda t: t.timestamp)
+    reader = DemoReader(store)
+    by_name = {o.name: o for o in newest.observations}
+    resolved = asyncio.run(resolve_refs(by_name["summarise"].input, reader, trace_id=newest.id))
+    assert resolved == {"from_model": NEWEST_ANSWER}
+    with pytest.raises(PayloadRefUnresolvedError, match="not yet available or lost"):
+        asyncio.run(resolve_refs(by_name["follow_up"].input, reader, trace_id=newest.id))
