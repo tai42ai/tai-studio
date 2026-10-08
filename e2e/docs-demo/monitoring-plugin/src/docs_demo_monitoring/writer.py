@@ -47,14 +47,6 @@ logger = logging.getLogger(__name__)
 _SPAN_STACK: ContextVar[tuple[DemoSpan, ...]] = ContextVar("docs_demo_span_stack", default=())
 _DISABLED: ContextVar[bool] = ContextVar("docs_demo_disabled", default=False)
 
-_KIND_TO_TYPE = {
-    SpanKind.LLM: "GENERATION",
-    SpanKind.TOOL: "SPAN",
-    SpanKind.CHAIN: "SPAN",
-    SpanKind.EVENT: "EVENT",
-}
-
-
 def _now() -> datetime:
     return datetime.now(UTC)
 
@@ -68,17 +60,6 @@ def _recorded(value: Any) -> Any:
     except Exception:
         logger.exception("docs-demo writer could not encode a %s value", type(value).__qualname__)
         return {"$tai42_unencodable": type(value).__qualname__}
-
-
-def _store_usage(usage: TokenUsage) -> dict[str, Any]:
-    """``usage`` in the store's usage vocabulary (the keys the reader aggregates)."""
-    pairs = (
-        ("input", usage.input_tokens),
-        ("output", usage.output_tokens),
-        ("total", usage.total_tokens),
-        ("cost", usage.cost_usd),
-    )
-    return {key: value for key, value in pairs if value is not None}
 
 
 def _current() -> DemoSpan | None:
@@ -142,7 +123,11 @@ class DemoSpan:
             if model is not None:
                 self._obs.model = model
             if usage is not None:
-                self._obs.usage = _store_usage(usage)
+                self._obs.input_tokens = usage.input_tokens
+                self._obs.output_tokens = usage.output_tokens
+                self._obs.total_tokens = usage.total_tokens
+                if usage.cost_usd is not None:
+                    self._store.record_cost(self.trace_id, self._obs.id, usage.cost_usd)
             if metadata:
                 self._obs.metadata = {**(self._obs.metadata or {}), **_recorded(metadata)}
             if level is not None:
@@ -214,7 +199,7 @@ class DemoWriter:
                 id=uuid.uuid4().hex,
                 trace_id=trace_id,
                 parent_id=self._parent_id(trace_context),
-                type=_KIND_TO_TYPE.get(kind, "SPAN"),
+                kind=kind,
                 name=name,
                 level=DEFAULT_LEVEL.value,
                 input=_recorded(input_),

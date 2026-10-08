@@ -50,6 +50,21 @@
  *   - dashboard-by-model-unavailable — the same Dashboard with the by-model card in
  *                  its degraded state, via a forced `byModelAvailable:false` payload
  *                  the live backend never returns.
+ *   - tracing-sort-guard — the Tracing tab under a cost sort with the filters that sort
+ *                  cannot carry disabled, via a forced `GET /api/observability/capabilities`
+ *                  payload: the Langfuse reader's real served declaration (the api-client
+ *                  fixture). The live demo backend declares no sort × filter exclusion, so it
+ *                  never disables a filter; the runs list, the sort and the rows stay live.
+ *   - trace-llm-parts — the newest seeded trace's model-call span: its input and output
+ *                  messages in the parts view (the user prompt, the assistant text and the
+ *                  "finish: stop" footer).
+ *   - trace-references-recorded / -resolved — the newest seeded trace's `summarise` step,
+ *                  whose input holds one reference to the model call's answer: the value
+ *                  as recorded (the reference with its span id and pointer in the tree),
+ *                  then resolved through the real resolved route.
+ *   - trace-reference-missing — the same trace's `follow_up` step, whose reference names
+ *                  a record the backend does not hold: the resolved route answers 502 and
+ *                  the missing-value panel renders.
  *   - manifest   — the manifest JSON tree (non-empty `user_tools`).
  *   - templates  — the seeded templates list + the rendered detail (deep-linked).
  *   - system     — the health badge (the health router is loaded before the SPA
@@ -107,7 +122,9 @@
  * not here.
  */
 import { chromium } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import { crc32, deflateSync } from 'node:zlib';
 
 const STUDIO_URL = process.env.STUDIO_URL ?? 'http://127.0.0.1:8765';
@@ -279,6 +296,54 @@ const BY_MODEL_UNAVAILABLE_METRICS = {
   byModelAvailable: false,
   granularity: 'day',
 };
+
+// A forced served-capabilities payload for the sort-guard state: the Langfuse reader's
+// real served declaration (its metric sorts cannot carry the status / cost / token /
+// latency / version filters), read from the api-client fixture that holds that reader's
+// `capabilities_view` output. The live demo backend combines every sort with every
+// filter, so it never declares an exclusion.
+const LANGFUSE_CAPABILITIES = JSON.parse(
+  readFileSync(
+    fileURLToPath(
+      new URL(
+        '../../packages/api-client/fixtures/redacted/observability-capabilities.json',
+        import.meta.url,
+      ),
+    ),
+    'utf8',
+  ),
+);
+
+// The newest seeded docs-demo trace: its model call records its prompt and answer in the
+// GenAI parts shape, its `summarise` step references that answer, and its `follow_up` step
+// references a record no trace holds.
+const SEEDED_TRACE_ID = 'docs-demo-024';
+const SEEDED_TRACE_PATH = `/observability?tab=tracing&trace=${SEEDED_TRACE_ID}`;
+const seededSpanRow = (suffix) =>
+  `[data-testid="waterfall-row"][data-span-id="${SEEDED_TRACE_ID}-${suffix}"]`;
+// The newest seeded trace's prompt, the model call's input message.
+const SEEDED_PROMPT = 'Summarise the incident timeline for the service outage.';
+// The pointer of the `summarise` step's reference into the model call's answer.
+const SEEDED_REFERENCE_POINTER = '/0/parts/0/content';
+
+/** Select the seeded trace's span `suffix` and wait until its detail pane shows every one of `texts`. */
+async function openSeededSpan(page, suffix, ...texts) {
+  await page.locator(seededSpanRow(suffix)).click();
+  for (const text of texts) {
+    await page
+      .getByTestId('span-detail')
+      .getByText(text)
+      .first()
+      .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  }
+}
+
+/** Choose the span detail's "Resolved" view and wait until it shows `text`. */
+async function showResolved(page, text) {
+  const detail = page.getByTestId('span-detail');
+  await detail.getByRole('radio', { name: 'Resolved' }).click();
+  await detail.getByText(text).first().waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+}
 
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
@@ -689,6 +754,75 @@ const AUTHED_PAGES = [
       await page
         .getByText('Per-model breakdown is unavailable for this range.')
         .evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    },
+  },
+  {
+    name: 'tracing-sort-guard',
+    path: '/observability?tab=tracing&sort=cost&dir=desc',
+    // A seeded run row: the runs list is the live demo backend's, under the live cost sort.
+    wait: '[data-testid^="run-row-docs-demo-"]',
+    // Force the served capabilities to a declaration the live demo backend never makes
+    // (the Langfuse reader's real one), so the filters a cost sort cannot carry render
+    // disabled. Matched on the pathname, registered before navigation.
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/observability/capabilities',
+        (route) => route.fulfill({ json: { data: LANGFUSE_CAPABILITIES } }),
+      );
+    },
+    // The guard is the shot: refuse to capture unless the excluded filters are disabled.
+    action: async (page) => {
+      for (const label of ['Min cost', 'Max latency (ms)']) {
+        await page
+          .getByLabel(label)
+          .and(page.locator(':disabled'))
+          .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT })
+          .catch((error) => {
+            throw new Error(
+              `tracing-sort-guard: the "${label}" filter is not disabled under the cost sort — refusing to ship a wrong screenshot`,
+              { cause: error },
+            );
+          });
+      }
+    },
+  },
+  {
+    name: 'trace-llm-parts',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('gen'),
+    action: async (page) => {
+      await openSeededSpan(page, 'gen', SEEDED_PROMPT, 'finish: stop');
+    },
+  },
+  {
+    name: 'trace-references-recorded',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('summarise'),
+    action: async (page) => {
+      await openSeededSpan(
+        page,
+        'summarise',
+        'Recorded with 1 reference to other steps.',
+        SEEDED_REFERENCE_POINTER,
+      );
+    },
+  },
+  {
+    name: 'trace-references-resolved',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('summarise'),
+    action: async (page) => {
+      await openSeededSpan(page, 'summarise', 'Recorded with 1 reference to other steps.');
+      await showResolved(page, 'Full value assembled from 1 reference.');
+    },
+  },
+  {
+    name: 'trace-reference-missing',
+    path: SEEDED_TRACE_PATH,
+    wait: seededSpanRow('follow-up'),
+    action: async (page) => {
+      await openSeededSpan(page, 'follow-up', 'Recorded with 1 reference to other steps.');
+      await showResolved(page, 'A referenced value is missing from the monitoring backend');
     },
   },
   // A non-empty `user_tools` renders the manifest JSON tree with that key.

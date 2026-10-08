@@ -8,7 +8,8 @@ pipeline renders populated content.
 
 The invariant: every registered capability a validated e2e screen depends on —
 a tool-extension attachment, an HTTP router, an extension surface, the task
-backend, a tool module — must also be present in the docs-demo boot, or a screen
+backend, the monitoring backend, a tool module — must also be present in the
+docs-demo boot, or a screen
 proven against the e2e boot cannot render in the docs boot. The comparison runs
 through the real ``tai42_contract.manifest.Manifest``: construction validates
 each manifest and normalises every ``extensions`` block to a single canonical
@@ -18,7 +19,7 @@ YAML text. A malformed manifest raises its pydantic error loudly at construction
 Blocks that legitimately differ between the boots — ``lifecycle_modules``
 (boot-specific verifier vs accounts identity wiring), ``user_tools`` and
 ``studio_plugins`` (per-boot display curation), and every docs-demo-only screen
-surface (``agents``, ``storage_module``, ``monitoring_module``, extra routers) —
+surface (``agents``, ``storage_module``, extra routers) —
 are outside the rule set: they name no cross-boot capability a validated screen
 inherits, so a superset assertion over them would falsely fail. Runtime-seeded
 data, ports and paths are never manifest-declared and so are absent by
@@ -162,3 +163,17 @@ def test_tool_modules_superset() -> None:
     assert not missing, (
         f"docs-demo manifest is missing tool module(s) {missing} that the e2e boot registers"
     )
+
+
+def test_monitoring_module_matches() -> None:
+    """Rule 6 — when the e2e boot names a monitoring backend, docs-demo names the same one.
+
+    The observability screens the e2e boot proves live read that backend's served
+    capabilities, runs and recorded references, so both boots must read the same one.
+    """
+    if BOOT.monitoring_module is not None:
+        assert DOCS.monitoring_module == BOOT.monitoring_module, (
+            f"docs-demo manifest monitoring_module is {DOCS.monitoring_module!r}, but the e2e "
+            f"boot names {BOOT.monitoring_module!r}; both boots must read the same monitoring "
+            f"backend"
+        )

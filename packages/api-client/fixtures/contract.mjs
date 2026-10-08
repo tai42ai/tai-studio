@@ -522,6 +522,24 @@ export const REDACTED_FIXTURES = [
     schema: 'runTrace',
   },
   {
+    name: 'observability-trace-outline',
+    path: '/api/observability/runs/trace_9f8e7d6c/trace/outline',
+    file: 'redacted/observability-trace-outline.json',
+    schema: 'runTraceOutline',
+  },
+  {
+    name: 'observability-capabilities',
+    path: '/api/observability/capabilities',
+    file: 'redacted/observability-capabilities.json',
+    schema: 'observabilityCapabilities',
+  },
+  {
+    name: 'observability-resolved',
+    path: '/api/observability/runs/trace_9f8e7d6c/spans/span_tool/resolved',
+    file: 'redacted/observability-resolved.json',
+    schema: 'resolvedSpanValue',
+  },
+  {
     name: 'tool-run',
     path: '/api/tool-runs/run_9f8e7d6c5b4a3210',
     file: 'redacted/tool-run.json',

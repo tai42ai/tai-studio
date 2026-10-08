@@ -1,7 +1,7 @@
 [project]
 name = "docs-demo-monitoring"
 version = "0.1.0"
-description = "Self-contained monitoring backend for the tai-studio docs-screenshot pipeline: a real MonitoringWriter/MonitoringReader over an in-memory store seeded with a deterministic demo dataset, so the Studio observability screens render populated real data with no external service."
+description = "Self-contained monitoring backend for the tai-studio docs-screenshot pipeline and e2e boot: a real MonitoringWriter/MonitoringReader over an in-memory store seeded with a deterministic demo dataset, so the Studio observability screens render populated real data with no external service."
 readme = "README.md"
 requires-python = ">=3.13"
 license = "Apache-2.0"

@@ -2,8 +2,10 @@
  * The filterable, sortable, paginated runs table. The full-page marketplace pitch is
  * shown only BEFORE any runs have loaded; a 501 arriving on a refetch of an
  * already-loaded table renders inline instead of blanking the tab. A row click drills
- * into the run's trace via the URL.
+ * into the run's trace via the URL. The sort headers and the filter guard read the
+ * backend's served capabilities, passed in by the tracing tab.
  */
+import type { ObservabilityCapabilities } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -21,6 +23,7 @@ import {
   useApi,
   useAppNavigate,
 } from '@tai42/studio-sdk';
+import type { UseQueryResult } from '@tanstack/react-query';
 import { type ReactNode, useState } from 'react';
 
 import { FilterBar } from './FilterBar';
@@ -31,11 +34,18 @@ import { RunsPagination } from './RunsPagination';
 import { SortableHeader } from './SortableHeader';
 import { useRunsQuery } from './useRunsQuery';
 
-export function RunsTable({ search }: { readonly search: ObservabilitySearch }): ReactNode {
+export function RunsTable({
+  search,
+  capabilities,
+}: {
+  readonly search: ObservabilitySearch;
+  readonly capabilities: UseQueryResult<ObservabilityCapabilities>;
+}): ReactNode {
   const api = useApi();
   const navigate = useAppNavigate();
   const [exportError, setExportError] = useState<string | null>(null);
   const { query, items, params } = useRunsQuery(search);
+  const served = capabilities.data;
 
   // The full-page pitch is only right BEFORE any runs have loaded; a later 501 renders
   // inline. Both 501 sources share one error code, so this keys off load state.
@@ -61,7 +71,13 @@ export function RunsTable({ search }: { readonly search: ObservabilitySearch }):
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--tai-space-4)' }}>
-      <FilterBar search={search} disabled={query.isPending} />
+      <FilterBar
+        search={search}
+        disabled={query.isPending}
+        capabilities={served}
+        capabilitiesError={capabilities.isError}
+        onRetryCapabilities={() => void capabilities.refetch()}
+      />
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--tai-space-2)' }}>
         <Button onClick={() => void query.refetch()} disabled={query.isFetching}>
@@ -102,23 +118,36 @@ export function RunsTable({ search }: { readonly search: ObservabilitySearch }):
               <ScrollRegion label="Runs">
                 <Table>
                   <THead>
-                    <TR>
-                      <SortableHeader columnKey="createdAt" label="When" search={search} />
+                    <TR aria-busy={capabilities.isPending ? true : undefined}>
+                      <SortableHeader
+                        columnKey="createdAt"
+                        label="When"
+                        search={search}
+                        capabilities={served}
+                      />
                       <TH>Status</TH>
                       <TH>Input</TH>
                       <TH>Output</TH>
                       <TH>Tags</TH>
-                      <SortableHeader columnKey="cost" label="Cost" search={search} numeric />
+                      <SortableHeader
+                        columnKey="cost"
+                        label="Cost"
+                        search={search}
+                        capabilities={served}
+                        numeric
+                      />
                       <SortableHeader
                         columnKey="latencyMs"
                         label="Latency"
                         search={search}
+                        capabilities={served}
                         numeric
                       />
                       <SortableHeader
                         columnKey="totalTokens"
                         label="Tokens"
                         search={search}
+                        capabilities={served}
                         numeric
                       />
                     </TR>

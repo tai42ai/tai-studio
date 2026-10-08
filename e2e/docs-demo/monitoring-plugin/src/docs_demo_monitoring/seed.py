@@ -1,6 +1,6 @@
 """The docs-demo observability dataset.
 
-:func:`build_seed_traces` returns a fixed, realistic set of traces spread over
+:func:`seed_store` fills a store with a fixed, realistic set of traces spread over
 the two weeks preceding ``now`` across three models, so the Studio dashboard
 renders populated summary tiles, a multi-bucket day trend, and a ranked
 "Cost by model" breakdown — all from the real ``/api/observability/metrics``
@@ -14,10 +14,18 @@ stays inside the dashboard's default 30-day window on every rerun.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Any
 
 import orjson
-from tai42_contract.monitoring import MonitoringObservation, MonitoringTrace
+from tai42_contract.monitoring import (
+    GENERATION_MESSAGE_METADATA_KEY,
+    MonitoringObservation,
+    MonitoringTrace,
+    SpanKind,
+)
 from tai42_kit.monitoring import encode_payload, payload_ref
+
+from docs_demo_monitoring.store import TraceStore
 
 # One row per trace: (days_ago, hour_utc, model, input_tokens, output_tokens,
 # cost_usd, latency_seconds). Spread over 13 days and three models so the day
@@ -59,6 +67,24 @@ _PROMPTS: tuple[str, ...] = (
     "Extract the action items from the planning meeting transcript.",
 )
 
+# The generated answer to each prompt of ``_PROMPTS``, by position.
+_ANSWERS: tuple[str, ...] = (
+    "The outage began at 09:12 when the cache tier stopped answering; service recovered at 09:40.",
+    "The Studio now shows a monitoring dashboard: cost, tokens and latency per day and per model.",
+    "This is a question about access. Suggested first reply: confirm the account name and the error shown.",
+    "Three action items: publish the agenda, book the review, and share the test plan by Friday.",
+)
+
+
+def _user_message(text: str) -> dict[str, Any]:
+    """``text`` as one user message in the GenAI message shape a model call records as its input."""
+    return {"role": "user", "parts": [{"type": "text", "content": text}]}
+
+
+def _assistant_message(text: str) -> dict[str, Any]:
+    """``text`` as one generated message in the GenAI message shape, with its finish reason."""
+    return {"role": "assistant", "parts": [{"type": "text", "content": text}], "finish_reason": "stop"}
+
 
 def _trace_from_row(index: int, now: datetime, row: tuple[int, int, str, int, int, float, float]) -> MonitoringTrace:
     days_ago, hour, model, in_tok, out_tok, cost, latency_s = row
@@ -68,11 +94,12 @@ def _trace_from_row(index: int, now: datetime, row: tuple[int, int, str, int, in
     ended = started + timedelta(seconds=latency_s)
     trace_id = f"docs-demo-{index:03d}"
     prompt = _PROMPTS[index % len(_PROMPTS)]
+    answer = _ANSWERS[index % len(_ANSWERS)]
 
     root = MonitoringObservation(
         id=f"{trace_id}-root",
         trace_id=trace_id,
-        type="SPAN",
+        kind=SpanKind.CHAIN,
         name="tools_agent",
         level="DEFAULT",
         input={"messages": [{"role": "user", "content": prompt}]},
@@ -83,13 +110,15 @@ def _trace_from_row(index: int, now: datetime, row: tuple[int, int, str, int, in
         id=f"{trace_id}-gen",
         trace_id=trace_id,
         parent_id=root.id,
-        type="GENERATION",
+        kind=SpanKind.LLM,
         name="chat",
         level="DEFAULT",
         model=model,
-        input={"messages": [{"role": "user", "content": prompt}]},
-        output={"answer": "…"},
-        usage={"input": in_tok, "output": out_tok, "total": in_tok + out_tok, "cost": cost},
+        input=[_user_message(prompt)],
+        output=[_assistant_message(answer)],
+        input_tokens=in_tok,
+        output_tokens=out_tok,
+        total_tokens=in_tok + out_tok,
         start=started + timedelta(seconds=0.2),
         end=ended - timedelta(seconds=0.1),
     )
@@ -105,26 +134,88 @@ def _trace_from_row(index: int, now: datetime, row: tuple[int, int, str, int, in
     )
 
 
-# The newest trace's generated answer, recorded in the GenAI message shape a model
-# call records, and referenced by the trace's ``summarise`` step.
-NEWEST_ANSWER = "The outage began at 09:12 when the cache tier stopped answering; service recovered at 09:40."
+# The newest trace's generated answer, referenced by the trace's ``summarise`` step.
+NEWEST_ANSWER = _ANSWERS[0]
 # An observation id no stored trace holds: the ``follow_up`` step's reference to it is
 # the "not yet available or lost" state.
 MISSING_OBSERVATION_ID = "docs-demo-not-recorded"
 
 
+def _member_wise(message: dict[str, Any], generation_id: str) -> dict[str, Any]:
+    """``message`` as a step records the model call's message again: scalars inline, every
+    container member a reference into the model call's recorded message."""
+    return {
+        key: payload_ref(generation_id, "metadata", f"/{GENERATION_MESSAGE_METADATA_KEY}/{key}")
+        if isinstance(member, (dict, list))
+        else member
+        for key, member in message.items()
+    }
+
+
 def _with_references(trace: MonitoringTrace) -> MonitoringTrace:
-    """Add the record-reference steps to ``trace``: one resolvable reference, one to an absent record."""
+    """Add the agent turn's steps to ``trace``: the model step holding the generation, and
+    the record-reference steps — one resolvable reference, one to an absent record."""
     root, generation = trace.observations
-    generation.output = [
-        {"role": "assistant", "parts": [{"type": "text", "content": NEWEST_ANSWER}], "finish_reason": "stop"}
-    ]
+    if generation.output != [_assistant_message(NEWEST_ANSWER)]:
+        raise ValueError(f"the newest seeded trace {trace.id!r} does not answer with NEWEST_ANSWER")
+    prompt = root.input["messages"][0]["content"]
+    message = {
+        "content": NEWEST_ANSWER,
+        "additional_kwargs": {},
+        "response_metadata": {"model_name": generation.model, "finish_reason": "stop"},
+        "type": "ai",
+        "name": root.name,
+        "id": f"{trace.id}-message",
+        "tool_calls": [],
+        "invalid_tool_calls": [],
+        "usage_metadata": {
+            "input_tokens": generation.input_tokens,
+            "output_tokens": generation.output_tokens,
+            "total_tokens": generation.total_tokens,
+        },
+    }
+    model_step = MonitoringObservation(
+        id=f"{trace.id}-model",
+        trace_id=trace.id,
+        parent_id=root.id,
+        kind=SpanKind.CHAIN,
+        name="model",
+        level="DEFAULT",
+        input={
+            "messages": [
+                {
+                    "content": prompt,
+                    "additional_kwargs": {},
+                    "response_metadata": {},
+                    "type": "human",
+                    "name": None,
+                    "id": f"{trace.id}-prompt",
+                }
+            ]
+        },
+        output=orjson.loads(
+            encode_payload(
+                [
+                    {
+                        "graph": None,
+                        "update": {"messages": [_member_wise(message, generation.id)]},
+                        "resume": None,
+                        "goto": [],
+                    }
+                ]
+            )
+        ),
+        start=generation.start - timedelta(seconds=0.1) if generation.start else None,
+        end=generation.end,
+    )
+    generation.parent_id = model_step.id
+    generation.metadata = {GENERATION_MESSAGE_METADATA_KEY: message}
     after = generation.end or generation.start
     summarise = MonitoringObservation(
         id=f"{trace.id}-summarise",
         trace_id=trace.id,
         parent_id=root.id,
-        type="SPAN",
+        kind=SpanKind.CHAIN,
         name="summarise",
         level="DEFAULT",
         input=orjson.loads(encode_payload({"from_model": payload_ref(generation.id, "output", "/0/parts/0/content")})),
@@ -136,26 +227,32 @@ def _with_references(trace: MonitoringTrace) -> MonitoringTrace:
         id=f"{trace.id}-follow-up",
         trace_id=trace.id,
         parent_id=root.id,
-        type="SPAN",
+        kind=SpanKind.CHAIN,
         name="follow_up",
         level="DEFAULT",
         input=orjson.loads(encode_payload({"earlier": payload_ref(MISSING_OBSERVATION_ID, "output")})),
         start=after,
         end=after,
     )
-    trace.observations = [root, generation, summarise, follow_up]
+    trace.observations = [root, model_step, generation, summarise, follow_up]
     return trace
 
 
-def build_seed_traces(now: datetime) -> list[MonitoringTrace]:
-    """Build the deterministic docs-demo dataset relative to ``now``.
+def seed_store(store: TraceStore, now: datetime) -> None:
+    """Fill ``store`` with the deterministic docs-demo dataset relative to ``now``.
 
-    ``now`` should be timezone-aware (UTC). Returns 24 traces, each with a root
-    span and a generation observation carrying model + token + cost usage. The newest
-    trace also carries a ``summarise`` step whose input references the generation's
-    answer, and a ``follow_up`` step whose input references a record no trace holds.
+    ``now`` should be timezone-aware (UTC). Inserts 24 traces, each with a root span
+    and a generation observation carrying model and token counts, and records each
+    generation's cost in the store. In the newest trace the generation sits under a
+    ``model`` step whose output records the generated message by reference to the
+    generation's recorded message, beside a ``summarise`` step whose input references the
+    generation's answer and a ``follow_up`` step whose input references a record no trace
+    holds.
     """
     traces = [_trace_from_row(i, now, row) for i, row in enumerate(_SEED_ROWS, start=1)]
     newest = max(traces, key=lambda trace: trace.timestamp or now)
     _with_references(newest)
-    return traces
+    for trace, row in zip(traces, _SEED_ROWS, strict=True):
+        store.insert(trace)
+        generation = next(o for o in trace.observations if o.kind is SpanKind.LLM)
+        store.record_cost(trace.id, generation.id, row[5])

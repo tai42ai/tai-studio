@@ -1,0 +1,37 @@
+{
+  "traceId": "trace_9f8e7d6c",
+  "spans": [
+    {
+      "id": "span_root",
+      "parentId": null,
+      "traceId": "trace_9f8e7d6c",
+      "name": "agent-run",
+      "kind": "CHAIN",
+      "level": "DEFAULT",
+      "statusMessage": null,
+      "start": "2026-07-05T11:58:03Z",
+      "end": "2026-07-05T11:58:04Z",
+      "model": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "totalTokens": null,
+      "metadata": null
+    },
+    {
+      "id": "span_tool",
+      "parentId": "span_root",
+      "traceId": "trace_9f8e7d6c",
+      "name": "summarise",
+      "kind": "TOOL",
+      "level": "DEFAULT",
+      "statusMessage": null,
+      "start": "2026-07-05T11:58:04Z",
+      "end": "2026-07-05T11:58:04Z",
+      "model": null,
+      "inputTokens": null,
+      "outputTokens": null,
+      "totalTokens": null,
+      "metadata": { "tai42.step_role": "sub_step" }
+    }
+  ]
+}

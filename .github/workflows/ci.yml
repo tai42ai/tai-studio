@@ -330,8 +330,8 @@ jobs:
   # (e2e/boot/manifest.yml) and the docs-demo boot (e2e/docs-demo/manifest.yml)
   # drive two boots of the same SPA; the docs-demo boot is a deliberate superset,
   # so every registered capability a validated e2e screen depends on — a
-  # tool-extension attachment, a router, an extension surface, the task backend, a
-  # tool module — must also be present there, or a screen proven against the e2e
+  # tool-extension attachment, a router, an extension surface, the task backend, the
+  # monitoring backend, a tool module — must also be present there, or a screen proven against the e2e
   # boot cannot render in the docs boot. The test compares through the real
   # tai42_contract manifest model (semantic, not textual). Runs on every PR
   # (forks and Dependabot included), unlike the fork/Dependabot-gated e2e job, so
@@ -368,9 +368,10 @@ jobs:
   # from the tai42 monorepo's uv workspace venv (``tai42/.venv``), built by "Sync
   # skeleton env": the monorepo's uv.lock resolves tai42-skeleton and every
   # first-party dependency from the workspace itself. One sibling is cloned — the
-  # public ``tai42`` monorepo; the boot recipe pip-installs the reference plugin
-  # and ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) into that
-  # venv. The monorepo is public, so the cross-repo checkout reads it with the
+  # public ``tai42`` monorepo; the boot recipe pip-installs the reference plugin,
+  # the seeded docs-demo monitoring backend (``e2e/docs-demo/monitoring-plugin``),
+  # ``tai42/plugins/webhook-verifier-github`` (the "github" verifier) and
+  # ``tai42/plugins/backend-rq`` into that venv. The monorepo is public, so the cross-repo checkout reads it with the
   # default GITHUB_TOKEN. This job is heavy (Docker + a full backend), so it is
   # gated to pushes and same-repo, non-Dependabot pull requests; forks and
   # Dependabot fall back to the ``check`` job only.
@@ -419,9 +420,9 @@ jobs:
         run: uv python install 3.13
       # Build the workspace venv (tai42/.venv) the boot recipe runs the backend
       # from. The monorepo's uv.lock resolves tai42-skeleton and every first-party
-      # dependency from the workspace itself. The reference plugin and
-      # tai42/plugins/webhook-verifier-github are pip-installed into this venv by
-      # the boot recipe.
+      # dependency from the workspace itself. The reference plugin, the docs-demo
+      # monitoring backend, tai42/plugins/webhook-verifier-github and
+      # tai42/plugins/backend-rq are pip-installed into this venv by the boot recipe.
       - name: Sync skeleton env
         if: env.TAI_E2E_TARGET == ''
         working-directory: tai42

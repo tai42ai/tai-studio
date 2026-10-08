@@ -64,10 +64,37 @@ export function observabilityClient(t: Transport) {
       }),
     listRuns: (params: RunsQuery = {}, signal?: AbortSignal) =>
       req('/api/observability/runs', s.runsPage, { query: runsQueryToParams(params), signal }),
+    // What the monitoring backend serves: page ceiling, sorts, sort/filter combinations, metrics.
+    getObservabilityCapabilities: (signal?: AbortSignal) =>
+      req('/api/observability/capabilities', s.observabilityCapabilities, { signal }),
     getRunTrace: (traceId: string, signal?: AbortSignal) =>
       req(`/api/observability/runs/${encodeSegment(traceId)}/trace`, s.runTrace, { signal }),
-    exportTrace: (traceId: string, signal?: AbortSignal): Promise<Blob> =>
+    // The run's span tree without span inputs/outputs.
+    getRunTraceOutline: (traceId: string, signal?: AbortSignal) =>
+      req(`/api/observability/runs/${encodeSegment(traceId)}/trace/outline`, s.runTraceOutline, {
+        signal,
+      }),
+    // One span field with every record reference resolved; `pointer` is an RFC 6901
+    // JSON pointer into the field's value (omitted or empty = the whole value).
+    getResolvedSpanValue: (
+      traceId: string,
+      spanId: string,
+      field: 'input' | 'output',
+      options: { readonly pointer?: string } = {},
+      signal?: AbortSignal,
+    ) =>
+      req(
+        `/api/observability/runs/${encodeSegment(traceId)}/spans/${encodeSegment(spanId)}/resolved`,
+        s.resolvedSpanValue,
+        { query: { field, pointer: options.pointer === '' ? undefined : options.pointer }, signal },
+      ),
+    exportTrace: (
+      traceId: string,
+      options: { readonly resolve?: boolean } = {},
+      signal?: AbortSignal,
+    ): Promise<Blob> =>
       apiDownload(config, `/api/observability/runs/${encodeSegment(traceId)}/trace/export`, {
+        query: { resolve: options.resolve ? 'true' : undefined },
         signal,
       }),
     exportRuns: (

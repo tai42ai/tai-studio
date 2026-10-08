@@ -1,11 +1,13 @@
 /**
  * Right pane of the trace explorer: the full detail for the selected span. A
- * header (name / type / status / duration / model / tokens) over an adaptive body:
- *   - a generation whose input is message-shaped → chat bubbles;
+ * header (name / kind / status / duration / model / tokens) over a body chosen by
+ * the span's neutral kind:
+ *   - an LLM span whose value is a GenAI message list → chat bubbles;
  *   - a tool → Arguments / Result;
  *   - anything else → a scale-guarded JSON tree.
- * `usage` and `metadata` render as their own guarded trees. Every payload is
- * escaped — this pane is never an HTML sink.
+ * Input / output trees offer the resolved view when they hold references to other
+ * steps; `metadata` renders as its own guarded tree. Every payload is escaped — this
+ * pane is never an HTML sink.
  */
 import type { RunSpan } from '@tai42/api-client';
 import { Badge, JsonTree } from '@tai42/studio-sdk';
@@ -13,6 +15,7 @@ import type { CSSProperties, ReactNode } from 'react';
 
 import { formatLatencyMs, formatTokenCount } from './format';
 import { asMessages, SpanMessages } from './SpanMessages';
+import { SpanValueSection } from './SpanReferences';
 import { isErrorSpan, spanDurationMs, spanTokens } from './trace-tree';
 
 const emptyStyle: CSSProperties = {
@@ -43,8 +46,17 @@ function hasContent(value: unknown): boolean {
   return true;
 }
 
-function usageIsMeaningful(usage: unknown): boolean {
-  return usage !== null && typeof usage === 'object' && Object.keys(usage).length > 0;
+function metadataIsMeaningful(metadata: unknown): boolean {
+  return metadata !== null && typeof metadata === 'object' && Object.keys(metadata).length > 0;
+}
+
+/** The header's token cell: in and out when both are reported, else the total, else a dash. */
+function tokenCell(span: RunSpan): string {
+  if (span.inputTokens !== null && span.outputTokens !== null) {
+    return `${formatTokenCount(span.inputTokens)} in · ${formatTokenCount(span.outputTokens)} out`;
+  }
+  const total = spanTokens(span);
+  return span.totalTokens !== null || total > 0 ? `${formatTokenCount(total)} tokens` : '—';
 }
 
 function DetailSection({
@@ -74,7 +86,6 @@ function SpanHeader({
   readonly spanName: string;
 }): ReactNode {
   const duration = spanDurationMs(span);
-  const tokens = spanTokens(span.usage);
   const error = isErrorSpan(span);
   return (
     <div className="tai-stack tai-stack-2">
@@ -91,7 +102,7 @@ function SpanHeader({
         >
           {spanName}
         </h3>
-        {span.type !== null ? <Badge>{span.type}</Badge> : null}
+        {span.kind !== null ? <Badge>{span.kind}</Badge> : null}
         {error ? <Badge variant="danger">error</Badge> : null}
       </div>
       <div
@@ -105,7 +116,7 @@ function SpanHeader({
       >
         {duration !== null ? <span>{formatLatencyMs(duration)}</span> : null}
         {span.model !== null ? <span className="tai-mono">{span.model}</span> : null}
-        {tokens > 0 ? <span>{formatTokenCount(tokens)} tokens</span> : null}
+        <span>{tokenCell(span)}</span>
       </div>
       {error && span.statusMessage !== null ? (
         <p
@@ -123,53 +134,65 @@ function SpanHeader({
   );
 }
 
-/** The adaptive payload body: chat bubbles for a message-shaped generation, Arguments/
- * Result for a tool, else guarded JSON — plus the usage and metadata trees. */
+/** The kind-chosen payload body: chat bubbles for an LLM span's message list, Arguments/
+ * Result for a tool, else guarded JSON — plus the metadata tree. */
 function SpanBody({
   span,
   spanName,
+  traceId,
 }: {
   readonly span: RunSpan;
   readonly spanName: string;
+  readonly traceId: string;
 }): ReactNode {
-  const type = (span.type ?? '').toUpperCase();
-  const inputMessages = type === 'GENERATION' || type === 'LLM' ? asMessages(span.input) : null;
-  const outputMessages = inputMessages !== null ? asMessages(span.output) : null;
-  const isTool = type === 'TOOL';
+  const isLlm = span.kind === 'LLM';
+  const isTool = span.kind === 'TOOL';
+  const inputMessages = isLlm ? asMessages(span.input) : null;
+  const outputMessages = isLlm ? asMessages(span.output) : null;
+  const inputLabel = isTool ? 'Arguments' : 'Input';
+  const outputLabel = isTool ? 'Result' : 'Output';
   return (
     <>
       {inputMessages !== null ? (
         <SpanMessages messages={inputMessages} label="Messages" />
       ) : hasContent(span.input) ? (
-        <DetailSection
-          label={isTool ? 'Arguments' : 'Input'}
-          data={span.input}
-          spanName={spanName}
+        <SpanValueSection
+          traceId={traceId}
+          spanId={span.id}
+          field="input"
+          label={inputLabel}
+          value={span.input}
+          treeLabel={`${spanName} ${inputLabel.toLowerCase()}`}
         />
       ) : null}
 
       {outputMessages !== null ? (
         <SpanMessages messages={outputMessages} label="Output" />
       ) : hasContent(span.output) ? (
-        <DetailSection
-          label={isTool ? 'Result' : 'Output'}
-          data={span.output}
-          spanName={spanName}
+        <SpanValueSection
+          traceId={traceId}
+          spanId={span.id}
+          field="output"
+          label={outputLabel}
+          value={span.output}
+          treeLabel={`${spanName} ${outputLabel.toLowerCase()}`}
         />
       ) : null}
 
-      {usageIsMeaningful(span.usage) ? (
-        <DetailSection label="Usage" data={span.usage} spanName={spanName} />
-      ) : null}
-
-      {usageIsMeaningful(span.metadata) ? (
+      {metadataIsMeaningful(span.metadata) ? (
         <DetailSection label="Metadata" data={span.metadata} spanName={spanName} />
       ) : null}
     </>
   );
 }
 
-export function SpanDetail({ span }: { readonly span: RunSpan | null }): ReactNode {
+export function SpanDetail({
+  span,
+  traceId,
+}: {
+  readonly span: RunSpan | null;
+  readonly traceId: string;
+}): ReactNode {
   if (span === null) {
     return (
       <div style={emptyStyle} data-testid="span-detail-empty">
@@ -183,7 +206,9 @@ export function SpanDetail({ span }: { readonly span: RunSpan | null }): ReactNo
   return (
     <div style={panelStyle} data-testid="span-detail">
       <SpanHeader span={span} spanName={spanName} />
-      <SpanBody span={span} spanName={spanName} />
+      {/* Keyed by span: every view choice inside the body (each tree's expansion, the
+          As recorded | Resolved switch) starts at its default for each selected span. */}
+      <SpanBody key={span.id} span={span} spanName={spanName} traceId={traceId} />
     </div>
   );
 }

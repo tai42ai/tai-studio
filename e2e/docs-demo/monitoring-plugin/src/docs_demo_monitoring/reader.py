@@ -17,7 +17,9 @@ from datetime import datetime
 from typing import Any, Literal
 
 from tai42_contract.monitoring import (
+    STEP_ROLE_METADATA_KEY,
     Dimension,
+    ListCapability,
     Measure,
     MetricsCapability,
     MetricsQuery,
@@ -33,8 +35,8 @@ from tai42_contract.monitoring import (
     OrderBy,
     SpanKind,
     SpanWindowItem,
+    StepRole,
     TraceNotFoundError,
-    preview,
 )
 
 from docs_demo_monitoring.store import TraceStore
@@ -44,6 +46,11 @@ from docs_demo_monitoring.store import TraceStore
 _SUPPORTED_MEASURES = frozenset({Measure.COUNT, Measure.COST, Measure.TOKENS, Measure.LATENCY})
 _SUPPORTED_DIMENSIONS = frozenset({Dimension.MODEL})
 _SUPPORTED_GRANULARITY = frozenset({"hour", "day", "week"})
+# The largest ``limit`` one ``list_traces`` call accepts.
+_MAX_PAGE_SIZE = 100
+# The kinds a step can be, and the producer markers that make a record part of a step.
+_STEP_KINDS = frozenset({SpanKind.TOOL, SpanKind.CHAIN})
+_NOT_A_STEP = frozenset({StepRole.GROUPING.value, StepRole.SUB_STEP.value})
 
 
 def _sorted_missing_last[T](
@@ -68,13 +75,17 @@ def _sorted_missing_last[T](
     return present + missing
 
 
+def _has_tokens(obs: MonitoringObservation) -> bool:
+    return obs.input_tokens is not None or obs.output_tokens is not None
+
+
+def _obs_tokens(obs: MonitoringObservation) -> int:
+    return (obs.input_tokens or 0) + (obs.output_tokens or 0)
+
+
 def _trace_tokens(trace: MonitoringTrace) -> int:
     """Total input+output tokens across a trace's observations."""
-    total = 0
-    for obs in trace.observations:
-        if isinstance(obs.usage, dict):
-            total += int(obs.usage.get("input") or 0) + int(obs.usage.get("output") or 0)
-    return total
+    return sum(_obs_tokens(obs) for obs in trace.observations)
 
 
 def _trace_latency_ms(trace: MonitoringTrace) -> float:
@@ -98,19 +109,18 @@ def _trace_status(trace: MonitoringTrace) -> Literal["ok", "error"]:
 
 
 def _to_summary(trace: MonitoringTrace) -> MonitoringTraceSummary:
-    """A run-list row for ``trace``: list-surface attributes plus batched
-    aggregates and bounded input/output previews — never a per-trace body (the
-    full input/output are read through ``get_trace``). ``total_tokens`` /
+    """A run-list row for ``trace``: list-surface attributes, the trace's own input and
+    output, and batched aggregates — never a per-trace body. ``total_tokens`` /
     ``latency_ms`` are ``None`` when the trace carries no usage / no timing —
     never coerced to ``0``."""
-    has_usage = any(isinstance(o.usage, dict) for o in trace.observations)
+    has_usage = any(_has_tokens(o) for o in trace.observations)
     has_timing = any(o.start for o in trace.observations) and any(o.end for o in trace.observations)
     return MonitoringTraceSummary(
         id=trace.id,
         timestamp=trace.timestamp,
         tags=list(trace.tags or []),
-        input_preview=preview(trace.input),
-        output_preview=preview(trace.output),
+        input=trace.input,
+        output=trace.output,
         latency_ms=_trace_latency_ms(trace) if has_timing else None,
         total_cost=trace.total_cost,
         total_tokens=_trace_tokens(trace) if has_usage else None,
@@ -145,29 +155,23 @@ def _trace_measures(traces: list[MonitoringTrace], measures: list[Measure]) -> d
 
 
 def _obs_measures(
-    observations: list[MonitoringObservation], measures: list[Measure]
+    store: TraceStore, observations: list[MonitoringObservation], measures: list[Measure]
 ) -> dict[Measure, float | None]:
     """The requested neutral measures aggregated over a set of generation observations.
 
-    ``COUNT`` is the number of per-model calls, ``COST`` / ``TOKENS`` their summed
-    usage totals, and ``LATENCY`` the mean per-observation duration in MILLISECONDS.
+    ``COUNT`` is the number of per-model calls, ``COST`` their summed recorded costs,
+    ``TOKENS`` their summed token counts, and ``LATENCY`` the mean per-observation
+    duration in MILLISECONDS.
     """
     out: dict[Measure, float | None] = {}
     for measure in measures:
         if measure is Measure.COUNT:
             out[measure] = float(len(observations))
         elif measure is Measure.COST:
-            out[measure] = round(
-                sum(float(o.usage.get("cost") or 0.0) for o in observations if isinstance(o.usage, dict)), 6
-            )
+            costs = (store.cost_of(o.trace_id or "", o.id) for o in observations)
+            out[measure] = round(sum(cost or 0.0 for cost in costs), 6)
         elif measure is Measure.TOKENS:
-            out[measure] = float(
-                sum(
-                    int(o.usage.get("input") or 0) + int(o.usage.get("output") or 0)
-                    for o in observations
-                    if isinstance(o.usage, dict)
-                )
-            )
+            out[measure] = float(sum(_obs_tokens(o) for o in observations))
         elif measure is Measure.LATENCY:
             durations = [_obs_duration_ms(o) for o in observations]
             out[measure] = round(sum(durations) / len(durations), 3) if durations else 0.0
@@ -194,6 +198,16 @@ class DemoReader:
 
     def __init__(self, store: TraceStore) -> None:
         self._store = store
+
+    # --- declarations --------------------------------------------------------
+
+    def list_capability(self) -> ListCapability:
+        """Declare the trace sorts ``list_traces`` serves; every sort combines with every filter."""
+        return ListCapability(sort_fields=frozenset(_TRACE_SORT_GETTERS))
+
+    def max_page_size(self) -> int:
+        """The largest ``limit`` one ``list_traces`` call accepts."""
+        return _MAX_PAGE_SIZE
 
     # --- metrics -----------------------------------------------------------
 
@@ -269,7 +283,7 @@ class DemoReader:
             rows = [
                 MetricsRow(
                     dimensions={Dimension.MODEL: model},
-                    measures=_obs_measures(observations, query.measures),
+                    measures=_obs_measures(self._store, observations, query.measures),
                 )
                 for model, observations in groups.items()
             ]
@@ -282,7 +296,7 @@ class DemoReader:
         rows = [
             MetricsRow(
                 dimensions={Dimension.MODEL: model},
-                measures=_obs_measures(observations, query.measures),
+                measures=_obs_measures(self._store, observations, query.measures),
                 bucket=bucket,
             )
             for (bucket, model), observations in sorted(bucketed.items())
@@ -301,6 +315,8 @@ class DemoReader:
         filter_: MonitoringFilter | None = None,
         order_by: OrderBy | None = None,
     ) -> list[MonitoringTraceSummary]:
+        if limit is not None and limit > _MAX_PAGE_SIZE:
+            raise ValueError(f"limit {limit} exceeds the reader's maximum page size {_MAX_PAGE_SIZE}")
         traces = [
             t
             for t in self._store.all_traces()
@@ -338,12 +354,8 @@ class DemoReader:
         filter_: MonitoringFilter | None = None,
         order_by: OrderBy | None = None,
     ) -> list[SpanWindowItem]:
-        # The tool/node-granularity unit for this backend is the generation
-        # observation (the leaf work), one item per execution.
-        if kind is not None and kind != SpanKind.LLM:
-            # This backend's leaf spans are all model generations (LLM); no other
-            # kind exists, so a narrower kind selects nothing rather than lying.
-            return []
+        # One item per step: a TOOL or CHAIN record the producer did not mark as a
+        # grouping or a sub-step; generations and events are never items.
         items: list[SpanWindowItem] = []
         for trace in self._store.all_traces():
             if run is not None and trace.id != run:
@@ -351,7 +363,11 @@ class DemoReader:
             if filter_ is not None and not self._trace_matches(trace, filter_):
                 continue
             for obs in trace.observations:
-                if obs.type != "GENERATION" or obs.start is None:
+                if obs.kind not in _STEP_KINDS or obs.start is None:
+                    continue
+                if kind is not None and obs.kind is not kind:
+                    continue
+                if (obs.metadata or {}).get(STEP_ROLE_METADATA_KEY) in _NOT_A_STEP:
                     continue
                 if not (t0 <= obs.start < t1):
                     continue
@@ -404,18 +420,9 @@ class DemoReader:
         return not (f.max_latency is not None and latency_s > f.max_latency)
 
     def _sort_traces(self, traces: list[MonitoringTrace], order_by: OrderBy | None) -> list[MonitoringTrace]:
-        # A missing total_cost sorts as 0.0 (present), not last — the run list
-        # always has a cost; the other keys never yield None for real traces.
-        getters: dict[str, Callable[[MonitoringTrace], Any]] = {
-            "timestamp": lambda t: t.timestamp,
-            "total_cost": lambda t: t.total_cost if t.total_cost is not None else 0.0,
-            "latency": _trace_latency_ms,
-            "total_tokens": _trace_tokens,
-            "id": lambda t: t.id,
-        }
         field = order_by.field if order_by is not None else "timestamp"
         reverse = order_by.direction == "desc" if order_by is not None else True
-        getter = getters.get(field)
+        getter = _TRACE_SORT_GETTERS.get(field)
         if getter is None:
             raise MonitoringReadNotSupportedError(f"unsupported order_by field: {field}")
         return _sorted_missing_last(traces, getter, lambda t: t.id, reverse=reverse)
@@ -442,3 +449,14 @@ def _in_window(ts: datetime | None, t0: datetime | None, t1: datetime | None) ->
     if t0 is not None and ts < t0:
         return False
     return not (t1 is not None and ts >= t1)
+
+
+# The trace sorts ``list_traces`` serves. A missing total_cost sorts as 0.0 (present),
+# not last — the run list always has a cost; the other keys never yield None for real traces.
+_TRACE_SORT_GETTERS: dict[str, Callable[[MonitoringTrace], Any]] = {
+    "timestamp": lambda t: t.timestamp,
+    "total_cost": lambda t: t.total_cost if t.total_cost is not None else 0.0,
+    "latency": _trace_latency_ms,
+    "total_tokens": _trace_tokens,
+    "id": lambda t: t.id,
+}

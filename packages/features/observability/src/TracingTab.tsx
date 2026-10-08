@@ -1,10 +1,11 @@
 /**
  * Tracing tab — a filterable, sortable, paginated runs table ({@link RunsTable}) over
  * `listRuns(filters)`. The filter set, sort key/direction, and the drilled-in trace id
- * all live in the URL, so a view is linkable. A metric-sort×filter combo can only reach
- * here from a shared or hand-edited link; it is repaired to a legal query and written
- * back to the URL — the source of truth — before any read. Drilling into a trace shows
- * the per-run {@link TraceView}.
+ * all live in the URL, so a view is linkable. The sorts and sort × filter combinations
+ * the monitoring backend serves come from its served capabilities; once they arrive, a
+ * combination it cannot serve (only reachable from a shared or hand-edited link) is
+ * repaired to a legal query and written back to the URL — the source of truth. Drilling
+ * into a trace shows the per-run {@link TraceView}.
  */
 import { useAppNavigate } from '@tai42/studio-sdk';
 import { type ReactNode, useEffect } from 'react';
@@ -12,10 +13,15 @@ import { type ReactNode, useEffect } from 'react';
 import { mergeSearch, type ObservabilitySearch, sanitizeSearch } from './filters';
 import { RunsTable } from './RunsTable';
 import { TraceView } from './TraceView';
+import { useObservabilityCapabilities } from './useObservabilityCapabilities';
 
 export function TracingTab({ search }: { readonly search: ObservabilitySearch }): ReactNode {
   const navigate = useAppNavigate();
-  const cleaned = sanitizeSearch(search);
+  const capabilities = useObservabilityCapabilities();
+  // No sanitising happens until the capabilities arrive: only the served map says
+  // which combinations are illegal.
+  const cleaned =
+    capabilities.data !== undefined ? sanitizeSearch(search, capabilities.data) : search;
   const repaired = cleaned !== search;
 
   // `sanitizeSearch` returns the same reference when nothing needs repair, so this
@@ -35,5 +41,5 @@ export function TracingTab({ search }: { readonly search: ObservabilitySearch })
     );
   }
 
-  return <RunsTable search={cleaned} />;
+  return <RunsTable search={cleaned} capabilities={capabilities} />;
 }

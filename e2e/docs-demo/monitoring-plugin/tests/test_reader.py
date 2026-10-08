@@ -23,11 +23,12 @@ from tai42_contract.monitoring import (
     MonitoringReadNotSupportedError,
     MonitoringTrace,
     OrderBy,
+    SpanKind,
     TraceNotFoundError,
 )
 
 from docs_demo_monitoring.reader import DemoReader, _sorted_missing_last
-from docs_demo_monitoring.seed import build_seed_traces
+from docs_demo_monitoring.seed import seed_store
 from docs_demo_monitoring.store import TraceStore
 
 NOW = datetime(2026, 7, 13, 12, 0, 0, tzinfo=UTC)
@@ -38,8 +39,7 @@ MEASURES = [Measure.COUNT, Measure.COST, Measure.TOKENS, Measure.LATENCY]
 
 def _reader() -> DemoReader:
     store = TraceStore()
-    for trace in build_seed_traces(NOW):
-        store.insert(trace)
+    seed_store(store, NOW)
     return DemoReader(store)
 
 
@@ -142,9 +142,25 @@ def test_list_and_get_traces() -> None:
 def test_list_spans_in_window() -> None:
     reader = _reader()
     spans = asyncio.run(reader.list_spans_in_window(FROM, TO))
-    # One generation (leaf) span per seeded trace.
-    assert len(spans) == 24
+    # One item per step: every trace's root, plus the newest trace's model step and its
+    # two reference steps; a generation is never an item.
+    assert len(spans) == 27
     assert spans[0].start >= spans[-1].start  # newest-first default
+    assert asyncio.run(reader.list_spans_in_window(FROM, TO, kind=SpanKind.LLM)) == []
+    assert len(asyncio.run(reader.list_spans_in_window(FROM, TO, kind=SpanKind.CHAIN))) == 27
+
+
+def test_list_capability_and_page_ceiling() -> None:
+    reader = _reader()
+    cap = reader.list_capability()
+    assert cap.sort_fields == {"timestamp", "total_cost", "latency", "total_tokens", "id"}
+    assert cap.incompatible_filters == {}
+    assert reader.max_page_size() == 100
+    assert len(asyncio.run(reader.list_traces(from_timestamp=FROM, to_timestamp=TO, limit=100))) == 24
+    with pytest.raises(ValueError, match="limit 101 exceeds the reader's maximum page size 100"):
+        asyncio.run(reader.list_traces(limit=101))
+    with pytest.raises(MonitoringReadNotSupportedError):
+        asyncio.run(reader.list_traces(order_by=OrderBy(field="name")))
 
 
 def _trace(trace_id: str, *, level: str, tokens: int) -> MonitoringTrace:
@@ -160,12 +176,13 @@ def _trace(trace_id: str, *, level: str, tokens: int) -> MonitoringTrace:
             MonitoringObservation(
                 id=f"{trace_id}-gen",
                 trace_id=trace_id,
-                type="GENERATION",
+                kind=SpanKind.LLM,
                 name="gen",
                 level=level,
                 input={"prompt": "hello"},
                 output={"reply": "world"},
-                usage={"input": tokens, "output": tokens},
+                input_tokens=tokens,
+                output_tokens=tokens,
                 model="gpt-4o-mini",
                 start=start,
                 end=start + timedelta(seconds=1),
@@ -174,7 +191,7 @@ def _trace(trace_id: str, *, level: str, tokens: int) -> MonitoringTrace:
     )
 
 
-def test_list_traces_summary_carries_status_previews_and_tokens() -> None:
+def test_list_traces_summary_carries_status_values_and_tokens() -> None:
     store = TraceStore()
     store.insert(_trace("ok-trace", level=MonitoringLevel.DEFAULT.value, tokens=10))
     reader = DemoReader(store)
@@ -182,8 +199,8 @@ def test_list_traces_summary_carries_status_previews_and_tokens() -> None:
     assert len(summaries) == 1
     summary = summaries[0]
     assert summary.status == "ok"
-    assert summary.input_preview == {"prompt": "hello"}
-    assert summary.output_preview == {"reply": "world"}
+    assert summary.input == {"prompt": "hello"}
+    assert summary.output == {"reply": "world"}
     assert summary.total_tokens == 20
 
 
@@ -215,12 +232,11 @@ def test_get_observation_found_and_absent() -> None:
     from tai42_contract.monitoring import ObservationNotFoundError, TraceNotFoundError
 
     from docs_demo_monitoring.reader import DemoReader
-    from docs_demo_monitoring.seed import build_seed_traces
+    from docs_demo_monitoring.seed import seed_store
     from docs_demo_monitoring.store import TraceStore
 
     store = TraceStore()
-    for trace in build_seed_traces(datetime(2026, 7, 14, tzinfo=UTC)):
-        store.insert(trace)
+    seed_store(store, datetime(2026, 7, 14, tzinfo=UTC))
     reader = DemoReader(store)
     obs = asyncio.run(reader.get_observation("docs-demo-001", "docs-demo-001-gen"))
     assert obs.name == "chat"
@@ -238,17 +254,73 @@ def test_the_seeded_references_resolve_and_one_is_unavailable() -> None:
     from tai42_kit.monitoring import resolve_refs
 
     from docs_demo_monitoring.reader import DemoReader
-    from docs_demo_monitoring.seed import NEWEST_ANSWER, build_seed_traces
+    from docs_demo_monitoring.seed import NEWEST_ANSWER, seed_store
     from docs_demo_monitoring.store import TraceStore
 
     store = TraceStore()
-    traces = build_seed_traces(datetime(2026, 7, 14, tzinfo=UTC))
-    for trace in traces:
-        store.insert(trace)
-    newest = max(traces, key=lambda t: t.timestamp)
+    seed_store(store, datetime(2026, 7, 14, tzinfo=UTC))
+    newest = max(store.all_traces(), key=lambda t: t.timestamp or datetime.min.replace(tzinfo=UTC))
     reader = DemoReader(store)
     by_name = {o.name: o for o in newest.observations}
     resolved = asyncio.run(resolve_refs(by_name["summarise"].input, reader, trace_id=newest.id))
     assert resolved == {"from_model": NEWEST_ANSWER}
     with pytest.raises(PayloadRefUnresolvedError, match="not yet available or lost"):
         asyncio.run(resolve_refs(by_name["follow_up"].input, reader, trace_id=newest.id))
+
+
+def test_the_newest_model_step_records_its_message_member_wise_by_reference() -> None:
+    """The model step's update holds the generated message with every container member a
+    reference to the model call's recorded message, and the references resolve to it."""
+    from tai42_contract.monitoring import GENERATION_MESSAGE_METADATA_KEY
+    from tai42_kit.monitoring import resolve_refs
+
+    store = TraceStore()
+    seed_store(store, NOW)
+    newest = max(store.all_traces(), key=lambda t: t.timestamp or NOW)
+    by_name = {o.name: o for o in newest.observations}
+    model_step, generation = by_name["model"], by_name["chat"]
+    assert model_step.kind is SpanKind.CHAIN
+    assert generation.parent_id == model_step.id
+    message = generation.metadata[GENERATION_MESSAGE_METADATA_KEY]
+    [step] = model_step.output
+    assert step["graph"] is None and step["resume"] is None and step["goto"] == []
+    [recorded] = step["update"]["messages"]
+    for key, member in message.items():
+        if isinstance(member, (dict, list)):
+            assert recorded[key] == {
+                "$tai42_ref": {
+                    "span_id": generation.id,
+                    "field": "metadata",
+                    "pointer": f"/{GENERATION_MESSAGE_METADATA_KEY}/{key}",
+                }
+            }, key
+        else:
+            assert recorded[key] == member, key
+    reader = DemoReader(store)
+    resolved = asyncio.run(resolve_refs(model_step.output, reader, trace_id=newest.id))
+    assert resolved == [{"graph": None, "update": {"messages": [message]}, "resume": None, "goto": []}]
+
+
+def test_every_seeded_model_call_records_the_gen_ai_message_shape() -> None:
+    """A model call's input and output are lists of ``{role, parts}`` messages, as a model call records them.
+
+    The input is the prompt as one user message of one text part; the output is the
+    generated answer as one assistant message of one text part with its finish reason.
+    """
+    store = TraceStore()
+    seed_store(store, NOW)
+    traces = store.all_traces()
+    assert len(traces) == 24
+    for trace in traces:
+        generation = next(o for o in trace.observations if o.kind is SpanKind.LLM)
+        root = next(o for o in trace.observations if o.parent_id is None)
+        prompt = root.input["messages"][0]["content"]
+        assert generation.input == [{"role": "user", "parts": [{"type": "text", "content": prompt}]}], trace.id
+        assert isinstance(generation.output, list), trace.id
+        [answer] = generation.output
+        assert answer["role"] == "assistant", trace.id
+        assert answer["finish_reason"] == "stop", trace.id
+        [part] = answer["parts"]
+        assert part["type"] == "text", trace.id
+        assert isinstance(part["content"], str), trace.id
+        assert part["content"].strip(" …"), trace.id

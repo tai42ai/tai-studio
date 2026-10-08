@@ -68,8 +68,8 @@ export function TraceWaterfall({
     const out: SpanNode[] = [];
     for (const node of tree.byId.values()) {
       const name = (node.span.name ?? '').toLowerCase();
-      const type = (node.span.type ?? '').toLowerCase();
-      if (name.includes(query) || type.includes(query)) out.push(node);
+      const kind = (node.span.kind ?? '').toLowerCase();
+      if (name.includes(query) || kind.includes(query)) out.push(node);
     }
     out.sort(
       (a, b) =>
