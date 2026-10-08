@@ -261,9 +261,21 @@ describe('form per-send data schemas — applied by the form preview', () => {
     expect(schemas.formOption.parse({ value: 'a' }).label).toBeUndefined();
   });
 
+  it('formOption carries a description second line, with a null description, and with none', () => {
+    expect(
+      schemas.formOption.parse({ value: 'a', label: 'Option A', description: 'Second line' }),
+    ).toEqual({ value: 'a', label: 'Option A', description: 'Second line' });
+    expect(schemas.formOption.parse({ value: 'a', description: null }).description).toBeNull();
+    expect(schemas.formOption.parse({ value: 'a' }).description).toBeUndefined();
+  });
+
   it('formOption rejects a missing or non-string value', () => {
     expect(() => schemas.formOption.parse({ label: 'x' })).toThrow();
     expect(() => schemas.formOption.parse({ value: 7 })).toThrow();
+  });
+
+  it('formOption rejects a non-string description', () => {
+    expect(() => schemas.formOption.parse({ value: 'a', description: 7 })).toThrow();
   });
 
   it('formData defaults values and options to empty objects', () => {

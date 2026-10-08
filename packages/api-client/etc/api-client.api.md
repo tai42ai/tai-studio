@@ -2773,6 +2773,7 @@ export function createApiClient(config: ApiConfig): {
         options: Record<string, {
             value: string;
             label?: string | null | undefined;
+            description?: string | null | undefined;
         }[]>;
         errors: Record<string, string>;
         display: Record<string, unknown>;
@@ -4870,6 +4871,7 @@ const formData: z.ZodObject<{
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
         value: z.ZodString;
         label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>>>;
 }, z.core.$strip>;
 
@@ -4884,6 +4886,7 @@ export type FormOption = z.infer<typeof formOption>;
 const formOption: z.ZodObject<{
     value: z.ZodString;
     label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -4963,6 +4966,7 @@ const formUpdate: z.ZodObject<{
     options: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodArray<z.ZodObject<{
         value: z.ZodString;
         label: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        description: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     }, z.core.$strip>>>>;
     errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
     display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
