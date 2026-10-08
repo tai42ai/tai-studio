@@ -467,11 +467,14 @@ function ReactionErrorNotice({ message }: { readonly message: string | null }): 
 /**
  * One option as text. The re-optioned control shows the VALUE, so a labelled option
  * reads `label (value)` to make the value→label mapping legible; an unlabelled one (or
- * a label equal to the value) is just the value, never an empty choice.
+ * a label equal to the value) is just the value, never an empty choice. An option's
+ * second line (`description`) is appended as ` — <description>` when non-blank.
  */
 function optionText(option: FormOption): string {
   const label = typeof option.label === 'string' ? option.label.trim() : '';
-  return label !== '' && label !== option.value ? `${label} (${option.value})` : option.value;
+  const head = label !== '' && label !== option.value ? `${label} (${option.value})` : option.value;
+  const description = typeof option.description === 'string' ? option.description.trim() : '';
+  return description !== '' ? `${head} — ${description}` : head;
 }
 
 /**

@@ -69,13 +69,16 @@ export type AttachmentMediaItem = z.infer<typeof attachmentMediaItem>;
 /**
  * One per-send choice for a `form` property whose schema is a string (or array of
  * strings). `value` is what the answer carries; `label` (absent OR null both parse
- * to no label) is the human text shown in its place. A send may replace a property's
- * `enum` this way for one ask without republishing the form. Applied per property by
- * the form preview (safeParsed), so a malformed entry is a loud notice, never silent.
+ * to no label) is the human text shown in its place; `description` (absent OR null
+ * both parse to none) is the option's second line of supporting text. A send may
+ * replace a property's `enum` this way for one ask without republishing the form.
+ * Applied per property by the form preview (safeParsed), so a malformed entry is a
+ * loud notice, never silent.
  */
 export const formOption = z.object({
   value: z.string(),
   label: z.string().nullish(),
+  description: z.string().nullish(),
 });
 export type FormOption = z.infer<typeof formOption>;
 

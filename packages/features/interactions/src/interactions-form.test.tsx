@@ -114,6 +114,38 @@ describe('InteractionsPage — form preview: per-send values, options and pages'
     expect(within(opts).getByText('Option A (a), b')).toBeInTheDocument();
   });
 
+  it("appends an option's description as a second line, and omits it when blank or absent", async () => {
+    const { channel } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      interactionJson({
+        interaction_id: 'q-form-opts-desc',
+        format: 'form',
+        prompt: 'Fill in the details',
+        format_payload: {
+          schema: { type: 'object', properties: { date: { type: 'string' } } },
+          data: {
+            options: {
+              date: [
+                { value: 'a', label: 'Option A', description: 'The first choice' },
+                { value: 'b', description: '  ' },
+                { value: 'c', label: 'Option C' },
+              ],
+            },
+          },
+        },
+      }),
+    );
+
+    // A non-blank description reads ` — <description>` after `label (value)`; a blank or
+    // absent one adds nothing.
+    const opts = await screen.findByTestId('form-send-options');
+    expect(
+      within(opts).getByText('Option A (a) — The first choice, b, Option C (c)'),
+    ).toBeInTheDocument();
+  });
+
   it('renders a re-optioned field as a choice of the per-send values, not a free control', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
