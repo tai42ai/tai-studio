@@ -21,8 +21,8 @@ export type ZoneRef =
 export interface ChipData {
   readonly url: string;
   readonly itemType: 'route' | 'sub-mcp';
-  /** The sub-MCP slug when `itemType === 'sub-mcp'`, else `null`. */
-  readonly slug: string | null;
+  /** The mount's served access pattern when `itemType === 'sub-mcp'`, else `null`. */
+  readonly accessPattern: string | null;
   readonly origin: ZoneRef;
   /** The HTTP methods for an unassigned route chip; empty otherwise. */
   readonly methods: readonly string[];

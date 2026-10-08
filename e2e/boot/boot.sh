@@ -238,7 +238,7 @@ PY
 # resource the wildcard key is authorized for. These are deployment wiring, not
 # identity, so they are seeded whether or not the owner + key are.
 log "seeding the route mappings (Postgres)"
-pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('studio_authed','studio'),('public_spa','public'),('public_assets','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
+pg_exec -c "INSERT INTO access_control_routes (url, scope_id) VALUES ('/studio_authed','studio'),('/public_spa','public'),('/public_assets','public') ON CONFLICT (url) DO UPDATE SET scope_id = EXCLUDED.scope_id;" >/dev/null
 
 # Seeded identity — the owner principal + its key, written directly to the stores in
 # EXACTLY the shape POST /api/setup and the mint produce, because Playwright needs a
@@ -289,7 +289,7 @@ fi
 # verifier's declared-public tier publics them from the route registration — the
 # studio_authed catch-all may cover them; the declared-public tier short-circuits
 # above the route table, so no template/row is needed here.
-export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/).*":"studio_authed","/(?!api(?:/|$)).*":"public_spa","/api/plugins/[^/]+/studio/.*":"public_assets"}'
+export ACCESS_CONTROL_PATH_PATTERNS='{"/api/(?!plugins/[^/]+/studio/).*":"/studio_authed","/(?!api(?:/|$)).*":"/public_spa","/api/plugins/[^/]+/studio/.*":"/public_assets"}'
 
 # --- 5. Skeleton env + launch -----------------------------------------------
 export ACCESS_CONTROL_ENABLE=true

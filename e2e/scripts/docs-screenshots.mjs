@@ -32,6 +32,9 @@
  *   - profiles   — the Settings page's Profiles tab: the seeded `production` profile
  *                  row (name + description) from `GET /api/config/profiles`. The action
  *                  switches to the tab and waits on that row.
+ *   - settings-access — the API keys tab's "Access control" card (the scopes mapper):
+ *                  the scope zones, the Unassigned bucket of unmapped routes, and the Public
+ *                  zone with its note, captured as the whole card.
  *   - agents     — the registered `tools_agent` from `GET /api/agents`.
  *   - presets    — the Presets list (`GET /api/presets`): the two seeded
  *                  `studio_demo_echo` presets, the master pane rendered full-width (no
@@ -524,6 +527,28 @@ const AUTHED_PAGES = [
         .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
+  {
+    // The API keys tab's "Access control" card: the scopes mapper with its scope zones,
+    // the Unassigned bucket (every unmapped route the server lists) and the Public zone
+    // with its note. The card is far taller than the viewport, so `frame` captures the
+    // whole card rather than a viewport slice. The action waits on the Public zone's
+    // note, the last thing the card renders once its three reads have settled.
+    // Deterministic: every zone comes from the boot's route table and seeded mappings,
+    // so NO `nondeterministic` flag.
+    name: 'settings-access',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'API keys' }).click();
+      await page
+        .getByText('Public routes are served without API-key authentication')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Access control', level: 3 }) }),
+  },
   // The registered demo agent renders one row per agent (`data-testid`).
   { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },
   {
@@ -1007,6 +1032,14 @@ const AUTHED_PAGES = [
       // key dialog's QR, not the create form.
       await page.getByLabel('User ID').fill(`svc-demo-${Date.now()}`);
       await page.getByLabel('Description').fill('Demo service key');
+      // Grant the boot's one route-mapped scope (`studio`). A key with no scope and no
+      // condition is no policy at all, so the claim-link door refuses it as "not a valid
+      // API key"; the minted key must carry a real grant for the QR step to render.
+      await page
+        .getByRole('dialog', { name: 'Create API key' })
+        .getByRole('group', { name: 'Scopes' })
+        .getByRole('checkbox', { name: 'studio', exact: true })
+        .click();
       await page.getByRole('button', { name: 'Create', exact: true }).click();
       await page.getByRole('button', { name: 'Create claim link (QR)' }).click();
       await page
@@ -1243,7 +1276,10 @@ async function shoot(page, entry, theme, { awaitPluginNav }) {
   // rather than clipped at the pane's fitView min-zoom (see frameCanvasContent).
   if (entry.canvas) await frameCanvasContent(page);
   const file = `${OUT_DIR}/${entry.name}-${theme}.png`;
-  await page.screenshot({ path: file, fullPage: false });
+  // `frame`, when present, names the one element the shot captures whole (it may run
+  // past the viewport); otherwise the shot is the fixed viewport.
+  if (entry.frame) await entry.frame(page).screenshot({ path: file });
+  else await page.screenshot({ path: file, fullPage: false });
   console.log(`  ✓ ${file}`);
 }
 

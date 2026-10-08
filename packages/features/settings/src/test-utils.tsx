@@ -99,6 +99,7 @@ const baseProjection: MeProjection = {
   owner_user_id: null,
   principal: { user_id: 'u-test', kind: 'human', display_name: 'Test User' },
   admin: false,
+  public_resource_id: 'public',
   scopes: [],
   routes: [],
   route_patterns: [],

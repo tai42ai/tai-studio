@@ -4,8 +4,8 @@
  * (`/api/sub-mcp`), each a slug mapped to a curated subset of tool names served on a
  * transport.
  *
- *  - LIST every entry with its transport and its concrete endpoint URL
- *    (`/app/{slug}`, copy-to-clipboard) plus a DELETE control guarded by a confirm
+ *  - LIST every entry with its transport and its served endpoint URL
+ *    (`mount_url`, copy-to-clipboard) plus a DELETE control guarded by a confirm
  *    `<Dialog>`.
  *  - CREATE a new entry from a slug + a multi-select of tool names
  *    (`GET /api/tools`) + a transport, posted with `POST /api/sub-mcp`. Register is
@@ -56,11 +56,6 @@ const TRANSPORT_OPTIONS: readonly RadioOption[] = [
   { value: 'sse', label: 'SSE' },
   { value: 'stdio', label: 'stdio' },
 ];
-
-/** The endpoint a registered sub-MCP is served under (`/app/{slug}`). */
-function endpointFor(slug: string): string {
-  return `/app/${slug}`;
-}
 
 function DeleteSubMcpDialog({
   slug,
@@ -136,7 +131,7 @@ function SubMcpList({
               </TD>
               <TD>
                 <CopyField
-                  value={endpointFor(slug)}
+                  value={mount.mount_url}
                   label={`Endpoint for ${slug}`}
                   idPrefix={`sub-mcp-endpoint-${slug}`}
                 />

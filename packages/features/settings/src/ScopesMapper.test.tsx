@@ -30,6 +30,11 @@ function mapperStub(overrides: Stub = {}): ApiClient {
   });
 }
 
+/** A registered sub-MCP mount as `listSubMcp` serves it, at `/app/<slug>` unless overridden. */
+function mount(slug: string, mountUrl = `/app/${slug}`) {
+  return { tools: [], transport: 'http', mount_url: mountUrl, access_pattern: `^${mountUrl}/.*$` };
+}
+
 function zoneEl(domId: string): HTMLElement {
   const el = document.querySelector(`[data-zone="${domId}"]`);
   if (el === null) throw new Error(`zone ${domId} not rendered`);
@@ -44,21 +49,24 @@ describe('ScopesMapper rendering', () => {
   const scopes = { '/a': 's1', '/b': 's1', '/app/x': 's2' };
 
   function renderMapper(overrides: Stub = {}, readOnly = false) {
-    return renderWithProviders(<ScopesMapper scopes={scopes} readOnly={readOnly} />, {
-      client: mapperStub({
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(
-            routes(
-              { path: '/a', methods: ['GET'], mapped: 's1' },
-              { path: '/b', methods: ['GET'], mapped: 's1' },
-              { path: '/c', methods: ['POST'], mapped: null },
+    return renderWithProviders(
+      <ScopesMapper scopes={scopes} readOnly={readOnly} publicId="public" />,
+      {
+        client: mapperStub({
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(
+              routes(
+                { path: '/a', methods: ['GET'], mapped: 's1' },
+                { path: '/b', methods: ['GET'], mapped: 's1' },
+                { path: '/c', methods: ['POST'], mapped: null },
+              ),
             ),
           ),
-        ),
-        listSubMcp: vi.fn(() => Promise.resolve({ x: {}, y: {} })),
-        ...overrides,
-      }),
-    });
+          listSubMcp: vi.fn(() => Promise.resolve({ x: mount('x'), y: mount('y') })),
+          ...overrides,
+        }),
+      },
+    );
   }
 
   it('groups mapped urls per scope and fills the unassigned bucket with unmapped routes and mounts', async () => {
@@ -92,7 +100,11 @@ describe('ScopesMapper rendering', () => {
     // A well-behaved backend never lists the marker as a scope, but if one leaks
     // in it must not become a "public" scope zone beside the Public surface.
     renderWithProviders(
-      <ScopesMapper scopes={{ '/a': 's1', 'https://pub': 'public' }} readOnly={false} />,
+      <ScopesMapper
+        scopes={{ '/a': 's1', 'https://pub': 'public' }}
+        readOnly={false}
+        publicId="public"
+      />,
       {
         client: mapperStub({
           listAuthRoutes: vi.fn(() =>
@@ -104,6 +116,40 @@ describe('ScopesMapper rendering', () => {
     await screen.findByText('/a');
     expect(zoneEl('zone-scope-s1')).toBeInTheDocument();
     expect(document.querySelector('[data-zone="zone-scope-public"]')).toBeNull();
+  });
+
+  it('surfaces an unmapped mount at the URL the server serves it at', async () => {
+    renderMapper({
+      listSubMcp: vi.fn(() => Promise.resolve({ x: mount('x'), y: mount('y', '/mounted/y') })),
+    });
+    await screen.findByText('/a');
+    const unassigned = zoneEl('zone-unassigned');
+    expect(within(unassigned).getByText('/mounted/y')).toBeInTheDocument();
+    expect(within(unassigned).queryByText('/app/y')).not.toBeInTheDocument();
+  });
+
+  it('reads an operator-set public marker', async () => {
+    // The deployment renamed its public marker to `open`: a stray `open` entry in the
+    // scope map is the Public surface, never a scope zone, and the Public zone renders.
+    renderWithProviders(
+      <ScopesMapper
+        scopes={{ '/a': 's1', 'https://pub': 'open' }}
+        readOnly={false}
+        publicId="open"
+      />,
+      {
+        client: mapperStub({
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+          ),
+          listPublicRoutes: vi.fn(() => Promise.resolve(['/health'])),
+        }),
+      },
+    );
+    await screen.findByText('/health');
+    expect(within(zoneEl('zone-public')).getByText('/health')).toBeInTheDocument();
+    expect(document.querySelector('[data-zone="zone-scope-open"]')).toBeNull();
+    expect(zoneEl('zone-scope-s1')).toBeInTheDocument();
   });
 
   it('renders public-pinned urls in the Public zone only', async () => {
@@ -129,9 +175,12 @@ describe('ScopesMapper rendering', () => {
   it('draws the chip remove control with the contrast-safe border, never the decorative one', async () => {
     // `tokens.css`: the decorative border sits below 3:1 and may never be a
     // control's only boundary. Derived over the whole rendered mapper.
-    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
-      client: mapperStub(),
-    });
+    renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub(),
+      },
+    );
 
     await screen.findByText('/a');
     expect(decorBorderedControls(document.body)).toEqual([]);
@@ -140,14 +189,17 @@ describe('ScopesMapper rendering', () => {
 
 describe('ScopesMapper create-scope', () => {
   function renderMapper(overrides: Stub = {}) {
-    return renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
-      client: mapperStub({
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
-        ),
-        ...overrides,
-      }),
-    });
+    return renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub({
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+          ),
+          ...overrides,
+        }),
+      },
+    );
   }
 
   it('rejects an invalid scope name (charset)', async () => {
@@ -159,6 +211,27 @@ describe('ScopesMapper create-scope', () => {
     await user.click(screen.getByRole('button', { name: 'Add scope' }));
 
     expect(await screen.findByText(/only letters, numbers/)).toBeInTheDocument();
+  });
+
+  it('rejects the served public marker as a scope name, naming it', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="open" />, {
+      client: mapperStub({
+        listAuthRoutes: vi.fn(() =>
+          Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+        ),
+      }),
+    });
+    await screen.findByText('/a');
+
+    await user.type(screen.getByLabelText('New scope name'), 'open');
+    await user.click(screen.getByRole('button', { name: 'Add scope' }));
+
+    expect(
+      await screen.findByText(
+        '“open” is the reserved public marker, not a scope. Use the Public zone.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('rejects a duplicate scope name', async () => {
@@ -199,14 +272,17 @@ describe('ScopesMapper create-scope', () => {
 
 describe('ScopesMapper add-route row', () => {
   function renderMapper(overrides: Stub = {}) {
-    return renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
-      client: mapperStub({
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
-        ),
-        ...overrides,
-      }),
-    });
+    return renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub({
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+          ),
+          ...overrides,
+        }),
+      },
+    );
   }
 
   it('validates the leading slash', async () => {
@@ -314,19 +390,22 @@ describe('ScopesMapper remove/delete', () => {
     const user = userEvent.setup();
     const spy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
     const removeUrlFromScope = vi.fn().mockResolvedValue({ url: '/a' });
-    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1', '/b': 's1' }} readOnly={false} />, {
-      client: mapperStub({
-        removeUrlFromScope,
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(
-            routes(
-              { path: '/a', methods: ['GET'], mapped: 's1' },
-              { path: '/b', methods: ['GET'], mapped: 's1' },
+    renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1', '/b': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub({
+          removeUrlFromScope,
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(
+              routes(
+                { path: '/a', methods: ['GET'], mapped: 's1' },
+                { path: '/b', methods: ['GET'], mapped: 's1' },
+              ),
             ),
           ),
-        ),
-      }),
-    });
+        }),
+      },
+    );
     await screen.findByText('/a');
 
     await user.click(screen.getByRole('button', { name: 'Remove URL /a' }));
@@ -343,14 +422,17 @@ describe('ScopesMapper remove/delete', () => {
   it('confirms removing the last url of a scope before unmapping it', async () => {
     const user = userEvent.setup();
     const removeUrlFromScope = vi.fn().mockResolvedValue({ url: '/a' });
-    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
-      client: mapperStub({
-        removeUrlFromScope,
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
-        ),
-      }),
-    });
+    renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub({
+          removeUrlFromScope,
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+          ),
+        }),
+      },
+    );
     await screen.findByText('/a');
 
     await user.click(screen.getByRole('button', { name: 'Remove URL /a' }));
@@ -366,14 +448,17 @@ describe('ScopesMapper remove/delete', () => {
     const user = userEvent.setup();
     const spy = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
     const removeScope = vi.fn().mockResolvedValue({ scope_id: 's1', deleted_keys: 2 });
-    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
-      client: mapperStub({
-        removeScope,
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
-        ),
-      }),
-    });
+    renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub({
+          removeScope,
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+          ),
+        }),
+      },
+    );
     await screen.findByText('/a');
 
     await user.click(screen.getByRole('button', { name: 'Delete scope s1' }));
@@ -394,15 +479,18 @@ describe('ScopesMapper public surface interactions', () => {
     const unpinPublicRoute = vi
       .fn()
       .mockRejectedValue(new ApiError("url is not pinned public: '/health'", 404));
-    renderWithProviders(<ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} />, {
-      client: mapperStub({
-        unpinPublicRoute,
-        listAuthRoutes: vi.fn(() =>
-          Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
-        ),
-        listPublicRoutes: vi.fn(() => Promise.resolve(['/health'])),
-      }),
-    });
+    renderWithProviders(
+      <ScopesMapper scopes={{ '/a': 's1' }} readOnly={false} publicId="public" />,
+      {
+        client: mapperStub({
+          unpinPublicRoute,
+          listAuthRoutes: vi.fn(() =>
+            Promise.resolve(routes({ path: '/a', methods: ['GET'], mapped: 's1' })),
+          ),
+          listPublicRoutes: vi.fn(() => Promise.resolve(['/health'])),
+        }),
+      },
+    );
     await screen.findByText('/health');
 
     await user.click(screen.getByRole('button', { name: 'Unpin /health' }));
