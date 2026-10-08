@@ -3159,7 +3159,10 @@ export function createApiClient(config: ApiConfig): {
         env: Record<string, string>;
         secret_keys: string[];
     }>;
-    readonly setEnvConfig: (env: Record<string, string>) => Promise<{
+    readonly setEnvConfig: (body: {
+        env: Record<string, string>;
+        secret_keys?: string[] | null;
+    }) => Promise<{
         status: string;
         env_keys: number;
         fanout: {

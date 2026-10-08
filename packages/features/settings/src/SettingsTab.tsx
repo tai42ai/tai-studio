@@ -83,7 +83,7 @@ export function SettingsTab({ readOnly }: SettingsTabProps): ReactNode {
   const [pending, setPending] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
-    mutationFn: (env: Record<string, string>) => api.setEnvConfig(env),
+    mutationFn: (env: Record<string, string>) => api.setEnvConfig({ env }),
     onSuccess: () => {
       setPending({});
       void queryClient.invalidateQueries({ queryKey: settingsSchemaKey });

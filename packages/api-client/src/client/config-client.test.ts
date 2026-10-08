@@ -58,7 +58,7 @@ describe('config client transport', () => {
     expect(out.secret_keys).toEqual(['API_TOKEN']);
   });
 
-  it('setEnvConfig POSTs the raw env map as the body and parses the apply result (reload + fanout)', async () => {
+  it('setEnvConfig POSTs the env map and the secret marks as the body and parses the apply result (reload + fanout)', async () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: {
@@ -71,11 +71,16 @@ describe('config client transport', () => {
         },
       }),
     );
-    const out = await client.setEnvConfig({ APP_TITLE: 'Studio', API_TOKEN: 'x' });
+    const out = await client.setEnvConfig({
+      env: { APP_TITLE: 'Studio', API_TOKEN: 'x' },
+      secret_keys: ['API_TOKEN'],
+    });
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toBe('/api/config/env');
-    // The env record is sent verbatim as the body (not wrapped in a key).
-    expect(captured[0]?.body).toEqual({ APP_TITLE: 'Studio', API_TOKEN: 'x' });
+    expect(captured[0]?.body).toEqual({
+      env: { APP_TITLE: 'Studio', API_TOKEN: 'x' },
+      secret_keys: ['API_TOKEN'],
+    });
     expect(out.status).toBe('ok');
     expect(out.fanout.mode).toBe('local-only');
   });
@@ -118,7 +123,7 @@ describe('config client transport', () => {
 
   it('surfaces a 4xx { error } from a rejected env write as a LOUD ApiError', async () => {
     const { client } = harness(() => jsonResponse({ error: 'config backend is read-only' }, 403));
-    await expect(client.setEnvConfig({ X: '1' })).rejects.toBeInstanceOf(ApiError);
+    await expect(client.setEnvConfig({ env: { X: '1' } })).rejects.toBeInstanceOf(ApiError);
   });
 
   it('throws ApiSchemaError LOUDLY on a drifting env config (secret_keys missing)', async () => {

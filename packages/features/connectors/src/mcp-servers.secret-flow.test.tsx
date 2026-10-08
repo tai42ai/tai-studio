@@ -7,7 +7,7 @@
 // signals below.
 import { ApiError } from '@tai42/api-client';
 import { QueryClient } from '@tanstack/react-query';
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -88,12 +88,54 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     await user.click(screen.getByRole('button', { name: 'Remove entry 1' }));
     await user.click(screen.getByRole('button', { name: /Save config/ }));
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith({ SECRET_1: '' });
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { SECRET_1: '' } });
     });
     // Wait out the save's success state, which lands only once its reload broadcast and the
     // post-save re-reads have settled, so no in-flight cache write is still draining when the
     // test ends.
     await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
+  });
+
+  it('keeps a generated key whose marker gains a default — it is still referenced', async () => {
+    const user = userEvent.setup({ delay: null });
+    const setMcpSecretEnv = vi.fn().mockResolvedValue(reload(1));
+    const setMcpConfig = vi.fn().mockResolvedValue(reload(0));
+    const setEnvConfig = vi.fn().mockResolvedValue(reload(0));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi
+        .fn()
+        .mockResolvedValueOnce(withEnvBlank)
+        .mockResolvedValue(withEnvMarker),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: [] }),
+      setMcpSecretEnv,
+      setMcpConfig,
+      setEnvConfig,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-entry-0');
+    await user.type(screen.getByLabelText('API_KEY'), 'supersecret-PLAINTEXT');
+    await user.click(screen.getByRole('button', { name: 'Use secret' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Save config/ })).toBeEnabled();
+    });
+    expect(setMcpSecretEnv).toHaveBeenCalledTimes(1);
+
+    // The generated key's marker gains a default in the raw view: the key is still in use.
+    await user.click(screen.getByRole('button', { name: 'JSON' }));
+    const textarea = await screen.findByRole('textbox', { name: 'MCP config' });
+    fireEvent.change(textarea, {
+      target: { value: '[{"title":"srv","env":{"API_KEY":"!ENV ${SECRET_1:fallback}"}}]' },
+    });
+    await user.click(screen.getByRole('button', { name: /Save config/ }));
+    await waitFor(() => {
+      expect(setMcpConfig).toHaveBeenCalledTimes(1);
+    });
+    await screen.findByText(/Saved \(/, undefined, { timeout: 5000 });
+    expect(setEnvConfig).not.toHaveBeenCalled();
   });
 
   it('raises when the paste cannot be confirmed, keeping the Save and paste doors shut', async () => {
@@ -173,7 +215,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     await user.click(screen.getByRole('button', { name: 'Remove entry 1' }));
     await user.click(screen.getByRole('button', { name: /Save config/ }));
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith({ SECRET_1: '' });
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { SECRET_1: '' } });
     });
   });
 
@@ -265,7 +307,7 @@ describe('McpServersSection — secret op lifecycle + blocking', () => {
     await user.click(screen.getByRole('button', { name: 'Remove entry 1' }));
     await user.click(screen.getByRole('button', { name: /Save config/ }));
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith({ SECRET_1: '' });
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { SECRET_1: '' } });
     });
   });
 

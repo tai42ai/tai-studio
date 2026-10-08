@@ -33,6 +33,26 @@ describe('McpServersSection — secret env op', () => {
     expect(screen.queryByText('SECRET_1')).toBeNull();
   });
 
+  it('reveals the real key of a reference that carries a default', async () => {
+    const user = userEvent.setup();
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue({
+        mcp: [{ title: 'srv', env: { API_KEY: '!ENV ${SECRET_1:fallback}' } }],
+        user_tools: ['echo'],
+      }),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['SECRET_1'] }),
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await screen.findByTestId('mcp-secret-0-API_KEY');
+    await user.click(screen.getByRole('button', { name: 'Show value' }));
+    expect(screen.getByText('SECRET_1')).toBeInTheDocument();
+    expect(screen.queryByText('SECRET_1:fallback')).toBeNull();
+  });
+
   it('runs the combined op on a pasted secret (env-then-marker, pointer head mcp) and never leaks the plaintext', async () => {
     const user = userEvent.setup();
     const PLAINTEXT = 'supersecret-PLAINTEXT';
@@ -124,6 +144,35 @@ describe('McpServersSection — secret env op', () => {
       ]);
     });
     expect(setMcpSecretEnv).not.toHaveBeenCalled();
+  });
+
+  it('keeps the reference default when another existing key is picked', async () => {
+    const user = userEvent.setup();
+    const setMcpConfig = vi.fn().mockResolvedValue(reload(1));
+    const client = {
+      getMcpStatus: vi.fn().mockResolvedValue(status()),
+      getManifestPreserved: vi.fn().mockResolvedValue({
+        mcp: [{ title: 'srv', env: { API_KEY: '!ENV ${OLD_KEY:fallback}' } }],
+        user_tools: ['echo'],
+      }),
+      getMcpConfigSchema: vi.fn().mockResolvedValue(SECRET_SCHEMA),
+      listExtensions: vi.fn().mockResolvedValue([]),
+      getEnvConfig: vi.fn().mockResolvedValue({ env: {}, secret_keys: ['OLD_KEY', 'SHARED_KEY'] }),
+      setMcpConfig,
+    };
+    renderWithProviders(<McpServersSection />, { client });
+
+    await user.click(await screen.findByRole('button', { name: 'Change reference' }));
+    await user.click(screen.getByRole('button', { name: 'Reference existing key' }));
+    await user.click(screen.getByRole('combobox', { name: 'API_KEY' }));
+    await user.click(await screen.findByRole('option', { name: 'SHARED_KEY' }));
+    await user.click(screen.getByRole('button', { name: /Save config/ }));
+
+    await waitFor(() => {
+      expect(setMcpConfig).toHaveBeenCalledWith([
+        { title: 'srv', env: { API_KEY: '!ENV ${SHARED_KEY:fallback}' } },
+      ]);
+    });
   });
 
   it('never sweeps a picked pre-existing shared key when its !ENV entry is removed', async () => {
@@ -250,7 +299,7 @@ describe('McpServersSection — secret env op', () => {
     // Manifest first (marker gone), THEN the generated env key deleted via the
     // env editor's blank-value path — never a dangling reference in between.
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith({ SECRET_1: '' });
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { SECRET_1: '' } });
     });
     expect(setMcpConfig).toHaveBeenCalledWith([{ title: 'srv', env: {} }]);
     expect(order).toEqual(['mcp-config', 'env-delete']);

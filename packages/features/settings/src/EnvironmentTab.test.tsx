@@ -142,7 +142,7 @@ describe('EnvironmentTab', () => {
 
     await waitFor(() => {
       expect(setEnvConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ TAI_ENV_SECRET_KEYS: 'FOO,OPENAI_API_KEY' }),
+        expect.objectContaining({ secret_keys: ['FOO', 'OPENAI_API_KEY'] }),
       );
     });
   });
@@ -173,9 +173,7 @@ describe('EnvironmentTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ TAI_ENV_SECRET_KEYS: '' }),
-      );
+      expect(setEnvConfig).toHaveBeenCalledWith(expect.objectContaining({ secret_keys: [] }));
     });
   });
 
@@ -212,7 +210,7 @@ describe('EnvironmentTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith(expect.objectContaining({ A: '1', B: '' }));
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { A: '1', B: '' }, secret_keys: [] });
     });
   });
 
@@ -232,7 +230,7 @@ describe('EnvironmentTab', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
-      expect(setEnvConfig).toHaveBeenCalledWith(expect.objectContaining({ A: '', A2: '1' }));
+      expect(setEnvConfig).toHaveBeenCalledWith({ env: { A: '', A2: '1' }, secret_keys: [] });
     });
   });
 
