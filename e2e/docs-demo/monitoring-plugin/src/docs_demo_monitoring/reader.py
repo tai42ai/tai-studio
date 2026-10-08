@@ -29,6 +29,7 @@ from tai42_contract.monitoring import (
     MonitoringReadNotSupportedError,
     MonitoringTrace,
     MonitoringTraceSummary,
+    ObservationNotFoundError,
     OrderBy,
     SpanKind,
     SpanWindowItem,
@@ -318,6 +319,14 @@ class DemoReader:
         if trace is None:
             raise TraceNotFoundError(f"trace {trace_id!r} not found")
         return trace
+
+    async def get_observation(self, trace_id: str, observation_id: str) -> MonitoringObservation:
+        """One observation of a stored trace; ``TraceNotFoundError`` / ``ObservationNotFoundError`` when absent."""
+        trace = await self.get_trace(trace_id)
+        for observation in trace.observations:
+            if observation.id == observation_id:
+                return observation
+        raise ObservationNotFoundError(f"observation {observation_id!r} not found in trace {trace_id!r}")
 
     async def list_spans_in_window(
         self,

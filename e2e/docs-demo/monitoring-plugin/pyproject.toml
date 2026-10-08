@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = "Apache-2.0"
 authors = [{ name = "tai42", email = "oss@tai42.ai" }]
-dependencies = ["tai42-contract"]
+dependencies = ["tai42-contract", "tai42-kit[monitoring]"]
 
 [build-system]
 requires = ["hatchling"]

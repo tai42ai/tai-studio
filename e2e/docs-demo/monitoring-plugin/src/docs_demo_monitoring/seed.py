@@ -15,7 +15,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+import orjson
 from tai42_contract.monitoring import MonitoringObservation, MonitoringTrace
+from tai42_kit.monitoring import encode_payload, payload_ref
 
 # One row per trace: (days_ago, hour_utc, model, input_tokens, output_tokens,
 # cost_usd, latency_seconds). Spread over 13 days and three models so the day
@@ -103,10 +105,57 @@ def _trace_from_row(index: int, now: datetime, row: tuple[int, int, str, int, in
     )
 
 
+# The newest trace's generated answer, recorded in the GenAI message shape a model
+# call records, and referenced by the trace's ``summarise`` step.
+NEWEST_ANSWER = "The outage began at 09:12 when the cache tier stopped answering; service recovered at 09:40."
+# An observation id no stored trace holds: the ``follow_up`` step's reference to it is
+# the "not yet available or lost" state.
+MISSING_OBSERVATION_ID = "docs-demo-not-recorded"
+
+
+def _with_references(trace: MonitoringTrace) -> MonitoringTrace:
+    """Add the record-reference steps to ``trace``: one resolvable reference, one to an absent record."""
+    root, generation = trace.observations
+    generation.output = [
+        {"role": "assistant", "parts": [{"type": "text", "content": NEWEST_ANSWER}], "finish_reason": "stop"}
+    ]
+    after = generation.end or generation.start
+    summarise = MonitoringObservation(
+        id=f"{trace.id}-summarise",
+        trace_id=trace.id,
+        parent_id=root.id,
+        type="SPAN",
+        name="summarise",
+        level="DEFAULT",
+        input=orjson.loads(encode_payload({"from_model": payload_ref(generation.id, "output", "/0/parts/0/content")})),
+        output={"summary_written": True},
+        start=after,
+        end=after,
+    )
+    follow_up = MonitoringObservation(
+        id=f"{trace.id}-follow-up",
+        trace_id=trace.id,
+        parent_id=root.id,
+        type="SPAN",
+        name="follow_up",
+        level="DEFAULT",
+        input=orjson.loads(encode_payload({"earlier": payload_ref(MISSING_OBSERVATION_ID, "output")})),
+        start=after,
+        end=after,
+    )
+    trace.observations = [root, generation, summarise, follow_up]
+    return trace
+
+
 def build_seed_traces(now: datetime) -> list[MonitoringTrace]:
     """Build the deterministic docs-demo dataset relative to ``now``.
 
     ``now`` should be timezone-aware (UTC). Returns 24 traces, each with a root
-    span and a generation observation carrying model + token + cost usage.
+    span and a generation observation carrying model + token + cost usage. The newest
+    trace also carries a ``summarise`` step whose input references the generation's
+    answer, and a ``follow_up`` step whose input references a record no trace holds.
     """
-    return [_trace_from_row(i, now, row) for i, row in enumerate(_SEED_ROWS, start=1)]
+    traces = [_trace_from_row(i, now, row) for i, row in enumerate(_SEED_ROWS, start=1)]
+    newest = max(traces, key=lambda trace: trace.timestamp or now)
+    _with_references(newest)
+    return traces
