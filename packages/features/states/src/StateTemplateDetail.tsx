@@ -4,8 +4,8 @@
  *
  *  - Template: the fields (`schema`) as a read-only tree — or, when the fragment schema is
  *    a stored template reference, that reference read-only — the write policies
- *    (`regimes`) as a table, the check jq behind a disclosure, and the parameters
- *    as a table.
+ *    (`regimes`) as a table, the check jq behind a disclosure, the parameters
+ *    as a table, and whether writes are traced.
  *  - Jq: every template jq by name, purpose, description, and its declared
  *    params / writes, each with its jq behind a disclosure.
  *
@@ -15,7 +15,9 @@
 import {
   ApiError,
   schemas,
+  type StateRegimeRule,
   type StateTemplateDocument,
+  type StateTemplateParameter,
   type TemplatedText,
   type TemplateJq,
 } from '@tai42/api-client';
@@ -52,23 +54,14 @@ function checkBody(document: StateTemplateDocument): TemplatedText | null {
   return document.declarations?.check ?? null;
 }
 
-/** A regime row's Path and Policy, read defensively from the free-form regime entry. */
-function regimeCells(
-  regime: Record<string, unknown>,
-  index: number,
-): {
-  readonly path: string;
-  readonly policy: string;
-} {
-  const rawPath = regime.path;
-  const path = Array.isArray(rawPath)
-    ? rawPath.map((segment) => String(segment)).join(' / ') || '(root)'
-    : typeof rawPath === 'string'
-      ? rawPath
-      : `(regime ${String(index + 1)})`;
-  const rawPolicy = regime.policy ?? regime.mode ?? regime.regime;
-  const policy = typeof rawPolicy === 'string' ? rawPolicy : JSON.stringify(regime);
-  return { path, policy };
+/** A regime rule's path, its segments joined; the root rule (an empty path) reads "(root)". */
+function regimePath(rule: StateRegimeRule): string {
+  return rule.path.length > 0 ? rule.path.join(' / ') : '(root)';
+}
+
+/** A parameter's default as JSON, or "—" when the parameter declares none. */
+function parameterDefault(parameter: StateTemplateParameter): string {
+  return 'default' in parameter ? JSON.stringify(parameter.default) : '—';
 }
 
 /**
@@ -190,19 +183,16 @@ function TemplateTab({ document }: { readonly document: StateTemplateDocument })
             <THead>
               <TR>
                 <TH>Path</TH>
-                <TH>Policy</TH>
+                <TH>Regime</TH>
               </TR>
             </THead>
             <TBody>
-              {regimes.map((regime, index) => {
-                const cells = regimeCells(regime, index);
-                return (
-                  <TR key={`${cells.path}:${String(index)}`}>
-                    <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{cells.path}</TD>
-                    <TD>{cells.policy}</TD>
-                  </TR>
-                );
-              })}
+              {regimes.map((rule, index) => (
+                <TR key={`${regimePath(rule)}:${String(index)}`}>
+                  <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{regimePath(rule)}</TD>
+                  <TD>{rule.regime}</TD>
+                </TR>
+              ))}
             </TBody>
           </Table>
         </section>
@@ -222,20 +212,30 @@ function TemplateTab({ document }: { readonly document: StateTemplateDocument })
             <THead>
               <TR>
                 <TH>Name</TH>
+                <TH>Schema</TH>
                 <TH>Default</TH>
               </TR>
             </THead>
             <TBody>
-              {parameterEntries.map(([name, value]) => (
+              {parameterEntries.map(([name, parameter]) => (
                 <TR key={name}>
                   <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{name}</TD>
-                  <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{JSON.stringify(value)}</TD>
+                  <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>
+                    {JSON.stringify(parameter.schema)}
+                  </TD>
+                  <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>
+                    {parameterDefault(parameter)}
+                  </TD>
                 </TR>
               ))}
             </TBody>
           </Table>
         </section>
       ) : null}
+
+      <p style={{ margin: 0 }} data-testid="template-trace">
+        Trace writes: {document.trace?.enabled === true ? 'On' : 'Off'}
+      </p>
     </div>
   );
 }

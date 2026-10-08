@@ -33,14 +33,23 @@ export type StateAttach = z.infer<typeof stateAttach>;
 export const stateBinding = z.object({ "states": z.array(stateAttach).min(1) }).strict();
 export type StateBinding = z.infer<typeof stateBinding>;
 
+export const stateRegimeRule = z.object({ "path": z.array(z.string().min(1)), "regime": z.enum(["single","composing","free"]) }).strict();
+export type StateRegimeRule = z.infer<typeof stateRegimeRule>;
+
 export const stateTemplateDeclarations = z.object({ "check": z.union([templatedText, z.null()]).default(null), "schema": z.record(z.string(), z.unknown()) }).strict();
 export type StateTemplateDeclarations = z.infer<typeof stateTemplateDeclarations>;
 
 export const stateTemplateJq = z.object({ "description": z.string().default(""), "jq": templatedText, "params": z.array(z.string()).default([]), "purpose": z.enum(["input","update"]), "reads": z.array(z.array(z.string())).default([]), "writes": z.array(z.array(z.string())).default([]) }).strict();
 export type StateTemplateJq = z.infer<typeof stateTemplateJq>;
 
+export const stateTemplateParameter = z.object({ "default": z.unknown().optional(), "schema": z.record(z.string(), z.unknown()) }).strict();
+export type StateTemplateParameter = z.infer<typeof stateTemplateParameter>;
+
 export const stateTemplateReconcile = z.object({ "close": templatedText, "orphans": templatedText, "resolutions": templatedText }).strict();
 export type StateTemplateReconcile = z.infer<typeof stateTemplateReconcile>;
+
+export const stateTemplateTrace = z.object({ "enabled": z.boolean().default(false) }).strict();
+export type StateTemplateTrace = z.infer<typeof stateTemplateTrace>;
 
 export const subAgentSpec: z.ZodType = z.lazy(() => z.object({ "description": z.string().default(""), "inline_skills": z.array(z.record(z.string(), z.unknown())).default([]), "name": z.string(), "presets": z.array(presetSpec).default([]), "response_format": z.union([z.unknown(), templatedText, z.record(z.string(), z.unknown()), z.null()]).default(null), "skills": z.array(z.string()).default([]), "strategy": z.union([z.string(), z.null()]).default(null), "subagents": z.array(subAgentSpec).default([]), "system_prompt": z.union([templatedText, z.null()]).default(null), "tool_names": z.array(z.string()).default([]), "tools": z.array(z.unknown()).default([]) }));
 export type SubAgentSpec = z.infer<typeof subAgentSpec>;
@@ -75,10 +84,10 @@ export type PresetSeed = z.infer<typeof presetSeed>;
 export const roleDefinition = z.object({ "allow_all": z.boolean().default(false), "base_tier": z.union([z.string(), z.null()]).default(null), "condition": z.union([templatedText, z.null()]).default(null), "description": z.string(), "grants": z.record(z.string(), z.enum(["none","read","write"])), "name": z.string(), "scopes": z.array(z.string()).default([]) });
 export type RoleDefinition = z.infer<typeof roleDefinition>;
 
-export const stateDeclaration = z.object({ "default_subject_kind": z.string(), "description": z.string().default(""), "effective_schema": z.union([z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "regimes": z.union([z.array(z.record(z.string(), z.unknown())), z.null()]).default(null), "retention_days": z.union([z.number().int().gt(0).lte(2147483647), z.null()]).default(null), "schema": z.union([templatedText, z.record(z.string(), z.unknown())]).optional(), "subject_kinds": z.array(z.string()).min(1), "updated_at": z.union([z.string().datetime({ offset: true }), z.null()]).default(null) }).strict();
+export const stateDeclaration = z.object({ "default_subject_kind": z.string(), "description": z.string().default(""), "effective_schema": z.union([z.record(z.string(), z.unknown()), z.null()]).default(null), "name": z.string(), "regimes": z.union([z.array(stateRegimeRule), z.null()]).default(null), "retention_days": z.union([z.number().int().gt(0).lte(2147483647), z.null()]).default(null), "schema": z.union([templatedText, z.record(z.string(), z.unknown())]).optional(), "subject_kinds": z.array(z.string()).min(1), "updated_at": z.union([z.string().datetime({ offset: true }), z.null()]).default(null) }).strict();
 export type StateDeclaration = z.infer<typeof stateDeclaration>;
 
-export const stateTemplateDocument = z.object({ "declarations": z.union([stateTemplateDeclarations, z.null()]).default(null), "description": z.string().default(""), "kind": z.literal("state-template").default("state-template"), "name": z.string(), "parameters": z.record(z.string(), z.unknown()).default({}), "reconcile": z.union([stateTemplateReconcile, z.null()]).default(null), "regimes": z.array(z.record(z.string(), z.unknown())).default([]), "schema": z.union([templatedText, z.record(z.string(), z.unknown())]).optional(), "template_jq": z.union([z.record(z.string(), stateTemplateJq), z.null()]).default(null), "trace": z.record(z.string(), z.unknown()).default({}) }).strict();
+export const stateTemplateDocument = z.object({ "declarations": z.union([stateTemplateDeclarations, z.null()]).default(null), "description": z.string().default(""), "kind": z.literal("state-template").default("state-template"), "name": z.string(), "parameters": z.record(z.string(), stateTemplateParameter).default({}), "reconcile": z.union([stateTemplateReconcile, z.null()]).default(null), "regimes": z.array(stateRegimeRule).default([]), "schema": z.union([templatedText, z.record(z.string(), z.unknown())]).optional(), "template_jq": z.union([z.record(z.string(), stateTemplateJq), z.null()]).default(null), "trace": stateTemplateTrace.optional() }).strict();
 export type StateTemplateDocument = z.infer<typeof stateTemplateDocument>;
 
 export const targetConversationConfig = z.object({ "greeting_template": z.union([z.string(), z.null()]).default(null), "multichannel": z.boolean().default(false), "state_binding": z.union([stateBinding, z.null()]).default(null), "target_kind": z.enum(["agent","tool"]), "target_name": z.string().min(1) });

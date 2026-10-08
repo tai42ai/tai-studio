@@ -3685,7 +3685,10 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         effective_schema: Record<string, unknown> | null;
         name: string;
-        regimes: Record<string, unknown>[] | null;
+        regimes: {
+            path: string[];
+            regime: "single" | "composing" | "free";
+        }[] | null;
         retention_days: number | null;
         subject_kinds: string[];
         updated_at: string | null;
@@ -3700,7 +3703,10 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         effective_schema: Record<string, unknown> | null;
         name: string;
-        regimes: Record<string, unknown>[] | null;
+        regimes: {
+            path: string[];
+            regime: "single" | "composing" | "free";
+        }[] | null;
         retention_days: number | null;
         subject_kinds: string[];
         updated_at: string | null;
@@ -3721,7 +3727,10 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         effective_schema: Record<string, unknown> | null;
         name: string;
-        regimes: Record<string, unknown>[] | null;
+        regimes: {
+            path: string[];
+            regime: "single" | "composing" | "free";
+        }[] | null;
         retention_days: number | null;
         subject_kinds: string[];
         updated_at: string | null;
@@ -3949,7 +3958,10 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         kind: "state-template";
         name: string;
-        parameters: Record<string, unknown>;
+        parameters: Record<string, {
+            schema: Record<string, unknown>;
+            default?: unknown;
+        }>;
         reconcile: {
             close: {
                 content?: string | undefined;
@@ -3967,7 +3979,10 @@ export function createApiClient(config: ApiConfig): {
                 kwargs?: Record<string, unknown> | undefined;
             };
         } | null;
-        regimes: Record<string, unknown>[];
+        regimes: {
+            path: string[];
+            regime: "single" | "composing" | "free";
+        }[];
         template_jq: Record<string, {
             description: string;
             jq: {
@@ -3980,13 +3995,15 @@ export function createApiClient(config: ApiConfig): {
             reads: string[][];
             writes: string[][];
         }> | null;
-        trace: Record<string, unknown>;
         attached_to: number;
         shipped_default: boolean;
         schema?: Record<string, unknown> | {
             content?: string | undefined;
             id?: string | undefined;
             kwargs?: Record<string, unknown> | undefined;
+        } | undefined;
+        trace?: {
+            enabled: boolean;
         } | undefined;
     }[]>;
     readonly getStateTemplate: (name: string, signal?: AbortSignal) => Promise<{
@@ -4001,7 +4018,10 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         kind: "state-template";
         name: string;
-        parameters: Record<string, unknown>;
+        parameters: Record<string, {
+            schema: Record<string, unknown>;
+            default?: unknown;
+        }>;
         reconcile: {
             close: {
                 content?: string | undefined;
@@ -4019,7 +4039,10 @@ export function createApiClient(config: ApiConfig): {
                 kwargs?: Record<string, unknown> | undefined;
             };
         } | null;
-        regimes: Record<string, unknown>[];
+        regimes: {
+            path: string[];
+            regime: "single" | "composing" | "free";
+        }[];
         template_jq: Record<string, {
             description: string;
             jq: {
@@ -4032,11 +4055,13 @@ export function createApiClient(config: ApiConfig): {
             reads: string[][];
             writes: string[][];
         }> | null;
-        trace: Record<string, unknown>;
         schema?: Record<string, unknown> | {
             content?: string | undefined;
             id?: string | undefined;
             kwargs?: Record<string, unknown> | undefined;
+        } | undefined;
+        trace?: {
+            enabled: boolean;
         } | undefined;
     }>;
     readonly putStateTemplate: (name: string, body: StateTemplateBody, replace?: boolean) => Promise<{
@@ -4051,7 +4076,10 @@ export function createApiClient(config: ApiConfig): {
         description: string;
         kind: "state-template";
         name: string;
-        parameters: Record<string, unknown>;
+        parameters: Record<string, {
+            schema: Record<string, unknown>;
+            default?: unknown;
+        }>;
         reconcile: {
             close: {
                 content?: string | undefined;
@@ -4069,7 +4097,10 @@ export function createApiClient(config: ApiConfig): {
                 kwargs?: Record<string, unknown> | undefined;
             };
         } | null;
-        regimes: Record<string, unknown>[];
+        regimes: {
+            path: string[];
+            regime: "single" | "composing" | "free";
+        }[];
         template_jq: Record<string, {
             description: string;
             jq: {
@@ -4082,11 +4113,13 @@ export function createApiClient(config: ApiConfig): {
             reads: string[][];
             writes: string[][];
         }> | null;
-        trace: Record<string, unknown>;
         schema?: Record<string, unknown> | {
             content?: string | undefined;
             id?: string | undefined;
             kwargs?: Record<string, unknown> | undefined;
+        } | undefined;
+        trace?: {
+            enabled: boolean;
         } | undefined;
     }>;
     readonly deleteStateTemplate: (name: string) => Promise<{
@@ -8215,6 +8248,12 @@ declare namespace s {
         TemplateReconcile,
         templateDeclarations,
         TemplateDeclarations,
+        stateTemplateParameter,
+        StateTemplateParameter,
+        stateRegimeRule,
+        StateRegimeRule,
+        stateTemplateTrace,
+        StateTemplateTrace,
         policyBody,
         PolicyBody,
         roleBody,
@@ -8800,6 +8839,12 @@ declare namespace schemas {
         TemplateReconcile,
         templateDeclarations,
         TemplateDeclarations,
+        stateTemplateParameter,
+        StateTemplateParameter,
+        stateRegimeRule,
+        StateRegimeRule,
+        stateTemplateTrace,
+        StateTemplateTrace,
         policyBody,
         PolicyBody,
         roleBody,
@@ -9375,7 +9420,14 @@ const stateDeclaration: z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>, z.ZodNull]>>;
+    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>, z.ZodNull]>>;
     retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -9427,7 +9479,14 @@ const stateDetail: z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>, z.ZodNull]>>;
+    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>, z.ZodNull]>>;
     retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -9485,7 +9544,14 @@ const stateList: z.ZodArray<z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>, z.ZodNull]>>;
+    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>, z.ZodNull]>>;
     retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -9505,7 +9571,14 @@ const stateListItem: z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
     name: z.ZodString;
-    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>, z.ZodNull]>>;
+    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>, z.ZodNull]>>;
     retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
@@ -9563,6 +9636,19 @@ const stateRecord: z.ZodObject<{
 
 // @public
 const stateRegime: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+
+// @public (undocumented)
+export type StateRegimeRule = z.infer<typeof stateRegimeRule>;
+
+// @public (undocumented)
+const stateRegimeRule: z.ZodObject<{
+    path: z.ZodArray<z.ZodString>;
+    regime: z.ZodEnum<{
+        single: "single";
+        composing: "composing";
+        free: "free";
+    }>;
+}, z.core.$strict>;
 
 // @public (undocumented)
 export type StateRetentionPruned = z.infer<typeof stateRetentionPruned>;
@@ -9649,7 +9735,10 @@ const stateTemplateDocument: z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
     name: z.ZodString;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+        default: z.ZodOptional<z.ZodUnknown>;
+        schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strict>>>;
     reconcile: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
         close: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -9667,7 +9756,14 @@ const stateTemplateDocument: z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>;
     }, z.core.$strict>, z.ZodNull]>>;
-    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    regimes: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -9688,7 +9784,9 @@ const stateTemplateDocument: z.ZodObject<{
         reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
         writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
     }, z.core.$strict>>, z.ZodNull]>>;
-    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    trace: z.ZodOptional<z.ZodObject<{
+        enabled: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>>;
 }, z.core.$strict>;
 
 // @public (undocumented)
@@ -9704,7 +9802,10 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
     name: z.ZodString;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+        default: z.ZodOptional<z.ZodUnknown>;
+        schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strict>>>;
     reconcile: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
         close: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -9722,7 +9823,14 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>;
     }, z.core.$strict>, z.ZodNull]>>;
-    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    regimes: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -9743,7 +9851,9 @@ const stateTemplateList: z.ZodArray<z.ZodObject<{
         reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
         writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
     }, z.core.$strict>>, z.ZodNull]>>;
-    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    trace: z.ZodOptional<z.ZodObject<{
+        enabled: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>>;
     attached_to: z.ZodDefault<z.ZodNumber>;
     shipped_default: z.ZodDefault<z.ZodBoolean>;
 }, z.core.$strict>>;
@@ -9764,7 +9874,10 @@ const stateTemplateListItem: z.ZodObject<{
     description: z.ZodDefault<z.ZodString>;
     kind: z.ZodDefault<z.ZodLiteral<"state-template">>;
     name: z.ZodString;
-    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    parameters: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodObject<{
+        default: z.ZodOptional<z.ZodUnknown>;
+        schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+    }, z.core.$strict>>>;
     reconcile: z.ZodDefault<z.ZodUnion<readonly [z.ZodObject<{
         close: z.ZodObject<{
             content: z.ZodOptional<z.ZodString>;
@@ -9782,7 +9895,14 @@ const stateTemplateListItem: z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>;
     }, z.core.$strict>, z.ZodNull]>>;
-    regimes: z.ZodDefault<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+    regimes: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>>;
     schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
         content: z.ZodOptional<z.ZodString>;
         id: z.ZodOptional<z.ZodString>;
@@ -9803,9 +9923,28 @@ const stateTemplateListItem: z.ZodObject<{
         reads: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
         writes: z.ZodDefault<z.ZodArray<z.ZodArray<z.ZodString>>>;
     }, z.core.$strict>>, z.ZodNull]>>;
-    trace: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    trace: z.ZodOptional<z.ZodObject<{
+        enabled: z.ZodDefault<z.ZodBoolean>;
+    }, z.core.$strict>>;
     attached_to: z.ZodDefault<z.ZodNumber>;
     shipped_default: z.ZodDefault<z.ZodBoolean>;
+}, z.core.$strict>;
+
+// @public (undocumented)
+export type StateTemplateParameter = z.infer<typeof stateTemplateParameter>;
+
+// @public (undocumented)
+const stateTemplateParameter: z.ZodObject<{
+    default: z.ZodOptional<z.ZodUnknown>;
+    schema: z.ZodRecord<z.ZodString, z.ZodUnknown>;
+}, z.core.$strict>;
+
+// @public (undocumented)
+export type StateTemplateTrace = z.infer<typeof stateTemplateTrace>;
+
+// @public (undocumented)
+const stateTemplateTrace: z.ZodObject<{
+    enabled: z.ZodDefault<z.ZodBoolean>;
 }, z.core.$strict>;
 
 // @public (undocumented)
