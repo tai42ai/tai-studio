@@ -275,7 +275,7 @@ describe('InteractionsPage — form preview: per-send values, options and pages'
 
     // The per-send list lands on the array's ITEMS, giving a fixed option set, so the
     // array draws as a multi-select (a checkbox per value) rather than the add/remove
-    // control — one consistent field definition across channels (scope E).
+    // control — one consistent field definition across channels.
     expect(await screen.findByRole('checkbox', { name: 'x' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'y' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add item' })).not.toBeInTheDocument();
@@ -541,7 +541,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     expect(notice).toHaveTextContent('handler timed out');
   });
 
-  it('shows and hides a conditional field, and submits the shown value (scope B)', async () => {
+  it('shows and hides a conditional field, and submits the shown value', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
     const { channel } = renderInbox(answer);
@@ -576,7 +576,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     });
   });
 
-  it('passes date bounds to the native control and enforces the range on submit (scope C)', async () => {
+  it('passes date bounds to the native control and enforces the range on submit', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
     const { channel } = renderInbox(answer);
@@ -612,7 +612,7 @@ describe('InteractionsPage — form preview: reactions, conditionals, dates, bou
     expect(answer).not.toHaveBeenCalled();
   });
 
-  it('enforces a client-side length bound before submit (bug 4 parity)', async () => {
+  it('enforces a client-side length bound before submit', async () => {
     const user = userEvent.setup();
     const answer = vi.fn().mockResolvedValue(undefined);
     const { channel } = renderInbox(answer);

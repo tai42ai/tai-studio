@@ -132,7 +132,7 @@ function validateString(
       return;
     }
   }
-  // Date bounds and unavailable days (scope C). Range span/ordering needs the sibling
+  // Date bounds and unavailable days. Range span/ordering needs the sibling
   // start field, so it is enforced at the object level (see validateDateRanges).
   if (model.date !== undefined && value.length > 0) {
     const message = dateConstraintError(model.date, value);
@@ -196,7 +196,7 @@ function validateObject(
   }
   const propMap = new Map(model.properties);
   for (const [name, propSchema] of model.properties) {
-    // A field hidden by its `visibleWhen` predicate (scope B) is not part of the answer:
+    // A field hidden by its `visibleWhen` predicate is not part of the answer:
     // it is not required and not validated, and a value left on it is dropped by the
     // server, not an error here. Evaluated on the current values, so a field that was
     // hidden by the predicate is skipped even if it still carries a stale value.
@@ -224,7 +224,7 @@ function inclusiveDayCount(start: string, end: string): number {
 }
 
 /**
- * Enforce a date RANGE declared on an END field (scope C): the end is on or after its
+ * Enforce a date RANGE declared on an END field: the end is on or after its
  * named `rangeStart` field, and the inclusive day span is within `minDays`/`maxDays`.
  * Read from the two plain date values — nothing recombined. A missing or not-yet-valid
  * endpoint is left to that field's own validation; a hidden end field is skipped.
@@ -286,7 +286,7 @@ function validateMultiselect(
 }
 
 /**
- * The JSON-Schema value/length/items bounds the client mirrors from the server (bug 4):
+ * The JSON-Schema value/length/items bounds the client mirrors from the server:
  * `minLength`/`maxLength`/`pattern` on a string, `minimum`/`maximum` on a number,
  * `minItems`/`maxItems` on an array. Applied only when the kind check found no type
  * error. A `pattern` that cannot compile surfaces as a loud field error, never a silent
@@ -393,7 +393,7 @@ function walk(schema: JsonSchema, value: unknown, path: string, ctx: ValidateCtx
   }
 
   dispatchKind(classified.model, value, path, ctx);
-  // The value/length/items bounds (bug 4) mirror the server and apply only when the kind
+  // The value/length/items bounds mirror the server and apply only when the kind
   // check found no type error for this field — a bound on a wrong-typed value is noise.
   if (ctx.errors[path] === undefined) applyBounds(classified.schema, value, path, ctx);
 }
