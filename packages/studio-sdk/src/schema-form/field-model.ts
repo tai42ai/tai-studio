@@ -29,8 +29,8 @@ export interface MediaUpload {
 }
 
 /**
- * The platform date constraints classified off a `date`/`date-time` string property
- * (scope C). `min`/`max` are inclusive `YYYY-MM-DD` bounds (passed to the native date
+ * The platform date constraints classified off a `date`/`date-time` string property.
+ * `min`/`max` are inclusive `YYYY-MM-DD` bounds (passed to the native date
  * control and enforced by the validator); `unavailable` is the set of excluded days
  * (the native control cannot disable arbitrary days, so this is validator-enforced).
  * A date RANGE is two ordinary date fields: on the END field, `rangeStart` names its
@@ -125,7 +125,7 @@ export type FieldModel =
        *  field into the jq expression editor (see {@link ExpressionAnnotation}). */
       readonly expression: ExpressionAnnotation | undefined;
       /** Present on a `date`/`date-time` string carrying any platform date
-       *  constraint (bounds, unavailable days, or range pairing — scope C). */
+       *  constraint (bounds, unavailable days, or range pairing). */
       readonly date: DateConstraints | undefined;
     }
   | { readonly kind: 'number'; readonly integer: boolean }

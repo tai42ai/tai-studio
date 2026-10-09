@@ -1,5 +1,5 @@
 /**
- * The display-only parts of a stepped form (scope D): a page's ordered display blocks
+ * The display-only parts of a stepped form: a page's ordered display blocks
  * (headings, body text, images, and data slots) and a review step's generic readback of
  * entered values. Neither is an input control — they render alongside (or instead of, for
  * a review page) a page's fields.
@@ -85,7 +85,7 @@ function slotValueText(value: unknown): string | undefined {
 
 /**
  * A review step's generic readback: each visible top-level field's label and the value
- * entered for it. A field hidden by its `visibleWhen` predicate (scope B) is absent from
+ * entered for it. A field hidden by its `visibleWhen` predicate is absent from
  * the readback, since it is absent from the answer the consumer receives.
  */
 export function ReviewReadback({
