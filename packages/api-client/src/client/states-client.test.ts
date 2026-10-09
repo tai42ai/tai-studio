@@ -102,11 +102,14 @@ describe('states client transport', () => {
     expect(out.attachments[0]?.template).toBe('notes');
   });
 
-  it('putState() PUTs the declaration with no replace query', async () => {
+  // The create / re-declare answer (`put_state`, response model `StateDeclarationPutResponse`):
+  // the stored declaration's fields plus `held`, the held pending saves the declare was
+  // accepted beside. It carries no attachments.
+  it('putState() PUTs the declaration with no replace query and parses the saved answer', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { ...declaration, attachments: [] } }),
+      jsonResponse({ data: { ...declaration, updated_at: null, held: [] } }),
     );
-    await client.putState('profile', {
+    const out = await client.putState('profile', {
       name: 'profile',
       schema: { type: 'object' },
       subject_kinds: ['person'],
@@ -114,6 +117,22 @@ describe('states client transport', () => {
     });
     expect(captured[0]?.method).toBe('PUT');
     expect(captured[0]?.url).toBe('/api/states/profile');
+    expect(out.name).toBe('profile');
+    expect(out.held).toEqual([]);
+  });
+
+  it('putState() parses the held pending saves an accepted re-declare names', async () => {
+    const held = { save_id: '17', held_by: '17', subjects: [subject] };
+    const { client } = harness(() =>
+      jsonResponse({ data: { ...declaration, updated_at: null, held: [held] } }),
+    );
+    const out = await client.putState('profile', {
+      name: 'profile',
+      schema: { type: 'object' },
+      subject_kinds: ['person'],
+      default_subject_kind: 'person',
+    });
+    expect(out.held).toEqual([held]);
   });
 
   it('getStateStats() parses the record/field/kind/consumer counts', async () => {

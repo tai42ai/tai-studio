@@ -44,6 +44,10 @@
  *                  store (`GET /api/states*`, `/api/state-templates`): the seeded `notes`
  *                  state's list row, its Declaration / Templates / Records / Consumers
  *                  tabs, and one subject's record page (document + `api` Writes audit).
+ *   - states-pending-saves — the States page's Pending saves card on its All outstanding tab:
+ *                  the newer save held behind a failed save (Retry / Discard), newest first, via a
+ *                  forced `GET /api/state-pending-saves` payload (the demo backend runs no flow
+ *                  whose save can fail).
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
@@ -279,6 +283,53 @@ const BY_MODEL_UNAVAILABLE_METRICS = {
   byModelAvailable: false,
   granularity: 'day',
 };
+
+// The pending-saves payload is FORCED through a route override: a save fails only when its
+// apply is refused after the run committed (a re-declare between the two, or a deferred call
+// that fails), and the demo backend runs no flow that defers a call or stages across a
+// re-declare. Two saves on one `notes` subject: the older one failed its records phase, the
+// newer one waits behind it. Each answer is the door's real page shape (decoded by the
+// studio's strict `pendingSavesPage` schema), answered per `status` filter the way the door
+// filters: `failed` lists the failed save, `outstanding` (or none) both. The ages are
+// relative to the capture, so the Age column reads the same on every run.
+const PENDING_SAVES_SUBJECT = {
+  target_kind: 'tool',
+  target_name: 'studio_demo_echo',
+  kind: 'thread',
+  key: 't-003',
+};
+function pendingSavesPage(status) {
+  const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
+  const failed = {
+    id: '41',
+    status: 'failed',
+    run_id: '7c2e9a1f-4b6d-4e0a-9f3b-5c8d1e2a7b40',
+    states: ['notes'],
+    subjects: [{ state: 'notes', subject: PENDING_SAVES_SUBJECT }],
+    calls: [{ kind: 'tool', target: 'studio_demo_echo' }],
+    attempts: 1,
+    last_error:
+      "ValueValidationError: state 'notes' subject tool/studio_demo_echo/thread/t-003: record invalid under the state schema at $.items[0].id: 7 is not of type 'string'",
+    failed_phase: 'records',
+    created_at: ago(12),
+    failed_at: ago(12),
+  };
+  const held = {
+    id: '42',
+    status: 'pending',
+    run_id: '0b8d3f6a-2c1e-4a7b-8e9f-0a1b2c3d4e5f',
+    states: ['notes'],
+    subjects: [{ state: 'notes', subject: PENDING_SAVES_SUBJECT }],
+    calls: [],
+    attempts: 0,
+    last_error: null,
+    failed_phase: null,
+    created_at: ago(4),
+    failed_at: null,
+  };
+  const items = status === 'failed' ? [failed] : [held, failed];
+  return { items, next_cursor: null, outstanding: 2, failed: 1 };
+}
 
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
@@ -597,12 +648,13 @@ const AUTHED_PAGES = [
     },
   },
   // --- States screens (the platform state store) -------------------------------
-  // The six frames the docs "## States" section shows, all under the seeded `notes`
+  // The seven frames the docs "## States" section shows, all under the seeded `notes`
   // state (the `docs-screenshots.sh` state-store seeding declares it, attaches a template, writes two subject
-  // records and registers a consumer hook). Each waits on a stable, populated element —
-  // a table row, a tab's populated control, or the record page's own document/audit —
-  // never a bare timeout. The content is deterministic (no server timestamp is in
-  // frame), so NONE carry the `nondeterministic` flag.
+  // records and registers a consumer hook; the pending saves are a forced payload). Each waits on a
+  // stable, populated element — a table row, a tab's populated control, or the record page's own
+  // document/audit — never a bare timeout. The content is deterministic (no server timestamp is in
+  // frame; the pending saves' ages are relative to the capture), so NONE carry the
+  // `nondeterministic` flag.
   {
     // The states master list: the declared `notes` row with its subject-kind badges and
     // record/consumer counts.
@@ -654,6 +706,34 @@ const AUTHED_PAGES = [
         .first()
         .waitFor({ state: 'visible', timeout: 8000 });
     },
+  },
+  {
+    // The Pending saves card with a failed save and the outstanding save held behind it,
+    // from the forced pending-saves payload above (the live `notes` list stays beneath it).
+    // The card opens on its Failed tab; the action switches to All outstanding so both rows
+    // are framed, and waits for the newer save's row. The card is captured whole.
+    name: 'states-pending-saves',
+    path: '/states',
+    wait: '[data-testid="pending-saves-summary"]',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/state-pending-saves',
+        (route) =>
+          route.fulfill({
+            json: {
+              data: pendingSavesPage(new URL(route.request().url()).searchParams.get('status')),
+            },
+          }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'All outstanding' }).click();
+      await page
+        .locator('#state-pending-saves')
+        .getByRole('cell', { name: '42', exact: true })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.locator('#state-pending-saves'),
   },
   {
     name: 'dashboard',

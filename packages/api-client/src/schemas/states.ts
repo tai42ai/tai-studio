@@ -36,6 +36,18 @@ export const stateListItem = stateDeclaration.extend({
 export type StateListItem = z.infer<typeof stateListItem>;
 export const stateList = z.array(stateListItem);
 
+/**
+ * One save held by a failed pending save: `save_id` names it, `held_by` the failed save holding it
+ * (equal to `save_id` for the failed save itself), `subjects` the subjects it writes. A scan or
+ * a re-declare that read past it names it in its `held` list.
+ */
+export const heldPendingSave = z.object({
+  save_id: z.string(),
+  held_by: z.string(),
+  subjects: z.array(stateSubject).default([]),
+});
+export type HeldPendingSave = z.infer<typeof heldPendingSave>;
+
 /** One template attachment on a state: where the fragment lands + its param/declaration values. */
 export const stateAttachment = z.object({
   template: z.string(),
@@ -53,6 +65,16 @@ export const stateDetail = stateDeclaration.extend({
 export type StateDetail = z.infer<typeof stateDetail>;
 
 /**
+ * `PUT /api/states/{name}` — a create or re-declare's answer: the stored declaration's fields
+ * plus `held`, the held pending saves an accepted re-declare names (empty when none). The
+ * answer carries no attachments; a caller that needs them reads `getState`.
+ */
+export const stateDeclarationSaved = stateDeclaration.extend({
+  held: z.array(heldPendingSave).default([]),
+});
+export type StateDeclarationSaved = z.infer<typeof stateDeclarationSaved>;
+
+/**
  * `GET /api/states/{name}/stats` — `records` (total documents), `per_field` (the count
  * of records carrying each base-schema property), `per_kind` (records per subject kind)
  * and `consumers` (the count of listable consumers). The Records tab shows `records`;
@@ -63,6 +85,7 @@ export const stateStats = z.object({
   per_field: z.record(z.string(), z.number()).default({}),
   per_kind: z.record(z.string(), z.number()).default({}),
   consumers: z.number().default(0),
+  held: z.array(heldPendingSave).default([]),
 });
 export type StateStats = z.infer<typeof stateStats>;
 
@@ -145,6 +168,7 @@ export type SubjectRow = z.infer<typeof subjectRow>;
 export const subjectPage = z.object({
   subjects: z.array(subjectRow),
   next_cursor: z.string().nullable().default(null),
+  held: z.array(heldPendingSave).default([]),
 });
 export type SubjectPage = z.infer<typeof subjectPage>;
 
@@ -156,6 +180,7 @@ export type SubjectPage = z.infer<typeof subjectPage>;
 export const recordSearchPage = z.object({
   matches: z.array(subjectRow),
   next_cursor: z.string().nullable().default(null),
+  held: z.array(heldPendingSave).default([]),
 });
 export type RecordSearchPage = z.infer<typeof recordSearchPage>;
 
@@ -224,6 +249,7 @@ export const stateAttached = z.object({
   attached: z.literal(true),
   state: z.string(),
   template: z.string(),
+  held: z.array(heldPendingSave).default([]),
 });
 export type StateAttached = z.infer<typeof stateAttached>;
 
@@ -232,6 +258,7 @@ export const stateAttachmentUpdated = z.object({
   updated: z.literal(true),
   state: z.string(),
   template: z.string(),
+  held: z.array(heldPendingSave).default([]),
 });
 export type StateAttachmentUpdated = z.infer<typeof stateAttachmentUpdated>;
 
@@ -269,5 +296,56 @@ export const recordErased = z.object({ erased: z.literal(true) });
  */
 export const stateRetentionPruned = z.object({
   pruned: z.record(z.string(), z.number()).default({}),
+  held: z.array(heldPendingSave).default([]),
 });
 export type StateRetentionPruned = z.infer<typeof stateRetentionPruned>;
+
+/** A pending save's lifecycle: records waiting, calls queued, a call running, or failed (held). */
+export const pendingSaveStatus = z.enum(['pending', 'calls', 'running', 'failed']);
+export type PendingSaveStatus = z.infer<typeof pendingSaveStatus>;
+
+/**
+ * One outstanding pending state save (`GET /api/state-pending-saves`): what it writes and calls,
+ * never the record data or call arguments. `failed_phase` says which part failed.
+ */
+export const pendingSave = z.object({
+  id: z.string(),
+  status: pendingSaveStatus,
+  run_id: z.string().nullable(),
+  states: z.array(z.string()),
+  subjects: z.array(z.object({ state: z.string(), subject: stateSubject })),
+  calls: z.array(z.object({ kind: z.string(), target: z.string() })),
+  attempts: z.number(),
+  last_error: z.string().nullable(),
+  failed_phase: z.enum(['records', 'calls']).nullable(),
+  created_at: z.string(),
+  failed_at: z.string().nullable(),
+});
+export type PendingSave = z.infer<typeof pendingSave>;
+
+/**
+ * A page of pending saves, newest first, with the totals of every `outstanding` and every
+ * `failed` save; `next_cursor` continues the page (`null` at the end).
+ */
+export const pendingSavesPage = z.object({
+  items: z.array(pendingSave),
+  next_cursor: z.string().nullable().default(null),
+  outstanding: z.number(),
+  failed: z.number(),
+});
+export type PendingSavesPage = z.infer<typeof pendingSavesPage>;
+
+/**
+ * `POST /api/state-pending-saves/{id}/retry` — the save's status after its records phase:
+ * `applied` (it landed whole), `pending`/`calls`/`running` (queued again), or `failed` again
+ * with its `last_error`.
+ */
+export const pendingSaveRetried = z.object({
+  id: z.string(),
+  status: z.enum(['applied', 'pending', 'calls', 'running', 'failed']),
+  last_error: z.string().nullable(),
+});
+export type PendingSaveRetried = z.infer<typeof pendingSaveRetried>;
+
+/** `DELETE /api/state-pending-saves/{id}` — the discarded save's id. */
+export const pendingSaveDiscarded = z.object({ discarded: z.string() });
