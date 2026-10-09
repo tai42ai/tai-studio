@@ -5,7 +5,7 @@
  * server-side match over the records and lists the hits. Every result opens the record
  * page through the shell router (`?state=&subject=&target=`).
  */
-import type { StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
+import type { HeldPendingSave, StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -32,7 +32,8 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, type SyntheticEvent, useState } from 'react';
 
-import { conversationTargetsKey, stateSearchKey, stateSubjectsKey } from './keys';
+import { conversationTargetsKey, stateSearchKey, stateSubjectsKey, subjectIdentity } from './keys';
+import { PENDING_SAVES_CARD_ID } from './PendingSavesCard';
 import { formatSubjectParam, formatTargetParam } from './record-subject';
 
 const PERSON_KIND = 'person';
@@ -268,6 +269,7 @@ function SubjectsBrowser({
             />
           </Field>
         </div>
+        {page !== undefined ? <HeldSubjectsLine held={page.held} /> : null}
         {query.isPending && rows.length === 0 ? (
           <Skeleton height={120} />
         ) : query.isError ? (
@@ -337,6 +339,41 @@ function SubjectsBrowser({
  * The content search: a JSONB containment match over the state's records. The box takes
  * a JSON object (validated client-side); each hit is a subject the record page opens.
  */
+/**
+ * The line above a Records table when some of the state's subjects are held by a failed pending
+ * save: their rows show the last applied data. "Pending saves" scrolls to the card that retries
+ * or discards the save. Nothing renders when no subject is held.
+ */
+function HeldSubjectsLine({ held }: { readonly held: readonly HeldPendingSave[] }): ReactNode {
+  const subjects = new Set(
+    held.flatMap((save) => save.subjects.map((subject) => subjectIdentity(subject))),
+  );
+  if (subjects.size === 0) return null;
+  return (
+    <p style={{ margin: 0, color: 'var(--tai-color-warn-text)' }} data-testid="held-subjects-line">
+      {subjects.size} subject(s) on this state are held by a failed pending save and show their last
+      applied data. Retry or discard it under{' '}
+      <button
+        type="button"
+        className="tai-link"
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          font: 'inherit',
+          cursor: 'pointer',
+        }}
+        onClick={() => {
+          document.getElementById(PENDING_SAVES_CARD_ID)?.scrollIntoView({ behavior: 'smooth' });
+        }}
+      >
+        Pending saves
+      </button>
+      .
+    </p>
+  );
+}
+
 function RecordSearch({
   stateName,
   onOpen,
@@ -409,45 +446,51 @@ function RecordSearch({
         ) : search.isError ? (
           <ErrorState message={errorMessage(search.error)} onRetry={() => void search.refetch()} />
         ) : search.data.matches.length === 0 ? (
-          <EmptyState title="No matches" description="No record contained those filters." />
+          <>
+            <HeldSubjectsLine held={search.data.held} />
+            <EmptyState title="No matches" description="No record contained those filters." />
+          </>
         ) : (
-          <Table>
-            <THead>
-              <TR>
-                <TH>Kind</TH>
-                <TH>Key</TH>
-                <TH>Target</TH>
-                <TH>Updated</TH>
-                <TH>Actions</TH>
-              </TR>
-            </THead>
-            <TBody>
-              {search.data.matches.map((item) => (
-                <TR
-                  key={`${item.subject.target_kind}:${item.subject.target_name}:${item.subject.kind}:${item.subject.key}`}
-                >
-                  <TD>{item.subject.kind}</TD>
-                  <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{item.subject.key}</TD>
-                  <TD>
-                    {item.subject.target_kind} {item.subject.target_name}
-                  </TD>
-                  <TD style={{ whiteSpace: 'nowrap' }} title={isoWhen(item.updated_at)}>
-                    {formatWhen(item.updated_at)}
-                  </TD>
-                  <TD>
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        onOpen(item.subject);
-                      }}
-                    >
-                      Open
-                    </Button>
-                  </TD>
+          <>
+            <HeldSubjectsLine held={search.data.held} />
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Kind</TH>
+                  <TH>Key</TH>
+                  <TH>Target</TH>
+                  <TH>Updated</TH>
+                  <TH>Actions</TH>
                 </TR>
-              ))}
-            </TBody>
-          </Table>
+              </THead>
+              <TBody>
+                {search.data.matches.map((item) => (
+                  <TR
+                    key={`${item.subject.target_kind}:${item.subject.target_name}:${item.subject.kind}:${item.subject.key}`}
+                  >
+                    <TD>{item.subject.kind}</TD>
+                    <TD style={{ fontFamily: 'var(--tai-font-mono)' }}>{item.subject.key}</TD>
+                    <TD>
+                      {item.subject.target_kind} {item.subject.target_name}
+                    </TD>
+                    <TD style={{ whiteSpace: 'nowrap' }} title={isoWhen(item.updated_at)}>
+                      {formatWhen(item.updated_at)}
+                    </TD>
+                    <TD>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          onOpen(item.subject);
+                        }}
+                      >
+                        Open
+                      </Button>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </>
         )}
       </div>
     </Card>
