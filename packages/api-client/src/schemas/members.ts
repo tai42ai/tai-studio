@@ -29,7 +29,8 @@ export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
  * (`GET /api/auth/members` → `members[]`). `id` is the provider's stable handle for
  * the person (a list key, not shown). `email` is the sign-in identity; `role` names
  * the platform role the person holds (the NAME only — the role definition is read
- * from the role listing). `principals` carries each principal's platform-joined
+ * from the role listing), or `null` when the person's access was not written from a
+ * role template. `principals` carries each principal's platform-joined
  * state; `disabled` is derived True only when EVERY principal is disabled, so a
  * person with any enabled principal still reads active while the per-principal truth
  * stays visible. `handle` routes an invoke back to the producing provider and pins
@@ -40,7 +41,7 @@ export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
 export const memberRow = z.object({
   id: z.string(),
   email: z.string(),
-  role: z.string(),
+  role: z.string().nullable(),
   created_at: z.string(),
   principals: z.array(memberPrincipalState),
   disabled: z.boolean(),
@@ -53,7 +54,7 @@ export type MemberRow = z.infer<typeof memberRow>;
  * One outstanding invitation an accounts provider holds, as the directory door
  * returns them (`GET /api/auth/members` → `invites[]`). `id` is the provider's
  * stable handle for the invited person; `email` is the invited address; `role` names
- * the platform role they will hold (name only, as on {@link memberRow}). An
+ * the platform role they will hold (name only, or `null`, as on {@link memberRow}). An
  * invitation holds no principal, so it carries no principal state. `handle` and
  * `action_keys` are the opaque routing tokens (see {@link memberRow}). `created_at`
  * and `expires_at` are ISO-8601 instants.
@@ -61,7 +62,7 @@ export type MemberRow = z.infer<typeof memberRow>;
 export const inviteRow = z.object({
   id: z.string(),
   email: z.string(),
-  role: z.string(),
+  role: z.string().nullable(),
   created_at: z.string(),
   expires_at: z.string(),
   handle: z.string(),

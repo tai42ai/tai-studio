@@ -122,6 +122,28 @@ describe('MembersPage listing', () => {
     expect(within(invitesTable).getByText('viewer')).toBeInTheDocument();
   });
 
+  it('renders a null role as the neutral "No role" badge with its explanation', async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
+        members: [{ ...member, role: null }],
+        invites: [{ ...invite, role: null }],
+      }),
+    });
+    renderPage(client);
+
+    const peopleTable = await screen.findByTestId('members-table');
+    const memberBadge = within(peopleTable).getByTestId('no-role-badge');
+    expect(memberBadge).toHaveTextContent('No role');
+    expect(within(memberBadge).getByText('No role')).toHaveAttribute('data-variant', 'neutral');
+    const invitesTable = screen.getByTestId('invites-table');
+    expect(within(invitesTable).getByTestId('no-role-badge')).toHaveTextContent('No role');
+
+    // Keyboard reachable: focusing the badge opens its explanation.
+    memberBadge.focus();
+    const note = await screen.findByRole('tooltip');
+    expect(note).toHaveTextContent("This member's access was set directly, not from a role.");
+  });
+
   it('reads active with a partially-disabled badge when only some principals are off', async () => {
     const client = stubClient({
       listMembers: vi.fn().mockResolvedValue({
