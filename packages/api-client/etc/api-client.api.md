@@ -2065,7 +2065,7 @@ export function createApiClient(config: ApiConfig): {
         members: {
             id: string;
             email: string;
-            role: string;
+            role: string | null;
             created_at: string;
             principals: {
                 user_id: string;
@@ -2078,7 +2078,7 @@ export function createApiClient(config: ApiConfig): {
         invites: {
             id: string;
             email: string;
-            role: string;
+            role: string | null;
             created_at: string;
             expires_at: string;
             handle: string;
@@ -5441,7 +5441,7 @@ export type InviteRow = z.infer<typeof inviteRow>;
 const inviteRow: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
-    role: z.ZodString;
+    role: z.ZodNullable<z.ZodString>;
     created_at: z.ZodString;
     expires_at: z.ZodString;
     handle: z.ZodString;
@@ -6444,7 +6444,7 @@ const memberDirectory: z.ZodObject<{
     members: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         email: z.ZodString;
-        role: z.ZodString;
+        role: z.ZodNullable<z.ZodString>;
         created_at: z.ZodString;
         principals: z.ZodArray<z.ZodObject<{
             user_id: z.ZodString;
@@ -6457,7 +6457,7 @@ const memberDirectory: z.ZodObject<{
     invites: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         email: z.ZodString;
-        role: z.ZodString;
+        role: z.ZodNullable<z.ZodString>;
         created_at: z.ZodString;
         expires_at: z.ZodString;
         handle: z.ZodString;
@@ -6481,7 +6481,7 @@ export type MemberRow = z.infer<typeof memberRow>;
 const memberRow: z.ZodObject<{
     id: z.ZodString;
     email: z.ZodString;
-    role: z.ZodString;
+    role: z.ZodNullable<z.ZodString>;
     created_at: z.ZodString;
     principals: z.ZodArray<z.ZodObject<{
         user_id: z.ZodString;
