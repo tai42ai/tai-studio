@@ -103,3 +103,10 @@ export function stateWritesKey(
 
 /** Key for the conversation-target list feeding the record-lookup target picker. */
 export const conversationTargetsKey = [STATES_KEY_ROOT, 'targets'] as const;
+
+/** Key for one page-set of pending saves, by the card's status filter. */
+export function statePendingSavesKey(
+  status: 'outstanding' | 'failed',
+): readonly [typeof STATES_KEY_ROOT, 'pending-saves', string] {
+  return [STATES_KEY_ROOT, 'pending-saves', status];
+}

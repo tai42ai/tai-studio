@@ -593,8 +593,8 @@ export type ConversationConfigDeleted = z.infer<typeof conversationConfigDeleted
 const conversationConfigDeleted: z.ZodObject<{
     removed: z.ZodBoolean;
     target_kind: z.ZodEnum<{
-        agent: "agent";
         tool: "tool";
+        agent: "agent";
     }>;
     target_name: z.ZodString;
 }, z.core.$strip>;
@@ -651,8 +651,8 @@ const conversationConfigs: z.ZodObject<{
             }, z.core.$strict>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            agent: "agent";
             tool: "tool";
+            agent: "agent";
         }>;
         target_name: z.ZodString;
     }, z.core.$strip>>;
@@ -666,8 +666,8 @@ export type ConversationConfigWritten = z.infer<typeof conversationConfigWritten
 const conversationConfigWritten: z.ZodObject<{
     created: z.ZodBoolean;
     target_kind: z.ZodEnum<{
-        agent: "agent";
         tool: "tool";
+        agent: "agent";
     }>;
     target_name: z.ZodString;
     config: z.ZodObject<{
@@ -717,8 +717,8 @@ const conversationConfigWritten: z.ZodObject<{
             }, z.core.$strict>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            agent: "agent";
             tool: "tool";
+            agent: "agent";
         }>;
         target_name: z.ZodString;
     }, z.core.$strip>;
@@ -729,11 +729,11 @@ export type ConversationDeliveryStatus = z.infer<typeof conversationDeliveryStat
 
 // @public
 const conversationDeliveryStatus: z.ZodEnum<{
-    failed: "failed";
     accepted: "accepted";
     pending_delivery: "pending_delivery";
     provisional: "provisional";
     delivered: "delivered";
+    failed: "failed";
     shed: "shed";
     silent: "silent";
     merged: "merged";
@@ -780,11 +780,11 @@ const conversationFailedMessages: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -833,11 +833,11 @@ const conversationMessage: z.ZodObject<{
         operator: "operator";
     }>;
     delivery_status: z.ZodEnum<{
-        failed: "failed";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
+        failed: "failed";
         shed: "shed";
         silent: "silent";
         merged: "merged";
@@ -890,11 +890,11 @@ const conversationMessageSearchPage: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -1011,8 +1011,8 @@ const conversationRoute: z.ZodObject<{
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodNull]>>;
     target_kind: z.ZodEnum<{
-        agent: "agent";
         tool: "tool";
+        agent: "agent";
     }>;
     target_name: z.ZodString;
     turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -1075,8 +1075,8 @@ const conversationRouteCreate: z.ZodObject<{
         kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
     }, z.core.$strict>, z.ZodNull]>>;
     target_kind: z.ZodEnum<{
-        agent: "agent";
         tool: "tool";
+        agent: "agent";
     }>;
     target_name: z.ZodString;
     turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -1151,8 +1151,8 @@ const conversationRoutes: z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            agent: "agent";
             tool: "tool";
+            agent: "agent";
         }>;
         target_name: z.ZodString;
         turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -1222,8 +1222,8 @@ const conversationRouteWritten: z.ZodObject<{
             kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
         }, z.core.$strict>, z.ZodNull]>>;
         target_kind: z.ZodEnum<{
-            agent: "agent";
             tool: "tool";
+            agent: "agent";
         }>;
         target_name: z.ZodString;
         turns_per_hour_override: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
@@ -1236,8 +1236,8 @@ export type ConversationTargetKind = z.infer<typeof conversationTargetKind>;
 
 // @public
 const conversationTargetKind: z.ZodEnum<{
-    agent: "agent";
     tool: "tool";
+    agent: "agent";
 }>;
 
 // @public (undocumented)
@@ -1250,11 +1250,11 @@ const conversationThread: z.ZodObject<{
     last_activity_at: z.ZodNumber;
     message_count: z.ZodNumber;
     last_delivery_status: z.ZodEnum<{
-        failed: "failed";
         accepted: "accepted";
         pending_delivery: "pending_delivery";
         provisional: "provisional";
         delivered: "delivered";
+        failed: "failed";
         shed: "shed";
         silent: "silent";
         merged: "merged";
@@ -1339,11 +1339,11 @@ const conversationThreadsPage: z.ZodObject<{
         last_activity_at: z.ZodNumber;
         message_count: z.ZodNumber;
         last_delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -1392,11 +1392,11 @@ const conversationTranscriptPage: z.ZodObject<{
             operator: "operator";
         }>;
         delivery_status: z.ZodEnum<{
-            failed: "failed";
             accepted: "accepted";
             pending_delivery: "pending_delivery";
             provisional: "provisional";
             delivered: "delivered";
+            failed: "failed";
             shed: "shed";
             silent: "silent";
             merged: "merged";
@@ -1502,7 +1502,7 @@ export function createApiClient(config: ApiConfig): {
                     base: string;
                     paths: {
                         path: string;
-                        methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+                        methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
                         public: boolean;
                     }[];
                 } | null | undefined;
@@ -1557,26 +1557,26 @@ export function createApiClient(config: ApiConfig): {
             routes: {
                 path: string;
                 full_path: string;
-                methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+                methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
                 public: boolean;
             }[];
         }[];
         collisions: {
             item: string;
             full_path: string;
-            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+            methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
             conflict_owner: string;
             conflict_path: string;
         }[];
         public_routes: {
             item: string;
             full_path: string;
-            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+            methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
         }[];
         new_public_routes: {
             item: string;
             full_path: string;
-            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+            methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
         }[];
         requires_public_acceptance: boolean;
         required_env: {
@@ -1602,7 +1602,7 @@ export function createApiClient(config: ApiConfig): {
         routes: {
             item: string;
             full_path: string;
-            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+            methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
             public: boolean;
         }[];
     }>;
@@ -1627,7 +1627,7 @@ export function createApiClient(config: ApiConfig): {
         routes: {
             item: string;
             full_path: string;
-            methods: ("POST" | "DELETE" | "PUT" | "PATCH" | "GET")[];
+            methods: ("PUT" | "DELETE" | "PATCH" | "POST" | "GET")[];
             public: boolean;
         }[];
     }>;
@@ -2209,7 +2209,7 @@ export function createApiClient(config: ApiConfig): {
             name: string;
             topic: string;
             execution_key: string;
-            trigger_auth: "token" | "public" | "verifier" | "token+api_key" | "out-of-service";
+            trigger_auth: "token" | "verifier" | "public" | "token+api_key" | "out-of-service";
             tool_kwargs: Record<string, unknown> | null;
             created_by: string | null;
             created_at: string;
@@ -2314,7 +2314,7 @@ export function createApiClient(config: ApiConfig): {
             verifier: string;
             config: Record<string, unknown>;
         }>;
-        trigger_auth: Record<string, "token" | "public" | "verifier" | "token+api_key" | "out-of-service">;
+        trigger_auth: Record<string, "token" | "verifier" | "public" | "token+api_key" | "out-of-service">;
     }>;
     readonly registerHook: (params: HookRegister) => Promise<{
         registered: boolean;
@@ -2933,7 +2933,7 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly disconnect: (id: string) => Promise<{
         connection_id: string;
-        upstream_revoke_outcome: "success" | "failed" | "skipped";
+        upstream_revoke_outcome: "success" | "skipped" | "failed";
         upstream_revoke_status: number | null;
         removed_manifest_entries: string[];
         fanout: {
@@ -3779,11 +3779,15 @@ export function createApiClient(config: ApiConfig): {
         retention_days: number | null;
         subject_kinds: string[];
         updated_at: string | null;
-        attachments: {
-            template: string;
-            path: string[];
-            parameters: Record<string, unknown>;
-            declarations: Record<string, unknown>;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
         }[];
         schema?: Record<string, unknown> | {
             content?: string | undefined;
@@ -3800,6 +3804,16 @@ export function createApiClient(config: ApiConfig): {
         per_field: Record<string, number>;
         per_kind: Record<string, number>;
         consumers: number;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
+        }[];
     }>;
     readonly listStateAttachments: (name: string, signal?: AbortSignal) => Promise<{
         template: string;
@@ -3817,11 +3831,31 @@ export function createApiClient(config: ApiConfig): {
         attached: true;
         state: string;
         template: string;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
+        }[];
     }>;
     readonly patchStateAttachment: (name: string, template: string, body: StateAttachmentBody) => Promise<{
         updated: true;
         state: string;
         template: string;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
+        }[];
     }>;
     readonly detachStateTemplate: (name: string, template: string) => Promise<{
         detached: true;
@@ -3841,6 +3875,16 @@ export function createApiClient(config: ApiConfig): {
             updated_at: number;
         }[];
         next_cursor: string | null;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
+        }[];
     }>;
     readonly searchStateRecords: (name: string, body: {
         filters: Record<string, unknown>;
@@ -3855,6 +3899,16 @@ export function createApiClient(config: ApiConfig): {
             updated_at: number;
         }[];
         next_cursor: string | null;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
+        }[];
     }>;
     readonly getStateRecord: (name: string, subject: StateSubjectRef, signal?: AbortSignal) => Promise<{
         state: string;
@@ -4173,6 +4227,55 @@ export function createApiClient(config: ApiConfig): {
     }>;
     readonly pruneStateRetention: () => Promise<{
         pruned: Record<string, number>;
+        held: {
+            save_id: string;
+            held_by: string;
+            subjects: {
+                target_kind: "agent" | "tool";
+                target_name: string;
+                kind: string;
+                key: string;
+            }[];
+        }[];
+    }>;
+    readonly listPendingSaves: (params: {
+        status?: "outstanding" | "failed";
+    } & StatePageQuery, signal?: AbortSignal) => Promise<{
+        items: {
+            id: string;
+            status: "pending" | "calls" | "running" | "failed";
+            run_id: string | null;
+            states: string[];
+            subjects: {
+                state: string;
+                subject: {
+                    target_kind: "agent" | "tool";
+                    target_name: string;
+                    kind: string;
+                    key: string;
+                };
+            }[];
+            calls: {
+                kind: string;
+                target: string;
+            }[];
+            attempts: number;
+            last_error: string | null;
+            failed_phase: "records" | "calls" | null;
+            created_at: string;
+            failed_at: string | null;
+        }[];
+        next_cursor: string | null;
+        outstanding: number;
+        failed: number;
+    }>;
+    readonly retryPendingSave: (id: string) => Promise<{
+        id: string;
+        status: "applied" | "pending" | "calls" | "running" | "failed";
+        last_error: string | null;
+    }>;
+    readonly discardPendingSave: (id: string) => Promise<{
+        discarded: string;
     }>;
     readonly listPresets: (signal?: AbortSignal) => Promise<{
         name: string;
@@ -5060,6 +5163,24 @@ const grantLevel: z.ZodEnum<{
 }>;
 
 // @public (undocumented)
+export type HeldPendingSave = z.infer<typeof heldPendingSave>;
+
+// @public
+const heldPendingSave: z.ZodObject<{
+    save_id: z.ZodString;
+    held_by: z.ZodString;
+    subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        target_kind: z.ZodEnum<{
+            agent: "agent";
+            tool: "tool";
+        }>;
+        target_name: z.ZodString;
+        kind: z.ZodString;
+        key: z.ZodString;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type HookList = z.infer<typeof hookList>;
 
 // @public (undocumented)
@@ -5144,8 +5265,8 @@ const hookList: z.ZodObject<{
             }, z.core.$strict>;
             kind: z.ZodString;
             target_kind: z.ZodEnum<{
-                agent: "agent";
                 tool: "tool";
+                agent: "agent";
             }>;
             target_name: z.ZodString;
         }, z.core.$strict>, z.ZodNull]>>;
@@ -5251,8 +5372,8 @@ const hookParams: z.ZodObject<{
         }, z.core.$strict>;
         kind: z.ZodString;
         target_kind: z.ZodEnum<{
-            agent: "agent";
             tool: "tool";
+            agent: "agent";
         }>;
         target_name: z.ZodString;
     }, z.core.$strict>, z.ZodNull]>>;
@@ -5344,8 +5465,8 @@ const hookRegister: z.ZodObject<{
         }, z.core.$strict>;
         kind: z.ZodString;
         target_kind: z.ZodEnum<{
-            agent: "agent";
             tool: "tool";
+            agent: "agent";
         }>;
         target_name: z.ZodString;
     }, z.core.$strict>, z.ZodNull]>>;
@@ -5378,8 +5499,8 @@ const hookSubject: z.ZodObject<{
     }, z.core.$strict>;
     kind: z.ZodString;
     target_kind: z.ZodEnum<{
-        agent: "agent";
         tool: "tool";
+        agent: "agent";
     }>;
     target_name: z.ZodString;
 }, z.core.$strict>;
@@ -6819,6 +6940,123 @@ const patternEntry: z.ZodObject<{
     scope_id: z.ZodString;
 }, z.core.$strip>;
 
+// @public (undocumented)
+export type PendingSave = z.infer<typeof pendingSave>;
+
+// @public
+const pendingSave: z.ZodObject<{
+    id: z.ZodString;
+    status: z.ZodEnum<{
+        pending: "pending";
+        calls: "calls";
+        running: "running";
+        failed: "failed";
+    }>;
+    run_id: z.ZodNullable<z.ZodString>;
+    states: z.ZodArray<z.ZodString>;
+    subjects: z.ZodArray<z.ZodObject<{
+        state: z.ZodString;
+        subject: z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>;
+    }, z.core.$strip>>;
+    calls: z.ZodArray<z.ZodObject<{
+        kind: z.ZodString;
+        target: z.ZodString;
+    }, z.core.$strip>>;
+    attempts: z.ZodNumber;
+    last_error: z.ZodNullable<z.ZodString>;
+    failed_phase: z.ZodNullable<z.ZodEnum<{
+        records: "records";
+        calls: "calls";
+    }>>;
+    created_at: z.ZodString;
+    failed_at: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+
+// @public
+const pendingSaveDiscarded: z.ZodObject<{
+    discarded: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type PendingSaveRetried = z.infer<typeof pendingSaveRetried>;
+
+// @public
+const pendingSaveRetried: z.ZodObject<{
+    id: z.ZodString;
+    status: z.ZodEnum<{
+        applied: "applied";
+        pending: "pending";
+        calls: "calls";
+        running: "running";
+        failed: "failed";
+    }>;
+    last_error: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type PendingSavesPage = z.infer<typeof pendingSavesPage>;
+
+// @public
+const pendingSavesPage: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        id: z.ZodString;
+        status: z.ZodEnum<{
+            pending: "pending";
+            calls: "calls";
+            running: "running";
+            failed: "failed";
+        }>;
+        run_id: z.ZodNullable<z.ZodString>;
+        states: z.ZodArray<z.ZodString>;
+        subjects: z.ZodArray<z.ZodObject<{
+            state: z.ZodString;
+            subject: z.ZodObject<{
+                target_kind: z.ZodEnum<{
+                    agent: "agent";
+                    tool: "tool";
+                }>;
+                target_name: z.ZodString;
+                kind: z.ZodString;
+                key: z.ZodString;
+            }, z.core.$strip>;
+        }, z.core.$strip>>;
+        calls: z.ZodArray<z.ZodObject<{
+            kind: z.ZodString;
+            target: z.ZodString;
+        }, z.core.$strip>>;
+        attempts: z.ZodNumber;
+        last_error: z.ZodNullable<z.ZodString>;
+        failed_phase: z.ZodNullable<z.ZodEnum<{
+            records: "records";
+            calls: "calls";
+        }>>;
+        created_at: z.ZodString;
+        failed_at: z.ZodNullable<z.ZodString>;
+    }, z.core.$strip>>;
+    next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outstanding: z.ZodNumber;
+    failed: z.ZodNumber;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type PendingSaveStatus = z.infer<typeof pendingSaveStatus>;
+
+// @public
+const pendingSaveStatus: z.ZodEnum<{
+    pending: "pending";
+    calls: "calls";
+    running: "running";
+    failed: "failed";
+}>;
+
 // @public
 const pinPublicResult: z.ZodObject<{
     url: z.ZodString;
@@ -7479,6 +7717,19 @@ const recordSearchPage: z.ZodObject<{
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
     next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -8423,11 +8674,15 @@ declare namespace s {
         stateListItem,
         StateListItem,
         stateList,
+        heldPendingSave,
+        HeldPendingSave,
         stateAttachment,
         StateAttachment,
         stateAttachmentList,
         stateDetail,
         StateDetail,
+        stateDeclarationSaved,
+        StateDeclarationSaved,
         stateStats,
         StateStats,
         stateTemplateListItem,
@@ -8472,6 +8727,15 @@ declare namespace s {
         recordErased,
         stateRetentionPruned,
         StateRetentionPruned,
+        pendingSaveStatus,
+        PendingSaveStatus,
+        pendingSave,
+        PendingSave,
+        pendingSavesPage,
+        PendingSavesPage,
+        pendingSaveRetried,
+        PendingSaveRetried,
+        pendingSaveDiscarded,
         storageInfo,
         StorageInfo,
         storageResourceList,
@@ -9024,11 +9288,15 @@ declare namespace schemas {
         stateListItem,
         StateListItem,
         stateList,
+        heldPendingSave,
+        HeldPendingSave,
         stateAttachment,
         StateAttachment,
         stateAttachmentList,
         stateDetail,
         StateDetail,
+        stateDeclarationSaved,
+        StateDeclarationSaved,
         stateStats,
         StateStats,
         stateTemplateListItem,
@@ -9073,6 +9341,15 @@ declare namespace schemas {
         recordErased,
         stateRetentionPruned,
         StateRetentionPruned,
+        pendingSaveStatus,
+        PendingSaveStatus,
+        pendingSave,
+        PendingSave,
+        pendingSavesPage,
+        PendingSavesPage,
+        pendingSaveRetried,
+        PendingSaveRetried,
+        pendingSaveDiscarded,
         storageInfo,
         StorageInfo,
         storageResourceList,
@@ -9479,6 +9756,19 @@ const stateAttached: z.ZodObject<{
     attached: z.ZodLiteral<true>;
     state: z.ZodString;
     template: z.ZodString;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9520,6 +9810,19 @@ const stateAttachmentUpdated: z.ZodObject<{
     updated: z.ZodLiteral<true>;
     state: z.ZodString;
     template: z.ZodString;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9628,6 +9931,46 @@ export interface StateDeclarationBody {
     // (undocumented)
     readonly subject_kinds: readonly string[];
 }
+
+// @public (undocumented)
+export type StateDeclarationSaved = z.infer<typeof stateDeclarationSaved>;
+
+// @public
+const stateDeclarationSaved: z.ZodObject<{
+    default_subject_kind: z.ZodString;
+    description: z.ZodDefault<z.ZodString>;
+    effective_schema: z.ZodDefault<z.ZodUnion<readonly [z.ZodRecord<z.ZodString, z.ZodUnknown>, z.ZodNull]>>;
+    name: z.ZodString;
+    regimes: z.ZodDefault<z.ZodUnion<readonly [z.ZodArray<z.ZodObject<{
+        path: z.ZodArray<z.ZodString>;
+        regime: z.ZodEnum<{
+            single: "single";
+            composing: "composing";
+            free: "free";
+        }>;
+    }, z.core.$strict>>, z.ZodNull]>>;
+    retention_days: z.ZodDefault<z.ZodUnion<readonly [z.ZodNumber, z.ZodNull]>>;
+    schema: z.ZodOptional<z.ZodUnion<readonly [z.ZodObject<{
+        content: z.ZodOptional<z.ZodString>;
+        id: z.ZodOptional<z.ZodString>;
+        kwargs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+    }, z.core.$strict>, z.ZodRecord<z.ZodString, z.ZodUnknown>]>>;
+    subject_kinds: z.ZodArray<z.ZodString>;
+    updated_at: z.ZodDefault<z.ZodUnion<readonly [z.ZodString, z.ZodNull]>>;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
+}, z.core.$strict>;
 
 // @public
 const stateDeleted: z.ZodObject<{
@@ -9831,6 +10174,19 @@ export type StateRetentionPruned = z.infer<typeof stateRetentionPruned>;
 // @public
 const stateRetentionPruned: z.ZodObject<{
     pruned: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -9842,6 +10198,19 @@ const stateStats: z.ZodObject<{
     per_field: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
     per_kind: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodNumber>>;
     consumers: z.ZodDefault<z.ZodNumber>;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -10248,6 +10617,19 @@ const subjectPage: z.ZodObject<{
         updated_at: z.ZodNumber;
     }, z.core.$strip>>;
     next_cursor: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    held: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        save_id: z.ZodString;
+        held_by: z.ZodString;
+        subjects: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            target_kind: z.ZodEnum<{
+                agent: "agent";
+                tool: "tool";
+            }>;
+            target_name: z.ZodString;
+            kind: z.ZodString;
+            key: z.ZodString;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -10395,8 +10777,8 @@ const targetConversationConfig: z.ZodObject<{
         }, z.core.$strict>>;
     }, z.core.$strict>, z.ZodNull]>>;
     target_kind: z.ZodEnum<{
-        agent: "agent";
         tool: "tool";
+        agent: "agent";
     }>;
     target_name: z.ZodString;
 }, z.core.$strip>;

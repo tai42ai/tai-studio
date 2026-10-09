@@ -102,9 +102,10 @@ function stateDeclarationMethods(t: Transport) {
       req(`/api/states/${encodeSegment(name)}`, s.stateDetail, { signal }),
     // A plain declaration upsert — no `replace` flag. With records present the server
     // accepts additive schema changes and refuses with a 409 any change that removes or
-    // alters an existing field, or a subject-kind removal that would strand records.
+    // alters an existing field, or a subject-kind removal that would strand records. The
+    // answer is the stored declaration plus the held pending saves it was accepted beside.
     putState: (name: string, body: StateDeclarationBody) =>
-      req(`/api/states/${encodeSegment(name)}`, s.stateDetail, {
+      req(`/api/states/${encodeSegment(name)}`, s.stateDeclarationSaved, {
         method: 'PUT',
         body,
       }),
@@ -278,11 +279,40 @@ function stateTemplateMethods(t: Transport) {
   };
 }
 
+/**
+ * Pending saves: the writes and deferred calls a run saved before its reply and that apply after
+ * it. A failed one holds its subjects until it is retried (after its cause is repaired) or
+ * discarded. `status` `failed` lists the failed ones only; `outstanding` (or none) every one.
+ */
+function statePendingSaveMethods(t: Transport) {
+  const { req } = t;
+  return {
+    listPendingSaves: (
+      params: { status?: 'outstanding' | 'failed' } & StatePageQuery,
+      signal?: AbortSignal,
+    ) =>
+      req('/api/state-pending-saves', s.pendingSavesPage, {
+        signal,
+        query: { status: params.status, limit: params.limit, cursor: params.cursor },
+      }),
+    retryPendingSave: (id: string) =>
+      req(`/api/state-pending-saves/${encodeSegment(id)}/retry`, s.pendingSaveRetried, {
+        method: 'POST',
+        body: {},
+      }),
+    discardPendingSave: (id: string) =>
+      req(`/api/state-pending-saves/${encodeSegment(id)}`, s.pendingSaveDiscarded, {
+        method: 'DELETE',
+      }),
+  };
+}
+
 export function statesClient(t: Transport) {
   // Declaration emit prepends each spread group's members, so the groups are
   // spread in reverse of their public order to keep the surface declaration →
-  // attachments → records → record-ops → templates.
+  // attachments → records → record-ops → templates → pending saves.
   return {
+    ...statePendingSaveMethods(t),
     ...stateTemplateMethods(t),
     ...stateRecordOpMethods(t),
     ...stateRecordMethods(t),
