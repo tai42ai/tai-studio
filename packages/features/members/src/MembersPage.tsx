@@ -37,6 +37,7 @@ import {
   TD,
   TH,
   THead,
+  Tooltip,
   TR,
   useApi,
 } from '@tai42/studio-sdk';
@@ -96,6 +97,36 @@ function formatInstant(value: string): string {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
   return parsed.toLocaleString();
+}
+
+const NO_ROLE_LABEL = 'No role';
+const NO_ROLE_NOTE = "This member's access was set directly, not from a role.";
+
+/** The `No role` badge's trigger: a bare button, so the badge alone is what shows. */
+const noRoleTriggerStyle: CSSProperties = {
+  padding: 0,
+  border: 'none',
+  background: 'none',
+  font: 'inherit',
+  cursor: 'help',
+};
+
+/**
+ * A row's role as a neutral badge. A `null` role — access not written from a role
+ * template — reads `No role`, with a tooltip saying so; the badge sits in a button so the
+ * explanation opens on keyboard focus as well as on hover.
+ */
+function RoleBadge({ role }: { readonly role: string | null }): ReactNode {
+  if (role !== null) {
+    return <Badge variant="neutral">{role}</Badge>;
+  }
+  return (
+    <Tooltip content={NO_ROLE_NOTE}>
+      <button type="button" style={noRoleTriggerStyle} data-testid="no-role-badge">
+        <Badge variant="neutral">{NO_ROLE_LABEL}</Badge>
+      </button>
+    </Tooltip>
+  );
 }
 
 /**
@@ -182,7 +213,7 @@ function PeopleTable({
             <TR key={member.id} data-testid="member-row">
               <TH scope="row">{member.email}</TH>
               <TD>
-                <Badge variant="neutral">{member.role}</Badge>
+                <RoleBadge role={member.role} />
               </TD>
               <TD>
                 <StatusCell row={member} />
@@ -246,7 +277,7 @@ function InvitesTable({
             <TR key={invite.id} data-testid="invite-row">
               <TH scope="row">{invite.email}</TH>
               <TD>
-                <Badge variant="neutral">{invite.role}</Badge>
+                <RoleBadge role={invite.role} />
               </TD>
               <TD>{formatInstant(invite.created_at)}</TD>
               <TD>{formatInstant(invite.expires_at)}</TD>
