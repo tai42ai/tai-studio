@@ -44,10 +44,16 @@
  *                  store (`GET /api/states*`, `/api/state-templates`): the seeded `notes`
  *                  state's list row, its Declaration / Templates / Records / Consumers
  *                  tabs, and one subject's record page (document + `api` Writes audit).
+ *   - state-template-typed — the state-template screen for the seeded `display` template: its
+ *                  fields, Write policies, Parameters (name, schema, default) and the Trace writes line.
  *   - states-pending-saves — the States page's Pending saves card on its All outstanding tab:
  *                  the newer save held behind a failed save (Retry / Discard), newest first, via a
  *                  forced `GET /api/state-pending-saves` payload (the demo backend runs no flow
  *                  whose save can fail).
+ *   - states-records-held — the Records tab with the line above the subjects table that counts
+ *                  the subjects held by a failed pending save and links to the Pending saves card,
+ *                  via the live subjects page with a forced `held` entry (the same failed save the
+ *                  pending-saves frame shows).
  *   - dashboard  — the observability Dashboard (`GET /api/observability/metrics`):
  *                  the seeded docs-demo monitoring backend gives it a real trend
  *                  chart AND a by-model breakdown.
@@ -361,7 +367,7 @@ const PENDING_SAVES_SUBJECT = {
   target_kind: 'tool',
   target_name: 'studio_demo_echo',
   kind: 'thread',
-  key: 't-003',
+  key: 't-002',
 };
 function pendingSavesPage(status) {
   const ago = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
@@ -374,7 +380,7 @@ function pendingSavesPage(status) {
     calls: [{ kind: 'tool', target: 'studio_demo_echo' }],
     attempts: 1,
     last_error:
-      "ValueValidationError: state 'notes' subject tool/studio_demo_echo/thread/t-003: record invalid under the state schema at $.items[0].id: 7 is not of type 'string'",
+      "ValueValidationError: state 'notes' subject tool/studio_demo_echo/thread/t-002: record invalid under the state schema at $.items[0].id: 7 is not of type 'string'",
     failed_phase: 'records',
     created_at: ago(12),
     failed_at: ago(12),
@@ -395,6 +401,15 @@ function pendingSavesPage(status) {
   const items = status === 'failed' ? [failed] : [held, failed];
   return { items, next_cursor: null, outstanding: 2, failed: 1 };
 }
+
+// The Records tab's held line reads the `held` entries the subjects page carries. The live
+// page is fetched and answered with the two saves of the pending-saves payload above added:
+// the failed save (held by itself) and the outstanding save held behind it, both on the
+// listed subject `t-002`.
+const HELD_ON_SUBJECTS_PAGE = [
+  { save_id: '41', held_by: '41', subjects: [PENDING_SAVES_SUBJECT] },
+  { save_id: '42', held_by: '41', subjects: [PENDING_SAVES_SUBJECT] },
+];
 
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
@@ -713,13 +728,14 @@ const AUTHED_PAGES = [
     },
   },
   // --- States screens (the platform state store) -------------------------------
-  // The seven frames the docs "## States" section shows, all under the seeded `notes`
+  // The nine frames the docs "## States" section shows, all under the seeded `notes`
   // state (the `docs-screenshots.sh` state-store seeding declares it, attaches a template, writes two subject
-  // records and registers a consumer hook; the pending saves are a forced payload). Each waits on a
-  // stable, populated element — a table row, a tab's populated control, or the record page's own
-  // document/audit — never a bare timeout. The content is deterministic (no server timestamp is in
-  // frame; the pending saves' ages are relative to the capture), so NONE carry the
-  // `nondeterministic` flag.
+  // records and registers a consumer hook, and uploads the typed `display` template; the pending saves
+  // and the held saves are forced payloads).
+  // Each waits on a stable, populated element — a table row, a tab's populated control, or the record
+  // page's own document/audit — never a bare timeout. The pending saves' ages are relative to the
+  // capture. Both Records frames show the subjects' Updated timestamps, written by the seed at boot;
+  // the held-line frame carries the `nondeterministic` flag.
   {
     // The states master list: the declared `notes` row with its subject-kind badges and
     // record/consumer counts.
@@ -741,6 +757,20 @@ const AUTHED_PAGES = [
     name: 'states-templates',
     path: '/states?state=notes&tab=templates',
     wait: 'text=preferences',
+  },
+  {
+    // The state-template screen of the seeded unattached `display` template, whose typed
+    // sections all render: the fields, Write policies, Parameters and the Trace writes line.
+    // Waits on the Parameters heading and the trace line; the template card is captured whole.
+    name: 'state-template-typed',
+    path: '/states?template=display',
+    wait: '[data-testid="template-trace"]',
+    action: async (page) => {
+      await page
+        .getByRole('heading', { name: 'Parameters', level: 3 })
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.locator('[data-testid="state-template-detail"]'),
   },
   {
     // The Records tab: the subject lookup form above the state's subjects. The subjects
@@ -799,6 +829,36 @@ const AUTHED_PAGES = [
         .waitFor({ state: 'visible', timeout: 8000 });
     },
     frame: (page) => page.locator('#state-pending-saves'),
+  },
+  {
+    // The Records tab with the held line above the subjects table, from the live subjects page
+    // with the forced `held` entries above. Waits on the line, which renders only for a held
+    // subject, then on the listed subject it names. The Subjects card is captured whole, so the
+    // line and the table it glosses are framed together.
+    name: 'states-records-held',
+    path: '/states?state=notes&tab=records',
+    nondeterministic: true,
+    wait: '[data-testid="held-subjects-line"]',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/states/notes/subjects',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          await route.fulfill({
+            response,
+            json: { ...body, data: { ...body.data, held: HELD_ON_SUBJECTS_PAGE } },
+          });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByText('t-002').first().waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Subjects', level: 3 }) }),
   },
   {
     name: 'dashboard',

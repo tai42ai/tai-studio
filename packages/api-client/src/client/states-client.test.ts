@@ -588,7 +588,7 @@ describe('state-binding schema', () => {
           updates: [
             {
               template_jq: 'tally.bump',
-              adapter: { content: '{ total: .output.total }' },
+              adapter: { content: '{ total: .total }' },
               op_id: { content: '.id' },
             },
           ],
@@ -605,7 +605,7 @@ describe('state-binding schema', () => {
     if (injection === undefined || update === undefined) throw new Error('expected rows');
     expect(injection.into).toBe('baseline');
     expect(update.template_jq).toBe('tally.bump');
-    expect(update.adapter).toEqual({ content: '{ total: .output.total }' });
+    expect(update.adapter).toEqual({ content: '{ total: .total }' });
   });
 
   it('fills the optional fields of an attach/injection/update with their defaults', () => {

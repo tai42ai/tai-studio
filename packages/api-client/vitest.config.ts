@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
+import { TEST_TIMEOUT_MS } from '../../vitest.shared.config';
+
 /**
  * Vitest config for the API client: a plain Node environment (no DOM), exercising
  * the transport, schema parsing, and SSE decoding as real code. Coverage is
@@ -12,6 +14,7 @@ import { defineConfig } from 'vitest/config';
  */
 export default defineConfig({
   test: {
+    testTimeout: TEST_TIMEOUT_MS,
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

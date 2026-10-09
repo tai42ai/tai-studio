@@ -9,12 +9,14 @@ it; holds no edge to jq (the jq fields render through the host's ambient
 
 - **template `input` jq** — input is the record (`.`), declared params bound as
   `$params`; returns the injected value.
-- **custom injection jq** — over `{ record, input }`; returns the value placed at `into`.
-- **adapter** — over `{ output, input }`; CONSTRUCTS the update jq's declared input
-  object.
-- **template `update` jq** — over `{ record, input }` where `input` is the adapter's
-  output; returns a template-relative op batch.
-- **custom `update` jq** — over `{ record, output, input }`; returns `[{op, path, value}]`.
+- **custom injection jq** — over the record (`.`), the run input bound as `$input`; returns
+  the value placed at `into`.
+- **adapter** — over the tool output (`.`), the run input bound as `$input`; CONSTRUCTS the
+  update jq's declared input object.
+- **template `update` jq** — over the record subtree (`.`), the adapter's output bound as
+  `$input`; returns a template-relative op batch.
+- **custom `update` jq** — over the tool output (`.`), the run input bound as `$input` and the
+  record as `$record`; returns `[{op, path, value}]`.
 - **`subject_expr`** — a jq yielding the record KEY: a bare key string, or a full subject object.
 - **`scope_expr`** — optional; a boolean jq predicate. When it is false, the state is skipped for the run.
 
@@ -28,7 +30,8 @@ canonical, parseable object so a stored adapter reopens as the form it was autho
 ```
 
 - `<key>` — a bare identifier, or a JSON string when it is not one.
-- `<value>` — one of: a field path (`.output…` / `.input…`), a JSON literal, or a raw
+- `<value>` — one of: a field path (an output field `.…`, the whole output `.`, an input
+  field `$input…`), a JSON literal, or a raw
   jq expression, each wrapped in `(…)`.
 
 `parseAdapter` inverts it: `parseAdapter(compileAdapter(rows).jq) === rows` for every

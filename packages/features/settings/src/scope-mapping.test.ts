@@ -203,6 +203,27 @@ describe('served sub-MCP mounts', () => {
     expect(mapped.unassignedChips).toEqual([]);
   });
 
+  it('lists a declared-public route apart and never as an Unassigned chip', () => {
+    const route = (path: string, declared: boolean) => ({
+      path,
+      methods: ['GET'],
+      mapped: null,
+      tags: [],
+      summary: '',
+      action: null,
+      declared_public: declared,
+    });
+    const chips = deriveMapperChips(
+      {},
+      [route('/ready', true), route('/c', false), route('/health', true)],
+      [],
+      {},
+      'public',
+    );
+    expect(chips.unassignedChips.map((chip) => chip.url)).toEqual(['/c']);
+    expect(chips.declaredPublic.map((r) => r.path)).toEqual(['/health', '/ready']);
+  });
+
   it('keeps the served public marker out of the scope zones, whatever it is named', () => {
     const chips = deriveMapperChips({ '/a': 'open', '/b': 's1' }, [], [], {}, 'open');
     expect(chips.realScopeIds).toEqual(['s1']);

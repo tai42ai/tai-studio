@@ -27,7 +27,10 @@ export type RouteAction = z.infer<typeof routeAction>;
  * description, and `action` its authorization class — the join fields the Roles
  * grant editor reads to derive grantable feature groups and mark the admin-only
  * (fenced/secret) routes it must never offer a grant for. An unregistered path
- * carries `tags: []`, `summary: ''`, `action: null`.
+ * carries `tags: []`, `summary: ''`, `action: null`. `declared_public` is `true` for
+ * a route its registration declares public: it is served without authentication
+ * and no scope mapping or public pin changes that, so the mapper never offers it
+ * for a scope.
  */
 export const authRoute = z.object({
   path: z.string(),
@@ -36,6 +39,7 @@ export const authRoute = z.object({
   tags: z.array(z.string()),
   summary: z.string(),
   action: routeAction.nullable(),
+  declared_public: z.boolean(),
 });
 export type AuthRoute = z.infer<typeof authRoute>;
 export const authRoutes = z.array(authRoute);

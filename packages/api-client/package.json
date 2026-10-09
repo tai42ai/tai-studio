@@ -56,8 +56,9 @@
     "lint": "eslint src --max-warnings 0",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
-    "api:check": "api-extractor run --config config/api-extractor.json",
-    "api:update": "api-extractor run --local --config config/api-extractor.json",
+    "api:build": "tsc -b tsconfig.build.json --clean && tsc -b tsconfig.build.json",
+    "api:check": "pnpm run api:build && api-extractor run --config config/api-extractor.json",
+    "api:update": "pnpm run api:build && api-extractor run --local --config config/api-extractor.json",
     "schema:generate": "node scripts/gen-schemas.mjs",
     "schema:check": "node scripts/gen-schemas.mjs --check",
     "schema:refresh": "node scripts/schema-refresh.mjs"

@@ -126,6 +126,7 @@ describe('auth route-catalog client transport', () => {
             tags: ['tools'],
             summary: 'List the registered tools.',
             action: 'read',
+            declared_public: false,
           },
           {
             path: '/api/backup/export',
@@ -134,6 +135,7 @@ describe('auth route-catalog client transport', () => {
             tags: ['backup'],
             summary: 'Export a backup.',
             action: 'fenced',
+            declared_public: false,
           },
         ],
       }),

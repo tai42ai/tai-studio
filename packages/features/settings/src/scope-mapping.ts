@@ -128,6 +128,8 @@ export interface MapperChips {
   readonly realScopeIds: string[];
   readonly unassignedChips: ChipData[];
   readonly publicChips: ChipData[];
+  /** The routes their registration declares public, sorted by path: shown, never offered. */
+  readonly declaredPublic: AuthRoute[];
 }
 
 /**
@@ -136,8 +138,10 @@ export interface MapperChips {
  * read during the parallel refetch after an assign) is excluded the moment it
  * appears in `scopes`, so a url never surfaces in both a scope zone and Unassigned
  * at once (which would register two dnd-kit draggables with the same id). A url the
- * server has re-pointed public belongs to the Public zone only. `publicId` is the
- * served public marker, never a scope.
+ * server has re-pointed public belongs to the Public zone only. A route its
+ * registration declares public is served without authentication whatever it is
+ * mapped to, so it is never an Unassigned chip: it is listed in `declaredPublic`.
+ * `publicId` is the served public marker, never a scope.
  */
 export function deriveMapperChips(
   scopes: Record<string, string>,
@@ -156,7 +160,11 @@ export function deriveMapperChips(
   const unassignedChips: ChipData[] = [
     ...routes
       .filter(
-        (route) => route.mapped === null && !(route.path in scopes) && !publicSet.has(route.path),
+        (route) =>
+          !route.declared_public &&
+          route.mapped === null &&
+          !(route.path in scopes) &&
+          !publicSet.has(route.path),
       )
       .map((route) => chipFor(route.path, { kind: 'unassigned' }, mounts, route.methods)),
     ...Object.values(mounts)
@@ -168,7 +176,11 @@ export function deriveMapperChips(
     .map((url) => chipFor(url, { kind: 'public' }, mounts))
     .sort((a, b) => a.url.localeCompare(b.url));
 
-  return { groups, publicSet, realScopeIds, unassignedChips, publicChips };
+  const declaredPublic = routes
+    .filter((route) => route.declared_public)
+    .sort((a, b) => a.path.localeCompare(b.path));
+
+  return { groups, publicSet, realScopeIds, unassignedChips, publicChips, declaredPublic };
 }
 
 /** Invalidate the mapper's coherent source surface after a successful mutation. */

@@ -506,9 +506,26 @@ describe('route catalog + public-pin schemas', () => {
         tags: ['tools'],
         summary: 'x',
         action: 'read',
+        declared_public: false,
       },
-      { path: '/b', methods: ['GET'], mapped: 'public', tags: [], summary: '', action: 'write' },
-      { path: '/c', methods: [], mapped: null, tags: ['backup'], summary: 'y', action: 'fenced' },
+      {
+        path: '/b',
+        methods: ['GET'],
+        mapped: 'public',
+        tags: [],
+        summary: '',
+        action: 'write',
+        declared_public: false,
+      },
+      {
+        path: '/c',
+        methods: [],
+        mapped: null,
+        tags: ['backup'],
+        summary: 'y',
+        action: 'fenced',
+        declared_public: false,
+      },
       {
         path: '/d',
         methods: ['GET'],
@@ -516,8 +533,17 @@ describe('route catalog + public-pin schemas', () => {
         tags: ['config'],
         summary: 'z',
         action: 'secret',
+        declared_public: false,
       },
-      { path: '/e', methods: ['GET'], mapped: null, tags: [], summary: '', action: null },
+      {
+        path: '/e',
+        methods: ['GET'],
+        mapped: null,
+        tags: [],
+        summary: '',
+        action: null,
+        declared_public: true,
+      },
     ]);
     expect(parsed[0]?.mapped).toBe('s1');
     expect(parsed[1]?.mapped).toBe('public');
@@ -530,12 +556,31 @@ describe('route catalog + public-pin schemas', () => {
     expect(parsed[3]?.action).toBe('secret');
     // An unregistered/ungated path carries no metadata: empty tags, null action.
     expect(parsed[4]?.action).toBeNull();
+    // A route its registration declares public is marked so the mapper never offers it.
+    expect(parsed[4]?.declared_public).toBe(true);
+    expect(parsed[0]?.declared_public).toBe(false);
+  });
+
+  it('rejects (loudly) a route row that does not say whether it is declared public', () => {
+    expect(() =>
+      schemas.authRoutes.parse([
+        { path: '/a', methods: ['GET'], mapped: null, tags: [], summary: '', action: 'read' },
+      ]),
+    ).toThrow();
   });
 
   it('rejects (loudly) a route row whose mapped is a non-string, non-null value', () => {
     expect(() =>
       schemas.authRoutes.parse([
-        { path: '/a', methods: ['GET'], mapped: 5, tags: [], summary: '', action: 'read' },
+        {
+          path: '/a',
+          methods: ['GET'],
+          mapped: 5,
+          tags: [],
+          summary: '',
+          action: 'read',
+          declared_public: false,
+        },
       ]),
     ).toThrow();
   });
@@ -550,6 +595,7 @@ describe('route catalog + public-pin schemas', () => {
           tags: [],
           summary: '',
           action: 'destructive',
+          declared_public: false,
         },
       ]),
     ).toThrow();

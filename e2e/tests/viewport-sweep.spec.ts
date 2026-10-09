@@ -137,6 +137,26 @@ for (const width of LADDER) {
         await expect(sidebar).toBeHidden();
         await expect(topbar).toBeVisible();
         await expect(hamburger).toBeVisible();
+        // The bar's theme switch keeps its three options on one row inside the bar:
+        // a wrapped switch is taller than the bar and spills over the page below it.
+        const bar = await topbar.boundingBox();
+        const themeSwitch = await topbar.getByRole('radiogroup', { name: 'Theme' }).boundingBox();
+        expect(bar, 'the top bar has no layout box').not.toBeNull();
+        expect(themeSwitch, 'the theme switch has no layout box').not.toBeNull();
+        if (bar !== null && themeSwitch !== null) {
+          expect(themeSwitch.y, 'the theme switch rises above the top bar').toBeGreaterThanOrEqual(
+            bar.y,
+          );
+          expect(
+            themeSwitch.y + themeSwitch.height,
+            'the theme switch spills below the top bar',
+          ).toBeLessThanOrEqual(bar.y + bar.height);
+        }
+        const optionTops = await topbar
+          .getByRole('radio')
+          .evaluateAll((options) => options.map((o) => Math.round(o.getBoundingClientRect().top)));
+        expect(optionTops, 'the theme options wrap onto a second row').toHaveLength(3);
+        expect(new Set(optionTops).size, 'the theme options wrap onto a second row').toBe(1);
       } else {
         await expect(sidebar).toBeVisible();
         await expect(topbar).toBeHidden();
