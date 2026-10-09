@@ -13,11 +13,18 @@ function stubClient(methods: Stub): ApiClient {
   return methods as unknown as ApiClient;
 }
 
-// The scope mapper reads only path/methods/mapped; the route catalog's feature-tag
-// join fields (tags/summary/action) default here so a fixture states only what it tests.
+// The scope mapper reads path/methods/mapped/declared_public; the route catalog's
+// feature-tag join fields (tags/summary/action) and `declared_public: false` default
+// here so a fixture states only what it tests.
 type RouteInput = Pick<AuthRoute, 'path' | 'methods' | 'mapped'> & Partial<AuthRoute>;
 function routes(...entries: RouteInput[]): AuthRoute[] {
-  return entries.map((entry) => ({ tags: [], summary: '', action: null, ...entry }));
+  return entries.map((entry) => ({
+    tags: [],
+    summary: '',
+    action: null,
+    declared_public: false,
+    ...entry,
+  }));
 }
 
 /** A mapper stub: empty catalog/public/sub-MCP unless overridden. */
@@ -150,6 +157,39 @@ describe('ScopesMapper rendering', () => {
     expect(within(zoneEl('zone-public')).getByText('/health')).toBeInTheDocument();
     expect(document.querySelector('[data-zone="zone-scope-open"]')).toBeNull();
     expect(zoneEl('zone-scope-s1')).toBeInTheDocument();
+  });
+
+  it('shows a declared-public route as public and never offers it as an Unassigned chip', async () => {
+    renderMapper({
+      listAuthRoutes: vi.fn(() =>
+        Promise.resolve(
+          routes(
+            { path: '/a', methods: ['GET'], mapped: 's1' },
+            { path: '/c', methods: ['POST'], mapped: null },
+            { path: '/health', methods: ['GET'], mapped: null, declared_public: true },
+          ),
+        ),
+      ),
+    });
+    await screen.findByText('/c');
+
+    // Not in the Unassigned bucket, where a chip is something to drag onto a scope.
+    expect(within(zoneEl('zone-unassigned')).queryByText('/health')).not.toBeInTheDocument();
+    // Listed among the routes public by declaration, with the reason, and not draggable.
+    const declared = screen.getByRole('group', { name: 'Routes public by declaration, 1 item' });
+    expect(within(declared).getByText('/health')).toBeInTheDocument();
+    expect(within(declared).queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      within(declared).getByText(
+        'Declared public where they are registered: served without API-key authentication, whatever scope or pin they are given.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('renders no declared-public group when no route is declared public', async () => {
+    renderMapper();
+    await screen.findByText('/c');
+    expect(screen.queryByRole('group', { name: /Routes public by declaration/ })).toBeNull();
   });
 
   it('renders public-pinned urls in the Public zone only', async () => {

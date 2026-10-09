@@ -350,6 +350,39 @@ jobs:
       - name: Compare the e2e and docs-demo boot manifests through the contract model
         run: uv run --python 3.13 --with pytest --with tai42-contract --with pyyaml pytest e2e/test_manifest_parity.py
 
+  # The docs-demo monitoring backend's own test suite. The plugin
+  # (e2e/docs-demo/monitoring-plugin) is the monitoring backend both the e2e boot and
+  # the docs-screenshot pipeline install into the tai42 workspace venv, so its suite
+  # runs against that same venv: the public tai42 monorepo is cloned and synced
+  # exactly as the e2e job does, the plugin is installed into it as boot.sh does, and
+  # its pytest runs there. No Docker and no backend, so it runs on every PR (forks
+  # and Dependabot included).
+  docs-demo-monitoring-plugin:
+    needs: reuse
+    if: ${{ needs.reuse.outputs.should_skip != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          path: tai-studio
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ github.repository_owner }}/tai42
+          path: tai42
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.11.26'
+          enable-cache: true
+      - run: uv python install 3.13
+      - name: Sync skeleton env
+        working-directory: tai42
+        run: uv sync --locked --package tai42-skeleton --extra dev
+      - name: Install the docs-demo monitoring plugin
+        run: uv pip install --python tai42/.venv/bin/python tai-studio/e2e/docs-demo/monitoring-plugin
+      - name: Test the docs-demo monitoring plugin
+        working-directory: tai-studio
+        run: ../tai42/.venv/bin/python -m pytest e2e/docs-demo/monitoring-plugin/tests
+
   # Fail when a first-party scoped npm dependency is a full major behind its latest
   # published release (smaller steps stay quiet — the update bot owns them). The check
   # is one shared composite action; a fork points the ref at its own copy.

@@ -24,15 +24,22 @@ describe('jqKey', () => {
 });
 
 describe('fieldPathToJq', () => {
-  it('renders each root with a dotted path', () => {
-    expect(fieldPathToJq('output', [])).toBe('.output');
-    expect(fieldPathToJq('input', ['user', 'name'])).toBe('.input.user.name');
-    expect(fieldPathToJq('input', ['count'])).toBe('.input.count');
+  it('reads a picked output field off the tool output, the program root', () => {
+    expect(fieldPathToJq('output', ['delta'])).toBe('.delta');
+    expect(fieldPathToJq('output', ['user', 'name'])).toBe('.user.name');
+    expect(fieldPathToJq('output', [])).toBe('.');
+  });
+
+  it('reads a picked input field off the bound run input', () => {
+    expect(fieldPathToJq('input', ['user', 'name'])).toBe('$input.user.name');
+    expect(fieldPathToJq('input', ['count'])).toBe('$input.count');
+    expect(fieldPathToJq('input', [])).toBe('$input');
   });
 
   it('brackets a non-identifier segment', () => {
-    expect(fieldPathToJq('output', ['odd key'])).toBe('.output["odd key"]');
-    expect(fieldPathToJq('output', ['a', '1x', 'b'])).toBe('.output.a["1x"].b');
+    expect(fieldPathToJq('output', ['odd key'])).toBe('.["odd key"]');
+    expect(fieldPathToJq('output', ['a', '1x', 'b'])).toBe('.a["1x"].b');
+    expect(fieldPathToJq('input', ['odd key'])).toBe('$input["odd key"]');
   });
 });
 
@@ -40,7 +47,7 @@ describe('rowValueJq — the per-row "show jq"', () => {
   it('compiles a picked field', () => {
     expect(rowValueJq({ kind: 'field', root: 'output', path: ['total'] })).toEqual({
       ok: true,
-      jq: '.output.total',
+      jq: '.total',
     });
   });
 
@@ -63,9 +70,9 @@ describe('rowValueJq — the per-row "show jq"', () => {
   });
 
   it('passes a jq expression through and rejects an empty one', () => {
-    expect(rowValueJq({ kind: 'jq', expr: '.output.total + 1' })).toEqual({
+    expect(rowValueJq({ kind: 'jq', expr: '.total + 1' })).toEqual({
       ok: true,
-      jq: '.output.total + 1',
+      jq: '.total + 1',
     });
     expect(rowValueJq({ kind: 'jq', expr: '   ' })).toEqual({
       ok: false,
@@ -83,7 +90,7 @@ describe('compileAdapter — the whole form compiles into ONE adapter jq', () =>
     const rows: MappingRow[] = [
       { target: 'total', source: { kind: 'field', root: 'output', path: ['total'] } },
     ];
-    expect(compileAdapter(rows)).toEqual({ ok: true, jq: '{ total: (.output.total) }' });
+    expect(compileAdapter(rows)).toEqual({ ok: true, jq: '{ total: (.total) }' });
   });
 
   it('compiles a literal row', () => {
@@ -92,21 +99,19 @@ describe('compileAdapter — the whole form compiles into ONE adapter jq', () =>
   });
 
   it('compiles a jq row', () => {
-    const rows: MappingRow[] = [
-      { target: 'sum', source: { kind: 'jq', expr: '.output.a + .state.b' } },
-    ];
-    expect(compileAdapter(rows)).toEqual({ ok: true, jq: '{ sum: (.output.a + .state.b) }' });
+    const rows: MappingRow[] = [{ target: 'sum', source: { kind: 'jq', expr: '.a + .state.b' } }];
+    expect(compileAdapter(rows)).toEqual({ ok: true, jq: '{ sum: (.a + .state.b) }' });
   });
 
   it('compiles a mix of all three sources, preserving row order', () => {
     const rows: MappingRow[] = [
       { target: 'total', source: { kind: 'field', root: 'output', path: ['total'] } },
       { target: 'label', source: { kind: 'literal', json: '"on"' } },
-      { target: 'note', source: { kind: 'jq', expr: '.input.memo // "n/a"' } },
+      { target: 'note', source: { kind: 'jq', expr: '$input.memo // "n/a"' } },
     ];
     expect(compileAdapter(rows)).toEqual({
       ok: true,
-      jq: '{ total: (.output.total), label: ("on"), note: (.input.memo // "n/a") }',
+      jq: '{ total: (.total), label: ("on"), note: ($input.memo // "n/a") }',
     });
   });
 
@@ -114,7 +119,7 @@ describe('compileAdapter — the whole form compiles into ONE adapter jq', () =>
     const rows: MappingRow[] = [
       { target: 'odd key', source: { kind: 'field', root: 'input', path: [] } },
     ];
-    expect(compileAdapter(rows)).toEqual({ ok: true, jq: '{ "odd key": (.input) }' });
+    expect(compileAdapter(rows)).toEqual({ ok: true, jq: '{ "odd key": ($input) }' });
   });
 
   it('rejects a blank target, a duplicate target, and an invalid source', () => {
@@ -138,21 +143,28 @@ describe('compileAdapter — the whole form compiles into ONE adapter jq', () =>
 });
 
 describe('parseFieldPath', () => {
-  it('recovers a field source and rejects a non-path', () => {
-    expect(parseFieldPath('.output.total')).toEqual({
+  it('reads a root path back as an output field and a $input path as an input field', () => {
+    expect(parseFieldPath('.delta')).toEqual({ kind: 'field', root: 'output', path: ['delta'] });
+    expect(parseFieldPath('.')).toEqual({ kind: 'field', root: 'output', path: [] });
+    expect(parseFieldPath('.["odd key"].x')).toEqual({
       kind: 'field',
       root: 'output',
-      path: ['total'],
+      path: ['odd key', 'x'],
     });
-    expect(parseFieldPath('.input["odd key"].x')).toEqual({
+    expect(parseFieldPath('$input["odd key"].x')).toEqual({
       kind: 'field',
       root: 'input',
       path: ['odd key', 'x'],
     });
-    expect(parseFieldPath('.output')).toEqual({ kind: 'field', root: 'output', path: [] });
-    expect(parseFieldPath('.output.total + 1')).toBeNull();
-    expect(parseFieldPath('.state.x')).toBeNull();
+    expect(parseFieldPath('$input')).toEqual({ kind: 'field', root: 'input', path: [] });
+  });
+
+  it('rejects anything that is not a pure path', () => {
+    expect(parseFieldPath('.total + 1')).toBeNull();
+    expect(parseFieldPath('$record.x')).toBeNull();
+    expect(parseFieldPath('$inputs.x')).toBeNull();
     expect(parseFieldPath('42')).toBeNull();
+    expect(parseFieldPath('..')).toBeNull();
   });
 });
 
@@ -176,10 +188,10 @@ describe('parseAdapter — the round-trip parse(generate(rows)) === rows', () =>
       name: 'object literal',
       rows: [{ target: 'o', source: { kind: 'literal', json: '{"a":1}' } }],
     },
-    { name: 'jq', rows: [{ target: 'sum', source: { kind: 'jq', expr: '.output.a + .input.b' } }] },
+    { name: 'jq', rows: [{ target: 'sum', source: { kind: 'jq', expr: '.a + $input.b' } }] },
     {
       name: 'jq with parens and string',
-      rows: [{ target: 'x', source: { kind: 'jq', expr: '(.output.a // ")")' } }],
+      rows: [{ target: 'x', source: { kind: 'jq', expr: '(.a // ")")' } }],
     },
     {
       name: 'quoted target',
@@ -190,7 +202,7 @@ describe('parseAdapter — the round-trip parse(generate(rows)) === rows', () =>
       rows: [
         { target: 'total', source: { kind: 'field', root: 'output', path: ['total'] } },
         { target: 'label', source: { kind: 'literal', json: '"on"' } },
-        { target: 'note', source: { kind: 'jq', expr: '.input.memo // "n/a"' } },
+        { target: 'note', source: { kind: 'jq', expr: '$input.memo // "n/a"' } },
       ],
     },
   ];
@@ -208,8 +220,8 @@ describe('parseAdapter — the round-trip parse(generate(rows)) === rows', () =>
   });
 
   it('returns null for a shape it does not recognise', () => {
-    expect(parseAdapter('.output.total')).toBeNull();
-    expect(parseAdapter('{ total: .output.total }')).toBeNull(); // no wrapping parens
+    expect(parseAdapter('.total')).toBeNull();
+    expect(parseAdapter('{ total: .total }')).toBeNull(); // no wrapping parens
     expect(parseAdapter('not json')).toBeNull();
   });
 });
@@ -220,7 +232,7 @@ describe('template call — tjq_<callName>({…})', () => {
       { target: 'total', source: { kind: 'field', root: 'output', path: ['total'] } },
     ];
     const call = generateTemplateCall('bump', rows);
-    expect(call).toBe('tjq_bump({ total: (.output.total) })');
+    expect(call).toBe('tjq_bump({ total: (.total) })');
     const parsed = parseTemplateCall(call);
     expect(parsed?.callName).toBe('bump');
     expect(parsed).not.toBeNull();
@@ -239,7 +251,7 @@ describe('template call — tjq_<callName>({…})', () => {
       'my_tally__bump__count',
     );
     expect(parseTemplateCall('tjq_my_tally__bump({})')?.callName).toBe('my_tally__bump');
-    expect(parseTemplateCall('.output.total')).toBeNull();
+    expect(parseTemplateCall('.total')).toBeNull();
     expect(parseTemplateCall('other(.x)')).toBeNull();
   });
 });

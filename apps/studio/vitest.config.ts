@@ -1,6 +1,8 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+import { SHARED_TEST_SETUP, TEST_TIMEOUT_MS } from '../../vitest.shared.config';
+
 /**
  * Vitest config: a jsdom DOM environment + React Testing Library, so this
  * package's components and hooks are exercised as real rendered DOM. CSS
@@ -15,10 +17,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [react()],
   test: {
+    testTimeout: TEST_TIMEOUT_MS,
     environment: 'jsdom',
     globals: true,
     css: false,
-    setupFiles: ['./src/test-setup.ts'],
+    setupFiles: [SHARED_TEST_SETUP, './src/test-setup.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

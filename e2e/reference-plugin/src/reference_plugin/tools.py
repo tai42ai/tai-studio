@@ -10,11 +10,14 @@
 - ``parking_ask`` asks and parks so a synchronous run returns a park: a caller
   ask surfaces as the caller-asks envelope the run panel lists, a user ask as the
   suspension receipt; ``parking_ask_resume`` is the resume continuation it binds.
+  It returns a park signal, so it registers with ``TOOL_META_PAUSES``: the platform
+  refuses a park from a tool that does not declare it can pause.
 """
 
 from typing import Any, Literal
 
 from tai42_contract.app import tai42_app
+from tai42_contract.tools import TOOL_META_PAUSES
 
 
 @tai42_app.tools.tool
@@ -85,7 +88,7 @@ def _ask_addressee(to: str) -> Literal["caller", "user"]:
     raise ValueError(f"to must be 'caller' or 'user', got {to!r}")
 
 
-@tai42_app.tools.tool
+@tai42_app.tools.tool(meta={TOOL_META_PAUSES: True})
 async def parking_ask(prompt: str, count: int = 1, to: str = "caller") -> object:
     """Ask ``count`` times and park, returning the run's suspension.
 

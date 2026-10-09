@@ -2075,6 +2075,13 @@
     border-bottom: 1px solid var(--tai-color-border);
   }
 
+  /* The bar already pads its edges, so the brand drops its own inline padding here:
+     at 320 px the brand, the three-option theme switch and the menu button then fit
+     on one row, and the switch never wraps into a box taller than the bar. */
+  .tai-topbar .tai-brand {
+    padding-inline: 0;
+  }
+
   /* -- Master / detail ---------------------------------------------------------------
      `data-pane` drives the layout at every width: `list` gives the list the full
      width with no empty detail pane; `detail` shows a balanced two-pane split.

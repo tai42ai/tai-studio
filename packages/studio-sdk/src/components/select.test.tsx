@@ -158,4 +158,19 @@ describe('Select', () => {
     // `<label>`: nothing else names the trigger, so the caller's name stands.
     expect(screen.getByRole('combobox')).toHaveAccessibleName('Sort results');
   });
+
+  it("is described by the caller's IDREFs first, then the enclosing Field's description", () => {
+    render(
+      <>
+        <p id="sort-note">Only some sorts apply.</p>
+        <Field label="Sort" description="Orders the list.">
+          <Select options={OPTIONS} aria-describedby="sort-note" />
+        </Field>
+      </>,
+    );
+
+    expect(screen.getByRole('combobox')).toHaveAccessibleDescription(
+      'Only some sorts apply. Orders the list.',
+    );
+  });
 });

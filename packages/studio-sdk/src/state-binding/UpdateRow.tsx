@@ -1,8 +1,8 @@
 /**
  * The update list of one attached state. Each update applies AFTER the run: either
  * a template `update` jq (picked by name, whose declared input is authored through
- * the adapter mapping) or a custom jq over `{ record, output, input }` that authors
- * the whole op batch itself. An optional op-id expression carries idempotency.
+ * the adapter mapping) or a custom jq over the tool output (its `.`, with the run input
+ * bound as `$input` and the record as `$record`) that authors the whole op batch itself. An optional op-id expression carries idempotency.
  */
 import type { ReactNode } from 'react';
 
@@ -114,7 +114,7 @@ function UpdateRowEditor({
         <BindingTemplatedJqField
           label={`Custom update jq ${String(index + 1)}`}
           required
-          description="A jq over `{ record, output, input }` returning a template-relative op batch."
+          description="A jq over the tool output (`.`), with `$input` and `$record` bound, returning a template-relative op batch."
           value={update.jq}
           onChange={(next) => {
             onChange({

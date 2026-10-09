@@ -1,6 +1,8 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
+import { SHARED_TEST_SETUP, TEST_TIMEOUT_MS } from '../../../vitest.shared.config';
+
 /**
  * Vitest config: a jsdom DOM environment + React Testing Library, so this
  * package's components and hooks are exercised as real rendered DOM. CSS
@@ -15,14 +17,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   plugins: [react()],
   test: {
+    testTimeout: TEST_TIMEOUT_MS,
     environment: 'jsdom',
     globals: true,
     css: false,
-    setupFiles: ['./src/test-setup.ts'],
-    // The run panel mounts the subject sub-form and the asks list on every run;
-    // user-event drives them without its per-key delay, and the headroom above the 5s
-    // default covers their render chain while coverage instrumentation is active.
-    testTimeout: 15_000,
+    setupFiles: [SHARED_TEST_SETUP, './src/test-setup.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

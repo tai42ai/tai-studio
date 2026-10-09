@@ -670,8 +670,9 @@ CONVERSATION_THREAD="$(send_conversation_message "ada.lovelace@demo.tai" "Thanks
 export STUDIO_CONVERSATION_ROUTE="${CONVERSATION_ROUTE}"
 export STUDIO_CONVERSATION_THREAD="${CONVERSATION_THREAD}"
 
-# --- 7f. Seed the platform state store (the six States screens) --------------
-# One declared state, one uploaded template attached to it, two subject records (one
+# --- 7f. Seed the platform state store (the States screens) ------------------
+# One declared state, one uploaded template attached to it, a second typed template left
+# unattached (the state-template screen's frame), two subject records (one
 # written straight through the record door, one built by a `set_by_key` delta so the
 # record page's Writes audit carries an `api`-origin row), and one consumer (a hook
 # whose subject kind the state declares, so the Consumers tab lists it). Every body is
@@ -752,6 +753,33 @@ case "${attach_resp}" in
   *) die "attaching template '${STATE_TEMPLATE}' on '${STATE_NAME}' failed: ${attach_resp}" ;;
 esac
 
+# 2b. A second, unattached template whose typed sections all render on the state-template
+#     screen: a write policy, a parameter with a default, and trace writes on.
+typed_template_body="$(python3 -c '
+import json
+print(json.dumps({
+    "kind": "state-template",
+    "name": "display",
+    "description": "Per-subject display density, one policy per field.",
+    "schema": {
+        "type": "object",
+        "properties": {"density": {"type": "string", "title": "Density"}},
+    },
+    "parameters": {
+        "default_density": {
+            "schema": {"type": "string", "enum": ["compact", "comfortable"]},
+            "default": "comfortable",
+        }
+    },
+    "regimes": [{"path": ["density"], "regime": "single"}],
+    "trace": {"enabled": True},
+}))')"
+typed_resp="$(api -H "content-type: application/json" -X PUT "${BASE_URL}/api/state-templates/display?replace=true" -d "${typed_template_body}")"
+case "${typed_resp}" in
+  *'"data"'*) : ;;
+  *) die "uploading state template 'display' failed: ${typed_resp}" ;;
+esac
+
 # 3. Two subject records. `t-001` is written whole through the record door; `t-002` is
 #    seeded empty and then grown by a `set_by_key` delta, so its Writes audit shows both
 #    an `api` replace and an `api` delta row.
@@ -814,6 +842,8 @@ api "${BASE_URL}/api/states/${STATE_NAME}/consumers" | grep -q "notes-updater" \
   || die "the consumer hook is not in the state's consumers — the Consumers tab would be empty"
 api "${REC_BASE}/thread/t-002/writes" | grep -q '"api"' \
   || die "record thread/t-002 has no api write — the record page's Writes audit would be empty"
+api "${BASE_URL}/api/state-templates/display" | grep -q '"default_density"' \
+  || die "state template 'display' carries no parameter — the typed state-template frame would show no Parameters"
 
 # --- 8. Capture every screen (light + dark) ---------------------------------
 log "capturing screenshots into ${OUT_DIR}"

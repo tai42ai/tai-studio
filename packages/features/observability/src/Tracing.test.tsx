@@ -608,6 +608,42 @@ describe('TracingTab — the served sort × filter exclusions', () => {
     );
   });
 
+  it('states why the filters are disabled in the page, as each disabled control’s description', async () => {
+    const note =
+      'Not available with this sort — the monitoring backend cannot combine them. Sort by time to use it.';
+    // The cost sort also refuses the status filter here, so the select is covered too.
+    const client = tracing(
+      {
+        listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+      },
+      { ...CAPS, incompatibleFilters: { cost: [...METRIC_FILTERS, 'status'] } },
+    );
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing', sort: 'cost' }} />, {
+      client,
+    });
+
+    await screen.findByTestId('run-row-r1');
+    // Readable without hovering: a keyboard user never reaches a disabled control.
+    expect(screen.getByText(note)).toBeVisible();
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Min cost')).toHaveAccessibleDescription(note);
+    expect(screen.getByLabelText('Max latency (ms)')).toHaveAccessibleDescription(note);
+    expect(screen.getByLabelText('Status')).toHaveAccessibleDescription(note);
+    // A filter the sort can carry is not described by the note.
+    expect(screen.getByLabelText('Tags (comma-separated)')).not.toHaveAccessibleDescription(note);
+  });
+
+  it('shows no disabled-filter note when the active sort carries every filter', async () => {
+    const client = tracing({
+      listRuns: vi.fn().mockResolvedValue({ items: [run('r1', 't1')], page: 1, nextPage: null }),
+    });
+    renderWithProviders(<ObservabilityPage search={{ tab: 'tracing' }} />, { client });
+
+    await screen.findByTestId('run-row-r1');
+    expect(screen.getByLabelText('Min cost')).toBeEnabled();
+    expect(screen.queryByText(/Not available with this sort/)).not.toBeInTheDocument();
+  });
+
   it('renders plain headers and an enabled filter bar while the capabilities load', async () => {
     let release: (caps: ObservabilityCapabilities) => void = () => undefined;
     const pending = new Promise<ObservabilityCapabilities>((resolve) => {
