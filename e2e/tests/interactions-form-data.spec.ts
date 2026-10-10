@@ -7,7 +7,10 @@
  * A pending `form` question carrying `format_payload.schema` + `data` (prefilled values
  * and a per-send option list) + `pages` renders: the schema controls prefilled from
  * `data.values`; a `format: date` field as the browser's native date control
- * (`<input type="date">`, prefilled with the `YYYY-MM-DD` value); a re-optioned field
+ * (`<input type="date">`, prefilled with the `YYYY-MM-DD` value); one `inputMode` string
+ * field per kind, each drawing its native control or keyboard hint (`email`/`url`/`tel`
+ * as the matching `<input type>`, `numeric`/`decimal` as a text box with the `inputmode`
+ * keyboard hint, `text` plain) with the value kept as the typed string; a re-optioned field
  * (`choice`) as a CHOICE of the send's values rather than a free control; the "Options
  * for this send" value→label mapping; and the two pages as REAL navigable steps (a
  * "Step N of M" status with Back/Next, only the current step's fields shown). Abstract
@@ -30,9 +33,12 @@ const OUT_DIR =
   fileURLToPath(new URL('../test-results/form-shots', import.meta.url));
 const VIEWPORT = { width: 1440, height: 900 } as const;
 
-/** One pending form ask: an abstract four-field schema, `starts_on` (a `format: date`
- * string) plus `count`/`notes` prefilled, a per-send option list on `choice`, and two
- * ordered pages. */
+/** One pending form ask: an abstract schema — `starts_on` (a `format: date` string),
+ * `count`/`notes` prefilled, a per-send option list on `choice`, one `inputMode` string
+ * field per kind (`contact`→email, `site`→url, `phone`→tel, `code`→numeric,
+ * `amount`→decimal, `note`→text), and two ordered pages. `code` is prefilled `"007"` to
+ * show a numeric field keeps the typed string (a keyboard hint, never a number
+ * coercion). */
 const FORM_INTERACTION = {
   interaction_id: 'form-preview-1',
   group_id: 'form-preview-1',
@@ -47,11 +53,17 @@ const FORM_INTERACTION = {
         starts_on: { type: 'string', format: 'date' },
         choice: { type: 'string' },
         count: { type: 'integer' },
+        contact: { type: 'string', inputMode: 'email' },
+        site: { type: 'string', inputMode: 'url' },
+        phone: { type: 'string', inputMode: 'tel' },
+        code: { type: 'string', inputMode: 'numeric' },
+        amount: { type: 'string', inputMode: 'decimal' },
+        note: { type: 'string', inputMode: 'text' },
         notes: { type: 'string' },
       },
     },
     data: {
-      values: { starts_on: '2026-08-05', count: 3, notes: 'a note' },
+      values: { starts_on: '2026-08-05', count: 3, code: '007', notes: 'a note' },
       options: {
         choice: [
           { value: 'a', label: 'Option A' },
@@ -60,7 +72,20 @@ const FORM_INTERACTION = {
       },
     },
     pages: [
-      { title: 'Basics', fields: ['starts_on', 'choice', 'count'] },
+      {
+        title: 'Basics',
+        fields: [
+          'starts_on',
+          'choice',
+          'count',
+          'contact',
+          'site',
+          'phone',
+          'code',
+          'amount',
+          'note',
+        ],
+      },
       { title: 'Extras', fields: ['notes'] },
     ],
   },
@@ -160,6 +185,28 @@ test('the form preview shows prefilled values, the per-send options, and navigab
   await expect(options).toContainText('Options for this send');
   await expect(options).toContainText('choice');
   await expect(options).toContainText('Option A (a), Option B (b)');
+
+  // Block 3b — the `inputMode` string fields on the Basics step each draw their kind's
+  // native control or keyboard hint. `email`/`url`/`tel` select the matching native
+  // `<input type>`; `numeric`/`decimal` keep a text box and set the HTML `inputmode`
+  // keyboard hint; `text` is a plain text box with no hint. The value stays the typed
+  // string throughout — `code`, prefilled "007", keeps its leading zeros.
+  await expect(card.getByLabel('contact', { exact: true })).toHaveAttribute('type', 'email');
+  await expect(card.getByLabel('site', { exact: true })).toHaveAttribute('type', 'url');
+  await expect(card.getByLabel('phone', { exact: true })).toHaveAttribute('type', 'tel');
+
+  const code = card.getByLabel('code', { exact: true });
+  await expect(code).toHaveAttribute('type', 'text');
+  await expect(code).toHaveAttribute('inputmode', 'numeric');
+  await expect(code).toHaveValue('007');
+
+  const amount = card.getByLabel('amount', { exact: true });
+  await expect(amount).toHaveAttribute('type', 'text');
+  await expect(amount).toHaveAttribute('inputmode', 'decimal');
+
+  const note = card.getByLabel('note', { exact: true });
+  await expect(note).toHaveAttribute('type', 'text');
+  await expect(note).not.toHaveAttribute('inputmode');
 
   // Block 4 — the pages are REAL navigable steps: advancing to "Extras" reveals its only
   // field, `notes`, prefilled from `data.values`; stepping Back returns to "Basics".

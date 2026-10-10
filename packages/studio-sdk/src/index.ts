@@ -404,6 +404,7 @@ export type {
   ExpressionFieldProps,
   ExpressionInputKey,
   ExpressionInputShape,
+  FormInputMode,
   JsonSchema,
   JsonSchemaType,
   RecordEntryContext,
