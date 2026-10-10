@@ -58,7 +58,7 @@ const member = {
   email: 'alice@example.com',
   role: 'editor',
   created_at: '2026-07-11T00:00:00Z',
-  principals: [{ user_id: 'p-1', disabled: false }],
+  principals: [{ user_id: 'p-1', disabled: false, role: 'editor' }],
   disabled: false,
   handle: 'handle-m-1',
   action_keys: [] as string[],
@@ -88,7 +88,7 @@ describe('MembersPage listing', () => {
             email: 'carol@example.com',
             role: 'admin',
             disabled: true,
-            principals: [{ user_id: 'p-2', disabled: true }],
+            principals: [{ user_id: 'p-2', disabled: true, role: 'admin' }],
             handle: 'handle-m-2',
           },
         ],
@@ -125,7 +125,9 @@ describe('MembersPage listing', () => {
   it('renders a null role as the neutral "No role" badge with its explanation', async () => {
     const client = stubClient({
       listMembers: vi.fn().mockResolvedValue({
-        members: [{ ...member, role: null }],
+        members: [
+          { ...member, role: null, principals: [{ user_id: 'p-1', disabled: false, role: null }] },
+        ],
         invites: [{ ...invite, role: null }],
       }),
     });
@@ -144,6 +146,63 @@ describe('MembersPage listing', () => {
     expect(note).toHaveTextContent("This member's access was set directly, not from a role.");
   });
 
+  it('renders logins holding different roles as a "Mixed roles" warning with each login\'s role', async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
+        members: [
+          {
+            ...member,
+            role: null,
+            principals: [
+              { user_id: 'login-a', disabled: false, role: 'viewer' },
+              { user_id: 'login-b', disabled: false, role: 'admin' },
+              { user_id: 'login-c', disabled: false, role: null },
+            ],
+          },
+        ],
+        invites: [],
+      }),
+    });
+    renderPage(client);
+
+    const peopleTable = await screen.findByTestId('members-table');
+    const badge = within(peopleTable).getByTestId('mixed-roles-badge');
+    expect(badge).toHaveTextContent('Mixed roles');
+    expect(within(badge).getByText('Mixed roles')).toHaveAttribute('data-variant', 'warning');
+    expect(within(peopleTable).queryByTestId('no-role-badge')).not.toBeInTheDocument();
+
+    // Keyboard reachable: focusing the badge lists every login's role and the repair.
+    badge.focus();
+    const note = await screen.findByRole('tooltip');
+    expect(note).toHaveTextContent('login-a — viewer');
+    expect(note).toHaveTextContent('login-b — admin');
+    expect(note).toHaveTextContent('login-c — No role');
+    expect(note).toHaveTextContent('Give every login of this person the same role.');
+  });
+
+  it('renders the one role every login holds as the neutral role badge', async () => {
+    const client = stubClient({
+      listMembers: vi.fn().mockResolvedValue({
+        members: [
+          {
+            ...member,
+            role: 'editor',
+            principals: [
+              { user_id: 'p-1', disabled: false, role: 'editor' },
+              { user_id: 'p-1b', disabled: false, role: 'editor' },
+            ],
+          },
+        ],
+        invites: [],
+      }),
+    });
+    renderPage(client);
+
+    const peopleTable = await screen.findByTestId('members-table');
+    expect(within(peopleTable).getByText('editor')).toHaveAttribute('data-variant', 'neutral');
+    expect(within(peopleTable).queryByTestId('mixed-roles-badge')).not.toBeInTheDocument();
+  });
+
   it('reads active with a partially-disabled badge when only some principals are off', async () => {
     const client = stubClient({
       listMembers: vi.fn().mockResolvedValue({
@@ -151,8 +210,8 @@ describe('MembersPage listing', () => {
           {
             ...member,
             principals: [
-              { user_id: 'p-1', disabled: false },
-              { user_id: 'p-1b', disabled: true },
+              { user_id: 'p-1', disabled: false, role: 'editor' },
+              { user_id: 'p-1b', disabled: true, role: 'editor' },
             ],
             disabled: false,
           },
