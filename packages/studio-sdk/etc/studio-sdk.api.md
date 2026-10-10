@@ -8819,6 +8819,9 @@ export interface FormDialogProps {
     readonly title: string;
 }
 
+// @public
+export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
+
 // @public (undocumented)
 type FormOption = z.infer<typeof formOption>;
 
@@ -9537,6 +9540,7 @@ export interface JsonSchema {
     readonly enum?: readonly unknown[];
     // (undocumented)
     readonly format?: string;
+    readonly inputMode?: FormInputMode;
     // (undocumented)
     readonly items?: JsonSchema;
     // (undocumented)

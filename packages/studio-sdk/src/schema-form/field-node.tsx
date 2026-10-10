@@ -135,6 +135,7 @@ function renderField(args: RenderFieldArgs): ReactNode {
           description={description}
           error={error}
           format={model.format}
+          inputMode={model.inputMode}
           media={model.media}
           expression={model.expression}
           date={model.date}

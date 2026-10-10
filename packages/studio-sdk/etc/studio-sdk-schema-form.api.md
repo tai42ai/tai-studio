@@ -74,6 +74,9 @@ interface ExpressionInputVariable {
 }
 
 // @public
+export type FormInputMode = 'text' | 'numeric' | 'decimal' | 'tel' | 'email' | 'url';
+
+// @public
 export function isFieldVisible(schema: JsonSchema, values: Record<string, unknown>): boolean;
 
 // @public
@@ -109,6 +112,7 @@ export interface JsonSchema {
     readonly enum?: readonly unknown[];
     // (undocumented)
     readonly format?: string;
+    readonly inputMode?: FormInputMode;
     // (undocumented)
     readonly items?: JsonSchema;
     // (undocumented)

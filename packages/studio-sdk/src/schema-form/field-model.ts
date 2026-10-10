@@ -5,7 +5,7 @@
  * validator import the vocabulary without pulling in classification code.
  */
 import type { EnumOption } from './resolve';
-import type { JsonSchema } from './types';
+import type { FormInputMode, JsonSchema } from './types';
 
 /**
  * How a string field accepts binary content as a JSON-serializable string.
@@ -119,6 +119,10 @@ export type FieldModel =
   | {
       readonly kind: 'string';
       readonly format: string | undefined;
+      /** The input kind (keyboard / native control) this string draws, from the
+       *  schema's `inputMode` keyword; `undefined` for a plain text box. It
+       *  draws, it does not validate, and it outranks `format` for the control. */
+      readonly inputMode: FormInputMode | undefined;
       /** Present when media annotations opt the field into the upload control. */
       readonly media: MediaUpload | undefined;
       /** Present when a well-formed `x-tai42-expression` annotation opts the

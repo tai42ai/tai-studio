@@ -181,6 +181,106 @@ describe('SchemaForm — string formats', () => {
   });
 });
 
+describe('SchemaForm — input mode', () => {
+  it('renders `inputMode: email` as a native email control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { mail: { type: 'string', inputMode: 'email', title: 'Mail' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Mail')).toHaveAttribute('type', 'email');
+  });
+
+  it('renders `inputMode: url` as a native url control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { link: { type: 'string', inputMode: 'url', title: 'Link' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Link')).toHaveAttribute('type', 'url');
+  });
+
+  it('renders `inputMode: tel` as a native tel control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { contact: { type: 'string', inputMode: 'tel', title: 'Contact' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    expect(screen.getByLabelText('Contact')).toHaveAttribute('type', 'tel');
+  });
+
+  it('renders `inputMode: numeric` as a text box with the numeric keyboard hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', inputMode: 'numeric', title: 'Code' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Code');
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('renders `inputMode: decimal` as a text box with the decimal keyboard hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { amount: { type: 'string', inputMode: 'decimal', title: 'Amount' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Amount');
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveAttribute('inputmode', 'decimal');
+  });
+
+  it('renders `inputMode: text` as a plain text box with no keyboard hint', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { note: { type: 'string', inputMode: 'text', title: 'Note' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByRole('textbox', { name: 'Note' });
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).not.toHaveAttribute('inputmode');
+  });
+
+  it('lets `inputMode` outrank `format` for the control', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: {
+        code: { type: 'string', format: 'email', inputMode: 'numeric', title: 'Code' },
+      },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByLabelText('Code');
+    // The mode wins: a numeric keyboard on a text box, not the format's email control.
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('reads an unknown `inputMode` value as absent — a plain text box', () => {
+    // A value outside the supported set (the typed keyword forbids it, so this
+    // models a schema off the wire): the permissive client renders the plain text
+    // box — the server ask door is the authority that refuses it.
+    const schema = JSON.parse(
+      '{"type":"object","properties":{"note":{"type":"string","inputMode":"phone","title":"Note"}}}',
+    ) as JsonSchema;
+    render(<Harness schema={schema} initial={{}} />);
+    const input = screen.getByRole('textbox', { name: 'Note' });
+    expect(input).toHaveAttribute('type', 'text');
+    expect(input).not.toHaveAttribute('inputmode');
+  });
+
+  it('keeps a numeric field value as the typed string (never coerced)', () => {
+    const schema: JsonSchema = {
+      type: 'object',
+      properties: { code: { type: 'string', inputMode: 'numeric', title: 'Code' } },
+    };
+    render(<Harness schema={schema} initial={{}} />);
+    fireEvent.change(screen.getByLabelText('Code'), { target: { value: '007' } });
+    // The leading zeros survive — a string, never a JSON number.
+    expect(emitted()).toBe('{"code":"007"}');
+  });
+});
+
 describe('SchemaForm — enum', () => {
   it('renders a small enum as selectable radios and emits the real value', async () => {
     const user = userEvent.setup();
