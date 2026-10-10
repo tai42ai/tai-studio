@@ -869,6 +869,7 @@ created_at: string;
 principals: {
 user_id: string;
 disabled: boolean;
+role: string | null;
 }[];
 disabled: boolean;
 handle: string;
@@ -5670,6 +5671,7 @@ function createApiClient(config: ApiConfig): {
             principals: {
                 user_id: string;
                 disabled: boolean;
+                role: string | null;
             }[];
             disabled: boolean;
             handle: string;
@@ -11069,6 +11071,7 @@ const memberDirectory: z.ZodObject<{
         principals: z.ZodArray<z.ZodObject<{
             user_id: z.ZodString;
             disabled: z.ZodBoolean;
+            role: z.ZodNullable<z.ZodString>;
         }, z.core.$strip>>;
         disabled: z.ZodBoolean;
         handle: z.ZodString;
@@ -11092,6 +11095,7 @@ type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
 const memberPrincipalState: z.ZodObject<{
     user_id: z.ZodString;
     disabled: z.ZodBoolean;
+    role: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11106,6 +11110,7 @@ const memberRow: z.ZodObject<{
     principals: z.ZodArray<z.ZodObject<{
         user_id: z.ZodString;
         disabled: z.ZodBoolean;
+        role: z.ZodNullable<z.ZodString>;
     }, z.core.$strip>>;
     disabled: z.ZodBoolean;
     handle: z.ZodString;

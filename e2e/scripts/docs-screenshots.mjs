@@ -411,6 +411,35 @@ const HELD_ON_SUBJECTS_PAGE = [
   { save_id: '42', held_by: '41', subjects: [PENDING_SAVES_SUBJECT] },
 ];
 
+// The Members People table's "Mixed roles" badge reads a person whose logins hold different
+// roles. The demo's accounts provider holds one login per person, so the live directory is
+// fetched and answered with one forced member row added: two logins, one `viewer` and one
+// `admin`, so the row carries no single role. It reuses a live member row's action keys, so its
+// actions render as every other row's do.
+function withMixedRolesMember(directory) {
+  const template =
+    directory.members.find((row) => row.action_keys.length > 0) ?? directory.members[0];
+  if (template === undefined)
+    throw new Error('members scene: the live directory has no member row');
+  return {
+    ...directory,
+    members: [
+      ...directory.members,
+      {
+        ...template,
+        id: 'demo-mixed-roles',
+        email: 'dorothy.vaughan@demo.tai',
+        role: null,
+        principals: [
+          { user_id: 'usr-demo-login-1', disabled: false, role: 'viewer' },
+          { user_id: 'usr-demo-login-2', disabled: false, role: 'admin' },
+        ],
+        disabled: false,
+      },
+    ],
+  };
+}
+
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
 // and its served-media bitmap are all stubbed to render the attachment states
@@ -1021,12 +1050,29 @@ const AUTHED_PAGES = [
     // the Pending invitations table, each row's actions joined from the declared
     // `GET /api/auth/member-actions` catalog. The runner seeds a realistic membership (an
     // admin owner + an active editor and viewer + a pending invite) before capture, so both
-    // tables are populated. Waits on the seeded owner's People row, and the action requires
-    // the seeded pending invite row so both sections are framed populated.
+    // tables are populated; the forced row above adds a person whose logins hold different
+    // roles. Waits on the seeded owner's People row, and the action requires the seeded
+    // pending invite row and the forced row's "Mixed roles" badge so every state is framed.
     name: 'members',
     path: '/members',
     wait: 'text=ada.lovelace@demo.tai',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/auth/members',
+        async (route) => {
+          const response = await route.fetch();
+          const body = await response.json();
+          await route.fulfill({
+            response,
+            json: { ...body, data: withMixedRolesMember(body.data) },
+          });
+        },
+      );
+    },
     action: async (page) => {
+      await page
+        .locator('[data-testid="mixed-roles-badge"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
       await page
         .locator('[data-testid="invite-row"]')
         .first()

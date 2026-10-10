@@ -15,23 +15,27 @@ export type MemberActionScope = z.infer<typeof memberActionScope>;
 /**
  * One platform principal a member holds (`GET /api/auth/members` →
  * `members[].principals[]`). `user_id` is the platform principal id; `disabled` is
- * taken from that principal's own record (the store the principals listing reads),
- * never from a provider.
+ * taken from that principal's own record (the store the principals listing reads) and
+ * `role` is the role it holds, joined from its own policy record — both never from a
+ * provider. `role` is `null` when the principal's policy was not written from a role
+ * template.
  */
 export const memberPrincipalState = z.object({
   user_id: z.string(),
   disabled: z.boolean(),
+  role: z.string().nullable(),
 });
 export type MemberPrincipalState = z.infer<typeof memberPrincipalState>;
 
 /**
  * One person an accounts provider owns, as the directory door returns them
  * (`GET /api/auth/members` → `members[]`). `id` is the provider's stable handle for
- * the person (a list key, not shown). `email` is the sign-in identity; `role` names
- * the platform role the person holds (the NAME only — the role definition is read
- * from the role listing), or `null` when the person's access was not written from a
- * role template. `principals` carries each principal's platform-joined
- * state; `disabled` is derived True only when EVERY principal is disabled, so a
+ * the person (a list key, not shown). `email` is the sign-in identity; `role` is the
+ * one role name every principal holds (the NAME only — the role definition is read
+ * from the role listing), or `null` when there is no single name: every principal's
+ * access was set directly, or the principals hold different roles
+ * (`principals[].role` carries each one's own). `principals` carries each principal's
+ * platform-joined state; `disabled` is derived True only when EVERY principal is disabled, so a
  * person with any enabled principal still reads active while the per-principal truth
  * stays visible. `handle` routes an invoke back to the producing provider and pins
  * this row; `action_keys` are the opaque catalog keys of the actions applicable to
@@ -54,7 +58,7 @@ export type MemberRow = z.infer<typeof memberRow>;
  * One outstanding invitation an accounts provider holds, as the directory door
  * returns them (`GET /api/auth/members` → `invites[]`). `id` is the provider's
  * stable handle for the invited person; `email` is the invited address; `role` names
- * the platform role they will hold (name only, or `null`, as on {@link memberRow}). An
+ * the platform role they will hold (name only, or `null` when not from a role template). An
  * invitation holds no principal, so it carries no principal state. `handle` and
  * `action_keys` are the opaque routing tokens (see {@link memberRow}). `created_at`
  * and `expires_at` are ISO-8601 instants.

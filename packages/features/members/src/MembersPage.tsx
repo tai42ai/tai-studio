@@ -17,7 +17,9 @@
  * reads, so a failed request is never a silent empty render and a missing catalog never
  * silently drops the actions. A person's status is the platform-joined `disabled`
  * (True only when every principal is disabled); a row with a mix of enabled and
- * disabled principals reads active and shows that it is partially disabled.
+ * disabled principals reads active and shows that it is partially disabled. A person's
+ * role is the one role every principal holds; principals holding different roles read
+ * `Mixed roles` with each principal's own role.
  */
 import type { InviteRow, MemberActionDescriptor, MemberRow } from '@tai42/api-client';
 import {
@@ -101,9 +103,11 @@ function formatInstant(value: string): string {
 
 const NO_ROLE_LABEL = 'No role';
 const NO_ROLE_NOTE = "This member's access was set directly, not from a role.";
+const MIXED_ROLES_LABEL = 'Mixed roles';
+const MIXED_ROLES_REPAIR = 'Give every login of this person the same role.';
 
-/** The `No role` badge's trigger: a bare button, so the badge alone is what shows. */
-const noRoleTriggerStyle: CSSProperties = {
+/** A badge's tooltip trigger: a bare button, so the badge alone is what shows. */
+const badgeTriggerStyle: CSSProperties = {
   padding: 0,
   border: 'none',
   background: 'none',
@@ -111,9 +115,15 @@ const noRoleTriggerStyle: CSSProperties = {
   cursor: 'help',
 };
 
+const tooltipLinesStyle: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 'var(--tai-space-1)',
+};
+
 /**
- * A row's role as a neutral badge. A `null` role — access not written from a role
- * template — reads `No role`, with a tooltip saying so; the badge sits in a button so the
+ * A role as a neutral badge. A `null` role — access not written from a role template —
+ * reads `No role`, with a tooltip saying so; the badge sits in a button so the
  * explanation opens on keyboard focus as well as on hover.
  */
 function RoleBadge({ role }: { readonly role: string | null }): ReactNode {
@@ -122,8 +132,38 @@ function RoleBadge({ role }: { readonly role: string | null }): ReactNode {
   }
   return (
     <Tooltip content={NO_ROLE_NOTE}>
-      <button type="button" style={noRoleTriggerStyle} data-testid="no-role-badge">
+      <button type="button" style={badgeTriggerStyle} data-testid="no-role-badge">
         <Badge variant="neutral">{NO_ROLE_LABEL}</Badge>
+      </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * A member's role from the platform-joined principals. Logins holding different roles
+ * (a name and another name, or a name and none) read `Mixed roles` as a warning, with a
+ * tooltip listing each login's own role and the repair; otherwise the row's one role
+ * renders as {@link RoleBadge}.
+ */
+function MemberRoleBadge({ row }: { readonly row: MemberRow }): ReactNode {
+  const distinct = new Set(row.principals.map((principal) => principal.role));
+  if (distinct.size <= 1) {
+    return <RoleBadge role={row.role} />;
+  }
+  const content = (
+    <span style={tooltipLinesStyle}>
+      {row.principals.map((principal) => (
+        <span
+          key={principal.user_id}
+        >{`${principal.user_id} — ${principal.role ?? NO_ROLE_LABEL}`}</span>
+      ))}
+      <span>{MIXED_ROLES_REPAIR}</span>
+    </span>
+  );
+  return (
+    <Tooltip content={content}>
+      <button type="button" style={badgeTriggerStyle} data-testid="mixed-roles-badge">
+        <Badge variant="warning">{MIXED_ROLES_LABEL}</Badge>
       </button>
     </Tooltip>
   );
@@ -213,7 +253,7 @@ function PeopleTable({
             <TR key={member.id} data-testid="member-row">
               <TH scope="row">{member.email}</TH>
               <TD>
-                <RoleBadge role={member.role} />
+                <MemberRoleBadge row={member} />
               </TD>
               <TD>
                 <StatusCell row={member} />

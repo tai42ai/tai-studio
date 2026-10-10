@@ -7,7 +7,7 @@ const member = {
   email: 'alice@example.com',
   role: 'editor',
   created_at: '2026-07-11T00:00:00Z',
-  principals: [{ user_id: 'p-1', disabled: false }],
+  principals: [{ user_id: 'p-1', disabled: false, role: 'editor' }],
   disabled: false,
   handle: 'handle-m-1',
   action_keys: [],
@@ -41,5 +41,23 @@ describe('members schemas', () => {
   it('reject a missing role', () => {
     const { role: _role, ...withoutRole } = member;
     expect(memberRow.safeParse(withoutRole).success).toBe(false);
+  });
+
+  it("carry each principal's own role, a name or null", () => {
+    const row = memberRow.parse({
+      ...member,
+      role: null,
+      principals: [
+        { user_id: 'p-1', disabled: false, role: 'viewer' },
+        { user_id: 'p-2', disabled: false, role: null },
+      ],
+    });
+    expect(row.principals.map((principal) => principal.role)).toEqual(['viewer', null]);
+  });
+
+  it('reject a principal without its role', () => {
+    expect(
+      memberRow.safeParse({ ...member, principals: [{ user_id: 'p-1', disabled: false }] }).success,
+    ).toBe(false);
   });
 });
