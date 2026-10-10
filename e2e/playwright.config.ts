@@ -97,6 +97,19 @@ export default defineConfig({
   // integrity cases mutate shared server state, so parallel workers would race.
   fullyParallel: false,
   workers: 1,
+  // Per-test bound. Every action waits on rendered state with no bound of its own, so this is
+  // the one limit that turns a test that never finishes into a failure naming the test and the
+  // step. It is a bound on a hang, not a performance limit, so it sits well above any legitimate
+  // run. Times of completed tests outside the axe sweep, as Playwright reports them: on the CI
+  // runner (ubuntu-latest) the slowest takes 4.1 s over six whole-suite runs; on a 20-core host
+  // shared with other work at a 1-min load average of 18-121, 24.7 s; while a busy-loop load
+  // generator at equal priority held that average at 109-138 (about six runnable tasks per
+  // core), the preset fixed-kwargs flow (`presets-kwargs.spec.ts`) completed in 66.742 s, of
+  // which the server's audit log puts 37.394 s in its setup `POST /api/config/env`. Twice that
+  // slowest run, rounded up to the next 10 s. A still slower environment reaches it, and a test
+  // that does so fails here rather than hangs. The two-theme axe sweep, which walks every
+  // feature screen in one test, sets its own bound by the same rule.
+  timeout: 140_000,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
