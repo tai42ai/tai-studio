@@ -245,6 +245,40 @@ describe('ClientCredentialsDialog — saving', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('disables the sign-in service, Client ID and Client secret while the save is in flight', async () => {
+    const user = userEvent.setup();
+    let answer: (value: unknown) => void = () => undefined;
+    const lookup = discovered({
+      authorization_servers: TWO_SERVICES,
+      client_issuer: 'https://auth-b.example.net',
+    });
+    const { onSaved } = renderDialog({
+      discoverServer: vi.fn().mockResolvedValue(lookup),
+      setProviderClient: vi.fn().mockReturnValue(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      ),
+    });
+    await screen.findByRole('combobox', { name: 'Sign-in service' });
+    const id = screen.getByLabelText('Client ID');
+    await waitFor(() => {
+      expect(id).toBeEnabled();
+    });
+    await user.type(id, 'app-1');
+    await user.type(screen.getByLabelText('Client secret'), SECRET);
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(screen.getByLabelText('Client ID')).toBeDisabled();
+    });
+    expect(screen.getByLabelText('Client secret')).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: 'Sign-in service' })).toBeDisabled();
+    answer({ provider: discoveredProvider({ client_source: 'manual' }), fanout: null });
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledOnce();
+    });
+  });
+
   it('keeps the secret out of every query and mutation in the cache', async () => {
     const user = userEvent.setup();
     const { queryClient, onSaved } = renderDialog();

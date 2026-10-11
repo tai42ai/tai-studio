@@ -17,6 +17,7 @@ import {
   discovered,
   discoveredProvider,
   makeClient,
+  NON_CONVERGED_FANOUT,
   provider,
   providerCatalog,
   renderWithProviders,
@@ -486,6 +487,28 @@ describe('ConnectorsPage — provider card additions', () => {
     const alert = await within(dialog).findByRole('alert');
     expect(alert).toHaveTextContent(message);
     expect(screen.getByRole('dialog', { name: 'Remove this server?' })).toBeInTheDocument();
+  });
+
+  it('keeps the confirm open on the fleet report when a worker did not reload the removal', async () => {
+    const user = userEvent.setup();
+    renderPage({
+      listProviders: vi.fn().mockResolvedValue(providerCatalog([discoveredProvider()])),
+      removeProvider: vi.fn().mockResolvedValue({
+        provider_id: 'remote_files',
+        removed_clients: 1,
+        fanout: NON_CONVERGED_FANOUT,
+      }),
+    });
+    await screen.findByText('Remote files', { selector: 'strong' });
+    await user.click(await within(card('Remote files')).findByRole('button', { name: 'Remove' }));
+    const dialog = screen.getByRole('dialog', { name: 'Remove this server?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    const alert = await within(dialog).findByRole('alert');
+    expect(alert).toHaveTextContent('Change saved, but 1 worker did not converge');
+    expect(within(alert).getByText('serve-b')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Remove' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('offers Remove only on a removable provider', async () => {
