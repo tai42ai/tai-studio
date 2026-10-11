@@ -65,7 +65,14 @@ describe('backup client transport', () => {
         data: {
           ok: true,
           sections: {
-            presets: { created: 1, updated: 0, skipped: 0, errors: [] },
+            presets: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              errors: [],
+              recycle: null,
+              awaiting_respawn: [],
+            },
             // The manifest/env restores apply through the config pipeline, so their
             // report carries the mode-wrapped fleet fanout; it must parse, not strip.
             manifest: {
@@ -77,6 +84,8 @@ describe('backup client transport', () => {
                 mode: 'local-only',
                 note: 'no worker bus configured; only this worker reloaded',
               },
+              recycle: null,
+              awaiting_respawn: [],
             },
           },
         },
