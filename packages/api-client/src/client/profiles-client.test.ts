@@ -153,6 +153,8 @@ describe('settings-profiles client transport', () => {
           ],
           fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
           refused: [],
+          recycle_stopped: null,
+          awaiting_respawn: [],
           fanout: {
             mode: 'local-only',
             note: 'no worker bus configured; only this worker reloaded',
@@ -191,6 +193,8 @@ describe('settings-profiles client transport', () => {
             { key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' },
             { key: 'TAI_DEFAULT_REDIS_URL', reason: 'recycle_supported=false for this shape' },
           ],
+          recycle_stopped: null,
+          awaiting_respawn: [],
           fanout: {
             mode: 'fleet',
             op: 'reload-config',
@@ -292,6 +296,8 @@ describe('settings-profiles client transport', () => {
           hot: [],
           recycle: [],
           refused: [],
+          recycle_stopped: null,
+          awaiting_respawn: [],
           fanout: { mode: 'local-only', note: 'only this worker reloaded' },
         },
       }),
@@ -307,6 +313,8 @@ describe('combined env+manifest op + preserved manifest transport', () => {
         data: {
           status: 'ok',
           env_keys: 3,
+          awaiting_respawn: [],
+          recycle: null,
           fanout: {
             mode: 'local-only',
             note: 'no worker bus configured; only this worker reloaded',

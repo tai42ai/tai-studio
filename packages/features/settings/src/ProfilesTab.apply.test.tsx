@@ -70,6 +70,8 @@ function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
     ],
     fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
     refused: [] as { key: string; reason: string }[],
+    recycle_stopped: null,
+    awaiting_respawn: [],
     fanout: {
       mode: 'local-only' as const,
       note: 'no worker bus configured; only this worker reloaded',
@@ -180,6 +182,8 @@ describe('ProfilesTab — apply', () => {
         // joined onto that row, it renders on its own under Fresh lives.
         fresh: [{ name: 'serve-9', kind: 'serve', generation: 1 }],
         refused: [] as { key: string; reason: string }[],
+        recycle_stopped: null,
+        awaiting_respawn: [],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),
     );
@@ -217,6 +221,8 @@ describe('ProfilesTab — apply', () => {
         recycle: [],
         fresh: [],
         refused: [{ key: 'TAI_APP_PROVIDERS', reason: 'boundary-refused: no recycle path' }],
+        recycle_stopped: null,
+        awaiting_respawn: [],
         fanout: { mode: 'local-only' as const, note: 'only this worker reloaded' },
       }),
     );
@@ -367,5 +373,76 @@ describe('ProfilesTab — version history', () => {
     await waitFor(() => {
       expect(rollbackSettingsProfile).toHaveBeenCalledWith('prod', 1);
     });
+  });
+});
+
+/** A converged profile apply whose fleet rows state the moved env (the fact) beside the
+ * recycled rows; the server's verdict is `awaiting`. */
+function rolledApply(
+  awaiting: { name: string; keys: string[] }[],
+): ReturnType<ApiClient['applySettingsProfile']> {
+  const moved = { status: 'ok', env_keys: 2, awaiting_respawn: ['BACKEND_MANIFEST_KEY'] };
+  return Promise.resolve({
+    hot: [],
+    recycle: [
+      { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 1 },
+      { name: 'serve-1', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+    ],
+    fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
+    refused: [] as { key: string; reason: string }[],
+    recycle_stopped: null,
+    awaiting_respawn: awaiting,
+    fanout: {
+      mode: 'fleet' as const,
+      op: 'reload_config',
+      reachable: true,
+      local_only: false,
+      results: [
+        { name: 'serve-1', outcome: 'applied' as const, payload: moved, error: null, detail: null },
+        {
+          name: 'backend-1',
+          outcome: 'applied' as const,
+          payload: moved,
+          error: null,
+          detail: null,
+        },
+      ],
+      error: null,
+    },
+  });
+}
+
+describe('ProfilesTab — apply report restart panel', () => {
+  async function applyWith(awaiting: { name: string; keys: string[] }[]): Promise<HTMLElement> {
+    const user = userEvent.setup();
+    renderWithProviders(<ProfilesTab readOnly={false} />, {
+      client: stubClient({
+        diffSettingsProfile: vi.fn(() => Promise.resolve(cleanDiff())),
+        applySettingsProfile: vi.fn(() => rolledApply(awaiting)),
+      }),
+      projection: fullProjection(),
+    });
+    await user.click(await screen.findByRole('button', { name: 'Apply profile prod' }));
+    const apply = await screen.findByRole('button', { name: 'Apply profile' });
+    await waitFor(() => {
+      expect(apply).toBeEnabled();
+    });
+    await user.click(apply);
+    return screen.findByTestId('apply-report');
+  }
+
+  it('shows no restart panel for a converged roll, whatever the rows state', async () => {
+    const report = await applyWith([]);
+    expect(within(report).getByTestId('apply-recycle')).toHaveTextContent('recycled');
+    expect(within(report).queryByText(/need a restart/)).toBeNull();
+  });
+
+  it('lists the workers the server names as still awaiting a respawn', async () => {
+    const report = await applyWith([{ name: 'backend-2', keys: ['BACKEND_MANIFEST_KEY'] }]);
+    const panel = within(report)
+      .getByText(/1 worker needs a restart/)
+      .closest('[role="status"]');
+    expect(panel).not.toBeNull();
+    expect(panel).toHaveTextContent('backend-2');
   });
 });

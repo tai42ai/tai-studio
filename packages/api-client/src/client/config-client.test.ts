@@ -64,6 +64,8 @@ describe('config client transport', () => {
         data: {
           status: 'ok',
           env_keys: 2,
+          awaiting_respawn: [],
+          recycle: null,
           fanout: {
             mode: 'local-only',
             note: 'no worker bus configured; only this worker reloaded',

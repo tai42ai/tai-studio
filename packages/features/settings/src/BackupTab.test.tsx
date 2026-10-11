@@ -105,8 +105,22 @@ describe('BackupTab', () => {
     const report: BackupImportReport = {
       ok: true,
       sections: {
-        manifest: { created: 1, updated: 0, skipped: 0, errors: [] },
-        env: { created: 0, updated: 0, skipped: 1, errors: ['env var rejected'] },
+        manifest: {
+          created: 1,
+          updated: 0,
+          skipped: 0,
+          errors: [],
+          recycle: null,
+          awaiting_respawn: [],
+        },
+        env: {
+          created: 0,
+          updated: 0,
+          skipped: 1,
+          errors: ['env var rejected'],
+          recycle: null,
+          awaiting_respawn: [],
+        },
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
@@ -131,7 +145,14 @@ describe('BackupTab', () => {
     const report: BackupImportReport = {
       ok: false,
       sections: {
-        env: { created: 0, updated: 0, skipped: 0, errors: ['<img src=x onerror=alert(1)>'] },
+        env: {
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          errors: ['<img src=x onerror=alert(1)>'],
+          recycle: null,
+          awaiting_respawn: [],
+        },
       },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
@@ -149,7 +170,16 @@ describe('BackupTab', () => {
     const user = userEvent.setup();
     const report: BackupImportReport = {
       ok: false,
-      sections: { env: { created: 0, updated: 0, skipped: 0, errors: ['boom'] } },
+      sections: {
+        env: {
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          errors: ['boom'],
+          recycle: null,
+          awaiting_respawn: [],
+        },
+      },
     };
     const importBackup = vi.fn().mockResolvedValue(report);
     renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
@@ -159,6 +189,108 @@ describe('BackupTab', () => {
     await user.click(await screen.findByRole('button', { name: 'Import selected' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Import failed');
+  });
+
+  it('renders a restore recycle roll and the workers it leaves awaiting a respawn', async () => {
+    const user = userEvent.setup();
+    const report: BackupImportReport = {
+      ok: true,
+      sections: {
+        env: {
+          created: 0,
+          updated: 1,
+          skipped: 0,
+          errors: [],
+          fanout: {
+            mode: 'fleet',
+            op: 'reload_config',
+            reachable: true,
+            local_only: false,
+            results: [],
+            error: null,
+          },
+          recycle: {
+            recycle: [
+              {
+                name: 'backend-1',
+                kind: 'backend',
+                status: 'timed-out',
+                generation_before: 1,
+                detail: 'old life still present after 30s',
+              },
+            ],
+            fresh: [],
+            recycle_stopped: {
+              kind: 'backend',
+              name: 'backend-1',
+              detail: 'old life still present after 30s',
+            },
+          },
+          awaiting_respawn: [
+            { name: 'backend-1', keys: ['BACKEND_MANIFEST_KEY'] },
+            { name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] },
+          ],
+        },
+      },
+    };
+    const importBackup = vi.fn().mockResolvedValue(report);
+    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+
+    await screen.findByRole('button', { name: 'Choose backup file' });
+    await uploadBackup(user);
+    await user.click(await screen.findByRole('button', { name: 'Import selected' }));
+
+    const roll = await screen.findByTestId('report-recycle-env');
+    expect(within(roll).getByText('timed-out')).toBeInTheDocument();
+    const awaiting = screen.getByText('2 workers need a restart to apply some settings');
+    const panel = awaiting.closest('[role="status"]');
+    expect(panel).not.toBeNull();
+    expect(within(panel as HTMLElement).getByText('serve-1')).toBeInTheDocument();
+    expect(within(panel as HTMLElement).getByText('backend-1')).toBeInTheDocument();
+  });
+
+  it('renders no restart list when the restore leaves no worker awaiting a respawn', async () => {
+    const user = userEvent.setup();
+    const report: BackupImportReport = {
+      ok: true,
+      sections: {
+        env: {
+          created: 0,
+          updated: 1,
+          skipped: 0,
+          errors: [],
+          fanout: {
+            mode: 'fleet',
+            op: 'reload_config',
+            reachable: true,
+            local_only: false,
+            results: [],
+            error: null,
+          },
+          recycle: {
+            recycle: [
+              { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 1 },
+              { name: 'serve-1', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+            ],
+            fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
+            recycle_stopped: null,
+          },
+          awaiting_respawn: [],
+        },
+      },
+    };
+    const importBackup = vi.fn().mockResolvedValue(report);
+    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+
+    await screen.findByRole('button', { name: 'Choose backup file' });
+    await uploadBackup(user);
+    await user.click(await screen.findByRole('button', { name: 'Import selected' }));
+
+    const roll = await screen.findByTestId('report-recycle-env');
+    expect(
+      within(roll).getByText('this worker recycles itself after replying'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/need(s)? a restart to apply some settings/)).not.toBeInTheDocument();
   });
 
   it('fronts the import surface with a danger-zone note and a danger restore button', async () => {

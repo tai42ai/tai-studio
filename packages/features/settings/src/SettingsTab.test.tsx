@@ -79,6 +79,8 @@ function saved(): ReturnType<ApiClient['setEnvConfig']> {
   return Promise.resolve({
     status: 'reloaded',
     env_keys: 1,
+    awaiting_respawn: [],
+    recycle: null,
     fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
   });
 }

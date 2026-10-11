@@ -26,6 +26,8 @@ function baseClient(overrides: StubApiClient = {}): StubApiClient {
     setToolExtensions: vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 0,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
     }),
     ...overrides,
@@ -204,6 +206,8 @@ describe('ToolExtensionsCard', () => {
     const setToolExtensions = vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 1,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: {
         mode: 'fleet',
         op: 'reload_config',
