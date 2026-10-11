@@ -112,6 +112,42 @@ describe('BackgroundRuns — active run detail', () => {
     expect(within(detail).getByRole('alert')).toHaveTextContent('kaboom');
   });
 
+  it("renders a failed terminal's outcome under the message", async () => {
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'failed' })]),
+      getToolRun: vi.fn().mockResolvedValue(
+        record({
+          status: 'failed',
+          error: 'tool run failed',
+          outcome: { reason: 'the run stopped short' },
+          finished_at: 't1b',
+        }),
+      ),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const detail = await screen.findByTestId('tool-run-detail');
+    expect(within(detail).getByRole('alert')).toHaveTextContent('tool run failed');
+    const outcome = within(detail).getByTestId('tool-run-outcome');
+    expect(within(outcome).getByRole('heading', { name: 'Outcome' })).toBeInTheDocument();
+    expect(within(outcome).getByText('reason:')).toBeInTheDocument();
+    expect(within(outcome).getByText('"the run stopped short"')).toBeInTheDocument();
+  });
+
+  it('renders a plain failure with its message and no outcome section', async () => {
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'failed' })]),
+      getToolRun: vi
+        .fn()
+        .mockResolvedValue(record({ status: 'failed', error: 'kaboom', finished_at: 't1b' })),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const detail = await screen.findByTestId('tool-run-detail');
+    expect(within(detail).getByRole('alert')).toHaveTextContent('kaboom');
+    expect(within(detail).queryByTestId('tool-run-outcome')).toBeNull();
+  });
+
   it('renders the distinct lost explanation', async () => {
     const client: StubApiClient = {
       listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'lost' })]),
