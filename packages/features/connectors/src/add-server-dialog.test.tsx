@@ -212,7 +212,8 @@ describe('AddServerDialog — step 2, the review', () => {
   });
 
   it('sends the parsed scopes, the name and the identifier', async () => {
-    const { client, onAdded } = renderDialog();
+    const { client, onAdded, queryClient } = renderDialog();
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     const user = await lookUp();
     await user.type(await screen.findByLabelText('Scopes'), ' files.read   files.write ');
     await user.click(screen.getByRole('button', { name: 'Add server' }));
@@ -227,10 +228,9 @@ describe('AddServerDialog — step 2, the review', () => {
     await waitFor(() => {
       expect(onAdded).toHaveBeenCalledWith(discoveredProvider(), true);
     });
-    // The catalog is read again so the new provider is listed.
-    await waitFor(() => {
-      expect(client.listProviders).toHaveBeenCalled();
-    });
+    // The catalog and the connections are read again so the new provider is listed.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['providers'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['connections'] });
   });
 
   it('hands the page a server that needs client credentials as such', async () => {

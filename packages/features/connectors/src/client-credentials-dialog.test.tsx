@@ -58,7 +58,9 @@ describe('ClientCredentialsDialog — the look-up', () => {
         "The ID and secret of the app you registered with this server's sign-in service.",
       ),
     ).toBeInTheDocument();
-    expect(client.discoverServer).toHaveBeenCalledWith({ providerId: 'remote_files' });
+    await waitFor(() => {
+      expect(client.discoverServer).toHaveBeenCalledWith({ providerId: 'remote_files' });
+    });
     expect(screen.getByRole('status', { name: 'Looking up' })).toBeInTheDocument();
     expect(screen.getByLabelText('Client ID')).toBeDisabled();
     expect(screen.getByLabelText('Client secret')).toBeDisabled();
