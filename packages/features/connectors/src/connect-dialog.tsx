@@ -19,15 +19,20 @@ import type { ReactNode } from 'react';
 
 import { ConnectorRefusalNotice, Notice } from './notice';
 import { SubServicesFieldset } from './SubServicesFieldset';
+import { useConnectorAdmin } from './use-add-server-dialog';
 import { useConnectDialog } from './use-connect-dialog';
 
 export function ConnectDialog({
   provider,
   onClose,
+  onSetClientCredentials,
 }: {
   provider: ProviderView;
   onClose: () => void;
+  /** Opens the client-credentials dialog for a server refused for lacking them. */
+  onSetClientCredentials?: (provider: ProviderView) => void;
 }): ReactNode {
+  const isAdmin = useConnectorAdmin();
   const {
     alias,
     setAlias,
@@ -99,7 +104,20 @@ export function ConnectDialog({
         ))}
 
         {refusal !== null ? (
-          <ConnectorRefusalNotice refusal={refusal} />
+          <ConnectorRefusalNotice
+            refusal={refusal}
+            action={
+              refusal.kind === 'client-required' && isAdmin && onSetClientCredentials ? (
+                <Button
+                  onClick={() => {
+                    onSetClientCredentials(provider);
+                  }}
+                >
+                  Set client credentials
+                </Button>
+              ) : undefined
+            }
+          />
         ) : errorMessage !== null ? (
           <ErrorState message={errorMessage} />
         ) : null}

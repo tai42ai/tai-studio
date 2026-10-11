@@ -51,9 +51,12 @@ const PALETTE: Record<OAuthNotice['kind'], NoticePalette> = {
 export function Notice({
   notice,
   onDismiss,
+  title,
 }: {
   notice: OAuthNotice;
   onDismiss: () => void;
+  /** The headline; defaults to the one of the notice's kind. */
+  title?: string;
 }): ReactNode {
   const palette = PALETTE[notice.kind];
   const style: CSSProperties = {
@@ -71,7 +74,7 @@ export function Notice({
   return (
     <div role={palette.role} data-kind={notice.kind} style={style}>
       <div>
-        <strong style={{ color: palette.fg }}>{palette.title}</strong>
+        <strong style={{ color: palette.fg }}>{title ?? palette.title}</strong>
         <p style={{ margin: 'var(--tai-space-1) 0 0', whiteSpace: 'pre-wrap' }}>{notice.message}</p>
       </div>
       <Button onClick={onDismiss} aria-label="Dismiss notice">
@@ -83,22 +86,26 @@ export function Notice({
 
 // The machine-readable `code`s the skeleton's named 501 refusals carry. The store
 // code names the whole feature being off; the provider code names one provider's
-// OAuth client-credentials env var gap (whose message names the offending var).
+// OAuth client-credentials env var gap (whose message names the offending var); the
+// client code names a provider whose sign-in service has no client credentials set.
 const STORE_NOT_CONFIGURED_CODE = 'connectors-not-configured';
 const PROVIDER_NOT_CONFIGURED_CODE = 'connector-provider-not-configured';
+const CLIENT_CREDENTIALS_REQUIRED_CODE = 'connector-client-credentials-required';
 
 /** A classified connector refusal — the muted OFF states, distinct from real errors. */
 export type ConnectorRefusal =
   | { readonly kind: 'store-off'; readonly message: string }
-  | { readonly kind: 'provider-off'; readonly message: string };
+  | { readonly kind: 'provider-off'; readonly message: string }
+  | { readonly kind: 'client-required'; readonly message: string };
 
 /**
  * Classify a mutation error as a named 501 connector refusal, or `null` when it is a
  * genuine error (validation, upstream, 5xx) that belongs in a loud ErrorState. Duck-
  * types the error's `status` / `code` / `message` so it needs no `instanceof`.
  *
- * The provider-credential gap is checked before the store code, then a bare 501 with
- * no specific code falls back to the whole-feature-off state.
+ * The provider-credential gap and the missing client credentials are checked before
+ * the store code, then a bare 501 with no specific code falls back to the
+ * whole-feature-off state.
  */
 export function readConnectorRefusal(error: unknown): ConnectorRefusal | null {
   if (typeof error !== 'object' || error === null) return null;
@@ -116,6 +123,15 @@ export function readConnectorRefusal(error: unknown): ConnectorRefusal | null {
           : 'This connector is not configured on this deployment.',
     };
   }
+  if (code === CLIENT_CREDENTIALS_REQUIRED_CODE) {
+    return {
+      kind: 'client-required',
+      message:
+        typeof message === 'string' && message !== ''
+          ? message
+          : 'This server needs client credentials before anyone can connect.',
+    };
+  }
   if (code === STORE_NOT_CONFIGURED_CODE || status === 501) {
     return { kind: 'store-off', message: featureDisabledMessage(error) };
   }
@@ -123,15 +139,33 @@ export function readConnectorRefusal(error: unknown): ConnectorRefusal | null {
 }
 
 /**
- * The muted, honest surface for a {@link ConnectorRefusal}. Both cases surface the
+ * The muted, honest surface for a {@link ConnectorRefusal}. Every case surfaces the
  * server's own actionable message (which names the missing configuration) — the
- * store-off case through the shared {@link FeatureDisabled} note, the provider-off
- * case as a `role="status"` note — never a loud red alert, because a capability the
- * deployment has not provided is a state, not a malfunction.
+ * store-off case through the shared {@link FeatureDisabled} note, the others as a
+ * `role="status"` note — never a loud red alert, because a capability the deployment
+ * has not provided is a state, not a malfunction. `action` is the control that
+ * resolves a missing-client-credentials refusal, when the caller may use it.
  */
-export function ConnectorRefusalNotice({ refusal }: { refusal: ConnectorRefusal }): ReactNode {
+export function ConnectorRefusalNotice({
+  refusal,
+  action,
+}: {
+  refusal: ConnectorRefusal;
+  action?: ReactNode;
+}): ReactNode {
   if (refusal.kind === 'store-off') {
     return <FeatureDisabled feature="Connectors" message={refusal.message} />;
+  }
+  if (refusal.kind === 'client-required') {
+    return (
+      <div data-testid="connector-client-required">
+        <EmptyState
+          title="This server needs client credentials"
+          description={refusal.message}
+          action={action}
+        />
+      </div>
+    );
   }
   return (
     <div data-testid="connector-provider-off">

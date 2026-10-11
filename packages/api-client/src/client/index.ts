@@ -43,7 +43,12 @@ export type {
   RoleCreateBody,
   RoleUpdateBody,
 } from './auth-client';
-export type { StartConnectArgs } from './connectors-client';
+export type {
+  AddServerArgs,
+  DiscoverServerTarget,
+  SetProviderClientArgs,
+  StartConnectArgs,
+} from './connectors-client';
 export type {
   ConversationMessageSearchQuery,
   ConversationThreadFilters,
