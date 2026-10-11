@@ -578,6 +578,29 @@ created: number;
 updated: number;
 skipped: number;
 errors: string[];
+recycle: {
+recycle: {
+name: string;
+kind: string;
+status: string;
+generation_before: number;
+detail?: string | null | undefined;
+}[];
+fresh: {
+name: string;
+kind: string;
+generation: number;
+}[];
+recycle_stopped: {
+kind: string;
+name: string | null;
+detail: string;
+} | null;
+} | null;
+awaiting_respawn: {
+name: string;
+keys: string[];
+}[];
 new_api_keys?: {
 user_id: string;
 description: string;
@@ -4014,6 +4037,29 @@ const backupImportReport: z.ZodObject<{
             error: z.ZodNullable<z.ZodString>;
             mode: z.ZodLiteral<"unreachable">;
         }, z.core.$strip>], "mode">>;
+        recycle: z.ZodNullable<z.ZodObject<{
+            recycle: z.ZodArray<z.ZodObject<{
+                name: z.ZodString;
+                kind: z.ZodString;
+                status: z.ZodString;
+                generation_before: z.ZodNumber;
+                detail: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+            }, z.core.$strip>>;
+            fresh: z.ZodArray<z.ZodObject<{
+                name: z.ZodString;
+                kind: z.ZodString;
+                generation: z.ZodNumber;
+            }, z.core.$strip>>;
+            recycle_stopped: z.ZodNullable<z.ZodObject<{
+                kind: z.ZodString;
+                name: z.ZodNullable<z.ZodString>;
+                detail: z.ZodString;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+        awaiting_respawn: z.ZodArray<z.ZodObject<{
+            name: z.ZodString;
+            keys: z.ZodArray<z.ZodString>;
+        }, z.core.$strip>>;
     }, z.core.$strip>>;
 }, z.core.$strip>;
 
@@ -5773,6 +5819,29 @@ function createApiClient(config: ApiConfig): {
             updated: number;
             skipped: number;
             errors: string[];
+            recycle: {
+                recycle: {
+                    name: string;
+                    kind: string;
+                    status: string;
+                    generation_before: number;
+                    detail?: string | null | undefined;
+                }[];
+                fresh: {
+                    name: string;
+                    kind: string;
+                    generation: number;
+                }[];
+                recycle_stopped: {
+                    kind: string;
+                    name: string | null;
+                    detail: string;
+                } | null;
+            } | null;
+            awaiting_respawn: {
+                name: string;
+                keys: string[];
+            }[];
             new_api_keys?: {
                 user_id: string;
                 description: string;
