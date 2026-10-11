@@ -32,6 +32,7 @@ import type { ReactNode } from 'react';
 
 import { AsksList, ParkedNote } from './AsksList';
 import { BackgroundRuns } from './BackgroundRuns';
+import { FailedOutcome, failedOutcomeOf } from './FailedOutcome';
 import { toolSchemaKey } from './keys';
 import { ResultViewer } from './ResultViewer';
 import { runToolWithTimeout } from './run';
@@ -116,7 +117,10 @@ function RunOutcome({ run }: { readonly run: AutoFormRun }): ReactNode {
       {run.timedOut ? (
         <TimeoutNotice />
       ) : run.run.isError ? (
-        <ErrorState message={errorMessage(run.run.error)} />
+        <FailedOutcome
+          message={errorMessage(run.run.error)}
+          outcome={failedOutcomeOf(run.run.error)}
+        />
       ) : null}
 
       {run.runView?.kind === 'result' ? (
