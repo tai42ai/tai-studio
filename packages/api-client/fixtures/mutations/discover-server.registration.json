@@ -1,0 +1,14 @@
+{
+  "url": "https://mcp.example.com/mcp",
+  "resource": "https://mcp.example.com/mcp",
+  "resource_name": "Remote files",
+  "issuer": "https://login.example.com",
+  "authorization_servers": ["https://login.example.com"],
+  "client_issuer": null,
+  "registration_supported": true,
+  "automatic_client": true,
+  "scopes_supported": ["files.read", "files.write"],
+  "suggested_id": "mcp_example_com",
+  "suggested_display_name": "Remote files",
+  "redirect_uri": "https://studio.example.com/api/connectors/oauth/callback"
+}

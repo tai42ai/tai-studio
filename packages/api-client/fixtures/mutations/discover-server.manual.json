@@ -1,0 +1,14 @@
+{
+  "url": "https://tools.example.net/mcp",
+  "resource": "https://tools.example.net/mcp",
+  "resource_name": null,
+  "issuer": "https://auth-a.example.net",
+  "authorization_servers": ["https://auth-a.example.net", "https://auth-b.example.net"],
+  "client_issuer": "https://auth-b.example.net",
+  "registration_supported": false,
+  "automatic_client": false,
+  "scopes_supported": [],
+  "suggested_id": "tools_example_net",
+  "suggested_display_name": "tools.example.net",
+  "redirect_uri": null
+}

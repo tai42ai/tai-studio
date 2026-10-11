@@ -6,12 +6,14 @@
  * return path); the redirect-resume completes the exchange via the forwarded
  * state/code and strips them from the URL; a `kind:'none'` connection hides
  * Reconnect; a disconnect whose upstream revoke FAILED surfaces the warning and
- * stays on the page; and a connector-MANAGED MCP entry renders read-only.
+ * stays on the page; a connector-MANAGED MCP entry renders read-only; an MCP server
+ * is added by its address (look-up, review, add) and lands in the connect dialog;
+ * and a removable provider is removed after its confirm.
  */
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { seedCredential } from './helpers';
+import { ADD_SERVER_LOOKUP, seedCredential } from './helpers';
 
 needs();
 
@@ -24,9 +26,6 @@ const PROVIDERS = {
       id: 'acme',
       display_name: 'Acme',
       description: 'Acme provider',
-      // The provider catalog contract requires a real URL (`providerView.icon_url`
-      // parses with `z.string().url()`), so an empty string would fail the response
-      // parse and blank the whole providers list.
       icon_url: 'https://cdn.example/acme.png',
       kind: 'oauth',
       origin: 'system',
@@ -36,6 +35,21 @@ const PROVIDERS = {
     },
   ],
   categories: [{ id: 'tools', display_name: 'Tools', sort_order: 1 }],
+};
+
+/** A provider added by its address: no icon, removable, its client registered automatically. */
+const ADDED_PROVIDER = {
+  id: 'remote_files',
+  display_name: 'Remote files',
+  description: '',
+  icon_url: null,
+  kind: 'oauth',
+  origin: 'community',
+  category: 'tools',
+  sub_services: [{ id: 'default', display_name: 'Remote files', description: '', scopes: [] }],
+  config_fields: [],
+  removable: true,
+  client_source: 'dynamic',
 };
 
 /** A UI-safe connection record with the given kind. */
@@ -238,4 +252,97 @@ test('a connector-managed MCP entry renders read-only in the config form', async
     page.getByRole('note').filter({ hasText: 'Managed by connection conn-1' }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove server 1' })).toBeDisabled();
+});
+
+/** Serve the catalog from `current()` on GET; hand any other method to `write`. */
+async function stubProviders(
+  page: Page,
+  current: () => unknown[],
+  write: (method: string, path: string) => unknown,
+): Promise<void> {
+  await page.route(
+    (url) => url.pathname === PROVIDERS_PATH || url.pathname.startsWith(`${PROVIDERS_PATH}/`),
+    async (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+      if (request.method() === 'GET' && path === PROVIDERS_PATH) {
+        await route.fulfill({
+          json: { data: { providers: current(), categories: PROVIDERS.categories } },
+        });
+        return;
+      }
+      await route.fulfill({ json: { data: write(request.method(), path) } });
+    },
+  );
+}
+
+test('an MCP server added by its address lands in the connect dialog', async ({ page }) => {
+  await stubCatalog(page);
+  let providers: unknown[] = [...PROVIDERS.providers];
+  const calls: string[] = [];
+  await stubProviders(
+    page,
+    () => providers,
+    (method, path) => {
+      calls.push(`${method} ${path}`);
+      if (path === `${PROVIDERS_PATH}/discover`) return ADD_SERVER_LOOKUP;
+      providers = [...providers, ADDED_PROVIDER];
+      return { provider: ADDED_PROVIDER, fanout: null };
+    },
+  );
+
+  await page.goto('/connectors');
+  await page
+    .getByRole('region', { name: 'Providers' })
+    .getByRole('button', { name: 'Add MCP server' })
+    .first()
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Add MCP server' });
+  await dialog.getByLabel('Server address').fill('https://mcp.example.com/mcp');
+  await dialog.getByRole('button', { name: 'Look up' }).click();
+
+  // The review step shows what the look-up found and prefills the name and identifier.
+  await expect(dialog.getByText('login.example.com')).toBeVisible();
+  await expect(dialog.getByText('Automatic')).toBeVisible();
+  await expect(dialog.getByLabel('Name')).toHaveValue('Remote files');
+  await expect(dialog.getByLabel('Identifier')).toHaveValue('remote_files');
+  await dialog.getByRole('button', { name: 'Add server' }).click();
+
+  // The server registers apps by itself, so the connect dialog opens for it.
+  await expect(page.getByRole('dialog', { name: 'Connect Remote files' })).toBeVisible();
+  expect(calls).toEqual([`POST ${PROVIDERS_PATH}/discover`, `POST ${PROVIDERS_PATH}`]);
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+  await expect(
+    page.getByRole('region', { name: 'Providers' }).getByText('Remote files', { exact: true }),
+  ).toBeVisible();
+});
+
+test('a removable provider is removed after its confirm', async ({ page }) => {
+  await stubCatalog(page);
+  let providers: unknown[] = [...PROVIDERS.providers, ADDED_PROVIDER];
+  const calls: string[] = [];
+  await stubProviders(
+    page,
+    () => providers,
+    (method, path) => {
+      calls.push(`${method} ${path}`);
+      providers = providers.filter((p) => p !== ADDED_PROVIDER);
+      return { provider_id: 'remote_files', removed_clients: 1, fanout: null };
+    },
+  );
+
+  await page.goto('/connectors');
+  const region = page.getByRole('region', { name: 'Providers' });
+  const added = region.locator('.tai-card').filter({ hasText: 'Remote files' });
+  await expect(added.getByText('App registered automatically')).toBeVisible();
+  await added.getByRole('button', { name: 'Remove' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Remove this server?' });
+  await expect(dialog).toContainText(
+    'This removes “Remote files” from the list. Disconnect its accounts first.',
+  );
+  await dialog.getByRole('button', { name: 'Remove' }).click();
+
+  await expect(dialog).toHaveCount(0);
+  await expect(region.getByText('Remote files', { exact: true })).toHaveCount(0);
+  expect(calls).toEqual([`DELETE ${PROVIDERS_PATH}/remote_files`]);
 });

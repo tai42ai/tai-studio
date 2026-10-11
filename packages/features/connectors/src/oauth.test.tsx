@@ -50,7 +50,13 @@ function ResumeHarness(): React.ReactNode {
   );
 }
 
-const goodMessage = { type: OAUTH_MESSAGE_TYPE, code: 'the-code', state: 'the-state', error: null };
+const goodMessage = {
+  type: OAUTH_MESSAGE_TYPE,
+  code: 'the-code',
+  state: 'the-state',
+  error: null,
+  iss: null,
+};
 
 function stubOpen(popup: FakePopup | null): void {
   vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
@@ -79,7 +85,7 @@ describe('useOAuthPopup — trusted message', () => {
     postMessageFrom(popup, goodMessage);
 
     await waitFor(() => {
-      expect(completeOAuth).toHaveBeenCalledWith('the-state', 'the-code', undefined);
+      expect(completeOAuth).toHaveBeenCalledWith('the-state', 'the-code', undefined, undefined);
     });
     await waitFor(() => {
       expect(screen.getByTestId('notice').textContent).toContain('success:');
@@ -137,7 +143,51 @@ describe('useOAuthPopup — trusted message', () => {
     await waitFor(() => {
       expect(screen.getByTestId('notice').textContent).toBe('cancelled:user said no');
     });
-    expect(completeOAuth).toHaveBeenCalledWith('the-state', '', 'access_denied');
+    expect(completeOAuth).toHaveBeenCalledWith('the-state', '', 'access_denied', undefined);
+  });
+});
+
+describe("useOAuthPopup — the redirect's iss", () => {
+  it('hands the iss of a trusted message to the completion call', async () => {
+    const popup = makeFakePopup();
+    stubOpen(popup);
+    const completeOAuth = vi
+      .fn()
+      .mockResolvedValue({ kind: 'success', connection_id: 'c1', return_url: '/x', fanout: null });
+    renderWithProviders(<Harness url="https://provider/auth" />, {
+      client: makeClient({ completeOAuth }),
+    });
+
+    fireEvent.click(screen.getByText('start'));
+    postMessageFrom(popup, { ...goodMessage, iss: 'https://login.example.com' });
+
+    await waitFor(() => {
+      expect(completeOAuth).toHaveBeenCalledWith(
+        'the-state',
+        'the-code',
+        undefined,
+        'https://login.example.com',
+      );
+    });
+  });
+
+  it('refuses a message whose iss is not a string, as it refuses a malformed code', async () => {
+    const popup = makeFakePopup();
+    stubOpen(popup);
+    const completeOAuth = vi
+      .fn()
+      .mockResolvedValue({ kind: 'success', connection_id: 'c', return_url: '/x' });
+    renderWithProviders(<Harness url="https://provider/auth" />, {
+      client: makeClient({ completeOAuth }),
+    });
+
+    fireEvent.click(screen.getByText('start'));
+    postMessageFrom(popup, { ...goodMessage, iss: 42 });
+    postMessageFrom(popup, { ...goodMessage, code: 42 });
+
+    await Promise.resolve();
+    expect(completeOAuth).not.toHaveBeenCalled();
+    expect(screen.getByTestId('notice').textContent).toBe('');
   });
 });
 
@@ -300,7 +350,7 @@ describe('useOAuthRedirectResume — completing a redirect flow', () => {
     renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
 
     await waitFor(() => {
-      expect(completeOAuth).toHaveBeenCalledWith('st', 'cd', undefined);
+      expect(completeOAuth).toHaveBeenCalledWith('st', 'cd', undefined, undefined);
     });
     await waitFor(() => {
       expect(screen.getByTestId('notice').textContent).toContain('success:');
@@ -309,6 +359,31 @@ describe('useOAuthRedirectResume — completing a redirect flow', () => {
     // unrelated `connection` param is preserved.
     expect(window.location.search).not.toContain(OAUTH_RESUME_PARAMS.state);
     expect(window.location.search).toContain('connection=c1');
+  });
+
+  it('hands a forwarded iss to the completion call and strips it from the URL', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      `/connectors?${OAUTH_RESUME_PARAMS.state}=st&${OAUTH_RESUME_PARAMS.code}=cd&${OAUTH_RESUME_PARAMS.iss}=${encodeURIComponent('https://login.example.com')}`,
+    );
+    const completeOAuth = vi.fn().mockResolvedValue({
+      kind: 'success',
+      connection_id: 'c1',
+      return_url: '/connectors',
+      fanout: null,
+    });
+    renderWithProviders(<ResumeHarness />, { client: makeClient({ completeOAuth }) });
+
+    await waitFor(() => {
+      expect(completeOAuth).toHaveBeenCalledWith(
+        'st',
+        'cd',
+        undefined,
+        'https://login.example.com',
+      );
+    });
+    expect(window.location.search).not.toContain(OAUTH_RESUME_PARAMS.iss);
   });
 
   it('is a no-op on a page without the forwarded params', async () => {

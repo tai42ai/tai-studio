@@ -1,0 +1,8 @@
+{
+  "provider_id": "mcp_example_com",
+  "removed_clients": 1,
+  "fanout": {
+    "mode": "local-only",
+    "note": "no worker bus configured; only this worker reloaded"
+  }
+}

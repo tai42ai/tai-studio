@@ -6,7 +6,8 @@
  *  - both pages are BYTE-CONSTANT — no request data is reflected into the served
  *    html/js (the zero-reflection discipline);
  *  - the callback posts to the opener with targetOrigin = the app-origin LITERAL
- *    (never "*") and refuses an opener that is not same-origin;
+ *    (never "*"), hands on the redirect's `iss` with the code, and refuses an opener
+ *    that is not same-origin;
  *  - the standalone bridge's anchored allow-list REFUSES `eviltai42.ai` and
  *    `tai42.ai.evil.com` style targets;
  *  - the standalone bridge artifact is directory-self-contained (CI check).
@@ -104,11 +105,17 @@ test('a same-origin opener receives the callback message; a direct open (no open
         },
         false,
       );
-      window.open('/oauth-callback.html?code=abc123&state=xyz789', 'cb', 'popup');
+      window.open(
+        '/oauth-callback.html?code=abc123&state=xyz789&iss=https%3A%2F%2Flogin.example.com',
+        'cb',
+        'popup',
+      );
     });
   });
   expect(message.code).toBe('abc123');
   expect(message.state).toBe('xyz789');
+  // The redirect's issuer travels with the code for the platform to check.
+  expect(message.iss).toBe('https://login.example.com');
 
   // Direct open (no opener): the page must NOT throw and must surface a plain
   // status — it never posts a credential into the void.

@@ -25,7 +25,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { seedCredential } from './helpers';
+import { openAddServerReview, seedCredential } from './helpers';
 
 needs();
 
@@ -106,14 +106,8 @@ for (const scheme of ['light', 'dark'] as const) {
       const report: ScreenReport[] = [];
       const blocking: string[] = [];
 
-      for (const route of FEATURE_ROUTES) {
-        await page.goto(route);
-        await waitForFeaturePage(page);
-        const theme = await page.evaluate(() =>
-          document.documentElement.getAttribute('data-theme'),
-        );
-        expect(theme, `data-theme did not resolve to ${scheme} on ${route}`).toBe(scheme);
-
+      // One axe pass over the document as it stands, filed under `route`.
+      const audit = async (route: string): Promise<void> => {
         const results = await new AxeBuilder({ page }).withTags([...WCAG_AA_TAGS]).analyze();
 
         report.push({
@@ -131,6 +125,22 @@ for (const scheme of ['light', 'dark'] as const) {
           if (v.impact === 'critical' || v.impact === 'serious') {
             blocking.push(`${route} [${scheme}]: ${v.id} (${v.impact}) — ${v.help}`);
           }
+        }
+      };
+
+      for (const route of FEATURE_ROUTES) {
+        await page.goto(route);
+        await waitForFeaturePage(page);
+        const theme = await page.evaluate(() =>
+          document.documentElement.getAttribute('data-theme'),
+        );
+        expect(theme, `data-theme did not resolve to ${scheme} on ${route}`).toBe(scheme);
+        await audit(route);
+        if (route === '/connectors') {
+          // The Connectors page also carries the "Add MCP server" dialog, framed at its
+          // review step (the fullest of its two steps).
+          await openAddServerReview(page);
+          await audit(`${route} (add MCP server, review step)`);
         }
       }
 
