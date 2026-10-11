@@ -5,10 +5,23 @@
  * (Client credentials, Remove), the Remove confirm, and the badge of a connection that
  * needs more permissions.
  */
-import type { ConnectionView, ProviderView } from '@tai42/api-client';
-import { Badge, Button, ConfirmDialog, ConnectorsIcon, Tooltip, useApi } from '@tai42/studio-sdk';
+import {
+  type ConnectionView,
+  type FleetReportSummary,
+  type ProviderView,
+  summarizeFleetFanout,
+} from '@tai42/api-client';
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  ConnectorsIcon,
+  FleetReport,
+  Tooltip,
+  useApi,
+} from '@tai42/studio-sdk';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useId } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 
 import { PROVIDERS_KEY } from './keys';
 import { ConnectorRefusalNotice, readConnectorRefusal } from './notice';
@@ -117,7 +130,9 @@ export function ProviderAdminActions({
 }
 
 /** The Remove confirm. A refusal (a provider that still has connections) keeps it open
- * with the server's message; the store being off takes the muted note instead. */
+ * with the server's message; the store being off takes the muted note instead. A removal
+ * whose reload did not reach every worker keeps it open on the fleet report, with Remove
+ * blocked (the removal is done, there is nothing to retry) and Cancel reading Close. */
 export function RemoveProviderDialog({
   provider,
   onClose,
@@ -127,26 +142,39 @@ export function RemoveProviderDialog({
 }): ReactNode {
   const api = useApi();
   const queryClient = useQueryClient();
+  const [fleetFailure, setFleetFailure] = useState<FleetReportSummary | null>(null);
   const remove = useMutation({
     mutationFn: () => api.removeProvider(provider.id),
-    onSuccess: () => {
+    onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
+      const fleet = summarizeFleetFanout(result.fanout);
+      if (fleet !== null && fleet.status !== 'converged') {
+        setFleetFailure(fleet);
+        return;
+      }
       onClose();
     },
   });
   const refusal = readConnectorRefusal(remove.error);
+  const note =
+    fleetFailure !== null ? (
+      <FleetReport summary={fleetFailure} />
+    ) : refusal !== null ? (
+      <ConnectorRefusalNotice refusal={refusal} />
+    ) : undefined;
   return (
     <ConfirmDialog
       title="Remove this server?"
       confirmLabel="Remove"
       pendingLabel="Removing"
+      cancelLabel={fleetFailure !== null ? 'Close' : 'Cancel'}
       onConfirm={() => {
         remove.mutate();
       }}
       onClose={onClose}
       isPending={remove.isPending}
       error={refusal === null ? remove.error : null}
-      disabledNote={refusal !== null ? <ConnectorRefusalNotice refusal={refusal} /> : undefined}
+      disabledNote={note}
     >
       <p style={{ margin: 0 }}>
         {`This removes “${provider.display_name}” from the list. Disconnect its accounts first.`}
