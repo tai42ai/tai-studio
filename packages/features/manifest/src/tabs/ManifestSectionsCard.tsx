@@ -113,7 +113,9 @@ function EntrySectionEditor({
       </div>
       {addMutation.isError ? <ErrorState message={errorMessage(addMutation.error)} /> : null}
       {addMutation.isSuccess ? (
-        <FleetReport summary={summarizeFleetFanout(addMutation.data.fanout)} />
+        <FleetReport
+          summary={summarizeFleetFanout(addMutation.data.fanout, addMutation.data.awaiting_respawn)}
+        />
       ) : null}
 
       {/* The remove door (a DELETE) is gated apart from add — a caller who can add but
@@ -144,7 +146,12 @@ function EntrySectionEditor({
             </Button>
           </div>
           {removeMutation.isSuccess ? (
-            <FleetReport summary={summarizeFleetFanout(removeMutation.data.fanout)} />
+            <FleetReport
+              summary={summarizeFleetFanout(
+                removeMutation.data.fanout,
+                removeMutation.data.awaiting_respawn,
+              )}
+            />
           ) : null}
 
           {confirmTitle !== null ? (
@@ -256,7 +263,9 @@ function ApiToolsEditor({ api }: { readonly api: ApiClient }): ReactNode {
         {edit.isSuccess ? <Badge variant="success">Updated</Badge> : null}
       </div>
       {edit.isError ? <ErrorState message={errorMessage(edit.error)} /> : null}
-      {edit.isSuccess ? <FleetReport summary={summarizeFleetFanout(edit.data.fanout)} /> : null}
+      {edit.isSuccess ? (
+        <FleetReport summary={summarizeFleetFanout(edit.data.fanout, edit.data.awaiting_respawn)} />
+      ) : null}
     </Stack>
   );
 }

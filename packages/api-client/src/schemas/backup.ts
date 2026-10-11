@@ -1,7 +1,7 @@
 /** Backup section, document and import-report response schemas. */
 import { z } from 'zod';
 
-import { fleetReportFanout } from './fleet';
+import { awaitingWorker, fleetReportFanout, recycleRoll } from './fleet';
 
 export const backupSections = z.array(z.object({ name: z.string(), secret: z.boolean() }));
 
@@ -37,6 +37,11 @@ export const backupImportReport = z.object({
       // sections omit it. Parsed EXPLICITLY so the shared fleet-report handler can
       // surface a failed restore propagation — otherwise zod would strip it silently.
       fanout: fleetReportFanout.optional(),
+      // An `env` restore that changed recycle-class keys rolls a fleet recycle: `recycle` is
+      // that roll (`null` when none ran) and `awaiting_respawn` the workers (name + keys) still
+      // awaiting a respawn after it — the operation's verdict, empty for every other section.
+      recycle: recycleRoll.nullable(),
+      awaiting_respawn: z.array(awaitingWorker),
     }),
   ),
 });

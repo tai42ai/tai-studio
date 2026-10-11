@@ -61,6 +61,7 @@ export type {
   FleetFailureOutcome,
   FleetReportStatus,
   FleetReportSummary,
+  FleetWorkerAwaitingRespawn,
   FleetWorkerFailure,
 } from './fleet-report';
 export {
@@ -136,6 +137,7 @@ export type {
   FormPages,
   FormReactions,
   FormUpdate,
+  FreshLife,
   GrantLevel,
   HeldPendingSave,
   HookList,
@@ -224,6 +226,9 @@ export type {
   ReactionEvent,
   ReactionEventKind,
   RecordSearchPage,
+  RecycleEntry,
+  RecycleRoll,
+  RecycleStop,
   ReloadConfigResult,
   RemoveProviderResult,
   ResolvedSpanValue,

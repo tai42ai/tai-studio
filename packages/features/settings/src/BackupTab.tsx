@@ -19,7 +19,7 @@
  * sink. Read-only config mode disables importing (a write); export stays
  * available.
  */
-import type { BackupImportReport } from '@tai42/api-client';
+import type { BackupImportReport, RecycleRoll } from '@tai42/api-client';
 import { schemas, summarizeFleetFanout } from '@tai42/api-client';
 import {
   AlertTriangleIcon,
@@ -43,9 +43,10 @@ import {
   useApi,
 } from '@tai42/studio-sdk';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, useId, useRef, useState } from 'react';
 
 import { backupSectionsKey } from './keys';
+import { RecycleRollSection } from './RecycleRollSection';
 
 interface Section {
   readonly name: string;
@@ -114,6 +115,12 @@ const errorListStyle: CSSProperties = {
   paddingLeft: 'var(--tai-space-4)',
   color: 'var(--tai-color-err-text)',
   fontSize: 'var(--tai-text-sm)',
+};
+
+const recycleTitleStyle: CSSProperties = {
+  margin: '0 0 var(--tai-space-2)',
+  fontSize: 'var(--tai-text-md)',
+  color: 'var(--tai-color-text)',
 };
 
 const mintedStyle: CSSProperties = {
@@ -218,16 +225,55 @@ function ExportCard({ sections }: { readonly sections: readonly Section[] }): Re
 
 // -- import ------------------------------------------------------------------
 
+/** The fleet recycle a section restore of recycle-class keys ran: why, then the rows. */
+function RestoreRecycleReport({
+  section,
+  roll,
+}: {
+  readonly section: string;
+  readonly roll: RecycleRoll;
+}): ReactNode {
+  const headingId = useId();
+  return (
+    <section
+      aria-labelledby={headingId}
+      data-testid={`report-recycle-${section}`}
+      style={{ marginTop: 'var(--tai-space-3)' }}
+    >
+      <h4 id={headingId} style={recycleTitleStyle}>
+        Worker recycle — <span className="tai-mono">{section}</span>
+      </h4>
+      <p style={noteStyle}>
+        Some restored settings take effect only in a fresh worker process, so the fleet recycled its
+        workers one at a time.
+      </p>
+      <RecycleRollSection
+        recycle={roll.recycle}
+        fresh={roll.fresh}
+        stopped={roll.recycle_stopped}
+        writerNote="this worker recycles itself after replying"
+      />
+    </section>
+  );
+}
+
 function ImportReportTable({ report }: { readonly report: BackupImportReport }): ReactNode {
   const entries = Object.entries(report.sections);
   const minted = entries.flatMap(([name, section]) =>
     (section.new_api_keys ?? []).map((key) => ({ section: name, ...key })),
   );
   // The `manifest` and `env` restores apply through the config pipeline, so their
-  // report carries a fleet fan-out; surface any failed propagation honestly.
+  // report carries a fleet fan-out; surface any failed propagation honestly, with the
+  // workers the restore leaves awaiting a respawn.
   const fleetReports = entries
-    .map(([name, section]) => ({ name, summary: summarizeFleetFanout(section.fanout) }))
+    .map(([name, section]) => ({
+      name,
+      summary: summarizeFleetFanout(section.fanout, section.awaiting_respawn),
+    }))
     .filter((entry) => entry.summary !== null);
+  const recycleRolls = entries.flatMap(([name, section]) =>
+    section.recycle === null ? [] : [{ name, roll: section.recycle }],
+  );
 
   return (
     <div>
@@ -283,6 +329,10 @@ function ImportReportTable({ report }: { readonly report: BackupImportReport }):
         <div key={entry.name} style={{ marginTop: 'var(--tai-space-3)' }}>
           <FleetReport summary={entry.summary} />
         </div>
+      ))}
+
+      {recycleRolls.map((entry) => (
+        <RestoreRecycleReport key={entry.name} section={entry.name} roll={entry.roll} />
       ))}
 
       {minted.length > 0 ? (

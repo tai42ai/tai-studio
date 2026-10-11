@@ -101,7 +101,7 @@ export function applyCompletion(
       // summary is handed to the consumer so a non-converged broadcast stays visible
       // as its own honest FleetReport (never a silent close); only a converged
       // completion confirms success in a notice.
-      const fleet = summarizeFleetFanout(result.fanout);
+      const fleet = summarizeFleetFanout(result.fanout, []);
       onSuccess?.(fleet);
       if (fleet !== null && fleet.status !== 'converged') return null;
       return { kind: 'success', message: 'Connected successfully.' };

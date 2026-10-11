@@ -72,7 +72,7 @@ export function useConnectDialog(provider: ProviderView, onClose: () => void) {
       // No-auth provider: the connection is already created and its manifest entry
       // broadcast to the fleet.
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
-      settleFleet(summarizeFleetFanout(result.fanout));
+      settleFleet(summarizeFleetFanout(result.fanout, []));
     },
   });
 

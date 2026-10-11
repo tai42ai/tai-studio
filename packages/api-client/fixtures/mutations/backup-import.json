@@ -9,7 +9,9 @@
       "fanout": {
         "mode": "local-only",
         "note": "no worker bus configured; only this worker reloaded"
-      }
+      },
+      "recycle": null,
+      "awaiting_respawn": []
     },
     "access_control": {
       "created": 1,
@@ -22,7 +24,9 @@
           "description": "Ingestion service key",
           "api_key": "example-key-redacted"
         }
-      ]
+      ],
+      "recycle": null,
+      "awaiting_respawn": []
     }
   }
 }

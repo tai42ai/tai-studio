@@ -14,14 +14,18 @@
  * framing and points the operator back at re-running the deregister, because a
  * reload would re-attach the very server being detached — the wrong remediation.
  *
- * A `converged` summary (every worker applied, or a lone-worker local-only change)
- * renders NOTHING — the calling surface shows its own success. A `degraded` summary
+ * A `converged` summary (every worker applied, or a lone-worker local-only change) with
+ * no worker awaiting a respawn renders NOTHING — the calling surface shows its own success. A `degraded` summary
  * (the bus was reached but a sibling did not confirm) or an `unreachable` summary (the
  * bus itself failed) renders a loud `role="alert"` panel naming the honest per-worker
  * outcomes: `failed` / `missing` / `departed` / `timed_out` / `resyncing` / `recycling` /
  * `stale`, or the bus error. It never fakes success on a stranded worker. Every
  * server-supplied string (a worker name, an error/detail message) renders as escaped
  * React text, never an HTML sink.
+ *
+ * Whatever the status, a worker whose reload named recycle-class settings awaiting a
+ * respawn is listed in a warning status panel beside it: the reload applied every other
+ * change, and those settings take effect only when that worker restarts.
  *
  * Every state — the headline and each worker's outcome — is a `tai-status` line: an
  * icon MARK plus a word LABEL, with the tone color only reinforcing them, so the
@@ -30,6 +34,7 @@
 import type {
   FleetFailureOutcome,
   FleetReportSummary,
+  FleetWorkerAwaitingRespawn,
   FleetWorkerFailure,
 } from '@tai42/api-client';
 import type { ReactNode } from 'react';
@@ -74,9 +79,10 @@ const OUTCOME_STATUS: Record<FleetFailureOutcome, StatusTone> = {
 };
 
 /**
- * Render a fleet broadcast's failure state. Returns `null` for a converged/absent
- * report (nothing to warn about) so callers can always mount it unconditionally
- * beside their own success line.
+ * Render a fleet broadcast's failure state and its workers awaiting a respawn. Returns
+ * `null` for an absent report or a converged one with no worker awaiting a respawn
+ * (nothing to warn about) so callers can always mount it unconditionally beside their
+ * own success line.
  */
 export interface FleetReportProps {
   readonly summary: FleetReportSummary | null;
@@ -193,8 +199,50 @@ function DegradedReport({
   );
 }
 
-export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
-  if (summary === null || summary.status === 'converged') return null;
+/**
+ * The panel for workers whose reload named recycle-class settings awaiting a respawn:
+ * the reload applied everything else, and these take effect only when the worker
+ * restarts. Guidance the operator acts on, not a failure, so it is a warning status
+ * rather than an alert.
+ */
+function AwaitingRespawnReport({
+  awaiting,
+}: {
+  readonly awaiting: readonly FleetWorkerAwaitingRespawn[];
+}): ReactNode {
+  const count = awaiting.length;
+  return (
+    <div role="status" className="tai-warn-state tai-stack tai-stack-2">
+      <strong className="tai-status tai-status-warn">
+        <AlertTriangleIcon />
+        {`${String(count)} worker${count === 1 ? ' needs' : 's need'} a restart to apply some settings`}
+      </strong>
+      <p>
+        These settings changed in the stored environment after the worker started. The reload
+        applied every other change; these take effect only when the worker restarts. Restart it
+        through your deployment&rsquo;s supervisor (on a bare server, restart the server).
+      </p>
+      <ul className="tai-stack tai-stack-2">
+        {awaiting.map((worker) => (
+          <li key={worker.name} className="tai-row">
+            <span className="tai-mono">{worker.name}</span>
+            <span className="tai-muted">waits for a restart:</span>
+            <span className="tai-mono">{worker.keys.join(', ')}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function FailureReport({
+  summary,
+  action,
+}: {
+  readonly summary: FleetReportSummary;
+  readonly action: FleetAction;
+}): ReactNode {
+  if (summary.status === 'converged') return null;
 
   // Only a saved config change carries the "Change saved" framing; a reload or a
   // deregister saved nothing.
@@ -216,5 +264,16 @@ export function FleetReport({ summary, action = 'save' }: FleetReportProps): Rea
       savedFraming={savedFraming}
       remediation={remediationText(action, 'degraded')}
     />
+  );
+}
+
+export function FleetReport({ summary, action = 'save' }: FleetReportProps): ReactNode {
+  if (summary === null) return null;
+  if (summary.status === 'converged' && summary.awaiting.length === 0) return null;
+  return (
+    <>
+      <FailureReport summary={summary} action={action} />
+      {summary.awaiting.length > 0 ? <AwaitingRespawnReport awaiting={summary.awaiting} /> : null}
+    </>
   );
 }

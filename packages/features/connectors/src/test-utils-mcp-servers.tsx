@@ -218,5 +218,11 @@ export function fleetOk(op: string) {
 
 /** A converged config-save result carrying `env_keys`. */
 export function reload(env_keys: number) {
-  return { status: 'ok', env_keys, fanout: { mode: 'local-only', note: 'lone worker' } };
+  return {
+    status: 'ok',
+    env_keys,
+    awaiting_respawn: [],
+    fanout: { mode: 'local-only', note: 'lone worker' },
+    recycle: null,
+  };
 }
