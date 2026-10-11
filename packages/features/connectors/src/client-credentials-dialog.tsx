@@ -52,11 +52,13 @@ function SignInService({
   issuer,
   onIssuer,
   showError,
+  disabled,
 }: {
   lookup: DiscoveredServer;
   issuer: string | null;
   onIssuer: (issuer: string) => void;
   showError: boolean;
+  disabled: boolean;
 }): ReactNode {
   const listed = lookup.authorization_servers;
   if (listed.length === 1) {
@@ -83,6 +85,7 @@ function SignInService({
         value={issuer ?? ''}
         onValueChange={onIssuer}
         placeholder="Choose a sign-in service"
+        disabled={disabled}
         options={listed.map((address) => ({ value: address, label: address }))}
       />
     </Field>
@@ -135,22 +138,29 @@ export function ClientCredentialsDialog({
   const [clientId, setClientId] = useState('');
   const [secret, setSecret] = useState('');
   const [clientIdTouched, setClientIdTouched] = useState(false);
+  const [saving, setSaving] = useState(false);
   const lookup = useServerLookup(provider.id, (found) => {
     setIssuer(signInChoice(found).issuer);
   });
 
   const found = lookup.data ?? null;
   const ready = found !== null;
+  const locked = !ready || saving;
   const unlisted = found !== null ? signInChoice(found).unlisted : null;
   const missingId = clientId.trim() === '';
 
   const submit = async (): Promise<void> => {
     if (issuer === null) throw new Error('Choose the sign-in service this app belongs to.');
-    await api.setProviderClient(provider.id, {
-      client_id: clientId.trim(),
-      client_secret: secret === '' ? null : secret,
-      issuer,
-    });
+    setSaving(true);
+    try {
+      await api.setProviderClient(provider.id, {
+        client_id: clientId.trim(),
+        client_secret: secret === '' ? null : secret,
+        issuer,
+      });
+    } finally {
+      setSaving(false);
+    }
     void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
     onSaved();
   };
@@ -180,6 +190,7 @@ export function ClientCredentialsDialog({
             issuer={issuer}
             onIssuer={setIssuer}
             showError={clientIdTouched}
+            disabled={saving}
           />
         ) : null}
         <Field
@@ -196,7 +207,7 @@ export function ClientCredentialsDialog({
             }}
             autoComplete="off"
             spellCheck={false}
-            disabled={!ready}
+            disabled={locked}
           />
         </Field>
         <Field label="Client secret" description="Leave empty for an app without a secret.">
@@ -207,7 +218,7 @@ export function ClientCredentialsDialog({
             onChange={(event) => {
               setSecret(event.target.value);
             }}
-            disabled={!ready}
+            disabled={locked}
           />
         </Field>
       </div>
