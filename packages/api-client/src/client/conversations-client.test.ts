@@ -482,6 +482,7 @@ describe('thread transcript transport', () => {
           next_page: null,
           truncated: true,
           order: 'desc',
+          person_id: null,
         },
       }),
     );
@@ -538,12 +539,11 @@ describe('thread transcript transport', () => {
     expect(out.items[0]?.successor_id).toBe('m-9');
   });
 
-  it('throws ApiSchemaError LOUDLY on a record missing successor_id', async () => {
+  it('reads a record without a successor_id as no successor', async () => {
     const { successor_id: _drop, ...withoutSuccessor } = callerRecord;
     const { client } = harness(() => jsonResponse(transcriptPage([withoutSuccessor], 'desc')));
-    await expect(client.readConversationTranscript(transcriptQuery)).rejects.toBeInstanceOf(
-      ApiSchemaError,
-    );
+    const out = await client.readConversationTranscript(transcriptQuery);
+    expect(out.items[0]?.successor_id).toBeNull();
   });
 
   it('throws ApiSchemaError LOUDLY on a record carrying no inbound text', async () => {

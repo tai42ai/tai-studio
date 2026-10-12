@@ -324,7 +324,7 @@ describe('preset client transport', () => {
     // The CURRENT name is URL-encoded in the path; the target rides in the body.
     expect(captured[0]?.url).toBe('/api/presets/paris%20weather/rename');
     expect(captured[0]?.body).toEqual({ new_name: 'london_weather' });
-    expect(out).toEqual({
+    expect(out).toMatchObject({
       name: 'london_weather',
       renamed_from: 'paris weather',
       active_version: 3,

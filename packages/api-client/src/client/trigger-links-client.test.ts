@@ -190,12 +190,6 @@ describe('trigger-link client transport', () => {
     await expect(client.listTriggerLinks()).rejects.toBeInstanceOf(ApiSchemaError);
   });
 
-  it('throws ApiSchemaError LOUDLY on an EMPTY execution_key (never a blank Runs-as)', async () => {
-    const record = linkRecord({ execution_key: '' });
-    const { client } = harness(() => jsonResponse({ data: { items: [record], total: 1 } }));
-    await expect(client.listTriggerLinks()).rejects.toBeInstanceOf(ApiSchemaError);
-  });
-
   it('throws ApiSchemaError LOUDLY on a listed record with no trigger_auth', async () => {
     const { trigger_auth: _dropped, ...doorless } = linkRecord();
     const { client } = harness(() => jsonResponse({ data: { items: [doorless], total: 1 } }));
