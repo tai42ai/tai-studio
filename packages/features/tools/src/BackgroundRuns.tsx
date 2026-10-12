@@ -39,6 +39,7 @@ import {
   toolRunKey,
   toolRunsListKey,
 } from './backgroundRunsCommon';
+import { FailedOutcome } from './FailedOutcome';
 import { ResultViewer } from './ResultViewer';
 import { readRunResult } from './run-asks';
 
@@ -116,7 +117,7 @@ function RunDetail({ runId }: { readonly runId: string }): ReactNode {
 
       {record.status === 'succeeded' ? <ResultViewer result={record.result} /> : null}
       {record.status === 'failed' ? (
-        <ErrorState message={record.error ?? 'The tool run failed.'} />
+        <FailedOutcome message={record.error ?? 'The tool run failed.'} outcome={record.outcome} />
       ) : null}
       {record.status === 'lost' ? <LostNotice /> : null}
       {record.status === 'parked' ? <ParkedRun result={record.result} /> : null}

@@ -127,6 +127,28 @@ describe('AutoFormRunPanel — validation + run', () => {
     expect(screen.queryByTestId('tool-run-timeout')).toBeNull();
   });
 
+  it("renders the outcome a failed terminal delivered beside the door's message", async () => {
+    const user = userEvent.setup();
+    const runTool = vi.fn().mockRejectedValue(
+      new ApiError('tool run failed', 500, undefined, undefined, {
+        error: 'tool run failed',
+        outcome: { reason: 'the run stopped short' },
+      }),
+    );
+    const client: StubApiClient = { runTool, listToolRuns: vi.fn().mockResolvedValue([]) };
+    renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
+      client,
+      projection: fullProjection(),
+    });
+
+    await user.click(await findEnabled('Run'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('tool run failed');
+    const outcome = screen.getByTestId('tool-run-outcome');
+    expect(within(outcome).getByRole('heading', { name: 'Outcome' })).toBeInTheDocument();
+    expect(within(outcome).getByText('"the run stopped short"')).toBeInTheDocument();
+  });
+
   it('submits a background run from the secondary action and shows its live detail', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg1' });

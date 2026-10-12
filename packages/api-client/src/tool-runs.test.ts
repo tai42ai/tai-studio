@@ -215,6 +215,20 @@ describe('zod boundaries', () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("keeps a failed terminal record's outcome whole", () => {
+    const outcome = { status: 'error', error: "the run's own reason", error_kind: 'bad_input' };
+    const parsed = toolRunRecord.parse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'failed',
+      started_at: 's',
+      error: 'tool run failed',
+      outcome,
+    });
+    expect(parsed.outcome).toEqual(outcome);
+    expect(parsed.error).toBe('tool run failed');
+  });
+
   it('carries the optional resumed_interactions ids', () => {
     const parsed = toolRunRecord.safeParse({
       run_id: 'r',

@@ -31,8 +31,10 @@ export const toolRunSubmitResult = z.object({
 
 /** `GET /api/tool-runs/{run_id}` → the full record. `result` is arbitrary JSON: the
  * tool's own value on `succeeded`, the park answer ({@link toolRunParkAnswer}) on
- * `parked`. `error` is present only on `failed`. `resumed_interactions` is the parked
- * interaction ids the run resumed or took while it executed (`[]` when it resumed none). */
+ * `parked`. `error` is present only on `failed`. `outcome` is present only on a `failed`
+ * record whose run reached a failed terminal: the run's outcome, whole, as the sync door
+ * delivers it (`error` is then the plain `tool run failed`). `resumed_interactions` is the
+ * parked interaction ids the run resumed or took while it executed (`[]` when it resumed none). */
 export const toolRunRecord = z.object({
   run_id: z.string(),
   tool_name: z.string(),
@@ -41,6 +43,7 @@ export const toolRunRecord = z.object({
   finished_at: z.string().optional(),
   result: z.unknown().optional(),
   error: z.string().optional(),
+  outcome: z.unknown().optional(),
   resumed_interactions: z.array(z.string()).optional(),
 });
 
