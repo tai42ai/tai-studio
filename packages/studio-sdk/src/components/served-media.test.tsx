@@ -17,7 +17,7 @@ import {
 const GRAMMAR = {
   MEDIA_ROUTE_PREFIX: '/api/interactions/media/',
   MEDIA_ID_PATTERN: '[A-Za-z0-9_-]{43}',
-} as const satisfies Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>;
+} satisfies Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>;
 
 // A served-media reference under that grammar: 43 urlsafe-base64 id chars after the route prefix.
 const SERVED = `/api/interactions/media/${'a'.repeat(43)}`;
@@ -38,7 +38,7 @@ describe('isRenderableMediaSrc', () => {
 
   it('rejects http, javascript, data, and a malformed served id', () => {
     expect(isRenderableMediaSrc('http://example.com/a.png', GRAMMAR)).toBe(false);
-    expect(isRenderableMediaSrc('javascript:alert(1)')).toBe(false);
+    expect(isRenderableMediaSrc('javascript:alert(1)', GRAMMAR)).toBe(false);
     expect(isRenderableMediaSrc('data:image/png;base64,AAAA', GRAMMAR)).toBe(false);
     expect(isRenderableMediaSrc('/api/interactions/media/too-short', GRAMMAR)).toBe(false);
   });

@@ -22651,7 +22651,9 @@ const servedDocumentsJson: {
 export const ServedEndpointsIcon: IconComponent;
 
 // @public
-export type ServedMediaGrammar = Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>;
+export type ServedMediaGrammar = {
+    readonly [K in keyof Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>]: string;
+};
 
 // @public
 const servedVectors: {

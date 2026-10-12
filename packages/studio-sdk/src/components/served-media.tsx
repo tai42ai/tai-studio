@@ -27,7 +27,9 @@ import { isSafeHttpUrl } from './primitives';
  * carries it as a RELATIVE url of exactly that shape, resolved to the API base at render time
  * ({@link resolveMediaSrc}), not assumed same-origin as the SPA page.
  */
-export type ServedMediaGrammar = Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>;
+export type ServedMediaGrammar = {
+  readonly [K in keyof Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>]: string;
+};
 
 /**
  * Whether `url` is the platform's own served-media reference: a relative
