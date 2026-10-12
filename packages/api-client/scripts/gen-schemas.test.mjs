@@ -1,6 +1,6 @@
 // The generator's rules, each over a synthetic bundle and spec: the discriminated union over
-// `$ref`s, the document name dedupe, the Input/Output collapse, the version fields kept out of
-// every generated file, and the route table with its `buildPath`.
+// `$ref`s, the nullable, the enums, the document name dedupe, the Input/Output collapse, the
+// version fields kept out of every generated file, and the route table with its `buildPath`.
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -128,6 +128,31 @@ describe('an anyOf of one schema and null', () => {
     );
     expect(files['openapi-schemas.ts']).toContain(
       'export const maybe = z.object({ "note": z.string().nullable().default(null) });',
+    );
+  });
+});
+
+describe('an enum', () => {
+  it('a named enum component is its own const and type; an inline enum is z.enum in place', () => {
+    const { files } = generate(
+      bundle(),
+      spec({
+        Color: { type: 'string', enum: ['red', 'blue'], title: 'Color' },
+        Paint: {
+          type: 'object',
+          properties: {
+            color: { $ref: '#/components/schemas/Color' },
+            finish: { type: 'string', enum: ['matte', 'gloss'] },
+          },
+          required: ['color', 'finish'],
+        },
+      }),
+    );
+    const out = files['openapi-schemas.ts'];
+    expect(out).toContain('export const color = z.enum(["red","blue"]);');
+    expect(out).toContain('export type Color = z.infer<typeof color>;');
+    expect(out).toContain(
+      'export const paint = z.object({ "color": color, "finish": z.enum(["matte","gloss"]) });',
     );
   });
 });
