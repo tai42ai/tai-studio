@@ -4236,9 +4236,9 @@ type BackupDocument = z.infer<typeof backupDocument>;
 // @public
 const backupDocument: z.ZodObject<{
     created_at: z.ZodString;
-    errors: z.ZodRecord<z.ZodString, z.ZodString>;
     sections: z.ZodRecord<z.ZodString, z.ZodUnknown>;
-    version: z.ZodNumber;
+    version: z.ZodLiteral<1>;
+    errors: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
