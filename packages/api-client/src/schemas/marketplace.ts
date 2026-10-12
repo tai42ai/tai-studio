@@ -1,13 +1,19 @@
 /** Marketplace listing, version, install and advisory schemas. */
 import { z } from 'zod';
 
+import * as openapi from '../generated/openapi-schemas';
+
+// The registry's listing, search, version, detail and advisory shapes are hand-written: the
+// skeleton passes the upstream registry's bodies through as opaque values. The installed,
+// upgrade, install, preview and uninstall shapes are the skeleton's own.
+
 /**
  * The CLOSED HTTP-method enum fixed by the contract's RouteMethod, the one source
  * for every route-method field (declaration and install/preview responses alike):
  * a wire method the contract does not define fails loudly as drift rather than
  * passing through silently.
  */
-export const routeMethod = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+export const routeMethod = openapi.mountedRoute.shape.methods.element;
 export type RouteMethod = z.infer<typeof routeMethod>;
 
 /**
@@ -16,7 +22,7 @@ export type RouteMethod = z.infer<typeof routeMethod>;
  * installs nothing but the manifest entry. A CLOSED enum, so a wire value the
  * server does not derive fails loudly as drift.
  */
-export const marketplaceDelivery = z.enum(['package', 'descriptor']);
+export const marketplaceDelivery = openapi.installedRow.shape.delivery;
 export type MarketplaceDelivery = z.infer<typeof marketplaceDelivery>;
 
 /**
@@ -32,7 +38,7 @@ export type MarketplaceSource = z.infer<typeof marketplaceSource>;
  * a `secret` (an OAuth client secret is; a client id or a plain marker var is not).
  * The install dialog seeds each toggle from `secret` and collects the missing ones.
  */
-export const marketplaceRequiredEnvVar = z.object({ name: z.string(), secret: z.boolean() });
+export const marketplaceRequiredEnvVar = openapi.requiredEnvVar;
 export type MarketplaceRequiredEnvVar = z.infer<typeof marketplaceRequiredEnvVar>;
 
 /**
@@ -230,16 +236,9 @@ export type MarketplacePluginDetail = z.infer<typeof marketplacePluginDetail>;
  * One installed plugin's compat verdict against the RUNNING tai42-contract:
  * `compatible` / `incompatible` per its declared contract range, `unknown` when
  * no verdict could be computed. `reason` is the human-readable explanation of a
- * non-`compatible` verdict, `null` when compatible. CLOSED (`.strict()`): the
- * server is built against exactly this shape, so an unknown key is drift and
- * throws instead of being stripped.
+ * non-`compatible` verdict, `null` when compatible.
  */
-export const marketplaceInstalledCompat = z
-  .object({
-    status: z.enum(['compatible', 'incompatible', 'unknown']),
-    reason: z.string().nullable(),
-  })
-  .strict();
+export const marketplaceInstalledCompat = openapi.compatStatus;
 export type MarketplaceInstalledCompat = z.infer<typeof marketplaceInstalledCompat>;
 
 /**
@@ -249,92 +248,51 @@ export type MarketplaceInstalledCompat = z.infer<typeof marketplaceInstalledComp
  * `incompatible_newer` names the newest version blocked by the running
  * contract (`null` when none), so "an update exists but needs a newer core" is
  * visible. `missing_upstream` flags a plugin the registry no longer lists.
- * `compat` is the row's verdict against the running contract. CLOSED, like
- * every shape of the installed listing.
+ * `compat` is the row's verdict against the running contract. `delivery` is `package`
+ * for a pip-installed plugin, `descriptor` for a descriptor-only plugin whose stored spec
+ * names no package. `items` is the `{kind, name}` of every item this plugin's stored spec
+ * provides (local truth); `route_mounts` is the persisted `{item_name: base}` mount this
+ * plugin is installed at (`{}` means every item at its declared base).
  */
-export const marketplaceInstalledPlugin = z
-  .object({
-    ref: z.string(),
-    version: z.string(),
-    source: z.string(),
-    // How the row was delivered: `package` for a pip-installed plugin, `descriptor`
-    // for a descriptor-only plugin whose stored spec names no package.
-    delivery: marketplaceDelivery,
-    installed_at: z.string(),
-    latest: z.string().nullable(),
-    update_available: z.boolean(),
-    incompatible_newer: z.string().nullable(),
-    missing_upstream: z.boolean(),
-    compat: marketplaceInstalledCompat,
-    // The `{kind, name}` of every item this plugin's stored spec provides
-    // (local truth). The connectors page's McpServersSection joins the mcp-server
-    // item names against the manifest's mcp-entry titles to render an
-    // installer-written entry read-only.
-    items: z.array(marketplaceItem.pick({ kind: true, name: true })),
-    // The persisted `{item_name: base}` mount this plugin is installed at (local
-    // truth; `{}` means every item at its declared base). Studio seeds the update
-    // flow and renders routes at the ACTUAL mounted base from this.
-    route_mounts: z.record(z.string(), z.string()),
-  })
-  .strict();
+export const marketplaceInstalledPlugin = openapi.installedRow;
 export type MarketplaceInstalledPlugin = z.infer<typeof marketplaceInstalledPlugin>;
 
 /**
  * The installed inventory (`GET /api/marketplace/installed`): the attributed
- * rows, each with its per-row compat verdict and update picture. CLOSED.
+ * rows, each with its per-row compat verdict and update picture.
  */
-export const marketplaceInstalled = z
-  .object({
-    installed: z.array(marketplaceInstalledPlugin),
-  })
-  .strict();
+export const marketplaceInstalled = openapi.installedInventory;
 export type MarketplaceInstalled = z.infer<typeof marketplaceInstalled>;
 
 /**
  * One per-plugin outcome of `POST /api/marketplace/upgrade-all`: `upgraded`,
  * already `up-to-date`, `no-compatible-version` in the registry, or `failed`;
- * `detail` always carries the human-readable specifics. CLOSED.
+ * `detail` always carries the human-readable specifics.
  */
-export const marketplaceUpgradeAllRow = z
-  .object({
-    ref: z.string(),
-    outcome: z.enum(['upgraded', 'up-to-date', 'no-compatible-version', 'failed']),
-    detail: z.string(),
-  })
-  .strict();
+export const marketplaceUpgradeAllRow = openapi.upgradeRow;
 export type MarketplaceUpgradeAllRow = z.infer<typeof marketplaceUpgradeAllRow>;
 
-/** The whole upgrade-all readout: one outcome row per installed plugin. CLOSED. */
-export const marketplaceUpgradeAllResult = z
-  .object({
-    results: z.array(marketplaceUpgradeAllRow),
-  })
-  .strict();
+/** The whole upgrade-all readout: one outcome row per installed plugin. */
+export const marketplaceUpgradeAllResult = openapi.upgradeAllResult;
 export type MarketplaceUpgradeAllResult = z.infer<typeof marketplaceUpgradeAllResult>;
 
 /** The advisory state for installed plugins, with when it was last fetched. */
-export const marketplaceAdvisories = z.object({
+export const marketplaceAdvisories = openapi.advisorySnapshot.extend({
   advisories: z.array(marketplaceAdvisory),
-  fetched_at: z.string(),
 });
 
 /** The registry's controlled category list, proxied through the skeleton. */
-export const marketplaceCategories = z.array(z.string());
+export const marketplaceCategories = openapi.stringList;
 
 /** The registry's controlled item-kind list, proxied through the skeleton. */
-export const marketplaceKinds = z.array(z.string());
+export const marketplaceKinds = openapi.stringList;
 
 /**
  * One route the install / update actually mounted: the item that owns it, the
  * absolute `full_path` it now answers, the `methods`, and whether it is served
  * `public`. The receipt lists these so the operator sees what was opened where.
  */
-export const marketplaceMountedRoute = z.object({
-  item: z.string(),
-  full_path: z.string(),
-  methods: z.array(routeMethod),
-  public: z.boolean(),
-});
+export const marketplaceMountedRoute = openapi.mountedRoute;
 export type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
 
 /**
@@ -342,60 +300,34 @@ export type MarketplaceMountedRoute = z.infer<typeof marketplaceMountedRoute>;
  * `notes` (env-selected items naming their activating env var) and any
  * non-critical `advisories` ride BOTH the install and update receipts.
  * `routes` is the mounted-route list — empty for a plugin that registers none.
- * The wire also carries `package`, `reload`, and `pip_output`, which the receipt
- * does not model — zod's default strip drops them; the UI renders the receipt,
- * not the raw install log.
+ * `package`, `reload` and `pip_output` carry the installed package, the config reload
+ * and the raw install log.
  */
-export const marketplaceInstallResult = z.object({
-  ref: z.string(),
-  version: z.string(),
-  notes: z.array(z.string()),
+export const marketplaceInstallResult = openapi.installResult.extend({
   advisories: z.array(marketplaceAdvisory),
-  routes: z.array(marketplaceMountedRoute),
 });
 export type MarketplaceInstallResult = z.infer<typeof marketplaceInstallResult>;
 
 /** One resolved route in an install preview: the declared `path`, its resolved
  * absolute `full_path`, the `methods`, and whether it is `public`. */
-export const marketplacePreviewRoute = z.object({
-  path: z.string(),
-  full_path: z.string(),
-  methods: z.array(routeMethod),
-  public: z.boolean(),
-});
+export const marketplacePreviewRoute = openapi.previewItemRoute;
 export type MarketplacePreviewRoute = z.infer<typeof marketplacePreviewRoute>;
 
 /** One route-carrying item in an install preview: its resolved `base` (the
  * override or the default), the `default_base` it declares, and the routes that
  * mount under it. */
-export const marketplacePreviewItem = z.object({
-  item: z.string(),
-  kind: z.string(),
-  base: z.string(),
-  default_base: z.string(),
-  routes: z.array(marketplacePreviewRoute),
-});
+export const marketplacePreviewItem = openapi.previewItem;
 export type MarketplacePreviewItem = z.infer<typeof marketplacePreviewItem>;
 
 /** One collision the preview found: a route whose resolved shape+method clashes
  * with an already-owned route. `conflict_owner` is `core` or `plugin:<ref>`; the
  * remedy is to remap the item's base. */
-export const marketplacePreviewCollision = z.object({
-  item: z.string(),
-  full_path: z.string(),
-  methods: z.array(routeMethod),
-  conflict_owner: z.string(),
-  conflict_path: z.string(),
-});
+export const marketplacePreviewCollision = openapi.routeCollision;
 export type MarketplacePreviewCollision = z.infer<typeof marketplacePreviewCollision>;
 
 /** One public route the operator is asked to accept: served WITHOUT
  * authentication once installed. */
-export const marketplacePreviewPublicRoute = z.object({
-  item: z.string(),
-  full_path: z.string(),
-  methods: z.array(routeMethod),
-});
+export const marketplacePreviewPublicRoute = openapi.publicRouteRow;
 export type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPublicRoute>;
 
 /**
@@ -410,28 +342,13 @@ export type MarketplacePreviewPublicRoute = z.infer<typeof marketplacePreviewPub
  * process env (server-computed — the ONE authority the dialog collects), and
  * `delivery` is the one word the surface shows (`package` / `descriptor`).
  */
-export const marketplaceInstallPreview = z.object({
-  ref: z.string(),
-  version: z.string(),
-  items: z.array(marketplacePreviewItem),
-  collisions: z.array(marketplacePreviewCollision),
-  public_routes: z.array(marketplacePreviewPublicRoute),
-  new_public_routes: z.array(marketplacePreviewPublicRoute),
-  requires_public_acceptance: z.boolean(),
-  required_env: z.array(marketplaceRequiredEnvVar),
-  missing_env: z.array(z.string()),
-  delivery: marketplaceDelivery,
-});
+export const marketplaceInstallPreview = openapi.installPreview;
 export type MarketplaceInstallPreview = z.infer<typeof marketplaceInstallPreview>;
 
 /**
  * The receipt of an uninstall. `notes` carries operator warnings (e.g. a config
  * provider still selected by its env var); render them like the install
- * receipt's notes.
+ * receipt's notes. `reload` is `null` when the plugin wrote no manifest entry to remove.
  */
-export const marketplaceUninstallResult = z.object({
-  ref: z.string(),
-  uninstalled: z.literal(true),
-  notes: z.array(z.string()),
-});
+export const marketplaceUninstallResult = openapi.uninstallResult;
 export type MarketplaceUninstallResult = z.infer<typeof marketplaceUninstallResult>;

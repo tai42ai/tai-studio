@@ -14,8 +14,9 @@
  */
 import { z } from 'zod';
 
+import { apiRoutes, buildPath } from './generated/api-routes';
 import type { ApiConfig } from './http';
-import { apiRequest, encodeSegment } from './http';
+import { apiRequest } from './http';
 import type { StateSubject } from './schemas/states';
 import { callerAsksEnvelope, suspendedRunReceipt } from './schemas/tools';
 
@@ -88,7 +89,7 @@ export function submitToolRun(
   args: SubmitToolRunArgs,
   signal?: AbortSignal,
 ): Promise<ToolRunSubmitResult> {
-  return apiRequest(config, '/api/tool-runs', toolRunSubmitResult, {
+  return apiRequest(config, apiRoutes.post_api_tool_runs.path, toolRunSubmitResult, {
     method: 'POST',
     body: {
       tool_name: args.tool_name,
@@ -105,9 +106,14 @@ export function getToolRun(
   runId: string,
   signal?: AbortSignal,
 ): Promise<ToolRunRecord> {
-  return apiRequest(config, `/api/tool-runs/${encodeSegment(runId)}`, toolRunRecord, {
-    signal,
-  });
+  return apiRequest(
+    config,
+    buildPath(apiRoutes.get_api_tool_runs_run_id.path, { run_id: runId }),
+    toolRunRecord,
+    {
+      signal,
+    },
+  );
 }
 
 /** List the recent background runs for one tool (newest first). */
@@ -116,7 +122,7 @@ export function listToolRuns(
   toolName: string,
   signal?: AbortSignal,
 ): Promise<ToolRunListItem[]> {
-  return apiRequest(config, '/api/tool-runs', toolRunList, {
+  return apiRequest(config, apiRoutes.get_api_tool_runs.path, toolRunList, {
     query: { tool_name: toolName },
     signal,
   });

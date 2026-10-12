@@ -19,7 +19,7 @@
 import type {
   ApiClient,
   ConversationMessage,
-  ConversationRoute,
+  ConversationRouteView,
   ConversationThread,
   MeProjection,
   TargetConversationConfig,
@@ -239,7 +239,9 @@ export function installViewportBand(band: 'compact' | 'full'): () => void {
 
 // -- fixtures ----------------------------------------------------------------
 
-export function makeRoute(overrides: Partial<ConversationRoute> = {}): ConversationRoute {
+export function makeRoute(overrides: Partial<ConversationRouteView> = {}): ConversationRouteView {
+  // A fixture spreads door-specific overrides over a channel row, so the result is asserted
+  // as the door union it stands for.
   return {
     route_name: 'chat',
     door: 'channel',
@@ -258,11 +260,10 @@ export function makeRoute(overrides: Partial<ConversationRoute> = {}): Conversat
     turns_per_hour_override: null,
     error_reply_text: null,
     execution_key_fingerprint: 'fp-1',
-    callback_secret: null,
     locale: null,
     overlap: { running: 'continue', deliver: 'one', settle_seconds: 0 },
     ...overrides,
-  };
+  } as ConversationRouteView;
 }
 
 export function makeConfig(

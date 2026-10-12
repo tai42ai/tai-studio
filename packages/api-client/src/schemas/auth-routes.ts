@@ -1,22 +1,14 @@
 /** Route catalog, scope mapping and public-route response schemas. */
-import { z } from 'zod';
+import type { z } from 'zod';
+
+import * as openapi from '../generated/openapi-schemas';
 
 /** `{ url: scope_id }` — every URL currently mapped to a scope. */
-export const authScopes = z.record(z.string(), z.string());
+export const authScopes = openapi.scopeUrlMap;
 
-export const addUrlToScopeResult = z.object({ scope_id: z.string(), url: z.string() });
-export const removeUrlFromScopeResult = z.object({ url: z.string() });
-export const removeScopeResult = z.object({ scope_id: z.string(), deleted_keys: z.number() });
-
-/**
- * A route's authorization ACTION class, joined onto the catalog from the route
- * registry. `read`/`write` routes are GRANTABLE — a role's per-tag level opens
- * them; `fenced`/`secret` routes are ADMIN-ONLY and never grantable (no per-tag
- * level reaches them). `null` marks a path the registry carries no metadata for
- * (an unregistered/ungated path — no feature tags, no action).
- */
-export const routeAction = z.enum(['read', 'write', 'fenced', 'secret']);
-export type RouteAction = z.infer<typeof routeAction>;
+export const addUrlToScopeResult = openapi.scopeUrlAck;
+export const removeUrlFromScopeResult = openapi.urlAck;
+export const removeScopeResult = openapi.scopeDeleteResult;
 
 /**
  * One row of the route catalog (`GET /api/auth/routes`) — a plain HTTP route with
@@ -32,21 +24,24 @@ export type RouteAction = z.infer<typeof routeAction>;
  * and no scope mapping or public pin changes that, so the mapper never offers it
  * for a scope.
  */
-export const authRoute = z.object({
-  path: z.string(),
-  methods: z.array(z.string()),
-  mapped: z.string().nullable(),
-  tags: z.array(z.string()),
-  summary: z.string(),
-  action: routeAction.nullable(),
-  declared_public: z.boolean(),
-});
+export const authRoute = openapi.routeMappingRow;
 export type AuthRoute = z.infer<typeof authRoute>;
-export const authRoutes = z.array(authRoute);
+export const authRoutes = openapi.routeMappingList;
+
+/**
+ * A route's authorization ACTION class, joined onto the catalog from the route
+ * registry. `read`/`write` routes are GRANTABLE — a role's per-tag level opens
+ * them; `fenced`/`secret` routes are ADMIN-ONLY and never grantable (no per-tag
+ * level reaches them). `null` on a row marks a path the registry carries no metadata
+ * for (an unregistered/ungated path — no feature tags, no action).
+ */
+export const routeAction = openapi.routeMappingRow.shape.action.unwrap();
+export type RouteAction = z.infer<typeof routeAction>;
+
 /** `GET /api/auth/public-routes` — the sorted urls pinned to the public marker. */
-export const publicRoutes = z.array(z.string());
+export const publicRoutes = openapi.stringList;
 
 /** `POST /api/auth/public-routes` — the pinned url. */
-export const pinPublicResult = z.object({ url: z.string() });
+export const pinPublicResult = openapi.urlAck;
 /** `DELETE /api/auth/public-routes` — the unpinned url (404 when not pinned). */
-export const unpinPublicResult = z.object({ url: z.string() });
+export const unpinPublicResult = openapi.urlAck;

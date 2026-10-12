@@ -4,7 +4,7 @@
  * of the page shell so the visibility gating and the ordering are testable and the
  * page component stays thin.
  */
-import type { MeProjection } from '@tai42/api-client';
+import { type ApiPathPrefix, apiRoutes, type MeProjection } from '@tai42/api-client';
 import {
   type CapabilityState,
   coversAnyRoute,
@@ -31,16 +31,19 @@ type PluginContributions = ReturnType<typeof usePluginContributions>;
  * `GET /api/config/mode` never sees either tab, so their admin-only reads never
  * 403-wall the surface.
  */
-export const CONFIG_READ_ROUTES = ['/api/config/settings-schema', '/api/config/env'] as const;
-export const BACKUP_READ_ROUTE = '/api/backup';
+export const CONFIG_READ_ROUTES = [
+  apiRoutes.get_api_config_settings_schema.path,
+  apiRoutes.get_api_config_env.path,
+] as const;
+export const BACKUP_READ_ROUTE: ApiPathPrefix = '/api/backup';
 /**
  * The Profiles tab reads only the `action=read` profiles LIST route — its OWN gate,
  * deliberately NOT folded into `CONFIG_READ_ROUTES`, so a scoped editor who can list
  * profiles but not read env/settings-schema sees the Profiles tab alone.
  */
-export const PROFILES_READ_ROUTES = ['/api/config/profiles'] as const;
+export const PROFILES_READ_ROUTES = [apiRoutes.get_api_config_profiles.path] as const;
 /** The Roles tab reads `GET /api/auth/roles` — an admin-only `secret` route. */
-export const ROLES_READ_ROUTE = '/api/auth/roles';
+export const ROLES_READ_ROUTE = apiRoutes.get_api_auth_roles.path;
 
 /**
  * Whether a core tab whose reads live under `prefixes` is visible to this caller. A

@@ -1,16 +1,14 @@
 /** Tool-organization overlay (folders and per-tool meta) schemas. */
-import { z } from 'zod';
+import type { z } from 'zod';
+
+import * as openapi from '../generated/openapi-schemas';
 
 /**
  * One folder in the tool-organization tree (`tool_folders`). `parent_id` is `null`
  * for a root folder and otherwise the containing folder's `id`; nesting is endless
  * via the parent chain. Ids are UUID strings. A drift throws `ApiSchemaError`.
  */
-export const folderRecord = z.object({
-  id: z.string(),
-  name: z.string(),
-  parent_id: z.string().nullable(),
-});
+export const folderRecord = openapi.folderRecord;
 export type FolderRecord = z.infer<typeof folderRecord>;
 
 /**
@@ -23,14 +21,7 @@ export type FolderRecord = z.infer<typeof folderRecord>;
  * `null` = defer to the plugin declaration, `true` = force hidden, `false` = force
  * visible. A drift throws `ApiSchemaError`.
  */
-export const toolMetaRecord = z.object({
-  tool_name: z.string(),
-  display_name: z.string().nullable(),
-  folder_id: z.string().nullable(),
-  tags: z.array(z.string()),
-  badges: z.array(z.string()),
-  hidden: z.boolean().nullable(),
-});
+export const toolMetaRecord = openapi.toolMetaRecord;
 export type ToolMetaRecord = z.infer<typeof toolMetaRecord>;
 
 /**
@@ -38,14 +29,11 @@ export type ToolMetaRecord = z.infer<typeof toolMetaRecord>;
  * every per-tool row. The UI builds the tree and merges the rows against the live
  * tool list client-side. A drift throws `ApiSchemaError`.
  */
-export const toolMetaOverlay = z.object({
-  folders: z.array(folderRecord),
-  meta: z.array(toolMetaRecord),
-});
+export const toolMetaOverlay = openapi.toolMetaListView;
 export type ToolMetaOverlay = z.infer<typeof toolMetaOverlay>;
 
 /** `DELETE /api/tool-meta/tools/{tool_name}` — the dropped overlay row (idempotent). */
-export const toolMetaDeleted = z.object({ tool_name: z.string(), deleted: z.literal(true) });
+export const toolMetaDeleted = openapi.toolMetaDeleted;
 
 /** `DELETE /api/tool-meta/folders/{folder_id}` — the removed empty folder. */
-export const folderDeleted = z.object({ folder_id: z.string(), deleted: z.literal(true) });
+export const folderDeleted = openapi.folderDeleted;

@@ -16,6 +16,7 @@
  * leave the (now-forgotten) thread on success — the transcript it named no longer
  * exists — by navigating back to the route's thread list.
  */
+import { apiRoutes } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -49,8 +50,14 @@ export function ThreadActions({
   // idiom, the interpolated path resolves to a full-projection gate: a scoped projection
   // can never method-express a templated route, so its write affordances stay withdrawn
   // (projection ⊆ gate; fail closed until ready+granted).
-  const canDeleteThread = useCanWrite('/api/conversations/{route_name}/thread', 'DELETE');
-  const canErasePerson = useCanWrite('/api/conversations/persons/{person_id}', 'DELETE');
+  const canDeleteThread = useCanWrite(
+    apiRoutes.delete_api_conversations_route_name_thread.path,
+    'DELETE',
+  );
+  const canErasePerson = useCanWrite(
+    apiRoutes.delete_api_conversations_persons_person_id.path,
+    'DELETE',
+  );
 
   const [confirming, setConfirming] = useState<'thread' | 'person' | null>(null);
 

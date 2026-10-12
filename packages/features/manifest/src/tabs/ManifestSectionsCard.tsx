@@ -16,7 +16,7 @@
  * Each section renders only for a caller whose projection can reach its door.
  */
 import type { ApiClient } from '@tai42/api-client';
-import { summarizeFleetFanout } from '@tai42/api-client';
+import { apiRoutes, summarizeFleetFanout } from '@tai42/api-client';
 import {
   Badge,
   Button,
@@ -277,16 +277,22 @@ function ApiToolsEditor({ api }: { readonly api: ApiClient }): ReactNode {
  */
 export function ManifestSectionsCard(): ReactNode {
   const api = useApi();
-  const canTools = useCanWrite('/api/tools-config/entries', 'POST');
-  const canAgents = useCanWrite('/api/agents-config/entries', 'POST');
-  const canApiTools = useCanWrite('/api/api-tools', 'POST');
+  const canTools = useCanWrite(apiRoutes.post_api_tools_config_entries.path, 'POST');
+  const canAgents = useCanWrite(apiRoutes.post_api_agents_config_entries.path, 'POST');
+  const canApiTools = useCanWrite(apiRoutes.post_api_api_tools.path, 'POST');
   // Remove rides a DYNAMIC per-title door (`DELETE /api/{…}-config/entries/{title}`),
   // distinct from add's POST. A dynamic route is not method-expressible in a scoped
   // projection, so — following the house approach for a templated write route — the
   // interpolated path resolves to a full-projection gate; under-showing a scoped
   // caller's remove is safe (projection ⊆ gate).
-  const canRemoveTools = useCanWrite('/api/tools-config/entries/{title}', 'DELETE');
-  const canRemoveAgents = useCanWrite('/api/agents-config/entries/{title}', 'DELETE');
+  const canRemoveTools = useCanWrite(
+    apiRoutes.delete_api_tools_config_entries_title.path,
+    'DELETE',
+  );
+  const canRemoveAgents = useCanWrite(
+    apiRoutes.delete_api_agents_config_entries_title.path,
+    'DELETE',
+  );
 
   if (!canTools && !canAgents && !canApiTools) return null;
 

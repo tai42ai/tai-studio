@@ -70,10 +70,14 @@ export {
   summarizeFleetFanout,
   summarizeFleetResult,
 } from './fleet-report';
+export type { ApiOperationId, ApiPathPrefix, ApiPathTemplate } from './generated/api-routes';
+export { apiPathPrefixes, apiRoutes, buildPath } from './generated/api-routes';
+export { API_KEY_HEADER } from './headers';
 export type { ApiConfig, RequestOptions } from './http';
 export { apiDownload, apiRequest, apiText } from './http';
 export type {
   AnswerFormat,
+  ApiConversationRouteCreate,
   ApplyResult,
   AttachmentMediaItem,
   AttachmentMediaKind,
@@ -82,7 +86,10 @@ export type {
   BackendInfo,
   BackupDocument,
   BackupImportReport,
+  BackupNewApiKeys,
+  BackupSectionReport,
   CallerAsksEnvelope,
+  ChannelConversationRouteCreate,
   Channels,
   ChannelTemplate,
   ClaimLinkCreated,
@@ -108,6 +115,7 @@ export type {
   ConversationRouteCreate,
   ConversationRouteDeleted,
   ConversationRoutes,
+  ConversationRouteView,
   ConversationRouteWritten,
   ConversationTargetKind,
   ConversationThread,
@@ -148,6 +156,7 @@ export type {
   InteractionAnswered,
   InteractionCancelled,
   InteractionMediaItem,
+  InteractionReaction,
   InteractionsPage,
   InviteRow,
   InvokeMemberActionResult,
@@ -218,7 +227,9 @@ export type {
   PresetValidation,
   PresetVersion,
   PresetVersionTags,
+  PreviousProfileName,
   Principal,
+  PrincipalKind,
   PrincipalRef,
   ProviderCatalogResponse,
   ProviderMutationResult,
@@ -240,11 +251,16 @@ export type {
   RouteAction,
   RouteEntry,
   Run,
+  RunAnswer,
   RunSpan,
   RunSpanOutline,
   RunTrace,
   RunTraceOutline,
+  ScheduleCreate,
   ScheduleItem,
+  ScheduleListRow,
+  ScheduleRecord,
+  SettingsProfileName,
   SettingsSchema,
   SetupBody,
   SetupResult,
@@ -314,6 +330,7 @@ export type {
   WriteEntry,
   WritesPage,
 } from './schemas';
+export { runAnswer, servedConstants, servedDocumentsJson, servedVectors } from './schemas';
 export * as schemas from './schemas';
 export type { SseFrame } from './sse';
 export { readSseFrames, SseFrameParser } from './sse';

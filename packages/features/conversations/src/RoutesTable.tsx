@@ -13,7 +13,7 @@
  * Every server-supplied value renders as escaped React text (a table cell); no
  * route field is ever interpreted as markup.
  */
-import type { ConversationRoute } from '@tai42/api-client';
+import { apiRoutes, type ConversationRouteView } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -66,13 +66,13 @@ export function RoutesTable({
   // resolves to a full-projection gate: a scoped projection can never method-express a
   // templated route, so its write affordances stay withdrawn (projection ⊆ gate). The
   // read table below is unaffected; only the write controls gate.
-  const canWrite = useCanWrite('/api/conversations/{route_name}', 'POST');
-  const canDelete = useCanWrite('/api/conversations/{route_name}', 'DELETE');
+  const canWrite = useCanWrite(apiRoutes.post_api_conversations_route_name.path, 'POST');
+  const canDelete = useCanWrite(apiRoutes.delete_api_conversations_route_name.path, 'DELETE');
 
   // `creating` opens the blank form; `editing` opens it prefilled from a row;
   // `pendingDelete` names the row awaiting a destructive-delete confirm.
   const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<ConversationRoute | null>(null);
+  const [editing, setEditing] = useState<ConversationRouteView | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const deleteMutation = useMutation({

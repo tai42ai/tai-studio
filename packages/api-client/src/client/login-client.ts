@@ -5,6 +5,7 @@ import {
   ApiSetupFailedError,
   ApiUnauthorizedError,
 } from '../errors';
+import { apiRoutes } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -79,7 +80,7 @@ export function loginClient(t: Transport) {
     // exists, so the unauthenticated call carries no auth header — no transport
     // change needed.
     getLoginMethods: (options?: { signal?: AbortSignal }) =>
-      req('/api/login/methods', s.loginMethods, { signal: options?.signal }),
+      req(apiRoutes.get_api_login_methods.path, s.loginMethods, { signal: options?.signal }),
     // Submit a `form` method's field VALUES as a flat top-level JSON body (the
     // server's request models take the declared field names top-level). `path`
     // is re-checked with the same relative-`/api/` guard the renderer uses — an
@@ -116,7 +117,10 @@ export function loginClient(t: Transport) {
     // unauthorized redirect. The caller latches the exchange so it fires once.
     claimLogin: async (body: { token: string }) => {
       try {
-        return await req('/api/login/claim', s.loginResult, { method: 'POST', body });
+        return await req(apiRoutes.post_api_login_claim.path, s.loginResult, {
+          method: 'POST',
+          body,
+        });
       } catch (error) {
         return asLoginError(error);
       }
@@ -129,7 +133,7 @@ export function loginClient(t: Transport) {
     // loudly.
     submitSetup: async (body: s.SetupBody) => {
       try {
-        return await req('/api/setup', s.setupResult, { method: 'POST', body });
+        return await req(apiRoutes.post_api_setup.path, s.setupResult, { method: 'POST', body });
       } catch (error) {
         return asSetupError(error);
       }
@@ -145,6 +149,6 @@ export function logoutClient(t: Transport) {
     // has nothing to revoke and answers 404 (surfaced as an `ApiError`, quiet at
     // the call site); a 5xx/network failure is a real revoke failure the shell
     // surfaces loudly.
-    logout: () => req('/api/auth/logout', s.logoutResult, { method: 'POST' }),
+    logout: () => req(apiRoutes.post_api_auth_logout.path, s.logoutResult, { method: 'POST' }),
   };
 }

@@ -1,5 +1,5 @@
 /** Preset CRUD, versioning and validation sub-client. */
-import { encodeSegment } from '../http';
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import * as s from '../schemas';
 import type { Transport } from './transport';
 
@@ -74,49 +74,56 @@ export function presetsClient(t: Transport) {
   return {
     // Every preset is store-backed and versioned; the list is the single
     // management population (the presets plus the conflicted quarantined rows).
-    listPresets: (signal?: AbortSignal) => req('/api/presets', s.presetList, { signal }),
+    listPresets: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_presets.path, s.presetList, { signal }),
     createPreset: (body: CreatePresetBody) =>
-      req('/api/presets', s.presetRecord, { method: 'POST', body }),
+      req(apiRoutes.post_api_presets.path, s.presetRecord, { method: 'POST', body }),
     getPreset: (name: string, signal?: AbortSignal) =>
-      req(`/api/presets/${encodeSegment(name)}`, s.presetDetail, { signal }),
+      req(buildPath(apiRoutes.get_api_presets_name.path, { name }), s.presetDetail, { signal }),
     listPresetVersions: (name: string, signal?: AbortSignal) =>
-      req(`/api/presets/${encodeSegment(name)}/versions`, s.presetVersionList, { signal }),
+      req(buildPath(apiRoutes.get_api_presets_name_versions.path, { name }), s.presetVersionList, {
+        signal,
+      }),
     getPresetVersion: (name: string, version: number, signal?: AbortSignal) =>
       req(
-        `/api/presets/${encodeSegment(name)}/versions/${encodeSegment(version)}`,
+        buildPath(apiRoutes.get_api_presets_name_versions_version.path, { name, version }),
         s.presetVersion,
         { signal },
       ),
     savePresetVersion: (name: string, body: SavePresetVersionBody) =>
-      req(`/api/presets/${encodeSegment(name)}/versions`, s.presetVersion, {
+      req(buildPath(apiRoutes.post_api_presets_name_versions.path, { name }), s.presetVersion, {
         method: 'POST',
         body,
       }),
     rollbackPreset: (name: string, version: number) =>
-      req(`/api/presets/${encodeSegment(name)}/rollback`, s.presetRollback, {
+      req(buildPath(apiRoutes.post_api_presets_name_rollback.path, { name }), s.presetRollback, {
         method: 'POST',
         body: { version },
       }),
     deletePreset: (name: string) =>
-      req(`/api/presets/${encodeSegment(name)}`, s.presetDeleted, { method: 'DELETE' }),
+      req(buildPath(apiRoutes.delete_api_presets_name.path, { name }), s.presetDeleted, {
+        method: 'DELETE',
+      }),
     renamePreset: (name: string, newName: string) =>
-      req(`/api/presets/${encodeSegment(name)}/rename`, s.presetRenamed, {
+      req(buildPath(apiRoutes.post_api_presets_name_rename.path, { name }), s.presetRenamed, {
         method: 'POST',
         body: { new_name: newName },
       }),
     // The presets whose active composition names this one as a tool — the referees
     // a rename would strand. A rename preflight reads this to warn before the 409.
     getPresetReferees: (name: string, signal?: AbortSignal) =>
-      req(`/api/presets/${encodeSegment(name)}/referees`, s.presetReferees, { signal }),
+      req(buildPath(apiRoutes.get_api_presets_name_referees.path, { name }), s.presetReferees, {
+        signal,
+      }),
     // The dry-run verdict for a draft (create OR version, mode-resolved server-side):
     // `valid` plus the server's verbatim `error` message. Both verdicts are HTTP 200.
     validatePreset: (body: ValidatePresetBody) =>
-      req('/api/presets/validate', s.presetValidation, { method: 'POST', body }),
+      req(apiRoutes.post_api_presets_validate.path, s.presetValidation, { method: 'POST', body }),
     // Replace one version's `tags` annotation — labels on an immutable body, so no
     // rebind. Returns the re-annotated identity + new tag list.
     setPresetVersionTags: (name: string, version: number, tags: readonly string[]) =>
       req(
-        `/api/presets/${encodeSegment(name)}/versions/${encodeSegment(version)}/tags`,
+        buildPath(apiRoutes.put_api_presets_name_versions_version_tags.path, { name, version }),
         s.presetVersionTags,
         { method: 'PUT', body: { tags } },
       ),

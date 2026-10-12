@@ -1,6 +1,7 @@
 /** Pluggable-kind status and MCP status/reload response schemas. */
-import { z } from 'zod';
+import type { z } from 'zod';
 
+import * as openapi from '../generated/openapi-schemas';
 import { fleetResult } from './fleet';
 import { reloadConfigResult } from './manifest-mcp';
 
@@ -9,16 +10,10 @@ import { reloadConfigResult } from './manifest-mcp';
 // studio_plugins). `state` is the kind's active/default/off status: `active` = a
 // real plugin serves it, `default` = a built-in fallback serves it, `off` =
 // nothing is registered (a legal state, reported not "fixed"). `plugin` is the
-// provider/module name when known, else null. Plain (non-strict) `z.object` so a
-// server that adds a field to the row still parses.
+// provider/module name when known, else null.
 
-export const kindStatus = z.object({
-  kind: z.string(),
-  state: z.enum(['active', 'default', 'off']),
-  plugin: z.string().nullable(),
-  detail: z.string(),
-});
-export const kindStatusList = z.array(kindStatus);
+export const kindStatus = openapi.kindStatus;
+export const kindStatusList = openapi.systemKindsListing;
 export type KindStatus = z.infer<typeof kindStatus>;
 
 /**
@@ -32,25 +27,13 @@ export type KindStatus = z.infer<typeof kindStatus>;
  */
 export const toolExtensionsApplyResult = reloadConfigResult;
 export type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult>;
-// `GET /api/mcp-status` — the bound-server map plus the servers the viability check
-// skipped. Each failed entry adds the coarse, credential-free failure detail the
-// platform records: `category` (`auth` for a 401/403, `unreachable` for a transport
-// error or timeout, `error` otherwise), the redacted `message`, and the `http_status`
-// the failure carried (`null` for a pure transport failure). The three detail fields
-// are optional so a server that omits them still parses; plain (non-strict) objects so
-// an added field never fails the read.
-export const mcpStatus = z.object({
-  bound: z.record(z.string(), z.array(z.string())),
-  failed: z.array(
-    z.object({
-      title: z.string(),
-      status: z.string(),
-      category: z.string().optional(),
-      message: z.string().optional(),
-      http_status: z.number().nullable().optional(),
-    }),
-  ),
-});
+// `GET /api/mcp-status` — the bound-server map, the servers the viability check
+// skipped, and each server's health record. Each failed entry carries the coarse,
+// credential-free failure detail the platform records: `category` (`auth` for a 401/403,
+// `unreachable` for a transport error or timeout, `error` otherwise), the redacted
+// `message`, and the `http_status` the failure carried (`null` for a pure transport
+// failure).
+export const mcpStatus = openapi.mcpStatusSnapshot;
 
 /**
  * `POST /api/mcp-status/{title}/reload` — re-probe a single MCP server and broadcast

@@ -13,6 +13,7 @@
  * since they are one hooks-tag `write` tier — a `read`-only grantee sees the list
  * without controls that would 403 on submit.
  */
+import { apiRoutes } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -38,7 +39,7 @@ import { RevokeTriggerLinkDialog } from './RevokeTriggerLinkDialog';
 import { TriggerLinkRow } from './TriggerLinkRow';
 
 /** The write route whose POST capability gates create AND revoke (see the header). */
-const TRIGGER_LINKS_WRITE_ROUTE = '/api/hooks/trigger-links';
+const TRIGGER_LINKS_WRITE_ROUTE = apiRoutes.post_api_hooks_trigger_links.path;
 
 const headerStyle: CSSProperties = {
   display: 'flex',

@@ -13,7 +13,7 @@
  * projection can reach the fenced doors.
  */
 import type { ToolAdminArgs } from '@tai42/api-client';
-import { summarizeFleetResult } from '@tai42/api-client';
+import { apiRoutes, summarizeFleetResult } from '@tai42/api-client';
 import {
   Badge,
   Button,
@@ -35,8 +35,8 @@ import { type ReactNode, useState } from 'react';
 import { toolMetaKey, toolsListKey } from './keys';
 
 /** The fenced live-registry doors — each gated on its OWN route. */
-const TOOL_RELOAD_ROUTE = '/api/tools/reload';
-const TOOL_REMOVE_ROUTE = '/api/tools/remove';
+const TOOL_RELOAD_ROUTE = apiRoutes.post_api_tools_reload.path;
+const TOOL_REMOVE_ROUTE = apiRoutes.post_api_tools_remove.path;
 
 export function ToolAdminCard(): ReactNode {
   const api = useApi();

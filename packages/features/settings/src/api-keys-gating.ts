@@ -3,7 +3,7 @@
  * the deployment-wide scopes mapper is reachable, whether the caller may mint a key,
  * and the scope options a scoped session is capped to.
  */
-import type { MeProjection, PrincipalRef } from '@tai42/api-client';
+import { apiRoutes, type MeProjection, type PrincipalRef } from '@tai42/api-client';
 import { type CapabilityState, coversAnyRoute, isFullProjection } from '@tai42/studio-sdk';
 
 /**
@@ -15,7 +15,7 @@ export function scopeIdsOf(scopes: Record<string, string>, publicId: string): st
 }
 
 /** The mint route the caller's projection must be able to reach to create a key. */
-export const MINT_ROUTE = '/api/auth/api-keys';
+export const MINT_ROUTE = apiRoutes.post_api_auth_api_keys.path;
 
 /**
  * The admin reads the scopes mapper issues on mount: the route table
@@ -24,9 +24,9 @@ export const MINT_ROUTE = '/api/auth/api-keys';
  * 403-wall the card, so the mapper renders only when the projection covers them all.
  */
 export const SCOPES_MAPPER_READ_ROUTES = [
-  '/api/auth/routes',
-  '/api/auth/public-routes',
-  '/api/sub-mcp',
+  apiRoutes.get_api_auth_routes.path,
+  apiRoutes.get_api_auth_public_routes.path,
+  apiRoutes.get_api_sub_mcp.path,
 ] as const;
 
 /**

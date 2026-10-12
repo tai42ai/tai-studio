@@ -4,7 +4,7 @@
  * `/api/tool-runs`. Each door gates on its OWN concrete route (projection ⊆ gate),
  * independent of tool visibility, and fails closed while the projection is not ready.
  */
-import type { StateSubject } from '@tai42/api-client';
+import { apiRoutes, type StateSubject } from '@tai42/api-client';
 import {
   buildSubject,
   defaultValueForSchema,
@@ -25,9 +25,9 @@ import { readRunResult, type RunView } from './run-asks';
 import { useRunSubject } from './use-run-subject';
 
 /** The synchronous Run door — admin-only. */
-const RUN_TOOL_ROUTE = '/api/run-tool';
+const RUN_TOOL_ROUTE = apiRoutes.post_api_run_tool.path;
 /** The background Run door. */
-const TOOL_RUNS_ROUTE = '/api/tool-runs';
+const TOOL_RUNS_ROUTE = apiRoutes.post_api_tool_runs.path;
 
 /** Validate the form against the schema and return the run-tool kwargs, or `null` when
  * invalid (the field errors are set). A non-object form root (scalar/array) is never a

@@ -6,6 +6,7 @@
  * page through the shell router (`?state=&subject=&target=`).
  */
 import type { HeldPendingSave, StateDetail, StateSubject, SubjectRow } from '@tai42/api-client';
+import { servedConstants } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -36,7 +37,7 @@ import { conversationTargetsKey, stateSearchKey, stateSubjectsKey, subjectIdenti
 import { PENDING_SAVES_CARD_ID } from './PendingSavesCard';
 import { formatSubjectParam, formatTargetParam } from './record-subject';
 
-const PERSON_KIND = 'person';
+const PERSON_KIND = servedConstants.PERSON_KIND;
 
 /** The Updated cell's display for a subject row's epoch-seconds `updated_at`: the locale
  * instant, or the raw value when unparseable (the full ISO rides on the cell's `title`). */

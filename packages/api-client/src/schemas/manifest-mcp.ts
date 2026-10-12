@@ -1,7 +1,8 @@
 /** Live-manifest MCP section, env-ref and config-reload schemas. */
 import { z } from 'zod';
 
-import { awaitingWorker, fleetReportFanout, recycleRoll } from './fleet';
+import * as openapi from '../generated/openapi-schemas';
+import { fleetReportFanout } from './fleet';
 
 /**
  * The back-reference a connector writes onto a manifest MCP entry to mark it
@@ -16,7 +17,8 @@ export const connectorRef = z.object({
 export type ConnectorRef = z.infer<typeof connectorRef>;
 
 /**
- * One entry of the live manifest's MCP section. Only the `managed` provenance
+ * One entry of the live manifest's MCP section, hand-typed: the spec publishes an entry as
+ * an open object. Only the `managed` provenance
  * marker is typed — the connect/disconnect flows write it server-side to point a
  * connector-owned entry back at its connection, and the editor renders such
  * entries read-only. `.nullish()` because a hand-authored entry carries `null`
@@ -31,9 +33,8 @@ export const manifestMcpEntry = z
   .loose();
 export type ManifestMcpEntry = z.infer<typeof manifestMcpEntry>;
 
-export const manifestView = z.object({
+export const manifestView = openapi.preservedManifestView.extend({
   mcp: z.array(manifestMcpEntry),
-  user_tools: z.array(z.string()),
 });
 
 /**
@@ -45,30 +46,17 @@ export const manifestView = z.object({
  * dangling refusal reads), so a var supplied by the deployment shows green, never
  * a false red. The checklist derives from THIS alone — no env value is ever fetched.
  */
-export const mcpEnvRef = z.object({
-  var: z.string(),
-  pointer: z.string(),
-  has_default: z.boolean(),
-  set: z.boolean(),
-});
+export const mcpEnvRef = openapi.mcpEnvRef;
 export type McpEnvRef = z.infer<typeof mcpEnvRef>;
-export const mcpEnvRefs = z.array(mcpEnvRef);
+export const mcpEnvRefs = openapi.mcpEnvRefList;
 export type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
 /**
  * The apply result every config-writer mutation returns (`POST /api/mcp-config`,
- * `POST /api/config/env`): the serving worker's local reload result (`status`,
- * `env_keys`), the mode-wrapped fleet fan-out of the reload it broadcast, `recycle` — the
- * fleet recycle roll an env change carrying a recycle-class key ran (`null` when it
- * carried none) — and `awaiting_respawn`, the operation's verdict: the workers (name +
- * keys) still awaiting a respawn after it, empty when its roll converged. `fanout` and `recycle` are parsed
- * EXPLICITLY so a failed propagation or a stopped roll reaches the UI — zod's
- * unknown-key stripping would otherwise hide them. A drift throws `ApiSchemaError`.
+ * `POST /api/config/env`): the serving worker's local reload result (`status` +
+ * `env_keys`) plus the mode-wrapped fleet fan-out of the reload it broadcast. The
+ * `fanout` is hand-typed (the spec publishes it as one object with optional fields) so
+ * the shared fleet-report handler can surface a failed propagation. A drift throws
+ * `ApiSchemaError`.
  */
-export const reloadConfigResult = z.object({
-  status: z.string(),
-  env_keys: z.number(),
-  awaiting_respawn: z.array(awaitingWorker),
-  fanout: fleetReportFanout,
-  recycle: recycleRoll.nullable(),
-});
+export const reloadConfigResult = openapi.applyResponse.extend({ fanout: fleetReportFanout });
 export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;

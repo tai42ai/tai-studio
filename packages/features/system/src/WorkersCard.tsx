@@ -8,7 +8,7 @@
  * closed while the projection is not ready; once ready and denied, the button is not
  * rendered so a non-admin never sees a control that 403s.
  */
-import { type FleetResult, summarizeFleetResult } from '@tai42/api-client';
+import { apiRoutes, type FleetResult, summarizeFleetResult } from '@tai42/api-client';
 import {
   Button,
   Card,
@@ -35,7 +35,7 @@ import { useWorkerSelection } from './useWorkerSelection';
 const FLEET_POLL_MS = 5000;
 
 /** The admin-fenced reload route the reload control gates on (projection ⊆ gate). */
-const FLEET_RELOAD_ROUTE = '/api/fleet/reload-config';
+const FLEET_RELOAD_ROUTE = apiRoutes.post_api_fleet_reload_config.path;
 
 /** The last reload's outcome: a calm converged note, or the honest per-worker failure
  * report — never faked success on a departed / timed_out / failed worker. */

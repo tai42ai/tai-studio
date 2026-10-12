@@ -1,5 +1,7 @@
 /** Setup-door (`POST /api/setup`) request-body and result schemas. */
-import { z } from 'zod';
+import type { z } from 'zod';
+
+import * as openapi from '../generated/openapi-schemas';
 
 /**
  * The result of a successful `POST /api/setup`, returned exactly ONCE. `api_key`
@@ -8,15 +10,7 @@ import { z } from 'zod';
  * `invite_token` and `login_path` are set only when the attachment was an invite
  * the operator completes later.
  */
-export const setupResult = z.object({
-  owner_user_id: z.string(),
-  key_user_id: z.string(),
-  api_key: z.string().min(1),
-  key_fingerprint: z.string(),
-  login_attached: z.boolean(),
-  invite_token: z.string().nullable().optional(),
-  login_path: z.string().nullable().optional(),
-});
+export const setupResult = openapi.setupResult;
 export type SetupResult = z.infer<typeof setupResult>;
 
 /**

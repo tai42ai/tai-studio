@@ -5,6 +5,7 @@
  */
 import type { FailedMcpEntry, FleetReportSummary } from '@tai42/api-client';
 import {
+  apiRoutes,
   failedMcpsFromReport,
   isFleetReportFailure,
   summarizeFleetResult,
@@ -48,7 +49,7 @@ function ServerStatusTable({ rows }: { rows: readonly ServerRow[] }): ReactNode 
   // Every per-title reload resolves to the same templated-route gate, so one
   // static-placeholder check covers the table (a door that can only refuse is
   // never offered).
-  const canReload = useCanWrite('/api/mcp-status/{title}/reload', 'POST');
+  const canReload = useCanWrite(apiRoutes.post_api_mcp_status_title_reload.path, 'POST');
   const reload = useMutation({
     mutationFn: (title: string) => api.reloadMcp(title),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: mcpStatusKey }),
@@ -174,7 +175,7 @@ const failedServerCellStyle = { width: '100%', maxWidth: 0 } as const;
  *  `<verb> path` is never shown a control that can only 403 on submit (projection ⊆
  *  gate). The per-server routes are DYNAMIC (`/api/mcp-status/{title}/…`), which a
  *  scoped projection can carry only as a method-less pattern, so — following the house
- *  approach for a templated write route — the interpolated path resolves to a
+ *  approach for a templated write route — the templated path resolves to a
  *  full-projection gate; under-showing a scoped caller's control is safe. */
 function FailedServerRow({
   entry,
@@ -187,8 +188,8 @@ function FailedServerRow({
   readonly reloadPending: boolean;
   readonly onDeregister: (title: string) => void;
 }): ReactNode {
-  const canReload = useCanWrite(`/api/mcp-status/${entry.title}/reload`, 'POST');
-  const canDeregister = useCanWrite(`/api/mcp-status/${entry.title}/deregister`, 'POST');
+  const canReload = useCanWrite(apiRoutes.post_api_mcp_status_title_reload.path, 'POST');
+  const canDeregister = useCanWrite(apiRoutes.post_api_mcp_status_title_deregister.path, 'POST');
   return (
     <TR>
       <TD style={failedServerCellStyle}>
@@ -346,7 +347,7 @@ export function FailedServersSection(): ReactNode {
   // Reload-all rides a CONCRETE, method-expressible route, so it gates exactly on
   // `POST /api/mcp-status/reload-failed` (projection ⊆ gate); the per-row Reload and
   // Deregister gates live in `FailedServerRow` on their own dynamic doors.
-  const canReloadAll = useCanWrite('/api/mcp-status/reload-failed', 'POST');
+  const canReloadAll = useCanWrite(apiRoutes.post_api_mcp_status_reload_failed.path, 'POST');
 
   const query = useQuery({
     queryKey: mcpFailedKey,

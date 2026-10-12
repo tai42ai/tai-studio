@@ -1,4 +1,5 @@
 /** Storage resource CRUD sub-client. */
+import { apiRoutes, buildPath } from '../generated/api-routes';
 import { apiDownload, isUnsafePathSegment } from '../http';
 import * as s from '../schemas';
 import type { Transport } from './transport';
@@ -29,12 +30,11 @@ export interface StorageUploadBody {
  * route. The server enforces the same relative-path rule; failing fast here keeps a
  * malformed id from ever leaving the client.
  */
-function encodePath(id: string): string {
-  const segments = id.split('/');
-  if (segments.some(isUnsafePathSegment)) {
+function storagePath(id: string): string {
+  if (id.split('/').some(isUnsafePathSegment)) {
     throw new Error("storage path must be a relative path with no empty, '.', or '..' segment");
   }
-  return segments.map(encodeURIComponent).join('/');
+  return id;
 }
 
 export function storageClient(t: Transport) {
@@ -43,21 +43,50 @@ export function storageClient(t: Transport) {
     // The content store a storage-provider plugin exposes. Dead by default:
     // `getStorageInfo` reports `present: false` (a 200 empty state) and every other
     // door answers a loud 501 when no provider is installed. Ids may be nested
-    // paths, so each is `encodePath`-encoded (per-segment, `/` preserved).
-    getStorageInfo: (signal?: AbortSignal) => req('/api/storage', s.storageInfo, { signal }),
+    // paths: `storagePath` refuses a dot or empty segment, and `buildPath` encodes each
+    // segment of the route's `{…:path}` parameter with the `/` separators preserved.
+    getStorageInfo: (signal?: AbortSignal) =>
+      req(apiRoutes.get_api_storage.path, s.storageInfo, { signal }),
     listStorageResources: (signal?: AbortSignal) =>
-      req('/api/storage/resources', s.storageResourceList, { signal }),
+      req(apiRoutes.get_api_storage_resources.path, s.storageResourceList, { signal }),
     statStorageResource: (id: string, signal?: AbortSignal) =>
-      req(`/api/storage/resources/${encodePath(id)}/stat`, s.storageResourceStat, { signal }),
+      req(
+        buildPath(apiRoutes.get_api_storage_resources_resource_id_stat.path, {
+          resource_id: storagePath(id),
+        }),
+        s.storageResourceStat,
+        { signal },
+      ),
     downloadStorageResource: (id: string, signal?: AbortSignal): Promise<Blob> =>
-      apiDownload(config, `/api/storage/resources/${encodePath(id)}/content`, { signal }),
+      apiDownload(
+        config,
+        buildPath(apiRoutes.get_api_storage_resources_resource_id_content.path, {
+          resource_id: storagePath(id),
+        }),
+        { signal },
+      ),
     uploadStorageResource: (body: StorageUploadBody) =>
-      req('/api/storage/resources', s.storageResourceStored, { method: 'POST', body }),
-    deleteStorageResource: (id: string) =>
-      req(`/api/storage/resources/${encodePath(id)}`, s.storageResourceDeleted, {
-        method: 'DELETE',
+      req(apiRoutes.post_api_storage_resources.path, s.storageResourceStored, {
+        method: 'POST',
+        body,
       }),
+    deleteStorageResource: (id: string) =>
+      req(
+        buildPath(apiRoutes.delete_api_storage_resources_resource_id.path, {
+          resource_id: storagePath(id),
+        }),
+        s.storageResourceDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
     deleteStorageDir: (path: string) =>
-      req(`/api/storage/dirs/${encodePath(path)}`, s.storageDirDeleted, { method: 'DELETE' }),
+      req(
+        buildPath(apiRoutes.delete_api_storage_dirs_dir_path.path, { dir_path: storagePath(path) }),
+        s.storageDirDeleted,
+        {
+          method: 'DELETE',
+        },
+      ),
   };
 }
