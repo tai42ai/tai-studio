@@ -84,7 +84,7 @@ export function isFleetReportFailure(summary: FleetReportSummary | null): boolea
  * reload payload names `awaiting_respawn` keys is listed under `awaiting`, whatever the
  * status.
  */
-export function summarizeFleetResult(result: FleetResult): FleetReportSummary {
+export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetReportSummary {
   const awaiting: FleetWorkerAwaitingRespawn[] = result.results
     .map((entry) => ({ name: entry.name, keys: awaitingKeys(entry.payload) }))
     .filter((entry) => entry.keys.length > 0);
@@ -92,7 +92,7 @@ export function summarizeFleetResult(result: FleetResult): FleetReportSummary {
 }
 
 function summarizeWith(
-  result: FleetResult,
+  result: Omit<FleetResult, 'ok'>,
   awaiting: readonly FleetWorkerAwaitingRespawn[],
 ): FleetReportSummary {
   if (!result.reachable) {

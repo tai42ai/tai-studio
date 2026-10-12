@@ -60,7 +60,10 @@ export function profilesClient(t: Transport) {
       ),
     getSettingsProfileVersion: (name: string, version: number, signal?: AbortSignal) =>
       req(
-        buildPath(apiRoutes.get_api_config_profiles_name_versions_version.path, { name, version }),
+        buildPath(apiRoutes.get_api_config_profiles_name_versions_version.path, {
+          name,
+          version: String(version),
+        }),
         s.settingsProfileVersion,
         { signal },
       ),

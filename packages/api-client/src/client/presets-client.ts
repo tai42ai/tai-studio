@@ -86,7 +86,10 @@ export function presetsClient(t: Transport) {
       }),
     getPresetVersion: (name: string, version: number, signal?: AbortSignal) =>
       req(
-        buildPath(apiRoutes.get_api_presets_name_versions_version.path, { name, version }),
+        buildPath(apiRoutes.get_api_presets_name_versions_version.path, {
+          name,
+          version: String(version),
+        }),
         s.presetVersion,
         { signal },
       ),
@@ -123,7 +126,10 @@ export function presetsClient(t: Transport) {
     // rebind. Returns the re-annotated identity + new tag list.
     setPresetVersionTags: (name: string, version: number, tags: readonly string[]) =>
       req(
-        buildPath(apiRoutes.put_api_presets_name_versions_version_tags.path, { name, version }),
+        buildPath(apiRoutes.put_api_presets_name_versions_version_tags.path, {
+          name,
+          version: String(version),
+        }),
         s.presetVersionTags,
         { method: 'PUT', body: { tags } },
       ),
