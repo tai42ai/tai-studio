@@ -63,10 +63,17 @@ function cleanDiff(): {
  * self-deferred applier line, empty refused, a lone-worker fanout. */
 function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
   return Promise.resolve({
+    recycle_stopped: null,
     hot: ['APP_TITLE'],
     recycle: [
-      { name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
-      { name: 'serve-2', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+      { detail: null, name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
+      {
+        detail: null,
+        name: 'serve-2',
+        kind: 'serve',
+        status: 'self-deferred',
+        generation_before: 2,
+      },
     ],
     fresh: [{ name: 'serve-1', kind: 'serve', generation: 5 }],
     refused: [] as string[],
@@ -176,8 +183,17 @@ describe('ProfilesTab — apply', () => {
     const user = userEvent.setup();
     const applySettingsProfile = vi.fn(() =>
       Promise.resolve({
+        recycle_stopped: null,
         hot: [],
-        recycle: [{ name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 3 }],
+        recycle: [
+          {
+            detail: null,
+            name: 'serve-1',
+            kind: 'serve',
+            status: 'recycled',
+            generation_before: 3,
+          },
+        ],
         // The fresh life carries a DIFFERENT name than the recycled target: it is not
         // joined onto that row, it renders on its own under Fresh lives.
         fresh: [{ name: 'serve-9', kind: 'serve', generation: 1 }],
@@ -217,6 +233,7 @@ describe('ProfilesTab — apply', () => {
     const user = userEvent.setup();
     const applySettingsProfile = vi.fn(() =>
       Promise.resolve({
+        recycle_stopped: null,
         hot: [],
         recycle: [],
         fresh: [],

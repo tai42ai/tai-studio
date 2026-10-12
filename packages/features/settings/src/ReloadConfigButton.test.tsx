@@ -28,6 +28,7 @@ function worker(overrides: Partial<FleetWorkerResult>): FleetWorkerResult {
 
 function fleetResult(overrides: Partial<FleetResult> = {}): FleetResult {
   return {
+    ok: true,
     op: 'reload_config',
     reachable: true,
     local_only: false,
