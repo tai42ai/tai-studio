@@ -10,7 +10,12 @@
  *    unreadable panel;
  *  - selecting a recent run shows that run's detail.
  */
-import { ApiSchemaError, type ToolRunListItem, type ToolRunRecord } from '@tai42/api-client';
+import {
+  ApiSchemaError,
+  type ToolRunListItem,
+  type ToolRunRecord,
+  toolRunRecord,
+} from '@tai42/api-client';
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -157,6 +162,29 @@ describe('BackgroundRuns — active run detail', () => {
     const detail = await screen.findByTestId('tool-run-detail');
     expect(within(detail).getByRole('alert')).toHaveTextContent('kaboom');
     expect(within(detail).queryByTestId('tool-run-outcome')).toBeNull();
+  });
+
+  it('renders a parsed failed record without an outcome as its message alone', async () => {
+    // Through the record schema, as the client reads it: an absent outcome reads as the
+    // published default (null), never as an outcome to show.
+    const parsed = toolRunRecord.parse({
+      run_id: 'r1',
+      tool_name: 'echo',
+      status: 'failed',
+      started_at: 't1',
+      finished_at: 't1b',
+      error: 'kaboom',
+    });
+    const client: StubApiClient = {
+      listToolRuns: vi.fn().mockResolvedValue([listItem({ status: 'failed' })]),
+      getToolRun: vi.fn().mockResolvedValue(parsed),
+    };
+    renderWithProviders(<BackgroundRuns toolName="echo" activeRunId="r1" />, { client });
+
+    const detail = await screen.findByTestId('tool-run-detail');
+    expect(within(detail).getByRole('alert')).toHaveTextContent('kaboom');
+    expect(within(detail).queryByTestId('tool-run-outcome')).toBeNull();
+    expect(within(detail).queryByRole('heading', { name: 'Outcome' })).toBeNull();
   });
 
   it('renders the distinct lost explanation', async () => {
