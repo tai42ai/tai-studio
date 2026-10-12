@@ -123,6 +123,12 @@
  *   - schedule-contract — the add-schedule dialog framing its door-contract section (the
  *                  execution-key picker + the four jq fields), backed by the RQ scheduling
  *                  backend the docs-demo boot installs.
+ *   - scheduling-rows — the Scheduling page's schedules table with an interval row, a cron
+ *                  row and a row carrying a backend error (its warning Error badge), via a
+ *                  forced `GET /api/schedules` payload (the demo backend records no scheduling
+ *                  failure and seeds no schedule).
+ *   - schedule-cron-error — the add-schedule dialog with a cron expression of the wrong
+ *                  length, showing the field error (nothing is submitted).
  *   - hooks-trigger-link / -execution-key — the mint→QR dialog, and the register
  *                  form's execution-key picker.
  *   - login      — the credential screen, captured signed out.
@@ -452,6 +458,55 @@ function withMixedRolesMember(directory) {
     ],
   };
 }
+
+// The forced schedules listing the `scheduling-rows` frame renders: one interval, one cron and one
+// row carrying a backend scheduling failure, as typed `ScheduleListRow` rows with fixed values.
+const SCHEDULE_ROWS = [
+  {
+    name: 'hourly-sync',
+    tool: 'studio_demo_echo',
+    cadence: { kind: 'interval', every: 3600, relative: false },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: null,
+  },
+  {
+    name: 'nightly-refresh',
+    tool: 'studio_demo_echo',
+    cadence: {
+      kind: 'crontab',
+      minute: '0',
+      hour: '2',
+      day_of_month: '*',
+      month_of_year: '*',
+      day_of_week: '*',
+    },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: null,
+  },
+  {
+    name: 'weekly-digest',
+    tool: 'studio_demo_echo',
+    cadence: {
+      kind: 'crontab',
+      minute: '30',
+      hour: '6',
+      day_of_month: '*',
+      month_of_year: '*',
+      day_of_week: '1',
+    },
+    enabled: true,
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: {
+      message: 'the worker could not re-arm the schedule',
+      at_iso: '2026-01-05T06:30:00+00:00',
+    },
+  },
+];
 
 // The inbound-attachments transcript is FORCED through a route override: the live demo
 // backend mints no byte-backed inbound attachments, so the transcript record, its thread
@@ -828,6 +883,51 @@ const AUTHED_PAGES = [
       await executionKey.waitFor({ state: 'visible', timeout: 8000 });
       await executionKey.click();
       await page.getByRole('option').first().click();
+    },
+  },
+  {
+    // The schedules table with one row of each kind the page renders: an interval, a cron and a
+    // row carrying the backend's last scheduling failure. The listing is FORCED (the demo backend
+    // seeds no schedule and records no failure); the rows are fixed, so the frame is
+    // deterministic. The table's card is framed, leaving out the live server clock.
+    name: 'scheduling-rows',
+    path: '/scheduling',
+    wait: 'text=Every 3600s',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/schedules',
+        (route) =>
+          route.request().method() === 'GET'
+            ? route.fulfill({ json: { data: SCHEDULE_ROWS } })
+            : route.fallback(),
+      );
+    },
+    action: async (page) => {
+      await page
+        .locator('[data-testid="schedule-error-badge"]')
+        .waitFor({ state: 'visible', timeout: 8000 });
+    },
+    frame: (page) => page.locator('.tai-card:has(table)'),
+  },
+  {
+    // The add-schedule dialog with a four-field cron expression submitted: the cron field shows
+    // its length error and nothing is sent, so no schedule is created.
+    name: 'schedule-cron-error',
+    path: '/scheduling',
+    wait: 'button:has-text("Add schedule")',
+    // The dialog is modal (background nav inert), so the plugin-nav wait is meaningless.
+    awaitPluginNav: false,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Add schedule' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Add schedule' });
+      await dialog.getByLabel('Name').fill('nightly-refresh');
+      await dialog.getByRole('combobox', { name: 'Tool' }).click();
+      await page.getByRole('option', { name: 'studio_demo_echo' }).click();
+      await dialog.getByLabel('Cron expression').fill('0 2 * *');
+      await dialog.getByRole('button', { name: 'Create schedule' }).click();
+      await dialog
+        .getByText('Use 5 fields (minute hour day-of-month month day-of-week)', { exact: false })
+        .waitFor({ state: 'visible', timeout: 8000 });
     },
   },
   { name: 'extensions', path: '/extensions', wait: 'text=ask_external' },
