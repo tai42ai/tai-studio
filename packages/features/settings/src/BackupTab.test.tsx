@@ -1,4 +1,4 @@
-import type { ApiClient, BackupImportReport } from '@tai42/api-client';
+import { type ApiClient, type BackupImportReport, schemas } from '@tai42/api-client';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
@@ -140,6 +140,47 @@ describe('BackupTab', () => {
     }
     expect(within(errorRow).getByText('env var rejected')).toBeInTheDocument();
     expect(screen.getByTestId('report-row-manifest')).toBeInTheDocument();
+  });
+
+  it('shows the API keys an access-control restore minted, from the reply as the server sends it', async () => {
+    const user = userEvent.setup();
+    // The server reply: every report field present, the minted keys in the open `details`.
+    const report = schemas.backupImportReport.parse({
+      ok: true,
+      sections: {
+        access_control: {
+          created: 1,
+          updated: 0,
+          skipped: 0,
+          errors: [],
+          details: {
+            skipped_existing: 0,
+            new_api_keys: [
+              { user_id: 'svc-alpha', description: 'Relay key', api_key: 'tai-minted-alpha' },
+            ],
+          },
+          fanout: null,
+          recycle: null,
+          awaiting_respawn: [],
+        },
+      },
+    });
+    const importBackup = vi.fn().mockResolvedValue(report);
+    renderWithProviders(<BackupTab readOnly={false} />, { client: baseStub({ importBackup }) });
+
+    await screen.findByRole('button', { name: 'Choose backup file' });
+    await uploadBackup(user);
+    await user.click(await screen.findByRole('button', { name: 'Import selected' }));
+
+    await screen.findByTestId('report-row-access_control');
+    expect(
+      screen.getByText(
+        'New API keys were minted during restore — copy them now, they cannot be retrieved again.',
+      ),
+    ).toBeInTheDocument();
+    const minted = screen.getByTestId('minted-svc-alpha');
+    expect(within(minted).getByText('svc-alpha — Relay key')).toBeInTheDocument();
+    expect(within(minted).getByText('tai-minted-alpha')).toBeInTheDocument();
   });
 
   it('escapes untrusted per-section error strings', async () => {

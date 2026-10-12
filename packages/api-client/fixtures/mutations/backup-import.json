@@ -6,6 +6,7 @@
       "updated": 1,
       "skipped": 0,
       "errors": [],
+      "details": {},
       "fanout": {
         "mode": "local-only",
         "note": "no worker bus configured; only this worker reloaded"
@@ -18,13 +19,16 @@
       "updated": 0,
       "skipped": 1,
       "errors": ["token 'svc-legacy': scope 'legacy-scope' does not exist or has no urls assigned"],
-      "new_api_keys": [
-        {
-          "user_id": "svc-ingest",
-          "description": "Ingestion service key",
-          "api_key": "example-key-redacted"
-        }
-      ],
+      "details": {
+        "skipped_existing": 0,
+        "new_api_keys": [
+          {
+            "user_id": "svc-ingest",
+            "description": "Ingestion service key",
+            "api_key": "example-key-redacted"
+          }
+        ]
+      },
       "fanout": null,
       "recycle": null,
       "awaiting_respawn": []

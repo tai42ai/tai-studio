@@ -133,6 +133,40 @@ describe('backup client transport', () => {
     expect(out.sections.env?.errors).toEqual(['TAI_BUS_HEARTBEAT_TTL needs a recycle']);
   });
 
+  it('importBackup parses the open details map, with the API keys an access-control restore minted', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ok: true,
+          sections: {
+            access_control: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              errors: [],
+              details: {
+                skipped_existing: 2,
+                new_api_keys: [
+                  { user_id: 'svc-alpha', description: 'Relay key', api_key: 'tai-minted-alpha' },
+                ],
+              },
+              fanout: null,
+              recycle: null,
+              awaiting_respawn: [],
+            },
+          },
+        },
+      }),
+    );
+    const out = await client.importBackup({ document: {}, sections: ['access_control'] });
+    expect(out.sections.access_control?.details).toEqual({
+      skipped_existing: 2,
+      new_api_keys: [
+        { user_id: 'svc-alpha', description: 'Relay key', api_key: 'tai-minted-alpha' },
+      ],
+    });
+  });
+
   it('exportBackup POSTs { sections } and returns the raw Blob with its content type', async () => {
     const bytes = new TextEncoder().encode('{"version":1}');
     const { client, captured } = harness(
