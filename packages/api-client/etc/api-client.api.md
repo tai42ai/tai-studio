@@ -16,6 +16,24 @@ import { ZodString } from 'zod';
 import { ZodUnknown } from 'zod';
 
 // @public
+export interface AddServerArgs {
+    // (undocumented)
+    readonly category?: string;
+    // (undocumented)
+    readonly description?: string;
+    // (undocumented)
+    readonly display_name?: string;
+    // (undocumented)
+    readonly icon_url?: string;
+    // (undocumented)
+    readonly id?: string;
+    // (undocumented)
+    readonly scopes?: string[];
+    // (undocumented)
+    readonly url: string;
+}
+
+// @public
 export interface AddUrlToScopeBody {
     // (undocumented)
     readonly pattern?: string;
@@ -294,6 +312,10 @@ export const apiRoutes: {
     readonly delete_api_connectors_connections_connection_id: {
         readonly method: "DELETE";
         readonly path: "/api/connectors/connections/{connection_id}";
+    };
+    readonly delete_api_connectors_providers_provider_id: {
+        readonly method: "DELETE";
+        readonly path: "/api/connectors/providers/{provider_id}";
     };
     readonly delete_api_conversation_configs_target_kind_target_name: {
         readonly method: "DELETE";
@@ -955,6 +977,14 @@ export const apiRoutes: {
         readonly method: "POST";
         readonly path: "/api/connectors/oauth/complete";
     };
+    readonly post_api_connectors_providers: {
+        readonly method: "POST";
+        readonly path: "/api/connectors/providers";
+    };
+    readonly post_api_connectors_providers_discover: {
+        readonly method: "POST";
+        readonly path: "/api/connectors/providers/discover";
+    };
     readonly post_api_connectors_tokens_reencrypt: {
         readonly method: "POST";
         readonly path: "/api/connectors/tokens/reencrypt";
@@ -1207,6 +1237,10 @@ export const apiRoutes: {
         readonly method: "PUT";
         readonly path: "/api/config/profiles/{name}";
     };
+    readonly put_api_connectors_providers_provider_id_client: {
+        readonly method: "PUT";
+        readonly path: "/api/connectors/providers/{provider_id}/client";
+    };
     readonly put_api_conversation_configs_target_kind_target_name: {
         readonly method: "PUT";
         readonly path: "/api/conversation-configs/{target_kind}/{target_name}";
@@ -1372,6 +1406,15 @@ const authRoutes: z.ZodArray<z.ZodObject<{
 const authScopes: z.ZodRecord<z.ZodString, z.ZodString>;
 
 // @public (undocumented)
+type AwaitingWorker = z.infer<typeof awaitingWorker>;
+
+// @public
+const awaitingWorker: z.ZodObject<{
+    keys: z.ZodArray<z.ZodString>;
+    name: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type BackendInfo = z.infer<typeof backendInfo>;
 
 // @public
@@ -1399,8 +1442,31 @@ export type BackupImportReport = z.infer<typeof backupImportReport>;
 const backupImportReport: z.ZodObject<{
     ok: z.ZodBoolean;
     sections: z.ZodRecord<z.ZodString, z.ZodObject<{
+        awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            keys: z.ZodArray<z.ZodString>;
+            name: z.ZodString;
+        }, z.core.$strip>>>;
         created: z.ZodDefault<z.ZodNumber>;
         errors: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            fresh: z.ZodArray<z.ZodObject<{
+                generation: z.ZodNumber;
+                kind: z.ZodString;
+                name: z.ZodString;
+            }, z.core.$strip>>;
+            recycle: z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                generation_before: z.ZodNumber;
+                kind: z.ZodString;
+                name: z.ZodString;
+                status: z.ZodString;
+            }, z.core.$strip>>;
+            recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                detail: z.ZodString;
+                kind: z.ZodString;
+                name: z.ZodNullable<z.ZodString>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>>;
         skipped: z.ZodDefault<z.ZodNumber>;
         updated: z.ZodDefault<z.ZodNumber>;
         fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -1476,8 +1542,31 @@ export type BackupSectionReport = z.infer<typeof backupSectionReport>;
 
 // @public (undocumented)
 const backupSectionReport: z.ZodObject<{
+    awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        keys: z.ZodArray<z.ZodString>;
+        name: z.ZodString;
+    }, z.core.$strip>>>;
     created: z.ZodDefault<z.ZodNumber>;
     errors: z.ZodDefault<z.ZodArray<z.ZodString>>;
+    recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        fresh: z.ZodArray<z.ZodObject<{
+            generation: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+        }, z.core.$strip>>;
+        recycle: z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            generation_before: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+            status: z.ZodString;
+        }, z.core.$strip>>;
+        recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            detail: z.ZodString;
+            kind: z.ZodString;
+            name: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
     skipped: z.ZodDefault<z.ZodNumber>;
     updated: z.ZodDefault<z.ZodNumber>;
     fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
@@ -1741,6 +1830,7 @@ const connectionsList: z.ZodObject<{
             oauth: "oauth";
         }>;
         provider_id: z.ZodString;
+        scopes_wanted: z.ZodDefault<z.ZodArray<z.ZodString>>;
         unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
     }, z.core.$strip>>;
     total: z.ZodNumber;
@@ -1768,6 +1858,7 @@ const connectionView: z.ZodObject<{
         oauth: "oauth";
     }>;
     provider_id: z.ZodString;
+    scopes_wanted: z.ZodDefault<z.ZodArray<z.ZodString>>;
     unreachable_sub_services: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 
@@ -3670,6 +3761,10 @@ export function createApiClient(config: ApiConfig): {
         pip_output: string | null;
         ref: string;
         reload: {
+            awaiting_respawn: {
+                keys: string[];
+                name: string;
+            }[];
             env_keys: number;
             fanout: {
                 error: string | null;
@@ -3686,6 +3781,25 @@ export function createApiClient(config: ApiConfig): {
                     payload: unknown;
                 }[] | null;
             };
+            recycle: {
+                fresh: {
+                    generation: number;
+                    kind: string;
+                    name: string;
+                }[];
+                recycle: {
+                    detail: string | null;
+                    generation_before: number;
+                    kind: string;
+                    name: string;
+                    status: string;
+                }[];
+                recycle_stopped: {
+                    detail: string;
+                    kind: string;
+                    name: string | null;
+                } | null;
+            } | null;
             status: string;
         };
         routes: {
@@ -3709,6 +3823,10 @@ export function createApiClient(config: ApiConfig): {
         notes: string[];
         ref: string;
         reload: {
+            awaiting_respawn: {
+                keys: string[];
+                name: string;
+            }[];
             env_keys: number;
             fanout: {
                 error: string | null;
@@ -3725,6 +3843,25 @@ export function createApiClient(config: ApiConfig): {
                     payload: unknown;
                 }[] | null;
             };
+            recycle: {
+                fresh: {
+                    generation: number;
+                    kind: string;
+                    name: string;
+                }[];
+                recycle: {
+                    detail: string | null;
+                    generation_before: number;
+                    kind: string;
+                    name: string;
+                    status: string;
+                }[];
+                recycle_stopped: {
+                    detail: string;
+                    kind: string;
+                    name: string | null;
+                } | null;
+            } | null;
             status: string;
         } | null;
         uninstalled: boolean;
@@ -3735,6 +3872,10 @@ export function createApiClient(config: ApiConfig): {
         pip_output: string | null;
         ref: string;
         reload: {
+            awaiting_respawn: {
+                keys: string[];
+                name: string;
+            }[];
             env_keys: number;
             fanout: {
                 error: string | null;
@@ -3751,6 +3892,25 @@ export function createApiClient(config: ApiConfig): {
                     payload: unknown;
                 }[] | null;
             };
+            recycle: {
+                fresh: {
+                    generation: number;
+                    kind: string;
+                    name: string;
+                }[];
+                recycle: {
+                    detail: string | null;
+                    generation_before: number;
+                    kind: string;
+                    name: string;
+                    status: string;
+                }[];
+                recycle_stopped: {
+                    detail: string;
+                    kind: string;
+                    name: string | null;
+                } | null;
+            } | null;
             status: string;
         };
         routes: {
@@ -3940,8 +4100,31 @@ export function createApiClient(config: ApiConfig): {
     }) => Promise<{
         ok: boolean;
         sections: Record<string, {
+            awaiting_respawn: {
+                keys: string[];
+                name: string;
+            }[];
             created: number;
             errors: string[];
+            recycle: {
+                fresh: {
+                    generation: number;
+                    kind: string;
+                    name: string;
+                }[];
+                recycle: {
+                    detail: string | null;
+                    generation_before: number;
+                    kind: string;
+                    name: string;
+                    status: string;
+                }[];
+                recycle_stopped: {
+                    detail: string;
+                    kind: string;
+                    name: string | null;
+                } | null;
+            } | null;
             skipped: number;
             updated: number;
             fanout: {
@@ -5381,14 +5564,24 @@ export function createApiClient(config: ApiConfig): {
         name: string;
         version: string;
     }[]>;
-    readonly listProviders: (signal?: AbortSignal) => Promise<{
-        categories: {
-            display_name: string;
-            id: string;
-            sort_order: number;
-        }[];
-        providers: {
+    readonly discoverServer: (target: DiscoverServerTarget) => Promise<{
+        authorization_servers: string[];
+        automatic_client: boolean;
+        client_issuer: string | null;
+        issuer: string;
+        redirect_uri: string | null;
+        registration_supported: boolean;
+        resource: string;
+        resource_name: string | null;
+        scopes_supported: string[];
+        suggested_display_name: string;
+        suggested_id: string;
+        url: string;
+    }>;
+    readonly addServer: (args: AddServerArgs) => Promise<{
+        provider: {
             category: string;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
             config_fields: {
                 key: string;
                 label: string;
@@ -5398,10 +5591,162 @@ export function createApiClient(config: ApiConfig): {
             }[];
             description: string;
             display_name: string;
-            icon_url: string;
+            icon_url: string | null;
             id: string;
             kind: "none" | "oauth";
             origin: "system" | "community";
+            removable: boolean;
+            sub_services: {
+                description: string;
+                display_name: string;
+                id: string;
+                scopes: string[];
+            }[];
+        };
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "fleet";
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly removeProvider: (id: string) => Promise<{
+        provider_id: string;
+        removed_clients: number;
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "fleet";
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly setProviderClient: (id: string, args: SetProviderClientArgs) => Promise<{
+        provider: {
+            category: string;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
+            config_fields: {
+                key: string;
+                label: string;
+                required: boolean;
+                secret: boolean;
+                target: "header" | "env";
+            }[];
+            description: string;
+            display_name: string;
+            icon_url: string | null;
+            id: string;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            removable: boolean;
+            sub_services: {
+                description: string;
+                display_name: string;
+                id: string;
+                scopes: string[];
+            }[];
+        };
+        fanout: {
+            mode: "local-only";
+            note: string;
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "fleet";
+        } | {
+            error: string | null;
+            local_only: boolean;
+            op: string;
+            reachable: boolean;
+            results: {
+                detail: string | null;
+                error: string | null;
+                name: string;
+                outcome: "applied" | "failed" | "missing" | "departed" | "timed_out" | "resyncing" | "recycling" | "stale";
+                payload: unknown;
+            }[];
+            mode: "unreachable";
+        } | null;
+    }>;
+    readonly listProviders: (signal?: AbortSignal) => Promise<{
+        categories: {
+            display_name: string;
+            id: string;
+            sort_order: number;
+        }[];
+        providers: {
+            category: string;
+            client_source: "manual" | "env" | "dynamic" | "unset" | null;
+            config_fields: {
+                key: string;
+                label: string;
+                required: boolean;
+                secret: boolean;
+                target: "header" | "env";
+            }[];
+            description: string;
+            display_name: string;
+            icon_url: string | null;
+            id: string;
+            kind: "none" | "oauth";
+            origin: "system" | "community";
+            removable: boolean;
             sub_services: {
                 description: string;
                 display_name: string;
@@ -5421,6 +5766,7 @@ export function createApiClient(config: ApiConfig): {
             granted_scopes: string[];
             kind: "none" | "oauth";
             provider_id: string;
+            scopes_wanted: string[];
             unreachable_sub_services: string[];
         }[];
         total: number;
@@ -5436,6 +5782,7 @@ export function createApiClient(config: ApiConfig): {
         granted_scopes: string[];
         kind: "none" | "oauth";
         provider_id: string;
+        scopes_wanted: string[];
         unreachable_sub_services: string[];
     }>;
     readonly startConnect: (args: StartConnectArgs) => Promise<{
@@ -5554,7 +5901,7 @@ export function createApiClient(config: ApiConfig): {
             mode: "unreachable";
         } | null;
     }>;
-    readonly completeOAuth: (state: string, code: string, error?: string) => Promise<{
+    readonly completeOAuth: (state: string, code: string, error?: string, iss?: string) => Promise<{
         kind: "cancelled";
         message: string;
     } | {
@@ -5598,7 +5945,30 @@ export function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly setMcpSecretEnv: (body: SetMcpSecretEnvBody) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -5676,6 +6046,10 @@ export function createApiClient(config: ApiConfig): {
         removed: string[];
     }>;
     readonly applySettingsProfile: (name: string) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         fresh: {
             generation: number;
             kind: string;
@@ -5755,7 +6129,30 @@ export function createApiClient(config: ApiConfig): {
         env: Record<string, string>;
         secret_keys?: string[] | null;
     }) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -5833,7 +6230,30 @@ export function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly setMcpConfig: (mcp: unknown[]) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -5897,7 +6317,30 @@ export function createApiClient(config: ApiConfig): {
         }[];
     }>;
     readonly addToolsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -5931,7 +6374,30 @@ export function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly removeToolsEntry: (title: string) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -5965,7 +6431,30 @@ export function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly addAgentsEntries: (entries: readonly unknown[], replace?: boolean) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -5999,7 +6488,30 @@ export function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly removeAgentsEntry: (title: string) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -6033,7 +6545,30 @@ export function createApiClient(config: ApiConfig): {
         };
     }>;
     readonly updateApiTools: (body: ApiToolsListsBody) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -6208,7 +6743,30 @@ export function createApiClient(config: ApiConfig): {
         })[][];
     }>;
     readonly setToolExtensions: (name: string, combos: readonly PresetExtensionElement[][]) => Promise<{
+        awaiting_respawn: {
+            keys: string[];
+            name: string;
+        }[];
         env_keys: number;
+        recycle: {
+            fresh: {
+                generation: number;
+                kind: string;
+                name: string;
+            }[];
+            recycle: {
+                detail: string | null;
+                generation_before: number;
+                kind: string;
+                name: string;
+                status: string;
+            }[];
+            recycle_stopped: {
+                detail: string;
+                kind: string;
+                name: string | null;
+            } | null;
+        } | null;
         status: string;
         fanout: {
             mode: "local-only";
@@ -7302,6 +7860,7 @@ export function createApiClient(config: ApiConfig): {
         finished_at?: string | undefined;
         result?: unknown;
         error?: string | undefined;
+        outcome?: unknown;
         resumed_interactions?: string[] | undefined;
     }>;
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
@@ -7450,6 +8009,32 @@ const disconnectResult: z.ZodObject<{
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">>>;
 }, z.core.$strip>;
+
+// @public (undocumented)
+export type DiscoveredServer = z.infer<typeof discoveredServer>;
+
+// @public
+const discoveredServer: z.ZodObject<{
+    authorization_servers: z.ZodArray<z.ZodString>;
+    automatic_client: z.ZodBoolean;
+    client_issuer: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    issuer: z.ZodString;
+    redirect_uri: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    registration_supported: z.ZodBoolean;
+    resource: z.ZodString;
+    resource_name: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    scopes_supported: z.ZodArray<z.ZodString>;
+    suggested_display_name: z.ZodString;
+    suggested_id: z.ZodString;
+    url: z.ZodString;
+}, z.core.$strip>;
+
+// @public
+export type DiscoverServerTarget = {
+    readonly url: string;
+} | {
+    readonly providerId: string;
+};
 
 // @public (undocumented)
 export type DisplayBlock = z.infer<typeof displayBlock>;
@@ -7627,6 +8212,7 @@ export type FleetReportStatus = 'converged' | 'degraded' | 'unreachable';
 
 // @public (undocumented)
 export interface FleetReportSummary {
+    readonly awaiting: readonly FleetWorkerAwaitingRespawn[];
     readonly error: string | null;
     readonly failures: readonly FleetWorkerFailure[];
     readonly note: string | null;
@@ -7688,6 +8274,14 @@ const fleetWorker: z.ZodObject<{
         ready: "ready";
     }>;
 }, z.core.$strip>;
+
+// @public
+export interface FleetWorkerAwaitingRespawn {
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly name: string;
+}
 
 // @public
 export interface FleetWorkerFailure {
@@ -7866,6 +8460,16 @@ const formUpdate: z.ZodObject<{
     }, z.core.$strict>>>>;
     errors: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
     display: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type FreshLife = z.infer<typeof freshLife>;
+
+// @public
+const freshLife: z.ZodObject<{
+    generation: z.ZodNumber;
+    kind: z.ZodString;
+    name: z.ZodString;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -8778,6 +9382,10 @@ const marketplaceInstallResult: z.ZodObject<{
     pip_output: z.ZodNullable<z.ZodString>;
     ref: z.ZodString;
     reload: z.ZodObject<{
+        awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            keys: z.ZodArray<z.ZodString>;
+            name: z.ZodString;
+        }, z.core.$strip>>>;
         env_keys: z.ZodNumber;
         fanout: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -8794,6 +9402,25 @@ const marketplaceInstallResult: z.ZodObject<{
                 payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
             }, z.core.$strip>>>>;
         }, z.core.$strip>;
+        recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            fresh: z.ZodArray<z.ZodObject<{
+                generation: z.ZodNumber;
+                kind: z.ZodString;
+                name: z.ZodString;
+            }, z.core.$strip>>;
+            recycle: z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                generation_before: z.ZodNumber;
+                kind: z.ZodString;
+                name: z.ZodString;
+                status: z.ZodString;
+            }, z.core.$strip>>;
+            recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                detail: z.ZodString;
+                kind: z.ZodString;
+                name: z.ZodNullable<z.ZodString>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>>;
         status: z.ZodString;
     }, z.core.$strip>;
     routes: z.ZodArray<z.ZodObject<{
@@ -9224,6 +9851,10 @@ const marketplaceUninstallResult: z.ZodObject<{
     notes: z.ZodArray<z.ZodString>;
     ref: z.ZodString;
     reload: z.ZodNullable<z.ZodObject<{
+        awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            keys: z.ZodArray<z.ZodString>;
+            name: z.ZodString;
+        }, z.core.$strip>>>;
         env_keys: z.ZodNumber;
         fanout: z.ZodObject<{
             error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
@@ -9240,6 +9871,25 @@ const marketplaceUninstallResult: z.ZodObject<{
                 payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
             }, z.core.$strip>>>>;
         }, z.core.$strip>;
+        recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            fresh: z.ZodArray<z.ZodObject<{
+                generation: z.ZodNumber;
+                kind: z.ZodString;
+                name: z.ZodString;
+            }, z.core.$strip>>;
+            recycle: z.ZodArray<z.ZodObject<{
+                detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+                generation_before: z.ZodNumber;
+                kind: z.ZodString;
+                name: z.ZodString;
+                status: z.ZodString;
+            }, z.core.$strip>>;
+            recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+                detail: z.ZodString;
+                kind: z.ZodString;
+                name: z.ZodNullable<z.ZodString>;
+            }, z.core.$strip>>>;
+        }, z.core.$strip>>>;
         status: z.ZodString;
     }, z.core.$strip>>;
     uninstalled: z.ZodBoolean;
@@ -10511,6 +11161,10 @@ type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
 // @public
 const profileApplyResponse: z.ZodObject<{
+    awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        keys: z.ZodArray<z.ZodString>;
+        name: z.ZodString;
+    }, z.core.$strip>>>;
     fresh: z.ZodArray<z.ZodObject<{
         generation: z.ZodNumber;
         kind: z.ZodString;
@@ -10583,15 +11237,19 @@ const profileApplyResponse: z.ZodObject<{
 // @public (undocumented)
 export type ProviderCatalogResponse = z.infer<typeof providers>;
 
+// @public (undocumented)
+export type ProviderMutationResult = z.infer<typeof providerMutationResult>;
+
 // @public
-const providers: z.ZodObject<{
-    categories: z.ZodArray<z.ZodObject<{
-        display_name: z.ZodString;
-        id: z.ZodString;
-        sort_order: z.ZodNumber;
-    }, z.core.$strip>>;
-    providers: z.ZodArray<z.ZodObject<{
+const providerMutationResult: z.ZodObject<{
+    provider: z.ZodObject<{
         category: z.ZodString;
+        client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            manual: "manual";
+            env: "env";
+            dynamic: "dynamic";
+            unset: "unset";
+        }>>>;
         config_fields: z.ZodDefault<z.ZodArray<z.ZodObject<{
             key: z.ZodString;
             label: z.ZodString;
@@ -10604,7 +11262,7 @@ const providers: z.ZodObject<{
         }, z.core.$strip>>>;
         description: z.ZodDefault<z.ZodString>;
         display_name: z.ZodString;
-        icon_url: z.ZodString;
+        icon_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         id: z.ZodString;
         kind: z.ZodEnum<{
             none: "none";
@@ -10614,6 +11272,102 @@ const providers: z.ZodObject<{
             system: "system";
             community: "community";
         }>;
+        removable: z.ZodDefault<z.ZodBoolean>;
+        sub_services: z.ZodArray<z.ZodObject<{
+            description: z.ZodDefault<z.ZodString>;
+            display_name: z.ZodString;
+            id: z.ZodString;
+            scopes: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+    fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        mode: z.ZodLiteral<"local-only">;
+        note: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"fleet">;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"unreachable">;
+    }, z.core.$strip>], "mode">>>;
+}, z.core.$strip>;
+
+// @public
+const providers: z.ZodObject<{
+    categories: z.ZodArray<z.ZodObject<{
+        display_name: z.ZodString;
+        id: z.ZodString;
+        sort_order: z.ZodNumber;
+    }, z.core.$strip>>;
+    providers: z.ZodArray<z.ZodObject<{
+        category: z.ZodString;
+        client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+            manual: "manual";
+            env: "env";
+            dynamic: "dynamic";
+            unset: "unset";
+        }>>>;
+        config_fields: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            key: z.ZodString;
+            label: z.ZodString;
+            required: z.ZodDefault<z.ZodBoolean>;
+            secret: z.ZodDefault<z.ZodBoolean>;
+            target: z.ZodEnum<{
+                header: "header";
+                env: "env";
+            }>;
+        }, z.core.$strip>>>;
+        description: z.ZodDefault<z.ZodString>;
+        display_name: z.ZodString;
+        icon_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        id: z.ZodString;
+        kind: z.ZodEnum<{
+            none: "none";
+            oauth: "oauth";
+        }>;
+        origin: z.ZodEnum<{
+            system: "system";
+            community: "community";
+        }>;
+        removable: z.ZodDefault<z.ZodBoolean>;
         sub_services: z.ZodArray<z.ZodObject<{
             description: z.ZodDefault<z.ZodString>;
             display_name: z.ZodString;
@@ -10629,6 +11383,12 @@ export type ProviderView = z.infer<typeof providerView>;
 // @public (undocumented)
 const providerView: z.ZodObject<{
     category: z.ZodString;
+    client_source: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+        manual: "manual";
+        env: "env";
+        dynamic: "dynamic";
+        unset: "unset";
+    }>>>;
     config_fields: z.ZodDefault<z.ZodArray<z.ZodObject<{
         key: z.ZodString;
         label: z.ZodString;
@@ -10641,7 +11401,7 @@ const providerView: z.ZodObject<{
     }, z.core.$strip>>>;
     description: z.ZodDefault<z.ZodString>;
     display_name: z.ZodString;
-    icon_url: z.ZodString;
+    icon_url: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     id: z.ZodString;
     kind: z.ZodEnum<{
         none: "none";
@@ -10651,6 +11411,7 @@ const providerView: z.ZodObject<{
         system: "system";
         community: "community";
     }>;
+    removable: z.ZodDefault<z.ZodBoolean>;
     sub_services: z.ZodArray<z.ZodObject<{
         description: z.ZodDefault<z.ZodString>;
         display_name: z.ZodString;
@@ -10727,11 +11488,80 @@ const recordSearchPage: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public (undocumented)
+export type RecycleEntry = z.infer<typeof recycleEntry>;
+
+// @public
+const recycleEntry: z.ZodObject<{
+    detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    generation_before: z.ZodNumber;
+    kind: z.ZodString;
+    name: z.ZodString;
+    status: z.ZodString;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type RecycleRoll = z.infer<typeof recycleRoll>;
+
+// @public
+const recycleRoll: z.ZodObject<{
+    fresh: z.ZodArray<z.ZodObject<{
+        generation: z.ZodNumber;
+        kind: z.ZodString;
+        name: z.ZodString;
+    }, z.core.$strip>>;
+    recycle: z.ZodArray<z.ZodObject<{
+        detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        generation_before: z.ZodNumber;
+        kind: z.ZodString;
+        name: z.ZodString;
+        status: z.ZodString;
+    }, z.core.$strip>>;
+    recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        detail: z.ZodString;
+        kind: z.ZodString;
+        name: z.ZodNullable<z.ZodString>;
+    }, z.core.$strip>>>;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type RecycleStop = z.infer<typeof recycleStop>;
+
+// @public
+const recycleStop: z.ZodObject<{
+    detail: z.ZodString;
+    kind: z.ZodString;
+    name: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+
+// @public (undocumented)
 export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;
 
 // @public
 const reloadConfigResult: z.ZodObject<{
+    awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        keys: z.ZodArray<z.ZodString>;
+        name: z.ZodString;
+    }, z.core.$strip>>>;
     env_keys: z.ZodNumber;
+    recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        fresh: z.ZodArray<z.ZodObject<{
+            generation: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+        }, z.core.$strip>>;
+        recycle: z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            generation_before: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+            status: z.ZodString;
+        }, z.core.$strip>>;
+        recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            detail: z.ZodString;
+            kind: z.ZodString;
+            name: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
     status: z.ZodString;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
@@ -10781,6 +11611,63 @@ const reloadConfigResult: z.ZodObject<{
         }, z.core.$strip>>>;
         mode: z.ZodLiteral<"unreachable">;
     }, z.core.$strip>], "mode">;
+}, z.core.$strip>;
+
+// @public (undocumented)
+export type RemoveProviderResult = z.infer<typeof removeProviderResult>;
+
+// @public
+const removeProviderResult: z.ZodObject<{
+    provider_id: z.ZodString;
+    removed_clients: z.ZodNumber;
+    fanout: z.ZodDefault<z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        mode: z.ZodLiteral<"local-only">;
+        note: z.ZodString;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"fleet">;
+    }, z.core.$strip>, z.ZodObject<{
+        error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        local_only: z.ZodDefault<z.ZodBoolean>;
+        op: z.ZodString;
+        reachable: z.ZodDefault<z.ZodBoolean>;
+        results: z.ZodDefault<z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            name: z.ZodString;
+            outcome: z.ZodEnum<{
+                applied: "applied";
+                failed: "failed";
+                missing: "missing";
+                departed: "departed";
+                timed_out: "timed_out";
+                resyncing: "resyncing";
+                recycling: "recycling";
+                stale: "stale";
+            }>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+        }, z.core.$strip>>>;
+        mode: z.ZodLiteral<"unreachable">;
+    }, z.core.$strip>], "mode">>>;
 }, z.core.$strip>;
 
 // @public (undocumented)
@@ -11419,6 +12306,12 @@ declare namespace s {
         patchSubServicesResult,
         oauthCompleteResult,
         OAuthCompleteResult,
+        discoveredServer,
+        DiscoveredServer,
+        providerMutationResult,
+        ProviderMutationResult,
+        removeProviderResult,
+        RemoveProviderResult,
         conversationDoor,
         ConversationDoor,
         conversationTargetKind,
@@ -11498,6 +12391,16 @@ declare namespace s {
         FleetReloadResult,
         fleetReportFanout,
         FleetReportFanout,
+        recycleEntry,
+        RecycleEntry,
+        freshLife,
+        FreshLife,
+        recycleStop,
+        RecycleStop,
+        recycleRoll,
+        RecycleRoll,
+        awaitingWorker,
+        AwaitingWorker,
         triggerAuth,
         TriggerAuth,
         hookList,
@@ -12209,6 +13112,12 @@ declare namespace schemas {
         patchSubServicesResult,
         oauthCompleteResult,
         OAuthCompleteResult,
+        discoveredServer,
+        DiscoveredServer,
+        providerMutationResult,
+        ProviderMutationResult,
+        removeProviderResult,
+        RemoveProviderResult,
         conversationDoor,
         ConversationDoor,
         conversationTargetKind,
@@ -12288,6 +13197,16 @@ declare namespace schemas {
         FleetReloadResult,
         fleetReportFanout,
         FleetReportFanout,
+        recycleEntry,
+        RecycleEntry,
+        freshLife,
+        FreshLife,
+        recycleStop,
+        RecycleStop,
+        recycleRoll,
+        RecycleRoll,
+        awaitingWorker,
+        AwaitingWorker,
         triggerAuth,
         TriggerAuth,
         hookList,
@@ -18558,6 +19477,18 @@ interface SetMcpSecretEnvBody {
     readonly value: string;
 }
 
+// @public
+export interface SetProviderClientArgs {
+    // (undocumented)
+    readonly client_id: string;
+    // (undocumented)
+    readonly client_secret?: string | null;
+    // (undocumented)
+    readonly issuer?: string;
+    // (undocumented)
+    readonly token_endpoint_auth_method?: 'client_secret_post' | 'client_secret_basic' | 'none';
+}
+
 // @public (undocumented)
 type SettingsProfileBody = z.infer<typeof settingsProfileBody>;
 
@@ -19824,7 +20755,7 @@ const subServiceView: z.ZodObject<{
 }, z.core.$strip>;
 
 // @public
-export function summarizeFleetFanout(fanout: FleetReportFanout | null | undefined): FleetReportSummary | null;
+export function summarizeFleetFanout(fanout: FleetReportFanout | null | undefined, awaiting: readonly FleetWorkerAwaitingRespawn[]): FleetReportSummary | null;
 
 // @public
 export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetReportSummary;
@@ -20136,7 +21067,30 @@ export type ToolExtensionsApplyResult = z.infer<typeof toolExtensionsApplyResult
 
 // @public
 const toolExtensionsApplyResult: z.ZodObject<{
+    awaiting_respawn: z.ZodDefault<z.ZodArray<z.ZodObject<{
+        keys: z.ZodArray<z.ZodString>;
+        name: z.ZodString;
+    }, z.core.$strip>>>;
     env_keys: z.ZodNumber;
+    recycle: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+        fresh: z.ZodArray<z.ZodObject<{
+            generation: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+        }, z.core.$strip>>;
+        recycle: z.ZodArray<z.ZodObject<{
+            detail: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            generation_before: z.ZodNumber;
+            kind: z.ZodString;
+            name: z.ZodString;
+            status: z.ZodString;
+        }, z.core.$strip>>;
+        recycle_stopped: z.ZodDefault<z.ZodNullable<z.ZodObject<{
+            detail: z.ZodString;
+            kind: z.ZodString;
+            name: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>>;
+    }, z.core.$strip>>>;
     status: z.ZodString;
     fanout: z.ZodDiscriminatedUnion<[z.ZodObject<{
         mode: z.ZodLiteral<"local-only">;
@@ -20351,6 +21305,7 @@ export const toolRunRecord: z.ZodObject<{
     finished_at: z.ZodOptional<z.ZodString>;
     result: z.ZodOptional<z.ZodUnknown>;
     error: z.ZodOptional<z.ZodString>;
+    outcome: z.ZodOptional<z.ZodUnknown>;
     resumed_interactions: z.ZodOptional<z.ZodArray<z.ZodString>>;
 }, z.core.$strip>;
 

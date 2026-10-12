@@ -53,8 +53,10 @@ export type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
 /**
  * The apply result every config-writer mutation returns (`POST /api/mcp-config`,
  * `POST /api/config/env`): the serving worker's local reload result (`status` +
- * `env_keys`) plus the mode-wrapped fleet fan-out of the reload it broadcast. The
- * `fanout` is hand-typed (the spec publishes it as one object with optional fields) so
+ * `env_keys`), the mode-wrapped fleet fan-out of the reload it broadcast, `recycle` — the
+ * fleet recycle roll an env change carrying a recycle-class key ran (`null` when it carried
+ * none) — and `awaiting_respawn`, the workers (name + keys) still awaiting a respawn after
+ * it, empty when its roll converged. The `fanout` is hand-typed (the spec publishes it as one object with optional fields) so
  * the shared fleet-report handler can surface a failed propagation. A drift throws
  * `ApiSchemaError`.
  */

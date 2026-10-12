@@ -1,6 +1,80 @@
 {
   "components": {
     "schemas": {
+      "AddServerRequest": {
+        "description": "Add the MCP server at ``url`` as a discovered provider.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Category"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Display Name"
+          },
+          "icon_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Icon Url"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Id"
+          },
+          "scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "AddServerRequest",
+        "type": "object"
+      },
       "AdvisorySnapshot": {
         "description": "The advisory snapshot for the installed plugins.\n\nEach advisory row is an upstream registry object forwarded verbatim (its shape is owned by the\nregistry); ``fetched_at`` is the ISO-8601 fetch time.",
         "properties": {
@@ -1292,14 +1366,32 @@
         "type": "object"
       },
       "ApplyResponse": {
-        "description": "The standard mutation-op response: this worker's local reload result merged with the fleet fan-out summary.\n\n``env_keys`` is the count of env keys the reload loaded.",
+        "description": "The standard mutation-op response: this worker's local reload result merged with the fleet fan-out summary.\n\n``env_keys`` is the count of env keys the reload loaded. ``recycle`` is the fleet recycle\nroll the change ran — ``null`` when it carried no recycle-class key. ``awaiting_respawn`` is\nthe operation's verdict: the workers still awaiting a respawn after it (name + keys) — empty\nwhen the change rolled a recycle that converged and this worker recycles itself; a worker the\nroll did not reach, and every listed worker of a change that rolls nothing, keep their keys.",
         "properties": {
+          "awaiting_respawn": {
+            "items": {
+              "$ref": "#/components/schemas/AwaitingWorker"
+            },
+            "title": "Awaiting Respawn",
+            "type": "array"
+          },
           "env_keys": {
             "title": "Env Keys",
             "type": "integer"
           },
           "fanout": {
             "$ref": "#/components/schemas/FanoutSummary"
+          },
+          "recycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecycleRoll"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "status": {
             "title": "Status",
@@ -1422,6 +1514,28 @@
         ],
         "title": "AuthHealthState",
         "type": "string"
+      },
+      "AwaitingWorker": {
+        "description": "One worker an operation names as still awaiting a respawn.\n\nIts recycle-class ``keys`` changed in the stored env since its process bound them (at boot, or\nwhen the plugin that declares them was loaded), and nothing in the operation respawns it.",
+        "properties": {
+          "keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "keys"
+        ],
+        "title": "AwaitingWorker",
+        "type": "object"
       },
       "BackendInfo": {
         "description": "Backend identity.\n\n``backend``/``module`` are ``null`` when no provider is registered\n(``present`` false).",
@@ -1594,8 +1708,15 @@
       },
       "BackupSectionReport": {
         "additionalProperties": false,
-        "description": "One section's import outcome — the typed result every importer returns.\n\nThe platform reads ONLY these fields: ``created``/``updated``/``skipped`` are\nthe per-record counts (``skipped`` is the per-record REJECTION count, each also\ncarried in ``errors``), ``errors`` is the per-record failure messages, and\n``fanout`` is the platform's own per-worker report for a section whose restore\nbroadcasts a fleet eviction (``None`` for every section that does not).\n\n``details`` is an OPEN map for an importer's OWN counts and data — a\nper-entity breakdown, a ``skipped_existing`` tally, minted credentials to\nsurface once — so a backend declares its own shape there without the platform\nknowing it. The typed surface is CLOSED (``extra=\"forbid\"``): an importer that\nreturns a stray top-level field is a wrong shape the registry refuses loudly\nrather than silently dropping. ``validate_assignment`` coerces ``fanout`` on\nassignment, so a mutation building the report cannot leave an unvalidated shape.",
+        "description": "One section's import outcome — the typed result every importer returns.\n\nThe platform reads ONLY these fields: ``created``/``updated``/``skipped`` are\nthe per-record counts (``skipped`` is the per-record REJECTION count, each also\ncarried in ``errors``), ``errors`` is the per-record failure messages, and\n``fanout`` is the platform's own per-worker report for a section whose restore\nbroadcasts a fleet eviction (``None`` for every section that does not), and\n``recycle`` the fleet recycle roll a section's restore ran for a recycle-class env\nchange (``None`` for every section that ran none), and ``awaiting_respawn`` the workers\nstill awaiting a respawn after the section's env change (name + keys; empty for every\nsection that ran none).\n\n``details`` is an OPEN map for an importer's OWN counts and data — a\nper-entity breakdown, a ``skipped_existing`` tally, minted credentials to\nsurface once — so a backend declares its own shape there without the platform\nknowing it. The typed surface is CLOSED (``extra=\"forbid\"``): an importer that\nreturns a stray top-level field is a wrong shape the registry refuses loudly\nrather than silently dropping. ``validate_assignment`` coerces ``fanout`` and ``recycle`` on\nassignment, so a mutation building the report cannot leave an unvalidated shape.",
         "properties": {
+          "awaiting_respawn": {
+            "items": {
+              "$ref": "#/components/schemas/AwaitingWorker"
+            },
+            "title": "Awaiting Respawn",
+            "type": "array"
+          },
           "created": {
             "default": 0,
             "title": "Created",
@@ -1617,6 +1738,17 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/FanoutSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "recycle": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecycleRoll"
               },
               {
                 "type": "null"
@@ -2986,6 +3118,13 @@
             "title": "Provider Id",
             "type": "string"
           },
+          "scopes_wanted": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes Wanted",
+            "type": "array"
+          },
           "unreachable_sub_services": {
             "items": {
               "type": "string"
@@ -3059,15 +3198,38 @@
         "type": "object"
       },
       "ConnectorReencryptResult": {
-        "description": "The KEK re-encrypt sweep's outcome.\n\n``scanned`` blobs split into ``reencrypted`` (rewritten under the current KEK), ``skipped`` (already under\nthe current key), and ``failed`` (no configured key could open them, or compare-and-set contention was not\nresolved). ``failed_connection_ids`` names each failed connection; ``cas_retries``\ncounts compare-and-set retries forced by concurrent refreshes.",
+        "description": "The KEK re-encrypt sweep's outcome, for the connection tokens and the stored client credentials.\n\n``scanned`` connection blobs split into ``reencrypted`` (rewritten under the current KEK), ``skipped``\n(already under the current key), and ``failed`` (no configured key could open them, or compare-and-set\ncontention was not resolved); ``failed_connection_ids`` names each failed connection. The ``clients_*``\ncounts split the stored OAuth client blobs the same way, ``failed_client_row_ids`` naming each failed\nclient row. ``cas_retries`` counts the compare-and-set retries concurrent writers forced in both tables.",
         "properties": {
           "cas_retries": {
             "title": "Cas Retries",
             "type": "integer"
           },
+          "clients_failed": {
+            "title": "Clients Failed",
+            "type": "integer"
+          },
+          "clients_reencrypted": {
+            "title": "Clients Reencrypted",
+            "type": "integer"
+          },
+          "clients_scanned": {
+            "title": "Clients Scanned",
+            "type": "integer"
+          },
+          "clients_skipped": {
+            "title": "Clients Skipped",
+            "type": "integer"
+          },
           "failed": {
             "title": "Failed",
             "type": "integer"
+          },
+          "failed_client_row_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Client Row Ids",
+            "type": "array"
           },
           "failed_connection_ids": {
             "items": {
@@ -3095,6 +3257,11 @@
           "skipped",
           "failed",
           "failed_connection_ids",
+          "clients_scanned",
+          "clients_reencrypted",
+          "clients_skipped",
+          "clients_failed",
+          "failed_client_row_ids",
           "cas_retries"
         ],
         "title": "ConnectorReencryptResult",
@@ -4282,6 +4449,133 @@
           "removed_manifest_entries"
         ],
         "title": "DisconnectResponse",
+        "type": "object"
+      },
+      "DiscoverServerRequest": {
+        "description": "Look up an MCP server's authorization: by its address, or the server of an existing discovered provider.",
+        "properties": {
+          "provider_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Provider Id"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Url"
+          }
+        },
+        "title": "DiscoverServerRequest",
+        "type": "object"
+      },
+      "DiscoveredServerView": {
+        "description": "What a look-up found: the server's protected resource and the sign-in service a new login would use.",
+        "properties": {
+          "authorization_servers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Authorization Servers",
+            "type": "array"
+          },
+          "automatic_client": {
+            "title": "Automatic Client",
+            "type": "boolean"
+          },
+          "client_issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client Issuer"
+          },
+          "issuer": {
+            "title": "Issuer",
+            "type": "string"
+          },
+          "redirect_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Redirect Uri"
+          },
+          "registration_supported": {
+            "title": "Registration Supported",
+            "type": "boolean"
+          },
+          "resource": {
+            "title": "Resource",
+            "type": "string"
+          },
+          "resource_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Resource Name"
+          },
+          "scopes_supported": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes Supported",
+            "type": "array"
+          },
+          "suggested_display_name": {
+            "title": "Suggested Display Name",
+            "type": "string"
+          },
+          "suggested_id": {
+            "title": "Suggested Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "resource",
+          "issuer",
+          "authorization_servers",
+          "registration_supported",
+          "automatic_client",
+          "scopes_supported",
+          "suggested_id",
+          "suggested_display_name"
+        ],
+        "title": "DiscoveredServerView",
         "type": "object"
       },
       "DisplayBlock": {
@@ -8183,7 +8477,7 @@
         "type": "object"
       },
       "OAuthComplete": {
-        "description": "The OAuth provider callback payload.\n\nThe signed ``state`` and the authorization ``code``, or a provider-reported ``error``.",
+        "description": "The OAuth provider callback payload.\n\nThe signed ``state`` and the authorization ``code``, or a provider-reported ``error``, with the\nredirect's ``iss`` (the issuer that answered, RFC 9207) when it carried one.",
         "properties": {
           "code": {
             "anyOf": [
@@ -8208,6 +8502,18 @@
             ],
             "default": null,
             "title": "Error"
+          },
+          "iss": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Iss"
           },
           "state": {
             "anyOf": [
@@ -10462,8 +10768,15 @@
         "type": "object"
       },
       "ProfileApplyResponse": {
-        "description": "The dedicated profile-apply response.\n\n``hot`` are the hot-class diff key names; ``recycle`` the worker lines of the recycle roll;\n``fresh`` the new ready lives seen since the pre-apply snapshot; ``refused`` is empty on success\n(any refusal aborts the pipeline before a response is built); ``recycle_stopped`` is ``null``\nwhen the roll ran to its end, otherwise where it stopped and why; ``fanout`` the reload\nbroadcast's fleet summary. Names only — never env values.",
+        "description": "The dedicated profile-apply response.\n\n``hot`` are the hot-class diff key names; ``recycle`` the worker lines of the recycle roll;\n``fresh`` the new ready lives seen since the pre-apply snapshot; ``refused`` is empty on success\n(any refusal aborts the pipeline before a response is built); ``recycle_stopped`` is ``null``\nwhen the roll ran to its end, otherwise where it stopped and why; ``awaiting_respawn`` the\nworkers still awaiting a respawn after the apply (name + keys; empty when the roll converged);\n``fanout`` the reload broadcast's fleet summary. Names only — never env values.",
         "properties": {
+          "awaiting_respawn": {
+            "items": {
+              "$ref": "#/components/schemas/AwaitingWorker"
+            },
+            "title": "Awaiting Respawn",
+            "type": "array"
+          },
           "fanout": {
             "$ref": "#/components/schemas/FanoutSummary"
           },
@@ -10852,6 +11165,24 @@
             "title": "Category",
             "type": "string"
           },
+          "client_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "env",
+                  "manual",
+                  "dynamic",
+                  "unset"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client Source"
+          },
           "config_fields": {
             "items": {
               "$ref": "#/components/schemas/ConfigFieldSpec"
@@ -10869,8 +11200,16 @@
             "type": "string"
           },
           "icon_url": {
-            "title": "Icon Url",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Icon Url"
           },
           "id": {
             "title": "Id",
@@ -10892,6 +11231,11 @@
             "title": "Origin",
             "type": "string"
           },
+          "removable": {
+            "default": false,
+            "title": "Removable",
+            "type": "boolean"
+          },
           "sub_services": {
             "items": {
               "$ref": "#/components/schemas/SubServiceView"
@@ -10903,7 +11247,6 @@
         "required": [
           "id",
           "display_name",
-          "icon_url",
           "kind",
           "origin",
           "category",
@@ -10935,6 +11278,32 @@
           "categories"
         ],
         "title": "ProviderCatalogResponse",
+        "type": "object"
+      },
+      "ProviderMutationResponse": {
+        "description": "The provider's catalog entry after a change, and the fleet report of the manifest write it made.",
+        "properties": {
+          "fanout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fanout"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/ProviderCatalogEntry"
+          }
+        },
+        "required": [
+          "provider"
+        ],
+        "title": "ProviderMutationResponse",
         "type": "object"
       },
       "PruneResult": {
@@ -11072,6 +11441,42 @@
         "title": "RecycleEntry",
         "type": "object"
       },
+      "RecycleRoll": {
+        "description": "The report of a fleet recycle roll an env change carrying a recycle-class key ran.\n\n``recycle`` the worker lines of the roll (the writer's own ``self-deferred`` line when its\npost-response self-exit is armed); ``fresh`` the new ready lives seen since the change began;\n``recycle_stopped`` is ``null`` when the roll ran to its end, otherwise where it stopped and\nwhy. Names only — never env values.",
+        "properties": {
+          "fresh": {
+            "items": {
+              "$ref": "#/components/schemas/FreshLife"
+            },
+            "title": "Fresh",
+            "type": "array"
+          },
+          "recycle": {
+            "items": {
+              "$ref": "#/components/schemas/RecycleEntry"
+            },
+            "title": "Recycle",
+            "type": "array"
+          },
+          "recycle_stopped": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecycleStop"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "recycle",
+          "fresh"
+        ],
+        "title": "RecycleRoll",
+        "type": "object"
+      },
       "RecycleStop": {
         "description": "Where a profile apply's recycle roll stopped and why.\n\n``name`` is the target the roll stopped at (its line in ``recycle`` carries the\ntarget's own outcome), or ``null`` when the bus could not be read before a target was\nreached.",
         "properties": {
@@ -11162,6 +11567,38 @@
           "error",
           "reloading"
         ],
+        "type": "object"
+      },
+      "RemoveProviderResponse": {
+        "description": "A removed provider, how many stored clients went with it, and the fleet report of the manifest write.",
+        "properties": {
+          "fanout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fanout"
+          },
+          "provider_id": {
+            "title": "Provider Id",
+            "type": "string"
+          },
+          "removed_clients": {
+            "title": "Removed Clients",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider_id",
+          "removed_clients"
+        ],
+        "title": "RemoveProviderResponse",
         "type": "object"
       },
       "RemovedByName": {
@@ -12965,6 +13402,64 @@
           "updated_at"
         ],
         "title": "ServedStateView",
+        "type": "object"
+      },
+      "SetConnectorClientRequest": {
+        "description": "Store the client credentials of an app registered by hand for a discovered provider.",
+        "properties": {
+          "client_id": {
+            "minLength": 1,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client Secret"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Issuer"
+          },
+          "token_endpoint_auth_method": {
+            "anyOf": [
+              {
+                "enum": [
+                  "client_secret_post",
+                  "client_secret_basic",
+                  "none"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Token Endpoint Auth Method"
+          }
+        },
+        "required": [
+          "client_id"
+        ],
+        "title": "SetConnectorClientRequest",
         "type": "object"
       },
       "SetMcpSecretEnv": {
@@ -17020,7 +17515,7 @@
         "type": "object"
       },
       "ToolRunView": {
-        "description": "A background tool run's full status view.\n\n``finished_at``/``result``/``error``/``resumed_interactions`` are present only once the run reaches a\nterminal status, so they are optional; ``result`` is the tool's arbitrary output;\n``resumed_interactions`` is the parked interaction ids the run resumed or took while it executed\n(``[]`` when it resumed nothing).",
+        "description": "A background tool run's full status view.\n\n``finished_at``/``result``/``error``/``resumed_interactions`` are present only once the run reaches a\nterminal status, so they are optional; ``result`` is the tool's arbitrary output;\n``resumed_interactions`` is the parked interaction ids the run resumed or took while it executed\n(``[]`` when it resumed nothing).\n\n``outcome`` is present only on a ``failed`` record whose run reached a failed terminal (a run that\nraises the contract's ``RunTerminalFailed``): the driver's outcome, whole, as the sync run-tool door\ndelivers it under the same name; ``error`` is then the plain ``tool run failed``. A plain raise records\nits message under ``error`` and no ``outcome``.",
         "properties": {
           "error": {
             "anyOf": [
@@ -17045,6 +17540,17 @@
             ],
             "default": null,
             "title": "Finished At"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "result": {
             "anyOf": [
@@ -21235,7 +21741,7 @@
     },
     "/api/backup/import": {
       "post": {
-        "description": "Import each SELECTED section of ``document`` in registration order and return a per-section report.\n\n``mode`` is the per-record policy (``skip`` or ``overwrite``). A ``version`` other than 1\nraises ``BadRequestError``; an unknown, absent, or failing section carries its error in\nthe report and makes ``ok`` false.",
+        "description": "Import each SELECTED section of ``document`` in registration order and return a per-section report.\n\n``mode`` is the per-record policy (``skip`` or ``overwrite``). A ``version`` other than 1\nraises ``BadRequestError``; an unknown, absent, or failing section carries its error in\nthe report and makes ``ok`` false. A section whose restore rolled a worker recycle (an env\nsection changing a recycle-class key on a supervised deployment) carries the roll in its\n``recycle``; when that roll converged, this worker recycles itself after replying.",
         "operationId": "post_api_backup_import",
         "requestBody": {
           "content": {
@@ -21561,7 +22067,7 @@
         ]
       },
       "post": {
-        "description": "Merge env overrides into the stored config and hot-reload this worker and the fleet.\n\n``secret_keys`` (when not ``None``) replaces the operator's secret marks in the same write;\nthe marks variable itself is never accepted as an ``env`` key.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
+        "description": "Merge env overrides into the stored config and reload this worker and the fleet.\n\nA hot-class key is re-read in place. A recycle-class key rolls a worker recycle across the\nfleet on a supervised deployment: the response's ``recycle`` carries the roll's rows (``null``\nwhen the change carried no recycle-class key), and when the roll converged this worker\nrecycles itself after replying — on the HTTP edge and on every projected tool door alike (a\npost-reply graceful self-exit its supervisor respawns).\nA change the deployment cannot carry is refused with a 400 before anything is written, naming\nthe key: a recycle-class key on a bare (unsupervised) deployment, and the bus URL or a key the\ndeployment pins on every shape.\n\n``secret_keys`` (when not ``None``) replaces the operator's secret marks in the same write;\nthe marks variable itself is never accepted as an ``env`` key.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
         "operationId": "post_api_config_env",
         "requestBody": {
           "content": {
@@ -21636,7 +22142,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Merge env overrides and hot-reload the process config",
+        "summary": "Merge env overrides and reload the fleet",
         "tags": [
           "config"
         ],
@@ -21967,7 +22473,7 @@
     },
     "/api/config/profiles/{name}/apply": {
       "post": {
-        "description": "Apply the profile's active env as the WHOLE stored env band and reload the fleet.\n\nThe profile's ``secret_keys`` are written as the stored secret marks in the same replace.\n\nA key the profile omits is deleted, save the carried deployment X band; build+swap a fresh serving\nepoch under it, persist env-write-LAST, broadcast the reload, and recycle the fleet for recycle-class\ndiffs. NO request body.\n\nThe response is the dedicated ``profileApplyResponse`` ``{hot, recycle:[{name, kind, status,\ngeneration_before, detail}], fresh:[{name, kind, generation}], refused:[],\nrecycle_stopped:{kind, name, detail} | null, fanout}`` — key names + worker identities only,\nnever env values. ``recycle`` is one line per sibling the roll reached (plus the applier's\nown deferred self-exit line when it is armed). A ``recycled`` line is confirmed on reality;\nthe roll stops at the first line that is not: ``timed-out`` (its old life did not go, fresh\ncapacity did not boot, or it never returned to ready, within the step budget) or ``failed``\n(the worker refused the op, or the bus could not be reached while it was in hand), its\n``detail`` naming why — or when the bus could not be read before a target was reached.\n``recycle_stopped`` names where the roll stopped and why (``null`` when it ran to its end; a\n``null`` name when no target was in hand). Later siblings and the applier's own recycle are\nthen not attempted, and the call still answers with the report: the env is persisted and the\nfleet reloaded. ``fresh`` is the per-kind new ready lives observed since the pre-apply\nsnapshot, capacity evidence never claimed as any target's successor. ``refused`` is ``[]``:\na refusal (X-band key, dangling ``!ENV``, a recycle-class diff the deployment shape cannot\ncarry) aborts upfront with a loud 400 naming the key, before anything is snapshotted, built,\nor persisted. When the diff carries serve-affecting recycle keys and the roll converged, the\napplier's OWN recycle is armed as a post-response graceful self-exit (a Starlette\n``BackgroundTask``) — its supervisor respawns it on the new env. 404 for an absent name.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
+        "description": "Apply the profile's active env as the WHOLE stored env band and reload the fleet.\n\nThe profile's ``secret_keys`` are written as the stored secret marks in the same replace.\n\nA key the profile omits is deleted, save the carried deployment X band; build+swap a fresh serving\nepoch under it, persist env-write-LAST, broadcast the reload, and recycle the fleet for recycle-class\ndiffs. NO request body.\n\nThe response is the dedicated ``profileApplyResponse`` ``{hot, recycle:[{name, kind, status,\ngeneration_before, detail}], fresh:[{name, kind, generation}], refused:[],\nrecycle_stopped:{kind, name, detail} | null, awaiting_respawn:[{name, keys}], fanout}`` — key names\n+ worker identities only,\nnever env values. ``recycle`` is one line per sibling the roll reached (plus the applier's\nown deferred self-exit line when it is armed). A ``recycled`` line is confirmed on reality;\nthe roll stops at the first line that is not: ``timed-out`` (its old life did not go, fresh\ncapacity did not boot, or it never returned to ready, within the step budget) or ``failed``\n(the worker refused the op, or the bus could not be reached while it was in hand), its\n``detail`` naming why — or when the bus could not be read before a target was reached.\n``recycle_stopped`` names where the roll stopped and why (``null`` when it ran to its end; a\n``null`` name when no target was in hand). Later siblings and the applier's own recycle are\nthen not attempted, and the call still answers with the report: the env is persisted and the\nfleet reloaded. ``fresh`` is the per-kind new ready lives observed since the pre-apply\nsnapshot, capacity evidence never claimed as any target's successor. ``refused`` is ``[]``:\na refusal (X-band key, dangling ``!ENV``, a recycle-class diff the deployment shape cannot\ncarry) aborts upfront with a loud 400 naming the key, before anything is snapshotted, built,\nor persisted. ``awaiting_respawn`` names the workers (name + keys) still awaiting a respawn\nafter the roll — empty when it converged. When the diff carries serve-affecting recycle keys\nand the roll converged, the applier's OWN recycle is armed as a post-reply graceful self-exit\n— after the HTTP body flushes, or once a projected tool call (MCP, ``tai tools run``, an\nagent, a preset, a schedule, a hook) returned — and its supervisor respawns it on the new\nenv. 404 for an absent name.\n\nCalled over MCP, the reload answers on the session that called it and then retires that session with\nthe generation it ran on: a later call on the same session fails (streamable HTTP answers it 404,\nand an SSE session's stream closes), so the client starts a new session to go on.",
         "operationId": "post_api_config_profiles_name_apply",
         "parameters": [
           {
@@ -22399,7 +22905,7 @@
     },
     "/api/config/reload": {
       "post": {
-        "description": "Soft-restart the process from its manifest, in-process with no pod restart.\n\nRefreshes env from the config manager, resets every settings cache, and re-initializes from the\nmanifest. Applied on this worker (when it is a target) and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report.\n\nHeavy (a full re-init); meant for env/config saves, not tool edits. A convergence\nop: its whole purpose is aligning siblings to persisted state, so a failed local\nreload still broadcasts and then re-raises with the fleet report attached.\n\nCalled over MCP on a worker the reload applies to (no ``targets``, or ``targets`` naming that\nworker), the reload answers on the session that called it and then retires that session with the\ngeneration it ran on: a later call on the same session fails (streamable HTTP answers it 404, and an\nSSE session's stream closes), so the client starts a new session to go on. When ``targets`` leave\nthat worker out, nothing reloads there and the session keeps working.",
+        "description": "Soft-restart the process from its manifest, in-process with no pod restart.\n\nRefreshes env from the config manager, resets every settings cache, and re-initializes from the\nmanifest. Applied on this worker (when it is a target) and broadcast to the fleet (all workers, or only\n``targets``); the response embeds the per-worker fleet report.\n\nHeavy (a full re-init); meant for env/config saves, not tool edits. A convergence\nop: its whole purpose is aligning siblings to persisted state, so a failed local\nreload still broadcasts and then re-raises with the fleet report attached.\n\nCalled over MCP on a worker the reload applies to (no ``targets``, or ``targets`` naming that\nworker), the reload answers on the session that called it and then retires that session with the\ngeneration it ran on: a later call on the same session fails (streamable HTTP answers it 404, and an\nSSE session's stream closes), so the client starts a new session to go on. When ``targets`` leave\nthat worker out, nothing reloads there and the session keeps working.\n\nEach worker's payload is ``{status, env_keys, awaiting_respawn}``: ``awaiting_respawn`` names the\nrecycle-class keys whose value now differs from the one that worker bound (at boot, or when the\nplugin that declares them was loaded) — the soft\nrestart carries every hot key in place, and those keys take effect only when the worker is\nrespawned through the deployment's supervisor (on a bare deployment, a server restart). This\noperation ERROR-logs one line naming every such worker and its keys.",
         "operationId": "post_api_config_reload",
         "requestBody": {
           "content": {
@@ -23084,7 +23590,7 @@
     },
     "/api/connectors/providers": {
       "get": {
-        "description": "The provider catalog — one entry per registered connector provider, plus category groupings.\n\nThe category groupings are those the UI arranges the providers under.\nProviders come from the in-memory registry (populated from the manifest's\n``connectors`` list at boot/reload), so they list regardless of store\nconfiguration. The category\ngroupings live in the connector store's Postgres, so they are served only when\nthat store is configured (otherwise an empty grouping list, mirroring the\nOFF-state connections read).",
+        "description": "The provider catalog — one entry per registered connector provider, plus category groupings.\n\nThe category groupings are those the UI arranges the providers under.\nProviders come from the in-memory registry (populated from the manifest's\n``connectors`` list at boot/reload), so they list regardless of store\nconfiguration; each says whether the provider door may remove it and where its\nsign-in client comes from (``unset`` for a stored-client provider and never\nremovable while the store is not configured). The category\ngroupings live in the connector store's Postgres, so they are served only when\nthat store is configured (otherwise an empty grouping list, mirroring the\nOFF-state connections read).",
         "operationId": "get_api_connectors_providers",
         "responses": {
           "200": {
@@ -23125,11 +23631,397 @@
         "tags": [
           "connectors"
         ]
+      },
+      "post": {
+        "description": "Add the MCP server at ``url`` as a discovered provider, written to the manifest and broadcast to the fleet.\n\nIts id is ``provider_id`` or a suggestion from the host. An id that is not free — a provider in the\nmanifest, a stored connection record (live or lapsed), or a stored client row under it — is a 409\nnaming which; nothing is deleted.",
+        "operationId": "post_api_connectors_providers",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddServerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ProviderMutationResponse"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Malformed request."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Missing or invalid api key."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict with the current resource state."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReloadingError"
+                }
+              }
+            },
+            "description": "The server is applying a config reload; retry shortly.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Add an MCP server as a connector provider",
+        "tags": [
+          "connectors"
+        ],
+        "x-destructive": true
+      }
+    },
+    "/api/connectors/providers/discover": {
+      "post": {
+        "description": "Look up the sign-in of the MCP server at ``url``, or of the server of the discovered provider ``provider_id``.\n\nPersists nothing. ``origin`` is the deployment origin a sign-in would start from: it decides the\ncallback address an app registered by hand must allow and whether this deployment's client-identity\ndocument can serve the login. An unknown provider is a 404; a declared one a 400.",
+        "operationId": "post_api_connectors_providers_discover",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoverServerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DiscoveredServerView"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Malformed request."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Missing or invalid api key."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Resource not found."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error."
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Look up an MCP server's sign-in",
+        "tags": [
+          "connectors"
+        ]
+      }
+    },
+    "/api/connectors/providers/{provider_id}": {
+      "delete": {
+        "description": "Remove a removable provider and its stored clients.\n\nA provider that is not removable here is a 409 naming where it is managed; a provider with a\nLIVE connection is a 409 naming the count. A connection whose session has lapsed is purged first,\nthrough the disconnect routine. The manifest change comes before the client rows are deleted, so a\nfailed change leaves them; a failed deletion after it is raised, and running the remove again\ndeletes the rows left under the id (nothing else holds it any more; no manifest change, so no\nfan-out).",
+        "operationId": "delete_api_connectors_providers_provider_id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/RemoveProviderResponse"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Missing or invalid api key."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Resource not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Conflict with the current resource state."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReloadingError"
+                }
+              }
+            },
+            "description": "The server is applying a config reload; retry shortly.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Remove a connector provider added by its address",
+        "tags": [
+          "connectors"
+        ],
+        "x-destructive": true
+      }
+    },
+    "/api/connectors/providers/{provider_id}/client": {
+      "put": {
+        "description": "Store the client credentials of an app registered by hand for the discovered provider ``provider_id``.\n\nThe credentials are stored for one sign-in service the provider's server lists: ``issuer`` when\ngiven (400 when the server does not list it), else the one the provider's manual client is already\nstored for while the server still lists it; with neither, a 400 ``connector-client-issuer-required``\nnaming the listed ones — the secret is never sent to a sign-in service nobody chose. Only a\ndiscovered provider that names no env client takes stored credentials.",
+        "operationId": "put_api_connectors_providers_provider_id_client",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetConnectorClientRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ProviderMutationResponse"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Success."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Malformed request."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Missing or invalid api key."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Resource not found."
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "Error."
+          }
+        },
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "summary": "Set the client credentials of a connector provider",
+        "tags": [
+          "connectors"
+        ]
       }
     },
     "/api/connectors/tokens/reencrypt": {
       "post": {
-        "description": "Re-encrypt every stored connector token blob under the current ``CONNECTORS_KEK``.\n\nThe KEK-rotation convergence sweep: after ``CONNECTORS_KEK`` is rotated (new current\nkey, old key moved to ``CONNECTORS_KEK_PREVIOUS``), this rewrites every blob still\nunder a previous key so the previous key can be retired. Idempotent — a blob already\nunder the current key is skipped. A blob no configured key can open is counted and\nnamed in ``failed_connection_ids``, never silently dropped. A missing/malformed\ncurrent ``CONNECTORS_KEK`` is a deployment-wide config fault and surfaces as a named\n``NotSupportedError`` (501), never an unnamed 500.",
+        "description": "Re-encrypt every stored connector token and client credential under the current ``CONNECTORS_KEK``.\n\nThe KEK-rotation convergence sweep: after ``CONNECTORS_KEK`` is rotated (new current\nkey, old key moved to ``CONNECTORS_KEK_PREVIOUS``), this rewrites every connection blob\nand every stored OAuth client blob still under a previous key so the previous key can\nbe retired. Idempotent — a blob already under the current key is skipped. A blob no\nconfigured key can open is counted and named in ``failed_connection_ids`` /\n``failed_client_row_ids``, never silently dropped. A missing/malformed\ncurrent ``CONNECTORS_KEK`` is a deployment-wide config fault and surfaces as a named\n``NotSupportedError`` (501), never an unnamed 500.",
         "operationId": "post_api_connectors_tokens_reencrypt",
         "responses": {
           "200": {
@@ -23176,7 +24068,7 @@
             "ApiKeyAuth": []
           }
         ],
-        "summary": "Re-encrypt connector tokens under the current KEK",
+        "summary": "Re-encrypt connector tokens and client credentials under the current KEK",
         "tags": [
           "connectors"
         ]
@@ -25621,7 +26513,7 @@
     },
     "/api/fleet/reload-config": {
       "post": {
-        "description": "Soft-restart the worker fleet, optionally restricted to the named ``targets``.\n\nCalled over MCP on a worker the reload applies to (no ``targets``, or ``targets`` naming that\nworker), the reload answers on the session that called it and then retires that session with the\ngeneration it ran on: a later call on the same session fails (streamable HTTP answers it 404, and an\nSSE session's stream closes), so the client starts a new session to go on. When ``targets`` leave\nthat worker out, nothing reloads there and the session keeps working.",
+        "description": "Soft-restart the worker fleet, optionally restricted to the named ``targets``.\n\nCalled over MCP on a worker the reload applies to (no ``targets``, or ``targets`` naming that\nworker), the reload answers on the session that called it and then retires that session with the\ngeneration it ran on: a later call on the same session fails (streamable HTTP answers it 404, and an\nSSE session's stream closes), so the client starts a new session to go on. When ``targets`` leave\nthat worker out, nothing reloads there and the session keeps working.\n\nEach worker's payload is ``{status, env_keys, awaiting_respawn}``: ``awaiting_respawn`` names the\nrecycle-class keys whose value now differs from the one that worker bound (at boot, or when the\nplugin that declares them was loaded) — the soft\nrestart carries every hot key in place, and those keys take effect only when the worker is\nrespawned through the deployment's supervisor (on a bare deployment, a server restart). This\noperation ERROR-logs one line naming every such worker and its keys.",
         "operationId": "post_api_fleet_reload_config",
         "requestBody": {
           "content": {
@@ -27717,7 +28609,7 @@
     },
     "/api/marketplace/install": {
       "post": {
-        "description": "Resolve, pip install, patch the manifest, reload, and record attribution.\n\nNothing is pip-installed for a descriptor-only plugin; aborts and unwinds on any\nfailure (see :meth:`Installer.install`). When the spec declares install-time env\n``env`` / ``secret_keys`` satisfy the required ``!ENV`` markers or connector-env in\nthe same combined transaction. ``route_mounts`` remaps declared route bases;\n``accept_public_routes`` acknowledges public routes. The result's ``routes`` lists\nevery route the install mounted.",
+        "description": "Resolve, pip install, patch the manifest, reload, and record attribution.\n\nNothing is pip-installed for a descriptor-only plugin; aborts and unwinds on any\nfailure (see :meth:`Installer.install`). When the spec declares install-time env\n``env`` / ``secret_keys`` satisfy the required ``!ENV`` markers or connector-env in\nthe same combined transaction. ``route_mounts`` remaps declared route bases;\n``accept_public_routes`` acknowledges public routes. The result's ``routes`` lists\nevery route the install mounted. An install-time env change carrying a recycle-class key\nrolls a worker recycle (the receipt's ``reload.recycle``); when it converged this worker\nrecycles itself after replying.",
         "operationId": "post_api_marketplace_install",
         "requestBody": {
           "content": {
@@ -28437,7 +29329,7 @@
     },
     "/api/marketplace/update": {
       "post": {
-        "description": "Resolve the target, pip upgrade, re-patch the manifest, reload, and upsert attribution.\n\nNothing is pip-upgraded for a descriptor-only plugin; the same pre-flights apply\nas install (see :meth:`Installer.update`). ``env`` / ``secret_keys`` satisfy a new\nversion's required ``!ENV`` markers or connector-env. ``route_mounts`` remaps\ndeclared route bases (surviving items keep their stored base);\n``accept_public_routes`` acknowledges public routes not already approved. The\nresult's ``routes`` lists every route the update mounted.",
+        "description": "Resolve the target, pip upgrade, re-patch the manifest, reload, and upsert attribution.\n\nNothing is pip-upgraded for a descriptor-only plugin; the same pre-flights apply\nas install (see :meth:`Installer.update`). ``env`` / ``secret_keys`` satisfy a new\nversion's required ``!ENV`` markers or connector-env. ``route_mounts`` remaps\ndeclared route bases (surviving items keep their stored base);\n``accept_public_routes`` acknowledges public routes not already approved. The\nresult's ``routes`` lists every route the update mounted. An update-time env change\ncarrying a recycle-class key rolls a worker recycle (the receipt's ``reload.recycle``);\nwhen it converged this worker recycles itself after replying.",
         "operationId": "post_api_marketplace_update",
         "requestBody": {
           "content": {
@@ -28966,7 +29858,7 @@
     },
     "/api/mcp-config/secret-env": {
       "post": {
-        "description": "Store a pasted secret as an env value and reference it from the manifest by a marker.\n\nThe env KEY is EITHER an explicit ``key`` OR generated from ``key_hint`` — exactly one\n(``key | key_hint``). Writes the secret ``value`` to the env store under that key AND\nmarks the key secret (adding it to ``TAI_ENV_SECRET_KEYS``), and writes an ``!ENV ${KEY}``\nMARKER at ``manifest_pointer`` — all through the combined\n``ConfigService.apply_env_and_change`` pipeline so the env write and the manifest mutate\nstay consistent. Partial-failure: a manifest-persist failure after the env write does\nNO rollback — the env write stands as an inert, re-runnable orphan and the op raises\nloudly. An explicit ``key`` colliding with an existing stored key holding a DIFFERENT value\nis a loud 400 naming the key; a generated key never shadows a registered settings\n``env_var``. The pointer's HEAD segment MUST be ``mcp`` (loud 400 otherwise). The response\nis the ``reloadConfigResult`` shape; the resolved key is NEVER returned. A dangling\n``!ENV`` / X-band refusal surfaces as a loud 400 naming the key (the shared boundary\nvalidator, same as ``POST /api/mcp-config``).",
+        "description": "Store a pasted secret as an env value and reference it from the manifest by a marker.\n\nThe env KEY is EITHER an explicit ``key`` OR generated from ``key_hint`` — exactly one\n(``key | key_hint``). Writes the secret ``value`` to the env store under that key AND\nmarks the key secret (adding it to ``TAI_ENV_SECRET_KEYS``), and writes an ``!ENV ${KEY}``\nMARKER at ``manifest_pointer`` — all through the combined\n``ConfigService.apply_env_and_change`` pipeline so the env write and the manifest mutate\nstay consistent. Partial-failure: a manifest-persist failure after the env write does\nNO rollback — the env write stands as an inert, re-runnable orphan and the op raises\nloudly. An explicit ``key`` colliding with an existing stored key holding a DIFFERENT value\nis a loud 400 naming the key; a generated key never shadows a registered settings\n``env_var``. The pointer's HEAD segment MUST be ``mcp`` (loud 400 otherwise). The response\nis the ``reloadConfigResult`` shape; the resolved key is NEVER returned. A dangling\n``!ENV`` / X-band refusal surfaces as a loud 400 naming the key (the shared boundary\nvalidator, same as ``POST /api/mcp-config``). An explicit ``key`` that is a recycle-class\nsetting rolls a worker recycle as every env write does (the response's ``recycle``; this\nworker recycles itself after replying when the roll converged).",
         "operationId": "post_api_mcp_config_secret_env",
         "requestBody": {
           "content": {

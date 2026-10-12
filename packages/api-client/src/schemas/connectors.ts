@@ -77,44 +77,22 @@ export type OAuthCompleteResult = z.infer<typeof oauthCompleteResult>;
  * protected resource, the sign-in services it lists, and whether a login started from
  * this deployment needs client credentials from anyone.
  */
-export const discoveredServer = z.object({
-  url: z.string(),
-  resource: z.string(),
-  resource_name: z.string().nullable(),
-  // The sign-in service a new login would use.
-  issuer: z.string(),
-  // Every sign-in service the server lists, in its order.
-  authorization_servers: z.array(z.string()),
-  // A look-up by provider only: the sign-in service its stored client credentials are
-  // for, whether or not the server still lists it.
-  client_issuer: z.string().nullable(),
-  registration_supported: z.boolean(),
-  automatic_client: z.boolean(),
-  scopes_supported: z.array(z.string()),
-  suggested_id: z.string(),
-  suggested_display_name: z.string(),
-  // The address an app registered by hand must allow; `null` when no sign-in can start
-  // from this deployment's address.
-  redirect_uri: z.string().nullable(),
-});
+export const discoveredServer = openapi.discoveredServerView;
 export type DiscoveredServer = z.infer<typeof discoveredServer>;
 
 /**
  * `POST /api/connectors/providers` and `PUT /api/connectors/providers/{id}/client` —
  * the provider's catalog entry after the change, and the fleet report of the manifest
- * write it made (`null` when none was made). Parsed explicitly so the shared fleet-report
- * handler can surface a failed propagation.
+ * write it made (`null` when none was made). The fan-out is hand-typed (the spec publishes it
+ * as an open object) so the shared fleet-report handler can surface a failed propagation.
  */
-export const providerMutationResult = z.object({
-  provider: providerView,
-  fanout: fleetReportFanout.nullable(),
+export const providerMutationResult = openapi.providerMutationResponse.extend({
+  fanout: fleetReportFanout.nullable().default(null),
 });
 export type ProviderMutationResult = z.infer<typeof providerMutationResult>;
 
 /** `DELETE /api/connectors/providers/{id}` — the removed provider and its manifest write. */
-export const removeProviderResult = z.object({
-  provider_id: z.string(),
-  removed_clients: z.number(),
-  fanout: fleetReportFanout.nullable(),
+export const removeProviderResult = openapi.removeProviderResponse.extend({
+  fanout: fleetReportFanout.nullable().default(null),
 });
 export type RemoveProviderResult = z.infer<typeof removeProviderResult>;

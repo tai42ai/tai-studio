@@ -91,21 +91,37 @@ export function connectorsClient(t: Transport) {
         method: 'POST',
         body: { state, code, error, iss },
       }),
+    ...providerSetupClient(t),
+  };
+}
+
+/** The provider-setup calls: look a server up, add it, set its sign-in client, remove it. */
+function providerSetupClient(t: Transport) {
+  const { req } = t;
+  return {
     discoverServer: (target: DiscoverServerTarget) =>
-      req('/api/connectors/providers/discover', s.discoveredServer, {
+      req(apiRoutes.post_api_connectors_providers_discover.path, s.discoveredServer, {
         method: 'POST',
         body: 'url' in target ? { url: target.url } : { provider_id: target.providerId },
       }),
     addServer: (args: AddServerArgs) =>
-      req('/api/connectors/providers', s.providerMutationResult, { method: 'POST', body: args }),
-    removeProvider: (id: string) =>
-      req(`/api/connectors/providers/${encodeSegment(id)}`, s.removeProviderResult, {
-        method: 'DELETE',
-      }),
-    setProviderClient: (id: string, args: SetProviderClientArgs) =>
-      req(`/api/connectors/providers/${encodeSegment(id)}/client`, s.providerMutationResult, {
-        method: 'PUT',
+      req(apiRoutes.post_api_connectors_providers.path, s.providerMutationResult, {
+        method: 'POST',
         body: args,
       }),
+    removeProvider: (id: string) =>
+      req(
+        buildPath(apiRoutes.delete_api_connectors_providers_provider_id.path, { provider_id: id }),
+        s.removeProviderResult,
+        { method: 'DELETE' },
+      ),
+    setProviderClient: (id: string, args: SetProviderClientArgs) =>
+      req(
+        buildPath(apiRoutes.put_api_connectors_providers_provider_id_client.path, {
+          provider_id: id,
+        }),
+        s.providerMutationResult,
+        { method: 'PUT', body: args },
+      ),
   };
 }

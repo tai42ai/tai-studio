@@ -334,6 +334,8 @@ export const installReceipt = (ref: string): MarketplaceInstallResult => ({
   reload: {
     status: 'reloaded',
     env_keys: 0,
+    recycle: null,
+    awaiting_respawn: [],
     fanout: {
       mode: 'local-only',
       note: 'only this worker reloaded',

@@ -52,6 +52,9 @@ export type StateUpdate = served.StateUpdate;
 export const targetConversationConfig = served.targetConversationConfig;
 export type TargetConversationConfig = served.TargetConversationConfig;
 
+export const addServerRequest = z.object({ "category": z.string().nullable().default(null), "description": z.string().default(""), "display_name": z.string().nullable().default(null), "icon_url": z.string().nullable().default(null), "id": z.string().nullable().default(null), "scopes": z.array(z.string()).default([]), "url": z.string() });
+export type AddServerRequest = z.infer<typeof addServerRequest>;
+
 export const jsonValue = z.unknown();
 export type JsonValue = z.infer<typeof jsonValue>;
 
@@ -130,13 +133,28 @@ export type ApiKeyEdit = z.infer<typeof apiKeyEdit>;
 export const apiToolsListsUpdate = z.object({ "exclude_add": z.array(z.string()).default([]), "exclude_remove": z.array(z.string()).default([]), "include_add": z.array(z.string()).default([]), "include_remove": z.array(z.string()).default([]) });
 export type ApiToolsListsUpdate = z.infer<typeof apiToolsListsUpdate>;
 
+export const awaitingWorker = z.object({ "keys": z.array(z.string()), "name": z.string() });
+export type AwaitingWorker = z.infer<typeof awaitingWorker>;
+
 export const fanoutWorkerResult = z.object({ "detail": z.string().nullable().default(null), "error": z.string().nullable().default(null), "name": z.string(), "outcome": z.string(), "payload": jsonValue.nullable().default(null) });
 export type FanoutWorkerResult = z.infer<typeof fanoutWorkerResult>;
 
 export const fanoutSummary = z.object({ "error": z.string().nullable().default(null), "local_only": z.boolean().nullable().default(null), "mode": z.string(), "note": z.string().nullable().default(null), "op": z.string().nullable().default(null), "reachable": z.boolean().nullable().default(null), "results": z.array(fanoutWorkerResult).nullable().default(null) });
 export type FanoutSummary = z.infer<typeof fanoutSummary>;
 
-export const applyResponse = z.object({ "env_keys": z.number().int(), "fanout": fanoutSummary, "status": z.string() });
+export const freshLife = z.object({ "generation": z.number().int(), "kind": z.string(), "name": z.string() });
+export type FreshLife = z.infer<typeof freshLife>;
+
+export const recycleEntry = z.object({ "detail": z.string().nullable().default(null), "generation_before": z.number().int(), "kind": z.string(), "name": z.string(), "status": z.string() });
+export type RecycleEntry = z.infer<typeof recycleEntry>;
+
+export const recycleStop = z.object({ "detail": z.string(), "kind": z.string(), "name": z.string().nullable() });
+export type RecycleStop = z.infer<typeof recycleStop>;
+
+export const recycleRoll = z.object({ "fresh": z.array(freshLife), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null) });
+export type RecycleRoll = z.infer<typeof recycleRoll>;
+
+export const applyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "env_keys": z.number().int(), "fanout": fanoutSummary, "recycle": recycleRoll.nullable().default(null), "status": z.string() });
 export type ApplyResponse = z.infer<typeof applyResponse>;
 
 export const applyResult = z.object({ "applied": z.boolean(), "data": z.record(z.string(), z.unknown()).nullable().default(null), "seq": z.number().nullable().default(null), "skipped": z.array(z.record(z.string(), z.unknown())).default([]) }).strict();
@@ -172,7 +190,7 @@ export type BackupExportDocument = z.infer<typeof backupExportDocument>;
 export const backupImport = z.object({ "document": z.record(z.string(), z.unknown()), "mode": z.enum(["skip","overwrite"]).default("skip"), "sections": z.array(z.string()) });
 export type BackupImport = z.infer<typeof backupImport>;
 
-export const backupSectionReport = z.object({ "created": z.number().int().default(0), "details": z.record(z.string(), z.unknown()).default({}), "errors": z.array(z.string()).default([]), "fanout": fanoutSummary.nullable().default(null), "skipped": z.number().int().default(0), "updated": z.number().int().default(0) }).strict();
+export const backupSectionReport = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "created": z.number().int().default(0), "details": z.record(z.string(), z.unknown()).default({}), "errors": z.array(z.string()).default([]), "fanout": fanoutSummary.nullable().default(null), "recycle": recycleRoll.nullable().default(null), "skipped": z.number().int().default(0), "updated": z.number().int().default(0) }).strict();
 export type BackupSectionReport = z.infer<typeof backupSectionReport>;
 
 export const backupImportResult = z.object({ "ok": z.boolean(), "sections": z.record(z.string(), backupSectionReport) });
@@ -232,7 +250,7 @@ export type ConfigFieldSpec = z.infer<typeof configFieldSpec>;
 export const configModeView = z.object({ "config_mode": z.string() });
 export type ConfigModeView = z.infer<typeof configModeView>;
 
-export const connectedAccountView = z.object({ "account_identity": z.string().nullable().default(null), "alias": z.string(), "auth_health_state": authHealthState, "connection_id": z.string(), "created_at": z.string().datetime({ offset: true }), "enabled_sub_services": z.array(z.string()), "granted_scopes": z.array(z.string()), "kind": z.enum(["oauth","none"]), "provider_id": z.string(), "unreachable_sub_services": z.array(z.string()).default([]) });
+export const connectedAccountView = z.object({ "account_identity": z.string().nullable().default(null), "alias": z.string(), "auth_health_state": authHealthState, "connection_id": z.string(), "created_at": z.string().datetime({ offset: true }), "enabled_sub_services": z.array(z.string()), "granted_scopes": z.array(z.string()), "kind": z.enum(["oauth","none"]), "provider_id": z.string(), "scopes_wanted": z.array(z.string()).default([]), "unreachable_sub_services": z.array(z.string()).default([]) });
 export type ConnectedAccountView = z.infer<typeof connectedAccountView>;
 
 export const connectionsListResponse = z.object({ "items": z.array(connectedAccountView), "total": z.number().int(), "unhealthy": z.number().int() });
@@ -241,7 +259,7 @@ export type ConnectionsListResponse = z.infer<typeof connectionsListResponse>;
 export const connectorCategoryView = z.object({ "display_name": z.string(), "id": z.string(), "sort_order": z.number().int() });
 export type ConnectorCategoryView = z.infer<typeof connectorCategoryView>;
 
-export const connectorReencryptResult = z.object({ "cas_retries": z.number().int(), "failed": z.number().int(), "failed_connection_ids": z.array(z.string()), "reencrypted": z.number().int(), "scanned": z.number().int(), "skipped": z.number().int() });
+export const connectorReencryptResult = z.object({ "cas_retries": z.number().int(), "clients_failed": z.number().int(), "clients_reencrypted": z.number().int(), "clients_scanned": z.number().int(), "clients_skipped": z.number().int(), "failed": z.number().int(), "failed_client_row_ids": z.array(z.string()), "failed_connection_ids": z.array(z.string()), "reencrypted": z.number().int(), "scanned": z.number().int(), "skipped": z.number().int() });
 export type ConnectorReencryptResult = z.infer<typeof connectorReencryptResult>;
 
 export const connectorRef = z.object({ "connection_id": z.string(), "provider_id": z.string().min(1).max(64), "sub_service": z.string().min(1).max(64) });
@@ -310,6 +328,12 @@ export type DirDeleted = z.infer<typeof dirDeleted>;
 export const disconnectResponse = z.object({ "connection_id": z.string(), "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "removed_manifest_entries": z.array(z.string()), "upstream_revoke_outcome": z.enum(["success","failed","skipped"]), "upstream_revoke_status": z.number().int().nullable().default(null) });
 export type DisconnectResponse = z.infer<typeof disconnectResponse>;
 
+export const discoverServerRequest = z.object({ "provider_id": z.string().nullable().default(null), "url": z.string().nullable().default(null) });
+export type DiscoverServerRequest = z.infer<typeof discoverServerRequest>;
+
+export const discoveredServerView = z.object({ "authorization_servers": z.array(z.string()), "automatic_client": z.boolean(), "client_issuer": z.string().nullable().default(null), "issuer": z.string(), "redirect_uri": z.string().nullable().default(null), "registration_supported": z.boolean(), "resource": z.string(), "resource_name": z.string().nullable().default(null), "scopes_supported": z.array(z.string()), "suggested_display_name": z.string(), "suggested_id": z.string(), "url": z.string() });
+export type DiscoveredServerView = z.infer<typeof discoveredServerView>;
+
 export const documentVersion = z.object({ "body": z.record(z.string(), z.unknown()), "created_at": z.string(), "is_current": z.boolean().default(false), "tags": z.array(z.string()).default([]), "version": z.number().int() });
 export type DocumentVersion = z.infer<typeof documentVersion>;
 
@@ -375,9 +399,6 @@ export type FormField = z.infer<typeof formField>;
 
 export const formMethod = z.object({ "fields": z.array(formField).min(1), "id": z.string().min(1), "purpose": z.enum(["login","invite"]).default("login"), "shape": z.literal("form").default("form"), "submit_path": z.string(), "title": z.string().min(1) }).strict();
 export type FormMethod = z.infer<typeof formMethod>;
-
-export const freshLife = z.object({ "generation": z.number().int(), "kind": z.string(), "name": z.string() });
-export type FreshLife = z.infer<typeof freshLife>;
 
 export const hookListView = z.object({ "items": z.array(hookParams), "topic_verifiers": z.record(z.string(), jsonValue), "total": z.number().int(), "trigger_auth": z.record(z.string(), z.enum(["public","verifier","token","token+api_key","out-of-service"])) });
 export type HookListView = z.infer<typeof hookListView>;
@@ -568,7 +589,7 @@ export type NotifyUser = z.infer<typeof notifyUser>;
 export const oAuthCancelled = z.object({ "kind": z.literal("cancelled"), "message": z.string() });
 export type OAuthCancelled = z.infer<typeof oAuthCancelled>;
 
-export const oAuthComplete = z.object({ "code": z.string().nullable().default(null), "error": z.string().nullable().default(null), "state": z.string().nullable().default(null) });
+export const oAuthComplete = z.object({ "code": z.string().nullable().default(null), "error": z.string().nullable().default(null), "iss": z.string().nullable().default(null), "state": z.string().nullable().default(null) });
 export type OAuthComplete = z.infer<typeof oAuthComplete>;
 
 export const oAuthFailed = z.object({ "kind": z.literal("failed"), "reason": z.string() });
@@ -709,13 +730,7 @@ export type PrincipalRef = z.infer<typeof principalRef>;
 export const principalUpdate = z.object({ "disabled": z.boolean().nullable().default(null), "display_name": z.string().min(1).nullable().default(null) });
 export type PrincipalUpdate = z.infer<typeof principalUpdate>;
 
-export const recycleEntry = z.object({ "detail": z.string().nullable().default(null), "generation_before": z.number().int(), "kind": z.string(), "name": z.string(), "status": z.string() });
-export type RecycleEntry = z.infer<typeof recycleEntry>;
-
-export const recycleStop = z.object({ "detail": z.string(), "kind": z.string(), "name": z.string().nullable() });
-export type RecycleStop = z.infer<typeof recycleStop>;
-
-export const profileApplyResponse = z.object({ "fanout": fanoutSummary, "fresh": z.array(freshLife), "hot": z.array(z.string()), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "refused": z.array(z.string()) });
+export const profileApplyResponse = z.object({ "awaiting_respawn": z.array(awaitingWorker).default([]), "fanout": fanoutSummary, "fresh": z.array(freshLife), "hot": z.array(z.string()), "recycle": z.array(recycleEntry), "recycle_stopped": recycleStop.nullable().default(null), "refused": z.array(z.string()) });
 export type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;
 
 export const profileDiffChange = z.object({ "key": z.string(), "new": z.string(), "old": z.string() });
@@ -760,11 +775,14 @@ export type ProjectionResult = z.infer<typeof projectionResult>;
 export const subServiceView = z.object({ "description": z.string().default(""), "display_name": z.string(), "id": z.string(), "scopes": z.array(z.string()).default([]) });
 export type SubServiceView = z.infer<typeof subServiceView>;
 
-export const providerCatalogEntry = z.object({ "category": z.string(), "config_fields": z.array(configFieldSpec).default([]), "description": z.string().default(""), "display_name": z.string(), "icon_url": z.string(), "id": z.string(), "kind": z.enum(["oauth","none"]), "origin": z.enum(["system","community"]), "sub_services": z.array(subServiceView) });
+export const providerCatalogEntry = z.object({ "category": z.string(), "client_source": z.enum(["env","manual","dynamic","unset"]).nullable().default(null), "config_fields": z.array(configFieldSpec).default([]), "description": z.string().default(""), "display_name": z.string(), "icon_url": z.string().nullable().default(null), "id": z.string(), "kind": z.enum(["oauth","none"]), "origin": z.enum(["system","community"]), "removable": z.boolean().default(false), "sub_services": z.array(subServiceView) });
 export type ProviderCatalogEntry = z.infer<typeof providerCatalogEntry>;
 
 export const providerCatalogResponse = z.object({ "categories": z.array(connectorCategoryView), "providers": z.array(providerCatalogEntry) });
 export type ProviderCatalogResponse = z.infer<typeof providerCatalogResponse>;
+
+export const providerMutationResponse = z.object({ "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "provider": providerCatalogEntry });
+export type ProviderMutationResponse = z.infer<typeof providerMutationResponse>;
 
 export const pruneResult = z.object({ "held": heldPendingSaveList.optional(), "pruned": z.record(z.string(), z.number().int()) });
 export type PruneResult = z.infer<typeof pruneResult>;
@@ -783,6 +801,9 @@ export type ReloadConfigRequest = z.infer<typeof reloadConfigRequest>;
 
 export const reloadingError = z.object({ "error": z.literal("reloading — the server is applying a config reload; retry shortly"), "reloading": z.literal(true) });
 export type ReloadingError = z.infer<typeof reloadingError>;
+
+export const removeProviderResponse = z.object({ "fanout": z.record(z.string(), z.unknown()).nullable().default(null), "provider_id": z.string(), "removed_clients": z.number().int() });
+export type RemoveProviderResponse = z.infer<typeof removeProviderResponse>;
 
 export const removedByName = z.object({ "name": z.string(), "removed": z.boolean() });
 export type RemovedByName = z.infer<typeof removedByName>;
@@ -927,6 +948,9 @@ export type StateAttachmentView = z.infer<typeof stateAttachmentView>;
 
 export const servedStateView = z.object({ "attachments": z.array(stateAttachmentView), "default_subject_kind": z.string(), "description": z.string(), "effective_schema": z.record(z.string(), jsonValue), "name": z.string(), "regimes": z.array(z.record(z.string(), jsonValue)), "retention_days": z.number().int().nullable(), "schema": z.record(z.string(), jsonValue), "subject_kinds": z.array(z.string()), "updated_at": z.string().nullable() });
 export type ServedStateView = z.infer<typeof servedStateView>;
+
+export const setConnectorClientRequest = z.object({ "client_id": z.string().min(1), "client_secret": z.string().nullable().default(null), "issuer": z.string().nullable().default(null), "token_endpoint_auth_method": z.enum(["client_secret_post","client_secret_basic","none"]).nullable().default(null) });
+export type SetConnectorClientRequest = z.infer<typeof setConnectorClientRequest>;
 
 export const setMcpSecretEnv = z.object({ "key": z.string().nullable().default(null), "key_hint": z.string().nullable().default(null), "manifest_pointer": z.string(), "value": z.string() });
 export type SetMcpSecretEnv = z.infer<typeof setMcpSecretEnv>;
@@ -1165,7 +1189,7 @@ export type ToolRunListResponse = z.infer<typeof toolRunListResponse>;
 export const toolRunSubmission = z.object({ "arguments": z.record(z.string(), z.unknown()).default({}), "subject": stateSubject.nullable().default(null), "tool_name": z.string().min(1) });
 export type ToolRunSubmission = z.infer<typeof toolRunSubmission>;
 
-export const toolRunView = z.object({ "error": z.string().nullable().default(null), "finished_at": z.string().nullable().default(null), "result": jsonValue.nullable().default(null), "resumed_interactions": z.array(z.string()).nullable().default(null), "run_id": z.string(), "started_at": z.string(), "status": z.string(), "tool_name": z.string() });
+export const toolRunView = z.object({ "error": z.string().nullable().default(null), "finished_at": z.string().nullable().default(null), "outcome": jsonValue.nullable().default(null), "result": jsonValue.nullable().default(null), "resumed_interactions": z.array(z.string()).nullable().default(null), "run_id": z.string(), "started_at": z.string(), "status": z.string(), "tool_name": z.string() });
 export type ToolRunView = z.infer<typeof toolRunView>;
 
 export const toolSchemaView = z.object({ "description": z.string().nullable(), "input": z.record(z.string(), jsonValue), "output": z.record(z.string(), jsonValue).nullable() });
@@ -1251,6 +1275,7 @@ export const responseSchemas = {
   delete_api_auth_scopes_urls: urlAck,
   delete_api_config_profiles_name: okResult,
   delete_api_connectors_connections_connection_id: disconnectResponse,
+  delete_api_connectors_providers_provider_id: removeProviderResponse,
   delete_api_conversation_configs_target_kind_target_name: conversationConfigDeleteResult,
   delete_api_conversations_persons_person_id: personDeleteResult,
   delete_api_conversations_route_name: routeRemoveResult,
@@ -1405,6 +1430,8 @@ export const responseSchemas = {
   post_api_connectors_connections_connection_id_reconnect: startConnectResponse,
   post_api_connectors_connections_start: startConnectOutcome,
   post_api_connectors_oauth_complete: oAuthCompletionResult,
+  post_api_connectors_providers: providerMutationResponse,
+  post_api_connectors_providers_discover: discoveredServerView,
   post_api_connectors_tokens_reencrypt: connectorReencryptResult,
   post_api_conversations_route_name: conversationRouteCreateResult,
   post_api_conversations_route_name_events: conversationTurnAck,
@@ -1468,6 +1495,7 @@ export const responseSchemas = {
   put_api_auth_principals_user_id: principal,
   put_api_auth_roles_name: roleDefinition,
   put_api_config_profiles_name: profileWriteResult,
+  put_api_connectors_providers_provider_id_client: providerMutationResponse,
   put_api_conversation_configs_target_kind_target_name: conversationConfigSetResult,
   put_api_conversations_persons_person_id_locale: person,
   put_api_conversations_route_name_thread_mode: threadModeSetResult,

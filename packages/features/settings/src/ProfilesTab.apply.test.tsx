@@ -63,7 +63,6 @@ function cleanDiff(): {
  * self-deferred applier line, empty refused, a lone-worker fanout. */
 function applyReport(): ReturnType<ApiClient['applySettingsProfile']> {
   return Promise.resolve({
-    recycle_stopped: null,
     hot: ['APP_TITLE'],
     recycle: [
       { detail: null, name: 'serve-1', kind: 'serve', status: 'recycled', generation_before: 4 },
@@ -183,7 +182,6 @@ describe('ProfilesTab — apply', () => {
     const user = userEvent.setup();
     const applySettingsProfile = vi.fn(() =>
       Promise.resolve({
-        recycle_stopped: null,
         hot: [],
         recycle: [
           {
@@ -233,7 +231,6 @@ describe('ProfilesTab — apply', () => {
     const user = userEvent.setup();
     const applySettingsProfile = vi.fn(() =>
       Promise.resolve({
-        recycle_stopped: null,
         hot: [],
         recycle: [],
         fresh: [],
@@ -401,8 +398,20 @@ function rolledApply(
   return Promise.resolve({
     hot: [],
     recycle: [
-      { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 1 },
-      { name: 'serve-1', kind: 'serve', status: 'self-deferred', generation_before: 2 },
+      {
+        detail: null,
+        name: 'backend-1',
+        kind: 'backend',
+        status: 'recycled',
+        generation_before: 1,
+      },
+      {
+        detail: null,
+        name: 'serve-1',
+        kind: 'serve',
+        status: 'self-deferred',
+        generation_before: 2,
+      },
     ],
     fresh: [{ name: 'backend-1', kind: 'backend', generation: 2 }],
     refused: [] as string[],
