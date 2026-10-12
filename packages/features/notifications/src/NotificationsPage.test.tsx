@@ -172,7 +172,10 @@ describe('NotificationsPage', () => {
               { kind: 'image', url: 'https://cdn.example.com/ship.png', caption: 'The ship' },
               { kind: 'link', url: 'https://example.com/notes', caption: 'Release notes' },
             ],
-            options: ['Acknowledge', 'Snooze'],
+            options: [
+              { kind: 'reply', id: null, text: 'Acknowledge', description: null },
+              { kind: 'link', label: 'Snooze', url: 'https://example.com/snooze' },
+            ],
           },
         ],
       }),
