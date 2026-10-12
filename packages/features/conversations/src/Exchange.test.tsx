@@ -243,7 +243,7 @@ describe('Exchange — inbound attachments', () => {
       { client: { baseUrl: '' } },
     );
 
-    const chip = screen.getByTestId('attachment-document');
+    const chip = screen.getByTestId('media-document');
     const link = within(chip).getByRole('link', { name: 'report.pdf' });
     expect(link).toHaveAttribute('href', SERVED);
     expect(link).toHaveAttribute('target', '_blank');
@@ -263,10 +263,10 @@ describe('Exchange — inbound attachments', () => {
       { client: { baseUrl: '' } },
     );
 
-    const audio = screen.getByTestId('attachment-audio');
+    const audio = screen.getByTestId('media-audio');
     expect(audio.tagName).toBe('AUDIO');
     expect(audio).toHaveAttribute('aria-label', 'Audio attachment');
-    const video = screen.getByTestId('attachment-video');
+    const video = screen.getByTestId('media-video');
     expect(video.tagName).toBe('VIDEO');
     expect(video).toHaveAttribute('aria-label', 'Video attachment');
   });
@@ -353,14 +353,14 @@ describe('Exchange — inbound attachments', () => {
     expect(notice).toHaveAttribute('role', 'alert');
     expect(within(notice).getByText('Attachment')).toBeInTheDocument();
     expect(within(notice).getByText('Attachment failed to load.')).toBeInTheDocument();
-    expect(screen.queryByTestId('attachment-document')).toBeNull();
+    expect(screen.queryByTestId('media-document')).toBeNull();
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.queryByText(BLOCKED)).toBeNull();
   });
 
   it.each([
-    ['audio', 'attachment-audio'],
-    ['video', 'attachment-video'],
+    ['audio', 'media-audio'],
+    ['video', 'media-video'],
   ] as const)(
     'shows the shared attachment notice for a blocked %s url, with no player element',
     (kind, testId) => {
@@ -379,8 +379,8 @@ describe('Exchange — inbound attachments', () => {
   );
 
   it.each([
-    ['audio', 'attachment-audio'],
-    ['video', 'attachment-video'],
+    ['audio', 'media-audio'],
+    ['video', 'media-video'],
   ] as const)(
     'shows the shared attachment notice for a bare https %s url, with no player element',
     (kind, testId) => {
@@ -401,8 +401,8 @@ describe('Exchange — inbound attachments', () => {
   );
 
   it.each([
-    ['audio', 'attachment-audio'],
-    ['video', 'attachment-video'],
+    ['audio', 'media-audio'],
+    ['video', 'media-video'],
   ] as const)(
     'replaces the %s player with the notice on a load error, then retries a fresh url at the same position',
     (kind, testId) => {

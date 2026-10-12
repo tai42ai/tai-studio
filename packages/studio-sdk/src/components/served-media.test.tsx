@@ -7,7 +7,9 @@ import { ApiProvider } from '../hooks/useApi';
 import {
   isRenderableMediaSrc,
   isServedMediaUrl,
+  MediaDocument,
   MediaImage,
+  MediaPlayer,
   resolveMediaSrc,
 } from './served-media';
 
@@ -147,5 +149,57 @@ describe('MediaImage', () => {
     expect(calls).toEqual([['failed', SERVED]]);
     expect(screen.getByTestId('custom-notice')).toBeInTheDocument();
     expect(screen.queryByTestId('media-image-error')).toBeNull();
+  });
+});
+
+describe('MediaDocument', () => {
+  const notice = (url: string): ReactNode => <span data-testid="notice">{`refused ${url}`}</span>;
+
+  it('renders a labelled download anchor joined to the API base, with no referrer', () => {
+    withApi(
+      <MediaDocument url={SERVED} label="report.pdf" renderNotice={notice} />,
+      'https://api.example',
+    );
+    const anchor = screen.getByRole('link', { name: 'report.pdf' });
+    expect(anchor.getAttribute('href')).toBe(`https://api.example${SERVED}`);
+    expect(anchor.getAttribute('rel')).toBe('noreferrer');
+    expect(anchor.hasAttribute('download')).toBe(true);
+  });
+
+  it('renders the caller notice for a url that fails the src gate', () => {
+    withApi(<MediaDocument url="javascript:alert(1)" label="x" renderNotice={notice} />, '');
+    expect(screen.getByTestId('notice')).toHaveTextContent('refused javascript:alert(1)');
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+});
+
+describe('MediaPlayer', () => {
+  const notice = (state: 'blocked' | 'failed', url: string): ReactNode => (
+    <span data-testid="notice">{`${state} ${url}`}</span>
+  );
+
+  it('renders a served reference as a video player with controls', () => {
+    withApi(<MediaPlayer kind="video" url={SERVED} label="clip" renderNotice={notice} />, '');
+    const video = screen.getByTestId('media-video');
+    expect(video.getAttribute('src')).toBe(SERVED);
+    expect(video.getAttribute('aria-label')).toBe('clip');
+    expect(video.hasAttribute('controls')).toBe(true);
+  });
+
+  it('renders a served reference as an audio player', () => {
+    withApi(<MediaPlayer kind="audio" url={SERVED} label="tone" renderNotice={notice} />, '');
+    expect(screen.getByTestId('media-audio').getAttribute('aria-label')).toBe('tone');
+  });
+
+  it('refuses an https url: a player has no referrer control', () => {
+    const url = 'https://cdn.example/clip.mp4';
+    withApi(<MediaPlayer kind="video" url={url} label="clip" renderNotice={notice} />, '');
+    expect(screen.getByTestId('notice')).toHaveTextContent(`blocked ${url}`);
+  });
+
+  it('renders the failed notice when the served media fails to load', () => {
+    withApi(<MediaPlayer kind="video" url={SERVED} label="clip" renderNotice={notice} />, '');
+    fireEvent.error(screen.getByTestId('media-video'));
+    expect(screen.getByTestId('notice')).toHaveTextContent(`failed ${SERVED}`);
   });
 });
