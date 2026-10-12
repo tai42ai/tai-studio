@@ -65,7 +65,16 @@ describe('backup client transport', () => {
         data: {
           ok: true,
           sections: {
-            presets: { created: 1, updated: 0, skipped: 0, errors: [] },
+            presets: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              errors: [],
+              details: {},
+              fanout: null,
+              recycle: null,
+              awaiting_respawn: [],
+            },
             // The manifest/env restores apply through the config pipeline, so their
             // report carries the mode-wrapped fleet fanout; it must parse, not strip.
             manifest: {
@@ -73,10 +82,13 @@ describe('backup client transport', () => {
               updated: 1,
               skipped: 0,
               errors: [],
+              details: {},
               fanout: {
                 mode: 'local-only',
                 note: 'no worker bus configured; only this worker reloaded',
               },
+              recycle: null,
+              awaiting_respawn: [],
             },
           },
         },
@@ -90,6 +102,71 @@ describe('backup client transport', () => {
     expect(out.ok).toBe(true);
     expect(out.sections.presets?.created).toBe(1);
     expect(out.sections.manifest?.fanout?.mode).toBe('local-only');
+  });
+
+  it('importBackup parses the server reply whose sections without a fan-out carry fanout null', async () => {
+    // The server serializes every report field: a section that broadcast nothing sends
+    // `fanout: null` and `recycle: null`, beside its open `details` map.
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ok: false,
+          sections: {
+            env: {
+              created: 0,
+              updated: 0,
+              skipped: 0,
+              errors: ['TAI_BUS_HEARTBEAT_TTL needs a recycle'],
+              details: {},
+              fanout: null,
+              recycle: null,
+              awaiting_respawn: [],
+            },
+          },
+        },
+      }),
+    );
+    const out = await client.importBackup({
+      document: { version: 1, created_at: 'now', sections: { env: {} } },
+      sections: ['env'],
+    });
+    expect(out.ok).toBe(false);
+    expect(out.sections.env?.fanout).toBeNull();
+    expect(out.sections.env?.errors).toEqual(['TAI_BUS_HEARTBEAT_TTL needs a recycle']);
+  });
+
+  it('importBackup parses the open details map, with the API keys an access-control restore minted', async () => {
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ok: true,
+          sections: {
+            access_control: {
+              created: 1,
+              updated: 0,
+              skipped: 0,
+              errors: [],
+              details: {
+                skipped_existing: 2,
+                new_api_keys: [
+                  { user_id: 'svc-alpha', description: 'Relay key', api_key: 'tai-minted-alpha' },
+                ],
+              },
+              fanout: null,
+              recycle: null,
+              awaiting_respawn: [],
+            },
+          },
+        },
+      }),
+    );
+    const out = await client.importBackup({ document: {}, sections: ['access_control'] });
+    expect(out.sections.access_control?.details).toEqual({
+      skipped_existing: 2,
+      new_api_keys: [
+        { user_id: 'svc-alpha', description: 'Relay key', api_key: 'tai-minted-alpha' },
+      ],
+    });
   });
 
   it('exportBackup POSTs { sections } and returns the raw Blob with its content type', async () => {

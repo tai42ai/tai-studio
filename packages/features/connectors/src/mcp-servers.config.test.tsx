@@ -35,6 +35,8 @@ describe('McpServersSection — config editor', () => {
     const setMcpConfig = vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 1,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: { mode: 'local-only', note: 'lone worker' },
     });
     const client = {
@@ -92,6 +94,8 @@ describe('McpServersSection — config editor', () => {
     const setMcpConfig = vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 2,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: { mode: 'local-only', note: 'lone worker' },
     });
     const getManifestPreserved = vi
@@ -288,6 +292,8 @@ describe('McpServersSection — config editor', () => {
     const setMcpConfig = vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 0,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: { mode: 'local-only', note: 'lone worker' },
     });
     const client = {
@@ -415,6 +421,8 @@ describe('McpServersSection — config editor', () => {
     const setMcpConfig = vi.fn().mockResolvedValue({
       status: 'ok',
       env_keys: 0,
+      awaiting_respawn: [],
+      recycle: null,
       fanout: { mode: 'local-only', note: 'lone worker' },
     });
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

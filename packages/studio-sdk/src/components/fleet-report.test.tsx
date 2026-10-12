@@ -21,6 +21,7 @@ describe('FleetReport', () => {
   it('renders nothing for a converged report (the caller shows its own success)', () => {
     const summary: FleetReportSummary = {
       status: 'converged',
+      awaiting: [],
       note: 'only this worker reloaded',
       failures: [],
       error: null,
@@ -32,6 +33,7 @@ describe('FleetReport', () => {
   it('renders a loud alert naming every non-converged worker and its outcome', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [
         { name: 'serve-a', outcome: 'failed', message: 'reload raised' },
@@ -61,6 +63,7 @@ describe('FleetReport', () => {
   it('renders the per-worker gap outcomes (resyncing / recycling / stale) with their labels and tone', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [
         { name: 'serve-1', outcome: 'resyncing', message: null },
@@ -85,6 +88,7 @@ describe('FleetReport', () => {
   it('gives every state a mark AND a label, never color alone', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [
         { name: 'serve-a', outcome: 'failed', message: null },
@@ -113,6 +117,7 @@ describe('FleetReport', () => {
   it('marks an unreachable bus as an error state', () => {
     const summary: FleetReportSummary = {
       status: 'unreachable',
+      awaiting: [],
       note: null,
       failures: [],
       error: 'RedisConnectionError: connection refused',
@@ -130,6 +135,7 @@ describe('FleetReport', () => {
   it('renders a loud alert with the transport error when the bus was unreachable', () => {
     const summary: FleetReportSummary = {
       status: 'unreachable',
+      awaiting: [],
       note: null,
       failures: [],
       error: 'RedisConnectionError: connection refused',
@@ -143,6 +149,7 @@ describe('FleetReport', () => {
   it('omits the error line when an unreachable report carries no message', () => {
     const summary: FleetReportSummary = {
       status: 'unreachable',
+      awaiting: [],
       note: null,
       failures: [],
       error: null,
@@ -154,6 +161,7 @@ describe('FleetReport', () => {
   it('drops the "Change saved" framing and System-page pointer on a degraded reload action', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [
         { name: 'serve-a', outcome: 'failed', message: 'reload raised' },
@@ -178,6 +186,7 @@ describe('FleetReport', () => {
   it('drops the "Change saved" framing and System-page pointer on an unreachable reload action', () => {
     const summary: FleetReportSummary = {
       status: 'unreachable',
+      awaiting: [],
       note: null,
       failures: [],
       error: 'RedisConnectionError: connection refused',
@@ -194,6 +203,7 @@ describe('FleetReport', () => {
   it('points a degraded remove at re-running the remove, never a reload', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [{ name: 'serve-b', outcome: 'timed_out', message: null }],
       error: null,
@@ -212,6 +222,7 @@ describe('FleetReport', () => {
   it('points an unreachable remove at re-running the remove, never a reload', () => {
     const summary: FleetReportSummary = {
       status: 'unreachable',
+      awaiting: [],
       note: null,
       failures: [],
       error: 'RedisConnectionError: connection refused',
@@ -226,6 +237,7 @@ describe('FleetReport', () => {
   it('points a degraded deregister at re-running the deregister, never a reload', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [{ name: 'serve-b', outcome: 'timed_out', message: null }],
       error: null,
@@ -245,6 +257,7 @@ describe('FleetReport', () => {
   it('points an unreachable deregister at re-running the deregister, never a reload', () => {
     const summary: FleetReportSummary = {
       status: 'unreachable',
+      awaiting: [],
       note: null,
       failures: [],
       error: 'RedisConnectionError: connection refused',
@@ -263,6 +276,7 @@ describe('FleetReport', () => {
   it('keeps the alert, its mark and its per-worker labels', () => {
     const summary: FleetReportSummary = {
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: [{ name: 'serve-a', outcome: 'failed', message: null }],
       error: null,
@@ -284,6 +298,7 @@ describe('FleetReport', () => {
     // headline's noun and the guidance line's subject and its pronoun.
     const degraded = (names: readonly string[]): FleetReportSummary => ({
       status: 'degraded',
+      awaiting: [],
       note: null,
       failures: names.map((name) => ({ name, outcome: 'failed', message: null })),
       error: null,
@@ -306,5 +321,57 @@ describe('FleetReport', () => {
       rerender(<FleetReport summary={degraded(names)} />);
       expect(screen.getByRole('alert').textContent).not.toContain('worker(s)');
     }
+  });
+});
+
+describe('FleetReport — workers awaiting a respawn', () => {
+  const awaiting: FleetReportSummary = {
+    status: 'converged',
+    awaiting: [
+      { name: 'serve-1', keys: ['BACKEND_MANIFEST_KEY'] },
+      { name: 'backend-1', keys: ['BACKEND_MANIFEST_KEY', 'TAI_BUS_HEARTBEAT_TTL'] },
+    ],
+    note: null,
+    failures: [],
+    error: null,
+  };
+
+  it('names each worker and the keys that take effect only when it restarts', () => {
+    render(<FleetReport summary={awaiting} action="reload" />);
+    const panel = screen.getByRole('status');
+    expect(panel).toHaveTextContent('2 workers need a restart to apply some settings');
+    expect(panel).toHaveTextContent(
+      'These settings changed in the stored environment after the worker started. The reload applied every other change; these take effect only when the worker restarts. Restart it through your deployment’s supervisor (on a bare server, restart the server).',
+    );
+    const [first, second] = within(panel).getAllByRole('listitem');
+    if (first === undefined || second === undefined) throw new Error('expected two worker rows');
+    expect(first).toHaveTextContent('serve-1');
+    expect(within(first).getByText('waits for a restart:')).toBeInTheDocument();
+    expect(within(first).getByText('BACKEND_MANIFEST_KEY')).toBeInTheDocument();
+    expect(
+      within(second).getByText('BACKEND_MANIFEST_KEY, TAI_BUS_HEARTBEAT_TTL'),
+    ).toBeInTheDocument();
+    expect(statusFor(panel, /need a restart/)).toHaveClass('tai-status-warn');
+  });
+
+  it('agrees the noun with a single worker', () => {
+    render(<FleetReport summary={{ ...awaiting, awaiting: [{ name: 'serve-1', keys: ['K'] }] }} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '1 worker needs a restart to apply some settings',
+    );
+  });
+
+  it('shows the restart list beside a degraded report', () => {
+    render(
+      <FleetReport
+        summary={{
+          ...awaiting,
+          status: 'degraded',
+          failures: [{ name: 'serve-2', outcome: 'missing', message: null }],
+        }}
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('serve-2');
+    expect(screen.getByRole('status')).toHaveTextContent('serve-1');
   });
 });

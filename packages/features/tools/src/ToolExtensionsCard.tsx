@@ -223,7 +223,9 @@ export function ToolExtensionsCard({ tool }: { readonly tool: string }): ReactNo
           <p role="status" className="tai-status-ok" style={{ margin: 0 }}>
             Extensions applied.
           </p>
-          <FleetReport summary={summarizeFleetFanout(save.data.fanout)} />
+          <FleetReport
+            summary={summarizeFleetFanout(save.data.fanout, save.data.awaiting_respawn)}
+          />
         </>
       ) : null}
 

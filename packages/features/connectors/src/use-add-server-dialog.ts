@@ -92,7 +92,7 @@ function useReviewStep(
     onSuccess: (result: AddServerResult) => {
       void queryClient.invalidateQueries({ queryKey: PROVIDERS_KEY });
       void queryClient.invalidateQueries({ queryKey: CONNECTIONS_KEY });
-      const fleet = summarizeFleetFanout(result.fanout);
+      const fleet = summarizeFleetFanout(result.fanout, []);
       // A reload that did not reach every worker keeps the dialog open on its report.
       if (fleet !== null && fleet.status !== 'converged') {
         setFleetFailure(fleet);

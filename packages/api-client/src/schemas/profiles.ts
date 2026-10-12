@@ -1,7 +1,7 @@
 /** Settings-profile record, version, diff and apply response schemas. */
 import { z } from 'zod';
 
-import { fleetReportFanout } from './fleet';
+import { awaitingWorker, fleetReportFanout, freshLife, recycleEntry, recycleStop } from './fleet';
 
 // The admin-only `/api/config/profiles/*` surface. Secrets ride the wire in the
 // clear (secret/fenced routes); masking is CLIENT-SIDE per the secret-mask union. A drift
@@ -73,7 +73,10 @@ export type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
  * the `self-deferred` status literal when the diff has serve-affecting recycle keys;
  * `fresh` is the per-kind list of NEW ready lives observed since the pre-apply snapshot
  * (each `{name, kind, generation}`), evidence of fresh capacity and never claimed as any
- * target's successor; `refused` is `[]` on success by construction (populated
+ * target's successor; `recycle_stopped` names where the roll stopped and why (`null`
+ * when it ran to its end); `awaiting_respawn` names the workers (name + keys) still
+ * awaiting a respawn after the apply (empty when the roll converged); `refused` is `[]`
+ * on success by construction (populated
  * `{key, reason}` only on a refusal), the populated refusal surfaces being the diff
  * preview and the refusal error report. `fanout` is the mode-wrapped fleet broadcast,
  * parsed EXPLICITLY so a failed propagation reaches the shared fleet-report handler. A
@@ -81,16 +84,11 @@ export type SettingsProfileDiff = z.infer<typeof settingsProfileDiff>;
  */
 export const profileApplyResponse = z.object({
   hot: z.array(z.string()),
-  recycle: z.array(
-    z.object({
-      name: z.string(),
-      kind: z.string(),
-      status: z.string(),
-      generation_before: z.number(),
-    }),
-  ),
-  fresh: z.array(z.object({ name: z.string(), kind: z.string(), generation: z.number() })),
+  recycle: z.array(recycleEntry),
+  fresh: z.array(freshLife),
   refused: z.array(z.object({ key: z.string(), reason: z.string() })),
+  recycle_stopped: recycleStop.nullable(),
+  awaiting_respawn: z.array(awaitingWorker),
   fanout: fleetReportFanout,
 });
 export type ProfileApplyResponse = z.infer<typeof profileApplyResponse>;

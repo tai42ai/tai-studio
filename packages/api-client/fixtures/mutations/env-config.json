@@ -1,8 +1,10 @@
 {
   "status": "ok",
   "env_keys": 5,
+  "awaiting_respawn": [],
   "fanout": {
     "mode": "local-only",
     "note": "no worker bus configured; only this worker reloaded"
-  }
+  },
+  "recycle": null
 }

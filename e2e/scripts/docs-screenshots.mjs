@@ -35,6 +35,16 @@
  *   - settings-access — the API keys tab's "Access control" card (the scopes mapper):
  *                  the scope zones, the Unassigned bucket of unmapped routes, and the Public
  *                  zone with its note, captured as the whole card.
+ *   - profile-apply-recycle-stopped — the profile apply report for a recycle roll that
+ *                  stopped (a forced apply response): the recycle rows, the stop panel, and
+ *                  the workers the server names as still awaiting a restart.
+ *   - backup-restore-recycle-stopped — the Backup tab's import report for an env-section
+ *                  restore whose recycle roll stopped (a forced import response): the section
+ *                  row, the workers the server names as still awaiting a restart, and the
+ *                  recycle rows with the stop panel, captured as the whole Import card.
+ *   - settings-env-recycle — the Environment tab after a save that rolled a worker
+ *                  recycle (a forced save response: the docs-demo stack runs bare): the
+ *                  recycle rows, captured as the whole Environment variables card.
  *   - agents     — the registered `tools_agent` from `GET /api/agents`.
  *   - presets    — the Presets list (`GET /api/presets`): the two seeded
  *                  `studio_demo_echo` presets, the master pane rendered full-width (no
@@ -541,6 +551,139 @@ const ADD_SERVER_LOOKUP = {
   redirect_uri: null,
 };
 
+/** The stored environment the `settings-env-recycle` scene's tab reads (forced, so the
+ * shot frames rows rather than the demo stack's empty store). */
+const ENV_SAVE_STORED = {
+  env: {
+    LOG_LEVEL: 'info',
+    TAI_BUS_HEARTBEAT_TTL: '7',
+    TAI_TOOL_RUNS_SHUTDOWN_DRAIN_SECONDS: '90',
+  },
+  secret_keys: [],
+};
+
+/** The forced response of an Environment-tab save that rolled a worker recycle (the
+ * `settings-env-recycle` scene): two backend workers recycled onto fresh lives and the
+ * writer's own deferred self-exit. Names only, as the server sends. */
+const ENV_SAVE_RECYCLE_ROLL = {
+  status: 'ok',
+  env_keys: 4,
+  awaiting_respawn: [],
+  fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+  recycle: {
+    recycle: [
+      {
+        name: 'backend-1',
+        kind: 'backend',
+        status: 'recycled',
+        generation_before: 3,
+        detail: null,
+      },
+      {
+        name: 'backend-2',
+        kind: 'backend',
+        status: 'recycled',
+        generation_before: 1,
+        detail: null,
+      },
+      {
+        name: 'serve-1',
+        kind: 'serve',
+        status: 'self-deferred',
+        generation_before: 2,
+        detail: null,
+      },
+    ],
+    fresh: [
+      { name: 'backend-1', kind: 'backend', generation: 4 },
+      { name: 'backend-2', kind: 'backend', generation: 2 },
+    ],
+    recycle_stopped: null,
+  },
+};
+
+/** The backup document the `backup-restore-recycle-stopped` scene uploads: one `env`
+ * section (names only matter; the forced import response stands in for the restore). */
+const BACKUP_RESTORE_DOCUMENT = {
+  version: 1,
+  created_at: '2026-01-01T00:00:00Z',
+  sections: { env: { TAI_BUS_HEARTBEAT_TTL: '20' } },
+};
+
+/** The forced response of that restore (the docs-demo stack runs bare, where a
+ * recycle-class restore is refused): one backend recycled, the roll stopped at the next,
+ * and the server's verdict naming the workers still awaiting a restart. */
+const BACKUP_RESTORE_STOPPED = {
+  ok: true,
+  sections: {
+    env: {
+      created: 0,
+      updated: 1,
+      skipped: 0,
+      errors: [],
+      details: {},
+      fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+      recycle: {
+        recycle: [
+          {
+            name: 'backend-1',
+            kind: 'backend',
+            status: 'recycled',
+            generation_before: 3,
+            detail: null,
+          },
+          {
+            name: 'backend-2',
+            kind: 'backend',
+            status: 'timed-out',
+            generation_before: 1,
+            detail: 'its old life was still present after 90s',
+          },
+        ],
+        fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
+        recycle_stopped: {
+          kind: 'backend',
+          name: 'backend-2',
+          detail: 'its old life was still present after 90s',
+        },
+      },
+      awaiting_respawn: [
+        { name: 'backend-2', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+        { name: 'serve-1', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+      ],
+    },
+  },
+};
+
+/** The forced response of a profile apply whose recycle roll stopped (the
+ * `profile-apply-recycle-stopped` scene): one backend recycled, the roll stopped at the
+ * next, and the server's verdict naming the workers still awaiting a restart. */
+const PROFILE_APPLY_STOPPED = {
+  hot: ['LOG_LEVEL'],
+  recycle: [
+    { name: 'backend-1', kind: 'backend', status: 'recycled', generation_before: 3, detail: null },
+    {
+      name: 'backend-2',
+      kind: 'backend',
+      status: 'timed-out',
+      generation_before: 1,
+      detail: 'its old life was still present after 90s',
+    },
+  ],
+  fresh: [{ name: 'backend-1', kind: 'backend', generation: 4 }],
+  refused: [],
+  recycle_stopped: {
+    kind: 'backend',
+    name: 'backend-2',
+    detail: 'its old life was still present after 90s',
+  },
+  awaiting_respawn: [
+    { name: 'backend-2', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+    { name: 'serve-1', keys: ['TAI_BUS_HEARTBEAT_TTL'] },
+  ],
+  fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
+};
+
 const AUTHED_PAGES = [
   // The ExplorerView count summary ("N tools") proves the catalog rendered populated.
   // A specific tool NAME is not used as the marker: the explorer paginates at 24/page
@@ -708,6 +851,39 @@ const AUTHED_PAGES = [
     },
   },
   {
+    // The profile apply report for a recycle roll that stopped: the shared recycle rows
+    // (one recycled backend, the backend the roll stopped at with its reason), the stop
+    // panel, and the server's verdict — the workers still awaiting a restart — in the fleet
+    // report's restart panel. The diff is the live seeded `production` profile's; the apply's
+    // response is the forced payload below (the docs-demo stack runs bare, where a
+    // recycle-class apply is refused). The dialog is captured whole.
+    name: 'profile-apply-recycle-stopped',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    // The open dialog is modal, so the sidebar behind it leaves the accessibility tree.
+    awaitPluginNav: false,
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/config/profiles/production/apply',
+        (route) => route.fulfill({ json: { data: PROFILE_APPLY_STOPPED } }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Profiles' }).click();
+      await page.getByRole('button', { name: 'Apply profile production' }).click();
+      const apply = page.getByRole('button', { name: 'Apply profile', exact: true });
+      await apply.waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+      await page
+        .locator('button:enabled', { hasText: /^Apply profile$/ })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+      await apply.click();
+      await page
+        .locator('[data-testid="recycle-stopped"]')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) => page.getByRole('dialog'),
+  },
+  {
     // The API keys tab's "Access control" card: the scopes mapper with its scope zones,
     // the Unassigned bucket (every unmapped route the server lists) and the Public zone
     // with its note. The card is far taller than the viewport, so `frame` captures the
@@ -728,6 +904,73 @@ const AUTHED_PAGES = [
       page
         .locator('.tai-card')
         .filter({ has: page.getByRole('heading', { name: 'Access control', level: 3 }) }),
+  },
+  {
+    // The Environment tab after a save that rolled a worker recycle: the shared recycle
+    // rows (a recycled backend joined onto its fresh life, the writer's own self-deferred
+    // line). The docs-demo stack runs bare, where a recycle-class save is refused, so the
+    // save's response is the forced roll payload below, and the stored env the tab reads is
+    // forced too (the demo store is empty). The action opens the tab, saves,
+    // and waits for the "Worker recycle" region; the Environment variables card is
+    // captured whole. Deterministic — the rows come entirely from the forced payload.
+    name: 'settings-env-recycle',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/config/env',
+        async (route) => {
+          if (route.request().method() !== 'POST') {
+            await route.fulfill({ json: { data: ENV_SAVE_STORED } });
+            return;
+          }
+          await route.fulfill({ json: { data: ENV_SAVE_RECYCLE_ROLL } });
+        },
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Environment' }).click();
+      await page.getByRole('button', { name: 'Save' }).click();
+      await page
+        .getByRole('region', { name: 'Worker recycle' })
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Environment variables', level: 3 }) }),
+  },
+  {
+    // The Backup tab's import report after an env-section restore whose recycle roll
+    // stopped: the section row, the restart list the server's verdict names, and the
+    // recycle rows with the stop panel. The import response is the forced payload above
+    // (the docs-demo stack runs bare, where a recycle-class restore is refused); the
+    // uploaded document is the synthetic one beside it. The Import card is captured whole.
+    name: 'backup-restore-recycle-stopped',
+    path: '/settings',
+    wait: 'text=LoggingSettings',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/backup/import',
+        (route) => route.fulfill({ json: { data: BACKUP_RESTORE_STOPPED } }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('tab', { name: 'Backup' }).click();
+      await page.getByLabel('Backup file').setInputFiles({
+        name: 'backup.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(BACKUP_RESTORE_DOCUMENT)),
+      });
+      await page.getByRole('button', { name: 'Import selected' }).click();
+      await page
+        .locator('[data-testid="recycle-stopped"]')
+        .waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+    },
+    frame: (page) =>
+      page
+        .locator('.tai-card')
+        .filter({ has: page.getByRole('heading', { name: 'Import', level: 3 }) }),
   },
   // The registered demo agent renders one row per agent (`data-testid`).
   { name: 'agents', path: '/agents', wait: '[data-testid="agent-row"]' },
