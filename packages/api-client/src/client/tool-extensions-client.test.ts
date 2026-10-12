@@ -53,10 +53,10 @@ const localOnly = {
 const getData = {
   combos: [['marka'], ['marka', 'markb']],
   available: [
-    { name: 'argswrap', kind: 'wrapper' },
-    { name: 'backendx', kind: 'backend' },
-    { name: 'marka', kind: 'wrapper' },
-    { name: 'markb', kind: 'wrapper' },
+    { name: 'argswrap', kind: 'wrapper', multiple: false },
+    { name: 'backendx', kind: 'backend', multiple: false },
+    { name: 'marka', kind: 'wrapper', multiple: false },
+    { name: 'markb', kind: 'wrapper', multiple: false },
   ],
 };
 
@@ -67,7 +67,7 @@ describe('tool-extensions client transport', () => {
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/tools/shout/extensions');
     expect(out.combos).toEqual([['marka'], ['marka', 'markb']]);
-    expect(out.available[1]).toEqual({ name: 'backendx', kind: 'backend' });
+    expect(out.available[1]).toEqual({ name: 'backendx', kind: 'backend', multiple: false });
   });
 
   it('getToolExtensions encodes the tool name in the path', async () => {

@@ -93,15 +93,15 @@ describe('tools client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: [
-          { name: 'argswrap', kind: 'wrapper' },
-          { name: 'backendx', kind: 'backend' },
+          { name: 'argswrap', kind: 'wrapper', multiple: false },
+          { name: 'backendx', kind: 'backend', multiple: false },
         ],
       }),
     );
     const out = await client.listExtensions();
     expect(captured[0]?.method).toBe('GET');
     expect(captured[0]?.url).toBe('/api/extensions');
-    expect(out[1]).toEqual({ name: 'backendx', kind: 'backend' });
+    expect(out[1]).toEqual({ name: 'backendx', kind: 'backend', multiple: false });
   });
 
   it('surfaces a 4xx { error } as a LOUD ApiError (never a silent empty list)', async () => {

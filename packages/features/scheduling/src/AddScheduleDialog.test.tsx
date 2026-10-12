@@ -428,7 +428,9 @@ describe('AddScheduleDialog — declared badges', () => {
       listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
       listToolTags: vi
         .fn()
-        .mockResolvedValue([{ name: 'sync', tags: [], badges: ['network'], hidden: false }]),
+        .mockResolvedValue([
+          { name: 'sync', tags: [], badges: ['network'], hidden: false, schedulable: false },
+        ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [

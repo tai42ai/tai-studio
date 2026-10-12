@@ -234,10 +234,10 @@ describe('ToolsPage — responsive master/detail', () => {
 
 const toolNames = ['alpha', 'beta', 'gamma', 'solo'];
 const toolTags: ToolTagEntry[] = [
-  { name: 'alpha', tags: ['x', 'y'], badges: [], hidden: false },
-  { name: 'beta', tags: ['x'], badges: [], hidden: false },
-  { name: 'gamma', tags: ['y'], badges: [], hidden: false },
-  { name: 'solo', tags: [], badges: [], hidden: false },
+  { name: 'alpha', tags: ['x', 'y'], badges: [], hidden: false, schedulable: false },
+  { name: 'beta', tags: ['x'], badges: [], hidden: false, schedulable: false },
+  { name: 'gamma', tags: ['y'], badges: [], hidden: false, schedulable: false },
+  { name: 'solo', tags: [], badges: [], hidden: false, schedulable: false },
 ];
 
 function taggedClient(overrides: StubApiClient = {}): StubApiClient {
@@ -520,7 +520,9 @@ describe('ToolsPage — tool_meta overlay merge', () => {
       listTools: vi.fn().mockResolvedValue(['echo']),
       listToolTags: vi
         .fn()
-        .mockResolvedValue([{ name: 'echo', tags: [], badges: ['network'], hidden: false }]),
+        .mockResolvedValue([
+          { name: 'echo', tags: [], badges: ['network'], hidden: false, schedulable: false },
+        ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
         meta: [
