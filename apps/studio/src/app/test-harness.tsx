@@ -76,7 +76,7 @@ const DASHBOARD_METRICS = {
 
 const defaultHandlers = [
   http.get('*/api/login/methods', () =>
-    HttpResponse.json({ data: { methods: [], needs_setup: false } }),
+    HttpResponse.json({ data: { methods: [], needs_setup: false, claim_fragment_key: 'claim' } }),
   ),
   http.get('*/api/auth/me', () => HttpResponse.json({ data: FULL_PROJECTION })),
   http.get('*/api/observability/metrics', () => HttpResponse.json({ data: DASHBOARD_METRICS })),
