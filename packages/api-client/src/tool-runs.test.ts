@@ -117,7 +117,8 @@ describe('getToolRun', () => {
     );
 
     const out = await api.getToolRun('r1');
-    expect(out).toEqual(record);
+    // The unsent fields read as the published `null` defaults.
+    expect(out).toEqual({ ...record, error: null, outcome: null, resumed_interactions: null });
     expect(url).toContain('/api/tool-runs/r1');
   });
 
