@@ -1,4 +1,4 @@
-import type { ApiClient } from '@tai42/api-client';
+import type { ApiClient, ServedConstants } from '@tai42/api-client';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
@@ -13,11 +13,17 @@ import {
   resolveMediaSrc,
 } from './served-media';
 
-// The platform's own served-media reference: 43 urlsafe-base64 id chars after the route prefix.
+// The served-media grammar the injected client carries: fixture data for the platform's published values.
+const GRAMMAR = {
+  MEDIA_ROUTE_PREFIX: '/api/interactions/media/',
+  MEDIA_ID_PATTERN: '[A-Za-z0-9_-]{43}',
+} as const satisfies Pick<ServedConstants, 'MEDIA_ROUTE_PREFIX' | 'MEDIA_ID_PATTERN'>;
+
+// A served-media reference under that grammar: 43 urlsafe-base64 id chars after the route prefix.
 const SERVED = `/api/interactions/media/${'a'.repeat(43)}`;
 
-function withApi(ui: ReactElement, baseUrl: string): void {
-  const client = { baseUrl } as unknown as ApiClient;
+function withApi(ui: ReactElement, baseUrl: string, grammar: object = GRAMMAR): void {
+  const client = { baseUrl, constants: grammar } as unknown as ApiClient;
   const wrapper = ({ children }: { readonly children: ReactNode }): ReactElement => (
     <ApiProvider value={client}>{children}</ApiProvider>
   );
@@ -26,49 +32,55 @@ function withApi(ui: ReactElement, baseUrl: string): void {
 
 describe('isRenderableMediaSrc', () => {
   it('admits an https url and the platform served-media reference', () => {
-    expect(isRenderableMediaSrc('https://example.com/a.png')).toBe(true);
-    expect(isRenderableMediaSrc(SERVED)).toBe(true);
+    expect(isRenderableMediaSrc('https://example.com/a.png', GRAMMAR)).toBe(true);
+    expect(isRenderableMediaSrc(SERVED, GRAMMAR)).toBe(true);
   });
 
   it('rejects http, javascript, data, and a malformed served id', () => {
-    expect(isRenderableMediaSrc('http://example.com/a.png')).toBe(false);
+    expect(isRenderableMediaSrc('http://example.com/a.png', GRAMMAR)).toBe(false);
     expect(isRenderableMediaSrc('javascript:alert(1)')).toBe(false);
-    expect(isRenderableMediaSrc('data:image/png;base64,AAAA')).toBe(false);
-    expect(isRenderableMediaSrc('/api/interactions/media/too-short')).toBe(false);
+    expect(isRenderableMediaSrc('data:image/png;base64,AAAA', GRAMMAR)).toBe(false);
+    expect(isRenderableMediaSrc('/api/interactions/media/too-short', GRAMMAR)).toBe(false);
   });
 
   it('blocks a data:image by default, admits it only when a raw-storing sink opts in', () => {
-    expect(isRenderableMediaSrc('data:image/png;base64,AAAA')).toBe(false);
-    expect(isRenderableMediaSrc('data:image/png;base64,AAAA', true)).toBe(true);
+    expect(isRenderableMediaSrc('data:image/png;base64,AAAA', GRAMMAR)).toBe(false);
+    expect(isRenderableMediaSrc('data:image/png;base64,AAAA', GRAMMAR, true)).toBe(true);
   });
 
   it('blocks a non-image data uri even when the opt-in is on', () => {
-    expect(isRenderableMediaSrc('data:text/html,<script>1</script>', true)).toBe(false);
+    expect(isRenderableMediaSrc('data:text/html,<script>1</script>', GRAMMAR, true)).toBe(false);
   });
 });
 
 describe('isServedMediaUrl', () => {
   it('admits only the platform served-media reference, not https/http/data/malformed', () => {
-    expect(isServedMediaUrl(SERVED)).toBe(true);
-    expect(isServedMediaUrl('https://example.com/a.png')).toBe(false);
-    expect(isServedMediaUrl('http://example.com/a.png')).toBe(false);
-    expect(isServedMediaUrl('data:image/png;base64,AAAA')).toBe(false);
-    expect(isServedMediaUrl('/api/interactions/media/too-short')).toBe(false);
+    expect(isServedMediaUrl(SERVED, GRAMMAR)).toBe(true);
+    expect(isServedMediaUrl('https://example.com/a.png', GRAMMAR)).toBe(false);
+    expect(isServedMediaUrl('http://example.com/a.png', GRAMMAR)).toBe(false);
+    expect(isServedMediaUrl('data:image/png;base64,AAAA', GRAMMAR)).toBe(false);
+    expect(isServedMediaUrl('/api/interactions/media/too-short', GRAMMAR)).toBe(false);
   });
 });
 
 describe('resolveMediaSrc', () => {
   it('returns an https url unchanged', () => {
-    expect(resolveMediaSrc('https://x/y.png', 'https://api.example')).toBe('https://x/y.png');
+    expect(resolveMediaSrc('https://x/y.png', 'https://api.example', GRAMMAR)).toBe(
+      'https://x/y.png',
+    );
   });
 
   it('joins a served reference to the API base, stripping a trailing slash', () => {
-    expect(resolveMediaSrc(SERVED, 'https://api.example')).toBe(`https://api.example${SERVED}`);
-    expect(resolveMediaSrc(SERVED, 'https://api.example/')).toBe(`https://api.example${SERVED}`);
+    expect(resolveMediaSrc(SERVED, 'https://api.example', GRAMMAR)).toBe(
+      `https://api.example${SERVED}`,
+    );
+    expect(resolveMediaSrc(SERVED, 'https://api.example/', GRAMMAR)).toBe(
+      `https://api.example${SERVED}`,
+    );
   });
 
   it('leaves a served reference relative under an empty (same-origin) base', () => {
-    expect(resolveMediaSrc(SERVED, '')).toBe(SERVED);
+    expect(resolveMediaSrc(SERVED, '', GRAMMAR)).toBe(SERVED);
   });
 });
 
@@ -201,5 +213,21 @@ describe('MediaPlayer', () => {
     withApi(<MediaPlayer kind="video" url={SERVED} label="clip" renderNotice={notice} />, '');
     fireEvent.error(screen.getByTestId('media-video'));
     expect(screen.getByTestId('notice')).toHaveTextContent(`failed ${SERVED}`);
+  });
+});
+
+describe('the served-media grammar comes from the injected client', () => {
+  it('blocks a reference under the default prefix once the client publishes another', () => {
+    const other = { ...GRAMMAR, MEDIA_ROUTE_PREFIX: '/other/' };
+    expect(isServedMediaUrl(SERVED, other)).toBe(false);
+    expect(isServedMediaUrl(`/other/${'a'.repeat(43)}`, other)).toBe(true);
+    withApi(<MediaImage url={SERVED} />, '', other);
+    expect(screen.getByTestId('media-item-blocked')).toBeInTheDocument();
+  });
+
+  it('reads the id pattern from the client', () => {
+    const shortIds = { ...GRAMMAR, MEDIA_ID_PATTERN: '[a-z]{3}' };
+    expect(isServedMediaUrl('/api/interactions/media/abc', shortIds)).toBe(true);
+    expect(isServedMediaUrl(SERVED, shortIds)).toBe(false);
   });
 });

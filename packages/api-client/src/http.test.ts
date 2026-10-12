@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createApiClient } from './client';
 import { ApiError, ApiSchemaError, ApiUnauthorizedError } from './errors';
 import { type ApiConfig, apiRequest, apiText, encodeSegment } from './http';
+import { servedConstants } from './schemas';
 
 function textResponse(body: string, status = 200): Response {
   return new Response(body, { status, headers: { 'content-type': 'text/plain' } });
@@ -169,6 +170,11 @@ describe('apiText', () => {
 });
 
 describe('createApiClient', () => {
+  it('carries the constants the contract serves beside its base url', () => {
+    const client = createApiClient(config(vi.fn()));
+    expect(client.constants).toBe(servedConstants);
+  });
+
   it('runs a tool via POST and returns the run answer', async () => {
     const fetchImpl = vi.fn(async (_url, init) => {
       expect((init as RequestInit).method).toBe('POST');

@@ -1,4 +1,5 @@
 import type { ApiClient, MeProjection } from '@tai42/api-client';
+import { servedConstants } from '@tai42/api-client';
 import {
   ApiProvider,
   AuthProvider,
@@ -79,7 +80,7 @@ function renderWithProviders(
  * and the `baseUrl` the media renderer reads (`''` == same-origin deployment).
  */
 function stubClient(listNotifications: ApiClient['listNotifications']): ApiClient {
-  return { listNotifications, baseUrl: '' } as unknown as ApiClient;
+  return { listNotifications, baseUrl: '', constants: servedConstants } as unknown as ApiClient;
 }
 
 const baseProjection: MeProjection = {

@@ -23,6 +23,7 @@ import {
   type ConversationThread,
   type MeProjection,
   schemas,
+  servedConstants,
   type TargetConversationConfig,
 } from '@tai42/api-client';
 import type { NavigateOptions, NavigationContextValue, RouteSearch } from '@tai42/studio-sdk';
@@ -81,10 +82,14 @@ const baseProjection: MeProjection = {
 function withCapabilities(client: StubApiClient, projection: MeProjection | undefined): ApiClient {
   if (projection === undefined) {
     globalThis.sessionStorage.removeItem(SESSION_KEY);
-    return client as ApiClient;
+    return { constants: servedConstants, ...client } as ApiClient;
   }
   globalThis.sessionStorage.setItem(SESSION_KEY, 'sk-test');
-  return { getMe: () => Promise.resolve(projection), ...client } as ApiClient;
+  return {
+    constants: servedConstants,
+    getMe: () => Promise.resolve(projection),
+    ...client,
+  } as ApiClient;
 }
 
 export interface RenderWithProvidersResult extends RenderResult {
