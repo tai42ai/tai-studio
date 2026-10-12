@@ -5,6 +5,7 @@
 ```ts
 
 import { $strip } from 'zod/v4/core';
+import { infer } from 'zod';
 import { z } from 'zod';
 import { ZodArray } from 'zod';
 import { ZodBoolean } from 'zod';
@@ -1634,45 +1635,6 @@ const backupSections: z.ZodArray<z.ZodObject<{
 
 // @public
 export function buildPath(template: ApiPathTemplate, params: Record<string, string>): string;
-
-// @public (undocumented)
-export type CallerAsksEnvelope = z.infer<typeof callerAsksEnvelope>;
-
-// @public
-const callerAsksEnvelope: z.ZodObject<{
-    asks: z.ZodArray<z.ZodObject<{
-        answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
-        audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        error: z.ZodDefault<z.ZodUnknown>;
-        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        id: z.ZodString;
-        media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
-        on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            kill: "kill";
-            resume: "resume";
-        }>>>;
-        payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
-        question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        result: z.ZodDefault<z.ZodUnknown>;
-        status: z.ZodEnum<{
-            running: "running";
-            asking: "asking";
-            failed: "failed";
-            finished: "finished";
-        }>;
-        thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
-        to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
-            caller: "caller";
-            user: "user";
-        }>>>;
-    }, z.core.$strict>>;
-}, z.core.$strip>;
 
 // @public (undocumented)
 export type ChannelConversationRouteCreate = z.input<typeof channelConversationRouteCreate>;
@@ -4743,26 +4705,6 @@ export function createApiClient(config: ApiConfig): {
             } | null;
         }[];
     }>;
-    readonly getWebEntryGate: (identity: string, signal?: AbortSignal) => Promise<{
-        enabled: boolean;
-        codes: {
-            code_id: string;
-            label: string | null;
-            created_at: string;
-            expires_at: string | null;
-        }[];
-    }>;
-    readonly setWebEntryGate: (identity: string, enabled: boolean) => Promise<{
-        enabled: boolean;
-    }>;
-    readonly mintWebEntryCode: (identity: string, body: WebEntryCodeMintBody) => Promise<{
-        code: string;
-        code_id: string;
-        expires_at: string | null;
-    }>;
-    readonly revokeWebEntryCode: (identity: string, codeId: string) => Promise<{
-        status: "revoked";
-    }>;
     readonly listConversationRoutes: (signal?: AbortSignal) => Promise<{
         items: ({
             callback_url: string | null;
@@ -5560,11 +5502,13 @@ export function createApiClient(config: ApiConfig): {
         contributions: {
             nav_entries: string[];
             pages: string[];
+            route_panels: string[];
             settings_tabs: string[];
             tool_panels: Record<string, string>;
         };
         entry: string;
         integrity: Record<string, string>;
+        mounts: Record<string, string>;
         name: string;
         version: string;
     }[]>;
@@ -7857,22 +7801,101 @@ export function createApiClient(config: ApiConfig): {
         run_id: string;
     }>;
     readonly getToolRun: (runId: string, signal?: AbortSignal) => Promise<{
+        error: string | null;
+        finished_at: string | null;
+        outcome: unknown;
+        result: unknown;
+        resumed_interactions: string[] | null;
         run_id: string;
-        tool_name: string;
-        status: "running" | "parked" | "failed" | "succeeded" | "lost";
         started_at: string;
-        finished_at?: string | undefined;
-        result?: unknown;
-        error?: string | undefined;
-        outcome?: unknown;
-        resumed_interactions?: string[] | undefined;
+        tool_name: string;
+        status: "running";
+    } | {
+        error: string | null;
+        finished_at: string | null;
+        outcome: unknown;
+        result: unknown;
+        resumed_interactions: string[] | null;
+        run_id: string;
+        started_at: string;
+        tool_name: string;
+        status: "succeeded";
+    } | {
+        error: string | null;
+        finished_at: string | null;
+        outcome: unknown;
+        result: unknown;
+        resumed_interactions: string[] | null;
+        run_id: string;
+        started_at: string;
+        tool_name: string;
+        status: "failed";
+    } | {
+        error: string | null;
+        finished_at: string | null;
+        outcome: unknown;
+        result: unknown;
+        resumed_interactions: string[] | null;
+        run_id: string;
+        started_at: string;
+        tool_name: string;
+        status: "lost";
+    } | {
+        error: string | null;
+        finished_at: string | null;
+        outcome: unknown;
+        resumed_interactions: string[] | null;
+        run_id: string;
+        started_at: string;
+        tool_name: string;
+        status: "parked";
+        result: {
+            asks: {
+                answer_format: string | null;
+                asked_by: string[] | null;
+                audience: string | null;
+                channel: string | null;
+                created_at: string | null;
+                error: unknown;
+                expiry_at: string | null;
+                format_payload: Record<string, unknown> | null;
+                group_id: string | null;
+                id: string;
+                media: Record<string, unknown>[] | null;
+                on_expiry: "kill" | "resume" | null;
+                payload: Record<string, unknown> | null;
+                question: string | null;
+                recipient: string | null;
+                result: unknown;
+                status: "running" | "asking" | "failed" | "finished";
+                thread_id: string | null;
+                to: "caller" | "user" | null;
+            }[];
+            kind: "asks";
+            suspended: {
+                caller_interaction_ids: string[];
+                expiry_at: string | null;
+                interaction_id: string;
+                interaction_ids: string[];
+                resume_owner: string | null;
+            };
+        } | {
+            kind: "parked";
+            suspended: {
+                caller_interaction_ids: string[];
+                expiry_at: string | null;
+                interaction_id: string;
+                interaction_ids: string[];
+                resume_owner: string | null;
+            };
+        };
     }>;
     readonly listToolRuns: (toolName: string, signal?: AbortSignal) => Promise<{
+        finished_at: string | null;
         run_id: string;
+        started_at: string;
         tool_name: string;
         status: "running" | "parked" | "failed" | "succeeded" | "lost";
-        started_at: string;
-        finished_at?: string | undefined;
     }[]>;
     readonly listToolTags: (signal?: AbortSignal) => Promise<{
         badges: string[];
@@ -7887,6 +7910,7 @@ export function createApiClient(config: ApiConfig): {
         readonly MEDIA_ROUTE_PREFIX: "/api/interactions/media/";
         readonly PERSON_KIND: "person";
     };
+    readonly request: <S extends Parameters<apiRequest>[2]>(path: string, schema: S, options?: Parameters<apiRequest>[3]) => Promise<infer<S>>;
 };
 
 // @public
@@ -12786,9 +12810,9 @@ declare namespace s {
         storageResourceStored,
         storageResourceDeleted,
         storageDirDeleted,
-        studioPluginManifest,
+        studioPluginListingEntry,
         studioPluginRegistry,
-        StudioPluginManifest,
+        StudioPluginListingEntry,
         subMcpMount,
         SubMcpMount,
         subMcpList,
@@ -12828,10 +12852,6 @@ declare namespace s {
         ParkedStatus,
         parkedCallerAsk,
         ParkedCallerAsk,
-        callerAsksEnvelope,
-        CallerAsksEnvelope,
-        suspendedRunReceipt,
-        SuspendedRunReceipt,
         visitOutcome,
         VisitOutcome,
         toolMediaResult,
@@ -12846,17 +12866,7 @@ declare namespace s {
         triggerLinkList,
         TriggerLinkList,
         triggerLinkDeleted,
-        TriggerLinkDeleted,
-        webEntryCode,
-        WebEntryCode,
-        webEntryGate,
-        WebEntryGate,
-        webEntryGateState,
-        WebEntryGateState,
-        webEntryCodeMinted,
-        WebEntryCodeMinted,
-        webEntryCodeRevoked,
-        WebEntryCodeRevoked
+        TriggerLinkDeleted
     }
 }
 
@@ -13592,9 +13602,9 @@ declare namespace schemas {
         storageResourceStored,
         storageResourceDeleted,
         storageDirDeleted,
-        studioPluginManifest,
+        studioPluginListingEntry,
         studioPluginRegistry,
-        StudioPluginManifest,
+        StudioPluginListingEntry,
         subMcpMount,
         SubMcpMount,
         subMcpList,
@@ -13634,10 +13644,6 @@ declare namespace schemas {
         ParkedStatus,
         parkedCallerAsk,
         ParkedCallerAsk,
-        callerAsksEnvelope,
-        CallerAsksEnvelope,
-        suspendedRunReceipt,
-        SuspendedRunReceipt,
         visitOutcome,
         VisitOutcome,
         toolMediaResult,
@@ -13652,17 +13658,7 @@ declare namespace schemas {
         triggerLinkList,
         TriggerLinkList,
         triggerLinkDeleted,
-        TriggerLinkDeleted,
-        webEntryCode,
-        WebEntryCode,
-        webEntryGate,
-        WebEntryGate,
-        webEntryGateState,
-        WebEntryGateState,
-        webEntryCodeMinted,
-        WebEntryCodeMinted,
-        webEntryCodeRevoked,
-        WebEntryCodeRevoked
+        TriggerLinkDeleted
     }
 }
 
@@ -20613,19 +20609,21 @@ export interface StorageUploadBody {
 }
 
 // @public (undocumented)
-export type StudioPluginManifest = z.infer<typeof studioPluginManifest>;
+export type StudioPluginListingEntry = z.infer<typeof studioPluginListingEntry>;
 
-// @public (undocumented)
-const studioPluginManifest: z.ZodObject<{
+// @public
+const studioPluginListingEntry: z.ZodObject<{
     api_version: z.ZodNumber;
     contributions: z.ZodObject<{
         nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
         pages: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        route_panels: z.ZodDefault<z.ZodArray<z.ZodString>>;
         settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString>>;
         tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
     }, z.core.$strict>;
     entry: z.ZodString;
     integrity: z.ZodRecord<z.ZodString, z.ZodString>;
+    mounts: z.ZodRecord<z.ZodString, z.ZodString>;
     name: z.ZodString;
     version: z.ZodString;
 }, z.core.$strict>;
@@ -20636,11 +20634,13 @@ const studioPluginRegistry: z.ZodArray<z.ZodObject<{
     contributions: z.ZodObject<{
         nav_entries: z.ZodDefault<z.ZodArray<z.ZodString>>;
         pages: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        route_panels: z.ZodDefault<z.ZodArray<z.ZodString>>;
         settings_tabs: z.ZodDefault<z.ZodArray<z.ZodString>>;
         tool_panels: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
     }, z.core.$strict>;
     entry: z.ZodString;
     integrity: z.ZodRecord<z.ZodString, z.ZodString>;
+    mounts: z.ZodRecord<z.ZodString, z.ZodString>;
     name: z.ZodString;
     version: z.ZodString;
 }, z.core.$strict>>;
@@ -20761,16 +20761,6 @@ export function summarizeFleetFanout(fanout: FleetReportFanout | null | undefine
 
 // @public
 export function summarizeFleetResult(result: Omit<FleetResult, 'ok'>): FleetReportSummary;
-
-// @public (undocumented)
-export type SuspendedRunReceipt = z.infer<typeof suspendedRunReceipt>;
-
-// @public
-const suspendedRunReceipt: z.ZodObject<{
-    interaction_id: z.ZodString;
-    interaction_ids: z.ZodArray<z.ZodString>;
-    caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
-}, z.core.$strip>;
 
 // @public (undocumented)
 export type TargetConversationConfig = z.input<typeof targetConversationConfig>;
@@ -21215,7 +21205,9 @@ const toolNames: z.ZodArray<z.ZodString>;
 
 // @public (undocumented)
 export const toolRunList: z.ZodArray<z.ZodObject<{
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     run_id: z.ZodString;
+    started_at: z.ZodString;
     tool_name: z.ZodString;
     status: z.ZodEnum<{
         running: "running";
@@ -21224,8 +21216,6 @@ export const toolRunList: z.ZodArray<z.ZodObject<{
         succeeded: "succeeded";
         lost: "lost";
     }>;
-    started_at: z.ZodString;
-    finished_at: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>>;
 
 // @public (undocumented)
@@ -21233,7 +21223,9 @@ export type ToolRunListItem = z.infer<typeof toolRunListItem>;
 
 // @public
 export const toolRunListItem: z.ZodObject<{
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
     run_id: z.ZodString;
+    started_at: z.ZodString;
     tool_name: z.ZodString;
     status: z.ZodEnum<{
         running: "running";
@@ -21242,15 +21234,13 @@ export const toolRunListItem: z.ZodObject<{
         succeeded: "succeeded";
         lost: "lost";
     }>;
-    started_at: z.ZodString;
-    finished_at: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 
 // @public (undocumented)
 export type ToolRunParkAnswer = z.infer<typeof toolRunParkAnswer>;
 
 // @public
-export const toolRunParkAnswer: z.ZodUnion<readonly [z.ZodObject<{
+export const toolRunParkAnswer: z.ZodDiscriminatedUnion<[z.ZodObject<{
     asks: z.ZodArray<z.ZodObject<{
         answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
         asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
@@ -21283,33 +21273,130 @@ export const toolRunParkAnswer: z.ZodUnion<readonly [z.ZodObject<{
             user: "user";
         }>>>;
     }, z.core.$strict>>;
+    kind: z.ZodDefault<z.ZodLiteral<"asks">>;
+    suspended: z.ZodObject<{
+        caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        interaction_id: z.ZodString;
+        interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
 }, z.core.$strip>, z.ZodObject<{
-    interaction_id: z.ZodString;
-    interaction_ids: z.ZodArray<z.ZodString>;
-    caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
-}, z.core.$strip>]>;
+    kind: z.ZodDefault<z.ZodLiteral<"parked">>;
+    suspended: z.ZodObject<{
+        caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        interaction_id: z.ZodString;
+        interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+        resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    }, z.core.$strip>;
+}, z.core.$strip>], "kind">;
 
 // @public (undocumented)
 export type ToolRunRecord = z.infer<typeof toolRunRecord>;
 
 // @public
-export const toolRunRecord: z.ZodObject<{
+export const toolRunRecord: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outcome: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    result: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    resumed_interactions: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
     run_id: z.ZodString;
-    tool_name: z.ZodString;
-    status: z.ZodEnum<{
-        running: "running";
-        parked: "parked";
-        failed: "failed";
-        succeeded: "succeeded";
-        lost: "lost";
-    }>;
     started_at: z.ZodString;
-    finished_at: z.ZodOptional<z.ZodString>;
-    result: z.ZodOptional<z.ZodUnknown>;
-    error: z.ZodOptional<z.ZodString>;
-    outcome: z.ZodOptional<z.ZodUnknown>;
-    resumed_interactions: z.ZodOptional<z.ZodArray<z.ZodString>>;
-}, z.core.$strip>;
+    tool_name: z.ZodString;
+    status: z.ZodLiteral<"running">;
+}, z.core.$strip>, z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outcome: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    result: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    resumed_interactions: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    run_id: z.ZodString;
+    started_at: z.ZodString;
+    tool_name: z.ZodString;
+    status: z.ZodLiteral<"succeeded">;
+}, z.core.$strip>, z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outcome: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    result: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    resumed_interactions: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    run_id: z.ZodString;
+    started_at: z.ZodString;
+    tool_name: z.ZodString;
+    status: z.ZodLiteral<"failed">;
+}, z.core.$strip>, z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outcome: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    result: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    resumed_interactions: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    run_id: z.ZodString;
+    started_at: z.ZodString;
+    tool_name: z.ZodString;
+    status: z.ZodLiteral<"lost">;
+}, z.core.$strip>, z.ZodObject<{
+    error: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    finished_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+    outcome: z.ZodDefault<z.ZodNullable<z.ZodUnknown>>;
+    resumed_interactions: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+    run_id: z.ZodString;
+    started_at: z.ZodString;
+    tool_name: z.ZodString;
+    status: z.ZodLiteral<"parked">;
+    result: z.ZodDiscriminatedUnion<[z.ZodObject<{
+        asks: z.ZodArray<z.ZodObject<{
+            answer_format: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            asked_by: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodString>>>;
+            audience: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            channel: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            created_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            error: z.ZodDefault<z.ZodUnknown>;
+            expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            format_payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            group_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            id: z.ZodString;
+            media: z.ZodDefault<z.ZodNullable<z.ZodArray<z.ZodRecord<z.ZodString, z.ZodUnknown>>>>;
+            on_expiry: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+                kill: "kill";
+                resume: "resume";
+            }>>>;
+            payload: z.ZodDefault<z.ZodNullable<z.ZodRecord<z.ZodString, z.ZodUnknown>>>;
+            question: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            recipient: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            result: z.ZodDefault<z.ZodUnknown>;
+            status: z.ZodEnum<{
+                running: "running";
+                asking: "asking";
+                failed: "failed";
+                finished: "finished";
+            }>;
+            thread_id: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            to: z.ZodDefault<z.ZodNullable<z.ZodEnum<{
+                caller: "caller";
+                user: "user";
+            }>>>;
+        }, z.core.$strict>>;
+        kind: z.ZodDefault<z.ZodLiteral<"asks">>;
+        suspended: z.ZodObject<{
+            caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            interaction_id: z.ZodString;
+            interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>;
+    }, z.core.$strip>, z.ZodObject<{
+        kind: z.ZodDefault<z.ZodLiteral<"parked">>;
+        suspended: z.ZodObject<{
+            caller_interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            expiry_at: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+            interaction_id: z.ZodString;
+            interaction_ids: z.ZodDefault<z.ZodArray<z.ZodString>>;
+            resume_owner: z.ZodDefault<z.ZodNullable<z.ZodString>>;
+        }, z.core.$strip>;
+    }, z.core.$strip>], "kind">;
+}, z.core.$strip>], "status">;
 
 // @public (undocumented)
 export type ToolRunStatus = z.infer<typeof toolRunStatus>;
@@ -21592,65 +21679,6 @@ const visitOutcome: z.ZodObject<{
             user: "user";
         }>>>;
     }, z.core.$strict>>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type WebEntryCode = z.infer<typeof webEntryCode>;
-
-// @public
-const webEntryCode: z.ZodObject<{
-    code_id: z.ZodString;
-    label: z.ZodNullable<z.ZodString>;
-    created_at: z.ZodString;
-    expires_at: z.ZodNullable<z.ZodString>;
-}, z.core.$strip>;
-
-// @public
-export interface WebEntryCodeMintBody {
-    // (undocumented)
-    readonly expires_at: string | null;
-    // (undocumented)
-    readonly label: string | null;
-}
-
-// @public (undocumented)
-export type WebEntryCodeMinted = z.infer<typeof webEntryCodeMinted>;
-
-// @public
-const webEntryCodeMinted: z.ZodObject<{
-    code: z.ZodString;
-    code_id: z.ZodString;
-    expires_at: z.ZodNullable<z.ZodString>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type WebEntryCodeRevoked = z.infer<typeof webEntryCodeRevoked>;
-
-// @public
-const webEntryCodeRevoked: z.ZodObject<{
-    status: z.ZodLiteral<"revoked">;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type WebEntryGate = z.infer<typeof webEntryGate>;
-
-// @public
-const webEntryGate: z.ZodObject<{
-    enabled: z.ZodBoolean;
-    codes: z.ZodArray<z.ZodObject<{
-        code_id: z.ZodString;
-        label: z.ZodNullable<z.ZodString>;
-        created_at: z.ZodString;
-        expires_at: z.ZodNullable<z.ZodString>;
-    }, z.core.$strip>>;
-}, z.core.$strip>;
-
-// @public (undocumented)
-export type WebEntryGateState = z.infer<typeof webEntryGateState>;
-
-// @public
-const webEntryGateState: z.ZodObject<{
-    enabled: z.ZodBoolean;
 }, z.core.$strip>;
 
 // @public (undocumented)
