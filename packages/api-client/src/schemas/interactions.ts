@@ -122,11 +122,11 @@ export type FormReactions = z.infer<typeof formReactions>;
 
 /**
  * The form update a reaction door returns (`POST /api/interactions/{id}/react`, its
- * `update`): the same kind of data a form is sent with, applied to the open form. `values` sets field
- * values; `options` replaces the per-send choice list of option-bearing fields; `errors`
- * shows per-field messages (keyed by field name); `display` fills display slots (keyed by
- * slot name) — a computed total among them. Every member defaults to empty, so a reaction
- * that touches only one of them returns only that one. The door response is safeParsed, so
+ * `update`): the same kind of data a form is sent with, applied to the open form. `values`
+ * sets field values; `options` replaces the per-send choice list of option-bearing fields;
+ * `errors` shows per-field messages (keyed by field name); `display` fills display slots
+ * (keyed by slot name) — a computed total among them. Every member defaults to empty, so a
+ * reaction that touches only one of them returns only that one. The door response is safeParsed, so
  * a malformed update surfaces loudly rather than applying a half-understood change.
  */
 export const formUpdate = z.object({

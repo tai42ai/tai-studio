@@ -106,9 +106,7 @@ export function RecycleRollSection({
                 {entry.status === 'self-deferred' ? (
                   <span style={labelStyle}>{writerNote}</span>
                 ) : null}
-                {entry.detail !== null && entry.detail !== undefined ? (
-                  <span style={labelStyle}>{entry.detail}</span>
-                ) : null}
+                {entry.detail !== null ? <span style={labelStyle}>{entry.detail}</span> : null}
               </li>
             );
           })}
