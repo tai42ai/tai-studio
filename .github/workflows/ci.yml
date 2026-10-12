@@ -361,7 +361,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - name: Gate first-party scoped npm majors
-        uses: tai42ai/tai42/.github/actions/first-party-npm-majors@195aa0c35bddf6ee5729e541e9e13e0ec61f2fb1
+        uses: tai42ai/tai42/.github/actions/first-party-npm-majors@d2e24acefee6444ac87caa1b318f5f6ef43c45bc
 
   # End-to-end: Playwright drives the SPA against a real tai42-skeleton backend.
   # The boot recipe (e2e/boot/boot.sh) runs the skeleton (``tai42/core/skeleton``)
