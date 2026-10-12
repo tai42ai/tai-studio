@@ -23,15 +23,22 @@ export const backupImportReport = z.object({
       updated: z.number(),
       skipped: z.number(),
       errors: z.array(z.string()),
-      new_api_keys: z
-        .array(
-          z.object({
-            user_id: z.string(),
-            description: z.string(),
-            api_key: z.string(),
-          }),
-        )
-        .optional(),
+      // The section's own open map of counts and data (a `skipped_existing` tally, say). The
+      // one entry the report renders is `new_api_keys`: the keys an `access_control` restore
+      // minted, each plaintext sent only in this reply.
+      details: z
+        .object({
+          new_api_keys: z
+            .array(
+              z.object({
+                user_id: z.string(),
+                description: z.string(),
+                api_key: z.string(),
+              }),
+            )
+            .optional(),
+        })
+        .loose(),
       // The mode-wrapped fleet `fanout` of a section whose restore broadcast (the `manifest`
       // and `env` reloads, the templates cache eviction); `null` for every other section.
       // Parsed EXPLICITLY so the shared fleet-report handler can surface a failed restore

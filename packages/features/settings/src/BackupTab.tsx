@@ -260,7 +260,7 @@ function RestoreRecycleReport({
 function ImportReportTable({ report }: { readonly report: BackupImportReport }): ReactNode {
   const entries = Object.entries(report.sections);
   const minted = entries.flatMap(([name, section]) =>
-    (section.new_api_keys ?? []).map((key) => ({ section: name, ...key })),
+    (section.details.new_api_keys ?? []).map((key) => ({ section: name, ...key })),
   );
   // The `manifest` and `env` restores apply through the config pipeline, so their
   // report carries a fleet fan-out; surface any failed propagation honestly, with the

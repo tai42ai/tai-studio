@@ -157,6 +157,7 @@ test('an env restore whose recycle stopped shows the roll and the workers awaiti
                 updated: 1,
                 skipped: 0,
                 errors: [],
+                details: {},
                 fanout: {
                   mode: 'local-only',
                   note: 'no worker bus configured; only this worker reloaded',

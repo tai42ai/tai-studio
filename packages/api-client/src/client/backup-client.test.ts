@@ -70,6 +70,7 @@ describe('backup client transport', () => {
               updated: 0,
               skipped: 0,
               errors: [],
+              details: {},
               fanout: null,
               recycle: null,
               awaiting_respawn: [],
@@ -81,6 +82,7 @@ describe('backup client transport', () => {
               updated: 1,
               skipped: 0,
               errors: [],
+              details: {},
               fanout: {
                 mode: 'local-only',
                 note: 'no worker bus configured; only this worker reloaded',

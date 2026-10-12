@@ -621,6 +621,7 @@ const BACKUP_RESTORE_STOPPED = {
       updated: 1,
       skipped: 0,
       errors: [],
+      details: {},
       fanout: { mode: 'local-only', note: 'no worker bus configured; only this worker reloaded' },
       recycle: {
         recycle: [

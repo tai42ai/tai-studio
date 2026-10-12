@@ -354,11 +354,13 @@ const backupImportReport: z.ZodObject<{
         updated: z.ZodNumber;
         skipped: z.ZodNumber;
         errors: z.ZodArray<z.ZodString>;
-        new_api_keys: z.ZodOptional<z.ZodArray<z.ZodObject<{
-            user_id: z.ZodString;
-            description: z.ZodString;
-            api_key: z.ZodString;
-        }, z.core.$strip>>>;
+        details: z.ZodObject<{
+            new_api_keys: z.ZodOptional<z.ZodArray<z.ZodObject<{
+                user_id: z.ZodString;
+                description: z.ZodString;
+                api_key: z.ZodString;
+            }, z.core.$strip>>>;
+        }, z.core.$loose>;
         fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
             mode: z.ZodLiteral<"local-only">;
             note: z.ZodString;
@@ -1859,6 +1861,14 @@ export function createApiClient(config: ApiConfig): {
             updated: number;
             skipped: number;
             errors: string[];
+            details: {
+                [x: string]: unknown;
+                new_api_keys?: {
+                    user_id: string;
+                    description: string;
+                    api_key: string;
+                }[] | undefined;
+            };
             fanout: {
                 mode: "local-only";
                 note: string;
@@ -1912,11 +1922,6 @@ export function createApiClient(config: ApiConfig): {
                 name: string;
                 keys: string[];
             }[];
-            new_api_keys?: {
-                user_id: string;
-                description: string;
-                api_key: string;
-            }[] | undefined;
         }>;
     }>;
     readonly validateCondition: (body: ValidateConditionBody) => Promise<{
