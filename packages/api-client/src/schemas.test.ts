@@ -992,3 +992,17 @@ describe('a generated enum refuses a value outside the published set', () => {
     expect(schemas.answerFormat.parse('free')).toBe('free');
   });
 });
+
+describe('backupDocument schema — the import door rule a picked file is checked by', () => {
+  const exported = { version: 1, created_at: '2026-07-05T00:00:00Z', sections: {}, errors: {} };
+
+  it('accepts the export document and one without the errors map', () => {
+    expect(schemas.backupDocument.safeParse(exported).success).toBe(true);
+    const { errors: _errors, ...withoutErrors } = exported;
+    expect(schemas.backupDocument.safeParse(withoutErrors).success).toBe(true);
+  });
+
+  it('refuses a document version the import door refuses', () => {
+    expect(schemas.backupDocument.safeParse({ ...exported, version: 2 }).success).toBe(false);
+  });
+});
