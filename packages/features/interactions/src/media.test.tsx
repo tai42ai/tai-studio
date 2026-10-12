@@ -273,6 +273,25 @@ describe('MediaGallery — display-only question media (gated render + loud fall
     expect(anchor).toHaveTextContent('Open it here');
   });
 
+  it('renders a document item as a link labelled by its caption', async () => {
+    const { channel, container } = renderInbox();
+    await emitFrame(
+      channel,
+      'interaction.add',
+      mediaJson({
+        interaction_id: 'q-doc',
+        media: [
+          { kind: 'document', url: 'https://docs.example/report.pdf', caption: 'The report' },
+        ],
+      }),
+    );
+
+    const anchor = container.querySelector('a');
+    expect(anchor?.getAttribute('href')).toBe('https://docs.example/report.pdf');
+    expect(anchor).toHaveTextContent('The report');
+    expect(container.querySelector('[data-testid="media-item-malformed"]')).toBeNull();
+  });
+
   it('renders an http:// link as a live anchor (links keep http, unlike the https-only image gate)', async () => {
     const { channel, container } = renderInbox();
     await emitFrame(
