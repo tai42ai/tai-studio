@@ -53,10 +53,10 @@ const localOnly = {
 const getData = {
   combos: [['marka'], ['marka', 'markb']],
   available: [
-    { name: 'argswrap', kind: 'wrapper', multiple: false },
+    { name: 'argswrap', kind: 'wrapper', multiple: true },
     { name: 'backendx', kind: 'backend', multiple: false },
-    { name: 'marka', kind: 'wrapper', multiple: false },
-    { name: 'markb', kind: 'wrapper', multiple: false },
+    { name: 'marka', kind: 'wrapper', multiple: true },
+    { name: 'markb', kind: 'wrapper', multiple: true },
   ],
 };
 

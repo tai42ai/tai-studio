@@ -303,7 +303,7 @@ describe('McpServersSection — config editor', () => {
       getMcpConfigSchema: vi.fn().mockResolvedValue(MCP_SCHEMA),
       listExtensions: vi
         .fn()
-        .mockResolvedValue([{ name: 'chain', kind: 'wrapper', multiple: false }]),
+        .mockResolvedValue([{ name: 'chain', kind: 'wrapper', multiple: true }]),
       setMcpConfig,
     };
     renderWithProviders(<McpServersSection />, { client });

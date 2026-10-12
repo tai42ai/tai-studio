@@ -93,7 +93,7 @@ describe('tools client transport', () => {
     const { client, captured } = harness(() =>
       jsonResponse({
         data: [
-          { name: 'argswrap', kind: 'wrapper', multiple: false },
+          { name: 'argswrap', kind: 'wrapper', multiple: true },
           { name: 'backendx', kind: 'backend', multiple: false },
         ],
       }),

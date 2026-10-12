@@ -18,9 +18,9 @@ describe('baseNameOf', () => {
 describe('groupIntoFamilies', () => {
   it('groups branch variants under their base tool name', () => {
     const extensions: Extension[] = [
-      { name: 'tool_a_b', kind: 'wrapper', multiple: false },
+      { name: 'tool_a_b', kind: 'wrapper', multiple: true },
       { name: 'tool', kind: 'backend', multiple: false },
-      { name: 'tool_a', kind: 'transformer', multiple: false },
+      { name: 'tool_a', kind: 'transformer', multiple: true },
     ];
     const families = groupIntoFamilies(extensions);
     expect(families).toHaveLength(1);
@@ -30,9 +30,9 @@ describe('groupIntoFamilies', () => {
 
   it('orders families by base name and separates distinct tools', () => {
     const extensions: Extension[] = [
-      { name: 'zeta_chain', kind: 'transformer', multiple: false },
+      { name: 'zeta_chain', kind: 'transformer', multiple: true },
       { name: 'alpha', kind: 'backend', multiple: false },
-      { name: 'alpha_batch', kind: 'transformer', multiple: false },
+      { name: 'alpha_batch', kind: 'transformer', multiple: true },
     ];
     const families = groupIntoFamilies(extensions);
     expect(families.map((f) => f.base)).toEqual(['alpha', 'zeta']);
@@ -48,9 +48,9 @@ describe('groupIntoFamilies', () => {
 describe('groupByKind', () => {
   it('groups the catalog by kind, ordered by kind then name', () => {
     const extensions: Extension[] = [
-      { name: 'markb', kind: 'wrapper', multiple: false },
+      { name: 'markb', kind: 'wrapper', multiple: true },
       { name: 'backendx', kind: 'backend', multiple: false },
-      { name: 'marka', kind: 'wrapper', multiple: false },
+      { name: 'marka', kind: 'wrapper', multiple: true },
     ];
     const groups = groupByKind(extensions);
     expect(groups.map((g) => g.kind)).toEqual(['backend', 'wrapper']);

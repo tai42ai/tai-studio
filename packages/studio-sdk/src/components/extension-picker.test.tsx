@@ -121,7 +121,7 @@ describe('ExtensionPicker', () => {
     const payload = '<script>alert(1)</script>';
     const { container } = render(
       <ExtensionPicker
-        available={[{ name: payload, kind: 'wrapper', multiple: false }]}
+        available={[{ name: payload, kind: 'wrapper', multiple: true }]}
         value={[payload]}
         onChange={vi.fn()}
       />,

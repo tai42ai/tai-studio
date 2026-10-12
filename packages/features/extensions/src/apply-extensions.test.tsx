@@ -19,8 +19,8 @@ import { ApplyExtensionsPanel } from './apply-extensions';
 import { renderWithProviders } from './test-utils';
 
 const CATALOG: Extension[] = [
-  { name: 'marka', kind: 'wrapper', multiple: false },
-  { name: 'markb', kind: 'wrapper', multiple: false },
+  { name: 'marka', kind: 'wrapper', multiple: true },
+  { name: 'markb', kind: 'wrapper', multiple: true },
   { name: 'backendx', kind: 'backend', multiple: false },
 ];
 

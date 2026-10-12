@@ -41,9 +41,7 @@ function currentVersion(stateBinding: unknown = null) {
 
 function client(overrides: StubApiClient = {}): StubApiClient {
   return {
-    listExtensions: vi
-      .fn()
-      .mockResolvedValue([{ name: 'chain', kind: 'wrapper', multiple: false }]),
+    listExtensions: vi.fn().mockResolvedValue([{ name: 'chain', kind: 'wrapper', multiple: true }]),
     // The active binding rides the current version body; the dialog reads it from here.
     listPresetVersions: vi.fn().mockResolvedValue([currentVersion(null)]),
     listStates: vi.fn().mockResolvedValue([]),
@@ -192,8 +190,8 @@ describe('SaveVersionDialog', () => {
       client: client({
         savePresetVersion,
         listExtensions: vi.fn().mockResolvedValue([
-          { name: 'chain', kind: 'wrapper', multiple: false },
-          { name: 'batch', kind: 'wrapper', multiple: false },
+          { name: 'chain', kind: 'wrapper', multiple: true },
+          { name: 'batch', kind: 'wrapper', multiple: true },
         ]),
       }),
     });
@@ -360,7 +358,7 @@ describe('SaveVersionDialog', () => {
       client: client({
         listExtensions: vi
           .fn()
-          .mockResolvedValue([{ name: 'other', kind: 'wrapper', multiple: false }]),
+          .mockResolvedValue([{ name: 'other', kind: 'wrapper', multiple: true }]),
         savePresetVersion,
       }),
     });
