@@ -79,6 +79,12 @@ routers_modules:
   - tai42_skeleton.routers.states
   - tai42_skeleton.routers.sub_mcp
   - tai42_skeleton.routers.config
+  # Backup and restore (`/api/backup/*`). The Settings Backup tab GETs
+  # `/api/backup/sections` on mount and imports through `/api/backup/import`; without
+  # this router that read 404s and the tab shows its error screen instead of the
+  # Import card. The sections are the ones the skeleton registers at boot, so the
+  # mount needs no extra config.
+  - tai42_skeleton.routers.backup
   - tai42_skeleton.routers.templates
   - tai42_skeleton.routers.manifest
   - tai42_skeleton.routers.connectors

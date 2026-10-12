@@ -40,6 +40,9 @@ router plus the real plugins so no screen is empty:
 | extensions                                    | `ask_external` + the `prometheus_metrics` wrapper                                                        |
 | settings                                      | the auto-populated settings schema                                                                       |
 | settings-access                               | the API keys tab's Access control card: the boot's `studio` scope, every unmapped route, the public pins |
+| settings-env-recycle                          | the Environment tab's save report from a forced worker-recycle roll (the demo stack runs bare)           |
+| profile-apply-recycle-stopped                 | the profile apply report from a forced stopped recycle roll and its awaiting-a-restart verdict           |
+| backup-restore-recycle-stopped                | the Backup import report from a forced stopped env-restore roll and its awaiting-a-restart verdict       |
 | agents                                        | `tools_agent` (from `tai42-agents`)                                                                      |
 | dashboard                                     | the seeded `docs_demo_monitoring` backend (real trend + by-model)                                        |
 | manifest                                      | a non-empty `user_tools` set                                                                             |

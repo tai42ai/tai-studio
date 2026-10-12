@@ -28,6 +28,7 @@ import {
 import { assertApplyable } from './profile-apply';
 import type { ApplyResponse } from './profile-secrets';
 import { DiffCallouts } from './ProfileDiffDialog';
+import { RecycleRollSection } from './RecycleRollSection';
 
 const dangerPanelStyle: CSSProperties = {
   display: 'flex',
@@ -83,47 +84,11 @@ const pendingStyle: CSSProperties = {
   fontSize: 'var(--tai-text-sm)',
 };
 
-/** The recycle section: one row per worker, joining a fresh life sharing its name. */
-function RecycleSection({ report }: { readonly report: ApplyResponse }): ReactNode {
-  if (report.recycle.length === 0) {
-    return <p style={noteStyle}>No process recycle was needed.</p>;
-  }
-  return (
-    <ul style={rowListStyle} data-testid="apply-recycle">
-      {report.recycle.map((entry) => {
-        const joined = report.fresh.find((life) => life.name === entry.name);
-        return (
-          <li
-            key={`${entry.name}-${entry.kind}-${String(entry.generation_before)}`}
-            className="tai-row"
-          >
-            <span className="tai-mono">{entry.name}</span>
-            <Badge variant="neutral">{entry.kind}</Badge>
-            <Badge variant={entry.status === 'self-deferred' ? 'warning' : 'primary'}>
-              {entry.status}
-            </Badge>
-            <span style={labelStyle}>
-              {joined !== undefined
-                ? `life ${String(entry.generation_before)} to ${String(joined.generation)}`
-                : `life ${String(entry.generation_before)}`}
-            </span>
-            {entry.status === 'self-deferred' ? (
-              <span style={labelStyle}>
-                this worker (the applier) recycles itself after replying
-              </span>
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 /**
  * The dedicated apply report (names-only — no env value appears). The fleet fan-out
  * surfaces any failed propagation; `hot` names the in-place swaps; `recycle` is the
- * per-worker orchestration; `fresh` is the new ready lives observed since the
- * pre-apply snapshot; `refused` (empty on success) names any boundary refusal. A
+ * per-worker orchestration (where it stopped and why, when it stopped); `fresh` is the
+ * new ready lives observed since the pre-apply snapshot; `refused` (empty on success) names any boundary refusal. A
  * fresh life sharing a recycled target's NAME is joined onto that row for display only.
  */
 function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode {
@@ -131,7 +96,7 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
   const unjoinedFresh = report.fresh.filter((life) => !recycledNames.has(life.name));
   return (
     <div className="tai-stack" data-testid="apply-report">
-      <FleetReport summary={summarizeFleetFanout(report.fanout)} />
+      <FleetReport summary={summarizeFleetFanout(report.fanout, report.awaiting_respawn)} />
 
       <section>
         <h4 style={sectionTitleStyle}>Hot-swapped</h4>
@@ -150,7 +115,12 @@ function ApplyReport({ report }: { readonly report: ApplyResponse }): ReactNode 
 
       <section>
         <h4 style={sectionTitleStyle}>Recycle</h4>
-        <RecycleSection report={report} />
+        <RecycleRollSection
+          recycle={report.recycle}
+          fresh={report.fresh}
+          stopped={report.recycle_stopped}
+          writerNote="this worker (the applier) recycles itself after replying"
+        />
       </section>
 
       {unjoinedFresh.length > 0 ? (

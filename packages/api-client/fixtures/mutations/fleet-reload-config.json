@@ -6,14 +6,14 @@
     {
       "name": "serve-1",
       "outcome": "applied",
-      "payload": { "status": "ok", "env_keys": 5 },
+      "payload": { "status": "ok", "env_keys": 5, "awaiting_respawn": [] },
       "error": null,
       "detail": null
     },
     {
       "name": "serve-2",
       "outcome": "applied",
-      "payload": { "status": "ok", "env_keys": 5 },
+      "payload": { "status": "ok", "env_keys": 5, "awaiting_respawn": [] },
       "error": null,
       "detail": null
     },

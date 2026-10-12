@@ -1,7 +1,7 @@
 /** Live-manifest MCP section, env-ref and config-reload schemas. */
 import { z } from 'zod';
 
-import { fleetReportFanout } from './fleet';
+import { awaitingWorker, fleetReportFanout, recycleRoll } from './fleet';
 
 /**
  * The back-reference a connector writes onto a manifest MCP entry to mark it
@@ -56,15 +56,19 @@ export const mcpEnvRefs = z.array(mcpEnvRef);
 export type McpEnvRefs = z.infer<typeof mcpEnvRefs>;
 /**
  * The apply result every config-writer mutation returns (`POST /api/mcp-config`,
- * `POST /api/config/env`): the serving worker's local reload result (`status` +
- * `env_keys`) plus the mode-wrapped fleet fan-out of the reload it broadcast. The
- * `fanout` is parsed EXPLICITLY so the shared fleet-report handler can surface a
- * failed propagation — zod's unknown-key stripping would otherwise hide it. A drift
- * throws `ApiSchemaError`.
+ * `POST /api/config/env`): the serving worker's local reload result (`status`,
+ * `env_keys`), the mode-wrapped fleet fan-out of the reload it broadcast, `recycle` — the
+ * fleet recycle roll an env change carrying a recycle-class key ran (`null` when it
+ * carried none) — and `awaiting_respawn`, the operation's verdict: the workers (name +
+ * keys) still awaiting a respawn after it, empty when its roll converged. `fanout` and `recycle` are parsed
+ * EXPLICITLY so a failed propagation or a stopped roll reaches the UI — zod's
+ * unknown-key stripping would otherwise hide them. A drift throws `ApiSchemaError`.
  */
 export const reloadConfigResult = z.object({
   status: z.string(),
   env_keys: z.number(),
+  awaiting_respawn: z.array(awaitingWorker),
   fanout: fleetReportFanout,
+  recycle: recycleRoll.nullable(),
 });
 export type ReloadConfigResult = z.infer<typeof reloadConfigResult>;

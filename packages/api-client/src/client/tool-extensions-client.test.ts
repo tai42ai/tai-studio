@@ -78,7 +78,9 @@ describe('tool-extensions client transport', () => {
 
   it('setToolExtensions POSTs the full { combos } list and parses the apply result (local reload + fanout)', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { status: 'ok', env_keys: 0, fanout: localOnly } }),
+      jsonResponse({
+        data: { status: 'ok', env_keys: 0, awaiting_respawn: [], recycle: null, fanout: localOnly },
+      }),
     );
     const out = await client.setToolExtensions('shout', [['marka'], ['markb']]);
     expect(captured[0]?.method).toBe('POST');
@@ -97,6 +99,8 @@ describe('tool-extensions client transport', () => {
         data: {
           status: 'ok',
           env_keys: 2,
+          awaiting_respawn: [],
+          recycle: null,
           fanout: {
             mode: 'fleet',
             op: 'reload_config',
@@ -127,7 +131,9 @@ describe('tool-extensions client transport', () => {
 
   it('setToolExtensions sends an empty combos list to CLEAR', async () => {
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { status: 'ok', env_keys: 0, fanout: localOnly } }),
+      jsonResponse({
+        data: { status: 'ok', env_keys: 0, awaiting_respawn: [], recycle: null, fanout: localOnly },
+      }),
     );
     await client.setToolExtensions('shout', []);
     expect(captured[0]?.body).toEqual({ combos: [] });
@@ -151,7 +157,9 @@ describe('tool-extensions client transport', () => {
       config: { schema: { type: 'object', title: 'Weather' } },
     };
     const { client, captured } = harness(() =>
-      jsonResponse({ data: { status: 'ok', env_keys: 0, fanout: localOnly } }),
+      jsonResponse({
+        data: { status: 'ok', env_keys: 0, awaiting_respawn: [], recycle: null, fanout: localOnly },
+      }),
     );
     await client.setToolExtensions('shout', [['marka', configElement]]);
     expect(captured[0]?.body).toEqual({ combos: [['marka', configElement]] });

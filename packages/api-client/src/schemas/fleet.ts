@@ -152,3 +152,53 @@ export const fleetReportFanout = z.discriminatedUnion('mode', [
   fleetResult.extend({ mode: z.literal('unreachable') }),
 ]);
 export type FleetReportFanout = z.infer<typeof fleetReportFanout>;
+
+/**
+ * One worker line of a fleet recycle roll. `status` is `recycled` (confirmed on
+ * reality), `timed-out` or `failed` (the target the roll stopped at — `detail` names
+ * why), or `self-deferred` (the worker that took the change recycles itself after
+ * replying). `generation_before` is the life that was recycled.
+ */
+export const recycleEntry = z.object({
+  name: z.string(),
+  kind: z.string(),
+  status: z.string(),
+  generation_before: z.number(),
+  detail: z.string().nullable().optional(),
+});
+export type RecycleEntry = z.infer<typeof recycleEntry>;
+
+/** One newly-ready worker life observed since the change began — capacity evidence. */
+export const freshLife = z.object({ name: z.string(), kind: z.string(), generation: z.number() });
+export type FreshLife = z.infer<typeof freshLife>;
+
+/**
+ * Where a recycle roll stopped and why: `name` is the target it stopped at, or `null`
+ * when the bus could not be read before a target was reached.
+ */
+export const recycleStop = z.object({
+  kind: z.string(),
+  name: z.string().nullable(),
+  detail: z.string(),
+});
+export type RecycleStop = z.infer<typeof recycleStop>;
+
+/**
+ * The report of a fleet recycle roll an env change carrying a recycle-class key ran:
+ * the worker lines, the fresh lives, and where the roll stopped (`null` when it ran to
+ * its end). Names only — never an env value.
+ */
+export const recycleRoll = z.object({
+  recycle: z.array(recycleEntry),
+  fresh: z.array(freshLife),
+  recycle_stopped: recycleStop.nullable(),
+});
+export type RecycleRoll = z.infer<typeof recycleRoll>;
+
+/**
+ * One worker an operation names as still awaiting a respawn: its recycle-class `keys`
+ * changed in the stored env since its process bound them (at boot, or when the plugin that
+ * declares them was loaded), and nothing in the operation respawns it.
+ */
+export const awaitingWorker = z.object({ name: z.string(), keys: z.array(z.string()) });
+export type AwaitingWorker = z.infer<typeof awaitingWorker>;

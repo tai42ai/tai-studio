@@ -122,6 +122,8 @@ describe('manifest / mcp client transport', () => {
         data: {
           status: 'ok',
           env_keys: 3,
+          awaiting_respawn: [],
+          recycle: null,
           fanout: {
             mode: 'local-only',
             note: 'no worker bus configured; only this worker reloaded',
@@ -284,6 +286,8 @@ describe('manifest / mcp client transport', () => {
   const applyResult = {
     status: 'ok',
     env_keys: 0,
+    awaiting_respawn: [],
+    recycle: null,
     fanout: { mode: 'local-only', note: 'only this worker reloaded' },
   };
 
