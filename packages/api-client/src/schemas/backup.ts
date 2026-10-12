@@ -32,11 +32,11 @@ export const backupImportReport = z.object({
           }),
         )
         .optional(),
-      // The `manifest` and `env` sections apply through the config pipeline, so their
-      // report carries the mode-wrapped fleet `fanout` of the restore's reload; other
-      // sections omit it. Parsed EXPLICITLY so the shared fleet-report handler can
-      // surface a failed restore propagation — otherwise zod would strip it silently.
-      fanout: fleetReportFanout.optional(),
+      // The mode-wrapped fleet `fanout` of a section whose restore broadcast (the `manifest`
+      // and `env` reloads, the templates cache eviction); `null` for every other section.
+      // Parsed EXPLICITLY so the shared fleet-report handler can surface a failed restore
+      // propagation — otherwise zod would strip it silently.
+      fanout: fleetReportFanout.nullable(),
       // An `env` restore that changed recycle-class keys rolls a fleet recycle: `recycle` is
       // that roll (`null` when none ran) and `awaiting_respawn` the workers (name + keys) still
       // awaiting a respawn after it — the operation's verdict, empty for every other section.

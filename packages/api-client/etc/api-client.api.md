@@ -359,7 +359,7 @@ const backupImportReport: z.ZodObject<{
             description: z.ZodString;
             api_key: z.ZodString;
         }, z.core.$strip>>>;
-        fanout: z.ZodOptional<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        fanout: z.ZodNullable<z.ZodDiscriminatedUnion<[z.ZodObject<{
             mode: z.ZodLiteral<"local-only">;
             note: z.ZodString;
         }, z.core.$strip>, z.ZodObject<{
@@ -1859,35 +1859,7 @@ export function createApiClient(config: ApiConfig): {
             updated: number;
             skipped: number;
             errors: string[];
-            recycle: {
-                recycle: {
-                    name: string;
-                    kind: string;
-                    status: string;
-                    generation_before: number;
-                    detail?: string | null | undefined;
-                }[];
-                fresh: {
-                    name: string;
-                    kind: string;
-                    generation: number;
-                }[];
-                recycle_stopped: {
-                    kind: string;
-                    name: string | null;
-                    detail: string;
-                } | null;
-            } | null;
-            awaiting_respawn: {
-                name: string;
-                keys: string[];
-            }[];
-            new_api_keys?: {
-                user_id: string;
-                description: string;
-                api_key: string;
-            }[] | undefined;
-            fanout?: {
+            fanout: {
                 mode: "local-only";
                 note: string;
             } | {
@@ -1916,7 +1888,35 @@ export function createApiClient(config: ApiConfig): {
                 }[];
                 error: string | null;
                 mode: "unreachable";
-            } | undefined;
+            } | null;
+            recycle: {
+                recycle: {
+                    name: string;
+                    kind: string;
+                    status: string;
+                    generation_before: number;
+                    detail?: string | null | undefined;
+                }[];
+                fresh: {
+                    name: string;
+                    kind: string;
+                    generation: number;
+                }[];
+                recycle_stopped: {
+                    kind: string;
+                    name: string | null;
+                    detail: string;
+                } | null;
+            } | null;
+            awaiting_respawn: {
+                name: string;
+                keys: string[];
+            }[];
+            new_api_keys?: {
+                user_id: string;
+                description: string;
+                api_key: string;
+            }[] | undefined;
         }>;
     }>;
     readonly validateCondition: (body: ValidateConditionBody) => Promise<{

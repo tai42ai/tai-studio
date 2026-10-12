@@ -70,6 +70,7 @@ describe('backup client transport', () => {
               updated: 0,
               skipped: 0,
               errors: [],
+              fanout: null,
               recycle: null,
               awaiting_respawn: [],
             },
