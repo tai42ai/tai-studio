@@ -11,7 +11,7 @@
  *  - with no contribution the auto-form renders; after a plugin registers a
  *    panel the contributed panel renders instead.
  */
-import { ApiError } from '@tai42/api-client';
+import { ApiError, ApiSchemaError } from '@tai42/api-client';
 import { type ToolPanelProps } from '@tai42/studio-sdk';
 import { loadPlugin } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
@@ -28,6 +28,9 @@ import {
   scopedProjection,
   type StubApiClient,
 } from './test-utils';
+
+/** No route mounts and no declared route panels: the host inputs of a plugin that contributes none. */
+const NO_HOST_INPUTS = { mounts: {}, declaredRoutePanels: [] };
 
 /** Both run doors, as a projection carries them (each a concrete route). */
 const RUN_TOOL_ROUTE = { path: '/api/run-tool', methods: ['POST'] };
@@ -96,7 +99,7 @@ describe('AutoFormRunPanel — validation + run', () => {
 
   it('runs the tool and renders an object result in the JSON tree', async () => {
     const user = userEvent.setup();
-    const runTool = vi.fn().mockResolvedValue({ greeting: 'hello' });
+    const runTool = vi.fn().mockResolvedValue({ kind: 'result', result: { greeting: 'hello' } });
     const client: StubApiClient = { runTool, listToolRuns: vi.fn().mockResolvedValue([]) };
     renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
       client,
@@ -147,6 +150,32 @@ describe('AutoFormRunPanel — validation + run', () => {
     const outcome = screen.getByTestId('tool-run-outcome');
     expect(within(outcome).getByRole('heading', { name: 'Outcome' })).toBeInTheDocument();
     expect(within(outcome).getByText('"the run stopped short"')).toBeInTheDocument();
+  });
+
+  it('shows the unreadable-answer panel with its details when the run answer fails its schema', async () => {
+    const user = userEvent.setup();
+    const runTool = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiSchemaError('/api/run-tool', [
+          { code: 'invalid_union', path: ['kind'], message: 'Invalid discriminator value' },
+        ]),
+      );
+    const client: StubApiClient = { runTool, listToolRuns: vi.fn().mockResolvedValue([]) };
+    renderWithProviders(<AutoFormRunPanel toolName="echo" schema={EMPTY_OBJECT_SCHEMA} />, {
+      client,
+      projection: fullProjection(),
+    });
+
+    await user.click(await findEnabled('Run'));
+
+    expect(
+      await screen.findByText(
+        'The run finished, but its answer is in a format this studio cannot read, so it is not shown.',
+      ),
+    ).toBeInTheDocument();
+    await user.click(screen.getByText('Details'));
+    expect(screen.getByText('kind: Invalid discriminator value')).toBeVisible();
   });
 
   it('submits a background run from the secondary action and shows its live detail', async () => {
@@ -358,7 +387,7 @@ describe('AutoFormRunPanel — client timeout', () => {
 describe('AutoFormRunPanel — run-door capability gate', () => {
   function runClient(): StubApiClient {
     return {
-      runTool: vi.fn().mockResolvedValue({ ok: 1 }),
+      runTool: vi.fn().mockResolvedValue({ kind: 'result', result: { ok: 1 } }),
       submitToolRun: vi.fn().mockResolvedValue({ run_id: 'bg' }),
       listToolRuns: vi.fn().mockResolvedValue([]),
     };
@@ -440,9 +469,13 @@ describe('RunPanel — panel vs auto-form', () => {
     function EchoPanel({ toolName }: ToolPanelProps): ReactNode {
       return <div>Custom panel for {toolName}</div>;
     }
-    await loadPlugin('acme', (ctx) => {
-      ctx.registerToolPanel({ toolName: 'echo', component: EchoPanel });
-    });
+    await loadPlugin(
+      'acme',
+      (ctx) => {
+        ctx.registerToolPanel({ toolName: 'echo', component: EchoPanel });
+      },
+      NO_HOST_INPUTS,
+    );
 
     const client: StubApiClient = {
       getToolSchema: vi.fn().mockResolvedValue({

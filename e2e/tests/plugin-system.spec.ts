@@ -14,7 +14,14 @@
 import { expect } from '@playwright/test';
 
 import { needs, test } from '../needs';
-import { expectPluginErrorCard, loginViaUi, openToolRow, seedCredential } from './helpers';
+import {
+  API_KEY,
+  EXECUTION_KEY_ID,
+  expectPluginErrorCard,
+  loginViaUi,
+  openToolRow,
+  seedCredential,
+} from './helpers';
 
 needs('kind:identity', 'kind:studio_plugins:reference_plugin');
 
@@ -301,4 +308,33 @@ test('a 401 during the post-login registry fetch is a LOGIN REDIRECT, never a pl
   await page.waitForURL('**/login**');
   await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: /failed to load/i })).toHaveCount(0);
+});
+
+test('a route on the synthetic channel shows the panel the reference plugin contributes for it', async ({
+  page,
+}) => {
+  await seedCredential(page);
+  const routeName = `synthetic-${String(Date.now())}`;
+  const identity = `relay-${String(Date.now())}`;
+  const created = await page.request.post(`/api/conversations/${routeName}`, {
+    headers: { 'x-api-key': API_KEY, 'content-type': 'application/json' },
+    data: {
+      door: 'channel',
+      channel: 'synthetic',
+      our_identity: identity,
+      target_kind: 'tool',
+      target_name: 'studio_demo_echo',
+      start_expr: { content: '{ message: .message.text }' },
+      reply_expr: { content: '{ text: .result.echoed }' },
+      execution_key: EXECUTION_KEY_ID,
+    },
+  });
+  expect(created.status()).toBe(200);
+
+  await page.goto(`/conversations?route=${routeName}`);
+  const region = page.getByRole('region', { name: 'Reference route panel' });
+  await expect(region).toBeVisible();
+  await expect(region.getByTestId('reference-route-panel')).toContainText(
+    `Contributed by reference_plugin for the route ${routeName} at ${identity}.`,
+  );
 });

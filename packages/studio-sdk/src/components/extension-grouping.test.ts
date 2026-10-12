@@ -1,13 +1,7 @@
 import type { Extension } from '@tai42/api-client';
 import { describe, expect, it } from 'vitest';
 
-import {
-  baseNameOf,
-  groupByKind,
-  groupIntoFamilies,
-  kindVariant,
-  NON_STACKABLE_KIND,
-} from './extension-grouping';
+import { baseNameOf, groupByKind, groupIntoFamilies, kindVariant } from './extension-grouping';
 
 describe('baseNameOf', () => {
   it('returns the whole name when there is no underscore', () => {
@@ -63,16 +57,28 @@ describe('groupByKind', () => {
     expect(groups[1]?.members.map((m) => m.name)).toEqual(['marka', 'markb']);
   });
 
-  it('flags only the backend kind as non-stackable', () => {
+  it("carries each kind's served multiple flag", () => {
     const extensions: Extension[] = [
       { name: 'backendx', kind: 'backend', multiple: false },
-      { name: 'marka', kind: 'wrapper', multiple: false },
+      { name: 'marka', kind: 'wrapper', multiple: true },
+      { name: 'routea', kind: 'router', multiple: false },
     ];
     const groups = groupByKind(extensions);
-    const backend = groups.find((g) => g.kind === NON_STACKABLE_KIND);
-    const wrapper = groups.find((g) => g.kind === 'wrapper');
-    expect(backend?.nonStackable).toBe(true);
-    expect(wrapper?.nonStackable).toBe(false);
+    expect(groups.map((g) => [g.kind, g.multiple])).toEqual([
+      ['backend', false],
+      ['router', false],
+      ['wrapper', true],
+    ]);
+  });
+
+  it('refuses a kind the catalog serves as both single- and multi-select', () => {
+    const extensions: Extension[] = [
+      { name: 'marka', kind: 'wrapper', multiple: true },
+      { name: 'markb', kind: 'wrapper', multiple: false },
+    ];
+    expect(() => groupByKind(extensions)).toThrow(
+      'extension kind wrapper is served as both single- and multi-select',
+    );
   });
 
   it('returns an empty array for an empty catalog', () => {
