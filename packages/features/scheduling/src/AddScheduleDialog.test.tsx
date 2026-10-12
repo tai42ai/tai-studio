@@ -459,11 +459,10 @@ describe('AddScheduleDialog — declared badges', () => {
     // shows their merged, deduped, sorted union beneath the chosen tool.
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
-      listToolTags: vi.fn().mockResolvedValue(schedulableTags('sync')),
       listToolTags: vi
         .fn()
         .mockResolvedValue([
-          { name: 'sync', tags: [], badges: ['network'], hidden: false, schedulable: false },
+          { name: 'sync', tags: [], badges: ['network'], hidden: false, schedulable: true },
         ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
