@@ -3,7 +3,7 @@
  * panel's views by its `kind`, and a refused answer (an `ApiSchemaError`) yields its first
  * issue for the unreadable panel's details.
  */
-import { ApiSchemaError } from '@tai42/api-client';
+import { ApiSchemaError, runAnswer } from '@tai42/api-client';
 import { describe, expect, it } from 'vitest';
 
 import { readRunResult, unreadableIssue } from './run-asks';
@@ -27,20 +27,22 @@ describe('readRunResult', () => {
   });
 
   it('reads an asks answer as the asks view', () => {
-    const view = readRunResult({
-      kind: 'asks',
-      asks: [{ id: 'i1', status: 'asking', question: 'Approve?', asked_by: ['run-a'] }],
-      suspended,
-    } as Parameters<typeof readRunResult>[0]);
+    const view = readRunResult(
+      runAnswer.parse({
+        kind: 'asks',
+        asks: [{ id: 'i1', status: 'asking', question: 'Approve?', asked_by: ['run-a'] }],
+        suspended,
+      }),
+    );
     expect(view.kind).toBe('asks');
     if (view.kind !== 'asks') throw new Error('expected asks view');
     expect(view.asks[0]?.question).toBe('Approve?');
   });
 
   it('reads a parked answer as the parked view', () => {
-    expect(
-      readRunResult({ kind: 'parked', suspended } as Parameters<typeof readRunResult>[0]),
-    ).toEqual({ kind: 'parked' });
+    expect(readRunResult(runAnswer.parse({ kind: 'parked', suspended }))).toEqual({
+      kind: 'parked',
+    });
   });
 
   it('reads a none answer as an empty result', () => {
