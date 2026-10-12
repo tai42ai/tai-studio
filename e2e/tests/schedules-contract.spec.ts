@@ -10,13 +10,13 @@
  * `POST /api/schedules` to a persisted schedule and reads it back from `GET /api/schedules`
  * with its cron cadence intact.
  *
- * The boot gives `studio_demo_echo` the backend `schedule_task` extension, so its
- * `studio_demo_echo_schedule_task` vehicle is registered and the create door has a real
- * schedulable target. The create leg asserts the request the dialog sends to the LIVE door
- * (never a stubbed response) — the vehicle tool name and the cadence — then proves the
- * schedule PERSISTED by reading it back from the listing. `GET /api/schedules` projects the
- * backend's listing (name, enabled, next run, and the cadence `meta`), which is where the
- * persistence shows.
+ * The boot gives `studio_demo_echo` the backend `schedule_task` extension, so the server
+ * serves it as schedulable and the create door has a real target. The dialog sends the BASE
+ * tool and a typed cadence (the five crontab fields split from the typed expression); the
+ * door resolves the backend's schedule vehicle itself. The create leg asserts that request
+ * against the LIVE door (never a stubbed response), then proves the schedule PERSISTED by
+ * reading it back from the listing as a typed `ScheduleListRow` (name, tool, cadence,
+ * enabled, next run — never the stored tool arguments).
  *
  * The dialog's execution-key picker and its wiring onto the create body are proven by the
  * first leg here (the picker renders) and by the scheduling feature's unit tests; the live
@@ -38,8 +38,6 @@ needs(
 );
 
 const SCHEDULE_TOOL = 'studio_demo_echo';
-/** The vehicle the create door dispatches: the tool's backend `schedule_task` branch. */
-const SCHEDULE_VEHICLE = `${SCHEDULE_TOOL}_schedule_task`;
 
 test('the add-schedule dialog carries the execution key + the four door-contract jq fields', async ({
   page,
@@ -75,16 +73,15 @@ test('a schedule created from the dialog persists and reads back with its cadenc
 
   await dialog.getByLabel('Name').fill(name);
   await dialog.getByRole('combobox', { name: 'Tool' }).click();
-  // The picker offers only schedulable BASE tools — the `…_schedule_task` vehicle is not a
-  // picker row — so the base tool names exactly one option.
+  // The picker offers only the tools the server serves as schedulable, so the base tool names
+  // exactly one option.
   await page.getByRole('option', { name: SCHEDULE_TOOL }).click();
   await dialog.getByLabel('Cron expression').fill(cron);
   // studio_demo_echo requires `message`; a schedule fires the tool with these stored kwargs.
   await dialog.getByLabel('Tool kwargs (JSON)').fill('{"message":"tick"}');
 
   // Observe the REAL create request (never a stubbed response): it reaches the live
-  // `POST /api/schedules` naming the tool's schedule vehicle and the cadence in
-  // `schedule_kwargs`.
+  // `POST /api/schedules` naming the base tool, the typed cadence and the schedule name.
   const createRequest = page.waitForRequest(
     (req) => req.url().includes('/api/schedules') && req.method() === 'POST',
   );
@@ -93,11 +90,19 @@ test('a schedule created from the dialog persists and reads back with its cadenc
   );
   await dialog.getByRole('button', { name: 'Create schedule' }).click();
 
+  const cadence = {
+    kind: 'crontab',
+    minute: '0',
+    hour: '2',
+    day_of_month: '*',
+    month_of_year: '*',
+    day_of_week: '*',
+  };
   const body = (await createRequest).postDataJSON() as Record<string, unknown>;
-  expect(body.tool_name).toBe(SCHEDULE_VEHICLE);
-  const scheduleKwargs = body.schedule_kwargs as Record<string, unknown>;
-  expect(scheduleKwargs.backend_schedule).toBe(cron);
-  expect(scheduleKwargs.backend_schedule_name).toBe(name);
+  expect(body.tool_name).toBe(SCHEDULE_TOOL);
+  expect(body.cadence).toEqual(cadence);
+  expect(body.schedule_name).toBe(name);
+  expect('schedule_kwargs' in body).toBe(false);
   // The live door registered the schedule — a 2xx, never a 501/500 stub.
   expect((await createResponse).status()).toBe(200);
 
@@ -110,6 +115,7 @@ test('a schedule created from the dialog persists and reads back with its cadenc
   const rows = ((await listing.json()) as { data: Record<string, unknown>[] }).data;
   const created = rows.find((row) => row.name === name);
   expect(created, `schedule ${name} not found in the listing`).toBeDefined();
+  expect(created?.tool).toBe(SCHEDULE_TOOL);
+  expect(created?.cadence).toEqual(cadence);
   expect(created?.enabled).toBe(true);
-  expect((created?.meta as Record<string, unknown>).cron_string).toBe(cron);
 });

@@ -1,7 +1,8 @@
 /**
  * Direct behavioural tests for the add-schedule dialog, driven on its own rather
  * than through the page. The dialog renders `open` and talks to exactly two api
- * seams: `listTools` (feeds the `ToolPicker`) and `addSchedule` (the mutation).
+ * seams: `listToolTags` (its `schedulable` rows feed the `ToolPicker`) and `addSchedule` (the
+ * mutation).
  * These cover: the initial render, a valid crontab submit and a valid interval
  * submit asserting the EXACT skeleton body, the client-side kwargs validation
  * (malformed JSON and non-object payloads), the per-field required-input guards,
@@ -19,11 +20,11 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AddScheduleDialog } from './AddScheduleDialog';
-import { makeClient, renderWithProviders } from './test-utils';
+import { makeClient, renderWithProviders, schedulableTags } from './test-utils';
 
 /**
  * Open the shared `ToolPicker` (a Radix combobox portalled to body). The trigger is
- * `disabled` until `listTools` resolves, so the open is gated on it being ENABLED —
+ * `disabled` until `listToolTags` resolves, so the open is gated on it being ENABLED —
  * the real ready signal — rather than on incidental timer slack, or a synchronous
  * click lands on the still-disabled trigger and nothing opens.
  */
@@ -48,7 +49,7 @@ const SUBMIT_FLOW_TIMEOUT_MS = 15_000;
 
 describe('AddScheduleDialog — render', () => {
   it('renders the dialog open with its fields, defaulting to the crontab spec', async () => {
-    const client = makeClient({ listTools: vi.fn().mockResolvedValue([]) });
+    const client = makeClient({ listToolTags: vi.fn().mockResolvedValue(schedulableTags()) });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
@@ -70,14 +71,7 @@ describe(
       const onClose = vi.fn();
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
-        listTools: vi
-          .fn()
-          .mockResolvedValue([
-            'run_report',
-            'run_report_schedule_task',
-            'sync',
-            'sync_schedule_task',
-          ]),
+        listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report', 'sync')),
         addSchedule,
       });
       renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
@@ -95,12 +89,17 @@ describe(
 
       await waitFor(() => {
         expect(addSchedule).toHaveBeenCalledWith({
-          tool_name: 'run_report_schedule_task',
+          tool_name: 'run_report',
           tool_kwargs: { limit: 10 },
-          schedule_kwargs: {
-            backend_schedule: '0 2 * * *',
-            backend_schedule_name: 'nightly-report',
+          cadence: {
+            kind: 'crontab',
+            minute: '0',
+            hour: '2',
+            day_of_month: '*',
+            month_of_year: '*',
+            day_of_week: '*',
           },
+          schedule_name: 'nightly-report',
         });
       });
       expect(addSchedule).toHaveBeenCalledTimes(1);
@@ -109,11 +108,11 @@ describe(
       });
     });
 
-    it('carries an optional subject as a tool kwarg', async () => {
+    it('carries an optional subject as the top-level door field', async () => {
       const user = userEvent.setup({ delay: null });
       const addSchedule = vi.fn().mockResolvedValue({});
       const client = makeClient({
-        listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+        listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
         listConversationRoutes: vi.fn().mockResolvedValue({
           items: [{ target_kind: 'agent', target_name: 'assistant' }],
           total: 1,
@@ -138,27 +137,26 @@ describe(
         expect(addSchedule).toHaveBeenCalled();
       });
       const body = addSchedule.mock.calls[0]?.[0] as
-        | { tool_kwargs: Record<string, unknown>; schedule_kwargs: Record<string, unknown> }
-        | undefined;
-      // The subject rides in tool_kwargs (what create_schedule validates), never a
-      // schedule-internal reserved stamp.
-      expect(body?.tool_kwargs.subject).toEqual({
+        { tool_kwargs: Record<string, unknown>; subject?: unknown } | undefined;
+      // The subject is the create door's top-level field (the fire's state context), never a
+      // tool argument.
+      expect(body?.subject).toEqual({
         target_kind: 'agent',
         target_name: 'assistant',
         kind: 'person',
         key: 'a-42',
       });
-      expect(body?.schedule_kwargs.backend_schedule_subject).toBeUndefined();
+      expect(body?.tool_kwargs).toEqual({});
     });
 
     it(
-      'posts a numeric backend_schedule and empty kwargs for the interval spec',
+      'posts an interval cadence and empty kwargs for the interval spec',
       async () => {
         const user = userEvent.setup({ delay: null });
         const onClose = vi.fn();
         const addSchedule = vi.fn().mockResolvedValue({});
         const client = makeClient({
-          listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
+          listToolTags: vi.fn().mockResolvedValue(schedulableTags('sync')),
           addSchedule,
         });
         renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
@@ -175,12 +173,10 @@ describe(
 
         await waitFor(() => {
           expect(addSchedule).toHaveBeenCalledWith({
-            tool_name: 'sync_schedule_task',
+            tool_name: 'sync',
             tool_kwargs: {},
-            schedule_kwargs: {
-              backend_schedule: 3600,
-              backend_schedule_name: 'hourly-sync',
-            },
+            cadence: { kind: 'interval', every: 3600 },
+            schedule_name: 'hourly-sync',
           });
         });
         await waitFor(() => {
@@ -198,7 +194,7 @@ describe('AddScheduleDialog — kwargs validation', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
@@ -222,7 +218,7 @@ describe('AddScheduleDialog — kwargs validation', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
@@ -249,7 +245,7 @@ describe('AddScheduleDialog — required-field guards', () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
@@ -263,11 +259,35 @@ describe('AddScheduleDialog — required-field guards', () => {
     expect(addSchedule).not.toHaveBeenCalled();
   });
 
+  it('rejects a cron expression of the wrong length with the field message', async () => {
+    const user = userEvent.setup({ delay: null });
+    const addSchedule = vi.fn();
+    const client = makeClient({
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
+      addSchedule,
+    });
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Name'), 'nightly-report');
+    await pickTool(user, dialog, 'run_report');
+    await user.type(within(dialog).getByLabelText('Cron expression'), '0 2 * *');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Create schedule' }));
+
+    expect(
+      within(dialog).getByText(
+        'Use 5 fields (minute hour day-of-month month day-of-week), or 6 with a leading seconds field.',
+      ),
+    ).toBeInTheDocument();
+    expect(addSchedule).not.toHaveBeenCalled();
+  });
+
   it('rejects a non-positive interval with a message', async () => {
     const user = userEvent.setup({ delay: null });
     const addSchedule = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('sync')),
       addSchedule,
     });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
@@ -291,7 +311,7 @@ describe('AddScheduleDialog — mutation states', () => {
     const onClose = vi.fn();
     const pending = deferred<unknown>();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
       addSchedule: vi.fn().mockReturnValue(pending.promise),
     });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
@@ -321,7 +341,7 @@ describe('AddScheduleDialog — mutation states', () => {
     const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['run_report', 'run_report_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('run_report')),
       addSchedule: vi.fn().mockRejectedValue(new ApiError('schedule name already exists', 409)),
     });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
@@ -341,10 +361,10 @@ describe('AddScheduleDialog — mutation states', () => {
 });
 
 describe('AddScheduleDialog — tools list error', () => {
-  it('replaces the tool picker with a retryable error when listTools fails', async () => {
+  it('replaces the tool picker with a retryable error when the tool tags read fails', async () => {
     const user = userEvent.setup({ delay: null });
-    const listTools = vi.fn().mockRejectedValue(new ApiError('tools unavailable', 500));
-    const client = makeClient({ listTools });
+    const listToolTags = vi.fn().mockRejectedValue(new ApiError('tools unavailable', 500));
+    const client = makeClient({ listToolTags });
     renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
 
     const dialog = await screen.findByRole('dialog');
@@ -352,7 +372,7 @@ describe('AddScheduleDialog — tools list error', () => {
     expect(within(dialog).queryByRole('combobox')).toBeNull();
 
     await user.click(within(dialog).getByRole('button', { name: 'Retry' }));
-    expect(listTools).toHaveBeenCalledTimes(2);
+    expect(listToolTags).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -360,24 +380,13 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
   it('excludes an EFFECTIVE-hidden tool, keeping an overlay-`false` unhidden one', async () => {
     // `secret_task` is plugin-hidden with no overlay opinion → excluded. `open_task`
     // is plugin-hidden but the overlay forces it visible (`hidden: false`) → offered.
-    // Each base tool is schedulable (its `_schedule_task` vehicle is registered), so the
-    // exclusion is tested on the base tools the picker offers.
+    // Each tool is served schedulable, so the exclusion is tested on tools the picker offers.
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
-      listTools: vi
-        .fn()
-        .mockResolvedValue([
-          'run_report',
-          'run_report_schedule_task',
-          'secret_task',
-          'secret_task_schedule_task',
-          'open_task',
-          'open_task_schedule_task',
-        ]),
       listToolTags: vi.fn().mockResolvedValue([
-        { name: 'run_report', tags: [], hidden: false },
-        { name: 'secret_task', tags: [], hidden: true },
-        { name: 'open_task', tags: [], hidden: true },
+        { name: 'run_report', tags: [], hidden: false, badges: [], schedulable: true },
+        { name: 'secret_task', tags: [], hidden: true, badges: [], schedulable: true },
+        { name: 'open_task', tags: [], hidden: true, badges: [], schedulable: true },
       ]),
       listToolMeta: vi.fn().mockResolvedValue({
         folders: [],
@@ -400,11 +409,36 @@ describe('AddScheduleDialog — hidden-tool exclusion', () => {
   });
 });
 
+describe('AddScheduleDialog — nothing schedulable', () => {
+  it('disables the tool picker with its placeholder and the schedulable explanation', async () => {
+    const client = makeClient({
+      listToolTags: vi
+        .fn()
+        .mockResolvedValue([
+          { name: 'run_report', tags: [], hidden: false, badges: [], schedulable: false },
+        ]),
+    });
+    renderWithProviders(<AddScheduleDialog onClose={vi.fn()} />, { client });
+
+    const dialog = await screen.findByRole('dialog');
+    const combobox = within(dialog).getByRole('combobox', { name: 'Tool' });
+    await waitFor(() => {
+      expect(combobox).toHaveTextContent('No tool can be scheduled');
+    });
+    expect(combobox).toBeDisabled();
+    expect(
+      within(dialog).getByText(
+        "A tool can be scheduled when it carries the scheduling backend's schedule extension.",
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
 describe('AddScheduleDialog — display names', () => {
   it('labels a picker option "Display (raw)" from the tool-meta overlay', async () => {
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('sync')),
     });
     renderWithProviders(
       <StaticToolDisplayNamesProvider names={{ sync: 'Nightly Sync' }}>
@@ -425,7 +459,7 @@ describe('AddScheduleDialog — declared badges', () => {
     // shows their merged, deduped, sorted union beneath the chosen tool.
     const user = userEvent.setup({ delay: null });
     const client = makeClient({
-      listTools: vi.fn().mockResolvedValue(['sync', 'sync_schedule_task']),
+      listToolTags: vi.fn().mockResolvedValue(schedulableTags('sync')),
       listToolTags: vi
         .fn()
         .mockResolvedValue([
@@ -463,7 +497,7 @@ describe('AddScheduleDialog — close paths', () => {
   it('calls onClose when Cancel is clicked', async () => {
     const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
-    const client = makeClient({ listTools: vi.fn().mockResolvedValue([]) });
+    const client = makeClient({ listToolTags: vi.fn().mockResolvedValue(schedulableTags()) });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
     const dialog = await screen.findByRole('dialog');
@@ -475,7 +509,7 @@ describe('AddScheduleDialog — close paths', () => {
   it('calls onClose when the dialog is dismissed with Escape', async () => {
     const user = userEvent.setup({ delay: null });
     const onClose = vi.fn();
-    const client = makeClient({ listTools: vi.fn().mockResolvedValue([]) });
+    const client = makeClient({ listToolTags: vi.fn().mockResolvedValue(schedulableTags()) });
     renderWithProviders(<AddScheduleDialog onClose={onClose} />, { client });
 
     await screen.findByRole('dialog');

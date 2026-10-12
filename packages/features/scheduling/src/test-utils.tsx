@@ -4,7 +4,7 @@
  * surfaces the error state immediately), the typed API client, the theme, and a
  * stub navigation context.
  */
-import type { ApiClient, ScheduleItem } from '@tai42/api-client';
+import type { ApiClient, ScheduleListRow, ToolTagEntry } from '@tai42/api-client';
 import { ApiProvider, NavigationProvider, ThemeProvider } from '@tai42/studio-sdk';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions, type RenderResult, waitFor } from '@testing-library/react';
@@ -66,17 +66,31 @@ export function makeClient(overrides: Partial<ApiClient>): ApiClient {
 }
 
 /**
- * A redacted schedule fixture (schedules are secret-bearing — `kwargs` can embed
- * credentials — so these are hand-authored, never auto-captured).
+ * A schedule list row fixture (the typed `ScheduleListRow`: no tool arguments).
  */
-export function schedule(overrides: Partial<ScheduleItem> = {}): ScheduleItem {
+export function schedule(overrides: Partial<ScheduleListRow> = {}): ScheduleListRow {
   return {
     name: 'nightly-report',
+    tool: 'run_report',
+    cadence: {
+      kind: 'crontab',
+      minute: '0',
+      hour: '2',
+      day_of_month: '*',
+      month_of_year: '*',
+      day_of_week: '*',
+    },
     enabled: true,
-    schedule: { __type: 'crontab', minute: '0', hour: '2' },
-    kwargs: { backend_tool_name: 'run_report_schedule_task' },
+    next_run_at_ts: null,
+    next_run_at_iso: null,
+    error: null,
     ...overrides,
   };
+}
+
+/** Tool-tag rows the server serves as `schedulable`, one per name. */
+export function schedulableTags(...names: string[]): ToolTagEntry[] {
+  return names.map((name) => ({ name, tags: [], hidden: false, badges: [], schedulable: true }));
 }
 
 /**
