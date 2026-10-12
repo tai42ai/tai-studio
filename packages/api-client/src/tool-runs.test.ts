@@ -269,14 +269,14 @@ describe('zod boundaries', () => {
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) expect(parsed.data.resumed_interactions).toEqual(['i1', 'i2']);
-    // Omitted entirely on a record that resumed nothing.
+    // A record that resumed nothing reads the published default.
     const bare = toolRunRecord.parse({
       run_id: 'r',
       tool_name: 't',
       status: 'running',
       started_at: 's',
     });
-    expect(bare.resumed_interactions).toBeUndefined();
+    expect(bare.resumed_interactions).toBeNull();
   });
 
   it('reads the two park kinds of a run answer through toolRunParkAnswer', () => {
@@ -309,5 +309,21 @@ describe('envelope guard', () => {
   it('throws ApiSchemaError when the response is not a { data } envelope', async () => {
     const api = createApiClient(config(mockFetch(() => jsonResponse({ nope: true }))));
     await expect(api.getToolRun('r1')).rejects.toBeInstanceOf(ApiSchemaError);
+  });
+});
+
+describe('the failed record', () => {
+  it('carries the outcome a failed terminal recorded beside the plain message', () => {
+    const record = toolRunRecord.parse({
+      run_id: 'r',
+      tool_name: 't',
+      status: 'failed',
+      started_at: 's',
+      finished_at: 's2',
+      error: 'tool run failed',
+      outcome: { reason: 'aborted' },
+    });
+    expect(record.status === 'failed' && record.outcome).toEqual({ reason: 'aborted' });
+    expect(record.error).toBe('tool run failed');
   });
 });

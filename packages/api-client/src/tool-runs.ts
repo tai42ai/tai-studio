@@ -15,7 +15,12 @@
 import { z } from 'zod';
 
 import { apiRoutes, buildPath } from './generated/api-routes';
-import { runAsksAnswer, runParkedAnswer } from './generated/openapi-schemas';
+import {
+  runAsksAnswer,
+  runParkedAnswer,
+  toolRunListItem as generatedToolRunListItem,
+  toolRunView,
+} from './generated/openapi-schemas';
 import type { ApiConfig } from './http';
 import { apiRequest } from './http';
 import type { StateSubject } from './schemas/states';
@@ -37,48 +42,29 @@ export const toolRunSubmitResult = z.object({
  */
 export const toolRunParkAnswer = z.discriminatedUnion('kind', [runAsksAnswer, runParkedAnswer]);
 
-const toolRunRecordBase = {
-  run_id: z.string(),
-  tool_name: z.string(),
-  started_at: z.string(),
-  finished_at: z.string().optional(),
-  resumed_interactions: z.array(z.string()).optional(),
-};
-
-/** `GET /api/tool-runs/{run_id}` → the full record, discriminated by `status`. `result` is
- * the tool's own value on `succeeded` and the park answer ({@link toolRunParkAnswer}) on
- * `parked`, parsed here so a reader switches on its `kind`; a parked record whose stored
- * answer is not one of the two park kinds is refused on the read. `error` is present only on
- * `failed`; `outcome` is present only on a `failed` record whose run reached a failed
- * terminal: the run's outcome, whole, as the sync door delivers it (`error` is then the plain
- * `tool run failed`). `resumed_interactions` is the parked interaction ids the run resumed or took while
- * it executed (`[]` when it resumed none). */
+/**
+ * `GET /api/tool-runs/{run_id}` → the full record, the published `ToolRunView` narrowed by
+ * `status` into one variant per lifecycle state. `result` is the tool's own value on
+ * `succeeded` and, on `parked`, the park answer ({@link toolRunParkAnswer}) parsed here so a
+ * reader switches on its `kind`; a parked record whose stored answer is not one of the two park
+ * kinds is refused on the read. `error` carries a `failed` run's message; `outcome` is set only
+ * on a `failed` record whose run reached a failed terminal: the run's outcome, whole, as the
+ * sync door delivers it (`error` is then the plain `tool run failed`). `resumed_interactions` is
+ * the parked interaction ids the run resumed or took while it executed (`[]` when it resumed
+ * none).
+ */
 export const toolRunRecord = z.discriminatedUnion('status', [
-  z.object({ ...toolRunRecordBase, status: z.literal('running') }),
-  z.object({
-    ...toolRunRecordBase,
-    status: z.literal('succeeded'),
-    result: z.unknown().optional(),
-  }),
-  z.object({
-    ...toolRunRecordBase,
-    status: z.literal('failed'),
-    error: z.string().optional(),
-    outcome: z.unknown().optional(),
-  }),
-  z.object({ ...toolRunRecordBase, status: z.literal('lost') }),
-  z.object({ ...toolRunRecordBase, status: z.literal('parked'), result: toolRunParkAnswer }),
+  toolRunView.extend({ status: z.literal('running') }),
+  toolRunView.extend({ status: z.literal('succeeded') }),
+  toolRunView.extend({ status: z.literal('failed') }),
+  toolRunView.extend({ status: z.literal('lost') }),
+  toolRunView.extend({ status: z.literal('parked'), result: toolRunParkAnswer }),
 ]);
 
-/** One entry of `GET /api/tool-runs?tool_name=...` — id/status/timestamps only,
- * deliberately carrying NO `result`/`error` (the list is not secret-bearing). */
-export const toolRunListItem = z.object({
-  run_id: z.string(),
-  tool_name: z.string(),
-  status: toolRunStatus,
-  started_at: z.string(),
-  finished_at: z.string().optional(),
-});
+/** One entry of `GET /api/tool-runs?tool_name=...` — the published list row (id, status,
+ * timestamps; never `result`/`error`, the list is not secret-bearing), its `status` narrowed to
+ * the lifecycle states. */
+export const toolRunListItem = generatedToolRunListItem.extend({ status: toolRunStatus });
 
 export const toolRunList = z.array(toolRunListItem);
 
