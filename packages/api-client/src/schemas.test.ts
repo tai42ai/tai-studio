@@ -1,8 +1,7 @@
 /**
- * Schema-level tests for the two additive fields the webhook-security feature
- * introduces: the interactions add-frame `server_verified` flag and the
- * `/api/hooks` response `topic_verifiers` map. Both are tolerant of an
- * older/absent value, and both accept a populated one.
+ * Schema-level tests of the api-client's response schemas — the generated schemas under
+ * the client's names, and the hand-written remainders. A value outside a published enum,
+ * a missing required field and a wrong type each fail the parse loudly.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -16,6 +15,8 @@ describe('interaction add-frame schema — server_verified', () => {
     question: 'Approve the deploy',
     created_at: '2026-07-04T00:00:00Z',
     timeout_at: '2026-07-04T00:05:00Z',
+    sensitive: false,
+    format_payload: null,
   };
 
   it('accepts a frame carrying server_verified: true', () => {
@@ -23,9 +24,9 @@ describe('interaction add-frame schema — server_verified', () => {
     expect(parsed.server_verified).toBe(true);
   });
 
-  it('leaves server_verified undefined when the frame omits it', () => {
+  it('reads server_verified as null when the frame omits it', () => {
     const parsed = schemas.interaction.parse(base);
-    expect(parsed.server_verified).toBeUndefined();
+    expect(parsed.server_verified).toBeNull();
   });
 
   it('rejects a non-boolean server_verified', () => {
@@ -41,6 +42,8 @@ describe('interaction add-frame schema — channel', () => {
     question: 'Reply on your phone',
     created_at: '2026-07-11T00:00:00Z',
     timeout_at: '2026-07-11T00:05:00Z',
+    sensitive: false,
+    format_payload: null,
   };
 
   it('surfaces the channel name when the frame carries one', () => {
@@ -48,9 +51,9 @@ describe('interaction add-frame schema — channel', () => {
     expect(parsed.channel).toBe('telegram');
   });
 
-  it('leaves channel undefined when the frame omits it', () => {
+  it('reads channel as null when the frame omits it', () => {
     const parsed = schemas.interaction.parse(base);
-    expect(parsed.channel).toBeUndefined();
+    expect(parsed.channel).toBeNull();
   });
 
   it('rejects a non-string channel', () => {
@@ -66,6 +69,8 @@ describe('interaction add-frame schema — attribution (recipient/origin/audienc
     question: 'Reply on your phone',
     created_at: '2026-07-11T00:00:00Z',
     timeout_at: '2026-07-11T00:05:00Z',
+    sensitive: false,
+    format_payload: null,
   };
 
   it('surfaces the attribution fields when the frame carries them', () => {
@@ -80,11 +85,11 @@ describe('interaction add-frame schema — attribution (recipient/origin/audienc
     expect(parsed.audience).toBe('user-42');
   });
 
-  it('leaves each attribution field undefined when the frame omits it', () => {
+  it('reads each attribution field as null when the frame omits it', () => {
     const parsed = schemas.interaction.parse(base);
-    expect(parsed.recipient).toBeUndefined();
-    expect(parsed.origin).toBeUndefined();
-    expect(parsed.audience).toBeUndefined();
+    expect(parsed.recipient).toBeNull();
+    expect(parsed.origin).toBeNull();
+    expect(parsed.audience).toBeNull();
   });
 
   it('rejects a non-string recipient', () => {
@@ -100,7 +105,7 @@ describe('interaction add-frame schema — attribution (recipient/origin/audienc
   });
 });
 
-describe('interaction add-frame schema — media (loose wire field)', () => {
+describe('interaction add-frame schema — media', () => {
   const base = {
     interaction_id: 'q1',
     group_id: 'g1',
@@ -108,20 +113,27 @@ describe('interaction add-frame schema — media (loose wire field)', () => {
     question: 'Which product?',
     created_at: '2026-07-17T00:00:00Z',
     timeout_at: '2026-07-17T00:05:00Z',
+    sensitive: false,
+    format_payload: null,
   };
 
-  it('leaves media undefined when the frame omits it', () => {
-    expect(schemas.interaction.parse(base).media).toBeUndefined();
+  it('reads media as null when the frame omits it', () => {
+    expect(schemas.interaction.parse(base).media).toBeNull();
   });
 
-  it('carries the media array through unparsed at the item level (items stay unknown)', () => {
-    // The wire field is loose (`z.array(z.unknown())`): a hostile/partial item does
-    // NOT fail the whole frame parse — per-item validation happens in the renderer.
+  it('parses each media item, a document among them', () => {
     const parsed = schemas.interaction.parse({
       ...base,
-      media: [{ kind: 'image', url: 'https://x/y.png' }, { junk: true }],
+      media: [
+        { kind: 'image', url: 'https://x/y.png' },
+        { kind: 'document', url: 'https://x/report.pdf', filename: 'report.pdf' },
+      ],
     });
     expect(parsed.media).toHaveLength(2);
+  });
+
+  it('refuses a malformed media item (the published item shape)', () => {
+    expect(() => schemas.interaction.parse({ ...base, media: [{ junk: true }] })).toThrow();
   });
 
   it('rejects a present non-array media (a gross frame malformation)', () => {
@@ -130,13 +142,13 @@ describe('interaction add-frame schema — media (loose wire field)', () => {
 });
 
 describe('interactionMediaItem schema — applied per item by the renderer', () => {
-  it('accepts an image item with an omitted caption', () => {
+  it('accepts an image item with an omitted caption, read as null', () => {
     const parsed = schemas.interactionMediaItem.parse({ kind: 'image', url: 'https://x/y.png' });
     expect(parsed.kind).toBe('image');
-    expect(parsed.caption).toBeUndefined();
+    expect(parsed.caption).toBeNull();
   });
 
-  it('accepts a link item with an explicit null caption (nullish, not optional)', () => {
+  it('accepts a link item with an explicit null caption', () => {
     const parsed = schemas.interactionMediaItem.parse({
       kind: 'link',
       url: 'https://x',
@@ -154,8 +166,16 @@ describe('interactionMediaItem schema — applied per item by the renderer', () 
     expect(parsed.caption).toBe('A widget');
   });
 
+  it('accepts the document, video and audio kinds the server publishes', () => {
+    for (const kind of ['document', 'video', 'audio'] as const) {
+      expect(schemas.interactionMediaItem.parse({ kind, url: 'https://x' }).kind).toBe(kind);
+    }
+  });
+
   it('rejects an unknown kind, a missing url, and a non-string url', () => {
-    expect(() => schemas.interactionMediaItem.parse({ kind: 'video', url: 'https://x' })).toThrow();
+    expect(() =>
+      schemas.interactionMediaItem.parse({ kind: 'sticker', url: 'https://x' }),
+    ).toThrow();
     expect(() => schemas.interactionMediaItem.parse({ kind: 'image' })).toThrow();
     expect(() => schemas.interactionMediaItem.parse({ kind: 'image', url: 42 })).toThrow();
   });
@@ -167,7 +187,7 @@ describe('attachmentMediaItem schema — applied per item by the transcript rend
     for (const kind of ['image', 'document', 'audio', 'video'] as const) {
       const parsed = schemas.attachmentMediaItem.parse({ kind, url });
       expect(parsed.kind).toBe(kind);
-      expect(parsed.filename).toBeUndefined();
+      expect(parsed.filename).toBeNull();
     }
     const doc = schemas.attachmentMediaItem.parse({
       kind: 'document',
@@ -175,7 +195,7 @@ describe('attachmentMediaItem schema — applied per item by the transcript rend
       filename: 'report.pdf',
     });
     expect(doc.filename).toBe('report.pdf');
-    // `.nullish()`: an explicit null caption/filename parses to null, not a failure.
+    // An explicit null caption/filename parses to null, not a failure.
     const nulls = schemas.attachmentMediaItem.parse({
       kind: 'image',
       url,
@@ -186,16 +206,15 @@ describe('attachmentMediaItem schema — applied per item by the transcript rend
     expect(nulls.filename).toBeNull();
   });
 
-  it('rejects a link kind and a missing url', () => {
+  it('rejects an unknown kind and a missing url', () => {
     const url = `/api/interactions/media/${'a'.repeat(43)}`;
-    // `link` is the ask-media surface (`interactionMediaItem`), never a byte-backed attachment.
-    expect(() => schemas.attachmentMediaItem.parse({ kind: 'link', url })).toThrow();
+    expect(() => schemas.attachmentMediaItem.parse({ kind: 'sticker', url })).toThrow();
     expect(() => schemas.attachmentMediaItem.parse({ kind: 'document' })).toThrow();
     expect(() => schemas.attachmentMediaItem.parse({ kind: 'image', url: 42 })).toThrow();
   });
 });
 
-describe('conversationMessage schema — inbound_attachments is a loose per-item array', () => {
+describe('conversationMessage schema — inbound_attachments', () => {
   const base = {
     message_id: 'm1',
     route_name: 'chat',
@@ -228,20 +247,19 @@ describe('conversationMessage schema — inbound_attachments is a loose per-item
     expect(parsed.inbound_attachments).toHaveLength(1);
   });
 
-  it('rejects a record missing inbound_attachments (the key is always on the wire)', () => {
+  it('reads an omitted inbound_attachments as null', () => {
     const { inbound_attachments: _omitted, ...withoutKey } = base;
-    expect(() => schemas.conversationMessage.parse(withoutKey)).toThrow();
+    expect(schemas.conversationMessage.parse(withoutKey).inbound_attachments).toBeNull();
   });
 
-  it('keeps a malformed member rather than failing the whole-record decode', () => {
-    // The renderer safeParses each item; a malformed one must reach it as a per-item
-    // notice, never vanish the transcript by throwing here.
+  it('refuses a malformed member (the published attachment shape)', () => {
     const url = `/api/interactions/media/${'a'.repeat(43)}`;
-    const parsed = schemas.conversationMessage.parse({
-      ...base,
-      inbound_attachments: [{ kind: 'image', url }, { junk: true }, 42],
-    });
-    expect(parsed.inbound_attachments).toHaveLength(3);
+    expect(() =>
+      schemas.conversationMessage.parse({
+        ...base,
+        inbound_attachments: [{ kind: 'image', url }, { junk: true }],
+      }),
+    ).toThrow();
   });
 
   it('rejects a present non-array inbound_attachments (a gross record malformation)', () => {
@@ -258,7 +276,7 @@ describe('form per-send data schemas — applied by the form preview', () => {
       label: 'Option A',
     });
     expect(schemas.formOption.parse({ value: 'a', label: null }).label).toBeNull();
-    expect(schemas.formOption.parse({ value: 'a' }).label).toBeUndefined();
+    expect(schemas.formOption.parse({ value: 'a' }).label).toBeNull();
   });
 
   it('formOption rejects a missing or non-string value', () => {
@@ -316,6 +334,10 @@ describe('form per-send data schemas — applied by the form preview', () => {
     expect(page.display[0]).toMatchObject({ kind: 'heading', text: 'Summary' });
   });
 
+  it('formPage refuses an unknown key (the contract model forbids extras)', () => {
+    expect(() => schemas.formPage.parse({ title: 'Basics', fields: [], extra: 1 })).toThrow();
+  });
+
   it('formPage rejects a missing title or non-string fields', () => {
     expect(() => schemas.formPage.parse({ fields: ['date'] })).toThrow();
     expect(() => schemas.formPage.parse({ title: 'Basics', fields: [7] })).toThrow();
@@ -361,6 +383,8 @@ describe('interactionsPage schema — the paged pending inbox', () => {
     question: 'Approve?',
     created_at: '2026-07-04T00:00:00Z',
     timeout_at: '2026-07-04T00:05:00Z',
+    sensitive: false,
+    format_payload: null,
   };
 
   it('parses a page window: items plus total/page/page_size/next_page/truncated', () => {
@@ -436,6 +460,21 @@ describe('notifications schema', () => {
     const { message: _dropped, ...broken } = record;
     expect(() => schemas.notifications.parse({ notifications: [broken] })).toThrow();
   });
+
+  it('parses the reply and link options a notify carried', () => {
+    const parsed = schemas.notifications.parse({
+      notifications: [
+        {
+          ...record,
+          options: [
+            { kind: 'reply', text: 'Acknowledge' },
+            { kind: 'link', label: 'Open', url: 'https://example.com' },
+          ],
+        },
+      ],
+    });
+    expect(parsed.notifications[0]?.options).toHaveLength(2);
+  });
 });
 
 describe('hookList schema — topic_verifiers', () => {
@@ -443,6 +482,7 @@ describe('hookList schema — topic_verifiers', () => {
     const parsed = schemas.hookList.parse({
       items: [],
       total: 0,
+      trigger_auth: {},
       topic_verifiers: {
         'events.created': { verifier: 'hmac-sha256', config: { secret_env: 'EVENTS_SECRET' } },
       },
@@ -453,9 +493,8 @@ describe('hookList schema — topic_verifiers', () => {
     });
   });
 
-  it('defaults topic_verifiers to {} when the response omits it', () => {
-    const parsed = schemas.hookList.parse({ items: [], total: 0 });
-    expect(parsed.topic_verifiers).toEqual({});
+  it('rejects a response without its topic_verifiers map', () => {
+    expect(() => schemas.hookList.parse({ items: [], total: 0, trigger_auth: {} })).toThrow();
   });
 });
 
@@ -609,12 +648,18 @@ describe('route catalog + public-pin schemas', () => {
 });
 
 describe('mcpStatus schema — failed-mount detail fields', () => {
-  const base = { title: 'srv', status: 'unavailable' };
+  const failure = {
+    title: 'srv',
+    status: 'unavailable',
+    category: 'auth',
+    message: 'invalid token',
+  };
 
   it('parses a failed entry carrying the category, message and http_status detail', () => {
     const parsed = schemas.mcpStatus.parse({
       bound: { ok: ['a', 'b'] },
-      failed: [{ ...base, category: 'auth', message: 'invalid token', http_status: 401 }],
+      failed: [{ ...failure, http_status: 401 }],
+      health: {},
     });
     expect(parsed.failed[0]?.category).toBe('auth');
     expect(parsed.failed[0]?.message).toBe('invalid token');
@@ -622,30 +667,49 @@ describe('mcpStatus schema — failed-mount detail fields', () => {
   });
 
   it.each(['auth', 'unreachable', 'error'])('accepts the %s category word', (category) => {
-    const parsed = schemas.mcpStatus.parse({ bound: {}, failed: [{ ...base, category }] });
+    const parsed = schemas.mcpStatus.parse({
+      bound: {},
+      failed: [{ ...failure, category, http_status: null }],
+      health: {},
+    });
     expect(parsed.failed[0]?.category).toBe(category);
   });
 
   it('accepts a null http_status for a pure transport failure', () => {
     const parsed = schemas.mcpStatus.parse({
       bound: {},
-      failed: [
-        { ...base, category: 'unreachable', message: 'connection refused', http_status: null },
-      ],
+      failed: [{ ...failure, category: 'unreachable', http_status: null }],
+      health: {},
     });
     expect(parsed.failed[0]?.http_status).toBeNull();
   });
 
-  it('leaves the detail fields undefined when a failed entry omits them', () => {
-    const parsed = schemas.mcpStatus.parse({ bound: {}, failed: [base] });
-    expect(parsed.failed[0]?.category).toBeUndefined();
-    expect(parsed.failed[0]?.message).toBeUndefined();
-    expect(parsed.failed[0]?.http_status).toBeUndefined();
+  it('carries each server health record', () => {
+    const parsed = schemas.mcpStatus.parse({
+      bound: {},
+      failed: [],
+      health: {
+        srv: {
+          consecutive_failures: 2,
+          failing_since: '2026-07-04T00:00:00Z',
+          last_error: { category: 'auth' },
+          last_success: null,
+        },
+      },
+    });
+    expect(parsed.health.srv?.consecutive_failures).toBe(2);
   });
 
-  it('rejects (loudly) a non-string category', () => {
+  it('rejects (loudly) a failed entry without its detail fields or with a non-string category', () => {
     expect(() =>
-      schemas.mcpStatus.parse({ bound: {}, failed: [{ ...base, category: 7 }] }),
+      schemas.mcpStatus.parse({ bound: {}, failed: [{ title: 'srv', status: 'x' }], health: {} }),
+    ).toThrow();
+    expect(() =>
+      schemas.mcpStatus.parse({
+        bound: {},
+        failed: [{ ...failure, category: 7, http_status: null }],
+        health: {},
+      }),
     ).toThrow();
   });
 });
@@ -682,8 +746,9 @@ describe('presetRenamed schema', () => {
       name: 'london_weather',
       renamed_from: 'paris_weather',
       active_version: 3,
+      fanout: { mode: 'local-only', note: 'only this worker reloaded' },
     });
-    expect(parsed).toEqual({
+    expect(parsed).toMatchObject({
       name: 'london_weather',
       renamed_from: 'paris_weather',
       active_version: 3,
@@ -911,5 +976,19 @@ describe('run-tool result schemas — caller asks, park receipt, visit outcome',
     expect(schemas.visitOutcome.safeParse({ action: 'resumed', kind: 'bogus' }).success).toBe(
       false,
     );
+  });
+});
+
+describe('a generated enum refuses a value outside the published set', () => {
+  it('refuses an unknown upgrade outcome, delivery and route method', () => {
+    expect(() =>
+      schemas.marketplaceUpgradeAllRow.parse({ ref: 'acme/x', outcome: 'skipped', detail: '' }),
+    ).toThrow();
+    expect(() => schemas.marketplaceDelivery.parse('wheel')).toThrow();
+    expect(() => schemas.routeMethod.parse('HEAD')).toThrow();
+  });
+
+  it('accepts the free answer format the hand enum lacked', () => {
+    expect(schemas.answerFormat.parse('free')).toBe('free');
   });
 });
