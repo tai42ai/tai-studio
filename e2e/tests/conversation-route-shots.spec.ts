@@ -272,7 +272,7 @@ const FRAMES: readonly Frame[] = [
       await stubGet(
         page,
         `/api/conversations/${TRANSCRIPT_ROUTE}/transcript`,
-        pageOf(TRANSCRIPT_RECORDS, { order: 'desc' }),
+        pageOf(TRANSCRIPT_RECORDS, { order: 'desc', person_id: null }),
       );
     },
     action: async (page) => {
@@ -307,7 +307,7 @@ const FRAMES: readonly Frame[] = [
       await stubGet(
         page,
         `/api/conversations/${TRANSCRIPT_ROUTE}/transcript`,
-        pageOf([ATTACHMENT_RECORD], { order: 'desc' }),
+        pageOf([ATTACHMENT_RECORD], { order: 'desc', person_id: null }),
       );
       // The served-media capability url the image loads from: fulfil it so the inline
       // image resolves to a real bitmap rather than a broken-load notice.
