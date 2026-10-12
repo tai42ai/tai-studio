@@ -27,6 +27,12 @@
  *                  `studio_demo_echo`'s plugin panel because core routes do not
  *                  wait on plugin load — the custom panel races the route mount —
  *                  whereas the auto-form always renders, keeping this reproducible.
+ *   - run-answer-unreadable — the sync run panel's unreadable-answer panel (its Details
+ *                  open), via a forced `POST /api/run-tool` body the live server never
+ *                  answers (a bare value with no `kind`).
+ *   - run-answer-parked-unreadable — the background card of a parked run whose stored
+ *                  answer is in an older format (its Details open), via forced
+ *                  `GET /api/tool-runs` / `GET /api/tool-runs/{id}` payloads.
  *   - extensions — the extension catalog (`ask_external`).
  *   - settings   — the config workbench from `GET /api/config/*` (settings schema).
  *   - profiles   — the Settings page's Profiles tab: the seeded `production` profile
@@ -818,6 +824,71 @@ const AUTHED_PAGES = [
       const list = page.getByTestId('asks-list');
       await list.waitFor({ state: 'visible', timeout: 8000 });
       await list.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // The sync run panel's unreadable-answer panel: the run-tool body is forced to a bare
+    // value with no `kind` (a body the live server never answers), so the api-client
+    // refuses it and the panel shows the fixed sentence; Details is opened to show the
+    // first issue. The error card appears only after the action runs the tool, past the
+    // pre-action error guard; the wait below is the panel's own test id.
+    name: 'run-answer-unreadable',
+    path: '/tools?tool=studio_demo_form',
+    wait: 'button:has-text("Run in background")',
+    setup: async (page) => {
+      await page.route(
+        (url) => url.pathname === '/api/run-tool',
+        (route) => route.fulfill({ json: { data: { greeting: 'Hello, Ada' } } }),
+      );
+    },
+    action: async (page) => {
+      await page.getByLabel('name', { exact: true }).fill('Ada');
+      await page.getByRole('button', { name: 'Run', exact: true }).click();
+      const panel = page.getByTestId('run-answer-unreadable');
+      await panel.waitFor({ state: 'visible', timeout: 8000 });
+      await panel.getByText('Details').click();
+      await panel.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    // The background card of a parked run whose stored answer is in an older format: the
+    // recent-runs list and the run's record are forced (the live store holds no such
+    // record), the record's `result` a park body without a run-answer `kind`, so the
+    // record read is refused and the card shows the fixed sentence; Details is opened.
+    name: 'run-answer-parked-unreadable',
+    path: '/tools?tool=studio_demo_form',
+    wait: 'button:has-text("Run in background")',
+    setup: async (page) => {
+      const run = {
+        run_id: 'run-parked-older',
+        tool_name: 'studio_demo_form',
+        status: 'parked',
+        started_at: '2026-01-01T09:00:00+00:00',
+        finished_at: '2026-01-01T09:00:02+00:00',
+      };
+      await page.route(
+        (url) => url.pathname === '/api/tool-runs',
+        (route) => route.fulfill({ json: { data: [run] } }),
+      );
+      await page.route(
+        (url) => url.pathname === `/api/tool-runs/${run.run_id}`,
+        (route) =>
+          route.fulfill({
+            json: {
+              data: {
+                ...run,
+                result: { interaction_id: 'ask-1', interaction_ids: ['ask-1'] },
+              },
+            },
+          }),
+      );
+    },
+    action: async (page) => {
+      await page.getByRole('button', { name: /run-parked-older/ }).click();
+      const panel = page.getByTestId('tool-run-answer-unreadable');
+      await panel.waitFor({ state: 'visible', timeout: 8000 });
+      await panel.getByText('Details').click();
+      await panel.scrollIntoViewIfNeeded();
     },
   },
   {
