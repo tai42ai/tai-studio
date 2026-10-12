@@ -361,6 +361,7 @@ describe('connectors client transport', () => {
         data: {
           items: [{ ...connection, scopes_wanted: ['files.write', 'files.read'] }, connection],
           total: 2,
+          unhealthy: 0,
         },
       }),
     );
