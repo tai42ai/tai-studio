@@ -11,7 +11,7 @@
  *  - with no contribution the auto-form renders; after a plugin registers a
  *    panel the contributed panel renders instead.
  */
-import { ApiError, ApiSchemaError } from '@tai42/api-client';
+import { ApiError, ApiSchemaError, toolRunList, toolRunRecord } from '@tai42/api-client';
 import { type ToolPanelProps } from '@tai42/studio-sdk';
 import { loadPlugin } from '@tai42/studio-sdk/host';
 import { __resetContributions } from '@tai42/studio-sdk/testing';
@@ -181,14 +181,16 @@ describe('AutoFormRunPanel — validation + run', () => {
   it('submits a background run from the secondary action and shows its live detail', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg1' });
-    const getToolRun = vi.fn().mockResolvedValue({
-      run_id: 'bg1',
-      tool_name: 'echo',
-      status: 'succeeded',
-      started_at: 't',
-      finished_at: 't2',
-      result: { ok: 1 },
-    });
+    const getToolRun = vi.fn().mockResolvedValue(
+      toolRunRecord.parse({
+        run_id: 'bg1',
+        tool_name: 'echo',
+        status: 'succeeded',
+        started_at: 't',
+        finished_at: 't2',
+        result: { ok: 1 },
+      }),
+    );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,
@@ -246,20 +248,24 @@ describe('AutoFormRunPanel — validation + run', () => {
   it('refetches the recent-runs list after a background submit into an EMPTY list', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg-new' });
-    const getToolRun = vi.fn().mockResolvedValue({
-      run_id: 'bg-new',
-      tool_name: 'echo',
-      status: 'running',
-      started_at: 't',
-    });
+    const getToolRun = vi.fn().mockResolvedValue(
+      toolRunRecord.parse({
+        run_id: 'bg-new',
+        tool_name: 'echo',
+        status: 'running',
+        started_at: 't',
+      }),
+    );
     // Empty on first load, then the just-submitted RUNNING run once the submit
     // invalidates and re-fetches the list.
     const listToolRuns = vi
       .fn()
       .mockResolvedValueOnce([])
-      .mockResolvedValue([
-        { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't' },
-      ]);
+      .mockResolvedValue(
+        toolRunList.parse([
+          { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't' },
+        ]),
+      );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,
@@ -287,23 +293,29 @@ describe('AutoFormRunPanel — validation + run', () => {
   it('refetches the recent-runs list after a background submit into an ALL-TERMINAL list', async () => {
     const user = userEvent.setup();
     const submitToolRun = vi.fn().mockResolvedValue({ run_id: 'bg-new' });
-    const getToolRun = vi.fn().mockResolvedValue({
-      run_id: 'bg-new',
-      tool_name: 'echo',
-      status: 'running',
-      started_at: 't2',
-    });
+    const getToolRun = vi.fn().mockResolvedValue(
+      toolRunRecord.parse({
+        run_id: 'bg-new',
+        tool_name: 'echo',
+        status: 'running',
+        started_at: 't2',
+      }),
+    );
     // First load: one already-settled run (poll stopped). After the submit the
     // list re-fetches and now also carries the new running run.
     const listToolRuns = vi
       .fn()
-      .mockResolvedValueOnce([
-        { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
-      ])
-      .mockResolvedValue([
-        { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't2' },
-        { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
-      ]);
+      .mockResolvedValueOnce(
+        toolRunList.parse([
+          { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
+        ]),
+      )
+      .mockResolvedValue(
+        toolRunList.parse([
+          { run_id: 'bg-new', tool_name: 'echo', status: 'running', started_at: 't2' },
+          { run_id: 'bg-old', tool_name: 'echo', status: 'succeeded', started_at: 't1' },
+        ]),
+      );
     const client: StubApiClient = {
       runTool: vi.fn(),
       submitToolRun,

@@ -13,6 +13,7 @@
 import {
   ApiSchemaError,
   type ToolRunListItem,
+  toolRunListItem,
   type ToolRunRecord,
   toolRunRecord,
 } from '@tai42/api-client';
@@ -24,19 +25,27 @@ import { BackgroundRuns } from './BackgroundRuns';
 import { POLL_INTERVAL_MS } from './backgroundRunsCommon';
 import { decorBorderedControls, renderWithProviders, type StubApiClient } from './test-utils';
 
-function listItem(over: Partial<ToolRunListItem> = {}): ToolRunListItem {
-  return { run_id: 'r1', tool_name: 'echo', status: 'succeeded', started_at: 't1', ...over };
-}
-
-/** A record of the given status; the fields a status carries ride `over`. */
-function record(over: Record<string, unknown> = {}): ToolRunRecord {
-  return {
+/** A list row as the client reads it: built through the published row schema. */
+function listItem(over: Record<string, unknown> = {}): ToolRunListItem {
+  return toolRunListItem.parse({
     run_id: 'r1',
     tool_name: 'echo',
     status: 'succeeded',
     started_at: 't1',
     ...over,
-  };
+  });
+}
+
+/** A record of the given status as the client reads it: built through the record schema, the
+ *  fields a status carries riding `over`. */
+function record(over: Record<string, unknown> = {}): ToolRunRecord {
+  return toolRunRecord.parse({
+    run_id: 'r1',
+    tool_name: 'echo',
+    status: 'succeeded',
+    started_at: 't1',
+    ...over,
+  });
 }
 
 const SUSPENDED = { interaction_id: 'u1', interaction_ids: ['u1'], caller_interaction_ids: [] };
