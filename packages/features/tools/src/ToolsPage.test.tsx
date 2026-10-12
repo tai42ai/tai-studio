@@ -354,6 +354,7 @@ describe('ToolsPage — tag chip overflow', () => {
     tags: [`t${String(i)}`],
     badges: [],
     hidden: false,
+    schedulable: false,
   }));
   function manyTagsClient(): StubApiClient {
     return {
