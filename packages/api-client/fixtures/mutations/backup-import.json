@@ -25,6 +25,7 @@
           "api_key": "example-key-redacted"
         }
       ],
+      "fanout": null,
       "recycle": null,
       "awaiting_respawn": []
     }

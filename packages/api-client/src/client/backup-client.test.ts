@@ -101,6 +101,37 @@ describe('backup client transport', () => {
     expect(out.sections.manifest?.fanout?.mode).toBe('local-only');
   });
 
+  it('importBackup parses the server reply whose sections without a fan-out carry fanout null', async () => {
+    // The server serializes every report field: a section that broadcast nothing sends
+    // `fanout: null` and `recycle: null`, beside its open `details` map.
+    const { client } = harness(() =>
+      jsonResponse({
+        data: {
+          ok: false,
+          sections: {
+            env: {
+              created: 0,
+              updated: 0,
+              skipped: 0,
+              errors: ['TAI_BUS_HEARTBEAT_TTL needs a recycle'],
+              details: {},
+              fanout: null,
+              recycle: null,
+              awaiting_respawn: [],
+            },
+          },
+        },
+      }),
+    );
+    const out = await client.importBackup({
+      document: { version: 1, created_at: 'now', sections: { env: {} } },
+      sections: ['env'],
+    });
+    expect(out.ok).toBe(false);
+    expect(out.sections.env?.fanout).toBeNull();
+    expect(out.sections.env?.errors).toEqual(['TAI_BUS_HEARTBEAT_TTL needs a recycle']);
+  });
+
   it('exportBackup POSTs { sections } and returns the raw Blob with its content type', async () => {
     const bytes = new TextEncoder().encode('{"version":1}');
     const { client, captured } = harness(
