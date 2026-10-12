@@ -333,6 +333,7 @@ export function page<T>(
     page_size: 50,
     next_page: nextPage,
     truncated,
+    unreadable: 0,
   };
 }
 
@@ -355,5 +356,5 @@ export function transcriptPage<T>(
     truncated?: boolean;
   } = {},
 ) {
-  return { ...page(items, nextPage, pageNumber, truncated), order };
+  return { ...page(items, nextPage, pageNumber, truncated), order, person_id: null };
 }

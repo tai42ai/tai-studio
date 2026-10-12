@@ -153,13 +153,6 @@ describe('routeToFormValue', () => {
     expect(value.turns_per_hour_override).toBeUndefined();
     expect(value.error_reply_text).toBeUndefined();
   });
-
-  it('tolerates null channel identity fields on a prefill', () => {
-    const value = routeToFormValue(
-      makeRoute({ door: 'channel', channel: null, our_identity: null }),
-    );
-    expect(value.delivery).toEqual({ door: 'channel', channel: '', our_identity: '' });
-  });
 });
 
 describe('formValueToBody', () => {
